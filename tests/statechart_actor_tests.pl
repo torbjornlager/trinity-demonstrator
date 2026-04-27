@@ -140,63 +140,6 @@ test(runtime_statechart_spawn_load_uri_relative_game) :-
         working_directory(_, Old)
     ).
 
-test(runtime_calculator_equals) :-
-    setup_call_cleanup(
-        spawn(statechart_actor:interpret_example('calculator.xml'), Pid, [monitor(true)]),
-        (
-            await_output(Pid, display('0'), 1.0),
-            send(Pid, digit(1)),
-            await_output(Pid, display('1'), 1.0),
-            send(Pid, digit(2)),
-            await_output(Pid, display('12'), 1.0),
-            send(Pid, oper(plus)),
-            send(Pid, digit(3)),
-            await_output(Pid, display('3'), 1.0),
-            send(Pid, equals),
-            await_output(Pid, display('15'), 1.0)
-        ),
-        catch((exit(Pid, stop), await_down(Pid, 2.0)), _, true)
-    ).
-
-test(runtime_calculator_accumulates_expression_like_w3c_example) :-
-    setup_call_cleanup(
-        spawn(statechart_actor:interpret_example('calculator.xml'), Pid, [monitor(true)]),
-        (
-            await_output(Pid, display('0'), 1.0),
-            send(Pid, digit(1)),
-            await_output(Pid, display('1'), 1.0),
-            send(Pid, digit(2)),
-            await_output(Pid, display('12'), 1.0),
-            send(Pid, oper(plus)),
-            send(Pid, digit(3)),
-            await_output(Pid, display('3'), 1.0),
-            send(Pid, oper(star)),
-            await_output(Pid, display('15'), 1.0),
-            send(Pid, digit(4)),
-            await_output(Pid, display('4'), 1.0),
-            send(Pid, equals),
-            await_output(Pid, display('24'), 1.0)
-        ),
-        catch((exit(Pid, stop), await_down(Pid, 2.0)), _, true)
-    ).
-
-test(runtime_calculator_supports_negative_first_operand) :-
-    setup_call_cleanup(
-        spawn(statechart_actor:interpret_example('calculator.xml'), Pid, [monitor(true)]),
-        (
-            await_output(Pid, display('0'), 1.0),
-            send(Pid, oper(minus)),
-            await_output(Pid, display('-'), 1.0),
-            send(Pid, digit(5)),
-            await_output(Pid, display('-5'), 1.0),
-            send(Pid, oper(star)),
-            send(Pid, digit(2)),
-            await_output(Pid, display('2'), 1.0),
-            send(Pid, equals),
-            await_output(Pid, display('-10'), 1.0)
-        ),
-        catch((exit(Pid, stop), await_down(Pid, 2.0)), _, true)
-    ).
 
 test(runtime_statechart_spawn_from_toplevel_load_text) :-
     atomics_to_string([

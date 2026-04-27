@@ -664,7 +664,7 @@ test(node_portal_and_example_routes_served) :-
             read_text(PortalURL, PortalBody),
             format(atom(EditorFrameURL), '~w/editor_frame?id=editor&mode=prolog', [URI]),
             read_text(EditorFrameURL, EditorFrameBody),
-            format(atom(ActorExampleURL), '~w/examples/actors/count_actor.pl', [URI]),
+            format(atom(ActorExampleURL), '~w/examples/actors/04%20count_actor.pl', [URI]),
             read_text(ActorExampleURL, ActorExampleBody),
             format(atom(ServiceExampleURL), '~w/examples/services/node_resident_services.pl', [URI]),
             read_text(ServiceExampleURL, ServiceExampleBody),
@@ -678,7 +678,6 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Don''t show this again.')),
             assertion(sub_string(PortalBody, _, _, _, 'Book manuscript')),
             assertion(sub_string(PortalBody, _, _, _, 'https://trinity.elfenbenstornet.se/book.html')),
-            assertion(sub_string(PortalBody, _, _, _, 'Shared and private code')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Font</div>')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Display</div>')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Terminal</div>')),
@@ -686,30 +685,16 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Hide local node in pid')),
             assertion(sub_string(PortalBody, _, _, _, 'Extra newline after query')),
             assertion(sub_string(PortalBody, _, _, _, 'Code coloring')),
-            assertion(sub_string(PortalBody, _, _, _, 'Web Prolog src')),
             assertion(sub_string(PortalBody, _, _, _, 'Statechart XML')),
             assertion(sub_string(EditorFrameBody, _, _, _, 'Workbench Editor Frame')),
             assertion(sub_string(ActorExampleBody, _, _, _, 'count_actor')),
             assertion(sub_string(ServiceExampleBody, _, _, _, 'pubsub_actor')),
             assertion(sub_string(StatechartBody, _, _, _, '<statechart')),
-            memberchk(_{name:"count_actor.pl", url:"/examples/actors/count_actor.pl", kind:"prolog"},
+            memberchk(_{name:"04 count_actor.pl", url:"/examples/actors/04 count_actor.pl", kind:"prolog"},
                       ActorEntries),
-            memberchk(_{name:"calculator.xml", url:"/examples/statecharts/calculator.xml", kind:"statechart"},
-                      StatechartEntries),
             assertion(\+ memberchk(_{name:"game.xml", url:"/examples/statecharts/game.xml", kind:"statechart"},
                                    StatechartEntries)),
-            assertion(sub_string(PortalBody, _, _, _, 'Message-passing concurrency')),
-            assertion(sub_string(PortalBody, _, _, _, 'Concurrent Prolog Web'))
-        )).
-
-test(node_calculator_page_served,
-     true((sub_string(Body, _, _, _, 'data-calculator-page="true"'),
-           sub_string(Body, _, _, _, 'Statechart Calculator'),
-           sub_string(Body, _, _, _, "interpret('statecharts/calculator.xml')")))) :-
-    with_node_server(URI,
-        (
-            format(atom(CalculatorURL), '~w/calculator', [URI]),
-            read_text(CalculatorURL, Body)
+            assertion(sub_string(PortalBody, _, _, _, 'Message-passing concurrency'))
         )).
 
 test(node_admin_page_served,
@@ -3410,59 +3395,6 @@ test(ws_actor_toplevel_monitor_notification_visible_to_flush) :-
                       get_dict(type, SuccessReply, "success"))),
                 assertion(sub_string(OutputData, _, _, _, "Shell got down(")),
                 assertion(sub_string(OutputData, _, _, _, "true"))
-            ),
-            catch(ws_close(WS, 1000, done), _, true)
-        )).
-
-test(ws_spawned_calculator_actor_streams_display_updates) :-
-    with_node_server_options([auth(dev)], URI,
-        setup_call_cleanup(
-            ws_open(URI, WS),
-            (
-                ws_send_json(WS, json{
-                    command:spawn,
-                    goal:"interpret('statecharts/calculator.xml')",
-                    options:"[]"
-                }),
-                ws_receive_json_until_expected_types(
-                    WS,
-                    ["spawned", "output", "output"],
-                    InitialReplies
-                ),
-                once((member(SpawnedReply, InitialReplies),
-                      get_dict(type, SpawnedReply, "spawned"),
-                      get_dict(pid, SpawnedReply, CalculatorPid))),
-                once((member(InitialOutputReply, InitialReplies),
-                      get_dict(type, InitialOutputReply, "output"),
-                      get_dict(data, InitialOutputReply, "display('0')"))),
-                ws_send_json(WS, json{command:send, pid:CalculatorPid, message:"digit(1)"}),
-                ws_send_json(WS, json{command:send, pid:CalculatorPid, message:"digit(2)"}),
-                ws_send_json(WS, json{command:send, pid:CalculatorPid, message:"oper(plus)"}),
-                ws_send_json(WS, json{command:send, pid:CalculatorPid, message:"digit(3)"}),
-                ws_send_json(WS, json{command:send, pid:CalculatorPid, message:"equals"}),
-                ws_receive_json_until_expected_types(
-                    WS,
-                    ["output", "output", "output", "output", "output"],
-                    OutputReplies
-                ),
-                findall(Data,
-                        ( member(Reply, OutputReplies),
-                          get_dict(data, Reply, Data)
-                        ),
-                        OutputData),
-                memberchk("display('1')", OutputData),
-                memberchk("display('12')", OutputData),
-                memberchk("display('3')", OutputData),
-                memberchk("display('15')", OutputData),
-                ws_send_json(WS, json{command:exit, pid:CalculatorPid, reason:"done"}),
-                ws_receive_json_until_expected_types(
-                    WS,
-                    ["down"],
-                    DownReplies
-                ),
-                once((member(DownReply, DownReplies),
-                      get_dict(type, DownReply, "down"),
-                      get_dict(pid, DownReply, CalculatorPid)))
             ),
             catch(ws_close(WS, 1000, done), _, true)
         )).
