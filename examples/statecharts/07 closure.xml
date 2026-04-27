@@ -1,0 +1,24 @@
+<!--
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="s">
+    <datamodel>
+        p(a,b). 
+        p(b,c). 
+        p(c,d).
+    </datamodel>
+    <state id="s">
+        <go if="p(X,Y), p(Y,Z), \+p(X,Z)">
+            assert(p(X,Z))
+        </go>
+        <go to="f" if="findall(p(X,Y), p(X,Y), List)">
+            format("Closure: ~w", [List])
+        </go>
+    </state>
+    <final id="f"/>
+</statechart> 

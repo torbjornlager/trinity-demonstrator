@@ -1,0 +1,19 @@
+<statechart datamodel="web-prolog" initial="Start">
+    <parallel id="Start">
+        <state id="A" initial="A1">
+            <state id="A1">
+                <go to="Done" on="x"/>
+            </state>
+            <state id="A2">
+                <go to="A1" on="x"/>
+            </state>
+        </state>
+        <state id="B" initial="B1">
+            <state id="B1">
+                <go to="B2" on="x"/>
+            </state>
+            <state id="B2"/>
+        </state>
+    </parallel>
+    <state id="Done"/>
+</statechart>

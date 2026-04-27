@@ -1,0 +1,17 @@
+<statechart datamodel="web-prolog" initial="Run">
+    <datamodel>
+        :- dynamic int/1.
+        int(25). int(10). int(15). int(30).
+    </datamodel>
+    <state id="Run">
+        <go if="int(X), int(Y), X > Y">
+            Z is X-Y,
+            retract(int(X)),
+            assert(int(Z))
+        </go>
+        <go to="Stop" if="int(X)">
+            writeln(X)
+        </go>
+    </state>
+    <final id="Stop"/>
+</statechart>

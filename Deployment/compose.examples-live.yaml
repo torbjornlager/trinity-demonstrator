@@ -1,0 +1,35 @@
+services:
+  wp_n1:
+    volumes:
+      - type: bind
+        source: ../examples
+        target: /app/examples
+        read_only: true
+
+  wp_n2:
+    volumes:
+      - type: bind
+        source: ../examples
+        target: /app/examples
+        read_only: true
+
+  wp_n3:
+    volumes:
+      - type: bind
+        source: ../examples
+        target: /app/examples
+        read_only: true
+
+  wp_admin:
+    volumes:
+      - type: bind
+        source: ../examples
+        target: /app/examples
+        read_only: true
+
+  wp_n4:
+    volumes:
+      - type: bind
+        source: ../examples
+        target: /app/examples
+        read_only: true

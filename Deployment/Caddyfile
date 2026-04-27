@@ -1,0 +1,135 @@
+{
+	servers :443 {
+		protocols h1 h2
+	}
+}
+
+(cors_headers) {
+	header Access-Control-Allow-Origin *
+	header Access-Control-Allow-Methods "GET, OPTIONS"
+	header Access-Control-Allow-Headers "Content-Type"
+}
+
+(common_proxy_headers) {
+	header_up -X-Web-Prolog-User
+	header_up -X-Web-Prolog-Principal
+	header_up -X-Web-Prolog-Capabilities
+	header_up -X-Web-Prolog-Caps
+	header_up -X-Web-Prolog-Internal-Proxy
+	header_up -X-Authenticated-User
+	header_up X-Forwarded-Proto https
+	header_up X-Forwarded-Host {host}
+}
+
+(trusted_internal_transport_headers) {
+	header_up X-Web-Prolog-User {header.X-Web-Prolog-User}
+	header_up X-Web-Prolog-Capabilities {header.X-Web-Prolog-Capabilities}
+	header_up X-Web-Prolog-Internal-Proxy true
+}
+
+n1.elfenbenstornet.se {
+	encode zstd gzip
+	import cors_headers
+
+	@options method OPTIONS
+	handle @options {
+		respond 204
+	}
+
+	@allowed path / /call /manual /node_info /img* /portal /workbench /tutorial /editor_frame /examples_index /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples*
+	handle @allowed {
+		reverse_proxy wp_n1:3051 {
+			import common_proxy_headers
+		}
+	}
+
+	respond "Not found" 404
+}
+
+n2.elfenbenstornet.se {
+	encode zstd gzip
+	import cors_headers
+
+	@options method OPTIONS
+	handle @options {
+		respond 204
+	}
+
+	@allowed {
+		path / /call /manual /node_info /img* /portal /workbench /tutorial /editor_frame /examples_index /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+	}
+	handle @allowed {
+		reverse_proxy wp_n2:3052 {
+			import common_proxy_headers
+		}
+	}
+
+	respond "Not found" 404
+}
+
+n3.elfenbenstornet.se {
+	encode zstd gzip
+	import cors_headers
+
+	@options method OPTIONS
+	handle @options {
+		respond 204
+	}
+
+	@trusted_internal_ws {
+		path /ws
+		remote_ip private_ranges
+	}
+	@allowed {
+		path / /call /manual /node_info /img* /portal /workbench /calculator /tutorial /editor_frame /examples_index /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+	}
+	handle @trusted_internal_ws {
+		reverse_proxy wp_n3:3053 {
+			import common_proxy_headers
+			import trusted_internal_transport_headers
+		}
+	}
+	handle @allowed {
+		reverse_proxy wp_n3:3053 {
+			import common_proxy_headers
+		}
+	}
+
+	respond "Not found" 404
+}
+
+n4.elfenbenstornet.se {
+	encode zstd gzip
+	import cors_headers
+
+	@options method OPTIONS
+	handle @options {
+		respond 204
+	}
+
+	@trusted_internal_ws {
+		path /ws
+		remote_ip private_ranges
+	}
+	@allowed {
+		path / /call /manual /node_info /img* /portal /workbench /calculator /tutorial /editor_frame /examples_index /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+	}
+	handle @trusted_internal_ws {
+		reverse_proxy wp_n4:3055 {
+			import common_proxy_headers
+			import trusted_internal_transport_headers
+		}
+	}
+	handle @allowed {
+		reverse_proxy wp_n4:3055 {
+			import common_proxy_headers
+		}
+	}
+
+	respond "Not found" 404
+}
+
+# Keep admin off the public internet.
+# If you later put it behind VPN, Tailscale, or Cloudflare Access, add a
+# separate site block here for admin.elfenbenstornet.se that reverse proxies
+# to wp_admin:3054.

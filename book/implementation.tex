@@ -1,0 +1,1309 @@
+\chapter{How to implement a Prolog node}\label{sec:profiles-and-implementation}
+
+\begin{quotation}
+\flushright Vision without execution is just hallucination.
+\flushright \textit{Thomas Alva Edison}
+\vspace{0.5cm}
+\end{quotation}
+
+\noindent We would have loved to be able to present a stable, speedy and secure implementation of a Prolog node, ready to be deployed to help building the Prolog Web. However, there exists no such implementation at this point in time. There are some proof-of-concept implementations, but they are neither stable nor speedy, nor secure. How can we build one that is? And how can we build \textit{more} than one, so that we can make sure that interoperability across different implementations works as intended?
+
+
+
+We also say something about browser-based implementations of Web Prolog and briefly discuss the prospects for developing a virtual machine with properties similar to Erlang's BEAM VM.\footnote{\url{https://en.wikipedia.org/wiki/BEAM\_(Erlang\_virtual\_machine)}}
+
+%But first, we shall discuss, in more general terms, a couple of different approaches to implementation. We do this guided by our proposal for the system of profiles suggested above, starting from the least capable type of node, and ending with the most capable. 
+
+
+%\begin{figure}[h]
+%    \centering
+%	\includegraphics[width=7.8cm]{different_platform}
+%    \caption{Nodes implemented in six different host languages can talk using Web Prolog.}
+%    \label{fig:platforms}
+%\end{figure}
+%
+%----
+
+
+
+%The best inspiration and aspirations are nothing but hot air without perspiration. 
+
+%\subsection{As a CGI script}\label{sec:isobase-node-cgi-implementation}
+%
+%It is not difficult to implement a node of type RELATION, ISOBASE or ISOTOPE using CGI technology. We will not claim that it is the best implementation.
+%
+%The Common Gateway Interface, most commonly referred to as CGI, is the oldest interface, and is supported by nearly every web server out of the box. Programs using CGI to communicate with their web server need to be started by the server for every request. So, every request starts a new Prolog interpreter -- which takes some time to start up -- thus making the whole interface only usable for low load situations.
+
+
+
+\section{Wrapping a node around an existing Prolog system}\label{sec:node-implementation-on-top-of-current}
+
+\begin{quotation}
+\noindent Make it work, then make it beautiful, then if you really, really have to, make it fast. 90\% of the time, if you make it beautiful, it will already be fast. So really, just make it beautiful!
+\flushright\textit{Joe Armstrong}
+\vspace{0.3cm}
+\end{quotation}
+
+\noindent %In this appendix we present some of what we learned from our own attempts to build proof-of-concept implementations. 
+It is likely that the first implementations of Prolog nodes would be Prolog systems providing as libraries whatever is required to comply with Web Prolog requirements. This is how our proof-of-concept implementations were built.
+
+Some really excellent Prolog systems exist out there, so if you are a Prolog implementer, one obvious advantage with this approach is that most of the necessary work has already been done. %Also, many systems are open-sourced and can be forked.
+The amount of additional work required to implement a node depends on which system it is built on top of. %Some systems might have to adjust to the syntax of Web Prolog, perhaps even using an alternative parser.
+
+In this section, we look at different ways to wrap a node around a system that supports the ISO Prolog working draft for threads.\footnote{\url{http://logtalk.org/plstd/threads.pdf}} We are aiming for an almost complete ISOBASE node, and an ACTOR node, albeit less complete.
+
+Using SWI-Prolog, we show a way to implement the stateless HTTP API. We do not focus solely on semantics, but on performance too. In particular, we devise a way to optimize the API by avoiding the unnecessary recomputation of solutions that a naive implementation would have to do.  Furthermore, we implement a version of \texttt{rpc/2-3} on top of the stateless HTTP API. 
+
+We implement specifications for how we believe predicates such as \texttt{spawn/1-3}, \texttt{!/2} and \texttt{receive/1-2} should work. On top of actors, we implement the behavior of Prolog toplevels. These implementations focus on semantics rather than performance. 
+
+We are seeking, if not beauty, then at least as much clarity and simplicity as possible. Our implementations are only partial, but we also indicate what else would be needed to complete them.
+
+
+%We will refer to our implementation as \textit{Web Prolog Lite}.
+
+
+\subsection{Implementing an ISOBASE node}\label{sec:isobase-node-web-server-implementation}
+
+\noindent A Prolog ISOBASE node is equipped with a stateless HTTP API. Managing this API is actually the only task its node controller is resonsible for. It means that we can make good use of a library for building web servers. Here is how a web server may be written in SWI-Prolog using \texttt{library(http/http\_server)}:
+
+\begin{verbatim}
+:- use_module(library(http/http_server)).
+
+:- http_handler(root(call), node_controller_isobase, []).
+
+node_controller_isobase(Request) :-
+    http_parameters(Request, [
+        goal(GoalAtom, [atom]),
+        template(TemplateAtom, [default(GoalAtom)]),
+        offset(Offset, [integer, default(0)]),
+        limit(Limit, [integer, default(10 000 000 000)]),
+        format(Format, [atom, default(json)])
+    ]),
+    atomic_list_concat([GoalAtom,+,TemplateAtom], QTAtom),
+    read_term_from_atom(QTAtom, Goal+Template, []),
+    compute_answer(Goal, Template, Offset, Limit, Answer),
+    respond_with_answer(Format, Answer).
+
+node(Port) :-
+    http_server(http_dispatch, [port(Port)]).
+\end{verbatim}
+
+\noindent The call to \texttt{compute\_answer/5} is responsible for the real work here. It takes a goal, a template, an offset and a limit, and computes an answer term serving as a response to the request which can be sent back to the client formatted as Prolog or JSON. There is more than one way to implement this predicate. Let us first look at a simple (but from a performance point of view naive) way of doing it.
+
+SWI-Prolog offers a library predicate \texttt{findnsols/4} which provides a useful foundation for our implementation. It is somewhat similar to the standard \texttt{findall/3}, but expects an integer \texttt{Limit} in its first argument and will generate at most that many solutions. It is also nondeterministic, so on backtracking it will do it again. We borrow an example of its use from the SWI-Prolog manual:\footnote{\url{https://www.swi-prolog.org/pldoc/doc\_for?object=findnsols/4}}
+
+\begin{verbatim}
+?- findnsols(5, I, between(1, 12, I), L).
+L = [1, 2, 3, 4, 5] ;
+L = [6, 7, 8, 9, 10] ;
+L = [11, 12].
+?-
+\end{verbatim}
+
+\noindent Another SWI-Prolog library predicate \texttt{offset/2} will also prove useful.\footnote{https://www.swi-prolog.org/pldoc/doc\_for?object=offset/2} Its purpose is to \textit{skip} the first \textit{n} solutions to a goal, i.e. the first \textit{n} solutions are computed, but not collected. Here is an example of its use:
+
+\begin{verbatim}
+?- offset(10, between(1, 12, I)).
+I = 11 ;
+I = 12.
+?- 
+\end{verbatim}
+
+\noindent Combining \texttt{findnsols/4} with \texttt{offset/2} allows us to implement a predicate \texttt{slice/5} capable of computing a \textit{slice} of solutions to a goal:
+
+\begin{verbatim}
+slice(Goal, Template, Offset, Limit, Slice) :-
+   findnsols(Limit, Template, offset(Offset, Goal), Slice).
+\end{verbatim}
+
+\noindent However, we are looking for \textit{answers}, rather than just slices of solutions. By wrapping a call to \texttt{slice/5} in a call to \texttt{call\_cleanup/2} wrapped by a call to \texttt{catch/3} we arrive at a predicate \texttt{answer/5} capable of producing the four different forms of answer terms that we need:
+
+\begin{verbatim}
+answer(Goal, Template, Offset, Limit, Answer) :-
+   catch(
+      call_cleanup(slice(Goal, Template, Offset, Limit, Slice),
+                   Det = true),
+         Error, true),
+   (   Slice == []
+   ->  Answer = failure
+   ;   nonvar(Error)
+   ->  Answer = error(Error)
+   ;   var(Det)
+   ->  Answer = success(Slice, true)
+   ;   Det = true
+   ->  Answer = success(Slice, false)
+   ).
+\end{verbatim}
+
+\noindent This predicate will turn out to be useful in more than one way. In this context it will be used for the implementation of \texttt{compute\_answer/5}. In this role we want \texttt{compute\_answer/5} to be deterministic, so since the call to \texttt{answer/5} is non-deterministic we need to wrap it in a call to \texttt{once/1} like so:
+
+\begin{verbatim}
+compute_answer(Goal, Template, Offset, Limit, Answer) :-
+    once(answer(Goal, Template, Offset, Limit, Answer)).
+\end{verbatim}
+
+\noindent The implementation of our simple but naive stateless HTTP API is almost complete, and assuming we also have a suitable implementation of \texttt{respond\_with\_answer/2}, we can now start running a node:
+
+\begin{verbatim}
+?- node(3010).
+% Started server at http://localhost:3010/
+true.
+?- 
+\end{verbatim}
+
+\noindent At this point we may want to take the node's stateless HTTP API for a trial run by entering the following URI in a web browser:
+
+\begin{verbatim}
+http://localhost:3010/call?goal=member(X,[a,b])&format=prolog
+\end{verbatim}
+
+\noindent In the browser's window, we should then see the following:
+
+\begin{verbatim}
+success([member(a,[a,b]),member(b,[a,b])],false)
+\end{verbatim}
+
+\noindent By appending \texttt{\&template=X\&offset=0\&limit=1} to the URI we should get
+
+\begin{verbatim}
+success([a],true)
+\end{verbatim}
+
+\noindent and by incrementing the \texttt{offset} parameter by \texttt{1} we should see
+
+\begin{verbatim}
+success([b],false)
+\end{verbatim}
+
+\noindent Note that it is important that we do not expose the node to the whole world at this point, as it is not secure.
+
+\subsection{Implementing rpc/2-3 on top of the stateless HTTP API}\label{sec:rpc-on-top-of-http}
+
+%Section~\ref{sec:prolog-agents} gave an implementation of \texttt{rpc/2-3} built on top of a toplevel and relying on a stateful WebSocket connection.
+
+As soon as we have an implementation of the stateless
+HTTP API, we can easily, by means of two other libraries provided by SWI-Prolog,\footnote{See \url{https://www.swi-prolog.org/pldoc/man?section=httpopen} and\\ \url{https://www.swi-prolog.org/pldoc/man?section=url}} implement \texttt{rpc/2-3} on top of it. Here is the source code:
+
+%\begingroup
+%\fontsize{8pt}{10pt}\selectfont
+\begin{verbatim}
+:- use_module(library(http/http_open)).
+:- use_module(library(url)).
+
+rpc(URI, Goal) :-
+    rpc(URI, Goal, []).
+
+rpc(URI, Goal, Options) :-
+    parse_url(URI, Ps),
+    term_variables(Goal, Vars),
+    Template =.. [v|Vars],
+    format(atom(GA), "(~p)", [Goal]),
+    format(atom(TA), "(~p)", [Template]),
+    option(limit(L), Options, 10 000 000 000),
+    rpc_7(Template, 0, L, GA, TA, Ps, Options).
+
+rpc_7(Template, O, L, GA, TA, Ps, Os) :-    
+    parse_url(ExpandedURI, [
+        path('/call'),
+        search([goal=GA, template=TA, offset=O,
+                limit=L, format=prolog])
+      | Ps
+    ]),
+    setup_call_cleanup(
+        http_open(ExpandedURI, Stream, Os),
+        read(Stream, Answer),
+        close(Stream)),
+    rpc_8(Answer, Template, O, L, GA, TA, Ps, Os).
+
+rpc_8(success(Slice, true), Template, O, L, GA, TA, Ps, Os) :-  !,
+    (   member(Template, Slice)
+    ;   NewO is O + L,
+        rpc_7(Template, NewO, L, GA, TA, Ps, Os)
+    ).
+rpc_8(success(Slice, false), Template, _, _, _, _, _, _) :-
+    member(Template, Slice).
+rpc_8(failure, _, _, _, _, _, _, _) :- fail.
+rpc_8(error(E), _, _, _, _, _, _, _) :- throw(E).
+\end{verbatim}
+%\endgroup
+
+\noindent The idea behind this code is to use \texttt{http\_open/3} in a loop in order to make one or more requests for consecutive slices of solutions to the goal in the first argument using the stateless HTTP API. The URI of each request takes the form
+
+\begin{verbatim}
+BaseURI/call?goal=G&template=T&offset=O&limit=L&format=prolog
+\end{verbatim}
+
+\noindent where \texttt{O} is initially \texttt{0} and is incremented by
+\texttt{L} between requests.
+
+The most interesting parts of the implementation are the use of the disjunction in the body of the first \texttt{rpc/7} clause and the use of \texttt{member/2} in the first and second clauses. They are responsible for turning the responses to the deterministic requests made by \texttt{http\_open/3} into the nondeterministic behavior we want \texttt{rpc/2-3} to show. 
+
+Let us test our implementation by running an example from Chapter~\ref{sec:the-prolog-web}, showing how \texttt{rpc/2-3} can be used:
+
+\begin{verbatim}
+?- [user].
+|: human(plato).
+|: human(aristotle).
+|: ^D% user://1 compiled 0.00 sec, 2 clauses
+true.
+?- rpc('http://localhost:3010', human(Who)).
+Who = plato ;
+Who = aristotle.
+?-
+\end{verbatim}
+
+\noindent Note that although the query has two solutions, only one network roundtrip is made, triggered by the following HTTP request:
+
+\begin{verbatim}
+GET http://localhost:3010/call?goal=human(Who)&format=prolog
+\end{verbatim}
+
+\noindent The response contains the following answer term:
+
+\begin{verbatim}
+success([human(plato),human(aristotle)],false)
+\end{verbatim}
+
+\noindent The above code is just a sketch that leaves out some of the details that are necessary for a fully working  node. In particular, it does not implement \texttt{respond\_with\_answer/2} and it does not handle syntax errors in queries. None of this would be difficult to add, and with such additions, this section together with the previous one implements the stateless API of an ISOBASE node, as well as the \texttt{rpc/2-3} predicate.
+
+
+\subsection{Fixing a problem due to spurious recomputation}\label{sec:potential-problem}
+
+The above implementation of the HTTP API suffers from a performance problem. The problem is easy to spot when timing a goal simulating a situation where a first solutions takes a long time to compute while a second solution takes almost no time at all -- a goal such as the disjunction \texttt{(sleep(1),\,X=foo\,;\,X=bar)} for example. Here is how this looks in a system such as SWI-Prolog:
+
+\begin{verbatim}
+?- time((sleep(1), X=foo ; X=bar)).
+% 1 inferences, 0.000 CPU in 1.005 seconds
+X = foo ;
+% 7 inferences, 0.000 CPU in 0.000 seconds
+X = bar.
+?- 
+\end{verbatim}
+
+\noindent As expected, solving the first disjunct took one second, while the second disjunct took almost no time at all. However, when calling this goal using \texttt{rpc/3} with the \texttt{limit} options set to \texttt{1}, we see the following:
+
+\begin{verbatim}
+?- _URI = 'http://localhost:3010',
+   time(rpc(_URI, (sleep(1), X=foo ; X=bar), [limit(1)])).
+% 1,984 inferences, 0.001 CPU in 1.006 seconds
+X = foo ;
+% 1,804 inferences, 0.001 CPU in 1.009 seconds
+X = bar.
+?- 
+\end{verbatim}
+
+\noindent The cause of this problem lies not in the implementation of \texttt{rpc/2-3}, but in the HTTP API, and more precisely in the way \texttt{compute\_answer/5} works. Consider the following call, where the third argument (for the offset) is \texttt{1}:
+
+\begin{verbatim}
+?- _Goal = (sleep(1), X=foo ; X=bar),
+   time(compute_answer(_Goal, X, 1, 1, Answer)).
+% 30 inferences, 0.000 CPU in 1.005 seconds
+Answer = success([bar], false).
+?-
+\end{verbatim}
+
+%\begin{verbatim}
+%?- compute_answer(between(1,12,N), N, 5, 5, Answer).
+%Answer = success([6, 7, 8, 9, 10], true).
+%\end{verbatim}
+
+%\noindent Setting \texttt{limit} to \texttt{1} and incrementing \texttt{offset} by just \texttt{1} twelve times means that the value of \texttt{N} is computed \texttt{1+2+...+11+12=78} times!
+
+\noindent In general, computing the first slice (i.e. the one starting at offset 0) is as fast as it can be, but computing the second slice involves the recomputation of the first slice and, more generally, computing the \textit{nth} slice involves the recomputation of all preceding slices, the results of which are then just thrown away. This, of course, is a waste of resources and puts an unnecessary burden on the node.
+
+This is not as bad as it looks. Most uses of \texttt{rpc/2-3} will compute all solutions at once and thus make only one network roundtrip. 
+
+\begin{verbatim}
+?- time(rpc($_URI, (sleep(1), X=foo ; X=bar))).
+% 2,011 inferences, 0.001 CPU in 1.007 seconds
+X = foo ;
+% 5 inferences, 0.000 CPU in 0.000 seconds
+X = bar.
+?- 
+\end{verbatim}
+
+\noindent As can be seen in the following example run, it is only when more than one network roundtrip may have to be made, so that the \texttt{limit} option must be employed, that the problem surfaces:
+
+\begin{verbatim}
+?- _Goal = (sleep(1), X=foo ; X=bar),
+   time(compute_answer(_Goal, X, 0, 2, Answer)).
+% 29 inferences, 0.000 CPU in 1.002 seconds
+Answer = success([foo, bar], false).
+?-
+\end{verbatim}
+
+%\noindent This is not a problem of correctness, only of performance. 
+
+%\subsection{Avoiding recomputation by the stateless API}\label{sec:pool-cached-toplevels}
+
+%\noindent For a request of the form
+%\texttt{/call?goal=G\&template=T\&offset=N\&limit=M}, leading to the call \texttt{compute\_response(G,T,N,M,R)},
+% a naive approach would compute the slice of solutions \texttt{0..N+M}, drop
+%the solutions \texttt{0..N} and bind \texttt{S} to the rest of the slice.
+%
+%However, taking this approach may involve a lot of recomputation.  Consider the following three request for solutions to \texttt{N} such that \texttt{between(1,12,N)} holds:
+%
+%\begin{verbatim}
+%/call?format=prolog&goal=between(1,12,N)&template=N&offset=0&limit=5
+%/call?format=prolog&goal=between(1,12,N)&template=N&offset=5&limit=5
+%/call?format=prolog&goal=between(1,12,N)&template=N&offset=10&limit=5
+%\end{verbatim}
+%
+%\noindent Using the naive approach, the first request might compute \texttt{[1,2,3,4,5]} and returns a response \texttt{success([1,2,3,4,5],true)}, the second request might compute \texttt{[1,2,3,4,5,6,7,8,9,10]}, throw away \texttt{[1,2,3,4,5]} and respond with \texttt{success([5,6,7,8,9,10],true)}, and the third request might compute \texttt{[1,2,3,
+%4,5,6,7,8,9,10,11,12]}, throw away \texttt{[1,2,3,4,5,6,7,8,9,10]} and respond with \texttt{success([11,12],false)}. 
+%
+%So using this approach, the node would compute a value of \texttt{N} no less than 27 times, instead of just 12.\footnote{[TODO: This must be checked with the implementation!]} 
+%
+%In general, computing the first slice (i.e. the one starting at offset 0) is as fast as it can be, but computing the second slice involves the recomputation of the first slice and, more generally, computing the \textit{nth} slice involves the recomputation of all preceding slices, the results of which are then just thrown away. This, of course, is a waste of resources and puts an unnecessary burden on the node.
+%
+%Here is a simple way to test if our node implementation has this problem. First make the following request:
+%
+%\begin{verbatim}
+%http://localhost:3010/call?goal=(sleep(1),X=a;X=b)&limit=1
+%\end{verbatim}
+%
+%\noindent When, after around one second, it has returned with a response containing the first solution (\texttt{X=a}), make another request with the same query but for the next solution, like so:
+%
+%\begin{verbatim}
+%http://localhost:3010/call?goal=(sleep(1),X=a;X=b)&offset=1&limit=1
+%\end{verbatim}
+%
+%\noindent If the second response is just as slow as the first (i.e. around one second), it shows that the first disjunct is recomputed, and thus \texttt{http://n1.org} seems to have this problem. 
+%
+%---
+
+\noindent Still, to achieve a less wasteful and more efficient stateless querying even when more than one network roundtrip must be made, recomputation of the kind described in the previous section should be avoided. In this section we lay out an approach where the node controller (subject to a setting) may \textit{cache} the state of the toplevel process that produced the \textit{nth} slice of solutions to a query, so that the work spent on producing it will not have to be repeated. This can still be done without requiring that the node controller remembers \emph{which} client made the request for the previous slices of solutions. 
+
+%Indexing the relevant process on the combination of the goal \texttt{G}, a template \texttt{T}, and an offset \texttt{O} indicating the next state is sufficient. This is the key to the statelessness of the API.
+
+The method can be seen as a kind of \emph{pooling} of toplevel processes, but
+while pooling usually involves a pool of merely initialized but idle processes which stand ready to be given work, this method involves a pool where each member has already done some real work. In other words, the idea here is not to cache \emph{already computed} solutions but rather to cache the \emph{potential} for new solutions in the form of processes that are idle, but
+have ``more to give'' if put to work.\footnote{Credits for this idea goes to Jan Wielemaker. The implementation is our's.}
+
+A consequence of this approach is that it allows the computation of the
+full set of solutions to a query to be distributed over more than one
+toplevel process. We can avoid spawning a new process for each incoming
+request, but instead, when available, select a member from a pool of
+suspended processes which, since it has already performed some of the
+work, needs to do as little as possible in order to compute the
+requested solutions. Using this approach, it is likely (although not
+guaranteed) that the work that generated the \textit{nth} slice of solutions does not have to be repeated if a request for the next slice is made.
+
+\todo{Check the principle of locality in https://chatgpt.com/share/68df7b2b-24dc-800f-a795-94d2958c9671}
+
+One way to realize this is to make the node controller responsible for the
+maintenance of a cache consisting of entries pointing to members of the
+pool of suspended processes. Such a cache has a very straightforward implementation in Prolog thanks to its dynamic database. The signature of a cache entry can be given as follows:
+
+\begin{verbatim}
+cache(+Gid, +N, -Pid) is nondet.
+\end{verbatim}
+
+\noindent Here, \texttt{Gid} is an identifier representing a goal \texttt{G} and a template \texttt{T}. \texttt{N} is an integer \textgreater{} \texttt{0}, and \texttt{Pid} is the pid of an already spawned process which, after having computed \texttt{N} solutions to \texttt{G} and returned them to the client, is now suspended but can be activated again at any point. A cache is simply a dynamic predicate comprising an ordered sequence of \texttt{cache/3} clauses. The cache will be searched from the top, stopping when the first match is found. Updates will be added to the bottom.\footnote{Note that the implementation of the cache as a Prolog predicate is not mandated. A node would be free to implement it in a way that suits the host platform best.}
+
+The cache forms a queue-like data structure and can be seen as a kind of priority queue. When a request comes in which specifies a goal, a template, and an offset\,>\,1, the cache is scanned from the beginning of the queue, the first matching entry is dequeued, and the corresponding process is employed. If no matching entry is found, a new process is spawned. Newly created as well as updated cache entries are added to the end of the queue. 
+
+The maximum size of the cache for a particular node can be
+specified by its owner by means of a setting. What is a reasonable size
+depends on the host platform of the node, and in particular on the cost
+of keeping suspended toplevel actors around. %In our demonstrator, the default value for the setting \texttt{cache_size} is 1000.
+
+Here is an implementation of two predicates for managing the cache:
+
+\begin{verbatim}
+:- dynamic cache/3.
+
+cache_retract(Gid, N, Pid) :-
+    once(retract(cache(Gid, N, Pid))).
+
+cache_update(Gid, N, Pid) :-
+    assertz(cache(Gid, N, Pid)),
+    setting(cache_size, Size),
+    predicate_property(cache(_,_,_),
+                       number_of_clauses(N)),
+    N > Size -> cache_retract(_,_,_) ; true.
+\end{verbatim}
+
+\noindent To ensure efficient cache lookup, the goal identifier \texttt{Gid} is a hash value computed from a grounded copy of the goal. In SWI-Prolog, \texttt{goal\_id/2} may be implemented as follows:
+
+\begin{verbatim}
+goal_id(GoalTemplate, Gid) :-
+    copy_term(GoalTemplate, Gid0),
+    numbervars(Gid0, 0, _),
+    term_hash(Gid0, Gid).
+\end{verbatim}
+ 
+\noindent Equipped with the above utility predicates, \texttt{compute\_answer/5} can be implemented like so:
+ 
+\begin{verbatim}
+compute_answer(Goal, Template, Offset, Limit, Answer) :-
+    goal_id(Goal-Template, Gid),
+    (   cache_retract(Gid, Offset, Pid)
+    ->  thread_self(Self),
+        toplevel_next(Pid, [
+            limit(Limit),
+            target(Self)
+        ])
+    ;   toplevel_spawn(Pid, [session(false)]),
+        toplevel_call(Pid, Goal, [
+            template(Template),
+            offset(Offset),
+            limit(Limit)
+        ])
+    ),
+    setting(timeout, Timeout),
+    receive({
+        success(Pid, Slice, true) ->
+            Index is Offset + Limit,
+            cache_update(Gid, Index, Pid),
+            Answer = success(Slice, true);
+        success(Pid, Slice, false) ->
+            Answer = success(Slice, false);
+        failure(Pid) ->
+            Answer = failure;
+        error(Pid, Error) -> 
+            Answer = error(Error) 
+    },[
+        timeout(Timeout),
+        on_timeout((Answer = error(timeout), 
+                    exit(Pid, kill)))
+    ]).
+\end{verbatim}
+
+\noindent Given a goal and a template, a goal identifier \texttt{Gid} is computed. Since more than one client may request the same slice of solutions, the Gid is not unique. Based on the gid and the value of the \texttt{offset} parameter, an attempt to look up a cache entry pointing to a suitable toplevel process will be made. If this succeeds, \texttt{toplevel\_next/2} will be called, which will compute an answer holding a slice of solutions no longer than the value of the \texttt{limit} parameter specifies. If it fails, a new toplevel will be spawned using \texttt{toplevel\_spawn/3}, and \texttt{toplevel\_call/3} will be called, which will compute the answer instead. 
+\noindent\textit{Note.} In this implementation, \texttt{toplevel\_call/3} reads only the options \texttt{template/1}, \texttt{offset/1}, \texttt{limit/1}, \texttt{once/1}, and \texttt{target/1}. Other options in the list are silently ignored. This keeps wrappers simple, but misspelled option names will also be ignored.
+
+The answer term resulting from this is sent to the thread in which the request handler is running and can be caught by \texttt{receive/2}. Note that if the reception of the term takes too long, it will result in a timeout error.
+
+\begin{verbatim}
+?- _Goal = (sleep(1), X=foo ; X=bar),
+   time(compute_answer(_Goal, X, 0, 1, Answer)).
+% 30 inferences, 0.000 CPU in 1.005 seconds
+Answer = success([foo], true).
+?-
+\end{verbatim}
+
+\noindent ...
+
+\begin{verbatim}
+?- _Goal = (sleep(1), X=foo ; X=bar),
+   time(compute_answer(_Goal, X, 1, 1, Answer)).
+% 30 inferences, 0.000 CPU in 0.005 seconds
+Answer = success([bar], false).
+?-
+\end{verbatim}
+
+
+\noindent How can we extend the implementation of the ISOBASE node so that it can serve also as an ISOTOPE node? As evident from the diagram in Figure~\ref{fig:node-profiles}, it needs support for the \texttt{load\_text} parameter. Its value must be sent along when calling \texttt{toplevel\_spawn/2}, which will inject the code in the private database of the toplevel. Moreover, the goal identifier must be based on \textit{both} the goal, the template and this value. Code for handling all of this would be easy to add.
+
+
+%It is important to note that this is not an implemention in Web Prolog only, but in a \textit{mixture} of SWI-Prolog and some of the Web Prolog built-in predicates.
+%
+%Note that we only use some features of the toplevel concurrency-oriented predicates available in the ACTOR profile. It means that they can fairly easily be replaced with something else.
+%
+%---
+
+
+
+\subsection{Implementing the Erlang-style concurrency predicates}\label{sec:relation-node-implementation}
+
+This section implement specifications for how we believe predicates such as \texttt{spawn/1-3}, \texttt{exit/1-2}, \texttt{!/2} and \texttt{receive/1-2} might work. To keep things as succinct as possible we do not add code checking the instantiation of arguments. (However, some such tests are present in the proof-of-concept mini implementation.)
+
+Today widely available Prolog systems can be differentiated whether they are multi-threaded or not. In a multi-threaded Prolog system we can create multiple threads that run concurrently over the same knowledge base. From Table~2 in \textit{Fifty Years of Prolog and Beyond} we learn that out of the Prolog systems listed above, five implement multi-threading support. According to this table, these are Ciao, ECLiPSe, SWI-Prolog, tuProlog and XSB. However, we that that Trealla Prolog should also be added to the list, and thus we have six systems with multi-threading support. 
+
+There is a draft standard for multi-threading support in Prolog, specified in a document that begins like so:
+
+\begin{quotation}
+ISO/IEC DTR 13211--5:2007 Prolog multi-threading support [...] is an optional part of the International Standard for Prolog, ISO/IEC 13211. [...] Multi-thread predicates are based on the semantics of POSIX threads. They have been implemented in some Prolog systems. As such, they are deemed a worthy extension to the ISO/IEC 13211 Prolog standard.\footnote{\url{https://logtalk.org/plstd/threads.pdf}}
+\end{quotation}
+
+\noindent Except for Ciao Prolog, which takes a different approach to multi-threading, the six systems listed above all implement the draft standard. 
+
+In order to support the Erlang-style concurrency predicates offered by the ACTOR profile of Web Prolog the five predicates on the left can be implemented by means of the seven predicates from the draft standard on the right:
+
+\begin{verbatim}
+       spawn/3               thread_create/3
+       self/1                thread_self/1
+       !/2, send/2           thread_send_message/2
+       receive/1-2           thread_get_message/3
+       exit/2                thread_signal/2
+                             thread_detach/1
+                             thread_property/2
+\end{verbatim}
+
+\noindent The drafts standard specifies more than a dozen more predicates, such as predicates for creating message queues and managing mutexes. We do not need those.
+
+Here is a first sketch of an implementation of \texttt{spawn/1-3}:
+
+\todo{Change start/4 into initialize/4,
+Changne stop/2 into terminate/2, change down/3 to terminate/3, see to it that eason 'kill' is converted into killed, by changing the implementation if down\_reason/2?}
+
+\begin{verbatim}
+:- op(800,  xfx, !).
+:- op(1000, xfy, when).
+
+:- dynamic link/2.
+
+spawn(Goal) :-
+    spawn(Goal, _Pid).
+
+spawn(Goal, Pid) :-
+    spawn(Goal, Pid, []).
+
+spawn(Goal, Pid, Options) :-
+    thread_self(Self),
+    make_pid(Pid),
+    thread_create(start(Self, Pid, Goal, Options), Pid, [
+        alias(Pid),
+        at_exit(stop(Pid, Self))
+    ]),
+    thread_get_message(initialized(Pid)).
+
+
+make_pid(Pid) :-
+    random_between(10000000, 99999990, Num),
+    atom_number(Pid, Num).
+      
+   
+:- thread_local parent/1.
+
+start(Parent, Pid, Goal, Options) :-
+    assertz(parent(Parent)),
+    option(link(Link), Options, true),
+    (   Link == true
+    ->  assertz(link(Parent, Pid))
+    ;   true
+    ),
+    option(monitor(Monitor), Options, false),
+    (   Monitor == true
+    ->  assertz(monitor(Parent, Pid))
+    ;   true
+    ),
+    thread_send_message(Parent, initialized(Pid)),
+    call(Goal).
+                                          
+
+stop(Pid, Parent) :-
+    thread_detach(Pid),
+    retractall(link(Parent, Pid)),
+    retractall(registered(_Name, Pid)),
+    forall(retract(link(Pid, ChildPid)), 
+           exit(ChildPid, kill)),
+    down_reason(Pid, Reason),
+    forall(retract(monitor(Other, Pid)), 
+           Other ! down(Pid, Reason)).
+
+down_reason(Pid, Reason) :-
+    retract(exit_reason(Pid, Reason)),
+    !.
+down_reason(Pid, Reason) :-
+    thread_property(Pid, status(Reason)).
+\end{verbatim}
+
+\todo{All of the above must be replaced - especially down/2 must become down/3}
+
+\noindent A thread implements an actor. The thread comes with its own message queue, which will serve as the actor's mailbox. The thread identifier works like a pid.
+
+A number of thread-related predicates are called that finds the identity of the soon-to-become parent, creates a thread that, just before terminating, calls \texttt{down/3}, which takes care of what must be done in the last moment before the actor terminates -- the termination of any children that it may have spawned during its life cycle (in case \texttt{link} is set to \texttt{true}), and the sending of a \texttt{down} message to the parent (if \texttt{monitor} is set to \texttt{true}).
+
+The above implementation of \texttt{spawn/1-3} calls two predicates -- \texttt{exit/2} and \texttt{!/2} -- that must be implemented. In addition, \texttt{exit/1} must be implemented, and this can be done as folloows:
+
+
+\begin{verbatim}
+:- dynamic exit_reason/2.
+
+exit(Reason) :-
+    self(Self),
+    asserta(exit_reason(Self, Reason)),
+    abort.
+\end{verbatim}
+
+\noindent For the implementation of \texttt{exit/2}, ISO/IEC DTR 13211--5:2007 specifies a predicate \texttt{thread\_signal/2} to make a thread execute some goal as an interrupt. Signaling may be used to cancel no-longer-needed threads. This means that \texttt{exit/2} may be implemented like so:
+
+\begin{verbatim}
+exit(Pid, Reason) :-
+    catch(thread_signal(Pid, exit(Reason)), 
+          error(existence_error(_,_), _), 
+          true).
+\end{verbatim}
+
+\noindent Note that \texttt{thread\_signal/2} throws an error if the thread ID in the first argument points to a thread that does not exist. Since \texttt{exit/2} must succeed also in this case, we have wrapped the call to  \texttt{thread\_signal/2} in a call to \texttt{catch/3}. 
+
+%For the present purpose, \texttt{self/1} can be trivially implemented like so:
+%
+%\begin{verbatim}
+%self(Pid) :- thread_self(Pid).
+%\end{verbatim}
+
+%\noindent Here too, a complete implementation must add code that allows the URI of the current node to be adjoined to the local pid with \texttt{@} as a delimiter, forming pairs such as \texttt{638349@'http://n1.org'}.
+
+%An actor process calling \texttt{Pid~!~Message} sends an instance of \texttt{Message} to the mailbox of the process identified as \texttt{PidOrName}. A message can be any term except a bare variable. The sending is asynchronous, i.e. \texttt{!/2} does not block waiting for a response but continues immediately. If any of the arguments is uninstantiated, an instantiation error is thrown. If a process named \texttt{Pid} does not exist, nothing happens.
+
+For the implementation of \texttt{!/2}, ISO/IEC DTR 13211--5:2007 offers a predicate \texttt{thread\_send\_message/2} which is somewhat similar to Erlang's send primitive. It allows any term to be sent to any thread. Just like in Erlang, the term is copied to the receiving process and variable bindings are thus lost. However, \texttt{thread\_send\_message/2} throws an error if the thread ID in the first argument points to a thread that does not exist. Again, since \texttt{!/2}, just like in Erlang, should succeed also in this case, we wrap the call in \texttt{catch/3} like so:
+
+%:- op(800, xfx, !).
+
+\begin{verbatim}
+Pid ! Message :-
+    send(Pid, Message).
+
+send(Name, Message) :-
+    registered(Name, Pid),
+    !,
+    send(Pid, Message).
+send(Pid, Message) :-
+    catch(thread_send_message(Pid, Message),
+          error(existence_error(_,_), _),
+          true).
+\end{verbatim}
+
+\noindent In effect, this makes any attempt to send a message to a non-existing actor a no-op. 
+
+%\begin{verbatim}
+%return(Message) :-
+%    parent(Parent),
+%    Parent ! Message.
+%\end{verbatim}
+
+The implementation of the receive operation is somewhat more involved. Relying on \texttt{thread\_get\_message/3}, what might be regarded as a reference implementation of \texttt{receive/1-2} looks like this:
+
+\begin{verbatim}
+:- thread_local deferred/1.
+
+receive(Clauses) :-
+    receive(Clauses, []).
+
+receive(Clauses, Options) :-
+    thread_self(Mailbox),
+    (   clause(deferred(Msg), true, Ref),
+        select_body(Clauses, Msg, Body)
+    ->  erase(Ref),
+        call(Body)
+    ;   receive(Mailbox, Clauses, Options)
+    ).
+
+receive(Mailbox, Clauses, Options) :-    
+    (   thread_get_message(Mailbox, Msg, Options)
+    ->  (   select_body(Clauses, Msg, Body)
+        ->  call(Body)
+        ;   assertz(deferred(Msg)),
+            receive(Mailbox, Clauses, Options)
+        )
+    ;   option(on_timeout(Body), Options, true),
+        call(Body)
+    ).
+
+select_body(_M:{Clauses}, Message, Body) :-
+    select_body_aux(Clauses, Message, Body).
+
+select_body_aux((Clause ; Clauses), Message, Body) :-
+    (   select_body_aux(Clause,  Message, Body)
+    ;   select_body_aux(Clauses, Message, Body)
+    ).
+select_body_aux((Head -> Body), Message, Body) :-
+    (   subsumes_term(if(Pattern, Guard), Head)
+    ->  if(Pattern, Guard) = Head,
+        subsumes_term(Pattern, Message),
+        Pattern = Message,
+        catch(once(Guard), _, fail)
+    ;   subsumes_term(Head, Message),
+        Head = Message
+    ).
+\end{verbatim}
+
+\subsection{Implementing output/1, input/2 and respond/2 }
+
+%\texttt{output/1} is a potential built-in predicate that in its simplest form can be defined like so:
+%
+%\begin{verbatim}
+%output(Message) :-
+%    self(Self),
+%    parent(Parent),
+%    Parent ! output(Self, Message).
+%\end{verbatim}
+
+
+\noindent The predicates \texttt{output/1-2}, \texttt{input/2-3} and \texttt{respond/2} are implemented on top of combinations of the \texttt{!/2} and \texttt{receive/2-3} primitives. %Their purpose is to simulate I/O.
+
+Here is the suggested implementation of \texttt{output/1-2}:
+
+\begin{verbatim}
+output(Term) :-
+    output(Term, []).
+   
+output(Term, Options) :-
+    self(Self),
+    parent(Parent),
+    option(target(Target), Options, Parent),
+    Target ! output(Self, Term).
+\end{verbatim}    
+
+\noindent The implementation of \texttt{input/2-3} is slightly more complicated:
+
+\begin{verbatim}
+input(Prompt, Input) :-
+    input(Prompt, Input, []).
+    
+input(Prompt, Input, Options) :-
+    self(Self),
+    parent(Parent),
+    option(target(Target), Options, Parent),
+    Target ! prompt(Self, Prompt),
+    receive({ 
+       '$input'(Target, Input) ->
+           true
+    }).
+\end{verbatim}    
+
+\noindent The predicate \texttt{respond/2} is used to respond to a prompt:
+
+\begin{verbatim}
+respond(Pid, Term) :-
+    self(Self),
+    Pid ! '$input'(Self, Term).
+\end{verbatim}  
+
+\noindent Since messages are wrapped in a binary term with the pid of the sender in its first argument, the target will always know if the message came from the right process.
+
+
+%\subsection{Implementing the first-class Prolog toplevel}\label{sec:first-class-toplevels}
+%
+%In addition to the Erlang-style actors, the toplevel behavior, controlled by predicates such as \texttt{toplevel\_spawn/1-2} and friends, must also be implemented. We refer the reader back to Chapter~\ref{sec:prolog-agents} for how this should work and for some hints for how it can be implemented. In our experience, once we have a complete implementation of all the Erlang-style primitives for concurrency and distribution, the implementation of the toplevel behavior and the built-in predicates for controlling it is fairly straightforward.
+%
+%We begin with an implementation of \texttt{toplevel\_spawn/1-2}:
+%
+%\begin{verbatim}
+%toplevel_spawn(Pid) :-
+%    toplevel_spawn(Pid, []).
+%
+%toplevel_spawn(Pid, Options) :-
+%    self(Self),
+%    option(target(Target), Options, Self),
+%    option(session(Continue), Options, false),
+%    spawn(session(Pid, Target, Continue), Pid, Options).
+%\end{verbatim}
+%
+%\noindent Note that options passed to \texttt{toplevel\_spawn/2} will be passed on to \texttt{spawn/3} as well. 
+%
+%Moving along to the implementation of the PTCP, consider again the diagram in Figure~\ref{fig:complate-states-impl}:
+%
+%\begin{figure}[h]
+%    \centering
+%	\includegraphics[width=9cm]{PLAP-statechart-3-states.pdf}
+%    \caption{The complete PTCP protocol.}
+%    \label{fig:complate-states-impl}
+%\end{figure}
+%
+%\noindent The most important part of the implementation of the PTCP protocol are the three inner states \textbf{s1}, \textbf{s2} and \textbf{s3}.
+%%\begin{figure}[h]
+%%    \centering
+%%	\includegraphics[width=4.5cm]{three-states}
+%%    \caption{The three inner states of the PTCP protocol.}
+%%    \label{fig:three-states}
+%%\end{figure}
+%We shall ignore for a moment the outer state labelled PTCP and implement a session like so:
+%
+%\begin{verbatim}
+%session(Pid, Target0, Continue) :-
+%    state_1(Pid, Target0, Continue).
+%\end{verbatim}
+%
+%\noindent This takes us straight to \textbf{s1}, and here is what happens in the predicate \texttt{state\_1}, which serves as the implementation of this state:
+%
+%\begin{verbatim}
+%state_1(Pid, Target0, Continue) :-
+%    receive({
+%        '$call'(Goal, Options) ->
+%            option(template(Template), Options, Goal),
+%            option(offset(Offset), Options, 0),
+%            option(limit(Limit0), Options, 10 000 000 000),
+%            option(target(Target1), Options, Target0),
+%            Limit = count(Limit0),
+%            state_2(Goal, Template, Offset, Limit, Pid, Answer),
+%            Target = target(Target1),
+%            arg(1, Target, Out),
+%            Out ! Answer,
+%            (   arg(3, Answer, true)
+%            ->  state_3(Limit, Target)  
+%            ;   true
+%            ) 
+%        }),
+%    (   Continue == false
+%    ->  true
+%    ;   state_1(Pid, Target0, Continue)
+%    ).
+%\end{verbatim}
+%
+%\noindent In \texttt{state\_2} the real work is being done. The predicate \texttt{answer/5}, defined earlier in this chapter in the context of the stateless web API, is reused. However, answer terms must be extended with the pids of the actor processes that produced them. 
+%
+%\begin{verbatim}
+%state_2(Goal, Template, Offset, Limit, Pid, Answer) :-
+%    answer(Goal, Template, Offset, Limit, Answer0),
+%    add_pid(Answer0, Pid, Answer).
+%\end{verbatim}
+%
+%\noindent To handle this, \texttt{add\_pid/3} is defined like so:
+%
+%\begin{verbatim}
+%add_pid(success(Slice, More), Pid, success(Pid, Slice, More)).
+%add_pid(failure, Pid, failure(Pid)).
+%add_pid(error(Term), Pid, error(Pid, Term)).
+%\end{verbatim}
+%
+%\noindent One feature of \texttt{answer/5} that was not demonstrated before, is that the argument specifying the limit can be passed a term \texttt{count/1} with an integer in its argument. This works like a mutable local variable that can be assigned values using \texttt{nb\_setarg/3} and read by means of \texttt{arg/3}.
+%
+%\begin{verbatim}
+%?- Limit = count(2),
+%   answer(between(1,12,I), I, 0, Limit, Answer),
+%   nb_setarg(1, Limit, 5).
+%Limit = count(5),
+%Answer = success([1, 2], true) ;
+%Limit = count(5),
+%Answer = success([3, 4, 5, 6, 7], true) ;
+%Limit = count(5),
+%Answer = success([8, 9, 10, 11, 12], false).
+%?-
+%\end{verbatim}
+%
+%
+%\noindent In the definition of the predicate \texttt{state\_1/3} we saw that if a \texttt{success} answer term indicates (with \texttt{true} in its third argument) that there may be more solutions to the current goal, we enter \texttt{state\_3}. For other answer terms a recursive call of \texttt{state\_1/3} is made.
+%
+%\begin{verbatim}
+%state_3(Limit, Target) :-
+%    receive({
+%        '$next'(Options2) ->
+%            (   option(limit(NewLimit), Options2)
+%            ->  nb_setarg(1, Limit, NewLimit)
+%            ;   true
+%            ),
+%            (   option(target(NewTarget), Options2)
+%            ->  nb_setarg(1, Target, NewTarget)
+%            ;   true
+%            ),                                                         
+%            fail ;
+%        '$stop' -> true
+%    }).
+%\end{verbatim}
+%
+%\noindent Here it is the reception of the \texttt{'\$next'} message and the subsequent call to \texttt{fail/0} that triggers the backtracking to \texttt{answer/5} in state s2. If the \texttt{'\$stop'} message is received instead, \texttt{state\_3/2} terminates, and then \texttt{state\_1/3} terminates too (unless the option \texttt{session(true)} was passed to \texttt{toplevel\_spawn/1-2}).
+%
+%As can be seen in the diagram depicting the PTCP, we have so far only implemented the three inner states. 
+%
+%%\begin{figure}[h]
+%%    \centering
+%%	\includegraphics[width=6.5cm]{PLAP-statechart-3-states.pdf}
+%%    \caption{The complete PTCP protocol.}
+%%    \label{fig:complate-states}
+%%\end{figure}
+%
+%We need to enable a client to abort the execution of a goal. We can do this by changing the implemention of \texttt{session/3} like so::
+%
+%\begin{verbatim}    
+%session(Pid, Target, Continue) :-
+%    catch(state_1(Pid, Target, Continue), 
+%          '$abort_goal',
+%          session(Pid, Target, Continue)).
+%\end{verbatim}
+%
+%%\noindent To make it work, the last line in the above implementation of \texttt{toplevel\_spawn/2} must be changed into this:
+%%
+%%\begin{verbatim} 
+%%   spawn(ptcp(Pid, Target, Session), Pid, Options).
+%%\end{verbatim}
+%
+%\noindent Here is to tell the toplevel actor to abort the execution of any goal that it currently runs:
+%
+%\begin{verbatim}
+%toplevel_abort(Pid) :-
+%    catch(thread_signal(Pid, throw('$abort_goal')), 
+%          error(existence_error(_,_), _), 
+%          true).  
+%\end{verbatim}
+%
+%\noindent The action of aborting a particular execution of a goal passed to \texttt{toplevel\_call/2-3} must not be confused with the action of exiting the toplevel process. The latter can be performed by using \texttt{toplevel\_exit/2} (or just \texttt{exit/2} which as can be seen here means the same):
+%
+%\begin{verbatim}
+%toplevel_exit(Pid, Reason) :-
+%    exit(Pid, Reason).
+%\end{verbatim}
+%
+%\noindent As suggested already in Chapter~\ref{sec:web-prolog}, programmers should not be burdened with having to remember the details of protocols and forms of built-in messages such as \texttt{'\$call'}, \texttt{'\$next'} and \texttt{'\$stop'}. Instead, such details should be hidden behind interface predicates dealing with sending them, implementing \texttt{toplevel\_call/2-3} simply as
+%
+%\begin{verbatim}
+%toplevel_call(Pid, Goal) :-
+%    toplevel_call(Pid, Goal, []).
+%
+%toplevel_call(Pid, Goal, Options) :-
+%    Pid ! '$call'(Goal, Options).
+%\end{verbatim}
+%
+%\noindent and \texttt{toplevel\_next/1-2} like so
+%
+%\begin{verbatim}
+%toplevel_next(Pid) :-
+%    toplevel_next(Pid, []).
+%    
+%toplevel_next(Pid, Options) :-
+%    Pid ! '$next'(Options). 
+%\end{verbatim}    
+%
+%\noindent and, finally, \texttt{toplevel\_stop/1} like so:
+%
+%\begin{verbatim}
+%toplevel_stop(Pid) :-
+%    Pid ! '$stop'.
+%\end{verbatim}    
+
+
+
+\subsection{What is missing from the sketches?}
+
+\noindent The predicates implemented so far are sufficient for running the majority of the example programs given in Chapter~\ref{sec:web-prolog} and Chapter~\ref{sec:prolog-agents} of this book. Of course, this is just a start, and to be able to run \textit{all} programs, and in particular the ones in Chapter~\ref{sec:the-prolog-web}, more is needed. Notably, the current implementation sketch does not support
+
+\begin{itemize}
+\item network-transparent concurrency and distribution,
+\item the implementation of an actors's private database, and
+\item security.
+\end{itemize}
+
+
+%A complete implementation of \texttt{spawn/2-3} must support a number of options besides \texttt{link} and \texttt{monitor}, such as options for source code injection and an option that allows the actor to be spawned on a remote node. 
+
+%Web Prolog is a network-transparent programming language. As shown in Chapter~\ref{sec:the-prolog-web}, one way in which this materializes is that \texttt{spawn/3} accepts the passing of the \texttt{node} option with a URI denoting the node on which the actor process should be created. In addition, the send operator must be able to target an actor running on a remote node. Expanding the above implementation to also cover such features would take us too far. 
+
+\noindent As for network transparency, the scenarios in Chapter~\ref{sec:the-prolog-web} show in great detail how the stateful distribution layer might work. Recall that to spawn an actor on a remote node, the \texttt{node} option must be passed to \texttt{spawn/3} with a URI pointing to the node:
+
+\begin{verbatim}
+?- spawn(foo, Pid, [
+       node('http://n7.org')
+   ]).
+Pid = 34925412@'http://n7.org'.
+?-
+\end{verbatim}  
+
+%---
+%
+%\noindent Borrowed from the SWI-Prolog manual, the following example exchanges a message with the \texttt{html5rocks.websocket.org} echo service:
+%
+%\begin{verbatim}
+%?- URL = 'ws://html5rocks.websocket.org/echo',
+%   http_open_websocket(URL, WS, []),
+%   ws_send(WS, text('Hello World!')),
+%   ws_receive(WS, Reply),
+%   ws_close(WS, 1000, "Goodbye").
+%URL = 'ws://html5rocks.websocket.org/echo',
+%WS = <stream>(0xe4a440,0xe4a610),
+%Reply = websocket{data:"Hello World!", opcode:text}.
+%\end{verbatim}
+%
+%
+%
+%---
+
+
+\noindent Note that once this works for \texttt{spawn/3}, it will work for \texttt{toplevel\_spawn/2} too.
+
+Exiting \textit{remote} processes must also be implemented so that it can be used in the following way:
+
+\begin{verbatim}
+?- exit(34925412@'http://n7.org', normal).
+true.
+?-
+\end{verbatim}
+
+\noindent Our implemention of the send operator will only work for the simplest of cases of local messaging, but a complete implementation of an \texttt{actor} node must also allow sending to remote processes, like so:
+
+\begin{verbatim}
+?- 34925412@'http://n7.org' ! bar.
+true.
+?-
+\end{verbatim} 
+
+\noindent Once this works for \texttt{!/2}, it will also make \texttt{toplevel\_call/2-3}, \texttt{toplevel\_next/1-2} and related predicates work. 
+
+Note that the stateful distribution layer depends on WebSockets and that, as far as we know, at this point in time SWI-Prolog is the only Prolog system that offers a WebSocket library.
+
+Source code injection such as in the following example must also be supported by an ACTOR node:
+
+\begin{verbatim}
+?- spawn(baz, Pid, [
+      load_text('p(a). p(b).')
+   ]).
+Pid = 71123976@'http://n1.org'.
+?-
+\end{verbatim}
+
+\noindent Injected source code must end up in the spawned actor's private Prolog database and thus we need a viable approach to the implementation of this database and the isolation it requires. Isolation can be based on \texttt{thread\_local/1} or the use of temporary modules. (Temporary modules are used by \texttt{library(pengines)}.)
+
+If source code injection works for \texttt{spawn/3}, it will work for \texttt{toplevel\_spawn/2} and \texttt{rpc/3} as well.
+
+On the subject of  security, a very important requirement relates to \textit{sandboxing}. The approach taken by \texttt{library(sandbox)} in SWISH is not satisfactory.
+
+
+
+%As explained by Wielemaker in ??, Prolog execution takes place in a sandboxed environment that consists of a Prolog thread and a temporary module. Executing a goal (1) transfers the code and goal to the server over the WebSocket connection; (2) starts a thread and creates a temporary module; (3) loads the code into the module; and (4) executes the code. This operationalisation allows the client to ask for alternative solutions, and for an actor to initialize rich mixed-initiative interactions.
+
+
+
+%---
+%
+%An actor running on a node must also be able to spawn an actor on another node. In order to do this, it must first create a connection to that node (unless a connection already exists).
+%
+%\begin{verbatim}
+%%!  connection(+Node, -Socket)
+%%
+%%   Return an existing connection to Node or create a new one.
+%
+%connection(Node, Socket) :-
+%    websocket(Node, _Thread, Socket),
+%    !.
+%connection(Node, Socket) :-
+%    atom_concat(Node, '/ws', WsURI),
+%    http_open_websocket(WsURI, Socket, [subprotocol(ptcp)]),
+%    thread_create(node_loop(Socket), Thread, [alias(Node)]),
+%    assertz(websocket(Node, Thread, Socket)).
+%\end{verbatim}
+
+\subsubsection{Implementation on top of engines}
+
+
+\noindent Here is how the SWI-Prolog manual introduces engines, an idea that originated by Paul Tarau. % \cite{Tarau2011}:
+
+\begin{quote}
+Engines are closely related to threads. An engine is a Prolog virtual machine that has its own stacks and (virtual) machine state. Unlike normal Prolog threads though, they are not associated with an operating system thread. Instead, you ask an engine for a next answer (\texttt{engine\_next/2}). Asking an engine for the next answer attaches the engine to the calling operating system thread and cause it to run until the engine calls \texttt{engine\_yield/1} or its associated goal completes with an answer, failure or an exception. After the engine yields or completes, it is detached from the operating system thread and the answer term is made available to the calling thread. Communicating with an engine is similar to communicating with a Prolog system though the terminal. In this sense engines are related to Pengines as provided by library \texttt{library(pengines)}, but where Pengines aim primarily at accessing Prolog engines through the network, engines are in-process entities.
+\end{quote}
+
+---
+
+Some Prolog systems implement concurrency but do not use ISO/IEC DTR 13211--5:2007. SICStus Prolog and Ciao Prolog are cases in point, but there are others. Presumably, at least some of the Web Prolog profiles can still be implemented using alternative constructs provided by these dialects.\footnote{\cite{quprolog:article}, section 7 compare communication in Qu-Prolog with that of SICStus-MT, BinProlog, CIAO, Erlang, Mozart-Oz and April.}
+
+\section{Sandboxing, isolation, and capability control}\label{sec:implementation-security}
+
+A production-quality Prolog node requires more than correct semantics and acceptable performance. It must also enforce a security boundary strong enough to allow the execution of untrusted client code. From an implementation point of view, this raises a practical question: where should that boundary be drawn, and by what mechanisms should it be enforced?
+
+At least four concerns must be kept apart. First, there is \emph{expressibility}: which language constructs and built-ins are available to client code. Second, there is \emph{authority}: which actors, services, and external resources a computation may affect. Third, there is \emph{isolation}: whether the runtime itself can escape into the host operating system or interfere with other computations. Fourth, there is \emph{resource consumption}: how much CPU time, memory, process space, mailbox space, or network activity a session may consume. These concerns are related, but they are not identical, and no single mechanism addresses them all.
+
+\subsection{Whitelist and blacklist strategies}
+
+A first implementation choice concerns the form of the language-level sandbox. One strategy is \emph{whitelisting}: client code is allowed to call only predicates that have been explicitly declared safe. Another is \emph{blacklisting}: client code is allowed to use the exposed language fragment except for specifically forbidden predicates or capabilities.
+
+For a reflective Prolog system, whitelisting is the safer default. The reason is not merely that some predicates are dangerous, but that authority may often be reconstructed indirectly through meta-calling, predicate inspection, dynamic database operations, foreign predicates, or other reflective mechanisms. In such an environment, whitelisting has a clear advantage: newly added predicates are denied by default until they have been reviewed.
+
+Blacklisting becomes more plausible only when the language fragment exposed to clients is already narrow and capability-oriented. This is one reason why Web Prolog is a better candidate for blacklisting than a full Prolog system. If client code is already denied direct access to file I/O, operating-system interaction, unrestricted reflection, foreign predicates, and persistent code modification, then the remaining surface is small enough that one may hope to enumerate the forbidden capabilities rather than all the permitted predicates. Even then, however, blacklisting should be treated as an engineering convenience rather than as a foundation for trust.
+
+\subsection{Language sandboxing versus host isolation}
+
+Language-level sandboxing is only one layer of defence. Even a carefully restricted Prolog fragment still runs inside some host environment, and that host may itself provide dangerous authority. For this reason, a node implementation should distinguish between \emph{language sandboxing} and \emph{host isolation}.
+
+Language sandboxing decides what client code can express in Web Prolog. Host isolation decides what the runtime process itself is able to do. A system that relies only on sandboxed predicates, but runs with unrestricted filesystem and network access in the host process, still places great trust in the correctness of the sandbox implementation. Conversely, a strongly isolated host environment can remove whole classes of risk even if the Prolog-level sandbox is imperfect.
+
+This suggests a layered implementation strategy. The inner layer is the Web Prolog language fragment exposed to clients. Around that sits a capability policy governing which exported services, actors, and owner-defined predicates may be reached. Outside that sits the deployment environment, which should itself restrict what the runtime may access.
+
+\subsection{WebAssembly and WASI}
+
+A particularly interesting host environment for Web Prolog is WebAssembly. A WebAssembly runtime starts with substantially less ambient authority than a native process. In the browser it inherits the browser's security model; in a standalone embedding it can be run inside a tightly controlled execution environment.
+
+The case becomes even stronger with WASI. In a WASI-style setting, access to external resources is explicitly granted rather than silently inherited. For a Web Prolog implementation, this means that many operations that would otherwise need to be denied at the Prolog level may simply be absent from the host environment. If the runtime is not given filesystem handles, unrestricted sockets, or privileged host callbacks, then no client program can reach them, regardless of whether the language-level sandbox is phrased as a whitelist or a blacklist.
+
+This does not solve everything. Wasm and WASI do not by themselves control Prolog-level reflection, and they do not remove the need for quotas and timeouts. But they can substantially reduce the amount of trust that must be placed in the Prolog sandbox alone.
+
+\subsection{Capability control inside the node}
+
+Even inside a host-isolated runtime, a Prolog node still needs a policy for authority within the Prolog Web. An implementation must decide which operations are available to ordinary clients and which are reserved for node owners. This includes, at minimum, the distinction between session-local computation and durable node-level authority.
+
+Examples of owner-only capabilities include publishing services, registering public names, installing persistent code, modifying shared node state, or detaching computations so that they survive the session that created them. Client capabilities, by contrast, should normally be limited to session-scoped actor creation, messaging, remote procedure calls to exported services, and other operations whose effects are contained by the lifetime discipline described earlier in the book.
+
+Implementation-level security is therefore not merely a matter of preventing operating-system escape. It is equally a matter of ensuring that the node's own public surface is small, explicit, and role-sensitive.
+
+\subsection{Resource limits are not sandboxing}
+
+It is important to distinguish \emph{sandboxing} from \emph{resource governance}. Timeouts, actor limits, mailbox bounds, RPC limits, and cache bounds are essential to a production deployment, but they serve a different purpose. A sandbox answers the question \emph{what may this program do?} Resource governance answers the question \emph{how much may it do?}
+
+This distinction matters in implementation work. A program may remain entirely within the sandbox and still cause denial-of-service by spawning large numbers of actors, generating very large terms, forcing unbounded result streams, or repeatedly issuing remote calls. Conversely, a program may use very few resources and yet still violate the security boundary if it reaches an authority it should not possess. A complete node therefore requires both capability control and operational limits.
+
+\subsection{A realistic implementation strategy}
+
+For near-term implementations, the most realistic strategy is therefore a layered one. The exposed Web Prolog fragment should be restricted by a language-level sandbox. The node should enforce a capability policy distinguishing client authority from owner authority. Sessions should be subject to operational limits. And, where possible, the runtime should be deployed inside a host environment that reduces ambient authority, such as a browser sandbox, a Wasm runtime, a WASI-based embedding, or an operating-system-level isolation boundary.
+
+Under such a strategy, whitelisting and blacklisting become local design choices inside a broader architecture of defence. For implementations built directly on top of existing Prolog systems, whitelisting is likely to remain the safer option. For restricted Web Prolog runtimes deployed inside capability-oriented hosts such as Wasm or WASI, blacklisting may become more plausible because so much dangerous authority has already been removed at the outer layers.
+
+
+%\subsubsection{Implementing the stateless HTTP API}\label{}
+%
+%What might be involved in implementing an ISOBASE node on top of one of the Prolog systems listed above? We probably would like this system to have libraries for HTTP client and server. 
+%
+%In Appendix~\ref{sec:swi-node-implementation} we shall present an implementation of a deterministic predicate \texttt{compute\_answer/5} which given a goal, a template, an offset and a limit is able to produce an answer term of the kind that we want. Here is an example:
+%
+%\begin{verbatim}
+%?- compute_answer(between(1,12,I), I, 0, 5, Answer).
+%Answer = success([1, 2, 3, 4, 5], true).
+%
+%?- compute_answer(between(1,12,I), I, 5, 5, Answer).
+%Answer = success([6, 7, 8, 9, 10], true).
+%
+%?- compute_answer(between(1,12,I), I, 10, 5, Answer).
+%Answer = success([11, 12], false).
+%\end{verbatim}
+%
+%
+%CGI approach
+%
+%HTTP server - many developers have client and servers
+%
+%Performance
+%
+%SWI best
+%
+%
+%support for op/3 not necessary. 
+%
+%---
+%
+%
+%
+%
+%%---
+%%
+%%\noindent There is a simple way to test if your node implementation provides this optimization by first making a request 
+%%
+%%\begin{verbatim}
+%%http://n1.org/find?goal=(sleep(1),X=a;X=b)&limit=1
+%%\end{verbatim}
+%%
+%%\noindent and when it has returned with a response, make another request with the same query but for the next solution, like so:
+%%
+%%\begin{verbatim}
+%%http://n1.org/find?goal=(sleep(1),X=a;X=b)&offset=1&limit=1
+%%\end{verbatim}
+%%
+%%\noindent If the second response is around one second quicker than the first, it shows that the first disjunct is not recomputed, and \texttt{http://n1.org} is likely implementing the optimization. Of course, this can be tested like so instead, in a terminal attached to \texttt{http://n1.org}:
+%%
+%%\begin{verbatim}
+%%?- (sleep(1),X=a ; X=b).
+%%X = a ;
+%%X = b.
+%%?-
+%%\end{verbatim}
+%
+%\subsubsection{Implementing rpc/2-3}\label{}
+%
+%As we have already indicated, rpc/2-3 can be implemented on top of the HTTP API, using HTTP as a transport. Therefore, a system that provides a HTTP client library has an advantage. 
+%
+%---
+%
+%Since \texttt{rpc/2-3} does not produce output or request input, it can be run over HTTP instead of over the WebSocket protocol. In our proof-of-concept implementation this is the default transport.
+%
+%
+%\subsubsection{Solving a performance problem}\label{}
+%
+%To retrieve the first solution to \texttt{?-mortal(X)} using HTTP, a GET request can be made with the following URI:
+%
+%\begin{verbatim}
+%http://n1.org/call?goal=mortal(X)&offset=0 
+%\end{verbatim}
+%
+%\noindent Here too, responses are returned as Prolog or as Prolog variable bindings encoded as JSON. Such URIs are simple, they are meaningful, they are declarative, they can be bookmarked, and responses are cachable by intermediates. 
+%
+%To ask for the second and third solution to \texttt{?-mortal(X)}, another GET request can be made with the same goal, but setting \texttt{offset} to \texttt{1} this time and adding a parameter \texttt{limit=2}. In order to avoid recomputation of previous solutions, the node controller keeps a pool of active toplevels. For example, when the node controller received the first request it spawned a toplevel which found and returned the solution to the client. This toplevel -- still running -- was then stored in the pool where it was indexed on the combination of the goal and an integer indicating the number of solutions produced so far (i.e. \texttt{1} in this case). When a request for the second and third solution arrived, the node controller picked a matching pooled toplevel, used it to compute the solutions, and returned them to the client. Note that the second request could have come from any client, not necessarily from the one that requested the first solution. This is what makes the HTTP API stateless.
+%
+%The maximum size of the pool is determined by the node's settings. To ensure that the load on the node is kept within limits, the oldest active toplevels are terminated and removed from the pool when the maximum size is reached. This \textit{may} mean that some solutions to some subsequent calls must be disposed of, but this will not hurt the general performance.
+%
+
+
+
+\section{Alternative implementation approaches}\label{sec:implementing-the-specification-from-scratch}
+
+Some (most?) Prolog systems could probably be deployed on the Web using OS based sandboxing where every client talks to a private copy. There are several language neutral environments that would let us do this. At least some profiles of Web Prolog could probably be implemented using this approach.
+
+\subsection{Implementation for browsers}\label{sec:browser-implementation}
+
+There seems to be at least three approaches one might take in order to implement a Web Prolog system (minus features that makes it into a node) that runs in a browser:
+
+\begin{enumerate}
+\item
+  \textbf{JavaScript implementation:} Prolog can be interpreted or
+  compiled into JavaScript, allowing it to run directly in a web
+  browser. JavaScript engines are highly optimized and available in all
+  modern browsers, providing a convenient platform. However, the
+  performance and capabilities might be limited compared to native
+  Prolog environments. This approach is taken by Tau Prolog.\footnote{\url{http://tau-prolog.org/}}
+\item
+  \textbf{WebAssembly (WASM):} WebAssembly offers a way to run code
+  written in multiple languages at near-native speed in web browsers. Some
+  Prolog system can be compiled to WebAssembly, enabling it to run
+  efficiently in the browser. This approach could potentially offer a
+  better performance than a pure JavaScript implementation. This approach is taken by SWI-Prolog, Ciao Prolog, Trealla Prolog and Scryer Prolog.
+\item
+  \textbf{Browser extensions or plug-ins:} Developing a browser
+  extension or plug-in could be another way to integrate Prolog into a
+  web environment. This would allow more direct interaction with the
+  browser\textquotesingle s capabilities but might limit the audience
+  due to the need for installing the extension.
+\end{enumerate}
+
+\noindent There is actually a fourth approach: to try to convince browser providers (e.g. Mozilla) that they should support Prolog. Interestingly, already back in 1999, Mozilla ran an umbrella project for experimental work investigating the integration of logic and inference capabilities into the RDF based information management system in the Mozilla application environment. Based on SWI-Prolog, Geoff Chappel implemented an early prototype Prolog plugin for the Mozilla/Netscape browser.\footnote{\url{https://www-archive.mozilla.org/rdf/doc/inference.html}} Presumably, the same approach can be used to support Prolog in Firefox. The problem with this approach is that it would likely be very hard to convince other browser vendors to follow suit.
+
+---
+
+As suggested in ??, the most promising approach to enable the running of Web Prolog in browsers seems to be using WebAssembly.
+
+---
+
+Flach and Wielemaker: "There are two ways to achieve that. One is to run  Prolog in a WebWorker (roughly, a browser task without a window) and make  it communicate with the browser task associated to a normal browser window.  The other is to yield from the Prolog virtual machine and resume Prolog when  the data become available. This leads to at least two interface designs: -- with a WebWorker we get interaction with a Prolog process that is not very  different from Prolog running on a remote server."
+
+---
+
+Problems: No concurrency.
+
+---
+
+Trealla Prolog:
+
+https://news.ycombinator.com/item?id=35624654
+
+https://github.com/trealla-prolog/trealla
+
+
+\subsection{Implementations on top of other programming systems}\label{sec:implementation-on-top-of-other}
+
+Dedicated Prolog systems such as SWI-Prolog or SICStus Prolog are usually written in fairly low-level languages such as C, C++ or (more recently) Rust, but one surprisingly often also comes across Prolog implementations in more high-level languages such as Scala, Haskell, Erlang, Lisp or Scheme.
+
+Such implementations may be nothing more than the result of programming exercises -- perhaps by a student or a hobbyist wishing to implement a couple of somewhat challenging algorithms such as unification and backtracking. But they may also be the results of a real need felt by a programmer confronted with a problem -- the need for a ``rule engine'' or ``logic engine.''  Then, rather than move an application to Prolog, the programmer decides to implement Prolog in the language of his application. Such implementations are often slow and incomplete, but there are exceptions. Indeed, it can be very useful to embed Prolog-style unification and backtracking in a more traditional imperative or functional programming language. Some people even do it for fun.
+
+%\section{Robert Virding's Erlog}\label{sec:virdings-erlog}
+
+Interestingly, there is already Erlog\footnote{\url{https://github.com/rvirding/erlog}} -- an unusually complete Prolog implementation in Erlang written by Robert Virding (one of the people behind Erlang, who seems to belong to the do-i-for-fun category of programmers). 
+
+An implementation of a Web Prolog node in Erlang would be interesting as it would most probably have a performance profile very different from the implementation in SWI-Prolog. Prolog is likely to be a lot slower in Erlang than in the implementation in SWI-Prolog, whereas the super-fast lightweight processes in Erlang have other advantages, making it scale better to very many simultaneous users on a network. Besides, Erlang is particularly famous for extremely efficient implementations of web-related technologies such as web servers (e.g. Yaws and Cowboy) and this could also be a distinctive advantage of an Erlang implementation.
+
+Then there is Akka + (say) tuProlog.
+
+\subsection{Prospects for a dedicated Web Prolog VM}\label{sec:web-prolog-vm}
+
+The Erlang virtual machine is known as the BEAM.\footnote{\url{http://blog.erlang.org/beam-compiler-history}}  The BEAM VM is the virtual machine at the core of the Erlang Open Telecom Platform (OTP), designed to efficiently execute Erlang code. The BEAM VM is renowned for its support of highly concurrent, distributed, and fault-tolerant applications, qualities that stem directly from the design principles of the Erlang language itself. One of the defining characteristics of the BEAM VM is its lightweight process model. Unlike operating system processes or threads, BEAM processes are managed within the VM, allowing for the creation of millions of concurrent processes. These processes are isolated, communicate via message passing, and do not share memory, which mitigates common concurrency issues such as race conditions and deadlocks. \todo{Compare performance of Erlang vs Web Prolog on the process ring.}
+
+The BEAM VM is not limited to running Erlang code. It also supports other languages that compile to its bytecode, such as Elixir, a modern, functional programming language that is fully interoperable with Erlang, leveraging the same VM for concurrent, distributed, and fault-tolerant applications. 
+
+In a paper presented at an Erlang conference ??, the following statement was made: 
+
+\begin{quotation}
+The holy grail for a Web Prolog runtime system is a compiler targeting a virtual machine with BEAM-like properties, capable of producing code which when run will create processes as small and efficient as Erlang processes, yet with the useful capabilities that Prolog offers. \textit{We do not dare to guess whether building such a virtual machine is feasible}.
+\end{quotation}
+
+\noindent When Richard O'Keefe, with a lot of experience with both Prolog and Erlang, kindly agreed to read the paper, he made the following comment on the passage:
+
+\begin{quotation}
+I do! It is! Let's face it, processes in Logix were \textit{tiny} compared with Erlang ones. And the BEAM was a reaction to JAM, which was inspired by the WAM, and Aquarius Prolog used the BAM which had some similarities to BEAM.
+\end{quotation}
+
+\noindent Designing and implementing a BEAM-like VM for Web Prolog is likely to be really hard, but with time it might prove to be the optimal way forward. One must not forget, however, that a node built on top of a current mature Prolog system might be able to offer a client a lot more than an efficient but bare-bones implementation which compiles source code into a BEAM-like VM.
+
+
+
+\subsection{Less capable profiles need less work}\label{sec:relation-node-implementation-less}
+
+Unfortunately, implementing a Prolog Web node capable of running the full set of example programs given in the previous chapters is not exactly an easy task, and this is what is required of an ACTOR node. Such difficulties have motivated us to define three other profiles which are less powerful and easier to implement than the ACTOR profile. Hopefully, this may encourage developers of Prolog systems to implement nodes capable of contributing to the Prolog Web. 
+
+An ISOBASE node can, since it does not have to load data or programs dynamically, pull a few tricks in order to optimise query processing, tricks that may be slow to play, but which can be performed offline if dynamic loading is not permitted. (Compiling Web Prolog code into C, for example.) In contrast, a node that implements the ACTOR or ISOTOPE profile, and thus offers code injection capabilities, must do the updating quickly and must probably avoid some of the slower ways of optimizing code.
+
+Without doubt, a node that conforms to the RELATION profile would be the easiest to implement, especially since it does not have to implement any ISO Prolog built-in predicates or control structures. One can imagine writing a RELATION node in (say) Python which offers developers just a single owner-defined predicate. If it supports querying over the stateless HTTP API  in the manner described elsewhere in this book, and is able to return answers in the form of either Prolog or JSON, then it it does conform to the RELATION profile of Web Prolog, yet would be easy to implement. Note that by our own definition, since it is a process on the Prolog Web that talks Prolog, such a node must also be categorized as a Prolog agent, despite not being written in Prolog.

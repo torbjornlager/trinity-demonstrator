@@ -1,0 +1,48 @@
+Supervisor Behaviour for Web Prolog — Test Package
+===================================================
+
+Files:
+  actor.pl            — actor runtime
+  server.pl           — minimal server behaviour
+  supervisor_actor.pl — supervisor behaviour
+  supervisor_actor_tests.pl  — test suite (16 tests)
+
+Quick start:
+
+  Place all four .pl files in the same directory, then:
+
+  $ swipl actor.pl server.pl supervisor_actor.pl supervisor_actor_tests.pl -g run_tests -g halt
+
+  Or interactively:
+
+  $ swipl
+  ?- [actor, server, supervisor, supervisor_actor_tests].
+  ?- run_tests.
+
+  To see supervisor debug output:
+
+  ?- debug(supervisor).
+  ?- run_tests.
+
+What the tests cover:
+
+  1.  Basic startup and which_children introspection
+  2.  one_for_one: crashed child restarts, sibling unchanged
+  3.  temporary child: removed after crash, not restarted
+  4.  transient child: not restarted on normal exit
+  5.  one_for_all: one crash restarts all children
+  6.  rest_for_one: crash restarts crashed child and successors
+  7.  Dynamic start_child (including duplicate rejection)
+  8.  Dynamic terminate_child and delete_child
+  9.  Dynamic restart_child
+  10. Server child under supervision (fridge from Chapter 5)
+  11. count_children introspection
+  12. Restart intensity: supervisor shuts down when exceeded
+  13. Nested supervision: outer supervisor manages inner supervisor
+  14. Server stopped via server_stop: permanent child restarts
+  15. Server stopped via server_stop: transient child does NOT restart
+
+Known issues / not yet implemented:
+
+  - simple_one_for_one strategy
+  - Logging / SASL-style event reports

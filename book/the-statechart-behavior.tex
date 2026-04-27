@@ -1,0 +1,431 @@
+  % !TeX root = book.tex
+\chapter{The statechart behavior}
+\label{sec:web-prolog-statechart-behavior}
+
+The earlier chapters introduced several generic behaviors for actors in Web Prolog: the toplevel behavior, the server behavior, and the supervisor behavior. Each of these patterns offered a reusable programming model for structuring how actors communicate, manage state, or enforce reliability. In this chapter we introduce a more expressive and visually oriented behavior: the \emph{statechart behavior}, which provides a powerful mechanism for defining how a single actor responds to events and evolves behavior over time.
+
+A statechart behavior encapsulates the dynamics of an actor in terms of a state machine with hierarchy, parallel regions, and event-triggered transitions. This model is inspired by David Harel's statecharts, and the result is an abstraction capable of implementing interactive interfaces, conversational flows, control systems, and long-running reactive processes in a structured and compositional manner.
+
+The representation we use in this chapter is based on a compact XML notation. Although XML is not always a popular choice as a general-purpose representation format, it fits statecharts unusually well because its tree structure mirrors hierarchical nesting of states and regions directly. The notation is directly executable, allowing statechart documents to be loaded, spawned, and controlled as Web Prolog actors. For example, a statechart can be launched with \texttt{statechart\_spawn/1-2}, participate in supervision trees, and send or receive messages like any other actor.
+
+
+\section{\textsc{Statecharts}}\label{sec:statecharts-behavior}
+
+\noindent Invented by David Harel, \textsc{Statecharts} is a graphical formalism for specifying reactive systems \cite{DBLP:journals/scp/Harel87}. Building on the concept of a state machine, it adds hierarchy, parallel regions (orthogonality), and event visibility across the active states and regions.
+Like logic, it is a ``tool for thinking'' with a formal semantics \cite{harel1996semantics}, but it is also explicitly visual -- a way of ``tapping the potential of high bandwidth spatial intelligence, as opposed to lexical intelligence used with textual information'' \cite{samek2002practical}.
+
+Statecharts have been used in a wide range of areas, from embedded control and user interfaces to conversational systems and protocols \cite{samek2002practical,horrocks1999constructing,DBLP:conf/icmi/SkantzeM12,DBLP:conf/ecms/CicirelliFGN09a}. In the Web context, the W3C standardized SCXML as a way to represent statecharts in an XML form \cite{barnett2015state}. SCXML has seen industrial use (for example by Genesys\footnote{See \url{https://docs.genesys.com/Documentation/OS}}). Ideas from statecharts are also visible in front-end libraries such as \textsc{XState}, which claims SCXML compatibility while expressing machines in JavaScript.\footnote{\url{https://github.com/statelyai/xstate}} For the back-end, \textit{Statifier} is an Elixir implementation of SCXML with a focus on W3C compliance.\footnote{\url{https://riddler.github.io/statifier/}} 
+
+In this chapter we implement most of the SCXML~1.0 processing model, but present a lightweight textual profile that is directly executable as a Web Prolog actor behavior, with Prolog as both data model and executable content. The surface syntax resembles SCXML, but it is intentionally not a full SCXML language binding; our goal is to keep the standard execution model while harmonizing it with Web Prolog and the Prolog Web.
+
+Importantly, the exposition in this chapter is self-contained: readers do not need any familiarity with SCXML. Although our syntax resembles SCXML superficially, the mechanisms are presented here as a standalone behavior for Web Prolog actors. A comparative discussion of SCXML 1.0, and of Erlang's \texttt{gen\_statem} behavior, is postponed until the end.
+
+\section{Statechart actors}
+\label{sec:statechart-actors-behavior}
+
+A \emph{statechart actor} is a Web Prolog actor whose control logic is given by a statechart document. Conceptually, it behaves like an ordinary actor with a mailbox, except that incoming messages are interpreted as \emph{events} that drive a structured state machine rather than an ad hoc \texttt{receive/1-2} loop.
+
+Events are just messages: any incoming actor message (a Prolog term) can serve as an external event. When an event is processed, it is \emph{visible} to all currently active parts of the machine (including parallel regions), and it may trigger one or more transitions whose actions run as Web Prolog code.
+
+Execution follows the standard statechart \emph{run-to-completion} intuition: processing one external event may trigger a finite cascade of internal work (such as taking condition-only transitions and handling internally raised events) before the actor consumes the next external message. This makes each reaction behave like an atomic control step at the statechart level, even though the actor itself remains an ordinary concurrent process.
+
+In the examples below, a statechart document can therefore be read as a compact description of (i) which states are active, (ii) which incoming events matter in those states, and (iii) what effects and state changes occur when such an event is observed. Precise processing rules are standardized by SCXML; see the W3C Recommendation, especially Appendix~D (Algorithm for SCXML Interpretation) and Section~3.13 (Selecting and Executing Transitions).
+
+
+\subsection{A playful intro to statecharts}\label{sec:statecharts-playful-intro}
+
+In its simplest form, a statechart is just a deterministic state machine, in which state transitions are triggered by events. The simple statechart in Figure~\ref{fig:simple-statechart-behavior} serves as our first example. The labelling of one of the transitions with the symbol \texttt{play} suggests that the example is drawn from the field of game development.\footnote{We are borrowing some of our examples from \cite{DBLP:journals/jaciii/BruskL08}.}
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[width=6cm]{simple-statechart}
+    \caption{A minimal statechart example: event-triggered transitions in a flat machine.}
+    \label{fig:simple-statechart-behavior}
+\end{figure}
+
+\noindent Here, \texttt{s1} is the initial state. If the next selected event is \texttt{play}, a transition to \texttt{s2} is taken. For any other event, the machine will remain in \texttt{s1} and the event will be lost (i.e.\ it will not be deferred). %Clearly, this is just a simple event-driven state machine.
+
+Any statechart can be translated into a document written in an XML-based syntax. Here, a document that captures the statechart in Figure~\ref{fig:simple-statechart-behavior} is shown:
+
+\begin{verbatim}
+<statechart datamodel="web-prolog" initial="s1">
+    <state id="s1">
+        <onentry>
+            output('IDLE')
+        </onentry>
+        <go to="s2" on="play"/>
+    </state>
+    <state id="s2">
+        <onentry>
+            output('PLAYING')
+        </onentry>
+        <go to="s1" on="reset"/>
+    </state>
+</statechart>
+\end{verbatim}
+
+\noindent Note that two \texttt{<onentry>} elements, the significance of which is not shown in Figure~\ref{fig:simple-statechart-behavior}, have been added to the document. They contain \textit{executable content} -- instructions which allow the state machine to \textit{do} things such as modifying its data model or interacting with external entities. Executable content must be specified using Web Prolog source code. In the case of the above example, the use of the Web Prolog built-in predicate \texttt{output/1} ensures that an event message -- either \texttt{`IDLE'} or \texttt{`PLAYING'} -- is returned to the spawning process each time \texttt{s1} or \texttt{s2} is entered. Such code -- which may also appear as the contents of \texttt{<onexit>} and \texttt{<go>} elements -- must succeed deterministically, and if an error is thrown by such code, an internal error event will be sent, not to the mailbox of the underlying actor, but to an \textit{internal} queue, where it may trigger transitions in the state machine.
+
+
+\subsection{A statechart process is an actor in disguise}\label{sec:running-statechart-behavior}
+
+A major feature of our proposal is that we encourage people to think of \textit{a statechart process as an actor running on the Prolog Web}, either \textit{in} a browser, or as a process running on a node and accessed \textit{from} a browser. Indeed, to create a statechart session, we can simply use \texttt{statechart\_spawn/2}:
+
+\begin{verbatim}
+?- statechart_spawn(Pid, [
+       load_uri('http://n6.org/game.xml'),
+       monitor(true)
+   ]).
+Pid = 78230912.
+?- flush.
+Shell got 'IDLE'
+true.
+?-
+\end{verbatim}
+
+\noindent When \texttt{statechart\_spawn/1-2} is called, a new actor is spawned that interprets the statechart. As specified by the \texttt{<onentry>} element in the initial state, the statechart actor immediately sends the event \texttt{'IDLE'} to its parent. Equipped with the pid, we can use \texttt{!/2} to send an event to the actor, causing a transition from \texttt{s1} to \texttt{s2}. In general, an event may be any Web Prolog term except a bare variable; here, the relevant \texttt{on} attribute tells us that the atom \texttt{play} will do:
+
+\begin{verbatim}
+?- $Pid ! play.
+true.
+?- receive({What -> true}).
+What = 'PLAYING'
+?-
+\end{verbatim}
+
+\noindent We may now send the event \texttt{reset} to return to \texttt{s1}, and so on. At any point we may also terminate the actor by sending it a signal with \texttt{exit/2}. Since the \texttt{monitor} option was set to \texttt{true}, the actor delivers a \texttt{down} message to its parent just before it terminates, exactly as an ordinary actor would.
+
+Other options to \texttt{statechart\_spawn/2} work as expected. For example, we can run the statechart on a remote node by passing a \texttt{node(URI)} option, and we can provide the source directly using \texttt{load\_text} rather than fetching it from a URI.
+
+The examples in the rest of this chapter are organized around a small set of extensions that make statecharts practically useful as an actor behavior on the Prolog Web. Each extension adds a distinct capability -- some at the state-machine level, others at the level of interaction with the surrounding actor system. Concretely, the extensions we rely on are:
+
+\medskip
+
+\noindent\begin{minipage}{11.5cm}
+\begin{multicols}{2}
+\begin{itemize}
+\item Hierarchy and history states
+\item Parallelism (a.k.a.\ orthogonality)
+\item Broadcast communication
+\item Process invocation
+\item Inter-process communication
+\item Data model and scripting language
+\end{itemize}
+\end{multicols}
+\end{minipage}
+
+\vspace{0.5cm}
+\noindent In the sections that follow, the left column highlights statechart-level structuring mechanisms, while the right column highlights how those mechanisms connect to actors and Prolog in the Web Prolog setting.
+
+
+
+
+\section{Hierarchy and history}
+\label{sec:hierarchy-history}
+
+Statecharts may be \textit{hierarchical}, i.e. a state may contain another statechart down to an arbitrary depth. A complex state may contain a \textit{history state}, serving as a memory of which substate S the complex state was in, the last time it was left for another state. Transition to the history state implies a transition to S. 
+
+The statechart in Figure~\ref{fig:pause_and_resume-behavior} exemplifies both hierarchy and the history state by enhancing our simple game with a pause-and-resume functionality.
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[width=10cm]{pause_and_resume}
+    \caption{Pause-and-resume via hierarchy and history state in the game controller.}
+    \label{fig:pause_and_resume-behavior}
+\end{figure}
+
+\noindent Suppose that the current state is \texttt{s2}, and that the next selected event is \texttt{pause}. The transitions leaving \texttt{s2} are tried from the inside and out, and since \texttt{reset} does not match the first event in the queue, but \texttt{pause} does, a transition to the \texttt{interrupted} state takes place. If a \texttt{resume} event then shows up in the queue, the system transitions to the history state \texttt{H}, which by the statechart semantics implies a transition back to \texttt{s2} again.
+
+Documents are structured so that they mirror the topology of the statecharts they represent. A document that captures the statechart in Figure~\ref{fig:pause_and_resume-behavior} is shown below:
+
+\begin{verbatim}
+<statechart datamodel="web-prolog" initial="Play">
+    <state id="Play" initial="S1">
+        <history id="H">
+            <go to="S1"/>
+        </history>
+        <state id="S1">
+            <go to="S2" on="play"/>
+        </state>
+        <state id="S2">
+            <go to="S1" on="reset"/>
+        </state>
+        <go to="Interrupted" on="pause"/>
+    </state>
+    <state id="Interrupted">
+        <go to="H" on="resume"/>
+    </state>
+</statechart>
+\end{verbatim}
+
+\noindent Hierarchy supports two complementary design moves. In \textit{refinement} (top-down), an abstract control state is elaborated into substates whose internal transitions make the behaviour explicit. In \textit{clustering} (bottom-up), a family of closely related states is grouped under a superstate, so that shared transitions and common entry/exit behaviour can be expressed once. Both moves reduce state explosion and make large machines readable: the top level can remain a small ``map'' of the application, while local detail is pushed down into the regions where it belongs. Together, hierarchy and history give \textit{interruption} and \textit{resumption} a useful first-class representation.
+
+\section{Parallelism and broadcast communication}
+\label{sec:parallel-regions}
+
+\noindent A hallmark of statecharts is \emph{orthogonality}: a state may contain two or more regions that execute in parallel. Operationally, the machine is simultaneously in one active state in each region. The point is not CPU-level parallelism, but a way to factor one reactive controller into several facets that evolve together.
+
+\subsection{A slightly richer orthogonality example: an NPC controller}
+\label{sec:parallel-npc}
+
+To see why orthogonality matters, consider a toy controller for a non-player character with two independent emotion dimensions and one behavior mode. Figure~\ref{fig:npc-orthogonal} sketches the idea: the character is simultaneously in one state in each emotion dimension and in one behavior state. When an event is processed, it may trigger coordinated changes across several regions.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=8cm]{emotions}
+    \caption{Orthogonal regions: two emotion dimensions plus one behaviour mode in an NPC controller.}
+    \label{fig:npc-orthogonal}
+\end{figure}
+
+\noindent In the figure, an \texttt{e} event (think: an explosion) moves the character into \texttt{fear}, \texttt{surprise}, and \texttt{fleeing} ``at once'', because all three regions observe the same event while they are active. Without parallel regions, we would be forced to encode combinations such as \texttt{anger\_anticipation\_attacking}, \texttt{fear\_surprise\_fleeing}, and so on, and the number of states grows quickly as more dimensions are added.
+
+\medskip
+\noindent Here is how to render this machine in XML:
+
+\begin{verbatim}
+<statechart datamodel="web-prolog" initial="agent">
+    <parallel id="agent">
+        <parallel id="emotions">
+            <state id="AF-dimension" initial="anger">
+                <state id="anger">
+                    <go to="fear" on="e"/>
+                </state>
+                <state id="fear">
+                    <go to="anger" on="d"/>
+                </state>
+            </state>
+            <state id="AS-dimension" initial="anticipation">
+                <state id="anticipation">
+                    <go to="surprise" on="e"/>
+                </state>
+                <state id="surprise">
+                    <go to="anticipation" on="f"/>
+                </state>
+            </state>
+        </parallel>
+        <state id="behavior" initial="attacking">
+            <state id="attacking">
+                <go to="fleeing" on="e"/>
+            </state>
+            <state id="fleeing">
+                <go to="attacking" on="g"/>
+            </state>
+        </state>
+    </parallel>
+</statechart>
+\end{verbatim}
+
+\subsection{A minimal broadcast example: two regions exchanging events}
+
+To make the mechanism completely explicit, we now switch to a deliberately minimal example: two regions that exchange events. The point is not to model two independent actors, but to show how a single statechart step can coordinate activity across regions.
+
+\begin{verbatim}
+<statechart datamodel="web-prolog" initial="Start">
+    <parallel id="Start">
+        <state id="Pinger">
+            <onentry>raise(pong)</onentry>
+            <go on="ping">
+                log('Ping'), raise(pong)
+            </go>
+        </state>
+        <state id="Ponger">
+            <go on="pong">
+                log('Pong'), raise(ping)
+            </go>
+        </state>
+    </parallel>
+</statechart>
+\end{verbatim}
+
+\noindent Note the use of targetless \texttt{<go>} elements (i.e.\ elements without a \texttt{to} attribute). These transitions consume an event (and may run executable content, such as \texttt{raise/1}) without changing the active configuration, so no \texttt{<onentry>} or \texttt{<onexit>} code is triggered.
+
+\subsection{What ``broadcast'' means here}
+
+The key semantic idea is the \emph{configuration}: the set of active states (and regions) that the machine is currently in. Whenever the interpreter selects an event for processing, that event is matched against transitions in \emph{all} active states in the configuration. In this sense the event is ``broadcast'': it is visible everywhere in the current machine, even though only some region(s) react to it. Any internal events raised while handling the current input are processed before the next external message is consumed, so the effects within one reaction are deterministic given the current configuration, the data model, and the selected event.
+
+\subsection{Why not model each region as a separate actor?}
+
+A natural objection is that the Prolog Web already provides actor-level concurrency: why not represent each region as its own actor supervised by a parent, and coordinate by ordinary messaging? This is certainly possible, and it is often the right choice when true independence, failure isolation, distribution, or distinct lifetimes are required.
+
+Orthogonality, however, is not primarily a claim about \emph{parallel execution}; it is a way to specify a \emph{single} reactive controller with an atomic, run-to-completion reaction. In a statechart, one selected event is visible to all active regions, transitions are chosen under a single set of priority and conflict-resolution rules, actions run, and the machine commits one coherent update of configuration and data model. An actor-only encoding can approximate the same effect, but typically only by introducing an explicit coordination protocol (disseminate, barrier, commit) and a coordinator that reimplements the statechart scheduler in ad hoc code, while also making cross-region invariants harder to maintain under message interleavings.
+
+A simple design rule of thumb follows: use orthogonal regions when the facets are tightly coupled parts of one control process and deterministic, atomic reactions are desirable; use separate actors when the facets should be independently schedulable, restartable, or distributable.
+
+
+\section{The Web Prolog data model}
+\label{sec:web-prolog-data-model}
+
+For many applications, a statechart by itself does not suffice. For example, while statecharts may be able to handle reactive aspects of AI-related applications, proactive aspects such as planning, decision making, and many other forms of problem solving and ``intelligent'' behavior must also be catered for. Therefore, sophisticated conversational systems require knowledge representation and reasoning capabilities as well as interactional capabilities. In its current form, statecharts do not provide developers with sufficient means for knowledge representation and reasoning. To enable reactive control to be combined with logical inference, rule-based decision-making, and symbolic computation, Web Prolog can be used for data modelling and scripting.
+
+So far, every transition has reacted to an external event. Statecharts also support \textit{eventless} transitions: transitions without an \texttt{on} attribute that may fire whenever their guard condition holds in the current configuration.
+Combined with a private and dynamic Prolog data model, this gives statecharts a form of forward-chaining inference: the machine repeatedly applies condition-action rules until no more apply, then waits for the next event. Here is a simple example, implementing Euclid's algorithm for calculating the greatest common divisor of a set of numbers:
+
+\begin{verbatim}
+<statechart datamodel="web-prolog" initial="Run">
+    <datamodel>
+        :- dynamic int/1.
+        int(25). int(10). int(15). int(30).
+    </datamodel>
+    <state id="Run">
+        <go if="int(X), int(Y), X > Y">
+            Z is X-Y,
+            retract(int(X)),
+            assert(int(Z))
+        </go>
+        <go to="Stop" if="int(X)">
+            writeln(X)
+        </go>
+    </state>
+    <final id="Stop"/>
+</statechart>
+\end{verbatim}
+
+\noindent The example illustrates another important piece of statechart semantics: if the children of an active state contain more than one \texttt{<go>} element, they are tried in document order. In this case, if the order between the \texttt{<go>} elements was switched, the statechart would just write \texttt{25} (instead of the correct \texttt{5}) and then transition to the final state \texttt{Stop}, and terminate.
+
+\section{Process invocation and communication}
+\label{sec:invocation-communication}
+
+Statecharts become much more useful once they can spawn other processes and \emph{communicate} with them. In the Web Prolog setting, the invoked processes are simply actors: toplevels, other statechart actors, or services running on remote nodes. For example, the statechart below spawns a toplevel, submits a query, prints each answer as it arrives, and terminates when the last answer has been received.
+
+\begin{verbatim}
+<statechart datamodel="web-prolog" initial="spawn-ask-collect">
+    <state id="spawn-ask-collect" initial="ask">
+        <spawn type="toplevel"
+               node="n9.org"
+               session="false">
+            p(a). p(b). p(c).
+        </spawn>
+        <state id="ask">
+            <go to="collect" on="spawned(Pid)">
+                toplevel_call(Pid, p(X), [
+                    limit(1)
+                ])
+            </go>
+        </state>
+        <state id="collect">
+            <go to="collect" on="success(Pid,Data,true)">
+                writeln(Data),
+                toplevel_next(Pid)
+            </go>
+            <go to="f" on="success(_,Data,false)">
+                writeln(Data)
+            </go>
+        </state>
+    </state>
+    <final id="f"/>
+</statechart>
+\end{verbatim}
+
+\medskip
+\noindent\textbf{How to read the example.}
+\begin{itemize}
+\item The \texttt{<spawn>} element requests that a child actor be created when the surrounding state becomes active. Here the child is a toplevel actor that is started on the node given by \texttt{node="n9.org"}.
+\item The event \texttt{spawned(Pid)} reports the pid of the spawned actor. The transition in state \texttt{ask} reacts to this event by calling \texttt{toplevel\_call/3}, which initiates query evaluation.
+\item Each answer arrives as an event of the form \texttt{success(Pid,\,Data,\,More)}. While \texttt{More} is \texttt{true}, the statechart requests the next slice of answers by calling \texttt{toplevel\_next/1}. When \texttt{More} is \texttt{false}, the last answer has been delivered and the machine transitions to the final state.
+\end{itemize}
+
+
+\noindent Note that variables bound by matching the \texttt{on} pattern and by evaluating the \texttt{if} guard are in scope in the executable content of the same \texttt{<go>} element.
+
+Also note that the intent of \texttt{<spawn>} is not merely to create a child process, but to tie its lifetime to control state: when the state that contains the invocation is exited, the invoked actor is terminated as part of leaving that state. This makes it easy to express resource ownership (``this control state owns this helper process'') without relying on ad hoc cleanup code.
+
+\section{Discussion}\label{sec:discussion-statechart-genstatem-scxml}
+
+This chapter has presented statecharts as an executable actor behaviour in Web Prolog, using an SCXML-inspired document syntax and Prolog as both data model and scripting language. The discussion section briefly situates this design relative to prior Prolog--SCXML work, clarifies what the behaviour buys compared to a hand-written \texttt{receive/1-2} loop, and then positions the result relative to Erlang/OTP's \texttt{gen\_statem} and the SCXML Recommendation.
+
+\subsection{Previous work}\label{sec:previous-work-behavior}
+
+\noindent The idea of using Prolog as a data modeling and scripting language in a statechart formalism is not new. A proof-of-concept implementation of an SCXML system with Prolog as data model and scripting language was developed by a team at the University of Darmstadt in Germany \cite{W13-4019}. Their focus is multi-modal conversational systems, and the paper is well worth reading, since it argues -- contrary to what one might initially expect -- that SCXML and Prolog form a good combination for developers of such systems. However, we take a slightly different, and, we believe, simpler and more lightweight approach to the interface between the two languages. Our aim is a profile that harmonizes with Web Prolog and the architecture of the Prolog Web; in other words, although we try to stay as compatible as possible, our goal is to adapt an SCXML-inspired profile to Web Prolog and the Prolog Web, rather than the other way around.
+
+\subsection{Comparison with an ordinary message loop}\label{sec:comparison-ordinary-look}
+
+At this point it is natural to ask why a dedicated statechart behaviour is introduced at all, rather than writing an ordinary message loop in Web Prolog. Small event-driven controllers are easy to code directly, but practical statecharts rely on Harel's extensions such as hierarchy, history, and orthogonality, which buy \emph{structure} that is difficult to recover from ad hoc \texttt{receive/1-2} code once the control problem grows. Hierarchy and history give interruption and resumption a first-class representation instead of burying it in auxiliary flags and continuations. Parallel regions support modular decomposition \emph{within} one reactive process, and run-to-completion execution yields deterministic coordination between regions: given the same event in the same configuration, the same transitions fire in the same order. Explicit invocation ties the lifetime of spawned processes to control states, so that leaving a state can reliably terminate what it invoked. Finally, the data model makes long-lived state a declarative Prolog object rather than an opaque tuple threaded through callback code, and the same structure that guides execution is directly visualizable, making control logic easier to review, communicate, and debug.
+
+Beyond these structural benefits, the statechart behaviour also changes the \emph{event-handling posture}. In a hand-written \texttt{receive/1-2} loop, selection is driven by the current mailbox contents and by pattern order, while non-matching messages typically remain in the mailbox (effectively deferred). In the statechart profile presented here, event relevance is determined by the current configuration (the active states and regions): one selected event is matched against enabled transitions across the whole configuration, and irrelevant events are discarded unless deferral is modelled explicitly. Conversely, statecharts provide run-to-completion reactions: one external event may trigger a finite cascade of internal work (condition-only transitions, eventless transitions, and internally raised events) before the next external message is consumed. With orthogonal regions, the selected event is visible across the entire active configuration, enabling deterministic broadcast-style coordination within one actor -- something that actor-level messaging can emulate only by explicit fan-out and coordination protocols.
+
+Table~\ref{tab:go-forms} summarizes the most common transition forms in the profile. Seen through the lens of \texttt{receive/1-2}, the table can be read as an inventory of control moves that are either awkward or easy to lose track of in an unstructured loop: eventless progress, guarded internal reactions, and targetless event handlers that consume messages without changing state.
+
+\begin{table}[ht]
+\centering
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{6pt}
+\begin{tabularx}{\linewidth}{|>{\ttfamily}p{0.45\linewidth}|X|}
+\hline
+\textnormal{\textbf{Transition form}} & \textbf{Typical use / notes} \\
+\hline
+\vspace{0.09cm}<go to="s" on="e">...\string</go> &
+Triggered state change. The ordinary event-driven case: on event pattern \texttt{e}, transition to \texttt{s} and run actions. \\
+\hline
+\vspace{0.25cm}<go to="s" on="e" if="c">...\string</go> &
+Triggered and guarded state change. The standard ECA pattern: a matching event plus a condition enables the transition; convenient when several transitions compete on the same event. \\
+\hline
+\vspace{0.46cm}<go on="e" if="c">...\string</go> &
+Guarded, targetless event reaction. Consumes events matching \texttt{e}, checks \texttt{c}, runs actions, and stays in the same configuration. Useful for logging, emitting output, raising internal events, or updating the data model without a state change. \\
+\hline
+\vspace{0.42cm}<go to="s">...\string</go> &
+Eventless, unconditional state change. Useful for automatic progress (e.g.\ completion-style transitions) or compact control-flow steps. Use with care, since chains of eventless transitions may create long run-to-completion cascades. \\
+\hline
+\vspace{0.27cm}<go to="s" if="c">...\string</go> &
+Eventless but guarded state change. Useful for decision points driven by the data model, or for encoding automatic progress only when a condition holds. \\
+\hline
+\vspace{0.45cm}<go if="c">...\string</go> &
+Guarded, targetless reaction (no control-state change). Useful as a condition-action rule that updates the data model, emits output, raises an internal event, logs, etc., while staying in the same configuration. \\
+\hline
+\end{tabularx}
+\caption{Common \texttt{<go>} transition forms and typical uses in the statechart profile.}
+\label{tab:go-forms}
+\end{table}
+
+
+A simple rule of thumb follows. A statechart is a good fit when the facets of behaviour are tightly coupled parts of one control process and deterministic, inspectable reactions are desired. Separate actors with ordinary message loops remain the right choice when independent scheduling, failure isolation, distribution, or distinct lifetimes are central concerns.
+
+
+Another operational difference is that \texttt{receive/1-2} is \emph{semi-deterministic}: it either succeeds once or fails. It commits to one selected message (and one matching receive clause); it fails only if the body of that selected clause fails, in which case the failure propagates and may trigger ordinary Prolog backtracking in the surrounding computation. By contrast, the statechart behaviour commits to one external event and then executes a deterministic run-to-completion macrostep under the standard statechart transition-selection rules; executable content is intended to succeed deterministically, with errors routed as internal events rather than expressed via failure.
+
+
+\subsection{Comparison with Erlang's \texttt{gen\_statem} behaviour}\label{sec:comparison-genstatem}
+
+Erlang's \texttt{gen\_statem} behavior offers a disciplined way to structure long-running reactive processes: the meaning of an incoming event depends on the current state, and a transition may update state data, schedule timeouts, or emit new events. In that sense, \texttt{gen\_statem} and our statechart behavior address the same engineering problem: how to express event-driven control in a maintainable way without hand-written receive loops.
+
+The statechart behavior differs in where it places complexity. First, it makes the control structure explicit and inspectable as a hierarchy of states rather than as callback code, which improves readability and supports direct visualization. Second, it supports hierarchical states, history, and parallel regions as first-class control constructs, whereas \texttt{gen\_statem} leaves such structure to be encoded by conventions in the callback logic. Third, the statechart run-to-completion macrostep provides deterministic intra-machine coordination (including broadcast effects across parallel regions under fixed priority rules), while Erlang's coordination across processes is intentionally mailbox-driven and concurrent. Finally, statecharts integrate process invocation as a control construct with a precise lifetime rule (invoked processes are tied to the state that invoked them), whereas \texttt{gen\_statem} relies on external OTP patterns (supervision, linking, monitoring) to manage process lifetimes.
+
+\subsection{Relationship to SCXML}\label{sec:relationship-scxml}
+
+The textual notation used in this chapter is intentionally SCXML-inspired, but it is not a full SCXML surface language. Our primary goal is to present statecharts as an executable actor behavior in Web Prolog, with Prolog as both data model and executable content. For that reason we aim to implement most of the SCXML~1.0 processing model, while adopting a smaller and more uniform set of constructs that harmonize with actor-style messaging and with Prolog scripting.
+
+Several SCXML constructs are omitted because they are either platform-specific (for example, ECMAScript-oriented scripting facilities), oriented toward browser integration rather than actor systems, or redundant when executable content is restricted to Web Prolog goals. In particular, we do not need a dedicated \texttt{<script>} element, since executable content is expressed directly as Prolog code. Likewise, communication with external actors is handled by Web Prolog predicates such as \texttt{!/2} (and derived predicates such as \texttt{output/1} and \texttt{toplevel\_call/2-3}), rather than by reproducing the full generality of SCXML's \texttt{<send>} element. Moreover, our \texttt{<spawn>} element corresponds to SCXML's \texttt{<invoke>} but is adapted for actor-style invocation rather than the SCXML service model.
+
+We also rename a small number of constructs for readability in Prolog-centric examples: \texttt{<transition>} becomes \texttt{<go>}, and the attributes \texttt{target}, \texttt{event}, and \texttt{cond} are rendered as \texttt{to}, \texttt{on}, and \texttt{if}. These are surface changes; the intent is to make examples compact and to emphasize that transitions function as rules governing event-driven evolution of the actor. 
+
+\subsection{Toward an actor-oriented successor to SCXML}\label{sec:toward-successor-scxml}
+
+Seen as a language for programming reactive actors, SCXML's core ideas are compelling, but the Web Prolog setting suggests a slightly different ``center of gravity'': a declarative data model, a single uniform scripting language and an explicit integration with actor messaging. The statechart behavior in this chapter can therefore be read as a concrete sketch of what an actor-oriented successor might prioritize: the standard statechart execution model, combined with Prolog-level reasoning and with explicit, programmable interaction with the surrounding actor system.
+
+%\section{Abstract ideas, concrete languages}\label{sec:abstract-ideas-concrete-languages}
+%
+%To place the role of statecharts in a slightly more abstract light, consider the famous equation coined by Robert Kowalski:
+%
+%\begin{quotation}
+%\noindent Algorithm $=$ Logic $+$ Control.
+%\end{quotation}
+%
+%\noindent The equation highlights the difference between \emph{what} a program means (logic) and \emph{how} it is made to run (control). In Prolog, control can be shaped in many familiar ways: by using the cut, by changing the default search regime, or by writing meta-interpreters and compilers, to mention just a few.
+%
+%The kind of control we have in mind here is different. Conversational and reactive systems are not primarily hard because they require sophisticated algorithms; they are hard because they require fine-grained \emph{interaction control}: turn-taking, phases, timeouts, interruption, recovery, orchestration, choreography, and long-lived dialogue or game flow. A useful slogan is therefore:
+%
+%\begin{quotation}
+%\noindent Conversation $=$ Logic $+$ Control \,---\, and conversational control is unusually rich.
+%\end{quotation}
+%
+%\noindent This is why we combine three programming models in the Prolog Web setting: logic programming for knowledge and inference; actor-based programming for concurrency, distribution, and interaction; and statecharts for explicit, inspectable control structure. Since statecharts are largely about control, their role can be seen as adding control of a different kind to actor-based logic programming: not search control, but control over reactive behaviour and structured interaction.
+%
+%One may reasonably debate whether statecharts are the best notation for reactive control, whether actors are the best model for concurrency, or whether logic programming is the best foundation for symbolic reasoning. The present proposal does not depend on any of these being uniquely optimal. What matters is that they are mature, complementary, and grounded well enough to be composed into a coherent programming model for the Web.
+%
+%On the level of concrete notation, this composition can be realised in more than one way. One option is to treat SCXML primarily as a conceptual reference point and use a Prolog-friendly representation for SCXML-style charts, while supporting translation to and from SCXML when interchange is useful. Another option is to use SCXML itself as a concrete control notation and Web Prolog as the language of guards, actions, and data. Either way, the relationship is a familiar Web pattern: a declarative control layer whose behaviour is scripted in a general-purpose language -- much as JavaScript is used to provide behaviour inside declarative hosts such as HTML and SVG.
+
+\section{Summary}\label{sec:summary}
+
+This chapter introduced the statechart behaviour: an actor behaviour in which control is expressed as a hierarchical, event-driven state machine with parallel regions, deterministic transition selection under run-to-completion execution, and executable actions written in Web Prolog. Statechart actors can be spawned and supervised like ordinary actors, can communicate via messages, and can spawn child actors with well-defined lifetimes tied to control states. The result is an SCXML-inspired but Prolog-centric profile that supports reactive control, structured coordination within one actor via configuration-wide event visibility, and integration of long-lived knowledge and decision logic through a private declarative Prolog data model.
+
+
+

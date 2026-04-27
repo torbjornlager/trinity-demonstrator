@@ -1,0 +1,158 @@
+services:
+  caddy:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.caddy
+    restart: unless-stopped
+    depends_on:
+      - wp_n1
+      - wp_n2
+      - wp_n3
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - wp_net
+    mem_limit: 256m
+    cpus: 0.50
+
+  wp_n1:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile
+    command: ["swipl", "-q", "-s", "/app/Deployment/start_n1.pl", "-g", "start_n1_forever", "-t", "halt"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    environment:
+      HOME: /tmp
+      TZ: Europe/Stockholm
+    ports:
+      - "127.0.0.1:3051:3051"
+    expose:
+      - "3051"
+    networks:
+      - wp_net
+    mem_limit: 512m
+    cpus: 0.50
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  wp_n2:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile
+    command: ["swipl", "-q", "-s", "/app/Deployment/start_n2.pl", "-g", "start_n2_forever", "-t", "halt"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=96m
+    environment:
+      HOME: /tmp
+      TZ: Europe/Stockholm
+    ports:
+      - "127.0.0.1:3052:3052"
+    expose:
+      - "3052"
+    networks:
+      - wp_net
+    mem_limit: 768m
+    cpus: 0.75
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  wp_n3:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile
+    command: ["swipl", "-q", "-s", "/app/Deployment/start_n3.pl", "-g", "start_n3_forever", "-t", "halt"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m
+    environment:
+      HOME: /tmp
+      TZ: Europe/Stockholm
+    ports:
+      - "127.0.0.1:3053:3053"
+    expose:
+      - "3053"
+    networks:
+      - wp_net
+    mem_limit: 1g
+    cpus: 1.00
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  wp_n4:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile
+    command: ["swipl", "-q", "-s", "/app/Deployment/start_n4.pl", "-g", "start_n4_forever", "-t", "halt"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m
+    environment:
+      HOME: /tmp
+      TZ: Europe/Stockholm
+    ports:
+      - "127.0.0.1:3055:3055"
+    expose:
+      - "3055"
+    networks:
+      - wp_net
+    mem_limit: 1g
+    cpus: 1.00
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  wp_admin:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile
+    command: ["swipl", "-q", "-s", "/app/Deployment/start_admin.pl", "-g", "start_admin_forever", "-t", "halt"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m
+    environment:
+      HOME: /tmp
+      TZ: Europe/Stockholm
+    ports:
+      - "127.0.0.1:3054:3054"
+    expose:
+      - "3054"
+    networks:
+      - wp_net
+    mem_limit: 768m
+    cpus: 0.75
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  wp_net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,53 @@
+<!--
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="p">
+    <parallel id="p">
+        <state id="s1">
+            <initial id="i1">
+                <go to="s1c1" />
+            </initial>
+            <state id="s1c1">
+                <go to="s1c2" on="e" />
+            </state>
+            <state id="s1c2">
+                <go to="s1c3" on="e" />
+            </state>
+            <state id="s1c3">
+                <go to="s1c4" on="e" />
+            </state>
+            <final id="s1c4" />
+        </state>
+        <state id="s2">
+            <initial id="i2">
+                <go to="s2c1" />
+            </initial>
+            <state id="s2c1">
+                <go to="s2c2" on="e" />
+            </state>
+            <state id="s2c2">
+                <go to="s2c3" on="e" />
+            </state>
+            <state id="s2c3">
+                <go to="s2c4" on="e" />
+            </state>
+            <final id="s2c4" />
+        </state>
+        <go to="f" on="done(p)" />
+    </parallel>
+    <final id="f" />
+</statechart>
+
+
+<!-- <examples>
+
+?- $Pid ! e.
+
+?- $Pid ! done(p).
+
+-->

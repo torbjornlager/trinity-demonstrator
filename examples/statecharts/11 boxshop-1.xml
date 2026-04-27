@@ -1,0 +1,72 @@
+<!--
+    A simple conversational agent, making  use of a DCG grammar in order
+    to parse the user's input. Also a nice example of how to make use
+    of the <history> element.
+
+    Keep the Logger open and SXML trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="start">
+    <datamodel>
+        :- dynamic color/1, size/1.
+            
+        np(Attr) --> adj(Attr).
+        np(Attr) --> [a], adj(Attr), [box].
+    
+        adj(color(red)) --> [red].
+        adj(color(blue)) --> [blue].
+        adj(size(small)) --> [small].
+        adj(size(big)) --> [big].
+        
+    </datamodel>
+    <state id="start" initial="color">
+        <history id="h">
+            <go to="color"/>
+        </history>
+        <state id="color">
+            <onentry> 
+                writeln('What color do you want?')
+            </onentry>
+            <go to="size"
+                on="input(Input)" 
+                if="phrase(np(color(Color)), Input)"> 
+                    assert(color(Color))
+            </go>
+        </state>
+        <state id="size">
+            <onentry> 
+                writeln('What size do you want?')
+            </onentry>
+            <go to="final"
+                on="input(Input)" 
+                if="phrase(np(size(Size)), Input)"> 
+                    assert(size(Size))
+            </go>
+        </state>
+        <go to="h" on="input(Input)">
+            writeln('I did not understand.')
+        </go>
+    </state>
+    <final id="final">
+        <onentry>
+            size(Size), color(Color),
+            format('You want a ~p ~p box!\n', [Size, Color])
+        </onentry>        
+    </final>
+</statechart>
+
+
+<!-- <examples>
+
+?- $Pid ! input([a, red, box]).
+
+?- $Pid ! input([blue]).
+
+?- $Pid ! input([a, big, box]).
+
+?- $Pid ! input([a, small, box]).
+
+-->

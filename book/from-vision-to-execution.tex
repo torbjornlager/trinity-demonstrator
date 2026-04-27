@@ -1,0 +1,348 @@
+  % !TeX root = book.tex
+\chapter{From vision to execution}\label{sec:from-vision-to-execution}
+
+\vspace{-2.7cm}
+
+\begin{quotation}
+\flushright Vision without execution is just hallucination.
+%\vspace{0.0cm}
+\flushright\textit{Thomas Alva Edison}
+\vspace{0.5cm}
+\end{quotation}
+
+\noindent At the beginning of this book, the Prolog Trinity ecosystem was introduced by means of a mindmap. Its purpose was primarily orienting: to sketch the conceptual territory, to name its principal components, and to hint at the relationships between them. That diagram accompanied the reader through the early stages of the argument, serving as a visual shorthand for a still-emerging design.
+
+In Figure~\ref{fig:summary-diagram-final} we now return to the same mindmap -- structurally unchanged, but this time adorned with three banners of the kind commonly used by the W3C.
+
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{summary-diagram-final}
+\vspace{0.15cm}\caption{The Prolog Trinity mind map revisited, now framed as shared infrastructure and adorned with three W3C-style technology banners.}
+\label{fig:summary-diagram-final}
+\end{figure}
+
+\noindent Such banners are not mere decoration. They function as compact visual markers of collective agreement: signals that a technology has passed from individual proposal to shared standard, and that its definition, maintenance, and evolution are now matters of public process rather than private intent. In a single glyph, a banner compresses years of discussion, specification work, experimentation, revision, and implementation experience.
+
+%Of the three languages that anchor the Prolog Trinity vision, only one currently carries such a banner: RDF. Web Prolog and our statechart language do not.
+Of the three standards implicitly invoked by the Prolog Trinity vision, only one currently carries such a banner: RDF. Web Prolog and the statechart language do not. This asymmetry is neither accidental nor embarrassing. On the contrary, it clarifies the status of the Trinity today. RDF represents a language whose role in the Web ecosystem has already been executed in the strongest possible sense: specified, standardised, implemented, deployed, criticised, and revised. Web Prolog and the statechart language, by contrast, remain parts of a forward-looking design -- carefully argued, technically grounded, but not yet socially ratified.
+
+This chapter is concerned with what it would mean to close that gap. The chapter therefore has two distinct but closely related tasks. First, it revisits the vision itself, drawing together the main ideas developed throughout the book and presenting them once more as a coherent whole. Second, it considers the work required to move from vision to execution: not only the technical work of implementation, but also the social and institutional work through which languages become shared infrastructure. The banners in Figure~\ref{fig:summary-diagram-final} should thus be read not as claims of authority, but as markers of intent -- placeholders for standards that do not yet exist, but whose contours this book has attempted to make precise.
+
+\section{The vision}\label{sec:vision}
+
+
+\begin{quotation}
+\flushright Vision without action is a daydream. Action without vision is a nightmare.
+%\vspace{0.0cm}
+\flushright\textit{Japanese proverb}
+\end{quotation}
+
+\begin{quotation}
+\flushright In order to carry a positive action we must develop here a positive vision.
+%\vspace{0.0cm}
+\flushright\textit{Dalai Lama}
+\vspace{0.5cm}
+\end{quotation}
+
+\noindent This section is written at a higher altitude than most of the book. The goal is not to introduce new machinery, but to restate the proposal as a coherent vision.
+
+%\subsection{The Trinity as an integrated design}\label{sec:vision-trinity}
+%The Prolog Trinity ecosystem is best understood as an integrated design rather than as three loosely related ideas. Web Prolog, Prolog agents, and the Prolog Web are mutually constraining: the language profile determines what can be exposed safely and portably; the agent model determines which long-lived behaviours can be made robust; and the network substrate determines which forms of composition are realistic at Web scale. This is why the proposal cannot be reduced to ``Prolog over HTTP'', nor to ``actors in Prolog'', nor to ``a distributed Prolog database''. Each strand is intended to keep the others honest.
+%
+%A second point is that the Trinity is not proposed as a competing system. It is scaffolding -- an ecosystem skeleton -- around which existing Prolog systems could collaborate without excluding anyone and without making any system less powerful. The promise is federative: define shared interaction surfaces that many implementations can adopt, while leaving internal design choices free. On that view, success is measured by interoperation and reuse, not by replacement.
+
+\subsection{Agents as the primary abstraction}\label{sec:vision-agents}
+
+The Trinity's most important structuring commitment is to treat agents as the primary abstraction: long-lived processes with identities, mailboxes, lifecycles, and explicit interaction protocols, hosted on nodes that themselves act as accountable participants rather than as anonymous servers. Chapter~\ref{sec:paradigm} develops this stance in detail, including the architectural multi-agent reading and the way it connects profiles, capability policy, supervision, and the sequential/concurrent partition to application pressures such as interactive control, coordination, and recovery. Here we simply recall the consequence: once ``agents all the way down'' is taken seriously, the Prolog Web becomes not only a network of endpoints, but a programmable society of communicating entities.
+
+\subsection{Executable logic at web scale}\label{sec:vision-executable-logic}
+The Trinity's claim that logic on the Web should be treated as
+\emph{executable} rather than merely representational is developed in
+Chapter~\ref{sec:paradigm}. The execution task, in the remainder of this
+chapter, is to make that substrate real: specified at the boundaries,
+implemented end-to-end, and adopted as shared infrastructure.
+
+\subsection{Two partitions and the axes of design}\label{sec:vision-axes}
+
+The conceptual distinction between the sequential and concurrent partitions,
+together with the cross-cutting axes that shape design choices -- purity and the
+openness-versus-risk trade-off -- are developed in Chapter~\ref{sec:paradigm}.
+Here we take those commitments as given. The execution question is how to turn
+them into deployable reality: which profiles to standardise first, which
+capability boundaries to make testable, and which security and governance
+mechanisms must be engineered before openness can be offered responsibly.
+
+%These distinctions and axes are not merely descriptive. They are intended to guide execution: what should be specified early, what must be left free to evolve, and where the hard boundaries of interoperability must ultimately be drawn.
+
+%\subsection{Two partitions and the axes of design}\label{sec:vision-axes}
+%
+%A recurrent theme throughout the book is that the Prolog Web is best understood as two \emph{partially overlapping} partitions, each with its own interaction style, semantic commitments, and engineering pressures. The distinction is not aesthetic. It is a way of keeping the design honest: some problems can be expressed cleanly in a request--response, goal-centric model, while others genuinely require long-lived processes, mailboxes, and reasoning about interleavings. The same distinction also helps organise the broader vision developed across the book: architectural choices, process choices, and ecosystem choices land differently depending on which partition one targets, and many realistic systems will deliberately mix the two.
+%
+%The \emph{sequential partition} is the world of goals and relations. Its emblematic constructs are \texttt{rpc/2-3}, which offers nondeterministic remote procedure calls while remaining close in spirit to ordinary Prolog execution, and the split-phase combination of \texttt{promise/3-4} and \texttt{yield/2-3}, which allows a caller to initiate remote work without blocking immediately. The defining experience is that a client can pose a goal and receive answers -- potentially many -- in a manner that remains goal-centric rather than mailbox-centric. When answers are numerous, pagination makes the interface usable, and the book has argued that such paged retrieval is naturally interpreted as a web-facing instance of Prolog-style backtracking: the client receives solutions in slices, but the logical meaning is that the remote goal has more solutions. This is the partition where one can most plausibly aim for a \emph{network-transparent} programming model: transport exists, but it should not dominate the programmer's mental model.
+%
+%The \emph{concurrent partition} is the world of actors and interactions. Here the semantics essentially involves message ordering, selective receive, process lifetime, failure propagation, supervision, fairness, and the realities of distributed scheduling. The core abstractions are mailbox-driven and asynchronous by default, even if a convenient synchronous veneer is sometimes provided. This is also the partition in which behaviours become observable that do not exist in the sequential view, such as the difference between sending two messages to the same mailbox versus sending one message each to two mailboxes, or the difference between a timed receive and an unbounded wait. In this partition, treating distribution as a transparent implementation detail is not always appropriate: ordering, timeouts, and fault boundaries can affect \emph{correctness}, not merely performance, and the programming model should therefore make them explicit rather than presenting them as ordinary call--return behaviour.
+%
+%This difference also shows up operationally. Stateless HTTP-style \texttt{rpc/2-3} can remain comparatively close to request--response (with explicit timeouts and errors), whereas long-lived actor interaction over WebSockets inherits additional failure modes around session state, disconnect--reconnect, and in-flight messages. The point is not that one style is ``better'', but that the concurrent partition has more \emph{observable} timing and failure phenomena, and therefore benefits less from being presented as if it were ordinary call--return.
+%
+%With the partition boundary in view, we can also name several orthogonal axes along which designs can vary, and which the Trinity treats as first-class choices rather than hidden implementation details. One such axis is \emph{purity} and, more generally, the discipline with which effects are allowed to enter the model. A strictly pure subset of Prolog would make certain reasoning tasks easier, but a web-facing system also needs pragmatic affordances. The proposal therefore leaves room for both a purer Prolog Web and a less pure one, treating them as points in a design space rather than as mutually exclusive ideologies.
+%
+%Another axis is \emph{openness versus risk}. A node that accepts injected code, offers stateful services, and supports long-lived actors can be extraordinarily useful, but it also becomes a shared execution environment with real security and resource-governance concerns. The profile hierarchy and the capability posture developed in this book are best read as disciplined responses to this axis: they let implementors scale from conservative, easily sandboxed services to more powerful ones without pretending that all features are equally safe to expose. This axis will return in a more concrete form when we later assess what it means to webize Prolog and prologize the Web: some requirements are primarily architectural, whereas others are principally about containment, policy, and operational discipline.
+
+
+%\subsection{Two partitions and the axes of design}\label{sec:vision-axes}
+%A recurrent theme throughout the book is that the Prolog Web is best understood as two partially overlapping partitions, each with its own interaction style, semantic commitments, and engineering pressures. The distinction is not aesthetic. It is a way of keeping the design honest: some problems can be handled with request--response and backtracking, while others genuinely require long-lived processes, mailboxes, and reasoning about interleavings. The same distinction also helps organise the broader vision developed across the book: architectural choices, process choices, and ecosystem choices all land differently depending on which partition one targets.
+%
+%The sequential partition of the Prolog Web is the world of goals and relations. 
+%%A convenient way to access it from ordinary web clients is through a \emph{promise--yield} interaction style over HTTP: a client submits a goal and receives a promise (a handle for a deferred computation), and later \emph{yields} answers by requesting them in one or more subsequent calls. This decouples time without changing the basic semantic posture: the client is still interacting with a goal whose meaning can be described without mentioning mailboxes, scheduling, or message races. 
+%Its emblematic constructs are the combination of \texttt{promise/3-4} and \texttt{yield/2-3} which offers asynchronous RPC, and  \texttt{rpc/2-3} which offers nondeterministic remote procedure calls while remaining close in spirit to ordinary Prolog execution. The defining experience here is that a client can ask a question and receive answers, potentially many, in a manner that remains goal-centric rather than mailbox-centric. When answers are numerous, pagination makes the interface usable, and the book has argued that such paged retrieval is naturally interpreted as a web-facing instance of Prolog-style backtracking: the client receives answers in slices, but the logical meaning is that the remote goal has more solutions. This is the partition where one can most plausibly aim for a network-transparent programming model: transport exists, but it should not dominate the programmer's mental model.
+%
+%%The \emph{sequential partition} of the Prolog Web is the world of goals and relations. Its emblematic construct is \texttt{rpc/2-3}, which offers nondeterministic remote procedure calls while remaining close in spirit to ordinary Prolog execution. The defining experience here is that a client can ask a question and receive answers, potentially many, in a manner that can be described without mentioning mailboxes, scheduling, or message races. When answers are numerous, pagination makes the interface usable, and the book has argued that such paged retrieval is naturally interpreted as a web-facing instance of Prolog-style backtracking: the client receives answers in slices, but the logical meaning is that the remote goal has more solutions. This is the partition where one can most plausibly aim for a network-transparent programming model: transport exists, but it should not dominate the programmer's mental model.
+%
+%
+%The \emph{concurrent partition} is the world of actors and interactions. Here the semantics essentially involves message ordering, selective receive, process lifetime, failure propagation, supervision, fairness, and the realities of distributed scheduling. The core abstractions are mailbox-driven and asynchronous by default, even if a convenient synchronous veneer is sometimes provided. This is also the partition in which behaviours become observable that do not exist in the sequential view, such as the difference between sending two messages to the same mailbox versus sending one message each to two mailboxes, or the difference between a timed receive and an unbounded wait. In this partition, treating distribution as a transparent implementation detail is not always appropriate. Message ordering, timeouts, and fault boundaries can affect correctness, not just performance, so the model should make them explicit rather than disguising them as ordinary call--return behaviour.
+%
+%---
+%
+%In practice, the difference is that HTTP-style \texttt{rpc/2-3} can remain comparatively close to a stateless request--response model (with explicit timeouts and errors), whereas long-lived actor interaction over WebSockets inherits additional operational failure modes around session state, disconnect--reconnect, and in-flight messages; for that reason, hiding distribution behind a ``transparent'' veneer is often less honest in the concurrent case than in the sequential one.
+%
+%%In this partition, network transparency is not always the right aspiration: when ordering, timeouts, or fault boundaries matter, the model should make them explicit rather than pretending they are irrelevant.
+%
+%Orthogonal to the partition boundary are several axes along which designs can vary, and which the Trinity treats as first-class choices rather than hidden implementation details. One such axis is \emph{purity} and, more generally, the discipline with which effects are allowed to enter the model. A strictly pure subset of Prolog would make certain reasoning tasks easier, but a web-facing system also needs pragmatic affordances: time, randomness, I/O, foreign calls, and interaction with external services. The proposal therefore leaves room for both a purer Prolog Web and a less pure one, treating them as points in a design space rather than as mutually exclusive ideologies.
+%
+%Another axis is \emph{openness versus risk}. A node that accepts injected code, offers stateful services, and supports long-lived actors can be extraordinarily useful, but it also becomes a shared execution environment with real security and resource-governance concerns. The profile hierarchy and the capability posture developed in this book are best read as disciplined responses to this axis: they let implementors scale from conservative, easily sandboxed services to more powerful ones without pretending that all features are equally safe to expose. This axis will return in a more concrete form when we later assess what it means to webize Prolog and prologize the Web: some requirements are primarily architectural, whereas others are principally about containment, policy, and operational discipline.
+
+\subsection{Webizing Prolog, prologizing the Web}\label{sec:vision-webizing-prologizing}
+In Section~1.6 we introduced a dual process which has guided the entire design: \emph{webizing Prolog} and \emph{prologizing the Web}. The first asks what happens when a language and its execution model are treated as part of an open world, and it yields a set of requirements that force Prolog to become web-native in its surface forms, its deployment posture, and its operational discipline. The second asks what it would mean for the Web to host, not only documents and services, but executable logic in the form of long-lived agents, and it yields a set of requirements that force the Web-facing substrate to preserve Prolog's distinctive strengths rather than merely embedding it as a curiosity.
+
+This subsection returns to the concrete checklist stated in Section~1.6 and assesses, point by point, what has been proposed or demonstrated in the rest of the book. The purpose is not to declare victory, but to make the scope and the remaining gaps explicit before we turn, in the next section, from vision to execution.
+
+\subsubsection{Webizing Prolog: eight requirements.}
+Section~1.6.1 listed eight requirements for webizing Prolog. We revisit them here in the same order.
+
+\begin{enumerate}
+\item \emph{Introduce URIs into the ecosystem.} This requirement is addressed by treating naming and addressing as web-facing from the outset. In Chapter~4, node addresses are URIs or NodeIDs, actor identifiers are understood as locatable in a network of nodes, and remote interaction primitives such as \texttt{rpc/2-3} and the node option in \texttt{spawn/3} are designed to be used across node boundaries without changing the programming model. In other words, URIs are not bolted on as an I/O convention; they are part of the semantic surface by which a computation reaches beyond its local context.
+\item \emph{Exploit the existing web infrastructure.} Chapters~3--4 develop the Prolog Web as an explicitly web-aligned substrate: a stateless HTTP interface where it suffices, a stateful mode where interaction needs continuity, and a WebSocket mode where message ordering and long-lived sessions are operationally central. The JSON encoding of Prolog terms, along with the framing of request--response versus mailbox-driven interaction, is meant to allow ordinary web clients to participate without learning a bespoke transport discipline.
+\item \emph{Make use of existing means for security.} The design responds to the open-world setting by insisting on containment-by-default rather than assuming trust. Chapter~4 introduces the core mechanisms that make openness manageable: capability policy (including disciplined use of communication capabilities), an explicit owner--client split, and resource bounds that let a node remain usable under adversarial or simply careless workloads. That said, this is also the place where the book is most candidly incomplete. The architecture identifies what must be controlled and where the boundary should sit, but a robust, standardisable security story demands more engineering detail than has been supplied so far, including stronger guidance on authentication, authorisation, auditing, and sandboxing across different deployment environments.
+\item \emph{Ensure web-size scalability.} The scalability story in Chapter~4 is fundamentally distribution-first. The Prolog Web treats distribution as the normal case: nodes are autonomous, composition happens across nodes, and caching and load distribution are expected in the stateless HTTP mode. Session affinity, stateless caching, and the discipline of designing the sequential partition so it can be served by ordinary web infrastructure are all part of the attempt to scale in the way the Web scales: by replication, caching, and loosely coupled components rather than by a single globally coordinated runtime.
+\item \emph{Support web application development.} Chapter~10 sketches what it would mean for the Trinity to be a practical development platform rather than a pure research proposal: turn-key nodes, playgrounds, and statechart-based approaches to user-interface state management. In this picture, a node is not merely a remote Prolog engine; it is a web-facing component that can be spun up, configured, and composed by non-specialists, and statecharts provide a principled bridge between reactive UI logic and Prolog-based modelling and scripting.
+\item \emph{Ensure fitness to web culture.} A web-facing system does not live only by its semantics. Chapter~9 therefore treats openness, documentation, community building, and the presence of a portal or hub as part of the design, not merely as marketing. This requirement is partly cultural and partly infrastructural: an open ecosystem needs canonical entry points, discoverable artefacts, and a public working style that matches how the Web community tends to build shared standards and shared libraries.
+\item \emph{Aim for standardisation.} Standardisation is separated out as an explicit execution task further ahead in this chapter, because the argument here is not that the book has already standardised anything, but that it has tried to identify a scope that could plausibly be standardised: small boundaries, precise interfaces, and a minimal interoperable core. The important claim at the vision level is that a web-facing Prolog substrate must be specified at the boundaries if it is to be shared, even if implementations remain free to innovate behind those boundaries.
+\item \emph{Play nicely with existing web standards.} This requirement is addressed across multiple chapters by treating Web Prolog as adjacent to, not opposed to, established W3C and IETF practices. Chapter~4 grounds the concrete transport and representation choices in the ordinary web stack (HTTP, WebSocket, JSON), keeping the system legible to web engineers. Chapter~6 connects to SCXML as a statechart language, suggesting a path by which statechart actors can align with existing state-machine standards. Chapter~7 relates the Prolog Web to the Semantic Web, emphasising compatibility with existing data standards rather than inventing new ones.  
+\end{enumerate}
+
+\subsubsection{Prologizing the Web: three requirements.}
+Section~1.6.2 listed three requirements for prologizing the Web. These are less about adopting web infrastructure and more about ensuring that what becomes web-native remains recognisably Prolog and recognisably agentic.
+
+\begin{enumerate}
+\item \emph{Leverage Prolog's capabilities.} Chapter~8 is the main place where the book argues that Prolog brings a distinctive set of capabilities to the Agentic Web layer: knowledge representation, inference, planning, meta-interpreters, DCGs, and the broader tradition of expert systems. The point is not nostalgia, but reuse: these are mature, well-understood techniques that become newly relevant when deployed as long-lived, tool-using agents embedded in a communicative network.
+\item \emph{Leverage Erlang-style concurrency.} Chapters~2--5 develop the actor model strand of Web Prolog: processes with mailboxes, message ordering as a semantic concern, failure propagation, supervision, and reusable actor patterns captured as generics. This is the prologizing half of the argument in its most concrete form: the Web is not merely a place to call a Prolog predicate, but a place where Prolog processes can live, coordinate, and recover under explicit operational rules.
+\item \emph{Run in browsers.} Section~4.3.2 sketches a browser profile and discusses Web-Assembly as a possible substrate. This is the other major gap, alongside security. The book motivates why browser execution would be powerful and how it could fit the profile hierarchy, but it does not yet offer a fully worked operational account of scheduling, isolation, shared state, and performance in a browser-hosted ACTOR environment. The requirement is therefore acknowledged as only partially addressed: the direction is clear, but the engineering is not yet complete.
+\end{enumerate}
+
+\subsubsection{An honest assessment.}
+Taken together, the checklist suggests that the Trinity has made substantial progress on the architectural and interface-facing requirements of webizing Prolog: URIs and web addressing, alignment with HTTP and WebSocket interaction styles, JSON-based interchange, and the explicit separation of sequential request--response computation from concurrent mailbox-driven interaction. The proposal has also made concrete progress on the prologizing requirements that concern expressive power and concurrency: Chapter~8 makes the case for Prolog's symbolic strengths in the Agentic Web setting, and Chapters~2--5 develop an actor model that is strong enough to support long-lived interaction and supervision.
+
+The main open gaps are also clear. First, security is architecturally well covered in Chapter~\ref{sec:the-prolog-web}: the open-world posture is grounded in three structural mechanisms -- inexpressibility, invisibility, and containment -- complemented by standard web deployment practices. The remaining execution work is to make this security posture operationally concrete: profiles must be accompanied by conformance tests, and public-node deployments need a baseline recipe for authentication, quotas, auditing, and transport security.
+
+Second, browser execution is motivated and sketched, but not yet backed by a detailed, testable account of how the ACTOR profile behaves under the constraints of browser runtimes. These two gaps are not peripheral. They are precisely the points where an appealing model meets the open-world reality of the Web. For that reason, they reappear as central execution tracks in the remainder of this chapter.
+
+\subsection{Statechart actors and the governance of interaction}\label{sec:vision-statecharts-governance}
+Statechart actors, and the broader claim that complex systems require explicit
+\emph{governance of interaction}, are developed as part of the Trinity's
+paradigmatic stance in Chapter~\ref{sec:paradigm}
+(Section~\ref{sec:paradigm-control}). Here, the execution question is how to
+make that stance operational: which control notation to standardise or treat as
+interchange, how to test conformance, and how to engineer tooling that makes
+control structure inspectable in deployed systems.
+
+\subsection{A platform for the Agentic Web}\label{sec:vision-agentic-web-platform}
+Agentic-system pressures are a major part of what makes execution urgent: once
+systems consist of long-lived, tool-using processes operating over the network,
+questions of governance, failure handling, timing, and interoperability stop
+being optional. The work in this part of the book is therefore motivated not
+only by elegance, but by the practical demands of building agents that remain
+durably interactive under explicit rules in an open Web setting.
+
+\subsection{Federation, not unification}\label{sec:vision-federation-not-unification}
+A central choice underlying the Trinity is to pursue federation rather than unification. The aim is not to design a new Prolog that all existing systems must become, nor to declare a single implementation as the reference centre of gravity. Instead, the proposal seeks to create shared \emph{interaction surfaces}: web-facing interfaces and execution profiles that multiple systems can implement while remaining free to diverge internally.
+
+This federative stance responds directly to the historical reality of the Prolog ecosystem. Prolog has thrived as a family of systems with different strengths, but that diversity has also produced a persistent portability and community-cohesion problem. The Trinity offers a different axis of standardisation: rather than standardising everything \emph{inside} a system, standardise what must be shared \emph{between} systems when they interact over the Web. In other words, federation treats interoperability as a public good and internal design freedom as a local right.
+
+This is also why Chapter~\ref{sec:whats-in-it-for-the-prolog-community} and Chapter~\ref{sec:for-other-communities} belong to the conceptual core of the book rather than to its marketing layer. The claim is that a federated Prolog Web can change the community's practical incentives: when systems can meet through web-native APIs, shared portals, playgrounds, and demonstrators become meaningful, and progress can be measured by interoperation rather than by persuasion. Federation thus becomes a strategy for ecosystem repair: it creates a way to cooperate without demanding agreement on everything.
+
+\subsection{Prolog as a web technology in its own right}\label{sec:vision-prolog-as-web-tech}
+If the preceding subsections are taken seriously, the Trinity's rhetorical punchline is not merely that ``Prolog can be used on the Web''. It is that Prolog can be a web technology in its own right: a web-native medium for executable knowledge and interaction protocols, deployed as services and agents across an open network.
+
+This reframing matters because it changes what counts as success. The goal is not only that a Prolog system can expose an HTTP endpoint. The goal is that Prolog becomes legible, usable, and adoptable in the way other web technologies are: with shared interfaces, test suites, playgrounds, public nodes, and a culture of composition. If that happens, Prolog's traditional strengths -- explicit representation, rule-based inference, nondeterminism, and meta-programming -- become available in the places where web applications and agentic systems increasingly need them.
+
+Seen this way, the Trinity is not a bid to redefine Prolog, but a bid to give it a clearer web-facing posture. Prolog remains a general-purpose language; Web Prolog is a specialised profile whose main purpose is to make Prolog's symbolic strengths -- explicit rules and auditable control -- directly usable as an interoperable layer in agentic systems on the Web. The claim is not that the Web is the end game, but that it is a particularly effective stage on which heterogeneous systems can be composed and made trustworthy through explicit, inspectable interfaces.
+
+%Seen this way, the Trinity is a bid for a different identity. It proposes that Prolog's most compelling future role may be as the symbolic substrate of the Agentic Web: not replacing other approaches, but providing the explicit, inspectable, interoperable core around which heterogeneous systems can be built and trusted.
+
+Taken together, the preceding sections articulate a vision that is internally coherent and deliberately constrained. The Prolog Trinity has been presented not as a monolithic system, but as an ecosystem structured around clear roles, layered abstractions, and a principled division of responsibilities. At this level, the question is no longer whether the design hangs together -- it does -- but what it would mean to take responsibility for making it real.
+
+The remainder of this chapter therefore shifts perspective. Having restated the vision one last time, we now turn to execution: to the technical, organisational, and communal work through which designs cease to be proposals and become shared infrastructure.
+
+
+\section{The execution}\label{sec:execution}
+
+\begin{quotation}
+\noindent We are not analyzing a world, we are building it. We are not experimental philosophers, we are philosophical engineers.
+\vspace{-0.3cm}
+\flushright\textit{Tim Berners-Lee}
+\end{quotation}
+
+\subsection{Standardization and shared ownership}\label{sec:standardization-shared-ownership}
+
+\subsubsection{Is it not too early?}\label{sec:too-early-to-standardize}
+
+%\begin{quote}
+%The current fragmentation of the Prolog community may be seen as a threat to the language standardization effort and, thus, the advancement of Prolog. \emph{[source]}
+%\end{quote}
+
+\noindent At what point in the evolution of a programming language should one try to create a standard for it? Is it really reasonable to aim for a Web Prolog standard already at this point? Is it not too early? Perhaps the language needs to mature first. Perhaps someone needs to implement a stable, speedy, and secure node before we decide what should be normative. After all, that is the usual approach.
+
+A first reply is that the ingredients are not new. Prolog and Erlang are mature languages that have stood the tests of time, and the Web standards on which this proposal relies are likewise well established. Web Prolog should therefore be seen as a product of incremental evolution rather than as a revolution: the task is not to invent an unfamiliar paradigm, but to find a disciplined way to combine existing ones.
+
+A second reply is more important. It is indeed too early to standardize everything. Much of what makes the Trinity interesting still belongs to design exploration and engineering iteration. But it is not too early to standardize the shared surfaces that prevent fragmentation: the media type, the profile boundaries, the client to node contracts, and the conformance tests by which independent implementations can agree on what it means to interoperate. If these boundaries are left implicit for too long, they will be standardized anyway, but accidentally, by whichever implementations happen to dominate first.
+
+In that sense, the question is not whether standardization should happen now, but what should be standardized now. The claim of this book is deliberately modest: standardize the interoperable core early enough to enable a shared ecosystem, while leaving room for implementations to compete, experiment, and mature behind those shared interfaces.
+
+\subsubsection{Who should do it?}\label{sec:who-should-do-it}
+
+If Web Prolog is to be both web-native and language-precise, it is difficult to see how a credible standardization effort could be carried out within a single culture of standardization. In our view, the W3C should not do it alone, and nor should ISO. The natural model is a liaison: a division of labour in which language-level concerns and web-architecture concerns are both represented as first-class, and where review across that boundary is routine rather than exceptional.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.25\textwidth]{w3c-iso-liaison}
+  \vspace{0.15cm}
+  \caption{Turning the Trinity design into shared infrastructure requires a liaison.}
+  \label{fig:w3c-iso-liaison}
+\end{figure}
+
+\noindent Liaisons between standards bodies are not controversial. The W3C engages in liaisons with numerous organizations,\footnote{\url{https://www.w3.org/liaisons/}} and ISO likewise maintains liaison relationships that include W3C.\footnote{\url{https://www.iso.org/organization/10143.html}}
+
+It would be premature to speculate about the exact form such cooperation might take for Web Prolog. The important point at this stage is simply that governance must match scope: language profiles, web protocols, and ecosystem-level interoperability are unlikely to be served well by treating the effort as belonging wholly to either camp.
+
+\subsubsection{How do we do it?}\label{sec:how-to-standardize}
+
+We must not underestimate the difficulties -- standardization is hard and often frustrating -- but W3C provides a practical point of entry in the form of \emph{W3C Community Groups}.\footnote{\url{https://www.w3.org/community}}
+
+\begin{quote}
+A W3C Community Group is an open forum, without fees, where Web developers and other stakeholders develop specifications, hold discussions, develop test suites, and connect with W3C's international community of Web experts.
+\end{quote}
+
+\noindent The basic idea is that an individual can share a proposal, gather collaborators, develop a draft and a test suite, and publish a report that may later motivate the formation of a formal working group. At the time of writing, there are many such groups, spanning a wide range of topics.
+
+Standardization is often misunderstood as a purely technical activity -- the act of writing down interfaces, fixing semantics, and publishing specifications. While these steps are necessary, they are not sufficient. What distinguishes a standard from a well-documented design is not precision alone, but shared ownership.
+
+Technologies that eventually acquire banners do so only after their authors have relinquished a certain degree of control. Decisions become matters of public record; trade-offs are negotiated rather than declared; and authority shifts from individual insight to collective process. In this sense, standardization is as much a social transition as a technical one.
+
+\subsubsection{Where do we start?}\label{sec:where-to-start}
+
+As we have argued throughout the book, the appropriate unit of standardization is not merely a language, but an ecosystem. Web Prolog is one essential strand, but the Prolog Web architecture, the profile hierarchy, and the externally observable behaviour of Prolog agents such as nodes and toplevels must also be specified. A viable standard must cover not only computation -- syntax and semantics of primitives -- but also the pragmatics of communication: protocols, APIs, message formats, and conformance conditions.
+
+The good news is that much of the language-level ground has already been covered by the ISO Prolog standard. This means that the distinctive effort proposed here can focus on what is currently missing from the Prolog ecosystem: shared web-facing interaction surfaces and the contracts that make a distributed Prolog Web interoperable. The aim is not to freeze innovation, but to give it a stable substrate on which multiple implementations can meet.
+
+%\subsection{Standardization and shared ownership}\label{sec:standardization-shared-ownership}
+%
+%The moment one speaks seriously of standardization, one is no longer discussing only technology. One is also discussing ownership: who gets to decide what is normative, which trade-offs are accepted, how compatibility is tested, and how the work is maintained over time. For Web Prolog, this question is unusually sharp because the proposal is intentionally dual in character: it is both a language profile and a web technology.
+%
+%Figure~\ref{fig:w3c-iso-liaison} captures that duality. The point is not that any particular institution should ``own'' Web Prolog, but that different kinds of standards work come with different assumptions and different strengths. A viable governance model must therefore either choose a home consciously, or acknowledge the boundary explicitly and build a liaison across it.
+%
+%\begin{figure}[ht]
+%  \centering
+%  \includegraphics[width=0.3\textwidth]{w3c-iso-liaison}
+%  \vspace{0.15cm}
+%  \caption{Execution implies governance: turning a design into shared infrastructure requires a home -- or a liaison.}
+%  \label{fig:w3c-iso-liaison}
+%\end{figure}
+%
+%\noindent At least three broad models are plausible. One is single-body ownership: treat Web Prolog primarily as a web technology (governed accordingly) or primarily as a language profile (governed accordingly). A second is split-scope governance: standardize a minimal, language-like core separately from the web-facing protocols and profiles. A third is explicit liaison governance: accept that the core and the web substrate co-evolve, and institutionalize that co-evolution through shared editorial control, shared test suites, and a process that makes cross-community review routine rather than exceptional. The choice matters less for symbolism than for mechanics: it determines how disagreements are resolved, how changes are ratified, and how the standard remains legible to both communities.
+%
+%Behind these governance models lies a more general point about what standardization is, and what it demands of its authors.
+%
+%Standardization is often misunderstood as a purely technical activity -- the act of writing down interfaces, fixing semantics, and publishing specifications. While these steps are necessary, they are not sufficient. What distinguishes a standard from a well-documented design is not precision alone, but shared ownership.
+%
+%Technologies that eventually acquire banners do so only after their authors have relinquished a certain degree of control. Decisions become matters of public record; trade-offs are negotiated rather than declared; and authority shifts from individual insight to collective process. In this sense, standardization is as much a social transition as a technical one.
+%
+%For Web Prolog and the Prolog Web, the challenge is therefore not merely to refine the designs presented in this book, but to expose them to the kinds of scrutiny that standards demand: alternative implementations, adversarial use cases, performance constraints, and the needs of communities whose priorities may differ from those of the original designers. Execution, in this context, means allowing the vision to be reshaped by contact with others.
+%
+%This is also where the asymmetry highlighted by the banners becomes instructive rather than discouraging. The fact that RDF has passed through this process -- and bears the marks of it -- provides a concrete example of what shared ownership entails. The goal for the Prolog Trinity ecosystem is not to imitate RDF's path, but to recognise that any path leading to durable, interoperable infrastructure must involve a comparable transfer of responsibility.
+
+
+\subsection{Implementation roadmap}\label{sec:implementation-roadmap}
+
+If standardization is the process by which a design becomes shared, implementation is the process by which it becomes real. No amount of conceptual clarity can substitute for running systems, and no specification can be considered mature until it has survived contact with actual use. For an ecosystem such as the Prolog Trinity, execution therefore requires a sustained commitment to implementation -- not as a final validation step, but as a primary source of design feedback.
+
+An implementation roadmap need not be ambitious in scope to be effective. On the contrary, early implementations are most valuable when they are modest, even mundane. Minimal nodes, incomplete shells, narrowly scoped agents, and unglamorous tooling are not signs of immaturity, but essential probes into the design space. They expose ambiguities in semantics, reveal hidden coupling between components, and force decisions that can otherwise remain comfortably abstract. In this sense, prototypes are not preliminary versions of a finished system, but instruments for discovering what a finished system could reasonably be.
+
+For Web Prolog, this implies prioritizing executable semantics over completeness: small interpreters, reference runtimes, and test suites that make the language's behaviour observable and comparable across implementations. For the Prolog Web, it implies early experimentation with concrete protocols, failure modes, and resource constraints, even if these experiments only cover fragments of the envisioned architecture. Partial implementations that work end-to-end are more informative than comprehensive designs that remain untested.
+
+Equally important is the role of redundancy. Multiple, independently developed implementations -- even if limited and imperfect -- provide a form of validation that no single reference system can offer. Divergences between implementations are not merely bugs to be fixed, but signals that a specification is underspecified, overconstrained, or poorly understood. An implementation roadmap should therefore encourage diversity of approach rather than premature convergence.
+
+Seen in this light, execution is less about marching toward a predefined endpoint than about maintaining a feedback loop between design and practice. The roadmap outlined here is intentionally open-ended: its purpose is not to predict how the Prolog Trinity ecosystem will be built, but to ensure that whatever is built remains grounded in experience rather than aspiration.
+
+A first Web Prolog node, in this spirit, would likely be unremarkable in almost every respect. It might support only a subset of the language, expose a minimal HTTP-based query interface, and host a small collection of static programs and data. Concurrency could be limited, error handling crude, and performance uneven. Yet even such a modest system would already exercise the core ideas of the Trinity: executable logic served over the Web, queries whose behaviour can be observed and reproduced, and agents or clients interacting with a node through well-defined but still evolving contracts. By existing at all, such a node would force abstract notions -- of purity, state, resource bounds, and interaction -- to acquire concrete meaning, and would provide a shared point of reference around which further experimentation could take place.
+
+
+\subsection{Community and adoption}\label{sec:execution-community}
+The preceding subsections have treated execution as a procedural and technical project: articulate an idea, publish a document, iterate through criticism and implementation, and arrive at a shared test suite with at least two interoperable implementations. That path is necessary, but it is not sufficient. A specification can be perfectly written and still inert. For the Trinity to become more than a private design, it must be adopted, used, and improved by a community that finds it worth building against.
+
+Chapter~9 argued that the Prolog community's most persistent problem is not a lack of ideas but a lack of shared \emph{interaction surfaces}. Fragmentation is sustained by the fact that systems, tools, teaching material, and sub-communities often do not meet in a common place. The Prolog Trinity ecosystem is therefore as much a community proposal as a technical one: technical interoperability is treated as a catalyst for social cohesion. If the systems can talk to each other over the Web, there is at least a chance that the communities will too. This is the motivation behind distinguishing between a \emph{technical Prolog Web} (nodes and agents) and a \emph{social Prolog Web} (people and collaboration), and insisting that they should be integrated rather than isolated.
+
+A first practical step is the \emph{portal} proposed in Chapter~9: a single public gateway that serves simultaneously as documentation hub, service directory, and community meeting place. The portal is not merely a set of links. It is meant to make the distributed nature of the ecosystem visible: which public nodes exist, what profiles they implement, what services they host, and what interaction protocols they expose. It is also meant to make the social layer visible: discussion forums, news, shared projects, and collaborative tools that invite participation from both users and implementers.
+
+A second step is to treat \emph{playgrounds} as first-class infrastructure rather than as isolated curiosities. The Prolog world already has web-based playgrounds, but they are fragmented by implementation and by interface conventions. A Trinity-oriented playground can be more than a browser REPL: it can be a profile-governed execution target for teaching material, examples, and small applications, and it can serve as the default way to try out remote queries, pagination-as-backtracking, and basic agent interaction without local installation. In other words, the playground becomes the point where the ``run this now'' culture of the Web meets the semantics of Prolog.
+
+A third step is \emph{dogfooding}: using the Prolog Web to build the Prolog Web. This is the most credible early-adoption story because it starts with the people who already care. If Prolog implementers and advanced users begin to publish nodes, services, and live demonstrations that others can interact with immediately, the ecosystem shifts from \emph{social coding} to \emph{social computing}. Sharing no longer means only pushing source code to a repository; it also means hosting runnable agents and queryable knowledge bases in a way that others can test, stress, and reuse. This style of participation is also valuable for standardisation, because it forces interface choices to survive contact with reality.
+
+A fourth step is \emph{learning material} that meets people where they are. One advantage of the Trinity approach is that it does not require abandoning existing Prolog culture. Tutorials and courses can still draw on established Prolog and Erlang textbooks, but they can be reframed around web-native interaction: ``call this node'', ``compose these services'', ``spawn this agent'', ``observe this protocol''. The result is a learning path that produces immediately usable skills in a modern setting, which is exactly what the Prolog community needs if it wants to attract new users without first demanding that they share decades of context.
+
+Finally, adoption depends on allies beyond the Prolog community. Neighbouring communities provide both early adopters and complementary expertise. Logic programming researchers can help clarify semantics and constraints. The Semantic Web community can supply stable representations and tooling that the Trinity can consume and produce. The AI and agentic-systems community can stress-test the proposal against real conversational and tool-using agents. The Erlang community provides a mature culture of fault-tolerant concurrency, supervision, and operational discipline. Web programmers, in turn, provide the pragmatic sensibility that keeps interfaces and deployment habits aligned with web reality. In short, the Trinity is not only a technical bridge between systems; it is also an invitation to build a shared surface where multiple communities can meet.
+
+For these reasons, execution is simultaneously a technical, social, and cultural project. The technical core can be specified and tested, but the ecosystem only becomes real when it is used: when people publish nodes, share runnable agents, teach through playgrounds, and improve the shared artefacts through criticism and implementation experience.
+
+\subsection{Closure}\label{sec:execution-closure}
+
+This chapter began by returning to a familiar diagram, not in order to introduce new ideas, but to reassess what has already been said from a different vantage point. The Prolog Trinity ecosystem, viewed in this way, is no longer merely a conceptual synthesis, but a set of commitments: to certain abstractions, to certain boundaries, and to a particular way of embedding logic and agency into the Web.
+
+Execution, as it has been used throughout this chapter, should therefore not be understood as a final step that follows design. It is an ongoing process in which designs are tested, revised, and sometimes abandoned as they encounter real users, real systems, and real constraints. Some parts of the Trinity may mature quickly; others may remain speculative for a long time; still others may turn out to have been mistaken. That is not a failure of the vision, but an inevitable feature of any attempt to build shared infrastructure.
+
+%What ultimately matters is not whether the Prolog Trinity ecosystem comes to resemble the diagram with which this chapter began, but whether the ideas developed in this book prove useful beyond its pages: whether they enable new forms of cooperation, lower the threshold for experimentation, and give logic programming a natural and durable place in the evolving Web. If that happens, the transition from vision to execution will already be under way -- regardless of how it is named, branded, or marked.
+
+%In the end, an ecosystem is not something one invents -- it is something one manages to invite into existence. What ultimately matters is not whether the Prolog Trinity ecosystem comes to resemble the diagram with which this chapter began, but whether it helps carve out a stable place for executable logic and communicative agents in the Web's future. A diagram can summarise an ambition, but only practice can decide what deserves to endure. If the Trinity proves to be a useful way of thinking -- a way that enables real systems, attracts real collaborators, and clarifies real trade-offs -- then execution will not be a moment of completion, but a gradual shift in what feels natural to build.
+
+In the end, an ecosystem is not something one invents -- it is something one manages to invite into existence. The chapter opened with banners because they are retrospective artefacts: they do not make a technology real, they mark that it has become shared. They compress years of discussion, specification work, test-suite building, implementation experience, and the slow accumulation of trust. In that sense, the banner motif was never a claim -- it was a reminder of the kind of work that must happen outside the pages of this book if the Trinity is to become more than a proposal.
+
+This returns us, quietly but insistently, to the warning implicit in the epigraph. Vision without execution is not a harmless state of incompleteness; it is a state in which ideas cannot be stress-tested, interoperable boundaries cannot be drawn, and responsibility cannot be shared. Execution is therefore not the last step after design, but the process through which design becomes accountable: to users, to implementors, to adversarial conditions, and to the constraints of the Web.
+
+What ultimately matters, then, is not whether the Prolog Trinity ecosystem comes to resemble the diagram with which this chapter began, but whether it helps carve out a stable place for executable logic and communicative agents in the Web's future. A diagram can summarise an ambition, but only practice can decide what deserves to endure. If the Trinity proves to be a useful way of thinking -- a way that enables real systems, attracts real collaborators, and clarifies real trade-offs -- then execution will not be a moment of completion, but a gradual shift in what feels natural to build.
+
+\medskip
+\noindent The comes the hard part: to get people to use the thing. For this, there are no guarantees. It may well turn out as a joke of a network. But at least we tried, and that is worth something.
+
+%===
+%
+%\medskip
+%\noindent Variant 1 -- Technical emphasis
+%
+%\medskip
+%\noindent What ultimately matters is not whether the Prolog Trinity ecosystem comes to resemble the diagram with which this chapter began, but whether its technical claims survive independent implementation. If Web Prolog can be specified with enough clarity to permit multiple runtimes, if the Prolog Web can be reduced to protocols and invariants rather than architectural folklore, and if agents can be given interoperable interaction patterns without sacrificing the flexibility that makes them useful, then the transition from vision to execution will already be under way. At that point, success will be measurable in the only way that really counts for infrastructure: in systems that work together without having been designed together.
+%
+%\medskip
+%\noindent Suggested coda: option (2).
+%
+%
+%
+%\medskip
+%\noindent Variant 2 -- Communal emphasis
+%
+%\medskip
+%\noindent What ultimately matters is not whether the Prolog Trinity ecosystem comes to resemble the diagram with which this chapter began, but whether it becomes a shared undertaking. If the ideas in this book lead to prototypes that others can extend, specifications that others can criticise, and interfaces that others can implement without asking permission, then the transition from vision to execution will already be under way. In that case, the Trinity will have achieved something more important than coherence: it will have become public.
+%
+%\medskip
+%\noindent Suggested coda: option (3).
+%
+%

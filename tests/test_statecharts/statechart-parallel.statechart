@@ -1,0 +1,15 @@
+<statechart datamodel="web-prolog" initial="Start">
+    <parallel id="Start">
+        <state id="Pinger">
+            <onentry>raise(pong)</onentry>
+            <go on="ping">
+                log('Ping'), raise(pong)
+            </go>
+        </state>
+        <state id="Ponger">
+            <go on="pong">
+                log('Pong'), raise(ping)
+            </go>
+        </state>
+    </parallel>
+</statechart>

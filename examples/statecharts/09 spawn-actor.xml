@@ -1,0 +1,40 @@
+<!--
+
+    Demonstrating the <spawn> element.
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="Pingpong">
+    <state id="Pingpong" initial="Init">
+        <spawn type="actor" goal="ponger">
+            ponger :-
+                receive({
+                    ping(Pid) ->
+                        sleep(1),
+                        Pid ! pong,
+                        ponger
+                 }).
+        </spawn>
+        <state id="Init">
+            <go to="Pinger" on="spawned(Pid)">
+                register(ponger, Pid)
+            </go>
+        </state>
+        <state id="Pinger">
+            <onentry>
+                self(Self),
+                ponger ! ping(Self)
+            </onentry>
+            <go on="pong">
+                writeln('Received Pong'),
+                sleep(1),
+                self(Self),
+                ponger ! ping(Self)
+            </go>
+        </state>
+    </state>
+</statechart>

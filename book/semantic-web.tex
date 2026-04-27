@@ -1,0 +1,765 @@
+  % !TeX root = book.tex
+\chapter{The Prolog Web $\approx$ the Semantic Web?}\label{sec:wp-ws-sw}
+
+Since the Prolog Web adds logic programming and automated reasoning to the conventional Web, it is natural to ask whether we are approaching something like the \emph{Semantic Web} -- the machine-readable Web vision articulated by  \citep{bernerslee2001semantic}. The gist of their proposal is captured by the following three statements:
+
+\begin{quotation}
+The Semantic Web is an extension of the current web in which information is given well-defined meaning, better enabling computers and people to work in cooperation.
+\end{quotation}
+
+\begin{quotation}
+For the semantic web to function, computers must have access to structured collections of information and sets of inference rules that they can use to conduct automated reasoning.
+\end{quotation}
+
+\begin{quotation}
+Adding logic to the Web -- the means to use rules to make inferences, choose courses of action and answer questions -- is the task before the Semantic Web community at the moment.
+\end{quotation}
+
+\noindent At first glance, words and phrases such as \emph{logic}, \emph{inference rules}, and \emph{answer questions} could be read as an informal description of what Prolog already does. Likewise, the characterisation as an extension of the current Web fits the Prolog Web rather well. This invites a tempting but slightly misleading conclusion: perhaps the Prolog Web is simply a simpler, ``poor man's'' Semantic Web?
+
+The resemblance is real, but it is a resemblance of ingredients rather than of engineering goals. The Semantic Web focuses on semantic interoperability by standardising shared meaning -- data models, identifiers, vocabularies, and ontology semantics that many independent parties can agree on. The Prolog Web focuses on execution by standardising an executable substrate -- a uniform rule language plus a node and process architecture in which predicates can be deployed as running services and agents. Both concern interoperable representations, but the Semantic Web foregrounds representation and shared meaning, whereas the Prolog Web foregrounds turning knowledge into executable behaviour.
+
+The thesis of this chapter is therefore cooperative rather than competitive: the two are best viewed as complementary. In practice, Web Prolog can consume and produce RDF-style data, reuse established vocabularies and identifiers, and apply Prolog's execution model to ``put the data to work'' as queries, rules, and long-lived agent behaviour.
+
+Although the Semantic Web serves as a convenient reference point, the architectural claims made here apply more broadly to graph-based knowledge systems, including property-graph and hybrid knowledge-graph platforms.
+
+%---
+%
+%\noindent At first glance, phrases such as \emph{logic}, \emph{inference rules}, and \emph{answer questions} could be read as an informal definition of what Prolog already does. Likewise, the characterization as \emph{an extension of the current Web} fits the Prolog Web rather well. This invites a tempting but slightly misleading conclusion: perhaps the Prolog Web is simply a simpler, ``poor man's'' Semantic Web. 
+%
+%The resemblance is real, but it is a resemblance of ingredients rather than of engineering goals. The Semantic Web standardises \emph{shared meaning} for interoperability -- data models, identifiers, vocabularies, and ontology semantics that many independent parties can agree on. The Prolog Web standardises an \emph{executable substrate} -- a uniform rule language plus a node and process architecture in which predicates become running services and agents. In other words, the Semantic Web is primarily about interoperable representations, while the Prolog Web is primarily about turning knowledge into executable behaviour.
+%
+%The thesis of this chapter is more cooperative than competitive. The Semantic Web has produced standardized data models, query languages, and ontology mechanisms that are valuable precisely because they support interoperability across many independent parties. The Prolog Web, on the other hand, contributes an executable substrate: a uniform programming language for both querying and rule-based computation, combined with a process architecture of nodes and long-lived actors. These two approaches are therefore best viewed as complementary. In practice, Web Prolog can often serve as the programming and agent layer around Semantic Web assets: it can query RDF data, post-process results using arbitrary predicates, orchestrate calls to specialized services such as OWL reasoners, and expose the resulting functionality through the Prolog Web's own APIs.
+%
+%We proceed in three steps. First, we give a minimal primer of the Semantic Web stack, only to the extent needed for the comparison. Second, we show why RDF and SPARQL are an unusually good match for Prolog-style relational programming. Third, we identify what Web Prolog adds at the architectural level, and what the Semantic Web adds at the semantic and ontological level, concluding with a few concrete patterns for how the two stacks can be combined in real systems.
+
+%===
+%
+%\noindent Since the Prolog Web adds logic and reasoning to the conventional web, we appear to be approaching something resembling the \textit{Semantic Web} -- a vision of a machine readable web first proposed in the Scientific American article by Berners-Lee, Hendler and Lassila \cite{bernerslee2001semantic}. The gist of this article is captured by the following three quotes:
+%
+%\begin{quotation}
+%The Semantic Web is an extension of the current web in which information is given well-defined meaning, better enabling computers and people to work in cooperation.
+%\end{quotation}
+%
+%\begin{quotation}
+%For the semantic web to function, computers must have access to structured collections of information and sets of inference rules that they can use to conduct automated reasoning.
+%\end{quotation}
+%
+%\begin{quotation}
+%Adding logic to the Web -- the means to use rules to make inferences, choose courses of action and answer questions -- is the task before the Semantic Web community at the moment.
+%\end{quotation}
+%
+%\noindent Surely, words and phrases such as ``logic,'' ``automated reasoning,'' and ``answer questions'' remind us about what Prolog can do, and clearly, the phrase ``an extension of the current web'' is a description that also fits the Prolog Web. This prompts us to investigate whether the Prolog Web might serve as a ``poor man's'' semantic web, and whether it -- for some use cases -- might even be a better choice of technology. As we shall see, it turns out that cooperation rather than competition is key here.
+%
+%There has been a lot of activity in the Semantic Web field in the years following the publication of \cite{bernerslee2001semantic}. The Semantic Web vision is many-faceted and has prompted research and development in many areas of computer science. A large number of logic-based languages for knowledge representation and querying have been designed and some of them have been standardized by the W3C. Components such as reasoners, web services, service discovery facilities, user interface frameworks, agent platforms and other forms of infrastructure for the Semantic Web have also been designed and prototyped but not yet standardized. 
+%
+%As such, the ideas behind the Semantic Web may be both sound and powerful, but the W3C recommendations are complex, and it is often difficult to see how they fit together and how to make use of them when building practical applications. The Prolog Web is much simpler, and we might ask ourselves if it could, in at least some cases, serve as an easier to use replacement for the Semantic Web, or perhaps as a form of ``glue'' between client code and semantic web services.
+
+\section{The Semantic Web tower}\label{sec:have-the-cake}
+
+The Semantic Web is often presented as a layered architecture, where each layer builds on the layers below it. The lower layers are shared with the conventional Web, while the upper layers introduce machine-processable representations of data, query mechanisms, and ontology-level semantics. A commonly used illustration is the so-called \emph{Semantic Web tower}, one variant of which is shown in Figure~\ref{fig:semantic_web_cake}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=6cm]{semantic_web_cake}
+\caption{One variant of the Semantic Web tower.}
+\label{fig:semantic_web_cake}
+\end{figure}
+
+\noindent The tower diagram is necessarily impressionistic, but it provides a useful scaffold for our comparison. At the bottom, URIs play the familiar role of locating resources (as URLs), but on the Semantic Web they also serve as global names for entities, relations and concepts (as IRIs). The Prolog Web uses URIs in this broader naming role too, but it also uses them operationally, for example to locate code and to identify conversations, processes, and even answer streams.
+
+Unicode can likewise be viewed as a naming layer, ensuring that text and identifiers can be represented consistently across languages. Not all Prolog systems fully support Unicode, but a web-facing Prolog system effectively has to.
+
+Many variants of the tower place XML at the syntactic level. In this chapter we treat XML mainly as a data interchange format among several. In the Prolog Web setting, Prolog terms provide a natural internal representation, and JSON is often the most convenient interchange format for client-facing APIs, while RDF serializations such as RDF/XML and Turtle remain important for interoperability with existing Semantic Web tooling.
+
+%\section{The Semantic Web tower}\label{sec:have-the-cake}
+%
+%\noindent The architecture of the Semantic Web is layered, one layer of languages above another, where each layer exploits the capabilities of the layers below. The layers at the bottom serve also the conventional web. A commonly used illustration of this idea is the so called ``Semantic Web tower'' one variant of which is depicted in Figure~\ref{fig:semantic_web_cake}.
+%
+%\begin{figure}[h]
+%    \centering
+%	\includegraphics[width=6cm]{semantic_web_cake}
+%    \caption{One variant of the Semantic Web tower.}
+%    \label{fig:semantic_web_cake}
+%\end{figure}
+%
+%\noindent A diagram of this kind can only give us a vague and somewhat impressionistic view of what the Semantic Web is all about, but can at least be used to lend structure to a comparison with the Prolog Web. Starting from the basement of the tower, the Uniform Resource Identifier (URI) has played an important part in the development of the Web already from its inception, at first only as a way to locate a document, but on the Semantic Web it can be used to name anything. The Prolog Web, as we shall see, may use it in this latter way too, but also to locate programs as well as to uniquely identify answers to queries. (Not surprisingly, URIs are normally represented as strings or atoms in Web Prolog, and since Web Prolog is a fairly general programming language, it is of course easy to pick them apart and access their components, or to build new URIs from arbitrary components.)
+%
+%Unicode, another necessary part of the conventional Web, may also be seen as a naming mechanism, as it aims to uniquely identify all the characters in all the written languages of the world. Support for Unicode is increasing throughout the world of computing, as the benefits of one common character set are overwhelming when programs are used in a global environment such as the Web. Not all Prolog systems are capable of working with Unicode, but it seems clear that a world wide Web Prolog has to be.
+%
+%The Semantic Web tower usually has a level indicating a reliance on XML, seen as the syntax of the Semantic Web. In the context of the Prolog Web we wish to somewhat downplay the importance of XML in favor of the Prolog \textit{term} data structure and the JSON format. We feel free to do that, since our impression is that most researchers would agree that XML is not fundamental to the Semantic Web but should rather be viewed as a \textit{data interchange format} (and, in fact, one out of many). %A particular node on the Prolog Web may well be able to parse and generate XML documents, but no node is strictly \textit{required} to be able to do so. 
+
+\section{RDF as \texttt{rdf/3}}\label{sec:instead-of-rdf}
+
+\noindent Right above the XML level of the Semantic Web tower we find the levels devoted to semantics proper, where RDF forms the basis. In RDF, triples serve as a universal representation of relations, and through the process of reification the ``subject predicate object'' (S-P-O) schema can in principle capture all the kinds of relations we might want to represent.
+
+From a Prolog point of view, RDF is a predicate with three arguments (or just two if the functor is used to represent the P in an S-P-O triple). In an ambitious attempt to create a library for working with RDF, \citet{wielemaker2016cliopatria} opted for using a predicate \texttt{rdf/3}. Here we give an example of triples represented in SWI Prolog taken from the RDF 1.1 primer document:\footnote{\url{http://www.w3.org/TR/2014/NOTE-rdf11-primer-20140624/\#section-n-triples}}
+
+\begin{verbatim}
+rdf('http://example.org/bob#me',
+    'http://...rdf-syntax-ns#type',
+    'http://xmlns.com/foaf/0.1/Person').
+rdf('http://example.org/bob#me',
+    'http://xmlns.com/foaf/0.1/knows',
+    'http://example.org/alice#me').
+rdf('http://example.org/bob#me',
+    'http://schema.org/birthDate',
+    literal(type('http://...#date', '1990-07-04'))).
+\end{verbatim}
+
+\noindent Given an RDF database represented in this way, Prolog allows us to define rules in terms of these clauses. For example, to get the birth dates of people somebody knows we can write the following clause in the system created by Wielemaker et al:
+
+\begin{verbatim}
+known_with_birthdate(Me, He, Date):-
+    rdf(Me, foaf:knows, He),
+    rdf(He, schema:birthDate, Date).
+\end{verbatim}
+
+\noindent SWI-Prolog's RDF libraries support a convenient prefix notation for IRIs. Prefixes can be declared with the library predicate \texttt{rdf\_register\_prefix/2}, after which an IRI may be written in the compact form \texttt{Prefix:LocalName}. A similar namespace mechanism would likely be valuable in Web Prolog, both to improve readability and to encourage a disciplined, interoperable naming practice when Prolog code refers to web-scale identifiers.
+
+%\noindent The RDF layer in SWI-Prolog allows for prefix notation. Prefixes can be declared using the library predicate \texttt{rdf\_register\_prefix/2}, after which URIs can be written as \texttt{prefix:localname}. It might be a good idea for Web Prolog to include a namespace mechanism such as this.
+%\footnote{It might be a good idea for a future version of Web Prolog to include a mechanism such as this.}
+
+\section{SPARQL-style querying in Prolog}\label{sec:instead-of-sparql}
+
+\noindent Instead of using SPARQL, querying Semantic Web data represented as above can be done in Prolog. The interactive session below illustrates the use of \texttt{known\_with\_birthdate/3} to query the triple store:
+
+\begin{verbatim}
+?- known_with_birthdate(Me, He, Date).
+Me = 'http://example.org/bob#me'
+He = 'http://example.org/alice#me'
+Date = literal(type(xsd:date,'1990-07-04')) ;
+Me = 'http://example.org/bob#me'
+He = 'http://example.org/john#me'
+Date = literal(type(xsd:date,'1992-09-06')) ;
+...
+\end{verbatim}
+
+\noindent The key point is modularity. \citet{wielemaker2016cliopatria} argue that the Prolog version using \texttt{known\_with\_birthdate/3} has several advantages over the SPARQL version. First, because the Prolog version has an explicit name, it is easy to reuse it in other queries. This allows developers to incrementally build more sophisticated functionality on top of existing, proven and tested building blocks. This can greatly simplify maintenance of complex queries.
+
+Secondly, Prolog is not confined to SPARQL's fixed menu of filters and functions. Any predicate can serve as a guard, transformation, or derived relation at any point in the clause, and the same definition can freely combine RDF triples with other relations -- for example, views backed by an RDBMS or calls into domain-specific code.
+
+%Secondly, Prolog is not confined to SPARQL's fixed menu of filters and functions. Any predicate can be used as a test, transformation, or guard at any point in a query, and the same clause can freely combine RDF triples with other relations -- for example, views backed by an RDBMS.
+
+The query in the above scenario is very simple, but more complex queries are possible too. Control primitives such as \texttt{,/2} (conjunction) and \texttt{;/2} (disjunction) are guaranteed to work and to have the traditional Prolog semantics, and  \verb|\+/1| (NAF) and ISO Prolog aggregation predicates \texttt{bagof/3}, \texttt{setof/3} and \texttt{findall/3}, the de-facto standard library \texttt{aggregate}\footnote{\url{https://www.swi-prolog.org/pldoc/man?section=aggregate}} which provides \texttt{count}, \texttt{sum}, \texttt{average}, etc. are available as well.
+
+The SWI-Prolog library \texttt{solution\_sequences}\footnote{\url{https://www.swi-prolog.org/pldoc/man?section=solutionsequences}} was developed specifically to allow for a straightforward translation of many SPARQL queries to Prolog and provides \texttt{distinct/1-2}, \texttt{limit/2}, \texttt{order\_by/2}, etc. For example, consider the following ten clauses defining a relation \texttt{r/2}:
+
+\begin{verbatim}
+r(a, foo).  r(a, bar).  r(a, bar).  r(c, bar).  r(c, bar).
+r(b, bar).  r(a, foo).  r(d, baz).  r(a, foo).  r(c, baz).     
+\end{verbatim}
+
+\noindent Here is an example of how a SPARQL-like query can be formulated using such predicates, and what the solutions would look like:
+
+\begin{verbatim}
+?- limit(10,order_by([desc(C)],aggregate(count,X,r(X,Y),C))).
+C = 3, Y = bar ;
+C = 2, Y = baz ;
+C = 1, Y = foo.
+?-
+\end{verbatim}
+
+\noindent Here, solutions are counted \emph{per} value of \texttt{Y}, so that on backtracking the call \texttt{aggregate(count,X,r(X,Y),C)} enumerates each distinct \texttt{Y} for which \texttt{r(X,Y)} holds and binds \texttt{C} to the corresponding count. The call to \texttt{order\_by/2} then sorts these \texttt{Y-C} pairs by descending \texttt{C}, and \texttt{limit/2} truncates the result to the top slice -- conceptually similar to a SPARQL query with \texttt{GROUP BY}, \texttt{ORDER BY}, and \texttt{LIMIT}.
+
+Of course, we can use a SPARQL-like query such as this one in a call to \texttt{toplevel\_call/2-3} or \texttt{rpc/2-3} as well, although then it may be better to use the \texttt{limit} option provided by these predicates instead of the \texttt{limit/2} predicate, like so:
+
+\begin{verbatim}
+?- Goal = order_by([desc(C)],aggregate(count,X,r(X,Y),C)),
+   rpc('http://n7.org', Goal, [limit(10)]).
+\end{verbatim}
+
+\noindent Note that all this can be handled by an ISOBASE node. However, if we want to inject a program along with the query, we need at least an ISOTOPE node.
+%, and if the program is large an ACTOR node might be a better choice.
+
+The bottom line is that few mainstream general-purpose languages offer an interface to RDF that is as direct and idiomatic as Prolog's: triples map to relations, and rule layers can be expressed in the same language as the queries that consume them.
+
+%The bottom line is that, to our knowledge, no reasonably well-established general-purpose programming language besides Prolog is capable of providing such a clean interface to RDF. Web Prolog gives us all of this and more.
+
+%Of course, if we are dealing with a very large dataset (billions of triples, say) it is likely that the whole set cannot be held in the internal memory of the node. This problem might be possible to solve by means of a back-end disk-based triple store.
+
+%The Semantic Web community makes a clear distinction between knowledge representation languages (such as RDF, RDFS and OWL) and query languages (such as SPARQL). As we have seen, Prolog (including Web Prolog) can, to some extent, fill both roles -- but it does so with different semantic commitments. Web Prolog is most naturally used as an \emph{executable rule layer}: named predicates encode task-specific queries and derived relations, and these predicates can be composed, tested, and evolved as ordinary code. OWL, by contrast, targets standardisable ontology semantics under open-world assumptions and decidable reasoning fragments, enabling interoperability that depends on shared class and property commitments rather than on shared procedural conventions. The consequence is a division of labour: Prolog excels at turning relational data into reusable, executable services, while OWL excels at making ontology-level meaning explicit in a way that independent tools and parties can agree on.
+
+%The Semantic Web community makes a clear distinction between knowledge representation languages (such as RDF, RDFS and OWL) and query languages (such as SPARQL). As we have seen, Prolog (including Web Prolog) can, at least to some extent, fill both of these roles. Granted, as a knowledge representation language, Prolog is not very expressive -- there are a lot of things we simply cannot say in Horn clause logic, and there are certainly queries that cannot be asked in Prolog used as a query language. However, the point is that the \textit{same} language can be used for \textit{both} knowledge representation and querying. This is a unique and very valuable feature of Prolog, not shared by any other (major) programming language. 
+
+
+\medskip
+
+\noindent \citet{wielemaker2016cliopatria} summarise the position we adopt:
+
+\begin{quotation}
+We do not consider SPARQL adequate for creating rich semantic web applications. SPARQL often needs additional application logic that is located near the data to provide a task-specific API that drives the user interface. Locating this logic near the data is required to avoid protocol and latency overhead. RDF-based application logic is a perfect match for Prolog and the RDF data is much easier queried through the Prolog RDF libraries than through SPARQL.
+\end{quotation}
+ 
+\noindent This is precisely the role the Prolog Web embraces: Prolog predicates become the task-specific API layer that lives near the data, while remaining compositional, testable, and reusable as ordinary code.
+
+\section{OWL as an external capability}\label{sec:instead-of-owl}
+
+Moving up the Semantic Web tower, we reach OWL, a family of ontology languages based on description logics. OWL's purpose is not merely to provide more rules, but to support a particular kind of interoperability: shared vocabularies with explicit semantic commitments (class hierarchies, property characteristics, domain and range constraints, cardinality restrictions, and so on) that can be processed by standard OWL \textit{reasoners}. This matters whenever independent producers and consumers of data need to agree not only on identifiers, but on the intended interpretation of those identifiers.
+
+%At this point it is useful to recall a standard Semantic Web separation of concerns. The community distinguishes between knowledge representation languages (RDF, RDFS, OWL) and query languages (SPARQL). Prolog (including Web Prolog) can, to some extent, play both roles, but it does so with different semantic commitments. Web Prolog is most naturally used as an \emph{executable rule layer}: named predicates encode task-specific queries and derived relations, and these predicates can be composed, tested, and evolved as ordinary code. OWL, by contrast, targets standardisable ontology semantics under open-world assumptions and decidable reasoning fragments, enabling interoperability that depends on shared class and property commitments rather than on shared procedural conventions. The consequence is a division of labour: Prolog excels at turning relational data into reusable, executable services, while OWL excels at making ontology-level meaning explicit in a way that independent tools and parties can agree on.
+
+The Semantic Web community makes a clear distinction between knowledge representation languages (such as RDF, RDFS) and query languages (such as SPARQL). As we have seen, Prolog (including Web Prolog) can, to some extent, fill both roles -- but with different semantic commitments. Web Prolog is most naturally used as an \emph{executable rule layer}: named predicates encode task-specific queries and derived relations, composable and testable as ordinary code. OWL, by contrast, targets standardisable ontology semantics under open-world assumptions and decidable reasoning fragments, enabling interoperability through shared class and property commitments rather than shared procedural conventions. Prolog therefore excels at turning relational data into reusable executable services; OWL excels at making ontology-level meaning explicit in a form that independent tools and parties can agree on.
+The Prolog Web is not ``an OWL replacement,'' and should not be presented as one. Web Prolog is grounded in Horn clause logic and, in typical use, relies on closed-world idioms including Negation As Failure. OWL is designed around decidable reasoning in fragments of first-order logic under open-world assumptions, and can express and validate ontology-level constraints in a standard, tool-supported way that plain Horn clauses cannot capture directly without either changing the semantics or moving to richer logic programming extensions.
+
+This does not make the Prolog Web irrelevant to ontology-heavy applications -- it merely suggests a division of labour. When OWL is the right tool for defining a shared ontology, Web Prolog can still play at least three valuable roles: \emph{consuming} OWL-derived results (such as classifications from an external reasoner) and combining them with application-specific rules; \emph{mediating} between heterogeneous sources by translating Semantic Web representations into executable relations exposed through the Prolog Web APIs; and providing an \emph{agent substrate} in which long-lived actors use ontology-backed knowledge as one input among many while the agent logic itself remains straightforward Prolog.
+
+Ontologies are thus one of the places where the Semantic Web stack contributes something genuinely distinct: not just inference, but shared semantic commitments and a mature ecosystem of reasoners and tooling. The Prolog Web complements this by making it easier to turn ontology-backed data into running services, executable behaviour, and web-native agents.
+
+%The Semantic Web community makes a clear distinction between knowledge representation languages (such as RDF, RDFS) and query languages (such as SPARQL). As we have seen, Prolog (including Web Prolog) can, to some extent, fill both roles -- but it does so with different semantic commitments. Web Prolog is most naturally used as an \emph{executable rule layer}: named predicates encode task-specific queries and derived relations, and these predicates can be composed, tested, and evolved as ordinary code. OWL, by contrast, targets standardisable ontology semantics under open-world assumptions and decidable reasoning fragments, enabling interoperability that depends on shared class and property commitments rather than on shared procedural conventions. The consequence is a division of labour: Prolog excels at turning relational data into reusable, executable services, while OWL excels at making ontology-level meaning explicit in a way that independent tools and parties can agree on.
+%
+%In this respect, the Prolog Web is not ``an OWL replacement,'' and should not be presented as one. Web Prolog is grounded in Horn clause logic and, in typical use, relies on Prolog's operational and closed-world idioms (including Negation As Failure). OWL, by contrast, is designed around decidable reasoning in fragments of first-order logic and is commonly paired with open-world assumptions. The consequence is practical: OWL can express and validate certain ontology-level constraints in a standard, tool-supported way that plain Horn clauses cannot capture directly without either changing the semantics or moving to richer (and typically more complex) logic programming extensions.
+%
+%This does not make the Prolog Web irrelevant to ontology-heavy applications. It merely suggests a division of labour. When OWL is the right tool for defining a shared ontology, Web Prolog can still play at least three valuable roles. First, it can \emph{consume} OWL-derived results -- for example, classifications computed by an external reasoner -- and combine them with application-specific rules and heuristics written as ordinary predicates. Second, it can \emph{mediate} between heterogeneous sources, translating Semantic Web representations into executable relations and exposing derived services through the Prolog Web APIs. Third, it can provide an \emph{agent substrate}: long-lived actors can use ontology-backed knowledge as one input among many when deciding what to do next, while the agent logic itself remains straightforward Prolog.
+%
+%In short, ontologies are one of the places where the Semantic Web stack contributes something genuinely distinct: not just inference, but shared semantic commitments and a mature ecosystem of reasoners and tooling. The Prolog Web complements this by making it easier to turn ontology-backed data into running services, executable behaviour, and web-native agents.
+
+%\section{Instead of OWL}\label{sec:instead-of-owl}
+%
+%\noindent Making our way up the levels of the tower, we find OWL. Based on description logics, a subset of predicate logic only partly overlapping with the Horn clause logic subset, OWL is used for establishing the fixed, controlled ontology vocabularies deemed so important for the Semantic Web. 
+%
+%Unfortunately, for some Semantic Web use cases, the Prolog Web is not quite there yet. While logic, automated reasoning, openness and decentralization may be necessary ingredients in a truly semantic web, they surely are not sufficient. The Prolog Web lacks a sufficiently advanced concept of ontologies. It is not that we cannot build ontologies in pure Web Prolog. We can, but due to the less expressive Horn clause logic they will be less useful. While so called ISA hierarchies can easily be represented -- already \cite{deliyanni1979logic} demonstrated this -- features such as range restrictions \textit{et cetera} are more problematic. (Since Web Prolog is a full-blown programming language, we can of course use it to write programs capable of reasoning with OWL, but this is a different matter.)
+
+\section{Positioning the Prolog Web alongside the Semantic Web}\label{sec:positioning}
+
+The preceding sections have examined individual layers of the Semantic Web tower and shown how each relates to the Prolog Web. It is now worth stepping back to compare the two ecosystems as wholes. Figure~\ref{fig:trinity-vs-semantic} places the Prolog Trinity alongside what, by analogy, might be called a ``Semantic Trinity'': a comparable ecosystem assembled from Semantic Web technologies -- RDF and SPARQL for data and querying, and a general-purpose language such as Java for application logic (and possibly OWL for ontology-level semantics, and an external reasoner for inference).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.9\textwidth]{trinity-vs-semantic}
+\vspace{0cm}\caption{Comparing the Prolog Trinity with a ``Semantic Trinity.'' Solid arrows indicate tight integration; dashed arrows indicate looser coupling.}
+\label{fig:trinity-vs-semantic}
+\end{figure}
+
+\noindent Two differences stand out. The first is integration. In the Prolog Trinity the arrows are solid, suggesting that the same language is used for knowledge representation, querying, rule-based computation, and agent scripting, and the execution substrate (nodes, actors, APIs) is part of the proposal rather than an afterthought. The dashed arrows in the Semantic Trinity suggests a less tight integration: the data layer (RDF), the query layer (SPARQL), and the application layer (Java or another host language) are designed and standardised independently, and the glue between them is left to the application developer. %Web Prolog does not match OWL's logical expressiveness, but it comes with a built-in reasoner and a built-in process architecture, which means that fewer external components are needed to get from data to running service.
+
+The second difference is architectural. The Semantic Web standards specify representations and query protocols, but they do not prescribe a process infrastructure: there is no standard notion of a Semantic Web node, no standard agent lifecycle, no standard way to host long-lived services that maintain state and coordinate over time. These concerns are left to whatever application framework the developer happens to use. The Prolog Web, by contrast, comes with an architecture as part of the design. Nodes serve answers to queries over standard web protocols, federated querying composes local and remote resources, and code can flow in either direction between client and node. This is not an incidental feature. It is what makes the Prolog Web a \emph{platform} for executable knowledge rather than merely a representation format.
+
+These observations suggest a pragmatic positioning. Semantic Web standards provide interoperable representations and shared semantic commitments, but rich applications still require a host language to implement task-specific APIs, workflows, and integration with heterogeneous data sources. A common assumption is that any general-purpose language will do. In practice, however, there is often an impedance mismatch between graph-shaped, relational data and imperative application code \citep{wielemaker2016cliopatria}. This is where Prolog has an unusually good fit. RDF triples map directly to relations, and rule layers can be expressed in the same language as the queries that consume them. Application logic that would otherwise live as opaque client-side code or as ad hoc service glue can instead be expressed as named, reusable predicates close to the data. This echoes the earlier argument by \citet{wielemaker2016cliopatria}.
+%This is the same engineering gap noted earlier: SPARQL alone rarely suffices for rich applications, and a rule and API layer close to the data is typically required \citep{wielemaker2016cliopatria}.
+
+%This is precisely the engineering point emphasised by Wielemaker and his collaborators: SPARQL alone rarely suffices for building rich applications, and Prolog is a natural language for the missing rule and API layer \citep{wielemaker2016cliopatria}.
+
+From the Prolog Web perspective, then, Web Prolog can act as a programming and agent layer around Semantic Web assets: consuming RDF and SPARQL endpoints when appropriate, delegating ontology-level reasoning to OWL reasoners when needed, and exposing the resulting functionality as web-native services hosted on Prolog Web nodes. The next section makes this complementarity concrete by outlining three integration patterns that recur in practice.
+
+
+%\section{Web Prolog as a Semantic Web programming layer}\label{sec:sw-programming-languages}
+%
+%Semantic Web standards provide interoperable representations and query mechanisms, but rich applications still require a host language to implement task-specific APIs, user interfaces, workflows, and integration with heterogeneous data sources. A common assumption is that any general-purpose language will do. In practice, however, there is often an impedance mismatch between graph-shaped, relational data and imperative application code \cite{wielemaker2016cliopatria}.
+%
+%This is one place where Prolog has an unusually good fit. RDF triples map directly to relations, and rule layers can be expressed in the same language as the queries that consume them. As a consequence, application logic that would otherwise have to live as opaque client-side code or as ad hoc service glue can often be expressed as named, reusable predicates close to the data. This is precisely the engineering point emphasised by Wielemaker and his collaborators: SPARQL alone rarely suffices for building rich applications, and Prolog is a natural language for the missing rule and API layer \cite{wielemaker2016cliopatria}.
+%
+%From the Prolog Web perspective, this suggests a pragmatic positioning: Web Prolog can act as a programming and agent layer around Semantic Web assets, consuming RDF and SPARQL endpoints when appropriate, delegating ontology-level reasoning to OWL reasoners when needed, and exposing the resulting functionality as Prolog Web services.
+
+
+
+\section{Cooperation patterns}\label{sec:pw-sw-cooperation-patterns}
+
+The comparison so far suggests a simple conclusion: the Prolog Web and the Semantic Web are best treated as complementary stacks. The Semantic Web excels at \emph{interoperable knowledge interchange} through shared identifiers, vocabularies and ontology constraints. The Prolog Web excels at \emph{turning knowledge into running services} through executable predicates, a node architecture, and long-lived actors that can coordinate work over time. This section makes that complementarity concrete by outlining three integration patterns that recur in practice, referred to as A, B and C below.
+
+\subsection{A: Web Prolog as a SPARQL client and post-processor}\label{sec:pattern-sparql-client}
+
+In many applications the most pragmatic role for Web Prolog is to act as a consumer of Semantic Web data offered by existing endpoints. A Web Prolog program issues a SPARQL query to a remote endpoint, parses the result, and then applies ordinary Prolog predicates for filtering, aggregation, explanation, or task-specific inference. The important point is that the \emph{logic that makes the results useful} is written as reusable predicates rather than being forced into a single monolithic SPARQL query.
+
+Conceptually, the pattern looks like this:
+\begin{enumerate}
+\item Query a SPARQL endpoint and obtain a set of bindings.
+\item Convert the bindings to a relational representation.
+\item Run Prolog rules over that representation and expose the result as a Prolog Web service.
+\end{enumerate}
+
+\noindent The first step is typically performed by a library predicate (or a small amount of glue code) that implements HTTP and one of the SPARQL result formats. The remaining steps are plain relational programming. If the application is interactive, the derived predicate can be offered through the Prolog Web's APIs, allowing the client to retrieve solutions lazily.
+
+\subsection{B: RDF as \texttt{rdf/3}, Prolog rules as the API}\label{sec:pattern-rdf-local-rule-layer}
+
+A second pattern is to treat RDF as a storage and interchange format, but to treat Prolog as the \emph{programming interface} to that data. In this pattern, RDF triples are ingested into a node-local triple store represented as \texttt{rdf/3} facts (possibly backed by an indexed store), while the public surface of the service consists of named Prolog predicates that encode the relevant domain.
+
+The advantage over exposing a SPARQL endpoint is not merely syntactic. Named predicates become stable, reusable building blocks, and they can be composed with arbitrary auxiliary relations, foreign data sources, and task-specific computations. The service remains readable, testable, and evolvable: if a predicate is refactored, callers can remain unchanged as long as the predicate interface is preserved.
+
+In a Prolog Web setting, such predicates can be offered through \texttt{rpc/2-3} or through a remote toplevel conversation. The result is a service that is recognisably ``Semantic Web'' in the sense that it is grounded in RDF identifiers and vocabularies, but ``Prolog Web'' in the sense that its interface is executable relational code.
+
+\subsubsection{A minimal bridge example}\label{sec:minimal-bridge-example}
+
+To make the idea more concrete, suppose a node maintains a local RDF store and provides the above derived predicate \texttt{known\_with\_birthdate/3}. A client can then query this service lazily using \texttt{rpc/3}, taking advantage of the Prolog Web's support for bounded slices of answers:
+
+\begin{verbatim}
+?- Goal = known_with_birthdate(Me, He, Date),
+   rpc('http://n7.org', Goal, [limit(10)]).
+\end{verbatim}
+
+\noindent The point of the example is not the particular relation, but the division of labour. The node's RDF store and vocabularies ensure that identifiers are interoperable with the Semantic Web, while the exposed predicate provides an application-friendly interface that can be maintained and composed like ordinary Prolog code. If more logic is needed, it can be layered on top of \texttt{known\_with\_birthdate/3} rather than being duplicated across multiple SPARQL queries.
+
+\subsection{C: OWL reasoning as a service, Web Prolog for orchestration}\label{sec:pattern-owl-as-service}
+
+A third pattern is to treat OWL reasoning as an external capability rather than as something to be reimplemented inside Web Prolog. This is often the most realistic approach when an application depends on ontology-level commitments such as class subsumption, property characteristics, and other constraints that are supported by mature OWL reasoners.
+
+In this pattern, OWL plays the role of \emph{semantic backbone}, while Web Prolog plays the role of \emph{executable glue}:
+
+\begin{enumerate}
+\item An OWL reasoner (local or remote) is used to compute classifications, entailments, or consistency checks.
+\item The computed results are imported into Web Prolog as ordinary relations (e.g.\ \texttt{class/2}, \texttt{subclass/2}, \texttt{entailed/1}, or additional \texttt{rdf/3} facts).
+\item Prolog rules and, if needed, long-lived actors use these relations as inputs to application-specific decisions, workflows, or interactive services.
+\end{enumerate}
+
+\noindent This arrangement respects the strengths of both stacks. OWL reasoners provide well-understood semantics and tool support for ontology-level inference, while Web Prolog provides a convenient substrate for integrating that inference with other sources of information, additional rule layers, network calls, and agent-style control logic. The resulting system is typically easier to engineer than an attempt to force all application logic into SPARQL and OWL alone.
+
+
+\subsection{Summary}\label{sec:cooperation-patterns-summary}
+
+The three patterns can be summarised as follows. Pattern~A treats Web Prolog as a consumer and post-processor of existing Semantic Web endpoints. Pattern~B treats RDF as the data substrate but uses named Prolog predicates as the public interface, thus ``hiding'' SPARQL behind reusable relations. Pattern~C treats OWL reasoning as a specialised service and uses Web Prolog for orchestration and agent behaviour. Together they illustrate the broader theme of this chapter: interoperability and shared vocabularies are the Semantic Web's distinctive contribution, whereas executable relational services and process-level architecture are the Prolog Web's distinctive contribution, and the two therefore compose naturally.
+
+\section{Proof and Trust}\label{sec:proof-and-trust}
+
+The upper layers of the Semantic Web tower are often labelled \emph{Proof} and \emph{Trust}. The labels point to real concerns, but the standards themselves do not prescribe a single, broadly adopted mechanism for either.
+
+For the Prolog Web it is useful to read ``trust'' in a pragmatic engineering sense. A simple starting point is transparency: a node can let clients inspect the Web Prolog source code behind a published predicate or service, for example through a browsing facility, and optionally accompany it with version identifiers, digital signatures, or provenance metadata. This does not settle trust in any deeper philosophical sense, but it does support auditability, reproducibility, and accountability -- which is often what developers actually need.
+
+This stance is also operationally natural in a Prolog setting. A node need not publish only answers; it can also publish the predicate definitions and provenance information required to reconstruct how those answers were obtained. Chapter~\ref{sec:prolog-ai-agents-on-the-agentic-web} develops the idea further by showing how proof trees can be collected and inspected as a basis for explainable reasoning in Prolog agents.
+
+
+%\section{Proof and Trust}\label{sec:proof-and-trust}
+%
+%The upper layers of the tower are often labelled \emph{Proof} and \emph{Trust}. These labels point to important concerns, but the Semantic Web standards do not prescribe a single, widely adopted mechanism for either.
+%
+%For the Prolog Web, it is useful to interpret trust in a mundane engineering sense. One straightforward trust mechanism is transparency: a node can allow clients to inspect the Web Prolog source code behind a published predicate or service, for example through a browsing facility, optionally combined with versioning, signatures, or provenance metadata. This does not solve trust in the general philosophical sense, but it supports auditability and reproducibility, which are often what developers actually need.
+%
+%In a Prolog Web setting this is also practical: a node can publish not only answers, but the predicate definitions and provenance metadata needed to explain where those answers came from.
+%
+%The Prolog Web offers a more grounded starting point -- nodes can publish not only answers but the predicate definitions and provenance metadata needed to reconstruct how those answers were derived. Chapter~\ref{sec:prolog-ai-agents-on-the-agentic-web} develops this idea further by showing how proof trees can be collected and inspected as a basis for explainable reasoning in Prolog agents.
+
+%\section{Proof and Trust}\label{sec:proof-and-trust}
+%
+%\noindent The Semantic Web community does not have much to say about the levels labelled Proof and Trust in Figure~\ref{fig:semantic_web_cake}, and neither have we. But we shall make two remarks, one about \textit{proof}, and one about \textit{trust}.
+%
+%---
+%
+%Regarding trust, we would like to suggest that this notion can be interpreted in a very mundane way, where one way to build and maintain trust in a Web Prolog resource is to offer a way to inspect the Web Prolog code stored on the remote node in question, e.g. through a browsing facility. 
+
+\section{User interfaces and applications}\label{sec:user-interface}
+
+The cooperation patterns above are easiest to exploit in the familiar web application architecture: a JavaScript front end plus a back end that exposes task-specific predicates as services.
+
+Semantic Web research has long emphasised the importance of user interfaces \citep{Gasevic12semanticweb}. The Prolog Web perspective is pragmatic: conventional Web front ends are typically implemented in HTML, CSS and JavaScript, while Web Prolog services provide a relational and rule-based back end accessed over HTTP or WebSocket. This arrangement is relevant to both approaches discussed in this chapter: a JavaScript UI can talk to Web Prolog services that in turn query RDF stores, SPARQL endpoints, or OWL reasoners, effectively using Web Prolog as an application-logic layer around Semantic Web assets. If Web Prolog is deployed in browsers, a small JavaScript API that exposes its core call and message primitives would likely be the most practical interface.
+
+This is also where agents enter the picture in a concrete, engineering sense. Some agents are \emph{UI agents}: long-lived client-side processes that maintain conversational or task state, trigger background queries, coordinate multiple services, and present results incrementally rather than as a single request--response transaction. In a conventional stack, such behaviour is implemented ad hoc in JavaScript and application glue. In the Prolog Web, the same interaction model can be carried across the client--server boundary: UI agents and back-end services can be written against the same set of message-passing and call abstractions, with the agent logic expressed as stateful actors that communicate by messages, consume RDF/OWL-backed knowledge when relevant, and expose their functionality through web-native APIs. We develop this agent perspective and the disciplined control structures needed to keep it predictable in Chapter~\ref{sec:prolog-ai-agents-on-the-agentic-web}.
+
+%\section{User interfaces and applications}\label{sec:user-interface}
+%
+%The cooperation patterns above are easiest to exploit in the familiar web application architecture: a JavaScript front end plus a back end that exposes task-specific predicates as services.
+%
+%Semantic Web research has long emphasised the importance of user interfaces \citep{Gasevic12semanticweb}. The Prolog Web perspective is pragmatic: conventional Web front ends are typically implemented in HTML, CSS and JavaScript, while Web Prolog services provide a relational and rule-based back end accessed over HTTP or WebSocket. This arrangement is relevant to both stacks. A JavaScript UI can talk to Web Prolog services that in turn query RDF stores, SPARQL endpoints, or OWL reasoners, effectively using Web Prolog as the application logic layer around Semantic Web assets. If Web Prolog is deployed in browsers, a small JavaScript API that exposes its core call and message primitives would likely be the most practical interface.
+%
+%This is also where agents enter the picture in a concrete, engineering sense. Some agents are \emph{UI agents}: long-lived client-side processes that maintain conversational or task state, trigger background queries, coordinate multiple services, and present results incrementally rather than as a single request–response transaction. In a conventional stack, such behaviour is implemented ad hoc in JavaScript and application glue. In the Prolog Web, it can instead be expressed in the same executable substrate as the back-end services: as stateful actors that communicate by messages, consume RDF/OWL-backed knowledge when relevant, and expose their functionality through web-native APIs. We develop this agent perspective -- and the disciplined control structures needed to keep it predictable -- in Chapter~\ref{sec:prolog-ai-agents-on-the-agentic-web}.
+
+
+%\section{User interface and applications}\label{sec:user-interface}
+%
+%\noindent For the Semantic Web vision to succeed, it is generally agreed that research on novel user interfaces is essential \cite{Gasevic12semanticweb}. Proposals are for example based on the idea that an ontology can more or less automatically be mapped to a user interface equipped with all kinds of bells and whistles for querying or updating data defined in the terms of this ontology. Our vision for the Prolog Web is far less ambitious, but user interfaces are of course needed here too. We have three things to say about this: 1) An editor in combination with a terminal attached to a Prolog shell is certainly not novel, but still a superb user interface to the Prolog Web, 2) Web Prolog in combination with standard web technologies such as HTML, CSS and JavaScript, and communication with the back-end processes (e.g. toplevels) performed over HTTP or WebSocket,  can be used to fairly easily build novel user interfaces adapted to particular kind of applications, and 3) this is relevant not only for building user interfaces to the Prolog Web, but also to the Semantic Web, as the work described in Section~\ref{sec:wp-ws-sw} has shown.
+%
+%\todo{Better write GUIs in JS.}
+%
+%As for Web Prolog running in a a browser, we propose that it should have a JS API.
+
+%\section{Agents and the Web}\label{sec:agents-and-the-web}
+%
+%In ``Agents and the Semantic Web'', \citet{hendler2001agents} argues that Web-based agents could become ``killer applications'' for Semantic Web technology, while noting that suitable infrastructure was still lacking. That diagnosis remains instructive. Much of the Semantic Web stack concerns representation, querying and ontology semantics, but it says comparatively little about the process architecture in which agents live and act over time.
+%
+%This is one point where the Prolog Web provides a more operational substrate. Nodes host long-lived actors that can maintain state, react to events, coordinate workflows, and communicate with other actors. These actors can, in turn, consume Semantic Web resources in several ways: they can fetch and import knowledge for local reasoning, query services hosted on remote nodes, or spawn specialised actors near remote data when the infrastructure permits. In this sense, the Prolog Web has a notion of web-native agents built in, and the next chapter's statechart behaviour can be read as a concrete control architecture for such agents.
+%
+%The intended conclusion is again cooperative. Semantic Web standards can supply interoperable identifiers, vocabularies and ontologies, while Web Prolog supplies a convenient programming model for agents that use such knowledge as one input among many when deciding what to do next.
+
+
+%\section{Agents and the Web}\label{sec:agents-and-the-web}
+%
+%\noindent In an article with the title ``Agents and the Semantic Web'', James \citet{hendler2001agents} tells the following anecdote:  
+%
+%\begin{quotation}
+%\noindent At a colloquium I attended recently, a speaker described a ``science fiction'' vision comprising agents running around the Web performing complex actions for their users. The speaker argued that we are far from the day this vision would become a reality because we don't have the infrastructure to make it happen. Although I agree with his assessment about infrastructure, his claim that we are ``far from the day'' is too pessimistic.
+%\end{quotation}
+%
+%\noindent Hendler goes on to argue that agents on the Web might serve as great ``killer apps'' that can lead to the realization of the ``science fiction'' vision, and show the world the great power of the Semantic Web as the infrastructure for such agents. We would argue that this is still a valid vision but that the Prolog Web, perhaps in combination with semantic web technologies, might be a more suitable environment for realizing it. 
+%
+%The notion of a Prolog agent has been thoroughly discussed in Chapter~\ref{sec:prolog-agents} so our task here is merely to argue that the notion of a Prolog agent fits nicely with the idea of agents on the Semantic Prolog Web.
+%
+%All Prolog agents have in common that they are software agents and that they live on the Web, just like the agents envisioned by Hendler, although the Prolog Web rather than the Semantic Web constitutes a vital part to the infrastructure for Prolog agents. In fact, as we shall see, it makes sense to say that the Prolog Web has the concept of agents \textit{built in} to it -- nodes, toplevel actors, statechart actors (we get to them in the next chapter) and potentially many other kinds of actors with useful properties and behaviors.
+%
+%The agents envisioned in the quote spend their lives ``running around the Web.'' Surely, an agent must somehow be capable of accessing the resources offered by remote nodes on the Semantic Web. Agents being \textit{movable} appears to be one way to solve this problem -- just teleport to the node where the resource needed is provided. 
+%
+%Prolog agents are not mobile  -- i.e. they are not ``running around,'' but stay put on the node that spawned them. We would argue that mobility is not required, at least not for the purpose of getting access to knowledge stored remotely. As we have seen, there are three ways for a Prolog agent to access such knowledge: 1) running on one node, they can (if permitted) fetch (i.e. download) the knowledge stored on another node and reason with it, or 2) they can query an actor already resident on that other node and in this way get hold of the knowledge it needs, or 3) they can spawn a new actor on this other node, a ``child actor'' with direct access to the knowledge stored there, and then query it. Should we find that mobile agents would be useful, they can most likely be implemented.
+%
+%---
+%
+%Hendler: Where are all the agents?
+%
+%On the Prolog Web, toplevels and other kinds of actors can easily access knowledge stored on the node where they were born and on which they now live, and we would assume that something like this can be arranged on the Semantic Web too. 
+%
+%---
+%
+%One Prolog agent can talk to other Prolog agents that are present there, using Web Prolog as their ACL, i.e. as their \textit{agent communication language}, to use a technical terms used in contexts involving so called ``multiagent systems.'' 
+%
+%In addition to Prolog agents, the Prolog Web is populated with knowledge in the form of databases containing facts and rules written in Web Prolog, and shared by all Prolog agents living there. Thus, Web Prolog also serves as a KRL -- a \textit{knowledge representation language}. %DCG is a grammar formalism -- another kind of language coming in handy when trying to specify what Prolog agents should do or say, and DCG too is part of Web Prolog. Web Prolog, and indeed also Erlang, can be considered \textit{agent programming languages}.
+%
+%---
+%
+%It might be argued that Prolog agents are hardly capable of ``performing complex actions for their users,'' but as we shall see in Chapter~\ref{sec:ides}, we may be able to build useful agents simply by combining the capabilities of simpler Prolog agents such as the ones in Figure~\ref{fig:prolog-agent-taxonomy}.
+%
+%---
+%
+%Agents can spawn each other - actors spawning toplevels, toplevels spawning statechart actors, and so on, without restrictions.
+%
+%---
+%
+%Simple, short-lived, solely reactive
+%
+%Hendler's web-based agent-systems might be a heterogeneous, and agents be complex, long-lived, intelligent (i.e. planning) conversational agents. 
+%
+%Complex (more than one actor)
+%
+%---	
+%
+%What Hendler likely had in mind when he wrote his 2001 papers, are agents that are quite clever. Nodes and simple toplevels do not qualify.
+
+%\section{Multi-Agent Systems}\label{sec:multi-agent-systems}
+%
+%Figure~\ref{fig:prolog-agent-taxonomy} (reproduced below for convenience) show the kind of Prolog agents that populate the Prolog Trinity:
+%
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=5cm]{prolog-agent-taxonomy}
+%    \caption{An open-ended taxonomy of Prolog agents.}
+%
+%\end{figure}
+%
+%---
+%
+%\noindent All expert systems are agents, but all agents are not expert systems.
+%
+%---
+%
+%Note that the expert system meta-interpreter is an example of a quite useful kind of program that would be much more difficult to write if only synchronous and stateless interaction over HTTP could be supported.
+%
+%---
+%
+%The explanation facility for the SemWeb chapter can be used like this too?
+%
+%---
+%
+%Middleware for WebAgents
+
+%\section{The Prolog Trinity vs a ``Semantic Trinity''}\label{sec:ecosys-vs-ecosys}
+%
+%In Figure~\ref{fig:sw-pw-comparison} we make an attempt to compare the Prolog Trinity ecosystem with (a particular possible instance of) the Semantic Web ecosystem. 
+%
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=10.5cm]{sw-pw-comparison}
+%    \caption{Comparing the Prolog Trinity with the ``Semantic Trinity.''}
+%    \label{fig:sw-pw-comparison}
+%\end{figure}
+%
+%\noindent To the left the  Prolog Trinity introduced already in Chapter~\ref{sec:intro} is reproduced. To the right is what by analogy might be a reasonable suggestion for a similar system using semantic web technologies (such as RDF and SPARQL) in combination with a general-purpose programming language (such as Java). OWL might be needed too, and then a so called \textit{reasoner} might be required as well. Web Prolog does not have the logical expressiveness of OWL, but it comes with a built-in reasoner.
+%
+%We use solid arrows to indicate the tight relations between the concepts involved. To the right we use dashed arrows to indicate that the relations between some of these roles are less tight.
+%
+%
+%\section{The Prolog Web comes with an architecture}\label{sec:architecture}
+%
+%\noindent The Prolog Web comes with programs, processes and a flexible infrastructure for computing on the Web. This is something that is lacking from the Semantic Web proposal, or at least does not exist in a form that has been generally agreed. 
+%
+%With the Prolog Web, an architecture has sort of suggested itself. A distributed process infrastructure consisting of nodes serving answers to queries has been specified in great detail and implemented. Federated querying in this architecture involves figuring out how to run a query making use of local as well as remote Web Prolog resources in the best possible way. (In the future, the ``best possible way'' can perhaps be determined algorithmically.) An approach allowing Web Prolog source code to be executed to flow in either direction, from the client to the node or from the node to the client, has been worked out. The choice between bringing data to the code, or code to the data, is left to the programmer to make on a case by case basis. %(Recall, however, that if the remote program is not self-contained, the choice is not even there.)
+
+
+\section{Related work: towers of logic programming}\label{sec:other-cakes}
+
+\noindent As noted above, many variants of the Semantic Web tower have been proposed, and some align more closely with logic programming than others. The two-tower architecture of \citet{Horrocks2005}, reproduced in Figure~\ref{fig:two-tower}, contrasts two plausible instantiations of a layered Web stack.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=6cm]{two-towers}
+    \caption{The two-tower architecture, with the tower proposed in \cite{Horrocks2005} to the left and a simplified version of the ``original'' tower to the right.}
+    \label{fig:two-tower}
+\end{figure}
+
+\noindent The right-hand tower captures essentially the same idea as Figure~\ref{fig:semantic_web_cake}. The left-hand tower, by contrast, is more explicitly grounded in the logic programming paradigm. Here DLP denotes Description Logic Programs, a fragment designed to connect Datalog-style rule reasoning with part of the ontological expressiveness found in OWL. Above DLP, one can formulate rules and enrich them with features such as Negation As Failure. The ``etc'' in the diagram is not mere hand-waving: it points to the broad family of logic programming formalisms surveyed in Section~\ref{sec:lp-landscape}, each with its own semantic foundations and practical strengths.
+
+The key observation is that this left-hand tower is not a single monolithic stack but a family of possible stacks, each grounded in a different fragment or extension of logic programming. The Prolog Web's profile hierarchy (Chapter~\ref{sec:prolog-agents}) provides a natural way to accommodate this diversity. A Datalog engine, with its guaranteed termination and pure relational semantics, is a natural fit for the RELATION or ISOBASE profile. A WFS-capable Prolog system, offering stronger semantic guarantees for negation, can present itself as an ISOTOPE node. A probabilistic reasoning engine can offer a specialised query interface while remaining addressable through standard Web Prolog protocols. In each case, the profile level advertises the system's expressive capabilities, and the protocol layer provides the common ground.
+
+In this reading, the left-hand tower of \citet{Horrocks2005} maps directly onto the architecture described in earlier chapters. The broader vision -- a Logic Programming Web rather than merely a Prolog Web -- is taken up again in Chapter~\ref{sec:for-other-communities}, where we consider what this architecture offers to the wider LP community.
+
+
+%\noindent The right-hand tower captures essentially the same idea as Figure~\ref{fig:semantic_web_cake}. The left-hand tower, by contrast, is more explicitly grounded in the logic programming paradigm. Here DLP denotes \emph{Description Logic Programs}, a fragment designed to connect Datalog-style rule reasoning with part of the ontological expressiveness found in OWL \citep{HENDLER2008821}. Above DLP, one can formulate rules and enrich them with features such as Negation As Failure (NAF). 
+%The ``etc'' in the diagram is not mere hand-waving: it points to a large body of work in which Horn clause logic is extended in different directions, each with its own semantic foundations and practical strengths. 
+%%In a similar spirit, \citet{Kifer2005} argues that a realistic Web architecture should consist of multiple independent but interoperable language stacks, and places particular emphasis on a stack closer to the left-hand tower.
+%%It is natural to ask whether the Prolog Web could be generalised into a more inclusive \emph{Logic Programming Web}. One motivation, noted by \citet{HENDLER2008821}, is that the scale and openness of the Web may require principled treatments of uncertainty and fuzziness. In that direction, one could imagine extending a system such as ProbLog into a node capable of answering queries in a Web Prolog compatible way, thereby providing a probabilistic logic programming layer.
+%%The ``etc'' after Negation As Failure in the left-hand tower is worth
+%%dwelling on. It gestures at a large and active body of work in which
+%%Horn clause logic is extended in different directions, each with its
+%%own semantic foundations and practical strengths. Several of these
+%%extensions are directly relevant to the question of what a
+%%logic-programming tower for the Web might look like.
+%
+%\emph{Datalog} occupies a particularly interesting position. As a
+%function-free fragment of Horn clause logic, Datalog sacrifices Turing
+%completeness in exchange for guaranteed termination and well-understood
+%complexity bounds -- properties that matter when queries run over
+%large, potentially untrusted datasets. Datalog has seen a resurgence in
+%recent years as a query and analysis language in domains ranging from
+%program analysis to access control to distributed systems
+%\citep[see e.g.][]{Ceri1989,Green2013}. In the context of the Semantic
+%Web, Datalog is closely related to DLP and to the rule layers that sit
+%above RDF in the left-hand tower. A Prolog Web node backed by a Datalog
+%engine could participate in the network at the ISOBASE profile level,
+%offering guaranteed-terminating relational queries without the full
+%generality -- or the full risk -- of unrestricted Prolog.
+%
+%\emph{Well-founded semantics} (WFS) addresses a different gap.
+%Standard Prolog's treatment of negation through Negation As Failure is
+%operationally useful but semantically fragile: the order of clause
+%evaluation can affect which negative conclusions are drawn. Well-founded
+%semantics provides a cleaner three-valued account in which every normal
+%logic program has a unique minimal model, assigning each ground atom
+%the value \emph{true}, \emph{false}, or \emph{undefined}
+%\citep{VanGelder1991}. Mature Prolog systems such as XSB and
+%SWI-Prolog already implement WFS via tabling, and the combination of
+%tabling with well-founded negation gives these systems a computational
+%behaviour closer to the model-theoretic ideal than raw SLD resolution.
+%For Semantic Web applications that require sound non-monotonic
+%reasoning over open or incomplete data, this is a significant
+%capability -- and one that the Prolog Web can expose without requiring
+%any new language, since WFS-capable Prolog systems simply offer a
+%better-behaved implementation of the same predicates.
+%
+%\emph{Probabilistic logic programming} extends the picture in yet
+%another direction. Systems such as ProbLog \citep{DeRaedt2007} and
+%cplint \citep{Riguzzi2018} allow facts to hold with specified
+%probabilities, defining a distribution over possible worlds from which
+%the probability of any query can be computed. ProbLog is a
+%Python-based toolbox supporting inference, sampling, and parameter
+%learning; cplint is implemented as a SWI-Prolog library and is already
+%accessible through a web-based environment (``cplint on SWISH'') that
+%is structurally close to a Prolog Web node. Extending either system to
+%speak the Web Prolog protocol would bring probabilistic reasoning into
+%the network as a specialised capability, available to any agent or
+%client that can issue a query.
+%
+%The common thread is that the Prolog Web's profile hierarchy
+%(Chapter~\ref{sec:prolog-agents}) provides a natural way to accommodate
+%these extensions. A Datalog engine can present itself as a PLAIN or
+%ISOBASE node; a WFS-capable Prolog system can present itself as an
+%ISOTOPE node with stronger semantic guarantees; a probabilistic engine
+%can offer a specialised query interface while remaining addressable
+%through standard Web Prolog protocols. In this reading, the left-hand
+%tower of Horrocks et al.\ is not a single monolithic stack but a
+%family of possible stacks, each grounded in a different fragment or
+%extension of logic programming, and the Prolog Web is the
+%infrastructure that lets them coexist and interoperate on the Web. The
+%broader vision -- a Logic Programming Web rather than merely a Prolog
+%Web -- is taken up again in Section~\ref{sec:broader-LP-community}.
+
+
+\section{Outlook: Prolog Trinity towers}
+
+Where does Web Prolog fit in? One alternative that suggests itself is to allow Web Prolog to form a layer of middleware between code -- often consisting of HTML, CSS and JavaScript -- that implements user interface and other application code that does not lend itself to implementation in Web Prolog, and the rest. This is suggested in Figure~\ref{fig:semantic_web_cake-with-wp}.
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[width=6cm]{semantic_web_cake-with-wp}
+    \caption{The Semantic Web tower with an explicit Web Prolog middleware layer.}
+    \label{fig:semantic_web_cake-with-wp}
+\end{figure}
+
+\noindent The same kind of arrangement can be built on top of the second tower, as suggested in Figure~\ref{fig:second-tower}.
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[width=5.4cm]{second-tower}
+    \caption{Two-tower architecture (after \citep{Horrocks2005}): logic-programming-oriented tower alongside the ‘original’ tower.}
+    \label{fig:second-tower}
+\end{figure}
+
+\noindent Or it might be regarded as a \textit{third} tower, independent but interoperable with the other towers. Figure~\ref{fig:third-tower} suggests this option.
+
+\begin{figure}[h]
+    \centering
+	\includegraphics[width=7.5cm]{three-towers}
+    \caption{Three-tower view: adding a Prolog Web tower alongside the two Semantic Web towers (after \citep{Horrocks2005}).}
+    \label{fig:third-tower}
+\end{figure}
+
+\noindent While the Semantic Web might be described as ``layered,'' then, in contrast, the Prolog Web might be described as ``integrated'' -- not only in the sense that the same language is used for knowledge representation and querying, but also in the sense that Web Prolog is a full-fledged programming language.
+
+\section{Discussion}
+
+\noindent The Prolog Web and the Semantic Web are similar in spirit: both treat the Web as a computational environment rather than merely a document store, and both rely on global naming (URIs) and on logic-based machinery to make data more useful than it would be in a purely syntactic web of documents. Both also aim at decentralisation and federation, in the sense that useful functionality should arise from composing resources offered by many independent parties rather than from a single central database.
+
+At the same time, the two stacks emphasise different things. The Semantic Web places its centre of gravity on interoperable data models and shared semantic commitments, while the Prolog Web places its centre of gravity on executable relational services, process-level structure, and web-native agents. Table~\ref{fig:wp-sw-comparison} summarises these differences.
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{ | p{5.7cm} | p{5.7cm} | }
+\hline
+\textbf{The Prolog Web} & \textbf{The Semantic Web} \\ \hline
+Uses the same language for querying and rule-based computation; queries can be packaged as reusable predicates & Typically separates data representation (RDF/OWL) from querying (SPARQL) and application logic \\ \hline
+Provides a process and service architecture (nodes, APIs, long-lived actors) as part of the proposal & Provides standards for interoperable data and ontology semantics, but does not prescribe a single process architecture \\ \hline
+Supports agent-style computation naturally through long-lived actors and message passing & Has strong support for shared ontologies and open-world reasoning through standardised languages and reasoners \\ \hline
+Shared meaning is typically implicit in executable predicates and local conventions; shared ontologies are optional & Interoperability is centred on shared identifiers, vocabularies, and ontology constraints \\ \hline
+Well suited as a programming and orchestration layer around heterogeneous services (including Semantic Web services) & Well suited as a lingua franca for knowledge interchange across independent parties \\ \hline
+\end{tabular}
+\end{center}
+\caption{Comparing the Prolog Web and the Semantic Web}
+\label{fig:wp-sw-comparison}
+\end{table}
+
+
+
+
+%In Table~\ref{fig:wp-sw-comparison}, some of the differences are summarized.
+%
+%\begin{table}[h]
+%\begin{center}
+%    \begin{tabular}{ | p{3.4cm} | p{3.4cm} |}
+%    \hline
+%    \hspace{0.5cm}\textsc{\textbf{The Prolog Web}} &  \hspace{0.3cm}\textsc{\textbf{The Semantic Web}} \\ \hline
+%    Uses the same language for knowledge representation and querying & Uses different languages for knowledge representation and querying \\ \hline
+%    Web Prolog is a  programming language & Semantic Web languages are not programming languages \\ \hline
+%    The Prolog Web comes with an architecture & The Semantic Web does not come with an architecture \\ \hline
+%    The Prolog Web comes with web agents built in & The Semantic Web does not feature web agents\\ \hline
+%    The Prolog Web does not deal with meaning & The Semantic Web purports to deal with meaning \\ \hline
+%    \end{tabular}
+%\end{center}
+%\caption{Comparing the Prolog Web and the Semantic Web}
+%\label{fig:wp-sw-comparison}
+%\end{table}
+
+%\todo{Present table row by row. Note that the Prolog Web does not deal with meaning. Note also the work by Wielemaker et al again.}
+
+\noindent Although the discussion in this chapter uses the Semantic Web as a concrete point of comparison, most of the underlying issues are not specific to RDF, OWL, or W3C standards. Over the past decade, a range of graph-based technologies -- including property-graph systems and large-scale knowledge-graph platforms -- have converged on similar concerns: graph-structured data, pattern-based querying, distributed evaluation, and the tension between shared representation and executable computation. The Prolog Web is intended to address this broader design space, offering an executable logic-based substrate that can sit alongside, or on top of, different graph representations rather than competing with any single one. 
+
+It should be clear by now that we do not aim for the Prolog Web to \textit{replace} the Semantic Web, or for Web Prolog to replace the current Semantic Web languages and the technologies surrounding them. On the contrary, we hope and believe that we will be able to carve out a place for the Prolog Web alongside the Semantic Web, and that the languages involved can live happily together. This also appears to be consistent with the multi-stack architecture for the Semantic Web proposed in \citep{Kifer2005,Horrocks2005}.
+
+Interestingly, \citet{Kifer2005} uses the following analogy when arguing against a single-stack architecture for the Semantic Web:
+
+\begin{quotation}
+While a single-stack architecture would hold aesthetic appeal and simplify interoperability, many workers in the field believe that such architecture is \textit{un-realistic} and \textit{unsustainable}. For one thing, it is presumptuous to assume that any technology will preserve its advantages forever and to require that any new development must be compatible with the old. If this were a law in the music industry (for example) then MP3 players would not be replacing compact disks, compact discs would have never displaced tapes, and we might still be using gramophones.
+\end{quotation}
+
+%\noindent We are tempted to push the analogy a little further. Vinyl records are old technology, yet they persist because they offer a distinctive combination of qualities, and modern turntables remain compatible with contemporary systems (for example through USB). In the same spirit, Prolog is old technology, yet its tight integration of knowledge representation, querying and general-purpose programming remains distinctive. The Prolog Web can be read as an attempt to make that old integration compatible with the modern Web: nodes and actors are a web-native ``playback'' infrastructure for executable Prolog knowledge. There are things one can do naturally in such a setting -- notably, treat knowledge as code and build services and agents directly out of relational programs -- that do not follow as directly from the usual Semantic Web stack.
+%
+%In the next chapter we make this operational reading concrete by introducing the statechart behaviour as a disciplined control architecture for such web-native Prolog agents.
+
+\noindent The authors do have a point, and we would like to draw on the gramophone analogy even further. Quite a few people (usually referring to themselves as ``audiophiles") \textit{are} still using gramophones, for the good sound and nice feel of vinyl records. We also note that, for reasons of compatibility and interoperability with more modern technology, the gramophones sold today can usually be plugged into a computer via a USB port. We are thus tempted to think of programs written in Web Prolog as the vinyl records of the logic programming world, and of actors and nodes as the gramophones -- updated for compatibility and interoperability with the Web -- on which to ``play'' the programs. And to continue with the analogy, there are things we can do with vinyl records and gramophones, like \textit{scratching}\footnote{\url{https://en.wikipedia.org/wiki/Scratching}} for example, which simply is not possible with newer technologies, and there are things we can do with Prolog, like \textit{programming} for example, which the usual Semantic Web stack of languages does not allow. So while it is true that Prolog is old technology, and while Prolog's tight integration of knowledge representation, querying and general-purpose programming comes with its own set of problems, this integration is at the heart of Prolog. Having it any other way, it would no longer be a Prolog Web.
+
+
+
+%\section{Semantic Web programming languages}\label{sec:sw-programming-languages}
+%
+%\noindent A commonly held assumption in the Semantic Web community seems to be that for tying all the different Semantic Web technologies together, any general-purpose programming language such as Java or Python would do. There are however well-known problems with this view, due to the so called ``impedance mismatch'' between imperative (object oriented) programming languages and relational languages \cite{wielemaker2016cliopatria}. 
+%
+%It can be argued that programming against the Semantic Web is better and more easily done using a relational language rather than an object oriented one. Prolog is such a language, and might be appreciated among practitioners on its merits as such.
+%
+%A relational language such as Prolog is very well equipped to handle property graphs, knowledge graphs, as well as semantic networks of a simpler kind.\\
+%
+%---
+%
+%It seems reasonable to view a special-purpose dialect of Prolog as a dedicated semantic web programming language.
+%
+%Web Prolog succeeds pretty well in \textit{hiding} the Semantic Web behind Prolog. The most important step was to adapt Prolog to the Web (i.e. to webize Prolog), and this seems to have already provided us with the most important features of a fairly decent Semantic Web Programming Language. With those features in place, it is easy to imagine node implementations specifically tailored to the purpose of serving semantic web researchers and developers. Among other things, such nodes would likely support both import and export of semantic web data in formats such as RDF/XML and Turtle.
+%
+%While Web Prolog may not be the \textit{best} possible knowledge representation language, the \textit{best} possible query language or the \textit{best} possible general programming language for the Semantic Web, it is the \textit{combination} that might win semantic web researchers over, just as the combination of tools offered by Swiss army knives has won people over. (The analogy is a little bit misleading though, since the combination of tools offered by Web Prolog is arguably more coherent than the combination of tools offered by a Swiss army knife.)
+%
+%---
+%
+%While they serve the broader purpose of enabling machine-readable data and complex querying capabilities on the Web,  Semantic Web languages are not Turing-complete and do not possess the general-purpose computational characteristics associated with traditional programming languages such as Python or Prolog.
+%
+%RDF, RDFS and OWL are more accurately described as data representation languages. They are used for defining data structures and ontologies, but they do not contain constructs for conditionals and loops that one would find in a traditional programming language. While SPARQL is a query language that allows for data manipulation and retrieval using quite complex queries, it lacks the broader computational features that characterize general-purpose programming languages. Languages such as N3, Turtle, JSON-LD and RDF/XML are syntaxes or serialization formats for representing semantic data, but are not designed for general computation. Languages such as RIF and SWRL are rule languages for describing rule-based transformations, but neither they are fully-featured programming languages.
+%
+%Therefore, it would be more accurate to refer to these technologies as languages for data representation, querying, and validation within the Semantic Web framework, rather than as programming languages in the traditional sense. Their primary purpose is to enable semantic interoperability and intelligent querying across diverse data sources, rather than general-purpose computation.
+%
+%---
+%
+%Prolog systems would need to
+%  demonstrate that they can handle the scale of data typically
+%  associated with the Semantic Web, both in terms of size and
+%  complexity, with performance characteristics that are at least on par
+%  with current technologies.
+%
+%---
+%
+%For Semantic Web applications that require Turing-complete programming
+%languages, typically general-purpose languages are employed in
+%conjunction with Semantic Web technologies. While the core Semantic Web
+%standards like RDF, SPARQL and OWL are not Turing-complete and
+%are primarily designed for data representation and querying, they are
+%often used in tandem with Turing-complete languages. Here are some
+%examples:
+%
+%\begin{enumerate}
+%\item
+%  \textbf{Java}: Java is commonly used in Semantic Web applications.
+%  Libraries like Apache Jena and Eclipse RDF4J (formerly known as
+%  Sesame) provide extensive support for RDF, SPARQL, and OWL, allowing
+%  developers to create, manipulate, and query Semantic Web data within a
+%  Java application.
+%\item
+%  \textbf{Python}: Python is another popular choice, with libraries such
+%  as RDFLib and OWL-RL. These libraries allow manipulation and querying
+%  of RDF and OWL data, and Python\textquotesingle s ease of use makes it
+%  a favored choice for rapid development of Semantic Web applications.
+%\item
+%  \textbf{Prolog}: Prolog\textquotesingle s declarative nature
+%  makes it well-suited for Semantic Web applications, particularly those
+%  involving complex rule-based reasoning. SWI-Prolog, for example,
+%  offers support for RDF and SPARQL, enabling Prolog to be used
+%  effectively in Semantic Web contexts.
+%\item
+%  \textbf{JavaScript}: With the rise of Node.js, JavaScript has become a
+%  versatile server-side language and can be used in Semantic Web
+%  applications. Libraries like N3.js allow handling RDF data in
+%  JavaScript.
+%\end{enumerate}
+%
+%These Turing-complete languages, when combined with Semantic Web
+%libraries, provide the full power needed for complex application
+%development, including data representation, querying, inference, and
+%manipulation in Semantic Web contexts. This approach allows developers
+%to leverage the strengths of both Turing-complete languages for general
+%programming tasks and Semantic Web standards for structured data
+%representation and reasoning.
+%
+%---
+%
+%In the context of Semantic Web and logic programming, Prolog is indeed
+%one of the most prominent languages due to its roots in formal logic and
+%its suitability for rule-based reasoning. However, there are other
+%programming languages and paradigms that can be used in a similar
+%relational or logic-oriented context, though they might not be as
+%well-known or widely used as Prolog in this domain:
+%
+%\begin{enumerate}
+%\item
+%  \textbf{Datalog}: Datalog is a declarative logic programming language
+%  that is syntactically a subset of Prolog but differs in that it
+%  typically does not allow complex terms as arguments of predicates.
+%  It\textquotesingle s particularly used in database applications and
+%  can be applied to Semantic Web data, especially when dealing with
+%  large-scale data and inferencing.
+%\item
+%  \textbf{SWI-Prolog's Semantic Web Library}: While this
+%  is still Prolog, it is worth mentioning specifically
+%  because SWI-Prolog includes extensive support for Semantic Web
+%  standards, including RDF and SPARQL. This makes it a particularly
+%  powerful tool for Semantic Web applications.
+%
+%\end{enumerate}
+%
+%While these alternatives exist, it is important to note
+%that the integration of these languages with Semantic Web technologies
+%might not be as straightforward or well-supported as with Prolog.
+%Additionally, the choice of language often depends on the specific
+%requirements of the project, such as the need for rule-based reasoning,
+%data manipulation capabilities, and the scale of data processing. Prolog
+%remains a significant choice in this domain due to its direct alignment
+%with logic-based reasoning and its existing support for Semantic Web
+%standards.
+

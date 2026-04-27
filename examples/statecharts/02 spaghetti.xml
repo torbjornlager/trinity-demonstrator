@@ -1,0 +1,73 @@
+<!--
+
+    Spaghetti statechart actor.
+
+    See https://github.com/torbjornlager/statechart-actor-web-prolog/raw/main/img/spaghetti.jpg
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="s0">
+    <state id="s0">
+        <initial>
+            <go to="s1" />
+        </initial>
+        <state id="s1">
+            <initial>
+                <go to="s11" />
+            </initial>
+            <state id="s11">
+                <go to="s211" on="g" />
+            </state>
+            <go to="s1" on="a" />
+            <go to="s11" on="b" />
+            <go to="s2" on="c" />
+            <go to="s0" on="d" />
+            <go to="s211" on="f" />
+        </state>
+        <state id="s2">
+            <initial>
+                <go to="s21" />
+            </initial>
+            <state id="s21">
+                <initial>
+                    <go to="s211" />
+                </initial>
+                <state id="s211">
+                    <go to="s21" on="d" />
+                    <go to="s0" on="g" />
+                    <go to="f" on="h" />
+                </state>
+                <go to="s211" on="b" />
+            </state>
+            <go to="s1" on="c" />
+            <go to="s11" on="f" />
+        </state>
+        <go to="s211" on="e" />
+    </state>
+    <final id="f" />
+</statechart>
+
+
+<!-- <examples>
+
+?- $Pid ! a.
+
+?- $Pid ! b.
+
+?- $Pid ! c.
+
+?- $Pid ! d.
+
+?- $Pid ! e.
+
+?- $Pid ! f.
+
+?- $Pid ! g.
+
+?- $Pid ! h.
+
+-->

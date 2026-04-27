@@ -1,0 +1,14 @@
+<statechart datamodel="web-prolog" initial="s1">
+    <state id="s1">
+        <onentry>
+            output('IDLE')
+        </onentry>
+        <go to="s2" on="play"/>
+    </state>
+    <state id="s2">
+        <onentry>
+            output('PLAYING')
+        </onentry>
+        <go to="s1" on="reset"/>
+    </state>
+</statechart>

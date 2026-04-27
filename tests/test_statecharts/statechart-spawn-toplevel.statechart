@@ -1,0 +1,23 @@
+<statechart datamodel="web-prolog" initial="spawn-ask-collect">
+    <state id="spawn-ask-collect" initial="ask">
+        <spawn type="toplevel">
+            q(X) :- p(X).
+            p(a). p(b). p(c). p(d).
+        </spawn>
+        <state id="ask">
+            <go to="collect" on="spawned(Pid)">
+                toplevel_call(Pid, q(X))
+            </go>
+        </state>
+        <state id="collect">
+            <go to="collect" on="success(Pid,Slice,true)">
+                forall(member(Data, Slice), writeln(Data)),
+                toplevel_next(Pid)
+            </go>
+            <go to="f" on="success(_,Slice,false)">
+                forall(member(Data, Slice), writeln(Data))
+            </go>
+        </state>
+    </state>
+    <final id="f" />
+</statechart>

@@ -1,0 +1,29 @@
+<!--
+
+    A clock - ticking once a second - and a
+    state parallel to it that is listening.
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="Start">
+    <parallel id="Start">
+        <state id="Clock">
+            <onentry>
+                raise(tick)
+            </onentry>
+            <go on="tick">
+                sleep(1),
+                raise(tick)
+            </go>
+        </state>
+        <state id="Listener">
+            <go on="tick">
+                writeln('Heard a tick!')
+            </go>
+        </state>
+    </parallel>
+</statechart>

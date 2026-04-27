@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor / IDE
+.claude/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# SWI-Prolog
+*.qlf
+
+# Local env / build artifacts
+.env
+.env.local

@@ -1,0 +1,11 @@
+digraph dependency_graph {
+  graph [rankdir=TB, labelloc=t, labeljust=l, fontsize=20, fontname="Helvetica", overlap=false, splines=true, nodesep=0.28, ranksep=0.55, pad=0.2];
+  node [shape=box, style="rounded", color="#666666", fontname="Helvetica", fontsize=11, margin="0.08,0.05"];
+  edge [color="#555555", arrowsize=0.7, penwidth=1.0];
+  label="Examples";
+  n0 [label="actor.pl"];
+  n1 [label="examples/services/node_resident_services.pl"];
+  n2 [label="node.pl"];
+  n1 -> n0;
+  n1 -> n2;
+}

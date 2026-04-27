@@ -1,0 +1,30 @@
+digraph dependency_graph {
+  graph [rankdir=TB, labelloc=t, labeljust=l, fontsize=20, fontname="Helvetica", overlap=false, splines=true, nodesep=0.28, ranksep=0.55, pad=0.2];
+  node [shape=box, style="rounded", color="#666666", fontname="Helvetica", fontsize=11, margin="0.08,0.05"];
+  edge [color="#555555", arrowsize=0.7, penwidth=1.0];
+  label="Statechart Modules";
+  n0 [label="actor.pl"];
+  n1 [label="actor_io_support.pl"];
+  n2 [label="node_session.pl"];
+  n3 [label="source_loader.pl"];
+  n4 [label="source_utils.pl"];
+  n5 [label="statechart_actor.pl"];
+  n6 [label="statechart_exec.pl"];
+  n7 [label="statechart_model.pl"];
+  n8 [label="statechart_runtime.pl"];
+  n9 [label="toplevel_actor.pl"];
+  n5 -> n0;
+  n5 -> n1;
+  n5 -> n2;
+  n5 -> n3;
+  n5 -> n6;
+  n5 -> n7;
+  n5 -> n8;
+  n5 -> n9;
+  n6 -> n0;
+  n6 -> n7;
+  n6 -> n8;
+  n7 -> n4;
+  n8 -> n0;
+  n8 -> n9;
+}

@@ -1,0 +1,35 @@
+<!--
+
+    Demonstrating the <spawn> element.
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="spawn-ask-collect">
+    <state id="spawn-ask-collect" initial="ask">
+        <spawn type="toplevel" exit="false">
+            q(X) :- p(X).
+            p(a). p(b). p(c). p(d).
+        </spawn>
+        <state id="ask">
+            <go to="collect" on="spawned(Pid)">
+                toplevel_call(Pid, q(X), [
+                    limit(1)
+                ])
+            </go>
+        </state>
+        <state id="collect">
+            <go to="collect" on="success(Pid, Data, true)">
+                writeln(Data),
+                toplevel_next(Pid)
+            </go>
+            <go to="final" on="success(_, Data, false)">
+                writeln(Data)
+            </go>
+        </state>
+    </state>
+    <final id="final" />
+</statechart>

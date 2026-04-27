@@ -1,0 +1,32 @@
+<!--
+
+    Two parallel states playing pingpong.
+    Pinger has the serve.
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="Start">
+    <parallel id="Start">
+        <state id="Pinger">
+            <onentry>
+                raise(ping)
+            </onentry>
+            <go on="ping">
+                writeln('Ping'),
+                sleep(1),
+                raise(pong)
+            </go>
+        </state>
+        <state id="Ponger">
+            <go on="pong">
+                writeln('Pong'),
+                sleep(1),
+                raise(ping)
+            </go>
+        </state>
+    </parallel>
+</statechart>

@@ -1,0 +1,47 @@
+<!--
+
+    Pause and resume - demonstrating hierarchy and history state.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="game">
+    <state id="game" initial="play">
+        <state id="play">
+            <initial>
+                <go to="s1" />
+            </initial>
+            <history id="h">
+                <go to="s1" />
+            </history>
+            <state id="s1">
+                <go to="s2" on="play" />
+            </state>
+            <state id="s2">
+                <go to="s1" on="reset" />
+            </state>
+            <go to="interrupted" on="pause" />
+        </state>
+        <state id="interrupted">
+            <go to="h" on="resume" />
+        </state>
+        <go to="final" on="stop" />
+    </state>
+    <final id="final" />
+</statechart>
+
+
+<!-- <examples>
+
+?- $Pid ! play.
+
+?- $Pid ! reset.
+
+?- $Pid ! pause.
+
+?- $Pid ! resume.
+
+?- $Pid ! stop.
+
+-->

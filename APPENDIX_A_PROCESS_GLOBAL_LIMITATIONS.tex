@@ -1,0 +1,32 @@
+% Standalone Appendix A note for the book.
+% This file is intended to be pasted into the appendix text or included with
+% \input{APPENDIX_A_PROCESS_GLOBAL_LIMITATIONS}.
+
+\paragraph{Implementation note: per-node versus process-global state.}
+The current SWI-Prolog proof-of-concept supports running multiple Web Prolog
+nodes inside the same SWI process, and the request-scoped runtime state is now
+largely isolated per node. Profile selection, authentication mode, sandbox
+mode, node URL, principal policy, shared database, timeout policy, and the
+stateless \texttt{/call} continuation cache are all resolved per node during
+ordinary HTTP and WebSocket execution.
+
+\paragraph{What still remains process-global?}
+The remaining global state concerns only \emph{no-context local convenience
+use} inside one SWI process. Two examples are especially relevant:
+
+\begin{itemize}
+\item the fallback shared-database facade used by direct local calls outside a
+request context, and
+\item the fallback self-node registration used when no per-node request context
+is active.
+\end{itemize}
+
+In practice this means that if several nodes are started inside one SWI
+process, then direct local interactions that do not run under a node-specific
+request or actor context still follow the most recently started node.
+
+\paragraph{Practical scope of the limitation.}
+This limitation matters only for in-process local experimentation. The actual
+node-facing HTTP and WebSocket APIs now keep their shared database, timeout,
+and continuation-cache state separate per node, even when multiple nodes are
+hosted in one SWI-Prolog process.

@@ -1,0 +1,90 @@
+ % !TeX root = book.tex
+\preface
+
+\vspace{-5cm}
+
+\begin{figure*}[h]
+    \centering
+	\includegraphics[width=6cm]{spiders-web-2.png}
+\end{figure*}
+
+\vspace{-0.5cm}
+
+\noindent In this book, we present a proposal for a profile of Prolog called \emph{Web Prolog}\index{Web Prolog}. We like to think of it as a \emph{web programming language}, or more specifically, as a web \emph{logic} programming language, but also as a kind of simple web-based \emph{agent} programming language. In addition, the architecture for an extension of the traditional Web that we think of as \textit{the Prolog Web} is described, along with descriptions of some of the \textit{Prolog agents} that might dwell there. Together, Web Prolog, Prolog agents and the Prolog Web form what we shall refer to as the \textit{Prolog Trinity ecosystem} -- a niche within the vast ecosystem of the World Wide Web.
+
+%\subsection*{A personal note}
+%
+%This book has grown out of a long and somewhat winding journey. It is the latest incarnation of an idea that has followed me, quietly at first and later rather insistently, through most of my professional life. Some parts of that journey have been joyful -- discovering new formalisms, collaborating with generous colleagues, seeing small prototypes actually work -- and some parts have been painful, marked by illness, exhaustion, and a stubborn sense that I should have done more, or done it differently.
+%
+%In June 2009 I suffered a stroke. It was not the kind of stroke that neatly fits the moral of a lifestyle lecture; I was in reasonably good health, and it simply happened. I was fortunate to be able to leave hospital after a week and to return to part-time work a few months later, but the combination of the stroke and an already heavy workload triggered a long period of burnout and what the doctors called brain fatigue. For someone who makes a living by thinking, this is not a particularly amusing diagnosis. I had to cut back on teaching, avoid noisy environments, and gradually became more peripheral in the everyday life of my department. I still live just a short walk from the university, but much of the work behind this book has been done at home, in silence, often alone.
+%
+%Those years were not heroic. In my worst periods I felt like a failure, embarrassed that I had not accomplished more, and painfully aware of the gap between what I believed a professor ought to achieve and what I was actually managing to do. At the same time, somewhat paradoxically, I never felt truly depressed. I was proud of the ideas I was working on and genuinely excited about their potential. That feeling -- that this might actually be good, or at least interesting -- kept me going.
+%
+%Slowing down, I have since realised, was not entirely a curse. There is something to be said for slow thinking and slow writing. One needs time to let problems settle, to circle around them, to try out partial solutions and then abandon them. Much of Web Prolog and the Prolog Trinity ecosystem has been designed at the pace my brain would allow: a few hours a day, seven days a week, for years. The manuscript you are holding is the result of that kind of slow writing. For me, the act of writing has been inseparable from the act of designing; the book is not just a report on the work, it is the main tool with which the work has been done.
+%
+%The project is also born out of dissatisfaction. Earlier in my career I helped design and implement systems such as the Current platform, SCXML-based architectures, and the first version of \texttt{library(pengines)} for SWI-Prolog. Each of these efforts taught me a great deal, and I remain fond of them, but over time I became increasingly uneasy about some of the design choices we had made. In hindsight, I think parts of \texttt{library(pengines)} were a mistake. This book may be read, in part, as an attempt to repair that mistake -- to distil what was valuable, discard what was ill-conceived, and rebuild on a clearer and more principled foundation.
+%
+%The same is true of my relationship with the Web and with programming languages more generally. As a linguist I cannot help seeing Web Prolog as a kind of creole: a language born from the encounter between Prolog and Erlang, shaped by the cultures and communities around them. As a long-time admirer of the Web, I also see it as an essay in what Tim Berners-Lee once called philosophical engineering: an attempt to take seriously both the constraints and the possibilities of an open, distributed medium, and to embed our favourite tools -- logic, actors, agents -- into that medium in a respectful way.
+%
+%Of course, none of this was planned as a grand design from the beginning. The path that led to Web Prolog and the Prolog Trinity passed through many stages: early fantasies about distributed logic programming in the browser; experiments with Oz and visual dialogue systems; years of work in the SCXML working group at W3C; countless prototypes that never quite felt right; and, finally, the decision to stop treating this as a sequence of separate projects and instead to admit that there was, in fact, a single vision trying to emerge. Using the word `vision' still makes me slightly uncomfortable -- it sounds pretentious -- but that is how it has felt: an idea that simply refused to go away.
+%
+%Along the way there has been plenty of doubt. At one point Joe Armstrong, after reading an early draft, remarked that he was not entirely sure who the book was for, and that perhaps the intended audience consisted of a very small set of people with first names uncomfortably similar to my own. I hope he was wrong, and I believe he was wrong, but he was certainly right about one thing: when you write a book, you must have a sense of who you are writing for. This preface, and the more programmatic parts of the introduction, are my attempt to answer that question honestly, without pretending that the work is more universal, or more complete, than it really is.
+%
+%If there is a thread that ties the personal and the technical story together, it is probably gratitude. I come from a family with little formal education and feel deeply fortunate to have been allowed to spend a career thinking about languages, logic, and computation. I have had generous colleagues and patient students; I have been allowed to make mistakes in public and then try again. To be able, after a stroke and several rounds of burnout, to sit down and think slowly about something that still feels exciting is a privilege I do not take lightly.
+%
+%So if parts of this book read like a report, others like a manifesto, and still others like a toolkit, that mixture reflects how it was written. It is an attempt to make sense of a long-standing obsession, to turn private sketches into something that might be shared, criticised, and improved. If you find the ideas compelling, I hope you will consider them an invitation rather than a finished product. If you find them misguided, I hope they will at least be clear enough to argue with.
+%
+%In either case, thank you for taking the time to read. Whatever becomes of Web Prolog and the Prolog Trinity ecosystem, the fact that you are willing to think along with me already makes the slow work that led to these pages feel worthwhile.
+%
+%\subsection*{Who should read this book?}
+
+As can be gleaned from its title, as well as from the previous paragraph, the Prolog programming language plays the lead role in the book, and Prolog programmers and Prolog system implementers are indeed among its intended readers. However, we do not think a reader has to be a very experienced Prolog programmer or implementer to get something out of it. In fact, we are presenting what we believe is a somewhat novel view of Prolog and Prolog programming, so it might even be good if your mind is a beginner's mind, still open to a somewhat different story.
+ 
+Another programming language, namely Erlang, has an important role to play in the book, so Erlang developers and other actor-programming aficionados might be interested. Or at least we hope so, as we might have some work cut out for them, both as regards the future specification of the Web Prolog language, as well as for its implementation. Note, however, that although the book is written with an audience of Erlangers in mind, some basic knowledge of Prolog is still assumed.\footnote{For readers lacking the necessary background in Prolog, we provide a few recommended learning resources in Appendix~\ref{sec:learning-resources}.}
+
+Logic programming researchers and system developers aiming for logical purity might be interested too, but should be aware that the book is focusing on a non-declarative concurrency and distribution model for Prolog, and does not purport to contribute to its logic programming aspects. It is still only ``good ol' Prolog.'' Logic programming researchers might find \textit{use} for it, however, as a way to present their own work to the world, and in particular to other Web Prolog programmers. Oh, and we almost forgot, we also intend to show how to wrap the whole globe in pure logic, and logic programming researchers may want to find out what that means.
+
+The book is also written with an audience of Semantic Web researchers and practitioners in mind, in the hope that it will seem relevant to some of them. After all, the Prolog community and the Semantic Web community have something in common, namely \textit{computational logic}, and probably also a deep conviction that, on some level at least, building software agents that are \textit{really} clever requires logic, reasoning and a relational way of thinking. %We are willing to bet on the fact that there are people in the Semantic Web community that know Prolog, understand it, and like it. 
+We hope to be able to show that Web Prolog might serve as a \textit{semantic web logic programming language} --  a language that fits in very well among the other web logic languages defined and standardized by the W3C, and a suitable language for building semantically aware web applications, such as intelligent web agents.
+
+Readers interested in Artificial Intelligence (AI) might also be able to get something out of the book, at least if they are somewhat familiar with Prolog. In particular, readers who, along with many others, hold the view that a lot of what happens within the field of AI in the coming decades will take place on the Web, and that intelligent conversational agents are likely to serve as the \textit{face} of AI. Note, however, that the book has almost nothing to say about artificial neural networks and other non-symbolic approaches to AI, but is primarily concerned with symbolic approaches, focusing on the use of logic and reasoning for building web agents. Having said that, it is of course impossible to ignore the recent success of so called Large Language Models (LLMs), so the text briefly speculates about the relation between LLM technology and our own approach to symbolic AI on the Web. We can only scratch the surface, but can say already at this point that finding the proper balance between such technologies appears to be as challenging as it is important for the logic programming community going forward. 
+
+%In writing this book, our aim extends beyond simply inviting constructive criticism of the vision, proposal, or the specific approach we have taken. More importantly, we aspire to inspire thoughtful, open-minded discussions that explore the entire spectrum of solutions to the challenges faced by logic programming and Prolog. By fostering such dialogue, we hope to contribute to the broader advancement of the field, encouraging innovative perspectives and collaborative problem-solving.
+
+The categories of potential readers outlined above -- Prolog programmers and system implementers, Erlang developers, logic programming researchers, and Semantic Web practitioners -- are not merely an audience for this book but also (potentially) the main stakeholders in a broader endeavor: the realization of the Prolog Trinity ecosystem. Each of these groups brings essential expertise and perspectives that contribute to the development, refinement, and practical deployment of Web Prolog, Prolog agents, and the Prolog Web. Together, these stakeholders form a core community that might shape the Trinity, ensuring that it is not only an intellectually compelling idea but also a practical and viable extension of the Web.
+
+\medskip
+\noindent It may all be a pipe dream, but it is not a castle in the air!\footnote{https://blogs.bmj.com/bmj/2017/01/27/neville-goodmans-metaphor-watch-dream-a-dream-of-ivory-castles-in-the-air/}
+
+
+\section*{Acknowledgments}
+
+
+
+%
+%TODO
+%
+%for getting the aitor-year citation style, see:
+%
+%https://tex.stackexchange.com/questions/624110/i-am-using-springer-nature-documentclasssn-mathphyssn-jnl-and-i-need-citat
+%
+%https://tex.stackexchange.com/questions/80032/adapting-an-existing-biblatex-style-in-order-to-imitate-springers-author-year-r
+%
+%----
+%
+%%% Please write your preface here
+%Use the template \emph{preface.tex} together with the document class SVMono (monograph-type books) or SVMult (edited books) to style your preface.
+%
+%A preface\index{preface} is a book's preliminary statement, usually written by the \textit{author or editor} of a work, which states its origin, scope, purpose, plan, and intended audience, and which sometimes includes afterthoughts and acknowledgments of assistance. 
+%
+%When written by a person other than the author, it is called a foreword. The preface or foreword is distinct from the introduction, which deals with the subject of the work.
+%
+%Customarily \textit{acknowledgments} are included as last part of the preface.
+% 
+%
+%\vspace{\baselineskip}
+%\begin{flushright}\noindent
+%Place(s),\hfill {\it Firstname  Surname}\\
+%month year\hfill {\it Firstname  Surname}\\
+%\end{flushright}
+

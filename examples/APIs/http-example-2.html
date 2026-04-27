@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Semi-stateful HTTP Prompt/Response Demo</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+        margin: 2rem auto;
+        max-width: 52rem;
+        padding: 0 1rem;
+      }
+      button {
+        margin-right: 0.75rem;
+        padding: 0.45rem 0.8rem;
+      }
+      code, pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      }
+      pre {
+        background: #f5f5f5;
+        border: 1px solid #d9d9d9;
+        overflow-x: auto;
+        padding: 0.9rem;
+        white-space: pre-wrap;
+      }
+      ul {
+        padding-left: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Semi-stateful HTTP API: prompt and respond</h1>
+    <p>
+      This page loads a session-local program over HTTP, starts it with
+      <code>/toplevel_call</code>, replies to each prompt with
+      <code>/toplevel_respond</code>, and uses <code>/toplevel_poll</code> to
+      fetch the next output, prompt, or final answer.
+    </p>
+
+    <p>
+      <button id="run-button" type="button">Run demo</button>
+      <button id="clear-button" type="button">Clear log</button>
+    </p>
+
+    <h2>Output</h2>
+    <ul id="results"></ul>
+
+    <h2>Request log</h2>
+    <pre id="log"></pre>
+
+    <script>
+      (function() {
+        var runButton = document.getElementById("run-button");
+        var clearButton = document.getElementById("clear-button");
+        var results = document.getElementById("results");
+        var logNode = document.getElementById("log");
+        var program = [
+          "echo :-",
+          "    input('Enter a Prolog term (cancel or leave empty to stop).', Something),",
+          "    (   Something == stop",
+          "    ->  writeln(done)",
+          "    ;   writeln(Something),",
+          "        echo",
+          "    )."
+        ].join("\n");
+
+        function clearLog() {
+          results.textContent = "";
+          logNode.textContent = "";
+        }
+
+        function logLine(text) {
+          logNode.textContent += text + "\n";
+        }
+
+        function addResult(text) {
+          var item = document.createElement("li");
+          item.textContent = text;
+          results.appendChild(item);
+        }
+
+        function endpoint(path) {
+          return new URL(path, window.location.origin);
+        }
+
+        function buildGetURL(path, params) {
+          var url = endpoint(path);
+          Object.keys(params).forEach(function(key) {
+            url.searchParams.set(key, params[key]);
+          });
+          return url;
+        }
+
+        async function fetchJSON(url, options) {
+          logLine((options && options.method ? options.method : "GET") + " " + url);
+          var response = await fetch(url, options || {});
+          var json = await response.json();
+          logLine(JSON.stringify(json));
+          return json;
+        }
+
+        async function abortSession(pid) {
+          if (!pid) {
+            return;
+          }
+          try {
+            await fetchJSON(buildGetURL("/toplevel_abort", {
+              pid: pid,
+              format: "json"
+            }));
+          } catch (error) {
+            logLine("cleanup failed: " + error.message);
+          }
+        }
+
+        async function pollSession(pid) {
+          while (true) {
+            var event = await fetchJSON(buildGetURL("/toplevel_poll", {
+              pid: pid,
+              format: "json"
+            }));
+
+            if (event.type === "output") {
+              addResult(event.data);
+              continue;
+            }
+
+            return event;
+          }
+        }
+
+        async function runDemo() {
+          var pid = null;
+          runButton.disabled = true;
+          clearLog();
+
+          try {
+            var spawned = await fetchJSON(endpoint("/toplevel_spawn"), {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                options: "[]",
+                load_text: program
+              })
+            });
+            pid = spawned.pid;
+
+            var event = await fetchJSON(buildGetURL("/toplevel_call", {
+              pid: pid,
+              goal: "echo",
+              template: "true",
+              format: "json"
+            }));
+
+            while (event.type === "prompt") {
+              var response = window.prompt(event.data, "hello(world)");
+              if (response === null || response.trim() === "") {
+                response = "stop";
+              }
+
+              await fetchJSON(buildGetURL("/toplevel_respond", {
+                pid: pid,
+                input: response,
+                format: "json"
+              }));
+
+              event = await pollSession(pid);
+            }
+
+            if (event.type === "success" && Array.isArray(event.data) && event.data.length > 0) {
+              addResult("success: " + JSON.stringify(event.data[0]));
+            }
+          } catch (error) {
+            logLine("error: " + error.message);
+          } finally {
+            await abortSession(pid);
+            runButton.disabled = false;
+          }
+        }
+
+        clearButton.addEventListener("click", clearLog);
+        runButton.addEventListener("click", runDemo);
+        runDemo();
+      })();
+    </script>
+  </body>
+</html>

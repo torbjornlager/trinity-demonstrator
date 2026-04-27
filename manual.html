@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Web Prolog Manual</title>
+    <meta name="description" content="Appendix manual for Web Prolog predicates and APIs">
+    <meta name="author" content="Torbjorn Lager">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+        (function() {
+            function readCookie(name) {
+                var prefix = name + "=";
+                var parts = String(document.cookie || "").split(/;\s*/);
+                var index;
+                for (index = 0; index < parts.length; index += 1) {
+                    if (parts[index].indexOf(prefix) === 0) {
+                        return decodeURIComponent(parts[index].slice(prefix.length));
+                    }
+                }
+                return "";
+            }
+            function applyTheme(theme) {
+                var next = theme === "dark" ? "dark" : "light";
+                document.documentElement.setAttribute("data-theme", next);
+                document.documentElement.style.colorScheme = next;
+            }
+            var cookieTheme = readCookie("wp_theme_mode");
+            var initialTheme = (cookieTheme === "dark" || cookieTheme === "light")
+                ? cookieTheme
+                : window.localStorage.getItem("wb.themeMode");
+            if (initialTheme === "dark" || initialTheme === "light") {
+                window.localStorage.setItem("wb.themeMode", initialTheme);
+            }
+            applyTheme(initialTheme);
+            window.addEventListener("message", function(event) {
+                if (event.origin !== window.location.origin) {
+                    return;
+                }
+                if (!event.data || event.data.type !== "webprolog-theme") {
+                    return;
+                }
+                applyTheme(event.data.theme);
+            });
+        }());
+    </script>
+    <style>
+        :root {
+            color-scheme: light;
+            --manual-bg: #ffffff;
+            --manual-ink: #111111;
+            --manual-heading: darkgreen;
+            --manual-link: darkgreen;
+            --manual-surface: #f8f8f8;
+            --manual-border: #d8d8d8;
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --manual-bg: #0f141a;
+            --manual-ink: #e5edf5;
+            --manual-heading: #8fd782;
+            --manual-link: #9cc8ff;
+            --manual-surface: #161d24;
+            --manual-border: #34414e;
+        }
+
+        body {
+            margin: 0;
+            background: var(--manual-bg);
+            color: var(--manual-ink);
+        }
+
+        #manual {
+            margin: 50px;
+            padding: 16px;
+            display: block;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+        }
+
+        h1 { font-size: 32px; color: var(--manual-heading); margin: 0 0 24px 0; }
+        h2 { font-size: 20px; margin-top: 46px; color: var(--manual-heading); }
+        h3 { font-size: 16px; margin-top: 30px; color: var(--manual-heading); }
+
+        p,
+        li {
+            line-height: 1.18;
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+            font-size: 12px;
+        }
+
+        pre,
+        code {
+            font-size: 12px;
+        }
+
+        pre {
+            background: var(--manual-surface);
+            border: 1px solid var(--manual-border);
+            padding: 10px 12px;
+            overflow-x: auto;
+        }
+
+        ul {
+            margin-top: 8px;
+        }
+
+        .predicate-entry {
+            margin-top: 28px;
+        }
+
+        .predicate-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .predicate-label {
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+            font-size: 12px;
+        }
+
+        .predicate-indicator {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        }
+
+        .predicate-family {
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+            font-size: 12px;
+            font-variant: small-caps;
+            letter-spacing: 0.08em;
+        }
+
+        .note-label {
+            font-weight: bold;
+        }
+
+        .contents a,
+        .predicate-entry a {
+            color: var(--manual-link);
+            text-decoration: none;
+        }
+
+        .contents a:hover,
+        .predicate-entry a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div id="manual">
+
+<h1>Web Prolog manual</h1>
+
+<p>
+    This document reproduces the predicate reference material from Appendix A
+    in HTML form. Each predicate entry carries an HTML anchor using its
+    predicate indicator so that entries can be linked directly.
+</p>
+
+<div class="contents">
+    <h2>Contents</h2>
+    <ul>
+        <li><a href="#sec:actor-api">Predicates for programming with core actors</a></li>
+        <li><a href="#sec:toplevel-api">Predicates for programming with toplevel actors</a></li>
+        <li><a href="#sec:server-api">Predicates for programming with server actors</a></li>
+        <li><a href="#sec:statechart-api">Predicates for programming with statechart actors</a></li>
+        <li><a href="#sec:supervisor-api">Predicates for programming with supervisor actors</a></li>
+        <li><a href="#sec:synchronous-predicate-api">Predicates for remote Prolog-style calls</a></li>
+        <li><a href="#sec:iso-predicates">ISO predicates and related constructs</a></li>
+    </ul>
+</div>
+
+<h2 id="sec:actor-api">Predicates for programming with core actors</h2>
+
+<article class="predicate-entry" id="self/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">self/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>self(-Pid) is det.</pre>
+    <p>Binds <code>Pid</code> to the process identifier of the calling process.</p>
+    <p><span class="note-label">Note:</span> The runtime uses a global pid model. Conceptually, pids are of the form <code>Id@Node</code>, although some compatibility-oriented surfaces, especially certain JSON responses, may still expose local pids as plain integers.</p>
+</article>
+
+<article class="predicate-entry" id="spawn/1-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">spawn/1-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>spawn(+Goal) is det.
+spawn(+Goal, -Pid) is det.
+spawn(+Goal, -Pid, +Options) is det.</pre>
+    <p>Creates a new Web Prolog actor process running <code>Goal</code>. Valid options are:</p>
+    <ul>
+        <li><code>node(+URI)</code><br>Creates the process locally or on a remote compatible node. Default is <code>localhost</code>.</li>
+        <li><code>monitor(+Boolean)</code><br>If <code>true</code>, monitoring is installed as part of process creation. Default is <code>false</code>.</li>
+        <li><code>link(+Boolean)</code><br>If <code>true</code>, installs directional parent-to-child link cleanup. Default is <code>true</code>.</li>
+        <li><code>load_text(+AtomOrString)</code><br>Loads the clauses specified by a Web Prolog source text into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>load_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>load_uri(+URI)</code><br>Loads the clauses specified by a file path, file URI, or HTTP(S) URI into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by <code>ListOfPredicateIndicators</code> into the actor's private Prolog database before calling <code>Goal</code>.</li>
+    </ul>
+    <p><span class="note-label">Note:</span> In <code>spawn(+Goal,-Pid,+Options)</code>, the option <code>monitor(true)</code> installs monitoring as part of process creation. When the child terminates, the parent receives a message <code>down(Ref,Pid,Reason)</code> where <code>Pid</code> is the terminated actor, <code>Reason</code> is its exit reason, and <code>Ref</code> identifies the monitor instance. For monitoring created via <code>monitor(true)</code>, the current implementation uses <code>Ref = Pid</code>.</p>
+    <p><span class="note-label">Note:</span> The semantics of <code>link(true)</code> are directional: if a parent spawns a child with linking enabled, termination of the parent causes linked children to be terminated. The link does not imply symmetric bidirectional exit propagation.</p>
+    <p><span class="note-label">Note:</span> It is possible to pass an arbitrary number of the <code>load_*</code> options to <code>spawn/3</code>, and possibly more than one instance of each variant. To ensure that clauses end up in a well-defined order, they are converted into Prolog source text before being loaded into the database. The order of clauses and directives in the resulting source text is determined by the order of the <code>load_*</code> options in the option list.</p>
+</article>
+
+<article class="predicate-entry" id="actors/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">actors/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>actors(-Pids) is det.</pre>
+    <p>Binds <code>Pids</code> to the list of actor pids visible from the current execution context. In ordinary public client execution, this means the current actor or toplevel together with any actors that have been spawned on behalf of the same client interaction. Actors belonging to other clients are not included.</p>
+    <p><span class="note-label">Note:</span> Outside public client execution, for example in node-owned runtime code or administrative code, <code>actors/1</code> returns the pids of all active local actors on the node.</p>
+</article>
+
+<article class="predicate-entry" id="monitor/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">monitor/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>monitor(+PidOrName, -Ref) is det.</pre>
+    <p>Installs a monitor and returns a fresh reference in <code>Ref</code>. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Ref,Pid,Reason)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="demonitor/1-2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">demonitor/1-2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>demonitor(+Ref) is det.
+demonitor(+Ref, +Options) is det.</pre>
+    <p>Stops monitoring identified by <code>Ref</code>. This is idempotent. There is only one valid option:</p>
+    <ul>
+        <li><code>flush</code><br>Non-blocking removal of one pending <code>down(Ref,_,_)</code> message from the mailbox.</li>
+    </ul>
+    <p>Using <code>monitor(true)</code> in <code>spawn/3</code> is the safest variant for short-lived children, since monitoring is established during spawn. Installing monitoring later with <code>monitor/2</code> is a separate step and may miss a child that exits immediately.</p>
+</article>
+
+<article class="predicate-entry" id="register/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">register/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>register(+Name, +Pid) is det.</pre>
+    <p>Register a local process under a name, where <code>Name</code> is an atom and <code>Pid</code> identifies the actor process. The association between the name and the pid is removed when the process terminates.</p>
+</article>
+
+<article class="predicate-entry" id="whereis/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">whereis/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>whereis(+Name, ?Pid) is det.</pre>
+    <p>Determine the identity of the actor process associated with the name. Binds <code>Pid</code> to <code>undefined</code> if the process does not exist.</p>
+</article>
+
+<article class="predicate-entry" id="unregister/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">unregister/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>unregister(+Name) is det.</pre>
+    <p>Remove the association between the name and the process.</p>
+</article>
+
+<a id="exit/1-2"></a>
+<article class="predicate-entry" id="exit/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">exit/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>exit(+Reason) is det.</pre>
+    <p>Exit the calling process with <code>Reason</code>.</p>
+</article>
+
+<article class="predicate-entry" id="exit/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">exit/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>exit(+Pid, +Reason) is det.</pre>
+    <p>Exit the process identified by <code>Pid</code> with <code>Reason</code>. For remote actors, the runtime routes this request through the remote node.</p>
+</article>
+
+<a id="!/2"></a>
+<article class="predicate-entry" id="send/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">!/2, send/2-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>+PidOrName ! +Message is det.
+send(+PidOrName, +Message) is det.
+send(+PidOrName, +Message, +Options) is det.</pre>
+    <p>Sends <code>Message</code> to the mailbox of the process identified as <code>PidOrName</code>. <code>PidOrName</code> may be a local pid, a local registered name, or a global pid of the form <code>Id@Node</code>. Valid options for <code>send/3</code> are:</p>
+    <ul>
+        <li><code>delay(+Number)</code><br>Delays the sending by a specified number of seconds. Default is <code>0</code>.</li>
+        <li><code>id(+ID)</code><br><code>ID</code> is a user-supplied identifier that can be used by <code>cancel/1</code> to stop the sending from taking place.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="cancel/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">cancel/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>cancel(+ID) is det.</pre>
+    <p>Tries to cancel the sending of <em>all</em> delayed messages with the specified ID. This is best-effort only, since a message may already have been sent by the time the call is made.</p>
+</article>
+
+<article class="predicate-entry" id="output/1-2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">output/1-2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>output(+Data) is det.
+output(+Data, +Options) is det.</pre>
+    <p>Sends a message <code>output(Pid,Data)</code> to the target process. <code>Pid</code> is the pid of the current process. Valid option:</p>
+    <ul>
+        <li><code>target(+Pid)</code><br>Send the message to <code>Pid</code>. Default is the parent process.</li>
+    </ul>
+    <p>Note that this is just a convenience predicate. A toplevel, like any other actor, may use <code>!/2</code> to send any term to any process to which it has a pid.</p>
+</article>
+
+<article class="predicate-entry" id="input/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">input/2-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>input(+Prompt, -Data) is det.
+input(+Prompt, -Data, +Options) is det.</pre>
+    <p>Sends a message <code>prompt(Pid,Prompt)</code> to the target process and waits for its input. <code>Prompt</code> may be any non-variable term. <code>Pid</code> is the pid of the current process. <code>Data</code> will be bound to the term that the target process sends using <code>respond/2</code>. Valid option:</p>
+    <ul>
+        <li><code>target(+Pid)</code><br>Send the <code>prompt</code> message to <code>Pid</code>. Default is the parent process.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="respond/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">respond/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>respond(+Pid, +Input) is det.</pre>
+    <p>Sends a response in the form of the term <code>Input</code> to a process that has prompted its parent process for input.</p>
+</article>
+
+<article class="predicate-entry" id="receive/1-2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">receive/1-2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>receive(+Clauses) is semidet.
+receive(+Clauses, +Options) is semidet.</pre>
+    <p><code>Clauses</code> is a sequence of receive clauses delimited by a semicolon:</p>
+    <pre>{  Pattern1 [if Guard1] -&gt;
+         Body1 ;
+   ...
+   PatternN [if GuardN] -&gt;
+         BodyN
+}</pre>
+    <p>Each pattern in turn is matched against the first message in the mailbox. If a pattern matches and the corresponding guard succeeds, the matching message is removed from the mailbox and the body of the receive clause is called. If no message is accepted, the process waits for new messages, checking them one at a time in arrival order. Messages that are not accepted are <em>deferred</em>, i.e. left in the mailbox without any change in their contents or order. Valid options:</p>
+    <ul>
+        <li><code>timeout(+Number)</code><br>If nothing appears in the current mailbox within <code>Number</code> seconds, the predicate succeeds anyway. Default is no timeout.</li>
+        <li><code>on_timeout(+Goal)</code><br>If the timeout occurs, <code>Goal</code> is called.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="flush/0">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">flush/0</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>flush is det.</pre>
+    <p>Removes all messages currently pending in the mailbox of the calling process. Each removed message is rendered through the actor terminal-output path as a line of the form <code>Shell got Message</code>, where <code>Message</code> is the full Prolog term.</p>
+    <p><span class="note-label">Note:</span> <code>flush/0</code> is primarily a shell-level inspection utility. It does not wait for future messages: once the mailbox is empty at the time of the call, it succeeds immediately.</p>
+</article>
+
+<article class="predicate-entry" id="listing/0-1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">listing/0-1</span></div>
+        <div class="predicate-family">isotope, actor</div>
+    </div>
+    <pre>listing is det.
+listing(+Pid) is det.</pre>
+    <p><code>listing/0</code> lists the content of the private database of the current actor process through the terminal-output path. Imported predicates and the injected I/O wrapper predicates are omitted.</p>
+    <p><code>listing/1</code> lists the content of the private database of the local actor identified by <code>Pid</code>. In public execution contexts this is namespace-scoped, so a client may only inspect actors that belong to its own session namespace.</p>
+</article>
+
+<h2 id="sec:toplevel-api">Predicates for programming with toplevel actors</h2>
+
+<article class="predicate-entry" id="toplevel_spawn/1-2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_spawn/1-2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>toplevel_spawn(-Pid) is det.
+toplevel_spawn(-Pid, +Options) is det.</pre>
+    <p>Spawns a toplevel actor and binds <code>Pid</code> to its pid. All options accepted by <code>spawn/3</code> are also accepted by <code>toplevel_spawn/2</code>. In addition, <code>toplevel_spawn/2</code> accepts the following options:</p>
+    <ul>
+        <li><code>session(+Boolean)</code><br>If set to <code>false</code>, the toplevel actor terminates after having run a goal to completion. If <code>true</code>, further interaction is expected. Default is <code>false</code> in the actor API.</li>
+        <li><code>target(+Pid)</code><br>Send all answer terms to <code>Pid</code>. Default is the pid of the parent.</li>
+        <li><code>name(+Name)</code><br>Register the toplevel under <code>Name</code>.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="toplevel_call/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_call/2-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>toplevel_call(+Pid, +Goal) is det.
+toplevel_call(+Pid, +Goal, +Options) is det.</pre>
+    <p>Asks the toplevel <code>Pid</code> for solutions to <code>Goal</code>. Valid options are:</p>
+    <ul>
+        <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with <code>Goal</code>. By default, the template is identical to the goal.</li>
+        <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
+        <li><code>limit(+Integer)</code><br>Restrict the length of the returned list of solutions to <code>Integer</code>.</li>
+        <li><code>once(+Boolean)</code><br>When <code>true</code>, the list of solutions in a <code>success</code> answer term may not be the only solutions that <code>Goal</code> has, but the answer term may still indicate that it is. Default is <code>false</code>. Makes sense only in combination with the <code>limit</code> option.</li>
+        <li><code>target(+Pid)</code><br>Send the answer term to <code>Pid</code>. Default is the value of <code>target</code> when passed as an option to <code>toplevel_spawn/2</code>.</li>
+    </ul>
+    <p>Variables in <code>Goal</code> are not bound directly in the caller. Instead, solutions and other kinds of output are returned in the form of answer messages delivered to the mailbox of the target process.</p>
+    <ul>
+        <li><code>success(Pid, Data, More)</code><br><code>Pid</code> is the pid of the toplevel process that succeeded in finding solutions to <code>Goal</code>. <code>Data</code> is a list holding instantiations of <code>Template</code>. <code>More</code> is either <code>true</code> or <code>false</code>, indicating whether the toplevel can return more solutions if <code>toplevel_next/1-2</code> is called.</li>
+        <li><code>failure(Pid)</code><br><code>Pid</code> is the pid of the toplevel process that failed for lack of solutions.</li>
+        <li><code>error(Pid, Data)</code><br><code>Pid</code> is the pid of the toplevel throwing the error. <code>Data</code> is the error term.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="toplevel_next/1-2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_next/1-2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>toplevel_next(+Pid) is det.
+toplevel_next(+Pid, +Options) is det.</pre>
+    <p>Asks toplevel <code>Pid</code> for more solutions. Valid options:</p>
+    <ul>
+        <li><code>limit(+Integer)</code><br>If omitted, the actor API keeps using the most recent limit value from the previous toplevel call state.</li>
+        <li><code>target(+Pid)</code><br>Send the answer term to <code>Pid</code>. Default is the value of <code>target</code> from the previous call state.</li>
+    </ul>
+    <p>The messages delivered to the target mailbox are the same as for <code>toplevel_call/2-3</code>.</p>
+</article>
+
+<article class="predicate-entry" id="toplevel_stop/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_stop/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>toplevel_stop(+Pid) is det.</pre>
+    <p>Asks toplevel <code>Pid</code> to stop searching for more solutions.</p>
+</article>
+
+<article class="predicate-entry" id="toplevel_abort/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_abort/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>toplevel_abort(+Pid) is det.</pre>
+    <p>Tells toplevel <code>Pid</code> to abort the execution of the currently running goal.</p>
+</article>
+
+<article class="predicate-entry" id="toplevel_halt/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_halt/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>toplevel_halt(+Pid, -Reply) is det.</pre>
+    <p>Sends <code>'$halt'</code> to an idle toplevel actor <code>Pid</code>, causing it to terminate from its idle state and acknowledge with <code>Reply</code>.</p>
+</article>
+
+<h2 id="sec:server-api">Predicates for programming with server actors</h2>
+
+
+<article class="predicate-entry" id="server_spawn/3-4">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_spawn/3-4</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>server_spawn(+Pred, +State, -Pid) is det.
+server_spawn(+Pred, +State, -Pid, +Options) is det.</pre>
+    <p>Spawns a generic server actor using callback predicate <code>Pred/4</code> and initial state <code>State</code>. The callback receives <code>(Request, OldState, Response, NewState)</code>.</p>
+    <p>All options are forwarded to <code>spawn/3</code> except:</p>
+    <ul>
+        <li><code>name(+Name)</code><br>Register the server under <code>Name</code>.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="server_request/3-4">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_request/3-4</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>server_request(+To, +Request, -Response) is det.
+server_request(+To, +Request, -Response, +Options) is det.</pre>
+    <p>Makes a synchronous request-response call to the server <code>To</code>. <code>server_request/4</code> accepts the options of <code>receive/2</code>, for example <code>timeout(+Seconds)</code>.</p>
+    <p>Monitoring is installed automatically so the call fails fast if the server terminates before replying.</p>
+</article>
+
+<article class="predicate-entry" id="server_promise/3-4">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_promise/3-4</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>server_promise(+To, +Request, -Ref) is det.
+server_promise(+To, +Request, -Ref, -MonRef) is det.</pre>
+    <p>Sends <code>Request</code> to the server <code>To</code> and returns a correlation reference <code>Ref</code>. The reply must later be collected with <code>server_yield/2-4</code>.</p>
+    <p>The four-argument variant additionally installs a monitor and returns its reference in <code>MonRef</code>.</p>
+</article>
+
+<article class="predicate-entry" id="server_yield/2-4">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_yield/2-4</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>server_yield(+Ref, -Response) is det.
+server_yield(+Ref, -Response, +Options) is det.
+server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
+    <p>Waits for the response matching <code>Ref</code>. The three-argument variant accepts the options of <code>receive/2</code>.</p>
+    <p>The four-argument variant uses <code>MonRef</code> to detect server termination and throws <code>server_down(Reason)</code> if the server dies before replying.</p>
+</article>
+
+<article class="predicate-entry" id="server_upgrade/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_upgrade/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>server_upgrade(+To, +Pred) is det.</pre>
+    <p>Replaces the callback predicate of the running server <code>To</code> without disturbing its current state. <code>Pred</code> must be arity 4.</p>
+</article>
+
+<article class="predicate-entry" id="server_halt/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_halt/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>server_halt(+To, -Reply) is det.</pre>
+    <p>Asks the server <code>To</code> to stop gracefully and binds <code>Reply</code> to its acknowledgement.</p>
+</article>
+
+<h2 id="sec:statechart-api">Predicates for programming with statechart actors</h2>
+
+<article class="predicate-entry" id="statechart_spawn/1-2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">statechart_spawn/1-2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>statechart_spawn(-Pid) is det.
+statechart_spawn(-Pid, +Options) is det.</pre>
+    <p>Spawns a statechart actor and binds <code>Pid</code> to its pid.</p>
+    <p><code>statechart_spawn/2</code> requires exactly one source option:</p>
+    <ul>
+        <li><code>load_uri(+URI)</code><br>Load and run a statechart from a URI or file path.</li>
+        <li><code>load_text(+Text)</code><br>Load and run a statechart from an XML text string.</li>
+    </ul>
+    <p>In addition, <code>statechart_spawn/2</code> accepts:</p>
+    <ul>
+        <li><code>name(+Name)</code><br>Register the statechart actor under <code>Name</code>.</li>
+    </ul>
+    <p>All remaining options are passed through to <code>spawn/3</code>.</p>
+    <p><code>load_list/1</code> and <code>load_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
+</article>
+
+<article class="predicate-entry" id="statechart_halt/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">statechart_halt/2-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>statechart_halt(+Pid, -Reply) is det.
+statechart_halt(+Pid, -Reply, +Timeout) is det.</pre>
+    <p>Asks the statechart actor <code>Pid</code> to halt gracefully and waits for an acknowledgement in <code>Reply</code>.</p>
+    <p>The three-argument form waits at most <code>Timeout</code> seconds. If the actor does not reply in time, it is killed and <code>Reply</code> becomes <code>killed</code>.</p>
+</article>
+
+<article class="predicate-entry" id="raise/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">raise/1</span></div>
+        <div class="predicate-family">statechart builtin</div>
+    </div>
+    <pre>raise(+Event) is det.</pre>
+    <p>Enqueues <code>Event</code> on the <em>internal</em> event queue of the current statechart interpreter.</p>
+    <p><span class="note-label">Important:</span> <code>raise/1</code> is only meaningful inside executable statechart content such as <code>&lt;datamodel&gt;</code>, <code>&lt;onentry&gt;</code>, <code>&lt;onexit&gt;</code>, and <code>&lt;go&gt;</code>.</p>
+</article>
+
+<h2 id="sec:supervisor-api">Predicates for programming with supervisor actors</h2>
+
+<article class="predicate-entry" id="supervisor_spawn/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_spawn/2-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_spawn(+ChildSpecs, -Pid) is det.
+supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
+    <p>Spawns a supervisor actor and starts its children. Supported options are:</p>
+    <ul>
+        <li><code>strategy(+Strategy)</code><br>One of <code>one_for_one</code> (default), <code>one_for_all</code>, or <code>rest_for_one</code>.</li>
+        <li><code>intensity(+Integer)</code><br>Max restarts in period. Default <code>1</code>.</li>
+        <li><code>period(+Integer)</code><br>Window size for restart intensity. Default <code>5</code>.</li>
+        <li><code>name(+Name)</code><br>Register the supervisor under <code>Name</code>.</li>
+    </ul>
+    <p>Other options are passed through to <code>spawn/3</code>.</p>
+    <p>Child specifications take the form <code>child(Id, ChildOptions)</code>. Child options are:</p>
+    <ul>
+        <li><code>start(+Goal)</code><br>Required. Start goal for the child.</li>
+        <li><code>restart(+Policy)</code><br>One of <code>permanent</code> (default), <code>transient</code>, or <code>temporary</code>.</li>
+        <li><code>shutdown(+Shutdown)</code><br>One of <code>brutal_kill</code>, <code>infinity</code>, or a timeout number.</li>
+        <li><code>type(+Type)</code><br><code>worker</code> (default) or <code>supervisor</code>.</li>
+    </ul>
+</article>
+
+<article class="predicate-entry" id="supervisor_spawn_child/3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_spawn_child/3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_spawn_child(+Pid, +ChildSpec, -Reply) is det.</pre>
+    <p>Dynamically adds and starts one child. <code>Reply</code> is one of <code>ok</code>, <code>error(already_present)</code>, or <code>error(start_failed)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="supervisor_terminate_child/3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_terminate_child/3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_terminate_child(+Pid, +Id, -Reply) is det.</pre>
+    <p>Stops child <code>Id</code> but keeps its specification. <code>Reply</code> is <code>ok</code> or <code>error(not_found)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="supervisor_delete_child/3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_delete_child/3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_delete_child(+Pid, +Id, -Reply) is det.</pre>
+    <p>Removes a non-running child specification. <code>Reply</code> is <code>ok</code>, <code>error(running)</code>, or <code>error(not_found)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="supervisor_respawn_child/3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_respawn_child/3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_respawn_child(+Pid, +Id, -Reply) is det.</pre>
+    <p>Restarts a previously terminated child from its stored specification. <code>Reply</code> is either <code>ok(NewPid)</code>, <code>error(running)</code>, <code>error(not_found)</code>, or <code>error(start_failed)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="supervisor_which_children/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_which_children/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_which_children(+Pid, -Children) is det.</pre>
+    <p>Returns a list of:</p>
+    <pre>info(Id, Pid, Type, Restart)</pre>
+    <p>where <code>Pid</code> may be <code>undefined</code> for stopped children.</p>
+</article>
+
+<article class="predicate-entry" id="supervisor_count_children/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_count_children/2</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_count_children(+Pid, -Counts) is det.</pre>
+    <p>Returns:</p>
+    <pre>[specs-N, active-N, supervisors-N, workers-N]</pre>
+</article>
+
+<article class="predicate-entry" id="supervisor_halt/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">supervisor_halt/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>supervisor_halt(+Pid) is det.</pre>
+    <p>Stops the supervisor and shuts down children in reverse start order.</p>
+</article>
+
+<h3>Note on synchronous supervisor calls</h3>
+
+<p>The dynamic/query API above uses monitored synchronous calls and may throw:</p>
+<ul>
+    <li><code>supervisor_down(Reason)</code></li>
+    <li><code>supervisor_call_timeout(Sup, Request)</code></li>
+</ul>
+
+<h2 id="sec:synchronous-predicate-api">Built-in predicates for RPC</h2>
+
+<article class="predicate-entry" id="rpc/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">rpc/2-3</span></div>
+        <div class="predicate-family">isobase</div>
+    </div>
+    <pre>rpc(+URI, +Goal) is nondet.
+rpc(+URI, +Goal, +Options) is nondet.</pre>
+    <p>Semantically, <code>rpc/2-3</code> executes a copy of <code>Goal</code> on the remote node identified by <code>URI</code> and then unifies the local goal with the remote copy on backtracking. The current implementation uses the stateless <code>/call</code> endpoint. This matters: even if the remote node happens to be deployed as an ACTOR node, a call made through <code>rpc/2-3</code> still runs against the node's stateless <code>/call</code> surface rather than its actor-facing APIs. Actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are therefore not available through <code>rpc/2-3</code>. The following options are valid:</p>
+    <ul>
+        <li><code>limit(+Integer)</code><br>Restricts the number of solutions retrieved per roundtrip.</li>
+        <li><code>once(+Boolean)</code><br>When <code>true</code>, the returned slice may not be the only solutions that <code>Goal</code> has, but the answer term may still indicate that it is.</li>
+        <li><code>timeout(+Number)</code><br>Requests a timeout in seconds for goal execution on the remote node. The effective timeout is the minimum of the requested value and the timeout configured by the node owner.</li>
+        <li><code>http_timeout(+Number)</code><br>Sets the client-side HTTP transport timeout in seconds for each request.</li>
+        <li><code>load_text(+AtomOrString)</code><br>Loads source text into the underlying actor's private database before calling <code>Goal</code>.</li>
+        <li><code>load_list(+ListOfClauses)</code><br>Loads a list of clauses into the underlying actor's private database before calling <code>Goal</code>.</li>
+        <li><code>load_uri(+URI)</code><br>Loads source text from <code>URI</code> into the underlying actor's private database before calling <code>Goal</code>.</li>
+        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by the supplied predicate indicators into the underlying actor's private database before calling <code>Goal</code>.</li>
+    </ul>
+    <p><code>http_timeout/1</code> controls only the client-side HTTP transport timeout. It does not change the remote execution timeout.</p>
+</article>
+
+<article class="predicate-entry" id="promise/3-4">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">promise/3-4</span></div>
+        <div class="predicate-family">isobase</div>
+    </div>
+    <pre>promise(+URI, +Goal, -Ref) is det.
+promise(+URI, +Goal, -Ref, +Options) is det.</pre>
+    <p>Makes an asynchronous RPC call to node <code>URI</code> with <code>Goal</code>. The current implementation supports the following options:</p>
+    <ul>
+        <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
+        <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
+        <li><code>limit(+Integer)</code><br>Restrict the number of returned solutions to <code>Integer</code>.</li>
+    </ul>
+    <p>The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the answer.</p>
+</article>
+
+<article class="predicate-entry" id="yield/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">yield/2-3</span></div>
+        <div class="predicate-family">isobase</div>
+    </div>
+    <pre>yield(+Ref, ?Answer) is det.
+yield(+Ref, ?Answer, +Options) is det.</pre>
+    <p>Returns the promised answer from a previous call to <code>promise/3-4</code>. This predicate must be called by the same process from which the previous call to <code>promise/3-4</code> was made. Valid options:</p>
+    <ul>
+        <li><code>timeout(+Number)</code><br>If nothing appears in the current mailbox within <code>Number</code> seconds, the goal supplied in the <code>on_timeout</code> option is called. Default is no timeout.</li>
+        <li><code>on_timeout(+Goal)</code><br>If the timeout occurs, <code>Goal</code> is called.</li>
+    </ul>
+</article>
+
+<h2 id="sec:iso-predicates">ISO predicates and related constructs</h2>
+
+<p>The following ISO Prolog predicates and related constructs are available to clients of a Web Prolog node. Predicates that require direct stream or file access, module loading, runtime reflection, or parser state mutation are excluded by the sandbox.</p>
+
+<h3>Control Constructs</h3>
+<p><code>true/0</code>, <code>fail/0</code>, <code>call/1-8</code>, <code>!/0</code>, <code>(,)/2</code>, <code>(;)/2</code>, <code>(->)/2</code>, <code>(\+)/1</code>, <code>catch/3</code>, <code>throw/1</code></p>
+
+<h3>Directives</h3>
+<p><code>dynamic/1</code>, <code>multifile/1</code>, <code>discontiguous/1</code></p>
+
+<h3>Term Unification</h3>
+<p><code>(=)/2</code>, <code>(\=)/2</code>, <code>unify_with_occurs_check/2</code></p>
+
+<h3>Arithmetic Evaluation and Comparison</h3>
+<p><code>is/2</code>, <code>(=:=)/2</code>, <code>(=\=)/2</code>, <code>(&lt;)/2</code>, <code>(&gt;)/2</code>, <code>(&gt;=)/2</code>, <code>(=&lt;)/2</code></p>
+
+<h3>Arithmetic Functions</h3>
+<p><code>(+)/1-2</code>, <code>(-)/1-2</code>, <code>(*)/2</code>, <code>(//)/2</code>, <code>(/)/2</code>, <code>rem/2</code>, <code>mod/2</code>, <code>abs/1</code>, <code>sign/1</code>, <code>float_integer_part/1</code>, <code>float_fractional_part/1</code>, <code>float/1</code>, <code>truncate/1</code>, <code>round/1</code>, <code>ceiling/1</code>, <code>floor/1</code>, <code>max/2</code>, <code>min/2</code>, <code>(**)/2</code>, <code>sin/1</code>, <code>cos/1</code>, <code>atan/1</code>, <code>atan2/2</code>, <code>exp/1</code>, <code>log/1</code>, <code>sqrt/1</code>, <code>(&gt;&gt;)/2</code>, <code>(&lt;&lt;)/2</code>, <code>(/\)/2</code>, <code>(\/)/2</code>, <code>(\)/1</code>, <code>xor/2</code>, <code>pi/0</code></p>
+
+<h3>Term Comparison</h3>
+<p><code>(@&lt;)/2</code>, <code>(@&gt;)/2</code>, <code>(@&gt;=)/2</code>, <code>(@=&lt;)/2</code>, <code>compare/3</code></p>
+
+<h3>Type Testing</h3>
+<p><code>var/1</code>, <code>nonvar/1</code>, <code>atom/1</code>, <code>number/1</code>, <code>integer/1</code>, <code>float/1</code>, <code>compound/1</code>, <code>atomic/1</code>, <code>callable/1</code>, <code>ground/1</code></p>
+
+<h3>Term Creation and Decomposition</h3>
+<p><code>functor/3</code>, <code>arg/3</code>, <code>(=..)/2</code>, <code>copy_term/2</code></p>
+
+<h3>Clause Retrieval</h3>
+<p><code>clause/2</code></p>
+
+<h3>Clause Creation and Destruction</h3>
+<p><code>asserta/1</code>, <code>assertz/1</code>, <code>retract/1</code>, <code>abolish/1</code></p>
+
+<h3>All-Solutions</h3>
+<p><code>findall/3</code>, <code>bagof/3</code>, <code>setof/3</code></p>
+
+<h3>Actor I/O (Overrides)</h3>
+<p>The ambient stream I/O predicates of ISO Prolog are blacklisted. In their place, the actor runtime prelude injects local overrides that route output through the actor messaging layer:</p>
+<p><code>nl/0</code>, <code>write/1</code>, <code>writeq/1</code>, <code>write_term/2</code>, <code>writeln/1</code>, <code>write_canonical/1</code>, <code>print/1</code>, <code>display/1</code>, <code>format/1-2</code></p>
+
+<h3>Atomic Term Processing</h3>
+<p><code>atom_length/2</code>, <code>atom_concat/3</code>, <code>atom_chars/2</code>, <code>atom_codes/2</code>, <code>sub_atom/5</code>, <code>char_code/2</code>, <code>number_chars/2</code>, <code>number_codes/2</code></p>
+
+</div>
+</body>
+</html>

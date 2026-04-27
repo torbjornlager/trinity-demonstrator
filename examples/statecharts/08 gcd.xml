@@ -1,0 +1,40 @@
+<!--
+
+    Using Euclide's algorithm for computing the
+    Greatest Common Divisor (GCD) for a set of
+    integers.
+
+    Keep the Logger open and Statechart Trace selected.
+
+-->
+
+<statechart
+       datamodel="web-prolog"
+       initial="init">
+    <datamodel>
+        :- dynamic int/1.
+    </datamodel>
+    <state id="init">
+        <go on="input(List)" to="run">
+            forall(member(X, List), asserta(int(X)))
+        </go>
+    </state>
+    <state id="run">
+        <go if="int(X), int(Y), X > Y">
+            Z is X-Y,
+            retract(int(X)),
+            assert(int(Z))
+        </go>
+        <go to="stop" if="int(X)">
+            writeln(X)
+        </go>
+    </state>
+    <final id="stop" />
+</statechart>
+
+
+<!-- <examples>
+
+?- $Pid ! input([25, 10, 15, 30]).
+
+-->

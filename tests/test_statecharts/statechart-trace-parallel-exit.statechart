@@ -1,0 +1,9 @@
+<statechart datamodel="web-prolog" initial="Start">
+    <parallel id="Start">
+        <state id="Left">
+            <go to="Done" on="x"/>
+        </state>
+        <state id="Right"/>
+    </parallel>
+    <state id="Done"/>
+</statechart>

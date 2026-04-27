@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>WebSocket Actor Messaging Demo</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+        margin: 2rem auto;
+        max-width: 52rem;
+        padding: 0 1rem;
+      }
+      button,
+      input {
+        margin-right: 0.75rem;
+        padding: 0.45rem 0.8rem;
+      }
+      input {
+        min-width: 18rem;
+      }
+      code, pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      }
+      pre {
+        background: #f5f5f5;
+        border: 1px solid #d9d9d9;
+        overflow-x: auto;
+        padding: 0.9rem;
+        white-space: pre-wrap;
+      }
+      ul {
+        padding-left: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebSocket API: actor messaging</h1>
+    <p>
+      This page uses the current <code>spawn</code> and <code>send</code>
+      commands. It spawns a browser-owned actor that turns
+      <code>msg(Term)</code> into <code>output(Term)</code>, subscribes that
+      actor to the node-resident <code>pubsub_service</code>, and then lets you
+      publish Prolog terms into the service.
+    </p>
+
+    <p>
+      <button id="connect-button" type="button">Connect</button>
+      <button id="publish-button" type="button">Publish term</button>
+      <button id="reset-button" type="button">Reset</button>
+    </p>
+
+    <p>
+      <label for="term-input">Term to publish:</label>
+      <input id="term-input" type="text" value="hello_from_browser">
+    </p>
+
+    <h2>Messages seen by the browser actor</h2>
+    <ul id="results"></ul>
+
+    <h2>Event log</h2>
+    <pre id="log"></pre>
+
+    <script>
+      (function() {
+        var connectButton = document.getElementById("connect-button");
+        var publishButton = document.getElementById("publish-button");
+        var resetButton = document.getElementById("reset-button");
+        var termInput = document.getElementById("term-input");
+        var results = document.getElementById("results");
+        var logNode = document.getElementById("log");
+        var socket = null;
+        var subscriberPid = null;
+        var subscribed = false;
+        var subscriberProgram = [
+          "subscriber :-",
+          "    receive({",
+          "        msg(Msg) ->",
+          "            output(Msg),",
+          "            subscriber",
+          "        ;",
+          "        stop ->",
+          "            true",
+          "    })."
+        ].join("\n");
+
+        function clearLog() {
+          results.textContent = "";
+          logNode.textContent = "";
+        }
+
+        function logLine(text) {
+          logNode.textContent += text + "\n";
+        }
+
+        function addResult(text) {
+          var item = document.createElement("li");
+          item.textContent = text;
+          results.appendChild(item);
+        }
+
+        function wsURL() {
+          var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+          return protocol + "//" + window.location.host + "/ws";
+        }
+
+        function prologString(text) {
+          return "\"" + String(text)
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, "\\\"")
+            .replace(/\r\n?/g, "\n")
+            .replace(/\n/g, "\\n") + "\"";
+        }
+
+        function sendJSON(payload) {
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            logLine("socket is not open");
+            return false;
+          }
+          logLine(">> " + JSON.stringify(payload));
+          socket.send(JSON.stringify(payload));
+          return true;
+        }
+
+        function setConnectedUI(connected) {
+          connectButton.disabled = connected;
+          publishButton.disabled = !connected;
+        }
+
+        function publishCurrentTerm() {
+          var term = termInput.value.trim();
+          if (!term) {
+            logLine("enter a Prolog term first");
+            return;
+          }
+          if (!subscribed || !subscriberPid) {
+            logLine("subscriber actor is not ready yet");
+            return;
+          }
+          sendJSON({
+            command: "send",
+            pid: "pubsub_service",
+            message: "publish(" + term + ")"
+          });
+        }
+
+        function resetConnection() {
+          if (subscriberPid && socket && socket.readyState === WebSocket.OPEN) {
+            sendJSON({
+              command: "send",
+              pid: "pubsub_service",
+              message: "unsubscribe(" + subscriberPid + ")"
+            });
+            sendJSON({
+              command: "exit",
+              pid: subscriberPid,
+              reason: "done"
+            });
+          }
+          if (socket) {
+            try {
+              socket.close();
+            } catch (_error) {
+            }
+          }
+          socket = null;
+          subscriberPid = null;
+          subscribed = false;
+          setConnectedUI(false);
+        }
+
+        function connect() {
+          var currentSocket;
+
+          resetConnection();
+          clearLog();
+
+          currentSocket = new WebSocket(wsURL());
+          socket = currentSocket;
+
+          currentSocket.onopen = function() {
+            if (socket !== currentSocket) {
+              return;
+            }
+            setConnectedUI(true);
+            sendJSON({
+              command: "spawn",
+              goal: "subscriber",
+              options: "[load_text(" + prologString(subscriberProgram) + ")]"
+            });
+          };
+
+          currentSocket.onmessage = function(message) {
+            if (socket !== currentSocket) {
+              return;
+            }
+            var event = JSON.parse(message.data);
+            logLine("<< " + JSON.stringify(event));
+
+            if (event.type === "spawned" && !subscriberPid) {
+              subscriberPid = event.pid;
+              sendJSON({
+                command: "send",
+                pid: "pubsub_service",
+                message: "subscribe(" + subscriberPid + ")"
+              });
+              subscribed = true;
+              publishCurrentTerm();
+              return;
+            }
+
+            if (event.type === "output") {
+              addResult(event.data);
+              return;
+            }
+
+            if (event.type === "down" && subscriberPid !== null && event.pid === subscriberPid) {
+              logLine("subscriber actor stopped");
+              subscriberPid = null;
+              subscribed = false;
+              setConnectedUI(false);
+              return;
+            }
+
+            if (event.type === "error") {
+              if (String(event.data).indexOf("pubsub_service") >= 0) {
+                logLine("this node does not expose pubsub_service");
+              }
+            }
+          };
+
+          currentSocket.onerror = function() {
+            if (socket !== currentSocket) {
+              return;
+            }
+            logLine("WebSocket error");
+            setConnectedUI(false);
+          };
+
+          currentSocket.onclose = function() {
+            if (socket !== currentSocket) {
+              return;
+            }
+            socket = null;
+            subscriberPid = null;
+            subscribed = false;
+            setConnectedUI(false);
+          };
+        }
+
+        connectButton.addEventListener("click", connect);
+        publishButton.addEventListener("click", publishCurrentTerm);
+        resetButton.addEventListener("click", resetConnection);
+        termInput.addEventListener("keydown", function(event) {
+          if (event.key === "Enter") {
+            publishCurrentTerm();
+          }
+        });
+
+        setConnectedUI(false);
+        connect();
+      })();
+    </script>
+  </body>
+</html>

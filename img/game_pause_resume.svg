@@ -1,0 +1,73 @@
+<svg width="100%" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .th { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 500; fill: #000; }
+      .t  { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 400; fill: #000; }
+      .ts { font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 400; fill: #000; }
+    </style>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- outer state: game -->
+  <rect x="4" y="10" rx="24" ry="24" width="620" height="260" fill="none" stroke="#555" stroke-width="1"/>
+  <line x1="4" y1="40" x2="624" y2="40" stroke="#555" stroke-width="0.5"/>
+  <text class="th" x="314" y="25" text-anchor="middle" dominant-baseline="central">game</text>
+
+  <!-- composite state: play -->
+  <rect x="60" y="56" rx="20" ry="20" width="320" height="200" fill="none" stroke="#555" stroke-width="0.5"/>
+  <line x1="60" y1="86" x2="380" y2="86" stroke="#555" stroke-width="0.5"/>
+  <text class="th" x="220" y="71" text-anchor="middle" dominant-baseline="central">play</text>
+
+  <!-- state: interrupted -->
+  <rect x="495" y="56" rx="20" ry="20" width="120" height="200" fill="none" stroke="#555" stroke-width="0.5"/>
+  <line x1="495" y1="86" x2="615" y2="86" stroke="#555" stroke-width="0.5"/>
+  <text class="th" x="555" y="71" text-anchor="middle" dominant-baseline="central">interrupted</text>
+
+  <!-- initial marker for game -->
+  <circle cx="26" cy="56" r="7" fill="#000"/>
+  <path d="M33 56 C42 54, 50 55, 62 64" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- initial marker for play -->
+  <circle cx="96" cy="136" r="6" fill="#000"/>
+  <path d="M102 136 C110 134, 116 135, 126 141" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- state: s1 -->
+  <rect x="124" y="136" rx="16" ry="16" width="72" height="96" fill="none" stroke="#555" stroke-width="0.5"/>
+  <line x1="124" y1="164" x2="196" y2="164" stroke="#555" stroke-width="0.5"/>
+  <text class="t" x="160" y="148" text-anchor="middle" dominant-baseline="central">s1</text>
+
+  <!-- state: s2 -->
+  <rect x="288" y="136" rx="16" ry="16" width="72" height="96" fill="none" stroke="#555" stroke-width="0.5"/>
+  <line x1="288" y1="164" x2="360" y2="164" stroke="#555" stroke-width="0.5"/>
+  <text class="t" x="324" y="148" text-anchor="middle" dominant-baseline="central">s2</text>
+
+  <!-- history marker H -->
+  <circle cx="242" cy="118" r="16" fill="none" stroke="#555" stroke-width="0.5"/>
+  <text class="th" x="242" y="118" text-anchor="middle" dominant-baseline="central">H</text>
+
+  <!-- play transition: s1 → s2 -->
+  <line x1="196" y1="192" x2="286" y2="192" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text class="ts" x="242" y="184" text-anchor="middle">play</text>
+
+  <!-- reset transition: s2 → s1 -->
+  <line x1="288" y1="214" x2="198" y2="214" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text class="ts" x="242" y="230" text-anchor="middle">reset</text>
+
+  <!-- pause transition: play → interrupted -->
+  <line x1="380" y1="210" x2="493" y2="210" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text class="ts" x="437" y="228" text-anchor="middle">pause</text>
+
+  <!-- resume transition: interrupted → history -->
+  <path d="M495 122 C445 104, 365 96, 260 116" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text class="ts" x="420" y="125" text-anchor="middle">resume</text>
+
+  <!-- stop transition: game → final -->
+  <line x1="624" y1="140" x2="662" y2="140" stroke="#555" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text class="ts" x="642" y="130" text-anchor="middle">stop</text>
+
+  <!-- final state (bull's eye) -->
+  <circle cx="678" cy="140" r="14" fill="none" stroke="#555" stroke-width="0.5"/>
+  <circle cx="678" cy="140" r="7" fill="#000"/>
+</svg>

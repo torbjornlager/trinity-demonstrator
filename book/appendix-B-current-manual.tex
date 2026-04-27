@@ -1,0 +1,1013 @@
+% Updated manual appendix draft aligned with the current
+% trinity-demonstrator implementation.
+%
+% This file intentionally does not replace appendix-A.tex.
+% It is a separate appendix-style draft that can be included later if wanted.
+
+\chapter{Manual}\label{sec:manual}
+
+\section{Predicates for programming with actors}\label{sec:actor-API}
+
+\noindent \textbf{Predicate:} \texttt{self/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+self(-Pid) is det.
+\end{verbatim}
+
+\noindent Binds \texttt{Pid} to the process identifier of the calling process.\\
+
+\smallskip
+\noindent \textbf{Note:} The runtime uses a global pid model. Conceptually,
+pids are of the form \texttt{Id@Node}, although some compatibility-oriented
+surfaces, especially certain JSON responses, may still expose local pids as
+plain integers.\\
+
+\noindent \textbf{Predicate:} \texttt{spawn/1-3}\hfill\textsc{actor}
+
+\begin{verbatim}
+spawn(+Goal) is det.
+spawn(+Goal, -Pid) is det.
+spawn(+Goal, -Pid, +Options) is det.
+\end{verbatim}
+
+\noindent Creates a new Web Prolog actor process running \texttt{Goal}. Valid
+options are:
+
+\begin{itemize}
+\item
+  \texttt{node(+URI)}\\
+  Creates the process locally or on a remote compatible node. Default is
+  \texttt{localhost}.
+\item
+  \texttt{monitor(+Boolean)}\\
+  If \texttt{true}, monitoring is installed as part of process creation.
+  Default is \texttt{false}.
+\item
+  \texttt{link(+Boolean)}\\
+  If \texttt{true}, installs directional parent-to-child link cleanup.
+  Default is \texttt{true}.
+\item
+  \texttt{load\_text(+AtomOrString)}\\
+  Loads the clauses specified by a Web Prolog source text into the actor's
+  private Prolog database before calling \texttt{Goal}.
+\item
+  \texttt{load\_list(+ListOfClauses)}\\
+  Converts the clauses to source text and loads them into the actor's private
+  Prolog database before calling \texttt{Goal}.
+\item
+  \texttt{load\_uri(+URI)}\\
+  Loads the clauses specified by a file path, file URI, or HTTP(S) URI into
+  the actor's private Prolog database before calling \texttt{Goal}.
+\item
+  \texttt{load\_predicates(+ListOfPredicateIndicators)}\\
+  Loads the local predicates denoted by
+  \texttt{ListOfPredicateIndicators} into the actor's private Prolog database
+  before calling \texttt{Goal}.
+\end{itemize}
+
+\noindent \textbf{Note:} In \texttt{spawn(+Goal,\,-Pid,\,+Options)}, the option
+\texttt{monitor(true)} installs monitoring as part of process creation. When
+the child terminates, the parent receives a message
+\texttt{down(Ref,\,Pid,\,Reason)} where \texttt{Pid} is the terminated actor,
+\texttt{Reason} is its exit reason, and \texttt{Ref} identifies the monitor
+instance. For monitoring created via \texttt{monitor(true)}, the current
+implementation uses \texttt{Ref\,=\,Pid}.\\
+
+\smallskip
+\noindent \textbf{Note:} The semantics of \texttt{link(true)} are directional:
+if a parent spawns a child with linking enabled, termination of the parent
+causes linked children to be terminated. The link does not imply symmetric
+bidirectional exit propagation.\\
+
+\smallskip
+\noindent \textbf{Note:} It is possible to pass an arbitrary number of the
+\texttt{load\_*} options to \texttt{spawn/3}, and possibly more than one
+instance of each variant. To ensure that clauses end up in a well-defined
+order, they are converted into Prolog source text before being loaded into the
+database. The order of clauses and directives in the resulting source text is
+determined by the order of the \texttt{load\_*} options in the option list.\\
+
+
+\noindent \textbf{Predicate:} \texttt{monitor/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+monitor(+PidOrName, -Ref) is det.
+\end{verbatim}
+
+\noindent Installs a monitor and returns a fresh reference in \texttt{Ref}. The
+first argument may be a pid or a registered local name. When the monitored
+process terminates, the monitoring process receives a message of the form
+\texttt{down(Ref,\,Pid,\,Reason)}.\\
+
+\noindent \textbf{Predicate:} \texttt{demonitor/1-2}\hfill\textsc{actor}
+
+\begin{verbatim}
+demonitor(+Ref) is det.
+demonitor(+Ref, +Options) is det.
+\end{verbatim}
+
+\noindent Stops monitoring identified by \texttt{Ref}. This is idempotent.
+There is only one valid option:
+
+\begin{itemize}
+\item
+  \texttt{flush}\\
+  Non-blocking removal of one pending \texttt{down(Ref,\,\_,\,\_)} message
+  from the mailbox.
+\end{itemize}
+
+\noindent Using \texttt{monitor(true)} in \texttt{spawn/3} is the safest
+variant for short-lived children, since monitoring is established during spawn.
+Installing monitoring later with \texttt{monitor/2} is a separate step and may
+miss a child that exits immediately.\\
+
+\noindent \textbf{Predicate:} \texttt{register/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+register(+Name, +Pid) is det.
+\end{verbatim}
+
+\noindent Register a local process under a name, where \texttt{Name} is an atom
+and \texttt{Pid} identifies the actor process. The association between the name
+and the pid is removed when the process terminates.\\
+
+\noindent \textbf{Predicate:} \texttt{whereis/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+whereis(+Name, ?Pid) is det.
+\end{verbatim}
+
+\noindent Determine the identity of the actor process associated with the name.
+Binds \texttt{Pid} to \texttt{undefined} if the process does not exist.\\
+
+\noindent \textbf{Predicate:} \texttt{unregister/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+unregister(+Name) is det.
+\end{verbatim}
+
+\noindent Remove the association between the name and the process.\\
+
+\noindent \textbf{Predicate:} \texttt{exit/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+exit(+Reason) is det.
+\end{verbatim}
+
+\noindent Exit the calling process with \texttt{Reason}.\\
+
+\noindent \textbf{Predicate:} \texttt{exit/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+exit(+Pid, +Reason) is det.
+\end{verbatim}
+
+\noindent Exit the process identified by \texttt{Pid} with \texttt{Reason}. For
+remote actors, the runtime routes this request through the remote node.\\
+
+\noindent \textbf{Predicate:} \texttt{!/2, send/2-3}\hfill\textsc{actor}
+
+\begin{verbatim}
++PidOrName ! +Message is det.
+send(+PidOrName, +Message) is det.
+send(+PidOrName, +Message, +Options) is det.
+\end{verbatim}
+
+\noindent Sends \texttt{Message} to the mailbox of the process identified as
+\texttt{PidOrName}. \texttt{PidOrName} may be a local pid, a local registered
+name, or a global pid of the form \texttt{Id@Node}. Valid options for
+\texttt{send/3} are:
+
+\begin{itemize}
+\item
+  \texttt{delay(+Number)}\\
+  Delays the sending by a specified number of seconds. Default is \texttt{0}.
+\item
+  \texttt{id(+ID)}\\
+  \texttt{ID} is a user-supplied identifier that can be used by
+  \texttt{cancel/1} to stop the sending from taking place.
+\end{itemize}
+
+\noindent \textbf{Predicate:} \texttt{cancel/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+cancel(+ID) is det.
+\end{verbatim}
+
+\noindent Tries to cancel the sending of \textit{all} delayed messages with the
+specified ID. This is best-effort only, since a message may already have been
+sent by the time the call is made.\\
+
+\noindent \textbf{Predicate:} \texttt{output/1-2}\hfill\textsc{actor}
+
+\begin{verbatim}
+output(+Data) is det.
+output(+Data, +Options) is det.
+\end{verbatim}
+
+\noindent Sends a message \texttt{output(Pid,\,Data)} to the target process.
+\texttt{Pid} is the pid of the current process. Valid option:
+
+\begin{itemize}
+\item
+  \texttt{target(+Pid)}\\
+  Send the message to \texttt{Pid}. Default is the parent process.
+\end{itemize}
+
+\noindent Note that this is just a convenience predicate. A toplevel, like any
+other actor, may use \texttt{!/2} to send any term to any process to which it
+has a pid.\\
+
+\noindent \textbf{Predicate:} \texttt{input/2-3}\hfill\textsc{actor}
+
+\begin{verbatim}
+input(+Prompt, -Data) is det.
+input(+Prompt, -Data, +Options) is det.
+\end{verbatim}
+
+\noindent Sends a message \texttt{prompt(Pid,\,Prompt)} to the target process and
+waits for its input. \texttt{Prompt} may be any non-variable term.
+\texttt{Pid} is the pid of the current process. \texttt{Data} will be bound to
+the term that the target process sends using \texttt{respond/2}. Valid option:
+
+\begin{itemize}
+\item
+  \texttt{target(+Pid)}\\
+  Send the \texttt{prompt} message to \texttt{Pid}. Default is the parent
+  process.
+\end{itemize}
+
+\noindent \textbf{Predicate:} \texttt{respond/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+respond(+Pid, +Input) is det.
+\end{verbatim}
+
+\noindent Sends a response in the form of the term \texttt{Input} to a process
+that has prompted its parent process for input.\\
+
+\noindent \textbf{Predicate:} \texttt{receive/1-2}\hfill\textsc{actor}
+
+\begin{verbatim}
+receive(+Clauses) is semidet.
+receive(+Clauses, +Options) is semidet.
+\end{verbatim}
+
+\noindent \texttt{Clauses} is a sequence of receive clauses delimited by a
+semicolon:
+
+\begin{verbatim}
+{  Pattern1 [if Guard1] ->
+         Body1 ;
+   ...
+   PatternN [if GuardN] ->
+         BodyN
+}
+\end{verbatim}
+
+\noindent Each pattern in turn is matched against the first message in the
+mailbox. If a pattern matches and the corresponding guard succeeds, the
+matching message is removed from the mailbox and the body of the receive clause
+is called. If no message is accepted, the process waits for new messages,
+checking them one at a time in arrival order. Messages that are not accepted
+are \textit{deferred}, i.e. left in the mailbox without any change in their
+contents or order. Valid options:
+
+\begin{itemize}
+\item
+  \texttt{timeout(+Number)}\\
+  If nothing appears in the current mailbox within \texttt{Number} seconds,
+  the predicate succeeds anyway. Default is no timeout.
+\item
+  \texttt{on\_timeout(+Goal)}\\
+  If the timeout occurs, \texttt{Goal} is called.
+\end{itemize}
+
+\section{Predicates for programming with toplevel actors}\label{sec:toplevel-api}
+
+\noindent \textbf{Predicate:} \texttt{toplevel\_spawn/1-2}\hfill\textsc{actor}
+
+\begin{verbatim}
+toplevel_spawn(-Pid) is det.
+toplevel_spawn(-Pid, +Options) is det.
+\end{verbatim}
+
+\noindent Spawns a toplevel actor and binds \texttt{Pid} to its pid. All options accepted by \texttt{spawn/3} are also accepted by
+\texttt{toplevel\_spawn/2}. In addition, \texttt{toplevel\_spawn/2}
+accepts the following options:
+
+\begin{itemize}
+\item
+  \texttt{session(+Boolean)}\\
+  If set to \texttt{false}, the toplevel actor terminates after having run a
+  goal to completion. If \texttt{true}, further interaction is expected.
+  Default is \texttt{false} in the actor API.
+\item
+  \texttt{target(+Pid)}\\
+  Send all answer terms to \texttt{Pid}. Default is the pid of the parent.
+\end{itemize}
+
+\noindent \textbf{Predicate:} \texttt{toplevel\_call/2-3}\hfill\textsc{actor}
+
+\begin{verbatim}
+toplevel_call(+Pid, +Goal) is det.
+toplevel_call(+Pid, +Goal, +Options) is det.
+\end{verbatim}
+
+\noindent Asks the toplevel \texttt{Pid} for solutions to \texttt{Goal}. Valid
+options are:
+
+\begin{itemize}
+\item
+  \texttt{template(+Template)}\\
+  \texttt{Template} is a term sharing variables with \texttt{Goal}. By
+  default, the template is identical to the goal.
+\item
+  \texttt{offset(+Integer)}\\
+  Collect only the slice of solutions starting from \texttt{Integer}. Default
+  is \texttt{0}.
+\item
+  \texttt{limit(+Integer)}\\
+  Restrict the length of the returned list of solutions to \texttt{Integer}.
+\item
+  \texttt{once(+Boolean)}\\
+  When \texttt{true}, the list of solutions in a \texttt{success} answer term
+  may not be the only solutions that \texttt{Goal} has, but the answer term may
+  still indicate that it is. Default is \texttt{false}. Makes sense only in
+  combination with the \texttt{limit} option.
+\item
+  \texttt{target(+Pid)}\\
+  Send the answer term to \texttt{Pid}. Default is the value of
+  \texttt{target} when passed as an option to \texttt{toplevel\_spawn/2}.
+\end{itemize}
+
+\noindent Variables in \texttt{Goal} are not bound directly in the caller.
+Instead, solutions and other kinds of output are returned in the form of answer
+messages delivered to the mailbox of the target process.
+
+\begin{itemize}
+\item
+  \texttt{success(Pid, Data, More)}\\
+  \texttt{Pid} is the pid of the toplevel process that succeeded in finding
+  solutions to \texttt{Goal}. \texttt{Data} is a list holding instantiations of
+  \texttt{Template}. \texttt{More} is either \texttt{true} or \texttt{false},
+  indicating whether the toplevel can return more solutions if
+  \texttt{toplevel\_next/1-2} is called.
+\item
+  \texttt{failure(Pid)}\\
+  \texttt{Pid} is the pid of the toplevel process that failed for lack of
+  solutions.
+\item
+  \texttt{error(Pid, Data)}\\
+  \texttt{Pid} is the pid of the toplevel throwing the error.
+  \texttt{Data} is the error term.
+\end{itemize}
+
+
+\noindent \textbf{Predicate:} \texttt{toplevel\_next/1-2}\hfill\textsc{actor}
+
+\begin{verbatim}
+toplevel_next(+Pid) is det.
+toplevel_next(+Pid, +Options) is det.
+\end{verbatim}
+
+\noindent Asks toplevel \texttt{Pid} for more solutions. Valid options:
+
+\begin{itemize}
+\item
+  \texttt{limit(+Integer)}\\
+  If omitted, the actor API keeps using the most recent limit value from the
+  previous toplevel call state.
+\item
+  \texttt{target(+Pid)}\\
+  Send the answer term to \texttt{Pid}. Default is the value of
+  \texttt{target} from the previous call state.
+\end{itemize}
+
+\noindent The messages delivered to the target mailbox are the same as for
+\texttt{toplevel\_call/2-3}.\\
+
+\noindent \textbf{Predicate:} \texttt{toplevel\_stop/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+toplevel_stop(+Pid) is det.
+\end{verbatim}
+
+\noindent Asks toplevel \texttt{Pid} to stop searching for more solutions.\\
+
+\noindent \textbf{Predicate:} \texttt{toplevel\_abort/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+toplevel_abort(+Pid) is det.
+\end{verbatim}
+
+\noindent Tells toplevel \texttt{Pid} to abort the execution of the currently
+running goal.\\
+
+\section{Predicates for programming with generic server actors}\label{sec:server-api}
+
+\noindent \textbf{Predicate:} \texttt{server\_spawn/3-4}\hfill\textsc{actor}
+
+\begin{verbatim}
+server_spawn(+Pred, +State, -Pid) is det.
+server_spawn(+Pred, +State, -Pid, +Options) is det.
+\end{verbatim}
+
+\noindent Spawns a generic server actor using callback predicate
+\texttt{Pred/4} and initial state \texttt{State}. The callback receives
+\texttt{(Request, OldState, Response, NewState)}. All options are forwarded to
+\texttt{spawn/3} except:
+
+\begin{itemize}
+\item
+  \texttt{name(+Name)}\\
+  Register the server under \texttt{Name}.
+\end{itemize}
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{server\_request/3-4}\hfill\textsc{actor}
+
+\begin{verbatim}
+server_request(+To, +Request, -Response) is det.
+server_request(+To, +Request, -Response, +Options) is det.
+\end{verbatim}
+
+\noindent Makes a synchronous request-response call to the server
+\texttt{To}. \texttt{server\_request/4} accepts the options of
+\texttt{receive/2}, for example \texttt{timeout(+Seconds)}. Monitoring is
+installed automatically so the call fails fast if the server terminates before
+replying.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{server\_promise/3-4}\hfill\textsc{actor}
+
+\begin{verbatim}
+server_promise(+To, +Request, -Ref) is det.
+server_promise(+To, +Request, -Ref, -MonRef) is det.
+\end{verbatim}
+
+\noindent Sends \texttt{Request} to the server \texttt{To} and returns a
+correlation reference \texttt{Ref}. The reply must later be collected with
+\texttt{server\_yield/2-4}. The four-argument variant additionally installs a
+monitor and returns its reference in \texttt{MonRef}.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{server\_yield/2-4}\hfill\textsc{actor}
+
+\begin{verbatim}
+server_yield(+Ref, -Response) is det.
+server_yield(+Ref, -Response, +Options) is det.
+server_yield(+Ref, +MonRef, -Response, +Options) is det.
+\end{verbatim}
+
+\noindent Waits for the response matching \texttt{Ref}. The three-argument
+variant accepts the options of \texttt{receive/2}. The four-argument variant
+uses \texttt{MonRef} to detect server termination and throws
+\texttt{server\_down(Reason)} if the server dies before replying.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{server\_upgrade/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+server_upgrade(+To, +Pred) is det.
+\end{verbatim}
+
+\noindent Replaces the callback predicate of the running server \texttt{To}
+without disturbing its current state. \texttt{Pred} must be arity 4.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{server\_stop/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+server_stop(+To, -Reply) is det.
+\end{verbatim}
+
+\noindent Asks the server \texttt{To} to stop gracefully and binds
+\texttt{Reply} to its acknowledgement.\\
+
+\section{Predicates for programming with statechart actors}\label{sec:statechart-api}
+
+\noindent \textbf{Predicate:} \texttt{statechart\_spawn/1-2}\hfill\textsc{actor}
+
+\begin{verbatim}
+statechart_spawn(-Pid) is det.
+statechart_spawn(-Pid, +Options) is det.
+\end{verbatim}
+
+\noindent Spawns a statechart actor and binds \texttt{Pid} to its pid.
+
+\medskip
+\noindent \texttt{statechart\_spawn/2} requires exactly one source option:
+
+\begin{itemize}
+\item
+  \texttt{load\_uri(+URI)}\\
+  Load and run a statechart from a URI or file path.
+\item
+  \texttt{load\_text(+Text)}\\
+  Load and run a statechart from an XML text string.
+\end{itemize}
+
+\noindent All remaining options are passed through to \texttt{spawn/3}.
+
+\medskip
+\noindent \texttt{load\_list/1} and \texttt{load\_predicates/1} are rejected
+for \texttt{statechart\_spawn/2}.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{raise/1}\hfill\textsc{statechart builtin}
+
+\begin{verbatim}
+raise(+Event) is det.
+\end{verbatim}
+
+\noindent Enqueues \texttt{Event} on the \textit{internal} event queue of the
+current statechart interpreter.
+
+\medskip
+\noindent \textbf{Important:} \texttt{raise/1} is only meaningful inside
+executable statechart content such as \texttt{<datamodel>},
+\texttt{<onentry>}, \texttt{<onexit>}, and \texttt{<go>}.\\
+
+\section{Predicates for programming with supervisor actors}\label{sec:supervisor-api}
+
+\noindent \textbf{Predicate:} \texttt{supervisor\_spawn/2-3}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_spawn(+ChildSpecs, -Pid) is det.
+supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.
+\end{verbatim}
+
+\noindent Spawns a supervisor actor and starts its children. Supported options
+are:
+
+\begin{itemize}
+\item
+  \texttt{strategy(+Strategy)}\\
+  One of \texttt{one\_for\_one} (default), \texttt{one\_for\_all}, or
+  \texttt{rest\_for\_one}.
+\item
+  \texttt{intensity(+Integer)}\\
+  Max restarts in period. Default \texttt{1}.
+\item
+  \texttt{period(+Integer)}\\
+  Window size for restart intensity. Default \texttt{5}.
+\item
+  \texttt{name(+Name)}\\
+  Register the supervisor under \texttt{Name}.
+\end{itemize}
+
+\noindent Other options are passed through to \texttt{spawn/3}.
+
+\medskip
+\noindent Child specifications take the form \texttt{child(Id, ChildOptions)}.
+Child options are:
+
+\begin{itemize}
+\item
+  \texttt{start(+Goal)}\\
+  Required. Start goal for the child.
+\item
+  \texttt{restart(+Policy)}\\
+  One of \texttt{permanent} (default), \texttt{transient}, or
+  \texttt{temporary}.
+\item
+  \texttt{shutdown(+Shutdown)}\\
+  One of \texttt{brutal\_kill}, \texttt{infinity}, or a timeout number.
+\item
+  \texttt{type(+Type)}\\
+  \texttt{worker} (default) or \texttt{supervisor}.
+\end{itemize}
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_spawn\_child/3}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_spawn_child(+Pid, +ChildSpec, -Reply) is det.
+\end{verbatim}
+
+\noindent Dynamically adds and starts one child. \texttt{Reply} is one of
+\texttt{ok}, \texttt{error(already\_present)}, or
+\texttt{error(start\_failed)}.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_terminate\_child/3}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_terminate_child(+Pid, +Id, -Reply) is det.
+\end{verbatim}
+
+\noindent Stops child \texttt{Id} but keeps its specification. \texttt{Reply}
+is \texttt{ok} or \texttt{error(not\_found)}.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_delete\_child/3}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_delete_child(+Pid, +Id, -Reply) is det.
+\end{verbatim}
+
+\noindent Removes a non-running child specification. \texttt{Reply} is
+\texttt{ok}, \texttt{error(running)}, or \texttt{error(not\_found)}.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_respawn\_child/3}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_respawn_child(+Pid, +Id, -Reply) is det.
+\end{verbatim}
+
+\noindent Restarts a previously terminated child from its stored specification.
+\texttt{Reply} is either \texttt{ok(NewPid)}, \texttt{error(running)},
+\texttt{error(not\_found)}, or \texttt{error(start\_failed)}.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_which\_children/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_which_children(+Pid, -Children) is det.
+\end{verbatim}
+
+\noindent Returns a list of:
+
+\begin{verbatim}
+info(Id, Pid, Type, Restart)
+\end{verbatim}
+
+\noindent where \texttt{Pid} may be \texttt{undefined} for stopped
+children.\\
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_count\_children/2}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_count_children(+Pid, -Counts) is det.
+\end{verbatim}
+
+\noindent Returns:
+
+\begin{verbatim}
+[specs-N, active-N, supervisors-N, workers-N]
+\end{verbatim}
+
+\bigskip
+\noindent \textbf{Predicate:} \texttt{supervisor\_stop/1}\hfill\textsc{actor}
+
+\begin{verbatim}
+supervisor_stop(+Pid) is det.
+\end{verbatim}
+
+\noindent Stops the supervisor and shuts down children in reverse start
+order.\\
+
+\subsubsection{Note on synchronous supervisor calls}
+
+\noindent The dynamic/query API above uses monitored synchronous calls and may
+throw:
+
+\begin{itemize}
+\item \texttt{supervisor\_down(Reason)}
+\item \texttt{supervisor\_call\_timeout(Sup, Request)}
+\end{itemize}
+
+\section{Built-in predicates for RPC}\label{sec:synchronous-predicate-api}
+
+\noindent \textbf{Predicate:} \texttt{rpc/2-3}\hfill\textsc{isobase}
+
+\begin{verbatim}
+rpc(+URI, +Goal) is nondet.
+rpc(+URI, +Goal, +Options) is nondet.
+\end{verbatim}
+
+\noindent Semantically, \texttt{rpc/2-3} executes a copy of \texttt{Goal} on
+the remote node identified by \texttt{URI} and then unifies the local goal
+with the remote copy on backtracking. The current implementation uses the
+stateless \texttt{/call} endpoint. The following options are valid:
+
+\begin{itemize}
+\item
+  \texttt{limit(+Integer)}\\
+  Restricts the number of solutions retrieved per roundtrip.
+\item
+  \texttt{once(+Boolean)}\\
+  When \texttt{true}, the returned slice may not be the only solutions that
+  \texttt{Goal} has, but the answer term may still indicate that it is.
+\item
+  \texttt{timeout(+Number)}\\
+  Requests a timeout in seconds for goal execution on the remote node. The
+  effective timeout is the minimum of the requested value and the timeout
+  configured by the node owner.
+\item
+  \texttt{http\_timeout(+Number)}\\
+  Sets the client-side HTTP transport timeout in seconds for each request.
+\item
+  \texttt{load\_text(+AtomOrString)}\\
+  Loads source text into the underlying actor's private database before calling
+  \texttt{Goal}.
+\item
+  \texttt{load\_list(+ListOfClauses)}\\
+  Loads a list of clauses into the underlying actor's private database before
+  calling \texttt{Goal}.
+\item
+  \texttt{load\_uri(+URI)}\\
+  Loads source text from \texttt{URI} into the underlying actor's private
+  database before calling \texttt{Goal}.
+\item
+  \texttt{load\_predicates(+ListOfPredicateIndicators)}\\
+  Loads the local predicates denoted by the supplied predicate indicators into
+  the underlying actor's private database before calling \texttt{Goal}.
+\end{itemize}
+
+\noindent \texttt{http\_timeout/1} controls only the client-side HTTP transport
+timeout. It does not change the remote execution timeout.\\
+
+\noindent \textbf{Predicate:} \texttt{promise/3-4}\hfill\textsc{isobase}
+
+\begin{verbatim}
+promise(+URI, +Goal, -Ref) is det.
+promise(+URI, +Goal, -Ref, +Options) is det.
+\end{verbatim}
+
+\noindent Makes an asynchronous RPC call to node \texttt{URI} with
+\texttt{Goal}. The current implementation supports the following options:
+
+\begin{itemize}
+\item
+  \texttt{template(+Template)}\\
+  \texttt{Template} is a term sharing variables with the goal. By default, the
+  template is identical to the goal.
+\item
+  \texttt{offset(+Integer)}\\
+  Collect only the slice of solutions starting from \texttt{Integer}. Default
+  is \texttt{0}.
+\item
+  \texttt{limit(+Integer)}\\
+  Restrict the number of returned solutions to \texttt{Integer}.
+\end{itemize}
+
+\noindent The reference returned in \texttt{Ref} can later be used by
+\texttt{yield/2-3} to collect the answer.\\
+
+\noindent \textbf{Predicate:} \texttt{yield/2-3}\hfill\textsc{isobase}
+
+\begin{verbatim}
+yield(+Ref, ?Answer) is det.
+yield(+Ref, ?Answer, +Options) is det.
+\end{verbatim}
+
+\noindent Returns the promised answer from a previous call to
+\texttt{promise/3-4}. This predicate must be called by the same process from
+which the previous call to \texttt{promise/3-4} was made. Valid options:
+
+\begin{itemize}
+\item
+  \texttt{timeout(+Number)}\\
+  If nothing appears in the current mailbox within \texttt{Number} seconds,
+  the goal supplied in the \texttt{on\_timeout} option is called. Default is no
+  timeout.
+\item
+  \texttt{on\_timeout(+Goal)}\\
+  If the timeout occurs, \texttt{Goal} is called.
+\end{itemize}
+
+\section{Built-in predicates for node deployment}\label{sec:node-predicate-api}
+
+\noindent \textbf{Predicate:} \texttt{node/1-2}\hfill\textsc{isobase}
+
+\begin{verbatim}
+node(+Port) is det.
+node(+Port, +Options) is det.
+\end{verbatim}
+
+\noindent Starts an HTTP server for a Prolog node on \texttt{Port}.
+
+\smallskip
+\noindent In the current implementation, the node exposes:
+
+\begin{itemize}
+\item \texttt{/}
+\item \texttt{/call}
+\item \texttt{/toplevel\_spawn}
+\item \texttt{/toplevel\_call}
+\item \texttt{/toplevel\_next}
+\item \texttt{/toplevel\_poll}
+\item \texttt{/toplevel\_stop}
+\item \texttt{/toplevel\_abort}
+\item \texttt{/toplevel\_respond}
+\item \texttt{/shell}
+\item \texttt{/ws}
+\end{itemize}
+
+\noindent The node module defines two owner-controlled settings:
+
+\begin{itemize}
+\item
+  \texttt{node:cache\_size(+Integer)}\\
+  Maximum number of cache entries used by the stateless \texttt{/call}
+  endpoint. Default is \texttt{100}.
+\item
+  \texttt{node:timeout(+Number)}\\
+  Owner timeout cap in seconds. Default is \texttt{2}. If a request includes a
+  timeout value, the effective timeout is the minimum of that requested value
+  and \texttt{node:timeout}.
+\end{itemize}
+
+\noindent \texttt{node/2} accepts shared-database startup options:
+
+\begin{itemize}
+\item \texttt{load\_shared\_db\_text(+Text)}
+\item \texttt{load\_shared\_db\_file(+File)}
+\item \texttt{load\_shared\_db\_uri(+URI)}
+\end{itemize}
+
+\noindent The shared database is loaded once into a dedicated runtime module
+and imported by actor modules.
+
+\section{The stateful WebSocket API}\label{sec:ws-api}
+
+\noindent The WebSocket ACTOR profile lives at \texttt{/ws}. Messages are
+encoded as JSON dicts.
+
+\medskip
+\noindent Supported commands from client to server are:
+
+\begin{itemize}
+\item \texttt{toplevel\_spawn}
+\item \texttt{toplevel\_call}
+\item \texttt{toplevel\_next}
+\item \texttt{toplevel\_stop}
+\item \texttt{toplevel\_abort}
+\item \texttt{toplevel\_respond}
+\item \texttt{spawn}
+\item \texttt{send}
+\item \texttt{exit}
+\end{itemize}
+
+\noindent Supported event types from server to client are:
+
+\begin{itemize}
+\item \texttt{spawned}
+\item \texttt{success}
+\item \texttt{failure}
+\item \texttt{error}
+\item \texttt{output}
+\item \texttt{prompt}
+\item \texttt{timeout}
+\item \texttt{stop}
+\item \texttt{abort}
+\item \texttt{responded}
+\item \texttt{down}
+\end{itemize}
+
+\noindent In WebSocket payloads, pid values may appear as integers for local
+actors or as strings of the form \texttt{"Id@Node"} for non-local actors.\\
+
+\section{The semi-stateful HTTP API}\label{sec:semi-stateful-http-api}
+
+\subsubsection{I/O and long-polling}
+
+\noindent The semi-stateful API is built on long-lived toplevel actors plus
+per-session queues.
+
+\medskip
+\noindent Table~\ref{table:api-parameters-toplevel-spawn} lists the
+parameters for the \texttt{/toplevel\_spawn} endpoint.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{| m{1.8cm} | m{1.6cm} | m{5.4cm} | m{2.5cm} |}
+\hline
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} & \textbf{Default Value} \\
+\hline
+\texttt{format} & atom & Response format, typically \texttt{json} or \texttt{prolog}. & \texttt{json} \\
+\hline
+\texttt{options} & list or string & Spawn options passed to the underlying toplevel actor. & \texttt{[]} \\
+\hline
+\texttt{load\_text} & string & Source text to be loaded into the session actor before use. & empty string \\
+\hline
+\end{tabular}
+\caption{HTTP API parameters for the \texttt{/toplevel\_spawn} endpoint.}
+\label{table:api-parameters-toplevel-spawn}
+\end{table}
+
+\noindent \textbf{Note:} In the actual HTTP ISOTOPE API, \texttt{session(true)}
+is always forced by the endpoint, regardless of any \texttt{session/1} value
+that may be present in \texttt{options}. The endpoint also injects a small
+prelude that redirects \texttt{writeln/1} to \texttt{actor:output/1}.\\
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{| m{1.6cm} | m{1.4cm} | m{5.6cm} | m{2.7cm} |}
+\hline
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} & \textbf{Default Value} \\
+\hline
+\texttt{pid} & pid & The toplevel actor to engage. Accepts integer forms and canonical \texttt{Id@Node} forms. & None \\
+\hline
+\texttt{goal} & callable & The goal to be called. & None \\
+\hline
+\texttt{template} & term & The template to be used. For \texttt{format=json}, named query variables are returned as a JSON dict template. & Same as goal \\
+\hline
+\texttt{offset} & int $>= 0$ & The offset in the virtual list of solutions. & 0 \\
+\hline
+\texttt{limit} & int $> 0$ & Max number of solutions to be returned. & Effectively no limit \\
+\hline
+\texttt{format} & atom & Response format. & \texttt{json} \\
+\hline
+\texttt{load\_text} & string & Additional session-local source text to be loaded before the call. & empty string \\
+\hline
+\texttt{once} & boolean & Restrict execution to one slice even if more solutions may exist. & \texttt{false} \\
+\hline
+\texttt{timeout} & number & Requested wait timeout for this call, capped by the node owner timeout. & Owner timeout \\
+\hline
+\end{tabular}
+\caption{HTTP API parameters for the \texttt{/toplevel\_call} endpoint.}
+\label{table:api-parameters-toplevel-call}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{| m{1.6cm} | m{1.4cm} | m{5.6cm} | m{2.7cm} |}
+\hline
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} & \textbf{Default Value} \\
+\hline
+\texttt{pid} & pid & The toplevel actor to continue. Accepts integer forms and canonical \texttt{Id@Node} forms. & None \\
+\hline
+\texttt{limit} & int $> 0$ & Max number of solutions to be returned by this HTTP wrapper call. & Effectively no limit \\
+\hline
+\texttt{format} & atom & Response format. & \texttt{json} \\
+\hline
+\texttt{timeout} & number & Requested wait timeout, capped by the node owner timeout. & Owner timeout \\
+\hline
+\end{tabular}
+\caption{HTTP API parameters for the \texttt{/toplevel\_next} endpoint.}
+\label{table:api-parameters-toplevel-next}
+\end{table}
+
+
+\medskip
+\noindent \texttt{/toplevel\_poll} takes \texttt{pid}, optional
+\texttt{format}, and optional \texttt{timeout}. \texttt{/toplevel\_respond}
+takes \texttt{pid}, \texttt{input}, and optional \texttt{format}.
+\texttt{/toplevel\_stop} and \texttt{/toplevel\_abort} take \texttt{pid} and
+optional \texttt{format}.\\
+
+\medskip
+\noindent Table~\ref{table:semi-stateful-node-urls} lists the complete
+set of endpoints and their current responses in the semi-stateful API.
+
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[h]
+\begin{center}
+    \begin{tabular}{ | p{4cm} | p{6cm} |}
+    \hline
+    \textbf{API endpoint} &  \textbf{Response types} \\ \hline
+    \texttt{/toplevel\_spawn} & \texttt{spawned} or \texttt{error} \\ \hline
+    \texttt{/toplevel\_call} & \texttt{success}, \texttt{failure}, \texttt{error}, \texttt{output}, \texttt{prompt}, \texttt{timeout}, or \texttt{abort} \\ \hline
+    \texttt{/toplevel\_next} & \texttt{success}, \texttt{failure}, \texttt{error}, \texttt{output}, \texttt{prompt}, \texttt{timeout}, or \texttt{abort} \\ \hline
+    \texttt{/toplevel\_respond} & \texttt{responded} or \texttt{error} \\ \hline
+    \texttt{/toplevel\_poll} & \texttt{success}, \texttt{failure}, \texttt{error}, \texttt{output}, \texttt{prompt}, \texttt{timeout}, or \texttt{abort} \\ \hline
+    \texttt{/toplevel\_stop} & \texttt{stop} \\ \hline
+    \texttt{/toplevel\_abort} & \texttt{abort} \\ \hline
+\end{tabular}
+\end{center}
+\caption{The complete set of endpoints and responses in the semi-stateful API.}
+\label{table:semi-stateful-node-urls}
+\end{table}
+
+\section{The stateless HTTP API}\label{sec:stateless-http-api}
+
+\noindent The stateless API is exposed at \texttt{/call}.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{| m{1.5cm} | m{1.2cm} | m{5.7cm} | m{2.6cm} |}
+\hline
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} & \textbf{Default Value} \\
+\hline
+\texttt{goal} & callable & The goal to be called. & None \\
+\hline
+\texttt{template} & term & The template to be used. For \texttt{format=json}, named query variables are returned as a JSON dict template. & Same as goal \\
+\hline
+\texttt{offset} & int $>= 0$ & The offset in the virtual list of solutions. & 0 \\
+\hline
+\texttt{limit} & int $> 0$ & Max number of solutions to be returned. & Effectively no limit \\
+\hline
+\texttt{load\_text} & string & Source text to be injected into the temporary actor context. & empty string \\
+\hline
+\texttt{timeout} & number & Requested timeout for remote goal execution, capped by the node owner's timeout setting. & Owner timeout setting \\
+\hline
+\texttt{once} & boolean-ish atom & Restrict execution to one slice even if more solutions may exist. & \texttt{false} \\
+\hline
+\texttt{format} & atom & The format of answer responses. & \texttt{json} \\
+\hline
+\end{tabular}
+\caption{HTTP API parameters for the \texttt{/call} endpoint.}
+\label{table:api-parameters-call-stateless}
+\end{table}
+
+\noindent The only required parameter is \texttt{goal}.
+
+\smallskip
+\noindent Although the API is stateless from the client's perspective, the
+server may cache a live toplevel actor internally to continue paged solution
+retrieval without recomputing earlier work.\\

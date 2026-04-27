@@ -1,0 +1,19 @@
+<statechart datamodel="web-prolog" initial="Play">
+    <state id="Play" initial="Inner">
+        <history id="H" type="deep">
+            <go to="S1"/>
+        </history>
+        <state id="Inner" initial="S1">
+            <state id="S1">
+                <go to="S2" on="play"/>
+            </state>
+            <state id="S2">
+                <go to="S1" on="reset"/>
+            </state>
+        </state>
+        <go to="Interrupted" on="pause"/>
+    </state>
+    <state id="Interrupted">
+        <go to="H" on="resume"/>
+    </state>
+</statechart>

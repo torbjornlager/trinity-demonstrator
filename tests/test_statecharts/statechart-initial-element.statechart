@@ -1,0 +1,6 @@
+<statechart datamodel="web-prolog">
+    <initial>
+        <go to="s1"/>
+    </initial>
+    <state id="s1"/>
+</statechart>

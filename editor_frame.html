@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>(function(){function c(n){var p=n+"=",a=String(document.cookie||"").split(/;\s*/),i;for(i=0;i<a.length;i+=1){if(a[i].indexOf(p)===0){return decodeURIComponent(a[i].slice(p.length));}}return"";}var tc=c("wp_theme_mode"),tl=localStorage.getItem("wb.themeMode"),t=(tc==="dark"||tc==="light")?tc:tl;if(t==="dark"){document.documentElement.setAttribute("data-theme","dark");document.documentElement.style.background="#11171d";document.documentElement.style.colorScheme="dark";localStorage.setItem("wb.themeMode","dark");}else{document.documentElement.setAttribute("data-theme","light");document.documentElement.style.background="#ffffff";document.documentElement.style.colorScheme="light";if(t==="light"){localStorage.setItem("wb.themeMode","light");}}})();</script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Workbench Editor Frame</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
+          integrity="sha384-zaeBlB/vwYsDRSlFajnDd7OydJ0cWk+c2OWybl3eSUf6hW2EbhlCsQPqKr3gkznT"
+          crossorigin="anonymous">
+    <style>
+      :root {
+        color-scheme: light;
+        --editor-bg: #ffffff;
+        --editor-ink: #1f2937;
+        --editor-gutter-bg: #f7fafc;
+        --editor-gutter-ink: #718096;
+        --editor-line-highlight: rgba(148, 163, 184, 0.08);
+        --editor-selection: rgba(147, 197, 253, 0.35);
+        --editor-cursor: #1f2937;
+        --mono-font: "IBM Plex Mono", "Menlo", "Consolas", monospace;
+        --mono-size: 13px;
+        --mono-weight: 400;
+        --mono-line-height: 1.45;
+      }
+
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --editor-bg: #11171d;
+        --editor-ink: #e5edf5;
+        --editor-gutter-bg: #182028;
+        --editor-gutter-ink: #8ea1b4;
+        --editor-line-highlight: rgba(148, 163, 184, 0.10);
+        --editor-selection: rgba(96, 165, 250, 0.26);
+        --editor-cursor: #f8fafc;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--editor-bg);
+        color: var(--editor-ink);
+      }
+
+      #editor {
+        height: 100%;
+        background: var(--editor-bg);
+      }
+
+      .CodeMirror {
+        height: 100%;
+        background: var(--editor-bg);
+        color: var(--editor-ink);
+        font-family: var(--mono-font);
+        font-size: var(--mono-size);
+        font-weight: var(--mono-weight);
+        line-height: var(--mono-line-height);
+      }
+
+      .CodeMirror,
+      .CodeMirror .CodeMirror-code,
+      .CodeMirror .CodeMirror-lines,
+      .CodeMirror .CodeMirror-line,
+      .CodeMirror .CodeMirror-line-like,
+      .CodeMirror pre,
+      .CodeMirror pre.CodeMirror-line,
+      .CodeMirror pre.CodeMirror-line-like,
+      .CodeMirror .CodeMirror-line > span,
+      .CodeMirror .CodeMirror-line-like > span,
+      .CodeMirror .CodeMirror-line span:not([class]),
+      .CodeMirror .CodeMirror-line-like span:not([class]) {
+        color: var(--editor-ink) !important;
+        background: transparent;
+      }
+
+      .CodeMirror-gutters {
+        background: var(--editor-gutter-bg);
+        border-right: 1px solid rgba(127, 140, 151, 0.25);
+      }
+
+      .CodeMirror-linenumber {
+        color: var(--editor-gutter-ink);
+      }
+
+      .CodeMirror-cursor {
+        border-left: 1px solid var(--editor-cursor);
+      }
+
+      .CodeMirror-selected {
+        background: var(--editor-selection) !important;
+      }
+
+      .CodeMirror-activeline-background {
+        background: var(--editor-line-highlight);
+      }
+
+      .CodeMirror span.cm-comment { color: #6b7280 !important; }
+      .CodeMirror span.cm-keyword { color: #0f766e !important; }
+      .CodeMirror span.cm-atom,
+      .CodeMirror span.cm-number { color: #b45309 !important; }
+      .CodeMirror span.cm-def,
+      .CodeMirror span.cm-variable,
+      .CodeMirror span.cm-variable-2,
+      .CodeMirror span.cm-variable-3,
+      .CodeMirror span.cm-property { color: #1f2937 !important; }
+      .CodeMirror span.cm-string,
+      .CodeMirror span.cm-string-2 { color: #166534 !important; }
+      .CodeMirror span.cm-meta,
+      .CodeMirror span.cm-operator,
+      .CodeMirror span.cm-bracket,
+      .CodeMirror span.cm-builtin { color: #374151 !important; }
+      .CodeMirror span.cm-tag { color: #0369a1 !important; }
+      .CodeMirror span.cm-attribute { color: #b45309 !important; }
+      .CodeMirror span.cm-qualifier { color: #1d4ed8 !important; }
+      .CodeMirror span.cm-error {
+        background: transparent !important;
+        color: #b91c1c !important;
+      }
+
+      :root[data-theme="dark"] .CodeMirror-gutters {
+        background: var(--editor-gutter-bg);
+        border-right-color: rgba(148, 163, 184, 0.22);
+      }
+
+      :root[data-theme="dark"] .CodeMirror span.cm-comment { color: #7f93a7 !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-keyword { color: #7dd3fc !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-atom,
+      :root[data-theme="dark"] .CodeMirror span.cm-number { color: #f9a8d4 !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-def,
+      :root[data-theme="dark"] .CodeMirror span.cm-variable,
+      :root[data-theme="dark"] .CodeMirror span.cm-variable-2,
+      :root[data-theme="dark"] .CodeMirror span.cm-variable-3,
+      :root[data-theme="dark"] .CodeMirror span.cm-property { color: #e2e8f0 !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-string { color: #86efac !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-string-2 { color: #bbf7d0 !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-meta,
+      :root[data-theme="dark"] .CodeMirror span.cm-operator,
+      :root[data-theme="dark"] .CodeMirror span.cm-bracket,
+      :root[data-theme="dark"] .CodeMirror span.cm-builtin { color: #cbd5e1 !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-tag { color: #7dd3fc !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-attribute { color: #fcd34d !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-qualifier { color: #93c5fd !important; }
+      :root[data-theme="dark"] .CodeMirror span.cm-error {
+        background: transparent;
+        color: #fca5a5 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="editor"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"
+            integrity="sha384-ZYmwuq4n2gOcNxMSiJ6jyTj+BbIrilr7p6dlq6q5nmSWKmsH9UU4K1qqjycMkfmR"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/prolog/prolog.min.js"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"
+            crossorigin="anonymous"></script>
+    <script>
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var editorId = params.get("id") || "prolog";
+        var mode = params.get("mode") || "none";
+
+        function normalizeMode(value) {
+          if (value === "xml") {
+            return "xml";
+          }
+          if (value === "prolog") {
+            return "prolog";
+          }
+          return null;
+        }
+
+        function normalizeTheme(value) {
+          return value === "dark" ? "dark" : "light";
+        }
+
+        function readCookie(name) {
+          var prefix = name + "=";
+          var parts = String(document.cookie || "").split(/;\s*/);
+          var index;
+          for (index = 0; index < parts.length; index += 1) {
+            if (parts[index].indexOf(prefix) === 0) {
+              return decodeURIComponent(parts[index].slice(prefix.length));
+            }
+          }
+          return "";
+        }
+
+        function applyTheme(theme) {
+          var next = normalizeTheme(theme);
+          document.documentElement.setAttribute("data-theme", next);
+          document.documentElement.style.colorScheme = next;
+        }
+
+        function restoreAppearanceFromStorage() {
+          var family = window.localStorage.getItem("wb.monoFontFamily");
+          var size = parseInt(window.localStorage.getItem("wb.monoFontSize"), 10);
+          var weight = parseInt(window.localStorage.getItem("wb.monoFontWeight"), 10);
+          var cookieTheme = readCookie("wp_theme_mode");
+          var initialTheme = (cookieTheme === "dark" || cookieTheme === "light")
+            ? cookieTheme
+            : window.localStorage.getItem("wb.themeMode");
+          if (initialTheme === "dark" || initialTheme === "light") {
+            window.localStorage.setItem("wb.themeMode", initialTheme);
+          }
+          applyTheme(initialTheme);
+          if (family) {
+            document.documentElement.style.setProperty("--mono-font", String(family));
+          }
+          if (Number.isFinite(size)) {
+            document.documentElement.style.setProperty("--mono-size", String(size) + "px");
+          }
+          if ([300, 400, 500, 600].indexOf(weight) >= 0) {
+            document.documentElement.style.setProperty("--mono-weight", String(weight));
+          }
+        }
+
+        function applyAppearance(options) {
+          var root = document.documentElement;
+          if (!options || typeof options !== "object") {
+            editor.refresh();
+            return;
+          }
+          applyTheme(options.theme);
+          if (options.fontFamily) {
+            root.style.setProperty("--mono-font", String(options.fontFamily));
+          }
+          if (options.fontSize) {
+            root.style.setProperty("--mono-size", String(options.fontSize) + "px");
+          }
+          if (options.fontWeight) {
+            root.style.setProperty("--mono-weight", String(options.fontWeight));
+          }
+          if (options.lineHeight) {
+            root.style.setProperty("--mono-line-height", String(options.lineHeight));
+          }
+          editor.refresh();
+        }
+
+        restoreAppearanceFromStorage();
+
+        var editor = CodeMirror(document.getElementById("editor"), {
+          mode: normalizeMode(mode),
+          lineNumbers: true,
+          lineWrapping: false,
+          value: ""
+        });
+
+        function notifyChange() {
+          try {
+            if (window.parent &&
+                window.parent.webPrologEditorHost &&
+                typeof window.parent.webPrologEditorHost.reportChange === "function") {
+              window.parent.webPrologEditorHost.reportChange(editorId, editor.getValue());
+            }
+          } catch (error) {
+          }
+        }
+
+        editor.on("change", notifyChange);
+
+        window.editorFrameBridge = {
+          getValue: function() {
+            return editor.getValue();
+          },
+          setValue: function(value) {
+            editor.setValue(String(value == null ? "" : value));
+          },
+          focusEditor: function() {
+            editor.focus();
+          },
+          refreshEditor: function() {
+            editor.refresh();
+          },
+          applyAppearance: function(options) {
+            applyAppearance(options);
+          },
+          setMode: function(nextMode) {
+            editor.setOption("mode", normalizeMode(nextMode));
+            editor.refresh();
+          }
+        };
+
+        window.addEventListener("resize", function() {
+          editor.refresh();
+        });
+
+        window.setTimeout(function() {
+          editor.refresh();
+        }, 0);
+      }());
+    </script>
+  </body>
+</html>
