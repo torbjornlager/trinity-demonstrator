@@ -288,6 +288,12 @@
             filter: invert(1);
         }
 
+        .statechart-raster-narrow {
+            width: 75%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
         em {
             font-weight: bold;
             font-style: normal;
@@ -2473,7 +2479,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-pr-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/pause-and-resume.xml'),
+       load_uri('/examples/statecharts/01%20pause-and-resume.xml'),
        trace(true)
    ]).
 </pre>
@@ -2643,7 +2649,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <figure style="margin: 1.5em 0;">
-  <img class="statechart-raster" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+  <img class="statechart-raster statechart-raster-narrow" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
   <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
     Orthogonal regions: two emotion dimensions plus one behavior mode.
   </p>
@@ -2698,6 +2704,14 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 
 <h2>Computing the GCD</h2>
+
+<p>
+    The time is ripe to introduce Web Prolog as a scripting language inside
+    statecharts. Executable Web Prolog code in transition bodies and guards
+    increases their power significantly: a chart can update data, run
+    relations, produce output, and still keep the surrounding control logic
+    explicit.
+</p>
 
 <p>
     This statechart applies Euclid's algorithm to find the greatest common
@@ -2759,6 +2773,86 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <p>
     The GCD <code>5</code> is computed and written to the terminal.
+</p>
+
+<h2>Process invocation and communication</h2>
+
+<p>
+    Statecharts become more useful once they can spawn other processes and
+    communicate with them. In Web Prolog, the invoked processes are simply
+    actors: toplevels, other statechart actors, or services running on local or
+    remote nodes.
+</p>
+
+<p>
+    This final example spawns a child toplevel, submits a query to it, prints
+    each answer as it arrives, and terminates when the last answer has been
+    received. The spawned toplevel is initialized with a small program:
+    <code>q(X) :- p(X)</code> and four facts, <code>p(a)</code> through
+    <code>p(d)</code>.
+</p>
+
+<pre id="sc-spawn-toplevel-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sc-spawn-toplevel-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    When the surrounding state becomes active, the <code>&lt;spawn&gt;</code>
+    element creates the child toplevel. The generated
+    <code>spawned(Pid)</code> event reports the pid of that child actor, and
+    the transition from <code>ask</code> to <code>collect</code> calls
+    <code>toplevel_call/3</code> with <code>limit(1)</code>.
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="spawn-ask-collect"&gt;
+    &lt;state id="spawn-ask-collect" initial="ask"&gt;
+        &lt;spawn type="toplevel" exit="false"&gt;
+            q(X) :- p(X).
+            p(a). p(b). p(c). p(d).
+        &lt;/spawn&gt;
+        &lt;state id="ask"&gt;
+            &lt;go to="collect" on="spawned(Pid)"&gt;
+                toplevel_call(Pid, q(X), [
+                    limit(1)
+                ])
+            &lt;/go&gt;
+        &lt;/state&gt;
+        &lt;state id="collect"&gt;
+            &lt;go to="collect" on="success(Pid, Data, true)"&gt;
+                writeln(Data),
+                toplevel_next(Pid)
+            &lt;/go&gt;
+            &lt;go to="final" on="success(_, Data, false)"&gt;
+                writeln(Data)
+            &lt;/go&gt;
+        &lt;/state&gt;
+    &lt;/state&gt;
+    &lt;final id="final" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<p>
+    Each answer arrives as <code>success(Pid, Data, More)</code>. While
+    <code>More</code> is <code>true</code>, the chart prints the current
+    answer and asks the child toplevel for the next one with
+    <code>toplevel_next/1</code>. When <code>More</code> is
+    <code>false</code>, the last answer has arrived and the machine enters its
+    final state.
+</p>
+
+<p>
+    Variables bound by the <code>on</code> pattern, and by any
+    <code>if</code> guard, are in scope in the executable content of the same
+    <code>&lt;go&gt;</code> element. The intent of <code>&lt;spawn&gt;</code>
+    is also ownership: the helper process belongs to the control state that
+    created it, so leaving that state can clean up the invoked actor without
+    ad hoc shutdown code.
 </p>
 
 
