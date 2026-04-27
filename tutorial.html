@@ -273,6 +273,21 @@
             box-sizing: border-box;
         }
 
+        .statechart-raster {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: var(--tutorial-surface);
+            border: 1px solid var(--tutorial-border);
+            border-radius: 20px;
+            box-shadow: var(--tutorial-shadow);
+            box-sizing: border-box;
+        }
+
+        :root[data-theme="dark"] .statechart-raster {
+            filter: invert(1);
+        }
+
         em {
             font-weight: bold;
             font-style: normal;
@@ -2532,6 +2547,154 @@ fridge2(_Other,      List, error(unknown_request), List).
 &lt;/statechart&gt;
 </pre>
 
+<h2>Reading a spaghetti statechart</h2>
+
+<p>
+    Real statecharts can look tangled at first. The visual trick is to read
+    them from the outside in: identify the active leaf state, then walk outward
+    through its parent states until you find a transition whose event matches
+    the message you send. The first enabled transition determines the next
+    state.
+</p>
+
+<figure style="margin: 1.5em 0;">
+  <img class="statechart-raster" src="/img/spaghetti.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
+  <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
+    Spaghetti statechart.
+  </p>
+</figure>
+
+<p>
+    The machine starts in <code>s0</code>, follows its initial transition into
+    <code>s1</code>, and then follows <code>s1</code>'s initial transition into
+    <code>s11</code>. If you send <code>c</code> while the active leaf is
+    <code>s11</code>, there is no <code>c</code> transition on
+    <code>s11</code>, so the interpreter looks at the parent
+    <code>s1</code> and takes <code>s1</code> &rarr; <code>s2</code>. Entering
+    <code>s2</code> then follows nested initial transitions down to
+    <code>s211</code>.
+</p>
+
+<p>
+    Spawn the chart and keep the Logger open with the Statechart Trace filter
+    selected. The trace shows the same process as text: the current
+    configuration, the external event, exits, transitions, and entries.
+</p>
+
+<pre id="sc-spaghetti-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/02%20spaghetti.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnSpaghetti(&quot;#sc-spaghetti-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Use the Examples menu to send events one at a time:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! a</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">loops on <code>s1</code> and re-enters its initial leaf <code>s11</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! b</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">targets <code>s11</code> from <code>s1</code>, or <code>s211</code> from <code>s21</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! c</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves between the two large sibling regions <code>s1</code> and <code>s2</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">resets outward to <code>s0</code>, or from <code>s211</code> to <code>s21</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">uses the outer <code>s0</code> transition to enter <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">crosses between <code>s1</code>, <code>s11</code>, and <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! g</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">shows leaf-level precedence from <code>s11</code> or <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! h</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">takes <code>s211</code> to final state <code>f</code> and terminates the actor</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>NPC emotions</h2>
+
+<p>
+    Parallel states let one actor be in several independent states at the same
+    time. This toy non-player character has two emotion dimensions and one
+    behavior mode. At any moment it has one active state in the
+    anger/fear dimension, one in the anticipation/surprise dimension, and one
+    in behavior.
+</p>
+
+<figure style="margin: 1.5em 0;">
+  <img class="statechart-raster" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+  <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
+    Orthogonal regions: two emotion dimensions plus one behavior mode.
+  </p>
+</figure>
+
+<p>
+    The point of orthogonality is that related but independent dimensions do
+    not have to be flattened into one large state name. Without parallel
+    regions, combinations such as <code>anger_anticipation_attacking</code> and
+    <code>fear_surprise_fleeing</code> would have to be encoded as separate
+    states, and the number of combinations would grow quickly.
+</p>
+
+<p>
+    Here, event <code>e</code> can be read as an explosion. Because all three
+    regions are active, the same event is observed in each region: anger becomes
+    fear, anticipation becomes surprise, and attacking becomes fleeing in one
+    coordinated step.
+</p>
+
+<pre id="sc-emotions-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/03%20emotions.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnEmotions(&quot;#sc-emotions-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Use the Examples menu to send the three events:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves to <code>fear</code>, <code>surprise</code>, and <code>fleeing</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>fear</code> back to <code>anger</code> and <code>fleeing</code> back to <code>attacking</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>surprise</code> back to <code>anticipation</code></td>
+    </tr>
+  </tbody>
+</table>
+
 
 
 <h2>Computing the GCD</h2>
@@ -2573,7 +2736,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/gcd.xml'),
+       load_uri('/examples/statecharts/08%20gcd.xml'),
        trace(true)
    ]).
 </pre>
@@ -3073,6 +3236,35 @@ fridge2(_Other,      List, error(unknown_request), List).
             bridge.setTerminalExamples([
                 { label: '$Pid ! input([25, 10, 15, 30]).', query: '$Pid ! input([25, 10, 15, 30]).' },
                 { label: '$Pid ! input([12, 8, 4]).',       query: '$Pid ! input([12, 8, 4]).'       }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnSpaghetti(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! a.', query: '$Pid ! a.' },
+                { label: '$Pid ! b.', query: '$Pid ! b.' },
+                { label: '$Pid ! c.', query: '$Pid ! c.' },
+                { label: '$Pid ! d.', query: '$Pid ! d.' },
+                { label: '$Pid ! e.', query: '$Pid ! e.' },
+                { label: '$Pid ! f.', query: '$Pid ! f.' },
+                { label: '$Pid ! g.', query: '$Pid ! g.' },
+                { label: '$Pid ! h.', query: '$Pid ! h.' }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnEmotions(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! e.', query: '$Pid ! e.' },
+                { label: '$Pid ! d.', query: '$Pid ! d.' },
+                { label: '$Pid ! f.', query: '$Pid ! f.' }
             ]);
         }
         pasteAndAskExample(exampleId);
