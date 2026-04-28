@@ -265,7 +265,7 @@
 
         #sc-pr-diagram {
             display: block;
-            background: var(--tutorial-surface);
+            background: transparent;
             border: 1px solid var(--tutorial-border);
             border-radius: 20px;
             box-shadow: var(--tutorial-shadow);
@@ -2385,7 +2385,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <figure style="margin: 1.5em 0;">
-<svg id="sc-pr-diagram" width="100%" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+<svg id="sc-pr-diagram" width="100%" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
       <defs>
     <style>
       .th { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 500; fill: var(--tutorial-diagram-ink); }
@@ -2760,8 +2760,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    Now send the input list. The GCD is written to the terminal and the
-    machine transitions to its final state:
+    Now send the input list: 
 </p>
 
 <pre id="sc-gcd-input">?- $Pid ! input([25, 10, 15, 30]).
@@ -2772,7 +2771,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    The GCD <code>5</code> is computed and written to the terminal.
+    The GCD <code>5</code> is computed and written to the terminal, and the
+    machine has moved to its final state.
 </p>
 
 <h2>Process invocation and communication</h2>
