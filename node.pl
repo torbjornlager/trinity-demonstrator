@@ -128,6 +128,10 @@ Design notes:
     request_client_meta/3,
     log_event/1
 ]).
+:- use_module(node_interaction_log, [
+    log_interaction_request/2,
+    log_browser_interaction_request/2
+]).
 :- use_module(node_sandbox).
 :- use_module(node_response, [respond_with_answer/2]).
 :- use_module(node_session, [
@@ -217,6 +221,7 @@ HTTP endpoint layout:
 :- http_handler(root(editor_frame), node_editor_frame_page, []).
 :- http_handler(root(node_info), node_info_page, []).
 :- http_handler(root(examples_index), node_examples_index_page, []).
+:- http_handler(root(interaction_log), node_interaction_log_page, []).
 :- http_handler(root(admin), node_admin_page, []).
 :- http_handler(root('admin/config'), node_admin_config_page, []).
 :- http_handler(root('admin/principals'), node_admin_principals_page, []).
@@ -1123,6 +1128,11 @@ default_port(https, 443).
 %
 %   Serve the experimental Vue-based portal frontend.
 node_portal_page(Request) :-
+    ignore(catch(
+        log_interaction_request(Request, _{event:"portal_load", route:"portal"}),
+        _,
+        true
+    )),
     node_workbench_file(File),
     reply_uncached_file(File, Request).
 
@@ -1234,6 +1244,29 @@ node_examples_index_page_1 :-
         tau:TauEntries,
         swi_wasm:SwiWasmEntries
     }).
+
+
+%!  node_interaction_log_page(+Request) is det.
+%
+%   Accept browser-reported public demonstrator interaction events and append
+%   them to the durable JSONL interaction log.
+node_interaction_log_page(Request) :-
+    with_request_node_context(Request,
+                              node_interaction_log_page_1(Request)).
+
+node_interaction_log_page_1(Request) :-
+    catch(
+        (
+            http_read_json_dict(Request, Event),
+            log_browser_interaction_request(Request, Event),
+            reply_json(json{status:ok})
+        ),
+        Error,
+        (
+            message_to_string(Error, Message),
+            reply_json_dict(json{status:error, message:Message}, [status(400)])
+        )
+    ).
 
 
 isotope_spawn_authorized_event(Request, Principal, PrincipalId, Event) :-

@@ -5,6 +5,9 @@ RUN groupadd -r webprolog \
 
 WORKDIR /app
 
+RUN mkdir -p /var/log/webprolog \
+    && chown webprolog:webprolog /var/log/webprolog
+
 COPY --chown=webprolog:webprolog . /app/
 
 USER webprolog

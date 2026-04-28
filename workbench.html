@@ -4910,6 +4910,7 @@
             statechartSourceText: DEFAULT_STATECHART,
             prologSourceDirty: false,
             statechartSourceDirty: false,
+            currentExampleSource: null,
             editorKind: "prolog",
             actorExamples: [],
             statechartExamples: [],
@@ -4952,6 +4953,7 @@
             wsLoadedText: "",
             wsSpawnLoadText: "",
             wsSpawnLoadOrigin: "none",
+            wsPendingExampleSpawn: null,
             wsEditorDirty: true,
             wsGeneration: 0,
             wsConnectPromise: null,
@@ -5637,6 +5639,17 @@
             this.prologSourceLabel = nextLabel;
             this.prologSourceText = value;
             this.prologSourceDirty = false;
+          },
+          setCurrentExampleSource: function(entry) {
+            if (!entry || !entry.kind || !entry.name) {
+              this.currentExampleSource = null;
+              return;
+            }
+            this.currentExampleSource = {
+              kind: entry.kind === "statechart" ? "statechart" : "prolog",
+              name: String(entry.name),
+              url: entry.url ? String(entry.url) : ""
+            };
           },
           updateEditorSourceDirty: function(kind, value) {
             var text = String(value == null ? "" : value);
@@ -6369,6 +6382,7 @@
           loadScratchBuffer: function(kind) {
             this.selectWorkspace("prolog");
             this.setEditorKind(kind);
+            this.currentExampleSource = null;
             if (kind === "statechart") {
               this.statechartText = DEFAULT_STATECHART;
               this.setEditorSourceState("statechart", "<scratch-buffer>", DEFAULT_STATECHART);
@@ -6394,6 +6408,7 @@
               this.setEditorKind(entry.kind);
               this.prologText = entry.text;
               this.setEditorSourceState("prolog", entry.name, entry.text);
+              this.setCurrentExampleSource(entry);
               this.editorDirty = true;
               this.wsEditorDirty = true;
               if (this.prologEditor) { this.prologEditor.setValue(entry.text); }
@@ -6456,6 +6471,7 @@
                 self.editorDirty = true;
                 self.wsEditorDirty = true;
               }
+              self.setCurrentExampleSource({ kind: kind, name: label, url: url });
               if (self.prologEditor) {
                 self.prologEditor.setValue(text);
               }
@@ -6904,6 +6920,7 @@
               return;
             }
             var xml = this.currentStatechartText();
+            var payload;
             if (!xml || xml.trim() === "") {
               this.log("warn", "Statechart editor is empty.");
               return;
@@ -6911,7 +6928,12 @@
             var escaped = xml.replace(/\\/g, "\\\\").replace(/'/g, "''");
             var opts = ["load_text('" + escaped + "')", "monitor(true)"];
             var goal = "statechart_spawn(Pid, [" + opts.join(", ") + "]).";
-            this.submitWorkbenchCommand(goal, "statechart_spawn(Pid, [...]).");
+            if (this.submitWorkbenchCommand(goal, "statechart_spawn(Pid, [...]).")) {
+              payload = this.exampleSpawnInteractionPayload("statechart", this.transportMode, "editor");
+              if (payload) {
+                this.reportInteraction(payload);
+              }
+            }
           },
           haltStatechart: function() {
             var goal = this.statechartStopCommand();
@@ -6934,6 +6956,50 @@
               return s;
             }
             return s.slice(0, maxLen) + "...";
+          },
+          reportInteraction: function(payload) {
+            var body;
+            if (!payload || typeof payload !== "object") {
+              return;
+            }
+            try {
+              body = JSON.stringify(payload);
+            } catch (_error) {
+              return;
+            }
+            fetch("/interaction_log", {
+              method: "POST",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json"
+              },
+              body: body,
+              keepalive: true
+            }).catch(function() {});
+          },
+          currentRunnableExampleSource: function(kind) {
+            var source = this.currentExampleSource;
+            if (!source || source.kind !== kind) {
+              return null;
+            }
+            if (kind === "statechart") {
+              return this.statechartSourceDirty ? null : source;
+            }
+            return this.prologSourceDirty ? null : source;
+          },
+          exampleSpawnInteractionPayload: function(kind, transport, origin) {
+            var source = this.currentRunnableExampleSource(kind);
+            if (!source) {
+              return null;
+            }
+            return {
+              event: "example_spawn",
+              example: source.name,
+              example_url: source.url,
+              source_kind: kind,
+              transport: transport,
+              origin: origin || "editor"
+            };
           },
           consumeTransientLoadText: function() {
             var text = this.transientLoadText;
@@ -7033,6 +7099,11 @@
             var consultProgram = this.extractTutorialConsultProgram(adapted);
             this.reportTutorialWarnings(adapted, "ask");
             this.dockTab = "terminal";
+            this.reportInteraction({
+              event: "tutorial_call",
+              example: String(id || "").replace(/^#/, ""),
+              example_label: this.clipText(adapted, 120)
+            });
             this.log("ui", "Tutorial ask " + (id || "") + ": " + this.clipText(adapted, 120), "tutorial");
             if (consultProgram !== null) {
                 this.handleTutorialConsult(consultProgram, id, true);
@@ -8157,6 +8228,7 @@
             this.wsLoadedText = "";
             this.wsSpawnLoadText = "";
             this.wsSpawnLoadOrigin = "none";
+            this.wsPendingExampleSpawn = null;
             this.wsEditorDirty = true;
             if (this.transportMode === "actor") {
               this.pendingPromptPid = null;
@@ -9713,11 +9785,15 @@
             var self = this;
             var loadSpec;
             var loadText;
+            var examplePayload;
             if (this.isotopePid !== null) {
               return Promise.resolve(this.isotopePid);
             }
             loadSpec = this.spawnLoadSpec();
             loadText = loadSpec.text;
+            if (loadSpec.origin === "editor" && loadText !== "") {
+              examplePayload = this.exampleSpawnInteractionPayload("prolog", "isotope", loadSpec.origin);
+            }
             var body = {
               options: "[]",
               trace: this.isTraceLoggingEnabled()
@@ -9745,6 +9821,9 @@
               }
               var spawnLogId = self.log("session", "ISOTOPE session spawned: " + event.pid, "isotope");
               self.recordSessionEvent("session", "Session spawned.", "isotope", event.pid, spawnLogId);
+              if (examplePayload) {
+                self.reportInteraction(examplePayload);
+              }
               return self.isotopePid;
             });
           },
@@ -10036,6 +10115,7 @@
             this.wsLoadedText = "";
             this.wsSpawnLoadText = "";
             this.wsSpawnLoadOrigin = "none";
+            this.wsPendingExampleSpawn = null;
             this.wsEditorDirty = true;
             this.wsConnectPromise = null;
             this.wsSpawnPromise = null;
@@ -10140,12 +10220,16 @@
                 if (spawnLoadText !== "") { spawnCmd.load_text = spawnLoadText; }
                 self.wsSpawnLoadText = spawnLoadText;
                 self.wsSpawnLoadOrigin = spawnLoadSpec.origin;
+                self.wsPendingExampleSpawn = spawnLoadSpec.origin === "editor" && spawnLoadText !== ""
+                  ? self.exampleSpawnInteractionPayload("prolog", "actor", spawnLoadSpec.origin)
+                  : null;
                 self.wsSend(spawnCmd);
                 self.wsSpawnTimer = setTimeout(function() {
                   self.wsSpawnTimer = null;
                   self.wsSpawnPromise = null;
                   self.wsSpawnResolve = null;
                   self.wsSpawnReject = null;
+                  self.wsPendingExampleSpawn = null;
                   reject(new Error("Failed to spawn WebSocket toplevel."));
                 }, 5000);
               });
@@ -10158,15 +10242,20 @@
             }
             this.captureBindingsFromEvent(event);
             if (event.type === "spawned") {
+              var pendingExampleSpawn = this.wsPendingExampleSpawn;
               this.wsPid = event.pid;
               this.wsLoadedText = this.wsSpawnLoadText;
               this.wsSpawnLoadText = "";
+              this.wsPendingExampleSpawn = null;
               if (this.wsSpawnLoadOrigin === "editor") {
                 this.wsEditorDirty = false;
               }
               this.wsSpawnLoadOrigin = "none";
               var wsSpawnLogId = this.log("session", "ACTOR session spawned: " + event.pid, "actor");
               this.recordSessionEvent("session", "Session spawned.", "actor", event.pid, wsSpawnLogId);
+              if (pendingExampleSpawn) {
+                this.reportInteraction(pendingExampleSpawn);
+              }
               if (this.wsSpawnTimer) {
                 clearTimeout(this.wsSpawnTimer);
                 this.wsSpawnTimer = null;
@@ -10305,6 +10394,7 @@
                 this.wsSpawnPromise = null;
                 this.wsSpawnResolve = null;
                 this.wsSpawnReject = null;
+                this.wsPendingExampleSpawn = null;
                 spawnReject(new Error("Session load failed: " + wsErrorText));
               } else {
                 this.finishError(term, wsErrorText);
