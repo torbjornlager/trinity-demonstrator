@@ -8,7 +8,7 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         line-height: 1.5;
         margin: 2rem auto;
-        max-width: 52rem;
+        max-width: 70.4rem;
         padding: 0 1rem;
       }
       button {
@@ -23,7 +23,20 @@
         border: 1px solid #d9d9d9;
         overflow-x: auto;
         padding: 0.9rem;
-        white-space: pre-wrap;
+        white-space: pre;
+      }
+      #log {
+        font-size: 0.875rem;
+        line-height: 1.35;
+      }
+      .log-request {
+        color: #1565c0;
+      }
+      .log-response {
+        color: #16833a;
+      }
+      .log-error {
+        color: #b42318;
       }
       ul {
         padding-left: 1.2rem;
@@ -63,8 +76,15 @@
           logNode.textContent = "";
         }
 
-        function logLine(text) {
-          logNode.textContent += text + "\n";
+        function logLine(text, kind) {
+          var line = document.createElement("span");
+          line.className = "log-" + (kind || "response");
+          line.textContent = text;
+          logNode.appendChild(line);
+          logNode.appendChild(document.createTextNode("\n"));
+          if (kind === "response") {
+            logNode.appendChild(document.createTextNode("\n"));
+          }
         }
 
         function addResult(text) {
@@ -85,11 +105,19 @@
           return url;
         }
 
+        function readableURL(url) {
+          try {
+            return decodeURIComponent(String(url));
+          } catch (_error) {
+            return String(url);
+          }
+        }
+
         async function fetchJSON(url, options) {
-          logLine((options && options.method ? options.method : "GET") + " " + url);
+          logLine((options && options.method ? options.method : "GET") + " " + readableURL(url), "request");
           var response = await fetch(url, options || {});
           var json = await response.json();
-          logLine(JSON.stringify(json));
+          logLine(JSON.stringify(json), "response");
           return json;
         }
 
@@ -103,7 +131,7 @@
               format: "json"
             }));
           } catch (error) {
-            logLine("cleanup failed: " + error.message);
+            logLine("cleanup failed: " + error.message, "error");
           }
         }
 
@@ -145,7 +173,7 @@
               }));
             }
           } catch (error) {
-            logLine("error: " + error.message);
+            logLine("error: " + error.message, "error");
           } finally {
             await cleanupSession(pid);
             runButton.disabled = false;

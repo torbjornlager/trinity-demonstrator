@@ -8,7 +8,7 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         line-height: 1.5;
         margin: 2rem auto;
-        max-width: 52rem;
+        max-width: 70.4rem;
         padding: 0 1rem;
       }
       button,
@@ -27,7 +27,20 @@
         border: 1px solid #d9d9d9;
         overflow-x: auto;
         padding: 0.9rem;
-        white-space: pre-wrap;
+        white-space: pre;
+      }
+      #log {
+        font-size: 0.875rem;
+        line-height: 1.35;
+      }
+      .log-request {
+        color: #1565c0;
+      }
+      .log-response {
+        color: #16833a;
+      }
+      .log-error {
+        color: #b42318;
       }
       ul {
         padding-left: 1.2rem;
@@ -89,8 +102,15 @@
           logNode.textContent = "";
         }
 
-        function logLine(text) {
-          logNode.textContent += text + "\n";
+        function logLine(text, kind) {
+          var line = document.createElement("span");
+          line.className = "log-" + (kind || "response");
+          line.textContent = text;
+          logNode.appendChild(line);
+          logNode.appendChild(document.createTextNode("\n"));
+          if (kind === "response") {
+            logNode.appendChild(document.createTextNode("\n"));
+          }
         }
 
         function addResult(text) {
@@ -114,10 +134,10 @@
 
         function sendJSON(payload) {
           if (!socket || socket.readyState !== WebSocket.OPEN) {
-            logLine("socket is not open");
+            logLine("socket is not open", "error");
             return false;
           }
-          logLine(">> " + JSON.stringify(payload));
+          logLine(">> " + JSON.stringify(payload), "request");
           socket.send(JSON.stringify(payload));
           return true;
         }
@@ -130,11 +150,11 @@
         function publishCurrentTerm() {
           var term = termInput.value.trim();
           if (!term) {
-            logLine("enter a Prolog term first");
+            logLine("enter a Prolog term first", "error");
             return;
           }
           if (!subscribed || !subscriberPid) {
-            logLine("subscriber actor is not ready yet");
+            logLine("subscriber actor is not ready yet", "error");
             return;
           }
           sendJSON({
@@ -195,7 +215,7 @@
               return;
             }
             var event = JSON.parse(message.data);
-            logLine("<< " + JSON.stringify(event));
+            logLine("<< " + JSON.stringify(event), "response");
 
             if (event.type === "spawned" && !subscriberPid) {
               subscriberPid = event.pid;
@@ -215,7 +235,7 @@
             }
 
             if (event.type === "down" && subscriberPid !== null && event.pid === subscriberPid) {
-              logLine("subscriber actor stopped");
+              logLine("subscriber actor stopped", "response");
               subscriberPid = null;
               subscribed = false;
               setConnectedUI(false);
@@ -224,7 +244,7 @@
 
             if (event.type === "error") {
               if (String(event.data).indexOf("pubsub_service") >= 0) {
-                logLine("this node does not expose pubsub_service");
+                logLine("this node does not expose pubsub_service", "error");
               }
             }
           };
@@ -233,7 +253,7 @@
             if (socket !== currentSocket) {
               return;
             }
-            logLine("WebSocket error");
+            logLine("WebSocket error", "error");
             setConnectedUI(false);
           };
 
