@@ -24,7 +24,7 @@ start_n1 :-
         auth(open),
         timeout(2),
         max_inflight_calls(2),
-        max_sessions_per_principal(2),
+        max_sessions_per_principal(16),
         max_ws_actors_per_principal(2),
         max_term_text_bytes(16384),
         max_load_text_bytes(65536),
