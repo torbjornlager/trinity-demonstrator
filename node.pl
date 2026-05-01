@@ -364,6 +364,7 @@ shared_db_private_predicate(write_canonical/1).
 shared_db_private_predicate(nl/0).
 shared_db_private_predicate(format/1).
 shared_db_private_predicate(format/2).
+shared_db_private_predicate(read/1).
 
 
 %!  node_controller_isobase(+Request) is det.

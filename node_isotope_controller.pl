@@ -27,6 +27,7 @@ Build endpoint events and parse shared ISOTOPE wait-request parameters.
     ensure_isotope_ready/3,
     wait_for_session_event/4,
     load_text_into_session/2,
+    read_response_input/3,
     with_isotope_session_public_execution_profile/2
 ]).
 :- use_module(node_log, [request_client_meta/3, start_activity/3]).
@@ -152,6 +153,6 @@ isotope_call_event(Pid, EffectiveProfile, GoalAtom0, TemplateAtom0, Offset, Limi
 %   Parse input term and deliver it to a waiting session prompt.
 isotope_respond_event(Pid, InputAtom, Event) :-
     profile_check_route(toplevel_respond),
-    read_term_from_atom(InputAtom, Input, []),
+    read_response_input(Pid, InputAtom, Input),
     with_isotope_session_public_execution_profile(Pid, respond(Pid, Input)),
     Event = responded(Pid).

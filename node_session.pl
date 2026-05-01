@@ -15,6 +15,7 @@
     require_isotope_session_owner/2,
     ensure_isotope_ready/3,
     wait_for_session_event/4,
+    read_response_input/3,
     load_text_into_session/2,
     current_isotope_session_infos/1,
     admin_terminate_isotope_session/1,
@@ -48,6 +49,7 @@ Session lifecycle and queue/message normalization for node ISOTOPE endpoints.
 :- dynamic isotope_session_owner/2.
 :- dynamic isotope_session_trace/1.
 :- dynamic isotope_ready/1.
+:- dynamic isotope_pending_prompt/2.
 
 :- meta_predicate with_isotope_session_public_execution_profile(+, 0).
 
@@ -192,6 +194,7 @@ cleanup_isotope_session(Pid) :-
     retractall(isotope_session_owner(SessionPid, _)),
     retractall(isotope_session_trace(SessionPid)),
     retractall(isotope_ready(SessionPid)),
+    retractall(isotope_pending_prompt(SessionPid, _)),
     forget_isotope_session_owner(SessionPid),
     clear_session_bindings(SessionPid).
 
@@ -272,7 +275,8 @@ session_message_event(Pid, error(Pid, Error), error(Pid, Error)).
 session_message_event(Pid, output(Pid, Data), output(Pid, Data)).
 session_message_event(Pid, terminal_io_output(Pid, Data), terminal_io_output(Pid, Data)).
 session_message_event(Pid, terminal_output(Pid, Data), terminal_output(Pid, Data)).
-session_message_event(Pid, prompt(Pid, Prompt), prompt(Pid, Prompt)).
+session_message_event(Pid, prompt(Pid, Prompt), prompt(Pid, Prompt)) :-
+    remember_pending_prompt(Pid, Prompt).
 session_message_event(Pid, '$abort_goal', abort(Pid)).
 session_message_event(Pid, down(_, Pid, _), abort(Pid)) :-
     cleanup_isotope_session(Pid).
@@ -280,6 +284,47 @@ session_message_event(Pid, Message, error(Pid, Unexpected)) :-
     Unexpected = error(unexpected_session_message(Message),
                        context(node:wait_for_session_event/4,
                                'unexpected session event')).
+
+
+%!  read_response_input(+Pid, +InputAtom, -Input) is det.
+%
+%   Parse one browser response for a pending prompt. Responses to `read/1`
+%   prompts must be full Prolog terms terminated by a period, matching stream
+%   `read/1` semantics. Other prompts keep the historical URL-parameter
+%   convenience and may omit the final period.
+read_response_input(Pid0, InputAtom, Input) :-
+    session_pid_key(Pid0, Pid),
+    (   retract(isotope_pending_prompt(Pid, '|:'))
+    ->  read_period_terminated_term(InputAtom, Input)
+    ;   retractall(isotope_pending_prompt(Pid, _)),
+        read_term_from_atom(InputAtom, Input, [])
+    ).
+
+
+remember_pending_prompt(Pid0, Prompt) :-
+    session_pid_key(Pid0, Pid),
+    retractall(isotope_pending_prompt(Pid, _)),
+    assertz(isotope_pending_prompt(Pid, Prompt)).
+
+
+read_period_terminated_term(InputAtom, Input) :-
+    setup_call_cleanup(
+        open_string(InputAtom, Stream),
+        read_period_terminated_stream(Stream, Input),
+        close(Stream)
+    ).
+
+
+read_period_terminated_stream(Stream, Input) :-
+    read_term(Stream, Input, [syntax_errors(error)]),
+    read_string(Stream, _, Rest),
+    (   string_codes(Rest, Codes),
+        forall(member(Code, Codes), code_type(Code, space))
+    ->  true
+    ;   throw(error(syntax_error(unexpected_input_after_full_stop),
+                    context(node_session:read_response_input/3,
+                            'read/1 response must contain exactly one period-terminated term')))
+    ).
 
 
 %!  load_text_into_session(+Pid, +LoadText) is det.

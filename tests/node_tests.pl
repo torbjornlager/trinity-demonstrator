@@ -644,10 +644,10 @@ test(node_1_starts_http_endpoint, true(Answer == success([true], false))) :-
 
 test(node_tutorial_and_image_routes_served,
      true((sub_string(TutorialBody, _, _, _, '<title>Web Prolog Tutorial</title>'),
-           sub_string(TutorialBody, _, _, _, 'id="tutorial-message-passing-concurrency"'),
-           sub_string(TutorialBody, _, _, _, 'id="tutorial-concurrent-prolog-web"'),
-           sub_string(TutorialBody, _, _, _, 'Message-passing concurrency'),
-           sub_string(TutorialBody, _, _, _, 'The concurrent Prolog Web'),
+           sub_string(TutorialBody, _, _, _, 'id="tutorial-local-actor-programming"'),
+           sub_string(TutorialBody, _, _, _, 'id="tutorial-distributed-actor-programming"'),
+           sub_string(TutorialBody, _, _, _, 'Local ACTOR programming'),
+           sub_string(TutorialBody, _, _, _, 'Distributed ACTOR programming'),
            Bytes == [137,80,78,71,13,10,26,10]))) :-
     with_node_server(URI,
         (
@@ -694,7 +694,7 @@ test(node_portal_and_example_routes_served) :-
                       ActorEntries),
             assertion(\+ memberchk(_{name:"game.xml", url:"/examples/statecharts/game.xml", kind:"statechart"},
                                    StatechartEntries)),
-            assertion(sub_string(PortalBody, _, _, _, 'Message-passing concurrency'))
+            assertion(sub_string(PortalBody, _, _, _, 'Local ACTOR programming'))
         )).
 
 test(node_admin_page_served,
@@ -4326,7 +4326,7 @@ test(isotope_read_respond_then_pull_success,
                 PromptPID = PromptJSON.pid,
                 PromptData = PromptJSON.data,
                 format(atom(RespondURL),
-                       '~w/toplevel_respond?pid=~w&input=ok&format=json',
+                       '~w/toplevel_respond?pid=~w&input=ok.&format=json',
                        [URI, Pid]),
                 read_json_answer(RespondURL, RespondJSON),
                 RespondType = RespondJSON.type,
@@ -4338,6 +4338,34 @@ test(isotope_read_respond_then_pull_success,
                 PollPID = PullJSON.pid,
                 PollData = PullJSON.data,
                 PollMore = PullJSON.more
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_read_response_requires_period,
+     true((PromptType == "prompt", PromptData == "|:",
+           RespondType == "error",
+           sub_string(RespondData, _, _, _, "Syntax error")))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=read(X)&format=json',
+                       [URI, Pid]),
+                read_json_answer(CallURL, PromptJSON),
+                PromptType = PromptJSON.type,
+                PromptData = PromptJSON.data,
+                format(atom(RespondURL),
+                       '~w/toplevel_respond?pid=~w&input=ok&format=json',
+                       [URI, Pid]),
+                read_json_answer(RespondURL, RespondJSON),
+                RespondType = RespondJSON.type,
+                RespondData = RespondJSON.data
             ),
             kill_isotope_session(Pid)
         )).
@@ -4412,7 +4440,7 @@ test(isotope_loaded_program_read_prompt_then_success,
                 PID2 = JSON2.pid,
                 Data2 = JSON2.data,
                 format(atom(RespondURL),
-                       '~w/toplevel_respond?pid=~w&input=ok&format=json',
+                       '~w/toplevel_respond?pid=~w&input=ok.&format=json',
                        [URI, Pid]),
                 read_json_answer(RespondURL, JSON3),
                 Type3 = JSON3.type,
