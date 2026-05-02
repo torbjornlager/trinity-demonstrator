@@ -6,3 +6,7 @@
 {"at":"2026-05-01T11:55:14Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777629314.486353}
 {"at":"2026-05-01T12:04:45Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777629885.346887}
 {"at":"2026-05-01T12:04:45Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777629885.480624}
+{"at":"2026-05-02T11:28:39Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714119.801019}
+{"at":"2026-05-02T11:28:39Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714119.933929}
+{"at":"2026-05-02T11:34:14Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714454.567261}
+{"at":"2026-05-02T11:34:14Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714454.70424}

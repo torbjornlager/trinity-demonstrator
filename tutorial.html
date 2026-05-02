@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap">
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&amp;display=swap">
 
     <style>
         :root {
@@ -26,7 +26,6 @@
             --tutorial-border: #d8d8d8;
             --tutorial-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
             --tutorial-code-bg: rgba(15, 23, 42, 0.05);
-            --tutorial-code-border: rgba(148, 163, 184, 0.22);
             --tutorial-info-bg: #edf9ef;
             --tutorial-info-border: #b7dec0;
             --tutorial-danger-bg: #fdf0f0;
@@ -66,7 +65,6 @@
             --tutorial-border: #34414e;
             --tutorial-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
             --tutorial-code-bg: rgba(255, 255, 255, 0.05);
-            --tutorial-code-border: rgba(148, 163, 184, 0.18);
             --tutorial-info-bg: #112319;
             --tutorial-info-border: #2f6d45;
             --tutorial-danger-bg: #2a1518;
@@ -131,7 +129,7 @@
 
         code {
             background: var(--tutorial-code-bg);
-            border: 1px solid var(--tutorial-code-border);
+            border: 0;
             border-radius: 4px;
             padding: 0.08em 0.28em;
         }
@@ -202,6 +200,10 @@
             padding-left: 28px;
         }
 
+        .tutorial-toc li.toc-h1 a {
+            font-weight: 700;
+        }
+
         .tutorial-toc a {
             text-decoration: none;
         }
@@ -266,10 +268,6 @@
         #sc-pr-diagram {
             display: block;
             background: transparent;
-            border: 1px solid var(--tutorial-border);
-            border-radius: 20px;
-            box-shadow: var(--tutorial-shadow);
-            padding: 10px;
             box-sizing: border-box;
         }
 
@@ -278,20 +276,31 @@
             width: 100%;
             height: auto;
             background: var(--tutorial-surface);
-            border: 1px solid var(--tutorial-border);
-            border-radius: 20px;
-            box-shadow: var(--tutorial-shadow);
             box-sizing: border-box;
-        }
-
-        :root[data-theme="dark"] .statechart-raster {
-            filter: invert(1);
         }
 
         .statechart-raster-narrow {
             width: 75%;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        img.theme-img-dark,
+        :root:not([data-theme="dark"]) img.theme-img-dark {
+            display: none;
+        }
+
+        img.theme-img-light,
+        :root:not([data-theme="dark"]) img.theme-img-light {
+            display: block;
+        }
+
+        :root[data-theme="dark"] img.theme-img-light {
+            display: none;
+        }
+
+        :root[data-theme="dark"] img.theme-img-dark {
+            display: block;
         }
 
         em {
@@ -313,10 +322,6 @@
             height: auto;
             background: var(--tutorial-bg);
         }
-
-        :root[data-theme="dark"] .profile-hierarchy img {
-            filter: invert(1);
-        }
     </style>
 </head>
 <body>
@@ -324,38 +329,40 @@
 
 
 <div>
-    <h1 class="tutorial-main-title">Web Prolog Tutorial</h1>
+    <h1 id="tutorial-top" class="tutorial-main-title">Web Prolog Tutorial</h1>
 </div>
 
 <nav id="tutorial-toc" class="tutorial-toc" aria-label="Table of contents"></nav>
 
 <section id="tutorial-getting-started">
-<h1>Getting started</h1>
+<h1>Introduction</h1>
 
 <p>
-   Web Prolog nodes do not all need to expose the same capabilities. The
-   tutorial follows the profile hierarchy: each step keeps the previous
-   profile's programming model and adds a new layer of execution.
-</p>
-
-<figure class="profile-hierarchy">
-  <img src="/img/profile-hierarchy.png" alt="Web Prolog profile hierarchy: RELATION, ISOBASE, ISOTOPE, ACTOR, and WORKBENCH">
-</figure>
-
-<p>
-   The ISOBASE sections begin with ordinary local Prolog and then distribute
-   that style of programming with <code>promise/3-4</code>,
-   <code>yield/2-3</code>, and <code>rpc/2-3</code>. The ISOTOPE sections add
-   persistent toplevel sessions, so examples can read and write, update a
-   session-local database, and build distributed proof trees.
+   Web Prolog is Prolog with two things added: a network and a process model.
+   Every node in this tutorial is an ordinary Prolog system that also speaks
+   HTTP and WebSocket, and every running query lives inside an Erlang-style
+   actor with its own mailbox. That combination &mdash; logic programming,
+   message-passing concurrency, and network-transparent addressing &mdash; is
+   what the rest of these pages explore.
 </p>
 
 <p>
-   The ACTOR sections then introduce pids, mailboxes, spawning, monitoring,
-   linking, selective receive, named actors, delayed sending, toplevel actors,
-   and actors running on remote nodes. The final chapters build on the actor
-   profile with server behaviours, statechart actors, and direct exercises of
-   the HTTP and WebSocket APIs.
+   Concretely, by the end of the tutorial you will have run logical queries
+   against a remote node as easily as against a local one, spawned actors that
+   survive on other machines and reply back to your shell, swapped a running
+   server's code without dropping its state, and driven a hierarchical state
+   machine by sending it messages. The same predicates work whether the other
+   side of the conversation is a function on this node, an actor across the
+   room, or a service on another continent.
+</p>
+
+<p>
+   Web Prolog nodes do not all have to do everything. The book defines a small
+   hierarchy of profiles &mdash; ISOBASE, ISOTOPE, ACTOR &mdash; and this
+   tutorial walks up it: pure relational queries first, then session state,
+   then actors, then the higher-level patterns (server behaviours, statecharts)
+   that build on actors. You can stop at any level; each one is a coherent way
+   to use the system.
 </p>
 
 </section>
@@ -454,13 +461,9 @@ father_child(mike, tom).
 </button>
 </p>
 
-<div class="alert alert-info">
-  <strong>Tip!</strong> The family program, like many other programs in this tutorial, can  
-  also be accessed from the list of Web Prolog source code in the Examples drawer. Clicking
-  on a file name will place the code in the editor and allow you to edit and run it.
-</div>
 
-<h2>Parsing with a DCG</h2>
+
+<h2>Parsing and generating with a DCG</h2>
 
 <p>
     This node also hosts a small grammar written as a Definite Clause Grammar
@@ -522,6 +525,12 @@ p(p(with)) --&gt; [with].
 </button>
 </p>
 
+<div class="alert alert-info">
+  <strong>Tip!</strong> The family program, like many other programs in this tutorial, can  
+  also be accessed from the list of Web Prolog source code in the Examples drawer. Clicking
+  on a file name will place the code in the editor and allow you to edit and run it.
+</div>
+
 </section>
 
 <section id="tutorial-distributed-isobase-programming">
@@ -533,35 +542,6 @@ p(p(with)) --&gt; [with].
     you start the remote work first and collect the answer later.
 </p>
 
-<h2>Remote calls with promises</h2>
-
-<p>
-    <code>promise/3-4</code> starts an asynchronous remote query and returns a
-    reference. Later, <code>yield/2-3</code> collects the answer produced by
-    that remote call.
-</p>
-
-<pre id="promise1">?- promise('https://n2.elfenbenstornet.se', mortal(Who), Ref).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#promise1&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="promise2">?- yield($Ref, Answer).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#promise2&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    The answer is returned as the same Prolog term format used by the stateless
-    remote call. The promise is useful when the caller has other work to do
-    before it needs the result.
-</p>
 
 <h2>Remote calls with rpc/2-3</h2>
 
@@ -618,26 +598,36 @@ human(Who) :-
     <code>n1</code>.
 </p>
 
+<h2>Remote calls with promises</h2>
+
 <p>
-    The three-argument form of <code>rpc/2-3</code> can also ship temporary
-    source text with the call. Here <code>mortal/1</code> is defined only for
-    the duration of the remote query:
+    <code>promise/3-4</code> starts an asynchronous remote query and returns a
+    reference. Later, <code>yield/2-3</code> collects the answer produced by
+    that remote call.
 </p>
 
-<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', mortal(Who), [
-       load_text("mortal(Who) :- human(Who).")
-   ]).
+<pre id="promise1">?- promise('https://n2.elfenbenstornet.se', mortal(Who), Ref).
 </pre>
 
 <p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#rpc2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+  <button onclick="pasteAndAskExample(&quot;#promise1&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="promise2">?- yield($Ref, Answer).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#promise2&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
 </p>
 
 <p>
-    The code passed in <code>load_text/1</code> is not installed permanently;
-    it exists only for that remote call.
+    The answer is returned as the same Prolog term format used by the stateless
+    remote call. The promise is useful when the caller has other work to do
+    before it needs the result.
 </p>
+
 </section>
 
 
@@ -671,9 +661,6 @@ read_and_write :-
   <button onclick="consult(&quot;#side-effects-io-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
 </p>
 
-<p>
-    Use the Call button for these:
-</p>
 
 <pre id="side-effects-hello-world">?- hello_world.
 </pre>
@@ -708,9 +695,6 @@ assert_many(Count) :-
   <button onclick="consult(&quot;#side-effects-db-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
 </p>
 
-<p>
-    Use the Call button for these:
-</p>
 
 <pre id="side-effects-assert-and-retract">?- assert_and_retract.
 </pre>
@@ -732,6 +716,30 @@ assert_many(Count) :-
 
 <section id="tutorial-distributed-isotope-programming">
 <h1>Distributed ISOTOPE programming</h1>
+
+<h2>Predicate shipping</h2>
+
+<p>
+    The three-argument form of <code>rpc/2-3</code> can also ship temporary
+    source text with the call. Here <code>mortal/1</code> is defined only for
+    the duration of the remote query:
+</p>
+
+<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', mortal(Who), [
+       load_text("mortal(Who) :- human(Who).")
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#rpc2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The code passed in <code>load_text/1</code> is not installed permanently;
+    it exists only for that remote call.
+</p>
+
 
 <h2>Distributed proof trees</h2>
 
@@ -849,6 +857,18 @@ X = aristotle.
 <section id="tutorial-local-actor-programming">
 <h1>Local ACTOR programming</h1>
 
+<blockquote>
+  <p>
+    Reading the code was fun &mdash; I had to do a double take &mdash; was I reading Erlang or Prolog &mdash; they often look pretty much the same.
+  </p>
+  <p><em>Joe Armstrong</em></p>
+</blockquote>
+
+<p>
+    These examples make one point clear: Web Prolog actors do not just borrow
+    Erlang's vocabulary. If you program them in the Erlang style, they behave
+    that way too.
+</p>
 
 <p>
     Web Prolog extends Prolog with Erlang-style message-passing concurrency.
@@ -858,11 +878,8 @@ X = aristotle.
 </p>
 
 <div class="alert alert-info">
-  <strong>Tip!</strong> The session is persistent. Run the examples in order:
-  later queries use shell substitutions such as <code>$Self</code> and
-  <code>$Pid</code>, which stand for the most recent bindings of those
-  variables. If you want to inspect the WebSocket traffic, open the Logger
-  and tick <code>API</code>.
+  <strong>Tip!</strong> The session is persistent. Run the examples in order. 
+  If you want to inspect the WebSocket traffic, open the Logger and tick <code>API</code>.
 </div>
 
 <h2>Your shell has a pid</h2>
@@ -1027,6 +1044,56 @@ X = aristotle.
     actor succeeds normally, so the reason should be <code>true</code>.
 </p>
 
+<h2>More on monitors</h2>
+
+<p>
+    <code>monitor(true)</code> is the simple case. You can also install
+    monitors explicitly with <code>monitor/2</code>. Each monitor gets its own
+    reference and therefore its own <code>down/3</code> message.
+</p>
+
+<pre id="mpc-monitor-twice">?- spawn(sleep(1), Pid),
+   monitor(Pid, Ref1),
+   monitor(Pid, Ref2),
+   sleep(1.2),
+   flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-monitor-twice&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    If you remove the monitor before the child terminates, the
+    <code>down/3</code> message never arrives.
+</p>
+
+<pre id="mpc-demonitor">?- spawn(sleep(1), Pid),
+   monitor(Pid, Ref),
+   demonitor(Ref),
+   receive({
+       down(_, Pid, _) -&gt;
+           writeln('Unexpected down message.')
+   }, [
+       timeout(1.2),
+       on_timeout(writeln('No down message arrived.'))
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-demonitor&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> If a child may finish immediately, prefer
+  <code>monitor(true)</code> on <code>spawn/3</code>. It installs the monitor
+  atomically with process creation and avoids the race where the child exits
+  before a later call to <code>monitor/2</code> has been set up.
+</div>
+
+
 <h2>Names are easier to remember than pids</h2>
 
 <p>
@@ -1108,6 +1175,33 @@ X = aristotle.
 </button>
 </p>
 
+<h2>An actor can choose its own exit reason</h2>
+
+<p>
+    A monitored actor can stop itself with <code>exit/1</code>. The reason
+    ends up in the <code>down/3</code> message:
+</p>
+
+<pre id="mpc-exit-self">?- spawn(exit(my_reason), Pid, [monitor(true)]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-exit-self-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Sending to a dead pid is just a no-op, so monitors are the usual way to
+    learn that an actor has gone away.
+</p>
 
 
 <h2>Selective receive</h2>
@@ -1219,61 +1313,29 @@ wait_goodbye :-
 </button>
 </p>
 
-
-<h2>More on monitors</h2>
+<h2>Look at all your actors</h2>
 
 <p>
-    <code>monitor(true)</code> is the simple case. You can also install
-    monitors explicitly with <code>monitor/2</code>. Each monitor gets its own
-    reference and therefore its own <code>down/3</code> message.
+    Web Prolog support the predicate <code>actors/1</code> that binds the argument to the list of pids identifying all actors that are visible from your current session:
 </p>
 
-<pre id="mpc-monitor-twice">?- spawn(sleep(1), Pid),
-   monitor(Pid, Ref1),
-   monitor(Pid, Ref2),
-   sleep(1.2),
-   flush.
+<pre id="mpc-link-default-actors">?- actors(Alive).
 </pre>
 
 <p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-monitor-twice&quot;)" class="btn btn-xs btn-primary" type="button">Call
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
-</p>
+</p> 
 
 <p>
-    If you remove the monitor before the child terminates, the
-    <code>down/3</code> message never arrives.
+    Note that the first (and perhaps only) item in the list is pid of your shell. 
 </p>
-
-<pre id="mpc-demonitor">?- spawn(sleep(1), Pid),
-   monitor(Pid, Ref),
-   demonitor(Ref),
-   receive({
-       down(_, Pid, _) -&gt;
-           writeln('Unexpected down message.')
-   }, [
-       timeout(1.2),
-       on_timeout(writeln('No down message arrived.'))
-   ]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-demonitor&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<div class="alert alert-info">
-  <strong>Tip!</strong> If a child may finish immediately, prefer
-  <code>monitor(true)</code> on <code>spawn/3</code>. It installs the monitor
-  atomically with process creation and avoids the race where the child exits
-  before a later call to <code>monitor/2</code> has been set up.
-</div>
 
 <h2>Linking controls child lifetime</h2>
 
 <p>
     By default, a child is linked to its parent. If the parent exits, linked
-    children are terminated too:
+    children are terminated too. 
 </p>
 
 <pre id="mpc-link-default">?- spawn(spawn(receive({}))).
@@ -1285,14 +1347,14 @@ wait_goodbye :-
 </p>
 
 <p>
-    Now inspect the actors visible from your current session:
+    Now inspect the actors visible from your current session again:
 </p>
 
-<pre id="mpc-link-default-actors">?- actors(Alive).
+<pre id="mpc-link-default-actors-after">?- actors(Alive).
 </pre>
 
 <p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors&quot;)" class="btn btn-xs btn-primary" type="button">Call
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors-after&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
 </p>
 
@@ -1335,39 +1397,12 @@ wait_goodbye :-
 </button>
 </p>
 
-<h2>An actor can choose its own exit reason</h2>
-
-<p>
-    A monitored actor can stop itself with <code>exit/1</code>. The reason
-    ends up in the <code>down/3</code> message:
-</p>
-
-<pre id="mpc-exit-self">?- spawn(exit(my_reason), Pid, [monitor(true)]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="mpc-exit-self-flush">?- flush.
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    Sending to a dead pid is just a no-op, so monitors are the usual way to
-    learn that an actor has gone away.
-</p>
 
 <h2>A small priority queue</h2>
 
 <p>
     This example, borrowed from Fred Hébert's
-    <em>Learn You Some Erlang for Great Good!</em>, uses guards plus
+<a target="_blank" href="https://learnyousomeerlang.com/more-on-multiprocessing#selective-receives">Learn You Some Erlang for Great Good!</a>, uses guards plus
     zero-timeout receives to sort "important" messages before normal ones.
     First load the predicates into your current session:
 </p>
@@ -1431,18 +1466,7 @@ normal(Messages) :-
 </p>
 <div id="tutorial-erlang-style-programming-examples"></div>
 
-<blockquote>
-  <p>
-    I would prefer multi-threading in Prolog to look as much as possible like Erlang.
-  </p>
-  <p><em>Richard O'Keefe</em></p>
-</blockquote>
 
-<p>
-    These examples make one point clear: Web Prolog actors do not just borrow
-    Erlang's vocabulary. If you program them in the Erlang style, they behave
-    that way too.
-</p>
 
 <h2>A count server</h2>
 
@@ -1522,7 +1546,7 @@ normal(Messages) :-
 
 <p>
     The following example, also adapted from Fred Hébert's
-    <em>Learn You Some Erlang for Great Good!</em>, simulates a fridge that
+    <a target="_blank" href="https://learnyousomeerlang.com/more-on-multiprocessing#state-your-state"><em>Learn You Some Erlang for Great Good!</em></a>, simulates a fridge that
     keeps its state as a list of food items. Messages are used to store food,
     take food, or terminate the server.
 </p>
@@ -1678,65 +1702,8 @@ take(Pid, Food, Response) :-
     explicitly.
 </p>
 
-<h2>Delayed sending</h2>
 
-<p>
-    Web Prolog supports delayed sending. Here we use it to build a tiny
-    alarm actor.
-</p>
-
-<pre id="epa-alarm-source">alarm :-
-    receive({
-        ring -&gt;
-            writeln('Alarm ringing!'),
-            alarm;
-        stop -&gt;
-            true
-    }).
-</pre>
-
-<pre id="epa-alarm-spawn">?- spawn(alarm, Pid).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#epa-alarm-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="epa-alarm-send">?- send($Pid, ring, [
-       delay(5),
-       id(alarm1)
-   ]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#epa-alarm-send&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="epa-alarm-cancel">?- cancel(alarm1).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#epa-alarm-cancel&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="epa-alarm-stop">?- $Pid ! stop.
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#epa-alarm-stop&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    If the cancellation happens in time, the alarm never rings. Send
-    <code>stop</code> afterwards so the actor does not keep waiting in the
-    background.
-</p>
-
-<h2>Ping-pong</h2>
+<h2>Actors playing ping-pong</h2>
 
 <p>
     This example is adapted from the official
@@ -1787,7 +1754,7 @@ ping_pong :-
 </p>
 <div id="tutorial-programming-with-toplevels"></div>
 
-<h2>Programming with toplevels</h2>
+<h2>Programming with toplevel actors</h2>
 
 <p>
     A shell is itself a toplevel, but Web Prolog also lets one actor spawn
@@ -1798,7 +1765,7 @@ ping_pong :-
 </p>
 
 <p>
-    The shell adds terminal-oriented conveniences such as
+    To its toplevel core the shell adds terminal-oriented conveniences such as
     <code>flush/0</code> and dollar notation. Those are useful here, because
     the answers produced by a spawned toplevel arrive in the shell mailbox as
     ordinary messages.
@@ -1824,7 +1791,7 @@ ping_pong :-
     The most recent binding of <code>Pid</code> is the one used below.
 </p>
 
-<h2>Calling goals</h2>
+<h2>Make it call a goal</h2>
 
 <p>
     Use <code>toplevel_call/2-3</code> to make the spawned toplevel run a goal.
@@ -1938,8 +1905,8 @@ ping_pong :-
 </p>
 
 <pre id="toplevel-call-slice">?- toplevel_call($Pid, between(1,infinite,I), [
-       offset(100),
        template(I),
+       offset(100),
        limit(3)
    ]).
 </pre>
@@ -2056,19 +2023,11 @@ ping_pong :-
 </p>
 
 <pre id="toplevel-assert-loop">?- toplevel_call($Pid, assert((p :- p))),
-   receive({Answer -&gt; true}).
+   toplevel_call($Pid, p).
 </pre>
 
 <p class="ask-buttons">
   <button onclick="pasteAndAskExample(&quot;#toplevel-assert-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="toplevel-call-loop">?- toplevel_call($Pid, p).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#toplevel-call-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
 </p>
 
@@ -2103,6 +2062,14 @@ ping_pong :-
 <section id="tutorial-distributed-actor-programming">
 <h1>Distributed ACTOR programming</h1>
 
+<blockquote>
+  <p>
+    I would prefer multi-threading in Prolog to look as much as possible like Erlang.
+  </p>
+  <p><em>Richard O'Keefe</em></p>
+</blockquote>
+
+
 <p>
     Spawning, sending, monitoring, registering, and even
     <code>toplevel_spawn/2</code> can work across node boundaries. In this
@@ -2113,7 +2080,7 @@ ping_pong :-
 
 <div class="alert alert-info">
   <strong>Tip!</strong> These examples only make sense on <code>n3</code> or
-  <code>n4</code>. The remote URL shown below is rewritten automatically so it
+  <code>n4</code>. The remote URI shown below is rewritten automatically so it
   points at the other node.
 </div>
 
@@ -2137,7 +2104,7 @@ ping_pong :-
 </p>
 
 <p>
-    The pid is now a compound term of the form <code>Id@'URL'</code>. Send the
+    The pid is now a compound term of the form <code>Id@'URI'</code>. Send the
     remote actor a message and let it reply to your local shell:
 </p>
 
@@ -2397,43 +2364,13 @@ fridge(take(_Food), List, not_found, List).
   <button onclick="pasteAndAskExample(&quot;#srv-yield&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
 </p>
 
-<h2>Fail-fast and recovery</h2>
-
-<p>
-    What happens if a client sends a malformed request? Our
-    <code>fridge/4</code> has no clause for <code>sore/1</code>, so the
-    server crashes:
-</p>
-
-<pre id="srv-bad-call">?- server_request(fridge, sore(milk), Response).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#srv-bad-call&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-<p>
-    The shell reports <code>Unknown message: server_down(false)</code>
-    rather than blocking forever, because <code>server_request/3</code>
-    installs a monitor under the hood. Behind the scenes, the supervisor
-    has already respawned the server under the same registered name, with
-    its state reset to the initial empty list. The next call goes through
-    to the freshly born server:
-</p>
-
-<pre id="srv-after-recovery">?- server_request(fridge, store(eggs), Response).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#srv-after-recovery&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
 <h2>Hot code swap</h2>
 
 <p>
-    A crashing server is not a long-term plan. The proper fix is a
-    defensive callback that returns an error response instead of crashing.
-    Here is one:
+    At this point our server holds the state <code>[meat]</code>. Suppose we
+    realise that <code>fridge/4</code> is too brittle: any request it has no
+    clause for would crash the server. Here is a more defensive callback that
+    returns an error response instead:
 </p>
 
 <pre id="srv-fridge2-source">fridge2(store(Food), List, ok, [Food|List]).
@@ -2446,7 +2383,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 <p>
     We can swap the running server&rsquo;s callback in place with
     <code>server_upgrade/2</code>. The pid does not change, the registered
-    name does not change, and crucially the current state is preserved:
+    name does not change, and crucially the state does not change either:
 </p>
 
 <pre id="srv-upgrade">?- server_upgrade(fridge, fridge2).
@@ -2457,8 +2394,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    The same bad request that previously killed the server now returns a
-    polite error:
+    A request that <code>fridge/4</code> had no clause for now returns a
+    polite error rather than killing the server:
 </p>
 
 <pre id="srv-bad-call-2">?- server_request(fridge, sore(milk), Response).
@@ -2470,7 +2407,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <p>
     And valid requests continue to thread through the state we accumulated
-    before the upgrade:
+    before the upgrade. Storing butter on top of the meat that was already in
+    the fridge gives us <code>[butter, meat]</code>:
 </p>
 
 <pre id="srv-store-after-upgrade">?- server_request(fridge, store(butter), Response).
@@ -2478,6 +2416,41 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <p class="ask-buttons">
   <button onclick="pasteAndAskExample(&quot;#srv-store-after-upgrade&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Fail-fast and recovery</h2>
+
+<p>
+    Hot upgrade preserves state, but a hard crash does not. To see what
+    happens when the server actually dies, we kill it from the outside:
+</p>
+
+<pre id="srv-bad-call">?- whereis(fridge, Pid), exit(Pid, kaboom).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-bad-call&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Behind the scenes, the supervisor immediately respawns the server under
+    the same registered name, with its state reset to the initial empty list.
+    The next call goes through to the freshly born server:
+</p>
+
+<pre id="srv-after-recovery">?- server_request(fridge, store(eggs), Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-after-recovery&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The response is <code>ok</code>, but notice that the prior contents
+    <code>[butter, meat]</code> are gone &mdash; supervised restart trades
+    in-flight state for a clean slate. Combined with the hot upgrade we just
+    saw, this is the Erlang/OTP bargain: state survives planned changes, and
+    the supervisor handles the unplanned ones.
 </p>
 
 <h2>Tearing down</h2>
@@ -2718,7 +2691,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <figure style="margin: 1.5em 0;">
-  <img class="statechart-raster" src="/img/spaghetti.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
+  <img class="statechart-raster theme-img-light" src="/img/spaghetti.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
+  <img class="statechart-raster theme-img-dark" src="/img/spaghetti-dark.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
   <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
     Spaghetti statechart.
   </p>
@@ -2736,7 +2710,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    Spawn the chart and keep the Logger open with the Statechart Trace filter
+    Spawn the chart and keep the Logger open with the SXML trace filter
     selected. The trace shows the same process as text: the current
     configuration, the external event, exits, transitions, and entries.
 </p>
@@ -2803,7 +2777,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <figure style="margin: 1.5em 0;">
-  <img class="statechart-raster statechart-raster-narrow" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+  <img class="statechart-raster statechart-raster-narrow theme-img-light" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+  <img class="statechart-raster statechart-raster-narrow theme-img-dark" src="/img/emotions-dark.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
   <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
     Orthogonal regions: two emotion dimensions plus one behavior mode.
   </p>
@@ -2868,7 +2843,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    This statechart applies Euclid's algorithm to find the greatest common
+    The statechart below applies Euclid's algorithm to find the greatest common
     divisor of a list of integers. The machine has two states:
     <code>init</code> waits for a single <code>input/1</code> event carrying
     the list, then <code>run</code> iterates &mdash; repeatedly replacing
@@ -3010,16 +2985,12 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 
-<h2>More statechart examples</h2>
-
-<p>
-    The examples above are just a starting point. Many more statecharts are
-    available in the <strong>Examples drawer</strong> on the left side of the
-    workbench &mdash; click the arrow to open it and select any file from the
-    <em>Statecharts</em> section. Loading a file opens it in the editor and
+<div class="alert alert-info">
+  <strong>Tip!</strong> The examples above are just a starting point. More statecharts are
+    available in the <strong>Examples drawer</strong>; click the arrow to open it and select any file from the <em>Statecharts</em> section. Loading a file opens it in the editor and
     populates the terminal&rsquo;s Examples menu with its built-in queries,
     ready to run.
-</p>
+</div>
 
 
 </section>
@@ -3152,9 +3123,15 @@ fridge2(_Other,      List, error(unknown_request), List).
         var next = normalizeTutorialTheme(theme);
         document.documentElement.setAttribute("data-theme", next);
         document.documentElement.style.colorScheme = next;
+        refreshTutorialThemeSensitiveArtwork();
     }
     function tutorialThemeValue(name) {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    function refreshTutorialThemeSensitiveArtwork() {
+        if (typeof _scRefreshDiagramTheme === "function") {
+            _scRefreshDiagramTheme();
+        }
     }
     function tutorialAppearanceFromOptions(options) {
         var fontSize = options && options.fontSize ? parseInt(options.fontSize, 10) : 13;
@@ -3215,6 +3192,20 @@ fridge2(_Other,      List, error(unknown_request), List).
             lineHeight: "1.45"
         });
     }
+    window.tutorialFrameBridge = {
+        applyAppearance: applyTutorialAppearance,
+        applyTheme: applyTutorialTheme
+    };
+    window.addEventListener("message", function(event) {
+        if (event.origin !== window.location.origin || !event.data) {
+            return;
+        }
+        if (event.data.type === "webprolog-theme") {
+            applyTutorialTheme(event.data.theme);
+        } else if (event.data.type === "webprolog-appearance") {
+            applyTutorialAppearance(event.data);
+        }
+    });
     function tutorialBridge() {
         try {
             if (window.parent &&
@@ -3545,6 +3536,8 @@ fridge2(_Other,      List, error(unknown_request), List).
     // event arrives; tutorialBootstrapBridge registers the callback below.
 
     var _scLastEvent = null;   // most recent external_event seen
+    var _scCurrentState = null;
+    var _scCurrentTrans = null;
 
     function _scHandleTrace(text) {
         var parsed = _scParseTerm(text);
@@ -3603,6 +3596,8 @@ fridge2(_Other,      List, error(unknown_request), List).
     function _scRenderDiagram(state, trans) {
         var svg = document.getElementById('sc-pr-diagram');
         if (!svg) { return; }
+        _scCurrentState = state || null;
+        _scCurrentTrans = trans || null;
         ['s1', 's2', 'interrupted', 'final'].forEach(function(id) {
             var el = document.getElementById('sc-state-' + id);
             if (el) { el.setAttribute('fill', 'none'); }
@@ -3626,6 +3621,11 @@ fridge2(_Other,      List, error(unknown_request), List).
                 transEl.setAttribute('stroke-width', '2');
                 transEl.setAttribute('marker-end', 'url(#sc-arr-hi)');
             }
+        }
+    }
+    function _scRefreshDiagramTheme() {
+        if (document.getElementById('sc-pr-diagram')) {
+            _scRenderDiagram(_scCurrentState, _scCurrentTrans);
         }
     }
 </script>
