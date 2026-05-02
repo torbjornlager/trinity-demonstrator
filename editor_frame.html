@@ -96,6 +96,26 @@
         background: var(--editor-selection) !important;
       }
 
+      .CodeMirror pre.CodeMirror-placeholder.CodeMirror-line-like {
+        position: absolute !important;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        white-space: pre-line;
+        color: var(--editor-gutter-ink) !important;
+        font-style: italic;
+        opacity: 0.75;
+        pointer-events: none;
+        padding: 1.5em;
+        margin: 0;
+      }
+
       .CodeMirror-activeline-background {
         background: var(--editor-line-highlight);
       }
@@ -157,6 +177,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"
             integrity="sha384-ZYmwuq4n2gOcNxMSiJ6jyTj+BbIrilr7p6dlq6q5nmSWKmsH9UU4K1qqjycMkfmR"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/display/placeholder.min.js"
             crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/prolog/prolog.min.js"
             crossorigin="anonymous"></script>
@@ -251,7 +273,11 @@
           mode: normalizeMode(mode),
           lineNumbers: true,
           lineWrapping: false,
-          value: ""
+          value: "",
+          placeholder:
+            "Scratch buffer\n\n" +
+            "Code typed here is auto-loaded into the current actor's private database.\n" +
+            "Selecting an example from the Examples drawer overwrites this buffer."
         });
 
         function notifyChange() {
