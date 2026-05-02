@@ -215,6 +215,7 @@ HTTP endpoint layout:
 :- http_handler(root(toplevel_respond), node_controller_isotope_respond, []).
 :- http_handler(root(portal), node_portal_page, []).
 :- http_handler(root(workbench), node_portal_page, []).
+:- http_handler(root(demonstrator), node_portal_page, []).
 :- http_handler(root(calculator), node_calculator_page, []).
 :- http_handler(root(tutorial), node_tutorial_page, []).
 :- http_handler(root(manual), node_manual_page, []).
