@@ -63,12 +63,13 @@ keep that one out of public git.
 - `start_n3.pl`: launcher for `n3.elfenbenstornet.se`
 - `start_n4.pl`: launcher for `n4.elfenbenstornet.se`
 - `start_admin.pl`: launcher for the local-only admin node
-- `shared_db_common.pl`: common shared database loaded by all deployment nodes
-- `shared_db_n1.pl`: shared database loaded by `n1`
-- `shared_db_n2.pl`: shared database loaded by `n2`
-- `shared_db_n3.pl`: shared database loaded by `n3`
-- `shared_db_n4.pl`: shared database loaded by `n4`
-- `shared_db_admin.pl`: shared database loaded by `admin`
+- `shared_db_common.pl`: common shared database loaded by every deployment node
+- `shared_db_actor_common.pl`: shared database loaded by ACTOR-profile nodes (`n3`, `n4`)
+- `shared_db_n1.pl`: per-node overlay for `n1`
+- `shared_db_n2.pl`: per-node overlay for `n2`
+- `shared_db_n3.pl`: per-node overlay for `n3`
+- `shared_db_n4.pl`: per-node overlay for `n4`
+- `shared_db_admin.pl`: per-node overlay for `admin`
 
 ## Before You Start
 
@@ -150,8 +151,11 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
 - `/call`, `/toplevel_*`, `/ws`, `/portal`, examples, statecharts,
   manual pages, and related assets are proxied
 - overlay contents:
-  `deployment_node(n3).`, `service/2` entries for `counter` and
-  `pubsub_service`, `echo_server/0`, `echo_actor/0`, `alarm/0`, `fridge/1`
+  `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that calls n4
+- actor-common contents (shared with n4):
+  `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
+  `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`,
+  `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`
 - shared DB file:
   [`shared_db_n3.pl`](Deployment/shared_db_n3.pl)
 - local-only admin surface:
@@ -164,8 +168,11 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
 - `/call`, `/toplevel_*`, `/ws`, `/portal`, examples, statecharts,
   manual pages, and related assets are proxied
 - overlay contents:
-  `deployment_node(n4).`, `service/2` entries for `counter` and
-  `pubsub_service`, `echo_server/0`, `echo_actor/0`, `alarm/0`, `fridge/1`
+  `deployment_node(n4).` plus `human(plato)` / `human(aristotle)`
+- actor-common contents (shared with n3):
+  `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
+  `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`,
+  `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`
 - shared DB file:
   [`shared_db_n4.pl`](Deployment/shared_db_n4.pl)
 - local-only admin surface:
@@ -270,11 +277,12 @@ Each deployment node now loads:
 
 The current deployment split is:
 
-- `shared_db_common.pl`: `human/1` and the family-tree relations
-- `shared_db_n1.pl`: only `deployment_node(n1).`
+- `shared_db_common.pl`: family-tree relations
+- `shared_db_actor_common.pl`: actor predicates (`echo_actor/0`, `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`) plus the public service directory; loaded only by `n3` and `n4`
+- `shared_db_n1.pl`: `deployment_node(n1).` plus `human(plato)` / `human(aristotle)` (used by `n2`'s rpc chain)
 - `shared_db_n2.pl`: isotope-friendly derived predicates over the common base
-- `shared_db_n3.pl`: actor-demo predicates plus the public service directory
-- `shared_db_n4.pl`: second actor-demo overlay for cross-node demonstrations
+- `shared_db_n3.pl`: `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that the distributed proof tree pulls through to `n4`
+- `shared_db_n4.pl`: `deployment_node(n4).` plus `human(plato)` / `human(aristotle)` (used by `n3`'s distributed proof tree)
 - `shared_db_admin.pl`: local deployment facts for admin use
 
 This keeps the repo-level

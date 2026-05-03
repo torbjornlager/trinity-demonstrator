@@ -5147,7 +5147,7 @@
                 title: "N1",
                 profile: "ISOBASE",
                 description: "The conservative stateless node. Use it for relational querying and stateless Prolog execution over the `/call` API.",
-                sharedDb: "Family predicates from the common deployment layer, plus `human(plato)`, `human(aristotle)`, a small DCG grammar, and the deployment-specific `deployment_node(n1)` layer.",
+                sharedDb: "Family predicates from the common deployment layer, plus `human(plato)`, `human(aristotle)`, and the deployment-specific `deployment_node(n1)` layer.",
                 links: linksFor("N1")
               },
               {
@@ -5163,7 +5163,7 @@
                 title: "N3",
                 profile: "ACTOR",
                 description: "The fully stateful node. It adds `/ws`, direct actor messaging, node-resident services, and the statechart demonstrator.",
-                sharedDb: "Common base plus `echo_server/0`, `echo_actor/0`, `alarm/0`, `fridge/1`, `human/1`, and registered `counter` / `pubsub_service` services.",
+                sharedDb: "Common base plus the actor-common layer (`echo_actor/0`, `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`) and the n3 overlay (`mortal/1`, `human(socrates)` plus a distributed `human/1` clause that calls n4), with registered `counter` / `pubsub_service` services.",
                 links: linksFor("N3")
               },
               {
@@ -5171,7 +5171,7 @@
                 title: "N4",
                 profile: "ACTOR",
                 description: "A second public ACTOR node for cross-node actor and statechart demonstrations. Use it together with N3 when you want distributed messaging rather than a single-node demo.",
-                sharedDb: "Common base plus the same public actor-demo layer as N3, including `echo_server/0`, `echo_actor/0`, `alarm/0`, `fridge/1`, `human/1`, and registered `counter` / `pubsub_service` services.",
+                sharedDb: "Common base plus the same actor-common layer as N3, and an n4 overlay providing `human(plato)` / `human(aristotle)`. Registered `counter` / `pubsub_service` services.",
                 links: linksFor("N4")
               }
             ];

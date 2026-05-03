@@ -2,6 +2,7 @@
 :- ['../load.pl'].
 :- use_module(shared_db_paths, [
     common_shared_db_path/1,
+    actor_common_shared_db_path/1,
     node_overlay_shared_db_path/2
 ]).
 :- use_module('../actor.pl', [
@@ -24,6 +25,7 @@ start_n4 :-
     !.
 start_n4 :-
     common_shared_db_path(CommonSharedDBPath),
+    actor_common_shared_db_path(ActorCommonSharedDBPath),
     node_overlay_shared_db_path(n4, OverlaySharedDBPath),
     set_setting(http:public_host, 'n4.elfenbenstornet.se'),
     set_setting(http:public_port, 443),
@@ -49,6 +51,7 @@ start_n4 :-
             'https://n4.elfenbenstornet.se'
         ]),
         load_shared_db_file(CommonSharedDBPath),
+        load_shared_db_file(ActorCommonSharedDBPath),
         load_shared_db_file(OverlaySharedDBPath)
     ]),
     with_node_port_context(3055,

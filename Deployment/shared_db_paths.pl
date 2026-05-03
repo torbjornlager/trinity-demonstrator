@@ -1,5 +1,6 @@
 :- module(shared_db_paths, [
     common_shared_db_path/1,
+    actor_common_shared_db_path/1,
     node_overlay_shared_db_path/2
 ]).
 
@@ -9,6 +10,12 @@ common_shared_db_path(SharedDBPath) :-
     source_file(common_shared_db_path(_), SourceFile),
     file_directory_name(SourceFile, Dir),
     directory_file_path(Dir, 'shared_db_common.pl', RelativePath),
+    absolute_file_name(RelativePath, SharedDBPath).
+
+actor_common_shared_db_path(SharedDBPath) :-
+    source_file(actor_common_shared_db_path(_), SourceFile),
+    file_directory_name(SourceFile, Dir),
+    directory_file_path(Dir, 'shared_db_actor_common.pl', RelativePath),
     absolute_file_name(RelativePath, SharedDBPath).
 
 node_overlay_shared_db_path(NodeName, SharedDBPath) :-
