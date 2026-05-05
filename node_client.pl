@@ -268,17 +268,16 @@ yield(Reference, Message, Options) :-
     must_be(integer, Reference),
     promise_queue_key(Reference, QueueKey),
     (   promise_queue_store(QueueKey, Queue)
-    ->  setup_call_cleanup(
-            true,
-            (   thread_get_message(Queue, Msg, Options)
-            ->  Message = Msg
-            ;   option(on_timeout(Goal), Options, fail),
-                call(Goal)
-            ),
+    ->  (   thread_get_message(Queue, Msg, Options)
+        ->  Message = Msg,
             retract(promise_queue_store(QueueKey, Queue))
+        ;   % Timed out; leave the queue mapping in place so a later
+            % yield/2-3 call can still pick the message up.
+            option(on_timeout(Goal), Options, true),
+            call(Goal)
         )
     ;   % Promise doesn't exist; treat as immediate timeout
-        option(on_timeout(Goal), Options, fail),
+        option(on_timeout(Goal), Options, true),
         call(Goal)
     ).
 

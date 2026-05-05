@@ -5214,8 +5214,8 @@ test(promise_4_options, true(Answer == success([2], true))) :-
             yield(Ref, Answer)
         )).
 
-test(yield_3_timeout_default_fails, [fail]) :-
-    yield(4242424242, _Message, [timeout(0.01)]).
+test(yield_3_timeout_default_succeeds_with_unbound, true(var(Message))) :-
+    yield(4242424242, Message, [timeout(0.01)]).
 
 test(yield_3_timeout_on_timeout_goal, true(Result == timed_out)) :-
     yield(4242424242, _Message,
