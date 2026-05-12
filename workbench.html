@@ -4909,7 +4909,7 @@
       var app = Vue.createApp({
         data: function() {
           return {
-            workspaceTab: "prolog",
+            workspaceTab: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? "tutorial" : "prolog",
             dockTab: "terminal",
             transportMode: "actor",
             prologText: DEFAULT_PROLOG,
@@ -5068,7 +5068,8 @@
             },
             introVisible: false,
             introSuppressFuture: false,
-            tutorialSrc: "/tutorial",
+            tutorialSrc: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? "/tutorial" + window.location.hash : "/tutorial",
+            handledTutorialDeepLink: "",
             isTauMode: (new URLSearchParams(window.location.search)).get("node") === "tau",
             isSwiWasmMode: (new URLSearchParams(window.location.search)).get("node") === "swi-wasm",
             tauSession: null,
@@ -5435,6 +5436,7 @@
           window.addEventListener("pointerup", this.stopSplitDrag);
           window.addEventListener("resize", this.handleWindowResize);
           window.addEventListener("focus", this.handleWindowFocus);
+          this.runInitialTutorialDeepLink();
         },
         beforeUnmount: function() {
           if (typeof this.adminConfigHelpPopoverCleanup === "function") {
@@ -5497,6 +5499,9 @@
               },
               appearanceOptions: function() {
                 return self.tutorialAppearanceOptions();
+              },
+              tutorialSectionUrl: function(id) {
+                return self.tutorialSectionUrl(id);
               },
               pasteText: function(text) {
                 self.handleTutorialPaste(text);
@@ -6194,6 +6199,73 @@
             }
             return frame.contentWindow.tutorialFrameBridge;
           },
+          initialTutorialAnchor: function() {
+            var hash = String(window.location.hash || "");
+            if (!/^#[A-Za-z0-9_-]+$/.test(hash)) {
+              return "";
+            }
+            return hash.slice(1);
+          },
+          tutorialSectionUrl: function(id) {
+            var url = new URL(window.location.href);
+            url.pathname = "/workbench";
+            url.search = "";
+            url.hash = String(id || "").replace(/^#/, "");
+            return url.toString();
+          },
+          runInitialTutorialDeepLink: function() {
+            var anchor = this.initialTutorialAnchor();
+            if (!anchor || this.handledTutorialDeepLink === anchor) {
+              return;
+            }
+            this.openTutorialSection(anchor);
+            if (anchor === "distributed-proof-trees") {
+              this.queueDistributedProofTreesExample();
+            }
+            this.handledTutorialDeepLink = anchor;
+          },
+          queueDistributedProofTreesExample: function(attempt) {
+            var self = this;
+            var frame = this.$refs.tutorialFrame;
+            var doc;
+            var sourceNode;
+            var runNode;
+            var sourceText;
+            var runText;
+            attempt = attempt || 0;
+            if (!frame || !frame.contentDocument) {
+              if (attempt < 20) {
+                window.setTimeout(function() {
+                  self.queueDistributedProofTreesExample(attempt + 1);
+                }, 100);
+              }
+              return;
+            }
+            doc = frame.contentDocument;
+            sourceNode = doc.getElementById("dpt-prove-source");
+            runNode = doc.getElementById("dpt-prove-run");
+            if ((!sourceNode || !runNode) && attempt < 20) {
+              window.setTimeout(function() {
+                self.queueDistributedProofTreesExample(attempt + 1);
+              }, 100);
+              return;
+            }
+            if (!sourceNode || !runNode || !this.terminal) {
+              return;
+            }
+            sourceText = sourceNode.textContent || "";
+            runText = this.tutorialExampleText(runNode.textContent || "");
+            this.selectDock("terminal");
+            Promise.resolve(this.handleTutorialConsult(sourceText, "#dpt-prove-source")).then(function(loaded) {
+              if (!loaded || !self.terminal) {
+                return;
+              }
+              if (typeof self.terminal.set_command === "function") {
+                self.terminal.set_command("");
+              }
+              self.handleTutorialPaste(runText, "#dpt-prove-run");
+            });
+          },
           syncTutorialAppearance: function() {
             var bridge = this.tutorialFrameBridge();
             if (bridge && typeof bridge.applyAppearance === "function") {
@@ -6506,10 +6578,10 @@
           loadTutorialProgramIntoCurrentSession: function(sourceText) {
             var self = this;
             if (!this.prepareTutorialConsultTransport()) {
-              return;
+              return Promise.resolve(false);
             }
             if (!this.terminal) {
-              return;
+              return Promise.resolve(false);
             }
             this.transientLoadText = sourceText;
             this.selectDock("terminal");
@@ -6517,33 +6589,36 @@
               if (this.isotopePid !== null) {
                 this.resetIsotopeTransport();
               }
-              this.ensureIsotopeSession(this.terminal, this.currentIsotopeGeneration()).then(function() {
+              return this.ensureIsotopeSession(this.terminal, this.currentIsotopeGeneration()).then(function() {
                 self.terminal.echo("% Tutorial program loaded into current session.");
                 self.focusTerminalSoon(true);
+                return true;
               }).catch(function(error) {
                 self.transientLoadText = "";
                 self.log("error", "Tutorial consult failed: " + error.message, "tutorial");
                 self.terminal.error(error.message);
                 self.focusTerminalSoon(true);
+                return false;
               });
-              return;
             }
             if (this.transportMode === "actor") {
               if (this.wsPid !== null) {
                 this.resetActorTransport();
               }
-              this.ensureWsSession(this.terminal).then(function() {
+              return this.ensureWsSession(this.terminal).then(function() {
                 self.terminal.echo("% Tutorial program loaded into current session.");
                 self.focusTerminalSoon(true);
+                return true;
               }).catch(function(error) {
                 self.transientLoadText = "";
                 self.log("error", "Tutorial consult failed: " + error.message, "tutorial");
                 self.terminal.error(error.message);
                 self.focusTerminalSoon(true);
+                return false;
               });
-              return;
             }
             this.transientLoadText = "";
+            return Promise.resolve(false);
           },
           currentTutorialSessionPid: function() {
             return this.wsPid || this.isotopePid || "pending-session";
@@ -6813,6 +6888,7 @@
             }
             window.requestAnimationFrame(function() {
               self.tutorialFrameLoaded = true;
+              self.runInitialTutorialDeepLink();
             });
           },
           focusActiveEditor: function() {
@@ -7143,14 +7219,14 @@
             this.reportTutorialWarnings(adapted, "consult");
             this.log("ui", "Tutorial program queued for session load" + (id ? " from " + id : "") + ".", "tutorial");
             if (!this.terminal) {
-              return;
+              return Promise.resolve(false);
             }
             if (this.terminalBusy || this.queryState === "prompt" || this.queryState === "more") {
               this.log("warn", "Tutorial consult ignored because the terminal session is busy.", "tutorial");
               this.terminal.error("Stop the current interaction before consulting a tutorial example.");
-              return;
+              return Promise.resolve(false);
             }
-            this.loadTutorialProgramIntoCurrentSession(adapted);
+            return this.loadTutorialProgramIntoCurrentSession(adapted);
           },
           handleTutorialExternalExample: function(path) {
             if (!this.hasEditorPane) {
@@ -10565,6 +10641,9 @@
             var hash = anchor ? ("#" + anchor) : "";
             var target = "/tutorial" + hash;
             this.selectWorkspace("tutorial");
+            if (window.history && typeof window.history.replaceState === "function") {
+              window.history.replaceState(null, document.title || "", "/workbench" + hash);
+            }
             if (this.tutorialFrameLoaded && this.navigateTutorialFrameInPlace(anchor)) {
               return;
             }

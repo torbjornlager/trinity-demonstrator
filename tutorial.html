@@ -208,6 +208,30 @@
             text-decoration: none;
         }
 
+        .heading-link {
+            border: 0;
+            background: transparent;
+            color: var(--tutorial-link);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.78em;
+            margin-left: 8px;
+            opacity: 0.55;
+            padding: 0 2px;
+            vertical-align: baseline;
+        }
+
+        h1:hover .heading-link,
+        h2:hover .heading-link,
+        h3:hover .heading-link,
+        .heading-link:focus {
+            opacity: 1;
+        }
+
+        .heading-link.copied {
+            opacity: 1;
+        }
+
         ul {
             margin-top: 8px;
         }
@@ -3264,6 +3288,71 @@ fridge2(_Other,      List, error(unknown_request), List).
             .replace(/^-+|-+$/g, "");
         return slug || "section";
     }
+    function tutorialHeadingText(heading) {
+        var clone = heading.cloneNode(true);
+        Array.prototype.forEach.call(clone.querySelectorAll(".heading-link"), function(link) {
+            link.remove();
+        });
+        return clone.textContent.trim();
+    }
+    function tutorialLinkForHeading(id) {
+        var bridge = tutorialBridge();
+        var url;
+        if (bridge && typeof bridge.tutorialSectionUrl === "function") {
+            return bridge.tutorialSectionUrl(id);
+        }
+        url = new URL(window.location.href);
+        url.hash = id;
+        return url.toString();
+    }
+    function copyTutorialHeadingLink(button, heading) {
+        var url = tutorialLinkForHeading(heading.id);
+        function markCopied() {
+            button.classList.add("copied");
+            button.setAttribute("aria-label", "Copied link to " + tutorialHeadingText(heading));
+            window.setTimeout(function() {
+                button.classList.remove("copied");
+                button.setAttribute("aria-label", "Copy link to " + tutorialHeadingText(heading));
+            }, 1200);
+        }
+        function fallbackCopy() {
+            var field = document.createElement("textarea");
+            field.value = url;
+            field.setAttribute("readonly", "");
+            field.style.position = "fixed";
+            field.style.left = "-9999px";
+            document.body.appendChild(field);
+            field.select();
+            try { document.execCommand("copy"); } catch (_error) {}
+            field.remove();
+            markCopied();
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(markCopied).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    }
+    function installTutorialHeadingLinks(headings) {
+        headings.forEach(function(heading) {
+            var button;
+            if (!heading.id || heading.querySelector(".heading-link")) {
+                return;
+            }
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = "heading-link";
+            button.textContent = "#";
+            button.title = "Copy link";
+            button.setAttribute("aria-label", "Copy link to " + tutorialHeadingText(heading));
+            button.addEventListener("click", function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                copyTutorialHeadingLink(button, heading);
+            });
+            heading.appendChild(button);
+        });
+    }
     function buildTutorialToc() {
         var tutorial = document.getElementById("tutorial");
         var toc = document.getElementById("tutorial-toc");
@@ -3293,7 +3382,7 @@ fridge2(_Other,      List, error(unknown_request), List).
                 used[heading.id] = true;
                 return;
             }
-            baseId = tutorialSlugify(heading.textContent);
+            baseId = tutorialSlugify(tutorialHeadingText(heading));
             uniqueId = baseId;
             while (used[uniqueId] ||
                    (document.getElementById(uniqueId) &&
@@ -3304,6 +3393,7 @@ fridge2(_Other,      List, error(unknown_request), List).
             heading.id = uniqueId;
             used[uniqueId] = true;
         });
+        installTutorialHeadingLinks(headings);
         toc.innerHTML = "";
         if (!headings.length) {
             return;
@@ -3317,7 +3407,7 @@ fridge2(_Other,      List, error(unknown_request), List).
             var link = document.createElement("a");
             item.className = "toc-" + heading.tagName.toLowerCase();
             link.href = "#" + heading.id;
-            link.textContent = heading.textContent.trim();
+            link.textContent = tutorialHeadingText(heading);
             item.appendChild(link);
             list.appendChild(item);
         });
