@@ -133,7 +133,7 @@ This is a naming drift, not a structural one.
 The codebase now exposes several routes that are outside the protocol model of
 Chapter 3:
 
-- `/workbench`
+- `/demonstrator`
 - `/tutorial`
 - `/editor_frame`
 - `/node_info`
@@ -236,7 +236,7 @@ implement additional presentation-level behavior:
 Relevant code:
 
 - [shell.html](shell.html)
-- [workbench.html](workbench.html)
+- [demonstrator.html](demonstrator.html)
 
 That is useful, but it means the observed shell behavior is no longer a pure
 expression of the protocol alone.

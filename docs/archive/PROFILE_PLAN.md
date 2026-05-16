@@ -92,9 +92,9 @@ The earlier idea of per-principal profile ceilings has been removed from the
 live execution model.
 
 
-### Workbench behavior
+### Demonstrator behavior
 
-The workbench reads `/node_info` and clamps its profile selector to the
+The demonstrator reads `/node_info` and clamps its profile selector to the
 announced node profile. It is a demonstrator, not part of profile
 conformance.
 
@@ -133,7 +133,7 @@ The main profile backlog is now documentation and completeness work:
    the predicate subsets
 2. decide whether `relation` should be implemented as a real fourth profile
 3. tighten any remaining built-in-subset ambiguities if they prove important
-4. keep the workbench's profile hints aligned with the backend as the matrix
+4. keep the demonstrator's profile hints aligned with the backend as the matrix
    evolves
 
 

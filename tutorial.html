@@ -3606,8 +3606,8 @@ fridge2(_Other,      List, error(unknown_request), List).
     }
 
     // ── Pause-and-resume statechart diagram ──────────────────────────────────
-    // Driven by statechart_trace events forwarded from the workbench.
-    // The workbench calls bridge.onStatechartTrace(text) whenever a trace
+    // Driven by statechart_trace events forwarded from the demonstrator.
+    // The demonstrator calls bridge.onStatechartTrace(text) whenever a trace
     // event arrives; tutorialBootstrapBridge registers the callback below.
 
     var _scLastEvent = null;   // most recent external_event seen

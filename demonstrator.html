@@ -2926,7 +2926,7 @@
                   <iframe ref="prologEditorFrame"
                           class="cm-host editor-frame"
                           src="/editor_frame?id=editor&amp;mode=none"
-                          title="Workbench editor"
+                          title="Demonstrator editor"
                           @load="handleEditorFrameLoad"></iframe>
                 </div>
                 <div class="wb-view" :class="{active: !hasEditorPane || workspaceTab === 'tutorial'}">
@@ -3334,7 +3334,7 @@
 
                 <div v-else-if="adminAccess === 'error'" class="admin-card">
                   <h3>Admin API Error</h3>
-                  <p>The workbench could not load the admin data for this node.</p>
+                  <p>The demonstrator could not load the admin data for this node.</p>
                   <div class="admin-principals-toolbar">
                     <button class="wb-button" type="button" @click="refreshAdminPanel">Retry</button>
                   </div>
@@ -5425,8 +5425,8 @@
           this.initEditors();
           this.initTerminal();
           this.restorePortalIntroPreference();
-          this.log("info", "Workbench scaffold loaded.");
-          this.log("ui", "Workbench is the primary demonstrator frontend.");
+          this.log("info", "Demonstrator scaffold loaded.");
+          this.log("ui", "Demonstrator frontend loaded.");
           this.adminConfigHelpPopoverCleanup = installClampedHelpPopover(
             ".admin-config-help-button[data-help]",
             document.getElementById("adminConfigHelpPopover")
@@ -5820,7 +5820,7 @@
             if (!this.isTransportModeAllowed(this.transportMode)) {
               this.transportMode = this.effectiveTransportProfile;
               this.handleTransportModeChange();
-	              this.log("ui", "Workbench clamped to " + this.transportModeLabel + " to match the " + this.transportClampContextLabel() + ".", "transport");
+	              this.log("ui", "Demonstrator clamped to " + this.transportModeLabel + " to match the " + this.transportClampContextLabel() + ".", "transport");
 	            }
 	          },
 	          applyAnnouncedPrincipalInfo: function(principalId, principalExecution) {
@@ -6208,7 +6208,7 @@
           },
           tutorialSectionUrl: function(id) {
             var url = new URL(window.location.href);
-            url.pathname = "/workbench";
+            url.pathname = "/demonstrator";
             url.search = "";
             url.hash = String(id || "").replace(/^#/, "");
             return url.toString();
@@ -7135,7 +7135,7 @@
               warnings.push("some src_* options remained after adaptation");
             }
             if (/\bconsult_text\s*\(/.test(text)) {
-              warnings.push("consult_text/1 is legacy and only partially adapted in the workbench");
+              warnings.push("consult_text/1 is legacy and only partially adapted in the demonstrator");
             }
             return warnings;
           },
@@ -10642,7 +10642,7 @@
             var target = "/tutorial" + hash;
             this.selectWorkspace("tutorial");
             if (window.history && typeof window.history.replaceState === "function") {
-              window.history.replaceState(null, document.title || "", "/workbench" + hash);
+              window.history.replaceState(null, document.title || "", "/demonstrator" + hash);
             }
             if (this.tutorialFrameLoaded && this.navigateTutorialFrameInPlace(anchor)) {
               return;

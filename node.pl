@@ -214,7 +214,6 @@ HTTP endpoint layout:
 :- http_handler(root(toplevel_trace), node_controller_isotope_trace, []).
 :- http_handler(root(toplevel_respond), node_controller_isotope_respond, []).
 :- http_handler(root(portal), node_portal_page, []).
-:- http_handler(root(workbench), node_portal_page, []).
 :- http_handler(root(demonstrator), node_portal_page, []).
 :- http_handler(root(calculator), node_calculator_page, []).
 :- http_handler(root(tutorial), node_tutorial_page, []).
@@ -1128,14 +1127,14 @@ default_port(https, 443).
 
 %!  node_portal_page(+Request) is det.
 %
-%   Serve the experimental Vue-based portal frontend.
+%   Serve the browser demonstrator frontend.
 node_portal_page(Request) :-
     ignore(catch(
         log_interaction_request(Request, _{event:"portal_load", route:"portal"}),
         _,
         true
     )),
-    node_workbench_file(File),
+    node_demonstrator_file(File),
     reply_uncached_file(File, Request).
 
 %!  node_calculator_page(+Request) is det.
@@ -1147,7 +1146,7 @@ node_calculator_page(Request) :-
 
 %!  node_tutorial_page(+Request) is det.
 %
-%   Serve the legacy tutorial document used inside the workbench tutorial tab.
+%   Serve the legacy tutorial document used inside the demonstrator tutorial tab.
 node_tutorial_page(Request) :-
     node_tutorial_file(File),
     reply_uncached_file(File, Request).
@@ -1161,7 +1160,7 @@ node_manual_page(Request) :-
 
 %!  node_editor_frame_page(+Request) is det.
 %
-%   Serve the isolated CodeMirror editor frame used by the workbench.
+%   Serve the isolated CodeMirror editor frame used by the demonstrator.
 node_editor_frame_page(Request) :-
     node_editor_frame_file(File),
     reply_uncached_file(File, Request).
@@ -1169,7 +1168,7 @@ node_editor_frame_page(Request) :-
 %!  reply_uncached_file(+File, +Request) is det.
 %
 %   Serve a static file with caching disabled. This keeps the browser-facing
-%   workbench HTML in sync with local edits during development.
+%   demonstrator HTML in sync with local edits during development.
 reply_uncached_file(File, Request) :-
     http_reply_file(
         File,
@@ -1384,7 +1383,7 @@ isotope_abort_event(Pid, abort(Pid)) :-
 
 %!  node_image_page(+Request) is det.
 %
-%   Serve static image assets referenced by the tutorial and workbench.
+%   Serve static image assets referenced by the tutorial and demonstrator.
 node_image_page(Request) :-
     node_image_dir(Dir),
     option(path_info(PathInfo), Request, ''),
@@ -1452,13 +1451,13 @@ node_tau_js_dir(Dir) :-
     directory_file_path(Dir0, 'Tau-Prolog', Dir).
 
 
-%!  node_workbench_file(-File) is det.
+%!  node_demonstrator_file(-File) is det.
 %
-%   Resolve absolute path to `workbench.html` shipped with this module.
-node_workbench_file(File) :-
+%   Resolve absolute path to `demonstrator.html` shipped with this module.
+node_demonstrator_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'workbench.html', File).
+    directory_file_path(Dir, 'demonstrator.html', File).
 
 %!  node_calculator_file(-File) is det.
 %

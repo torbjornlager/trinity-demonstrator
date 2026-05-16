@@ -205,7 +205,7 @@ Checklist:
 
 Reasoning:
 
-- this is the main path used by `/shell` and much of the workbench
+- this is the main path used by `/shell` and much of the demonstrator
 
 
 ### `node_session.pl`

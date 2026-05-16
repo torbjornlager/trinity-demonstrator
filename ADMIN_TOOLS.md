@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Admin tools panel in the Web Prolog workbench provides real-time control over a running node's configuration, authentication, and resource management. Changes take effect immediately and apply only to the current runtime session. **They are not persisted across node restarts** unless you update the node's startup configuration separately.
+The Admin tools panel in the Web Prolog demonstrator provides real-time control over a running node's configuration, authentication, and resource management. Changes take effect immediately and apply only to the current runtime session. **They are not persisted across node restarts** unless you update the node's startup configuration separately.
 
 ---
 
@@ -12,7 +12,7 @@ At the top of the Admin panel, you'll see the current node's identity and operat
 
 ### **Principal**
 
-The authenticated user or service making changes. In the workbench, this is typically `dev` (the development principal).
+The authenticated user or service making changes. In the demonstrator, this is typically `dev` (the development principal).
 
 ### **Node Profile**
 

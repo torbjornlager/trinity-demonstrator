@@ -1,14 +1,14 @@
-# Workbench
+# Demonstrator
 
-This document describes the current browser workbench at `/workbench`.
+This document describes the current browser demonstrator at `/demonstrator`.
 
-The workbench is no longer just a plan. It is the current unified browser UI
+The demonstrator is no longer just a plan. It is the current unified browser UI
 for editing, tutorial-driven exploration, terminal interaction, logging,
 settings, and admin access.
 
 ## Current Role
 
-The workbench combines several surfaces that were previously separate or only
+The demonstrator combines several surfaces that were previously separate or only
 partly sketched:
 
 - tutorial browsing and guided example execution
@@ -33,7 +33,7 @@ The left-side project drawer currently exposes:
 - Web Prolog code examples
 - Statechart XML examples
 
-This lets the workbench act as both an editor shell and a guided tutorial
+This lets the demonstrator act as both an editor shell and a guided tutorial
 frontend.
 
 ### Main Workspace
@@ -45,7 +45,7 @@ The center workspace currently switches between:
 - the tutorial view
 
 The tutorial is loaded in an iframe and is bridged to the surrounding
-workbench so examples can be pasted, consulted, or run against the terminal.
+demonstrator so examples can be pasted, consulted, or run against the terminal.
 
 ### Runtime Dock
 
@@ -77,7 +77,7 @@ Current editor-facing concerns include:
 
 ### Tutorial Integration
 
-The tutorial is not a passive document. The workbench installs a bridge object
+The tutorial is not a passive document. The demonstrator installs a bridge object
 used by `tutorial.html` so the tutorial can:
 
 - paste queries into the terminal
@@ -86,7 +86,7 @@ used by `tutorial.html` so the tutorial can:
 - jump between sections
 - expose example sets to the terminal UI
 
-That bridge is an important part of the current workbench architecture.
+That bridge is an important part of the current demonstrator architecture.
 
 ### Terminal and Logger
 
@@ -95,11 +95,11 @@ component. The logger records transport and UI events and supports filtering,
 including statechart-trace filtering.
 
 The logger is therefore not just a debug panel; it is part of the current
-runtime-observability story of the workbench.
+runtime-observability story of the demonstrator.
 
 ### Settings
 
-The workbench now includes a settings surface with sections for:
+The demonstrator now includes a settings surface with sections for:
 
 - font
 - display
@@ -109,12 +109,12 @@ The workbench now includes a settings surface with sections for:
 - code coloring
 - session
 
-These settings control live workbench behavior such as typography, theme,
+These settings control live demonstrator behavior such as typography, theme,
 terminal presentation, startup greeting behavior, and code-coloring modes.
 
 ### Admin Panel
 
-The admin surface is integrated directly into the workbench and mirrors the
+The admin surface is integrated directly into the demonstrator and mirrors the
 runtime admin API when available.
 
 Current capabilities include viewing and editing:
@@ -127,7 +127,7 @@ Current capabilities include viewing and editing:
 
 ## Architectural Boundary
 
-Even in its current single-file form, the workbench has a meaningful internal
+Even in its current single-file form, the demonstrator has a meaningful internal
 split between:
 
 - UI state and layout management
@@ -142,7 +142,7 @@ split into more files or moved behind a build step.
 
 ## Current Limitations
 
-The current workbench still has deliberate rough edges:
+The current demonstrator still has deliberate rough edges:
 
 - much of the frontend remains in one served HTML/JS file
 - transport and state concerns are only partly separated into distinct modules
@@ -155,9 +155,9 @@ Prolog codebase also shapes the frontend.
 
 ## Near-Term Documentation Goal
 
-The right next step for the workbench documentation is not another long-term
+The right next step for the demonstrator documentation is not another long-term
 plan. It is to keep this document aligned with the UI that actually exists.
 
-When the workbench changes materially, this file should be updated as a current
+When the demonstrator changes materially, this file should be updated as a current
 status document rather than allowed to drift back into a speculative design
 note.

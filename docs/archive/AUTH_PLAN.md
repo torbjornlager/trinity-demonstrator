@@ -27,7 +27,7 @@ authorization checks such as ownership.
 
 Administrative control is not part of node-profile conformance. A node is not
 required to expose an admin API or admin UI. In this repository, the admin
-API and the workbench admin panel are demonstrator tooling.
+API and the demonstrator admin panel are demonstrator tooling.
 
 
 ## Implemented
@@ -116,8 +116,8 @@ Admin-only endpoints are implemented in
 - `GET`/`POST /admin/config`
 - `GET`/`POST /admin/principals`
 
-The workbench includes a small demonstrator UI on top of this API in
-[workbench.html](workbench.html).
+The demonstrator includes a small demonstrator UI on top of this API in
+[demonstrator.html](demonstrator.html).
 
 
 ## Deferred

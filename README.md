@@ -14,7 +14,7 @@ other Prolog systems.
 - Generic servers and Erlang-style supervisors
 - Statechart actors
 - Stateless HTTP, semi-stateful HTTP, and stateful WebSocket node APIs
-- Browser tooling: workbench, tutorial, logger, admin panel, editors
+- Browser tooling: demonstrator, tutorial, logger, admin panel, editors
 - Docker deployment bundle for the public node setup
 
 ## Quick Start
@@ -59,8 +59,8 @@ swipl -q -s test.pl -g test -t halt
   Canonical built-ins catalog for the ACTOR profile surface.
 - [WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md](WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md)
   Route-by-route verification of what client code is actually accepted.
-- [WORKBENCH.md](WORKBENCH.md)
-  Current architecture and status of the browser workbench.
+- [DEMONSTRATOR.md](DEMONSTRATOR.md)
+  Current architecture and status of the browser demonstrator.
 
 ### Editing, Deployment, and Operations
 
@@ -71,7 +71,7 @@ swipl -q -s test.pl -g test -t halt
 - [ADMIN-DEPLOYMENT-MANUAL.public.md](ADMIN-DEPLOYMENT-MANUAL.public.md)
   Operator manual for a Docker-based deployment of the public Web Prolog nodes.
 - [ADMIN_TOOLS.md](ADMIN_TOOLS.md)
-  User guide for the workbench admin panel and admin API surface.
+  User guide for the demonstrator admin panel and admin API surface.
 
 ### Policy and Security
 

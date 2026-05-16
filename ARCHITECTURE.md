@@ -159,7 +159,7 @@ The browser can:
 - exit actors
 
 This is the most direct exposure of the actor runtime. The shell frontend in
-[`workbench.html`](workbench.html)
+[`demonstrator.html`](demonstrator.html)
 is the current demonstrator frontend and switches between stateless HTTP,
 ISOTOPE, and ACTOR modes.
 

@@ -78,7 +78,7 @@ private actor databases.
 The repository now exposes a broader surface than the older manual and Chapter
 3 descriptions emphasize, including:
 
-- `/workbench`
+- `/demonstrator`
 - `/tutorial`
 - `/editor_frame`
 - `/node_info`

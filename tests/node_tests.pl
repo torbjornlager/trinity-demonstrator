@@ -378,6 +378,13 @@ read_text(URL, Text) :-
         close(Stream)
     ).
 
+read_text_status(URL, Status, Text) :-
+    setup_call_cleanup(
+        http_open(URL, Stream, [status_code(Status)]),
+        read_string(Stream, _, Text),
+        close(Stream)
+    ).
+
 read_bytes(URL, Count, Bytes) :-
     setup_call_cleanup(
         http_open(URL, Stream, []),
@@ -662,6 +669,10 @@ test(node_portal_and_example_routes_served) :-
         (
             format(atom(PortalURL), '~w/portal', [URI]),
             read_text(PortalURL, PortalBody),
+            format(atom(DemonstratorURL), '~w/demonstrator', [URI]),
+            read_text(DemonstratorURL, DemonstratorBody),
+            format(atom(OldWorkbenchURL), '~w/workbench', [URI]),
+            read_text_status(OldWorkbenchURL, OldWorkbenchStatus, _OldWorkbenchBody),
             format(atom(EditorFrameURL), '~w/editor_frame?id=editor&mode=prolog', [URI]),
             read_text(EditorFrameURL, EditorFrameBody),
             format(atom(ActorExampleURL), '~w/examples/actors/04%20count_actor.pl', [URI]),
@@ -677,6 +688,8 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Your portal to the Prolog Web')),
             assertion(sub_string(PortalBody, _, _, _, 'Don''t show this again.')),
             assertion(sub_string(PortalBody, _, _, _, 'Book manuscript')),
+            assertion(sub_string(DemonstratorBody, _, _, _, 'Book manuscript')),
+            assertion(OldWorkbenchStatus == 404),
             assertion(sub_string(PortalBody, _, _, _, 'https://trinity.elfenbenstornet.se/book.html')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Font</div>')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Display</div>')),
@@ -686,7 +699,7 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Extra newline after query')),
             assertion(sub_string(PortalBody, _, _, _, 'Code coloring')),
             assertion(sub_string(PortalBody, _, _, _, 'Statechart XML')),
-            assertion(sub_string(EditorFrameBody, _, _, _, 'Workbench Editor Frame')),
+            assertion(sub_string(EditorFrameBody, _, _, _, 'Demonstrator Editor Frame')),
             assertion(sub_string(ActorExampleBody, _, _, _, 'count_actor')),
             assertion(sub_string(ServiceExampleBody, _, _, _, 'pubsub_actor')),
             assertion(sub_string(StatechartBody, _, _, _, '<statechart')),
@@ -721,15 +734,15 @@ test(node_admin_and_portal_pages_include_manual_predicate_link_support) :-
     module_property(node, file(NodeFile)),
     file_directory_name(NodeFile, Dir),
     directory_file_path(Dir, 'admin.html', AdminFile),
-    directory_file_path(Dir, 'workbench.html', WorkbenchFile),
+    directory_file_path(Dir, 'demonstrator.html', DemonstratorFile),
     read_file_to_string(AdminFile, AdminBody, []),
-    read_file_to_string(WorkbenchFile, WorkbenchBody, []),
+    read_file_to_string(DemonstratorFile, DemonstratorBody, []),
     once((
         sub_string(AdminBody, _, _, _, 'manualEntryHref(predicateName)'),
         sub_string(AdminBody, _, _, _, 'web-prolog-manual'),
         sub_string(AdminBody, _, _, _, 'renderPredicateIndicator(predicateName)'),
-        sub_string(WorkbenchBody, _, _, _, 'adminBuiltinManualHref(predicateName)'),
-        sub_string(WorkbenchBody, _, _, _, 'web-prolog-manual')
+        sub_string(DemonstratorBody, _, _, _, 'adminBuiltinManualHref(predicateName)'),
+        sub_string(DemonstratorBody, _, _, _, 'web-prolog-manual')
     )).
 
 test(node_admin_and_portal_pages_include_config_help_controls,

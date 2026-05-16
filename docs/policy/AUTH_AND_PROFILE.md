@@ -119,7 +119,7 @@ Implemented ownership checks include:
   [node_ws.pl](node_ws.pl)
 
 Admin control is not part of profile conformance. A deployment need not expose
-an admin API at all. In this repository, the admin API and workbench admin
+an admin API at all. In this repository, the admin API and demonstrator admin
 panel are demonstrator tooling layered on top of the core execution model.
 
 ## Implemented Today
@@ -131,7 +131,7 @@ The implemented model should be read as:
 - auth and ownership are implemented, but are distinct from profile
 - node-profile semantics, not user-profile semantics, govern execution
 
-The workbench reads `/node_info` and clamps its profile hints to the announced
+The demonstrator reads `/node_info` and clamps its profile hints to the announced
 node profile, but that is a frontend convenience rather than part of the core
 contract.
 
