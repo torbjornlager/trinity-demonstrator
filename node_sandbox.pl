@@ -1001,6 +1001,7 @@ sandbox:safe_primitive(actor:respond(_, _)).
 sandbox:safe_primitive(actor:flush).
 sandbox:safe_primitive(actor:listing_private).
 sandbox:safe_primitive(actor:listing_private(_)).
+sandbox:safe_primitive(actor:node_setting(_, _)).
 
 sandbox:safe_meta(call_cleanup(Goal, Cleanup), [Goal, Cleanup]).
 sandbox:safe_meta(setup_call_cleanup(Setup, Goal, Cleanup), [Setup, Goal, Cleanup]).

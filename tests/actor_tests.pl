@@ -476,10 +476,10 @@ test(actors_load_uri_without_user_bang_operator, Result == true) :-
    self(Self),
    setup_call_cleanup(
        ( current_op(Pri, Type, !),
-         actor_example_path('04 count_actor.pl', CountActorPath),
+         actor_example_path('04 count_server.pl', CountActorPath),
          op(0, xfx, !)
        ),
-       ( spawn(count_actor(0), Pid, [
+       ( spawn(count_server(0), Pid, [
              monitor(true),
              load_uri(CountActorPath)
          ]),

@@ -181,7 +181,7 @@ Design notes:
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_host), []).
 :- setting(cache_size, integer, 100, 'Max number of cache entries').
-:- setting(timeout,    number,  2,   'Timeout in seconds').
+:- setting(timeout,    number,  1,   'Timeout in seconds').
 :- setting(sandbox,   atom,    blacklist, 'Sandbox policy: off, whitelist, or blacklist (on/demo/strict accepted as aliases for whitelist)').
 
 :- dynamic node_shared_source/1.
@@ -212,6 +212,7 @@ HTTP endpoint layout:
 :- http_handler(root(toplevel_stop), node_controller_isotope_stop, []).
 :- http_handler(root(toplevel_abort), node_controller_isotope_abort, []).
 :- http_handler(root(toplevel_trace), node_controller_isotope_trace, []).
+:- http_handler(root(statechart_trace), node_controller_isotope_trace, []).
 :- http_handler(root(toplevel_respond), node_controller_isotope_respond, []).
 :- http_handler(root(portal), node_portal_page, []).
 :- http_handler(root(demonstrator), node_portal_page, []).
@@ -575,18 +576,20 @@ node_controller_isotope_trace_1(Request) :-
     request_principal(Request, Principal),
     http_parameters(Request, [
         pid(Pid0, [atom]),
-        enabled(Enabled0, [atom, default(true)]),
+        statechart_trace(StatechartTrace0, [atom, default('')]),
+        enabled(LegacyEnabled0, [atom, default('')]),
         format(Format, [atom, default(json)])
     ]),
     parse_pid_or_throw(Pid0, node:parse_request_pid/2,
                        'pid must be an integer, atom name, or Id@Node term', Pid),
-    parse_enabled_atom(Enabled0, Enabled),
+    pick_isotope_trace_value(StatechartTrace0, LegacyEnabled0, EnabledRaw),
+    parse_enabled_atom(EnabledRaw, Enabled),
     execute_and_respond_logged(
         Request,
         Principal,
         Format,
-        _{route:"toplevel_trace", action:"toplevel_trace", pid:Pid,
-          enabled:Enabled},
+        _{route:"statechart_trace", action:"statechart_trace", pid:Pid,
+          statechart_trace:Enabled},
         isotope_trace_authorized_event(Principal, Pid, Enabled),
         pid_error_mapper(Pid)
     ).
@@ -1323,9 +1326,23 @@ authorize_isotope_session_access(Principal, RouteId, Pid) :-
     require_isotope_session_owner(PrincipalId, Pid).
 
 
+%!  pick_isotope_trace_value(+StatechartTrace, +LegacyEnabled, -Chosen) is det.
+%
+%   Prefer the new `statechart_trace` query parameter; fall back to legacy
+%   `enabled`.  Empty atom means "not supplied".  When neither is supplied,
+%   default to `true` (preserves the historical `/toplevel_trace` default).
+pick_isotope_trace_value('', '', true) :- !.
+pick_isotope_trace_value('', Legacy, Legacy) :- !.
+pick_isotope_trace_value(Statechart, _, Statechart).
+
+
 parse_enabled_atom(true, true) :-
     !.
 parse_enabled_atom(false, false) :-
+    !.
+parse_enabled_atom(@(true), true) :-
+    !.
+parse_enabled_atom(@(false), false) :-
     !.
 parse_enabled_atom(Atom0, Enabled) :-
     atom(Atom0),

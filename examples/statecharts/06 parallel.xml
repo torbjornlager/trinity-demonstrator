@@ -1,6 +1,8 @@
 <!--
 
-    Keep the Logger open and Statechart Trace selected.
+    Another demonstration of parallel states.
+
+    Keep the Logger open and SXML trace selected.
 
 -->
 
@@ -47,7 +49,5 @@
 <!-- <examples>
 
 ?- $Pid ! e.
-
-?- $Pid ! done(p).
 
 -->

@@ -3,7 +3,7 @@
     Two parallel states playing pingpong.
     Pinger has the serve.
 
-    Keep the Logger open and Statechart Trace selected.
+    Keep the Logger open and SXML trace selected.
 
 -->
 

@@ -4,7 +4,7 @@
 %   then hands off to normal/1 for the remaining messages.
 %
 %	@param	Messages - list of collected messages, high-priority first
-%	@author Adapted from an example in Erlang textbook by Fred Hebert.
+%	@author Adapted from an example in an Erlang textbook by Fred Hebert.
 
 important(Messages) :-
     receive({

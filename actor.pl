@@ -40,6 +40,7 @@
      remote_send_command/2,  % +NodeURL, +Command
      register_remote_proxy/2,% +CompoundPid, +LocalProxyPid
      resolve_thread/2,       % +Pid, -ThreadId
+     node_setting/2,         % ?Key, ?Value
 
      op(800,  xfx, !),       %
      op(200,  xfx, @),       %
@@ -110,6 +111,7 @@ The implementation favors readability and explicitness over feature breadth.
     with_public_execution_namespace/2
 ]).
 :- use_module(public_goal_guard, [rewrite_goal_if_needed/3]).
+:- use_module(node_builtin_policy, [builtin_family_enabled/2]).
 
 :- meta_predicate
     spawn(:),
@@ -951,6 +953,41 @@ actors(Pids) :-
             Pids
         )
     ).
+
+
+%!  node_setting(?Key, ?Value) is nondet.
+%
+%   Query a publicly visible setting of the node servicing this request.
+%   With Key unbound, enumerates all keys that the node is willing to
+%   share. Sensitive runtime state (shared DB source, principal policies,
+%   developer credentials) is deliberately not exposed.
+
+node_setting(Key, Value) :-
+    public_node_setting(Key, Family),
+    setting_family_visible(Family),
+    current_node_value(Key, Value).
+
+setting_family_visible(always) :- !.
+setting_family_visible(Family) :-
+    current_node_value(profile, Profile),
+    builtin_family_enabled(Profile, Family).
+
+public_node_setting(url, always).
+public_node_setting(profile, always).
+public_node_setting(sandbox, always).
+public_node_setting(auth, always).
+public_node_setting(timeout, always).
+public_node_setting(rate_window_seconds, always).
+public_node_setting(max_inflight_calls, stateless_api).
+public_node_setting(max_term_text_bytes, stateless_api).
+public_node_setting(max_call_requests_per_window, stateless_api).
+public_node_setting(max_load_text_bytes, private_db).
+public_node_setting(load_uri_allowed_origins, private_db).
+public_node_setting(max_sessions_per_principal, semistateful_api).
+public_node_setting(max_session_spawns_per_window, semistateful_api).
+public_node_setting(max_ws_actors_per_principal, stateful_api).
+public_node_setting(max_ws_frame_bytes, stateful_api).
+public_node_setting(max_ws_commands_per_window, stateful_api).
 
 
 %!  self(-Pid) is det.

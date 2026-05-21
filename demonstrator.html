@@ -5473,12 +5473,14 @@
                 if (self.editorKind === "statechart") {
                   self.statechartText = String(value);
                   self.updateEditorSourceDirty("statechart", value);
+                  self.refreshTerminalExamplesFromEditorText(value);
                   return;
                 }
                 self.prologText = String(value);
                 self.updateEditorSourceDirty("prolog", value);
                 self.editorDirty = true;
                 self.wsEditorDirty = true;
+                self.refreshTerminalExamplesFromEditorText(value);
               }
             };
           },
@@ -5513,7 +5515,7 @@
                 self.handleTutorialExternalExample(path);
               },
               setTerminalExamples: function(examples) {
-                self.terminalExamples = Array.isArray(examples) ? examples : [];
+                self.setTerminalExamples(examples);
                 self.examplesMenuOpen = false;
               }
             };
@@ -5956,16 +5958,16 @@
               return;
             }
             this.wsSend({
-              command: "set_trace",
+              command: "set_statechart_trace",
               pid: pid,
-              enabled: enabled ? "true" : "false"
+              statechart_trace: enabled
             });
           },
           syncIsotopeTraceEnabled: function(pid, enabled) {
             var self = this;
-            var url = "/toplevel_trace?" + new URLSearchParams({
+            var url = "/statechart_trace?" + new URLSearchParams({
               pid: String(pid),
-              enabled: enabled ? "true" : "false",
+              statechart_trace: enabled ? "true" : "false",
               format: "json"
             }).toString();
             return fetch(url, {
@@ -6041,6 +6043,44 @@
           },
           closeExamplesMenu: function() {
             this.examplesMenuOpen = false;
+          },
+          terminalExamplesEqual: function(left, right) {
+            var a = Array.isArray(left) ? left : [];
+            var b = Array.isArray(right) ? right : [];
+            var i;
+            if (a.length !== b.length) {
+              return false;
+            }
+            for (i = 0; i < a.length; i += 1) {
+              if (!a[i] || !b[i] ||
+                  String(a[i].label || "") !== String(b[i].label || "") ||
+                  String(a[i].query || "") !== String(b[i].query || "")) {
+                return false;
+              }
+            }
+            return true;
+          },
+          setTerminalExamples: function(examples) {
+            var next = Array.isArray(examples) ? examples : [];
+            if (this.terminalExamplesEqual(this.terminalExamples, next)) {
+              return;
+            }
+            this.terminalExamples = next;
+            this.examplesMenuOpen = false;
+          },
+          shouldUseEditorTerminalExamples: function() {
+            return this.dockTab === "terminal" &&
+              this.hasEditorPane &&
+              this.workspaceTab !== "tutorial";
+          },
+          refreshTerminalExamplesFromEditorText: function(text) {
+            if (!this.shouldUseEditorTerminalExamples()) {
+              return;
+            }
+            this.setTerminalExamples(this.extractFileExamples(text));
+          },
+          refreshTerminalExamplesFromActiveEditor: function() {
+            this.refreshTerminalExamplesFromEditorText(this.currentEditorText());
           },
           chooseExampleQuery: function(example) {
             var query = example && example.query ? String(example.query) : "";
@@ -6498,8 +6538,7 @@
               this.editorDirty = true;
               this.wsEditorDirty = true;
               if (this.prologEditor) { this.prologEditor.setValue(entry.text); }
-              this.terminalExamples = this.extractFileExamples(entry.text);
-              this.examplesMenuOpen = false;
+              this.setTerminalExamples(this.extractFileExamples(entry.text));
               return;
             }
             if (!entry.url) { return; }
@@ -6561,8 +6600,7 @@
               if (self.prologEditor) {
                 self.prologEditor.setValue(text);
               }
-              self.terminalExamples = self.extractFileExamples(text);
-              self.examplesMenuOpen = false;
+              self.setTerminalExamples(self.extractFileExamples(text));
               self.log("ui", "Loaded example file: " + label + ".");
               if (loadOptions.focus === "editor") {
                 self.focusActiveEditor();
@@ -9886,7 +9924,7 @@
             }
             var body = {
               options: "[]",
-              trace: this.isTraceLoggingEnabled()
+              statechart_trace: this.isTraceLoggingEnabled()
             };
             if (loadText !== "") { body.load_text = loadText; }
             return this.requestJson("/toplevel_spawn", {
@@ -10303,7 +10341,7 @@
                 self.wsSpawnReject = reject;
                 var spawnCmd = {
                   command: "toplevel_spawn",
-                  trace: self.isTraceLoggingEnabled() ? "true" : "false"
+                  statechart_trace: self.isTraceLoggingEnabled()
                 };
                 spawnLoadSpec = self.spawnLoadSpec();
                 var spawnLoadText = spawnLoadSpec.text;
@@ -10630,6 +10668,9 @@
             this.log("ui", "Workspace switched to " + tabId + ".");
             this.refreshPanels();
             if (tabId === "prolog") {
+              this.refreshTerminalExamplesFromActiveEditor();
+            }
+            if (tabId === "prolog") {
               this.focusActiveEditor();
             } else if (tabId === "tutorial") {
               this.blurTerminal();
@@ -10660,6 +10701,7 @@
               this.loadAdminPanel();
             }
             if (tabId === "terminal") {
+              this.refreshTerminalExamplesFromActiveEditor();
               if (previousTab === "help" || previousTab === "settings" || previousTab === "admin") {
                 this.focusTerminalSoon(true);
                 window.setTimeout(function() {

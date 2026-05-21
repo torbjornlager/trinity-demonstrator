@@ -2,9 +2,7 @@
 
     Spaghetti statechart actor.
 
-    See https://github.com/torbjornlager/statechart-actor-web-prolog/raw/main/img/spaghetti.jpg
-
-    Keep the Logger open and Statechart Trace selected.
+    Keep the Logger open and SXML trace selected.
 
 -->
 

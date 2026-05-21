@@ -1,4 +1,4 @@
-%%  ping_pong/0 is nondet.
+%%  ping_pong/0 is det.
 %
 %	@author https://www.erlang.org/doc/system/conc_prog.html
 

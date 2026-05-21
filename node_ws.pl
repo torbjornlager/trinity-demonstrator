@@ -316,6 +316,8 @@ ws_action(toplevel_abort, Dict, Queue, Principal) :-
     ws_action_toplevel_abort(Dict, Queue, Principal).
 ws_action(set_trace, Dict, Queue, Principal) :-
     ws_action_set_trace(Dict, Queue, Principal).
+ws_action(set_statechart_trace, Dict, Queue, Principal) :-
+    ws_action_set_trace(Dict, Queue, Principal).
 ws_action(toplevel_respond, Dict, Queue, Principal) :-
     ws_action_toplevel_respond(Dict, Queue, Principal).
 ws_action(spawn, Dict, Queue, Principal) :-
@@ -337,7 +339,7 @@ ws_action_toplevel_spawn(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_spawn),
     effective_profile_for_route(ws, EffectiveProfile),
     ws_parse_spawn_options(Dict, UserOptions),
-    ws_get_trace_enabled(Dict, trace, TraceEnabled),
+    ws_get_spawn_trace_enabled(Dict, TraceEnabled),
     require_source_options_access(Principal, UserOptions),
     sandbox_prepare_source_options(EffectiveProfile, node_ws,
                                    UserOptions, PreparedOptions),
@@ -452,7 +454,7 @@ ws_action_set_trace(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_call),
     ws_get_pid(Dict, Pid),
     ws_require_owned_session(Queue, Principal, Pid),
-    ws_get_trace_enabled(Dict, enabled, Enabled),
+    ws_get_set_trace_enabled(Dict, Enabled),
     set_isotope_session_trace(Pid, Enabled),
     thread_send_message(Queue, responded(Pid)).
 
@@ -1104,9 +1106,39 @@ ws_get_trace_enabled(Dict, Key, Enabled) :-
     ws_get_atom_or(Dict, Key, false, Enabled0),
     ws_parse_enabled_atom(Enabled0, Enabled).
 
+%!  ws_get_spawn_trace_enabled(+Dict, -Enabled) is det.
+%
+%   Read the spawn-time statechart trace flag.  Prefer the new key
+%   `statechart_trace`; fall back to the legacy `trace` key during
+%   transition.
+ws_get_spawn_trace_enabled(Dict, Enabled) :-
+    (   get_dict(statechart_trace, Dict, Raw)
+    ->  ws_parse_enabled_atom(Raw, Enabled)
+    ;   get_dict(trace, Dict, Raw)
+    ->  ws_parse_enabled_atom(Raw, Enabled)
+    ;   Enabled = false
+    ).
+
+%!  ws_get_set_trace_enabled(+Dict, -Enabled) is det.
+%
+%   Read the runtime statechart trace flag for `set_statechart_trace`
+%   (formerly `set_trace`).  Prefer the new key `statechart_trace`; fall
+%   back to the legacy `enabled` key.
+ws_get_set_trace_enabled(Dict, Enabled) :-
+    (   get_dict(statechart_trace, Dict, Raw)
+    ->  ws_parse_enabled_atom(Raw, Enabled)
+    ;   get_dict(enabled, Dict, Raw)
+    ->  ws_parse_enabled_atom(Raw, Enabled)
+    ;   Enabled = false
+    ).
+
 ws_parse_enabled_atom(true, true) :-
     !.
 ws_parse_enabled_atom(false, false) :-
+    !.
+ws_parse_enabled_atom(@(true), true) :-
+    !.
+ws_parse_enabled_atom(@(false), false) :-
     !.
 ws_parse_enabled_atom('true', true) :-
     !.
@@ -1122,7 +1154,8 @@ ws_parse_enabled_atom(Value0, Enabled) :-
     string(Value0),
     !,
     string_lower(Value0, Lower),
-    ws_parse_enabled_atom(Lower, Enabled).
+    atom_string(LowerAtom, Lower),
+    ws_parse_enabled_atom(LowerAtom, Enabled).
 ws_parse_enabled_atom(Value, _) :-
     throw(error(domain_error(boolean, Value),
                 context(node_ws:ws_parse_enabled_atom/2,

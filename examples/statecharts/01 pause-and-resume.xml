@@ -2,6 +2,8 @@
 
     Pause and resume - demonstrating hierarchy and history state.
 
+    Keep the Logger open and SXML trace selected.
+
 -->
 
 <statechart

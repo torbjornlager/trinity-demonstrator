@@ -1,7 +1,9 @@
 <!--
 
-    Keep the Logger open and Statechart Trace selected.
+    Computing the closure of a relation p/2.
 
+    Keep the Logger open and SXML trace selected.
+    
 -->
 
 <statechart

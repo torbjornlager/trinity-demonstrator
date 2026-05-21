@@ -34,7 +34,7 @@ start_n4 :-
         sandbox(blacklist),
         profile(actor),
         auth(open),
-        timeout(8),
+        timeout(1),
         max_inflight_calls(3),
         max_sessions_per_principal(16),
         max_ws_actors_per_principal(8),

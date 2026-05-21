@@ -47,14 +47,26 @@ spawn_options_from_query(Request, SpawnOptions, LoadText, TraceEnabled) :-
     http_parameters(Request, [
         options(OptionsAtom, [atom, default('[]')]),
         load_text(LoadText0, [default('')]),
-        trace(Trace0, [atom, default(false)])
+        statechart_trace(StatechartTrace0, [atom, default('')]),
+        trace(LegacyTrace0, [atom, default('')])
     ]),
     check_term_text_size(options, OptionsAtom),
     parse_spawn_options_atom(OptionsAtom, SpawnOptions0),
     text_to_string(LoadText0, LoadText),
     check_source_text_size(load_text, LoadText),
-    parse_trace_value(Trace0, TraceEnabled),
+    pick_trace_value(StatechartTrace0, LegacyTrace0, TraceRaw),
+    parse_trace_value(TraceRaw, TraceEnabled),
     maybe_add_load_text(LoadText, SpawnOptions0, SpawnOptions).
+
+
+%!  pick_trace_value(+StatechartTrace, +LegacyTrace, -Chosen) is det.
+%
+%   Prefer the new `statechart_trace` field; fall back to legacy `trace`.
+%   Empty atom means "not supplied".  When neither is supplied, default to
+%   `false`.
+pick_trace_value('', '', false) :- !.
+pick_trace_value('', Legacy, Legacy) :- !.
+pick_trace_value(Statechart, _, Statechart).
 
 
 %!  spawn_options_from_dict(+Dict, -SpawnOptions, -LoadText, -TraceEnabled) is det.
@@ -63,7 +75,9 @@ spawn_options_from_dict(Dict, SpawnOptions, LoadText, TraceEnabled) :-
     ->  parse_spawn_options_value(OptionsValue, SpawnOptions0)
     ;   SpawnOptions0 = []
     ),
-    (   get_dict(trace, Dict, TraceValue)
+    (   get_dict(statechart_trace, Dict, TraceValue)
+    ->  parse_trace_value(TraceValue, TraceEnabled)
+    ;   get_dict(trace, Dict, TraceValue)
     ->  parse_trace_value(TraceValue, TraceEnabled)
     ;   TraceEnabled = false
     ),
@@ -133,6 +147,10 @@ is_session_option(session(_)).
 parse_trace_value(true, true) :-
     !.
 parse_trace_value(false, false) :-
+    !.
+parse_trace_value(@(true), true) :-
+    !.
+parse_trace_value(@(false), false) :-
     !.
 parse_trace_value(Value0, Value) :-
     atom(Value0),

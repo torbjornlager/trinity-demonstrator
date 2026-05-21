@@ -3,7 +3,7 @@
 %   A server actor modelling a fridge. Responds to store/3 and take/3 messages.
 %
 %	@param	FoodList - list of food items currently in the fridge
-%	@author Adapted from an example in Erlang textbook by Fred Hebert
+%	@author Adapted from an example in an Erlang textbook by Fred Hebert
 
 fridge(FoodList0) :-
     receive({

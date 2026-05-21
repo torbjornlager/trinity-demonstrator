@@ -271,6 +271,8 @@ builtin_goal_policy(parallel(_), parallel, actor).
 builtin_goal_policy(node(_), node_control, actor).
 builtin_goal_policy(node(_, _), node_control, actor).
 
+builtin_goal_policy(node_setting(_, _), node_info, relation).
+
 
 builtin_route_family(call, stateless_api).
 builtin_route_family(toplevel_spawn, semistateful_api).
@@ -467,3 +469,8 @@ builtin_family_spec(node_control,
                     "Start local Web Prolog nodes from Prolog code.",
                     ["node/1", "node/2"],
                     [actor]).
+builtin_family_spec(node_info,
+                    "Node introspection",
+                    "Expose publicly readable runtime settings of the node.",
+                    ["node_setting/2"],
+                    [relation, isobase, isotope, actor]).
