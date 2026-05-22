@@ -59,7 +59,14 @@ start_n3 :-
                                ws_endpoint_overrides:[
                                    'https://n3.elfenbenstornet.se'-'ws://wp_n3:3053/ws',
                                    'https://n4.elfenbenstornet.se'-'ws://wp_n4:3055/ws'
-                               ]
+                               ],
+                               %  Give each browser tab a distinct anon
+                               %  principal id so per-principal limits
+                               %  (max_ws_actors_per_principal etc.) bind
+                               %  per visitor instead of as a single
+                               %  shared bucket.  See node_auth.pl:
+                               %  ws_principal/2.
+                               anon_per_ws_connection:true
                            })),
     start_n3_service_bootstrap,
     assertz(start_n3_done).

@@ -26,6 +26,7 @@ and ownership.
 */
 
 :- use_module(library(error)).
+:- use_module(library(random)).
 :- use_module(library(settings)).
 
 :- use_module(node_client, [text_to_string/2]).
@@ -93,8 +94,54 @@ request_principal(Request, Principal) :-
 
 
 %!  ws_principal(+Request, -Principal) is det.
+%
+%   Resolve the principal for a WebSocket handshake.  Same as
+%   request_principal/2 by default, but when the node's
+%   `anon_per_ws_connection` runtime value is true the shared
+%   `anonymous` principal is replaced with a fresh per-connection
+%   `anon:<id>` principal.
+%
+%   Why per-connection: with the default shared anonymous principal,
+%   all unauthenticated browser visitors collapse to one identity, so
+%   per-principal limits like max_ws_actors_per_principal degenerate
+%   into a single shared bucket (one visitor saturates the cap for
+%   everyone), audit log rows lose meaning, and there is no way to
+%   rate-shape a specific misbehaving client.  Individualising the
+%   id at handshake time restores per-tab isolation without
+%   requiring an authentication UX.
+%
+%   The id is server-generated and only meaningful for the lifetime
+%   of the WebSocket connection.  No cookie, no signing.  A
+%   sufficiently-trusted client cannot forge another tab's id
+%   because the id never leaves the server for the wire identity --
+%   only the WS connection itself binds an actor to its principal.
 ws_principal(Request, Principal) :-
-    request_principal(Request, Principal).
+    request_principal(Request, Base),
+    (   ws_should_individualize_anon(Base)
+    ->  individualize_anon_principal(Principal)
+    ;   Principal = Base
+    ).
+
+ws_should_individualize_anon(anonymous) :-
+    catch(current_node_value(anon_per_ws_connection, true), _, fail),
+    !.
+
+individualize_anon_principal(principal{
+                                id:Id,
+                                capabilities:Capabilities,
+                                unknown:false
+                            }) :-
+    auth_mode(Mode),
+    anonymous_capabilities(Mode, Capabilities),
+    fresh_anon_principal_id(Id).
+
+fresh_anon_principal_id(Id) :-
+    %  64 bits of random in lowercase hex, prefixed `anon:` so the
+    %  audit / dev paths can recognise it as an anonymous identity.
+    %  Not cryptographic; only collision-resistance and forge-
+    %  resistance-by-non-disclosure matter here.
+    random_between(0, 18446744073709551615, N),
+    format(string(Id), "anon:~|~`0t~16r~16+", [N]).
 
 
 %!  principal_id(+Principal, -PrincipalId) is det.

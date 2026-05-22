@@ -59,7 +59,10 @@ start_n4 :-
                                ws_endpoint_overrides:[
                                    'https://n3.elfenbenstornet.se'-'ws://wp_n3:3053/ws',
                                    'https://n4.elfenbenstornet.se'-'ws://wp_n4:3055/ws'
-                               ]
+                               ],
+                               %  Per-tab anon principal -- see start_n3.pl
+                               %  and node_auth.pl ws_principal/2.
+                               anon_per_ws_connection:true
                            })),
     start_n4_service_bootstrap,
     assertz(start_n4_done).

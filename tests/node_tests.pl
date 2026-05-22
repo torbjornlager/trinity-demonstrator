@@ -2331,6 +2331,51 @@ test(ws_origin_allowlist_accepts_listed_origin) :-
         retractall(node_runtime_state:node_runtime(_, _))
     ).
 
+
+%  ------------- Per-WS-connection anonymous identity -----------------
+%
+%  Pins the behaviour of ws_principal/2 when the node has
+%  `anon_per_ws_connection: true` in its runtime config.  Without
+%  the toggle, anonymous browser visitors share a single principal
+%  id and per-principal limits become a shared bucket; with it
+%  each handshake gets a fresh anon:<id> principal.
+
+test(ws_principal_anonymous_when_per_connection_disabled) :-
+    %  Default behaviour: ws_principal == anonymous (shared).
+    retractall(node_runtime_state:node_runtime(_, _)),
+    node_auth:ws_principal([], Principal),
+    assertion(Principal == anonymous).
+
+test(ws_principal_individualised_when_per_connection_enabled) :-
+    setup_call_cleanup(
+        (
+            retractall(node_runtime_state:node_runtime(_, _)),
+            register_node_runtime(9998, node_runtime{
+                url:"https://n3.example",
+                auth:open,
+                anon_per_ws_connection:true
+            })
+        ),
+        node_runtime_state:with_node_port_context(9998,
+            (
+                node_auth:ws_principal([], P1),
+                node_auth:ws_principal([], P2)
+            )),
+        retractall(node_runtime_state:node_runtime(_, _))
+    ),
+    %  Both are individualised principals, not the shared `anonymous`.
+    assertion(is_dict(P1, principal)),
+    assertion(is_dict(P2, principal)),
+    %  Two consecutive resolutions yield distinct ids.
+    principal_id(P1, Id1),
+    principal_id(P2, Id2),
+    assertion(Id1 \== Id2),
+    %  Ids carry the anon:<hex> form.
+    assertion(string_concat("anon:", _, Id1)),
+    %  Capabilities match open-mode anonymous (execute + public_read).
+    principal_capabilities(P1, Caps),
+    assertion(memberchk(execute, Caps)).
+
 test(request_principal_accepts_internal_transport_headers_from_private_peer) :-
     request_principal([
         peer(ip(172, 18, 0, 5)),
