@@ -13,6 +13,9 @@
     request_principal/2,
     set_dev_auth_config/2
 ]).
+:- use_module('../node_capabilities.pl', [
+    capability_granted/2
+]).
 :- use_module('../node_profile_policy.pl', [
     profile_check_route/1,
     profile_check_goal/2,
@@ -2252,6 +2255,28 @@ test(request_principal_accepts_internal_transport_headers_from_loopback_peer) :-
     principal_capabilities(Principal, Capabilities),
     assertion(PrincipalId == "node:https://n4.example"),
     assertion(memberchk(internal_transport, Capabilities)).
+
+test(internal_transport_does_not_imply_execute) :-
+    %  Regression pin: holding internal_transport alone must not
+    %  grant the execute capability.  Cross-node peers always send
+    %  the explicit pair "execute,internal_transport" in the
+    %  X-Web-Prolog-Capabilities header (actor.pl:561), so this
+    %  combo is what production traffic uses.  The pin matters
+    %  because require_source_options_access/2 reduces to
+    %  require_execution_access/1, which in turn requires the
+    %  execute capability via capability_granted/2.  If a future
+    %  change ever made internal_transport imply execute (e.g. by
+    %  adding a clause to capability_granted/2 in
+    %  node_capabilities.pl), the per-option capability gates
+    %  for load_text / load_list / load_predicates / load_uri would
+    %  weaken silently for internal_transport peers.
+    assertion(\+ capability_granted([internal_transport], execute)),
+    %  admin still implies everything (intentional).
+    assertion(capability_granted([admin], execute)),
+    %  The explicit combo production traffic carries works as expected.
+    assertion(capability_granted([execute, internal_transport], execute)),
+    %  And the capability check is correctly self-identifying.
+    assertion(capability_granted([internal_transport], internal_transport)).
 
 test(request_principal_accepts_internal_transport_headers_from_private_peer) :-
     request_principal([
