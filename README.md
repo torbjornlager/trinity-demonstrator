@@ -80,6 +80,10 @@ swipl -q -s test.pl -g test -t halt
 
 ### Policy and Security
 
+- [SECURITY_REPORT.md](SECURITY_REPORT.md)
+  Consolidated description of the demonstrator's security posture:
+  threat model, defences, known limitations, and what would change
+  for a production deployment.
 - [AUTH_AND_PROFILE.md](docs/policy/AUTH_AND_PROFILE.md)
   Canonical summary of authentication, authorization, profile enforcement, and ownership.
 - [PROFILE_MATRIX.md](PROFILE_MATRIX.md)
