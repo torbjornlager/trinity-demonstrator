@@ -59,7 +59,13 @@ default_node_option_state(state{
     profile:actor,
     auth:open,
     dev_principal:dev,
-    dev_capabilities:[admin],
+    %  Safe-by-default: dev capabilities used to be [admin], which
+    %  silently gave full admin to every loopback request on
+    %  auth(dev) nodes.  [execute] matches the open-mode default
+    %  surface; admin must be opted into explicitly via
+    %  dev_capabilities([admin]).  See node_auth.pl's
+    %  request_dev_principal/2 docstring for the deployment caveat.
+    dev_capabilities:[execute],
     principal_policies_rev:[],
     timeout:default,
     cache_size:default,

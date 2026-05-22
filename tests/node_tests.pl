@@ -164,7 +164,7 @@ stop_node_server(Port) :-
 current_dev_auth_config(PrincipalId, Capabilities) :-
     node_auth:dev_auth_config(PrincipalId, Capabilities),
     !.
-current_dev_auth_config("dev", [admin]).
+current_dev_auth_config("dev", [execute]).
 
 record_walked_goal(Goal) :-
     assertz(walked_goal(Goal)).
@@ -2277,6 +2277,59 @@ test(internal_transport_does_not_imply_execute) :-
     assertion(capability_granted([execute, internal_transport], execute)),
     %  And the capability check is correctly self-identifying.
     assertion(capability_granted([internal_transport], internal_transport)).
+
+%  ----------------- WebSocket Origin policy -----------------------
+%
+%  Pins the behaviour of ws_require_allowed_origin/1 in node_ws.pl.
+%  Without an Origin check, any web page on any origin can open a
+%  WebSocket to the node and drive its full actor surface from a
+%  victim's browser (no CORS protection on WS handshakes).
+
+test(ws_origin_no_header_allowed) :-
+    %  Native (non-browser) clients -- including the cross-node
+    %  WebSocket reader in actor.pl -- do not set Origin and must
+    %  be accepted.
+    node_ws:ws_require_allowed_origin([host("n3.example.com")]).
+
+test(ws_origin_same_origin_allowed) :-
+    node_ws:ws_require_allowed_origin([
+        host("n3.example.com"),
+        x_forwarded_proto("https"),
+        origin("https://n3.example.com")
+    ]).
+
+test(ws_origin_trailing_slash_normalized) :-
+    node_ws:ws_require_allowed_origin([
+        host("n3.example.com"),
+        x_forwarded_proto("https"),
+        origin("https://n3.example.com/")
+    ]).
+
+test(ws_origin_cross_origin_rejected,
+     [throws(error(permission_error(open, websocket_origin, _), _))]) :-
+    node_ws:ws_require_allowed_origin([
+        host("n3.example.com"),
+        x_forwarded_proto("https"),
+        origin("https://evil.example.com")
+    ]).
+
+test(ws_origin_allowlist_accepts_listed_origin) :-
+    setup_call_cleanup(
+        (
+            retractall(node_runtime_state:node_runtime(_, _)),
+            register_node_runtime(9999, node_runtime{
+                url:"https://n3.example",
+                ws_allowed_origins:["https://partner.example.com"]
+            })
+        ),
+        node_runtime_state:with_node_port_context(9999,
+            node_ws:ws_require_allowed_origin([
+                host("n3.example.com"),
+                x_forwarded_proto("https"),
+                origin("https://partner.example.com")
+            ])),
+        retractall(node_runtime_state:node_runtime(_, _))
+    ).
 
 test(request_principal_accepts_internal_transport_headers_from_private_peer) :-
     request_principal([

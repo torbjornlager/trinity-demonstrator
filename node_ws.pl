@@ -146,6 +146,7 @@ ws_handler(Request) :-
     with_node_request_context(
         Request,
         catch((   profile_check_route(ws),
+                  ws_require_allowed_origin(Request),
                   ws_principal(Request, Principal),
                   require_route_access(Principal, ws)
               ),
@@ -161,6 +162,91 @@ ws_handler(Request) :-
         )
     ;   ws_profile_error_reply(Error)
     ).
+
+
+%!  ws_require_allowed_origin(+Request) is det.
+%
+%   Validate the WebSocket handshake Origin header against the
+%   node's configured allowlist (and same-origin against the
+%   request's Host).  Browsers do not apply CORS to WebSocket
+%   upgrade requests, so the receiving server is responsible for
+%   restricting which web pages may open a connection to /ws --
+%   without this check, any page on the web can drive this node's
+%   full actor surface from a visitor's browser.
+%
+%   Policy:
+%
+%     - No Origin header present: accept.  Native (non-browser)
+%       clients -- including the cross-node WebSocket reader in
+%       actor.pl -- do not set Origin, and locking them out is not
+%       the intent of this check.
+%     - Origin matches the request's Host (same-origin): accept.
+%       This is the typical browser case where a portal hosted at
+%       n3.example.com opens wss://n3.example.com/ws.
+%     - Origin appears in the node's `ws_allowed_origins` startup
+%       option (a list of "scheme://host[:port]" entries): accept.
+%       Use this to allow specific cross-origin browser clients.
+%     - Otherwise: reject with a permission_error.
+ws_require_allowed_origin(Request) :-
+    (   ws_request_origin_value(Request, Origin)
+    ->  (   ws_origin_allowed(Origin, Request)
+        ->  true
+        ;   throw(error(permission_error(open, websocket_origin, Origin),
+                        context(node_ws:ws_require_allowed_origin/1,
+                                'WebSocket Origin not allowed')))
+        )
+    ;   true
+    ).
+
+ws_request_origin_value(Request, Origin) :-
+    memberchk(origin(Origin0), Request),
+    text_to_string(Origin0, Origin1),
+    normalize_space(string(Origin2), Origin1),
+    Origin2 \== "",
+    Origin = Origin2.
+
+ws_origin_allowed(Origin, _Request) :-
+    catch(current_node_value(ws_allowed_origins, Allowed), _, fail),
+    is_list(Allowed),
+    member(AllowedEntry, Allowed),
+    normalize_origin_text(AllowedEntry, AllowedNorm),
+    normalize_origin_text(Origin, OriginNorm),
+    AllowedNorm == OriginNorm,
+    !.
+ws_origin_allowed(Origin, Request) :-
+    %  Same-origin fallback against the Host header.  Accepts both
+    %  bare "host:port" and "scheme://host[:port]" Host values.
+    ws_request_host_origin(Request, HostOrigin),
+    normalize_origin_text(Origin, OriginNorm),
+    normalize_origin_text(HostOrigin, HostNorm),
+    OriginNorm == HostNorm,
+    !.
+
+ws_request_host_origin(Request, HostOrigin) :-
+    memberchk(host(HostValue), Request),
+    text_to_string(HostValue, HostString),
+    (   sub_string(HostString, _, _, _, "://")
+    ->  HostOrigin = HostString
+    ;   ws_request_scheme(Request, Scheme),
+        format(string(HostOrigin), "~w://~w", [Scheme, HostString])
+    ).
+
+ws_request_scheme(Request, Scheme) :-
+    memberchk(x_forwarded_proto(Proto), Request),
+    !,
+    text_to_string(Proto, Scheme).
+ws_request_scheme(_, "http").
+
+normalize_origin_text(Value0, Norm) :-
+    text_to_string(Value0, S1),
+    normalize_space(string(S2), S1),
+    string_lower(S2, S3),
+    %  Strip a trailing slash so "https://host" == "https://host/".
+    (   string_concat(S4, "/", S3)
+    ->  Norm = S4
+    ;   Norm = S3
+    ).
+
 
 %!  ws_main(+NodePort, +Principal, +ClientMeta, +WebSocket) is det.
 %

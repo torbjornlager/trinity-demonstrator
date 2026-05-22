@@ -374,9 +374,32 @@ default_open_capabilities([
 
 default_dev_principal_id("dev").
 
-default_dev_capabilities([admin]).
+%  Default dev capabilities used to be [admin].  That was a foot-gun
+%  because `admin` should never be the implicit default for a mode
+%  that grants by peer IP alone -- launching `auth(dev)` without
+%  explicitly setting `dev_capabilities([...])` then gave every
+%  loopback request full admin.  Defaulted to [execute] so the
+%  dev-auth path is safe-by-default; admin must be opted into
+%  explicitly via the `dev_capabilities([admin])` startup option.
+default_dev_capabilities([execute]).
 
 
+%!  request_dev_principal(+Request, -Principal) is semidet.
+%
+%   Loopback shortcut used only when the node was started with
+%   `auth(dev)`.  Grants the configured dev principal id and
+%   capabilities to any request whose HTTP peer address is local.
+%
+%   Security note: "peer" is whatever the HTTP layer sees as the
+%   TCP peer.  If a node is fronted by a reverse proxy running on
+%   the same host (e.g. Caddy/nginx on 127.0.0.1 -> SWI HTTP on
+%   127.0.0.1), the peer is loopback for *every* external client
+%   and `auth(dev)` would hand the dev principal to the entire
+%   internet.  Unlike `internal_transport` (see
+%   request_internal_transport_trusted/1), this path does NOT
+%   require an additional defence-in-depth header.  `auth(dev)`
+%   should therefore only be used for direct loopback access -- not
+%   in conjunction with a same-host reverse proxy.
 request_dev_principal(Request, principal{
                          id:PrincipalId,
                          capabilities:Capabilities
