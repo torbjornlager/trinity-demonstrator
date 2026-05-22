@@ -10,3 +10,12 @@
 {"at":"2026-05-02T11:28:39Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714119.933929}
 {"at":"2026-05-02T11:34:14Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714454.567261}
 {"at":"2026-05-02T11:34:14Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1777714454.70424}
+{"at":"2026-05-22T10:53:48Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440028.36581}
+{"at":"2026-05-22T10:53:48Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440028.373077}
+{"at":"2026-05-22T10:53:48Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440028.510727}
+{"at":"2026-05-22T10:54:29Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440069.690212}
+{"at":"2026-05-22T10:54:29Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440069.696971}
+{"at":"2026-05-22T10:54:29Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440069.83272}
+{"at":"2026-05-22T10:56:15Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440175.398114}
+{"at":"2026-05-22T10:56:15Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440175.404789}
+{"at":"2026-05-22T10:56:15Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1779440175.537949}
