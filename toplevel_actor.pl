@@ -27,6 +27,7 @@ The actor speaks a small command protocol over mailbox messages:
 Replies are sent as `success/failure/error` terms enriched with `Pid`.
 */
 
+:- use_module(node_controller, []).
 :- use_module(actor, [
     spawn/3,
     self/1,
@@ -39,7 +40,7 @@ Replies are sent as `success/failure/error` terms enriched with `Pid`.
     localhost_node/1,
     remote_request_spawn/3,
     remote_send_command/2,
-    register_remote_proxy/2,
+    register_remote_pid/2,
     op(200, xfx, @)
 ]).
 
@@ -94,14 +95,31 @@ toplevel_spawn(RemotePid@NodeURL, Options0) :-
         options: RemoteOptionsAtom
     }, RemotePid),
     CompoundPid = RemotePid@NodeURL,
-    spawn(remote_toplevel_proxy(NodeURL, RemotePid, Target),
-          LocalPid, [link(false)]),
-    register_remote_proxy(CompoundPid, LocalPid),
+    %  Step 6: no per-pid proxy actor.  Install monitor + link first,
+    %  then register the target (the readiness marker for inbound
+    %  dispatch), then flush.  See spawn_remote/4 in actor.pl for
+    %  the rationale.
     maybe_register_toplevel_name(Options, CompoundPid),
     (   option(monitor(true), Options)
-    ->  assertz(actor:monitor(Self, CompoundPid, CompoundPid))
+    ->  assertz(actor:monitor(Self, CompoundPid, CompoundPid)),
+        node_controller:add_remote_monitor(Self, CompoundPid, CompoundPid)
     ;   true
-    ).
+    ),
+    %  Mirror the link-default behavior of actor.pl's remote spawn
+    %  path.  Without this, a cross-node toplevel_spawn never
+    %  installs the parent->child link, so when the parent dies,
+    %  stop/2 has no link record to walk and the remote toplevel is
+    %  orphaned on the target node.  Documented contract:
+    %  manual.html:204 / manual.html:406 say link defaults to true
+    %  and toplevel_spawn/2 accepts all spawn/3 options.
+    option(link(Link), Options, true),
+    (   Link == true
+    ->  assertz(actor:link(Self, CompoundPid)),
+        node_controller:add_remote_link(Self, CompoundPid)
+    ;   true
+    ),
+    actor:register_remote_pid(CompoundPid, Target),
+    actor:flush_pending_for_pid(NodeURL, RemotePid).
 
 toplevel_spawn(Pid, Options0) :-
     strip_module(Options0, SourceModule, Options),
@@ -297,7 +315,17 @@ toplevel_next(Pid, Options) :-
 
 
 %!  toplevel_halt(+Pid, -Reply) is det.
-
+%
+%   Halt an idle toplevel session and wait for its reply.  Routes
+%   cross-node halts through actor:remote_request_halt/3 so that the
+%   call no longer hangs when Pid is a compound RemoteId@NodeURL
+%   (the local proxy's receive loop does not handle '$halt'/1, and
+%   the remote WS layer needs a toplevel_halt action which is now
+%   wired in node_ws.pl).
+toplevel_halt(RemoteId@NodeURL, Reply) :-
+    \+ localhost_node(NodeURL),
+    !,
+    actor:remote_request_halt(NodeURL, RemoteId, Reply).
 toplevel_halt(Pid, Reply) :-
     self(Self),
     send(Pid, '$halt'(Self)),
@@ -324,107 +352,11 @@ toplevel_abort(Pid) :-
     ).
 
 
-                /*******************************
-                *      REMOTE TOPLEVEL         *
-                *******************************/
-
-%!  remote_toplevel_proxy(+NodeURL, +RemotePid, +Target) is det.
-%
-%   Goal for a local proxy actor that represents a remote toplevel.
-%
-%   The remote toplevel already exists (RemotePid is assigned by the remote
-%   node). Incoming WS events are routed to this proxy by actor.pl's shared
-%   connection manager as '$ws_remote_event'(Dict) messages.
-%
-%   The proxy receives local '$call'/'$next'/'$stop' requests, translates
-%   them to WS commands on the shared connection, and forwards remote events
-%   to Target.
-
-remote_toplevel_proxy(NodeURL, RemotePid, Target) :-
-    CompoundPid = RemotePid@NodeURL,
-    ExitReason = reason(done),
-    LimitBox = limit(10 000 000 000),
-    catch(
-        remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox),
-        _,
-        true
-    ),
-    arg(1, ExitReason, DownReason),
-    retractall(actor:remote_pid_proxy(CompoundPid, _)),
-    forall(
-        retract(actor:monitor(Other, CompoundPid, Ref)),
-        send(Other, down(Ref, CompoundPid, DownReason))
-    ).
-
-%!  remote_proxy_loop(+NodeURL, +RemotePid, +CompoundPid, +Target,
-%!                    +ExitReason, +LimitBox) is det.
-%
-%   Receive local toplevel requests and routed remote WS events.
-remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox) :-
-    receive({
-        '$call'(Goal, Options) ->
-            option(template(Template0), Options, Goal),
-            goal_template_to_wire_atoms(Goal, Template0, GoalAtom, TemplateAtom),
-            option(limit(Limit), Options, 10 000 000 000),
-            nb_setarg(1, LimitBox, Limit),
-            option(offset(Offset), Options, 0),
-            option(once(Once), Options, false),
-            (   catch(remote_send_command(NodeURL, json{
-                command:  toplevel_call,
-                pid:      RemotePid,
-                goal:     GoalAtom,
-                template: TemplateAtom,
-                format:   prolog,
-                limit:    Limit,
-                offset:   Offset,
-                once:     Once
-            }), _, fail)
-            ->  remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox)
-            ;   nb_setarg(1, ExitReason, connection_closed)
-            )
-        ;
-        '$next'(Options2) ->
-            arg(1, LimitBox, CurrentLimit),
-            option(limit(Limit2), Options2, CurrentLimit),
-            nb_setarg(1, LimitBox, Limit2),
-            (   catch(remote_send_command(NodeURL, json{
-                command: toplevel_next,
-                pid:     RemotePid,
-                limit:   Limit2
-            }), _, fail)
-            ->  remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox)
-            ;   nb_setarg(1, ExitReason, connection_closed)
-            )
-        ;
-        '$stop' ->
-            (   catch(remote_send_command(NodeURL, json{
-                command: toplevel_stop,
-                pid:     RemotePid
-            }), _, fail)
-            ->  remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox)
-            ;   nb_setarg(1, ExitReason, connection_closed)
-            )
-        ;
-        '$ws_remote_event'(Dict) ->
-            (   ws_json_down_reason(Dict, Reason)
-            ->  nb_setarg(1, ExitReason, Reason)
-            ;   ws_json_is_io_output(Dict)
-            ->  remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox)
-            ;   ws_json_to_actor_event(Dict, CompoundPid, Event)
-            ->  send(Target, Event),
-                remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox)
-            ;   remote_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason, LimitBox)
-            )
-        ;
-        '$ws_remote_close' ->
-            nb_setarg(1, ExitReason, connection_closed)
-        ;
-        '$kill'(Reason) ->
-            term_to_wire_atom(Reason, ReasonAtom),
-            catch(remote_send_command(NodeURL, json{
-                command: exit,
-                pid: RemotePid,
-                reason: ReasonAtom
-            }), _, true),
-            nb_setarg(1, ExitReason, Reason)
-    }).
+%  Step 6c: the local proxy actor for remote toplevels
+%  (remote_toplevel_proxy/3, remote_proxy_loop/6, and
+%  remote_toplevel_proxy_finalize/4) has been removed.  Cross-node
+%  toplevel I/O now flows through the controller-driven dispatch in
+%  actor.pl: `send/2` for remote pids routes `$call/$next/$stop` as
+%  wire messages, `exit/2` routes via safe_remote_kill_send/4, and
+%  the controller's remote_target_/3 + remote_monitor_/3 tables drive
+%  event delivery on the local side.

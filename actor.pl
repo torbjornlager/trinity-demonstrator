@@ -37,8 +37,10 @@
      self_node_url/1,        % -URL
      canonical_pid/2,        % +Pid0, -Pid
      remote_request_spawn/3, % +NodeURL, +Command, -RemotePid
+     remote_request_halt/3,  % +NodeURL, +RemotePid, -Reply
      remote_send_command/2,  % +NodeURL, +Command
-     register_remote_proxy/2,% +CompoundPid, +LocalProxyPid
+     register_remote_pid/2,  % +CompoundPid, +Target
+     flush_pending_for_pid/2,% +NodeURL, +RemotePid
      resolve_thread/2,       % +Pid, -ThreadId
      node_setting/2,         % ?Key, ?Value
 
@@ -112,6 +114,8 @@ The implementation favors readability and explicitness over feature breadth.
 ]).
 :- use_module(public_goal_guard, [rewrite_goal_if_needed/3]).
 :- use_module(node_builtin_policy, [builtin_family_enabled/2]).
+:- use_module(node_log, [log_event/1]).
+:- use_module(node_controller, []).
 
 :- meta_predicate
     spawn(:),
@@ -153,12 +157,6 @@ Runtime bookkeeping:
 :- dynamic main_pid/1.
 :- thread_local io_target/1.
 
-%!  remote_pid_proxy(?CompoundPid, ?LocalPid) is nondet.
-%
-%   Registry mapping a remote compound Pid of the form `RemoteId@NodeURL`
-%   to the local proxy actor Pid that handles communication with the remote
-%   process over WebSocket. Retracted when the proxy actor exits.
-:- dynamic remote_pid_proxy/2.
 :- dynamic ws_connection/4.
 :- dynamic ws_pending_event/3.
 
@@ -172,6 +170,57 @@ best_effort_fail(Goal) :-
 
 best_effort_if_gone(Goal) :-
     catch(Goal, error(existence_error(_,_), _), true).
+
+%!  safe_remote_kill_send(+Node, +Pid, +ReasonAtom, +Command) is det.
+%
+%   Send a cross-node kill (`exit`) Command to Node over the shared
+%   per-node WebSocket. Unlike best_effort/1, this helper makes failures
+%   observable: on any I/O / connection error it logs a structured
+%   ``remote_exit_failed`` event via node_log:log_event/1, sleeps briefly,
+%   retries once, and on a second failure logs a terminal event that will
+%   surface in /admin/runtime's recent_events. The helper never raises an
+%   exception because callers run inside another actor's cleanup chain
+%   (see exit/2 / stop/2) where a throw would corrupt the cleanup.
+safe_remote_kill_send(Node, Pid, ReasonAtom, Command) :-
+    catch(remote_send_command(Node, Command), Error1, true),
+    (   var(Error1)
+    ->  true
+    ;   log_remote_exit_failure(Node, Pid, ReasonAtom, Error1, false),
+        catch(sleep(0.05), _, true),
+        catch(remote_send_command(Node, Command), Error2, true),
+        (   var(Error2)
+        ->  true
+        ;   log_remote_exit_failure(Node, Pid, ReasonAtom, Error2, true)
+        )
+    ).
+
+log_remote_exit_failure(Node, Pid, ReasonAtom, Error, Terminal) :-
+    catch(
+        ( format(string(PidText), '~w', [Pid]),
+          format(string(NodeText), '~w', [Node]),
+          format(string(ErrorText), '~q', [Error]),
+          (   Terminal == true
+          ->  Status = "terminal"
+          ;   Status = "transient"
+          ),
+          format(string(Summary),
+                 'remote exit send ~w (pid=~w node=~w)',
+                 [Status, PidText, NodeText]),
+          log_event(_{
+              event_type: "remote_exit_failed",
+              action: "exit",
+              pid: PidText,
+              node: NodeText,
+              reason: ReasonAtom,
+              error: ErrorText,
+              status: Status,
+              terminal: Terminal,
+              summary: Summary
+          })
+        ),
+        _,
+        true
+    ).
 
 spawn(Goal) :-
     spawn(Goal, _Pid).
@@ -293,8 +342,8 @@ prepare_public_spawn(Goal, Options0, Options) :-
 %!  spawn_remote(:Goal, -Pid, +Node0, +Options) is det.
 %
 %   Spawn a remote actor over WebSocket and return a compound pid `Id@Node`.
-%   A local proxy actor is created so regular send/exit/monitor operations
-%   continue to work through actor:send/2 and actor:exit/2.
+%   Cross-node send/exit/monitor for the returned pid is handled by the
+%   node_controller's routing tables (no per-pid local proxy actor).
 spawn_remote(Goal, RemotePid@NodeURL, Node0, Options) :-
     self(Self),
     node_url_atom(Node0, NodeURL),
@@ -309,19 +358,27 @@ spawn_remote(Goal, RemotePid@NodeURL, Node0, Options) :-
         options: RemoteOptionsAtom
     }, RemotePid),
     CompoundPid = RemotePid@NodeURL,
-    spawn(remote_actor_proxy(NodeURL, RemotePid, Self),
-          LocalProxyPid, [link(false)]),
-    register_remote_proxy(CompoundPid, LocalProxyPid),
+    %  Step 6: no per-pid proxy actor.  Set up monitor and link
+    %  FIRST, then register_remote_pid (which sets the controller's
+    %  target row -- the readiness marker for inbound dispatch),
+    %  then flush any events the WS reader buffered during the
+    %  spawn round-trip.  Ordering matters: target last means a
+    %  buffered down arriving in the race window has the monitor
+    %  entries it needs by the time flush replays it.
     option(monitor(Monitor), Options, false),
     (   Monitor == true
-    ->  assertz(monitor(Self, CompoundPid, CompoundPid))
+    ->  assertz(monitor(Self, CompoundPid, CompoundPid)),
+        node_controller:add_remote_monitor(Self, CompoundPid, CompoundPid)
     ;   true
     ),
     option(link(Link), Options, true),
     (   Link == true
-    ->  assertz(link(Self, CompoundPid))
+    ->  assertz(link(Self, CompoundPid)),
+        node_controller:add_remote_link(Self, CompoundPid)
     ;   true
-    ).
+    ),
+    register_remote_pid(CompoundPid, Self),
+    flush_pending_for_pid(NodeURL, RemotePid).
 
 %!  remote_spawn_options(+Options, +SourceModule, -RemoteOptions) is det.
 %
@@ -370,6 +427,36 @@ remote_wait_spawned(SpawnQueue, RemotePid) :-
     ;   remote_wait_spawned(SpawnQueue, RemotePid)
     ).
 
+
+%!  remote_request_halt(+NodeURL, +RemotePid, -Reply) is det.
+%
+%   Send a toplevel_halt command for RemotePid over the shared per-node
+%   WebSocket and synchronously wait for the corresponding halted event.
+%   The matching wire response is produced by node_ws.pl's
+%   ws_action_toplevel_halt/3 and routed back here by
+%   remote_ws_dispatch/3 (which now also recognizes type:"halted").
+remote_request_halt(NodeURL, RemotePid, Reply) :-
+    ws_mutex(NodeURL, ws_spawn_lock, Mutex),
+    with_mutex(Mutex,
+               ( remote_connection(NodeURL, Socket, SpawnQueue),
+                 ws_send_json(Socket, json{
+                     command: toplevel_halt,
+                     pid: RemotePid
+                 }),
+                 remote_wait_halted(SpawnQueue, RemotePid, Reply)
+               )).
+
+remote_wait_halted(SpawnQueue, RemotePid, Reply) :-
+    catch(thread_get_message(SpawnQueue, Message),
+          Error,
+          throw(error(remote_halt_failed(Error),
+                      context(actor:remote_request_halt/3,
+                              'failed waiting for halted event')))),
+    (   Message = halted(RemotePid, Reply)
+    ->  true
+    ;   remote_wait_halted(SpawnQueue, RemotePid, Reply)
+    ).
+
 %!  remote_send_command(+NodeURL, +Command) is det.
 %
 %   Send a JSON command over the shared per-node WebSocket connection.
@@ -384,13 +471,49 @@ remote_send_command(NodeURL, Command) :-
 %
 %   Register local proxy for a remote pid and immediately flush any buffered
 %   events that arrived before registration completed.
-register_remote_proxy(RemotePid@NodeURL, LocalProxyPid) :-
-    assertz(remote_pid_proxy(RemotePid@NodeURL, LocalProxyPid)),
-    flush_pending_remote_events(NodeURL, RemotePid, LocalProxyPid).
+%!  register_remote_pid(+CompoundPid, +Target) is det.
+%
+%   Step 6 replacement for register_remote_proxy/2.  Records
+%   CompoundPid -> Target in the node_controller table.  Does NOT
+%   flush pending events: callers must finish their controller setup
+%   (monitor/link installation) before calling flush_pending_for_pid/2
+%   so that any buffered down events have the correct monitor entries
+%   to deliver against.
+register_remote_pid(RemotePid@NodeURL, Target) :-
+    node_controller:register_remote_target(RemotePid@NodeURL, Target).
 
-flush_pending_remote_events(NodeURL, RemotePid, LocalProxyPid) :-
+
+%!  flush_pending_for_pid(+NodeURL, +RemotePid) is det.
+%
+%   Re-dispatch every WS event that the reader buffered for
+%   RemotePid before the local side finished registering the pid.
+%   Each buffered dict goes through remote_per_pid_dispatch/2 so
+%   down events fire monitors via the controller and other events
+%   are forwarded to the controller-registered target.
+flush_pending_for_pid(NodeURL, RemotePid) :-
     forall(retract(ws_pending_event(NodeURL, RemotePid, Dict)),
-           send(LocalProxyPid, '$ws_remote_event'(Dict))).
+           remote_per_pid_dispatch(NodeURL, Dict)).
+
+
+%!  remote_per_pid_dispatch(+NodeURL, +Dict) is det.
+%
+%   Per-pid dispatch shared by remote_ws_dispatch/3 (the inline
+%   reader path) and flush_pending_for_pid/2 (the buffered-event
+%   replay path).
+remote_per_pid_dispatch(NodeURL, Dict) :-
+    (   remote_event_pid(Dict, RemotePid)
+    ->  CompoundPid = RemotePid@NodeURL,
+        (   get_dict(type, Dict, "down")
+        ->  deliver_remote_down_via_controller(CompoundPid, Dict)
+        ;   ws_json_is_io_output(Dict)
+        ->  true        % suppress remote I/O outputs -- see remote_ws_dispatch/3
+        ;   node_controller:current_remote_target(CompoundPid, Target),
+            ws_json_to_actor_event(Dict, CompoundPid, Event)
+        ->  send(Target, Event)
+        ;   true
+        )
+    ;   true
+    ).
 
 %!  remote_connection(+NodeURL, -Socket, -SpawnQueue) is det.
 %
@@ -411,7 +534,18 @@ remote_connection_locked(NodeURL, Socket, SpawnQueue) :-
         internal_transport_ws_options(WSOptions),
         http_open_websocket(WsURL, Socket, WSOptions),
         message_queue_create(SpawnQueue),
-        thread_create(remote_ws_reader(NodeURL, Socket, SpawnQueue), ReaderThread, [
+        %  Capture the calling thread's node port so the reader thread
+        %  inherits the same logging scope as the rest of the local
+        %  node's threads -- without this, any log_event from
+        %  remote_ws_dispatch (e.g. future telemetry) would fall through
+        %  to the `global` scope and not appear in /admin/runtime.
+        (   current_node_port(CallerPort)
+        ->  ReaderEntry = with_node_port_context(
+                              CallerPort,
+                              remote_ws_reader(NodeURL, Socket, SpawnQueue))
+        ;   ReaderEntry = remote_ws_reader(NodeURL, Socket, SpawnQueue)
+        ),
+        thread_create(ReaderEntry, ReaderThread, [
             detached(true)
         ]),
         assertz(ws_connection(NodeURL, Socket, ReaderThread, SpawnQueue))
@@ -452,14 +586,63 @@ remote_ws_read_loop(NodeURL, Socket, SpawnQueue) :-
     ).
 
 remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
-    (   get_dict(type, Dict, "spawned"),
+    (   %  Step 6c: down events handled entirely by the controller.
+        %  No more proxy hand-off.  Discriminator: if a target is
+        %  registered for the pid, the local side has completed its
+        %  setup and we can deliver now; otherwise we are racing
+        %  ahead of the spawn caller's register_remote_pid -- buffer
+        %  the dict and let flush_pending_for_pid replay it later.
+        get_dict(type, Dict, "down"),
+        remote_event_pid(Dict, RemotePid)
+    ->  CompoundPid = RemotePid@NodeURL,
+        (   node_controller:current_remote_target(CompoundPid, _)
+        ->  deliver_remote_down_via_controller(CompoundPid, Dict)
+        ;   assertz(ws_pending_event(NodeURL, RemotePid, Dict))
+        )
+    ;   get_dict(type, Dict, "spawned"),
         get_dict(pid, Dict, RawPid),
         normalize_remote_pid(RawPid, RemotePid)
     ->  best_effort(thread_send_message(SpawnQueue, spawned(RemotePid)))
+    %  Halted ack from a cross-node toplevel_halt/2 request: route to the
+    %  shared SpawnQueue (reused for control-plane request/response) where
+    %  remote_request_halt/3 is waiting.  The Reply field is serialized
+    %  on the remote node via term_to_json_string/2, so it arrives as a
+    %  JSON string -- parse it back to a Prolog term here so callers see
+    %  the atom `true` (or whatever term the remote toplevel returned)
+    %  instead of the string "true".
+    ;   get_dict(type, Dict, "halted"),
+        get_dict(pid, Dict, RawPid),
+        normalize_remote_pid(RawPid, RemotePid)
+    ->  (   get_dict(reply, Dict, Reply0),
+            parse_halted_reply(Reply0, ReplyTerm)
+        ->  ReplyValue = ReplyTerm
+        ;   ReplyValue = true
+        ),
+        best_effort(thread_send_message(SpawnQueue, halted(RemotePid, ReplyValue)))
     ;   get_dict(type, Dict, "error"),
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
         best_effort(thread_send_message(SpawnQueue, spawn_error(ErrorData)))
+    ;   %  Remote I/O outputs are dropped: a local toplevel only
+        %  sees terminal output from actors in its own node and
+        %  local descendant lineage (manual.html capability rule for
+        %  the terminal I/O channel).  Pinned by node_tests.pl tests
+        %  ws_remote_actor_io_output_suppressed and
+        %  ws_remote_toplevel_io_output_suppressed.
+        remote_event_pid(Dict, RemotePid),
+        ws_json_is_io_output(Dict)
+    ->  true
+    ;   %  Forward non-down per-pid events (success, prompt, stop,
+        %  abort, responded, ...) directly to the controller-
+        %  registered local target.  When no controller target
+        %  exists, fall back to buffering as ws_pending_event so
+        %  events arriving before registration completes can be
+        %  replayed by flush_pending_for_pid/2.
+        remote_event_pid(Dict, RemotePid),
+        CompoundPid = RemotePid@NodeURL,
+        node_controller:current_remote_target(CompoundPid, Target),
+        ws_json_to_actor_event(Dict, CompoundPid, Event)
+    ->  send(Target, Event)
     ;   remote_event_pid(Dict, RemotePid)
     ->  route_remote_event(NodeURL, RemotePid, Dict)
     ;   true
@@ -469,6 +652,47 @@ remote_event_pid(Dict, RemotePid) :-
     get_dict(pid, Dict, RawPid),
     normalize_remote_pid(RawPid, RemotePid),
     integer(RemotePid).
+
+
+%!  deliver_remote_down_via_controller(+CompoundPid, +Dict) is det.
+%
+%   Drain both the controller's remote_monitor_/3 table and the
+%   actor module's monitor/3 table for CompoundPid, and synchronously
+%   deliver down/3 messages to each watcher.  Draining both tables
+%   atomically prevents the proxy's finalize from re-delivering the
+%   same down events.
+deliver_remote_down_via_controller(CompoundPid, Dict) :-
+    (   ws_json_down_reason(Dict, Reason)
+    ->  true
+    ;   Reason = unknown
+    ),
+    node_controller:take_remote_monitors_for_pid(CompoundPid, Entries),
+    retractall(monitor(_, CompoundPid, _)),
+    %  Step 6 cleanup: the remote pid is gone, so its target
+    %  registration and any link records that pointed to it are
+    %  now stale.  In the proxy era this was done by the proxy's
+    %  setup_call_cleanup finalize; now it is part of the
+    %  controller's death-of-remote-pid handling.
+    node_controller:forget_remote_target(CompoundPid),
+    retractall(node_controller:remote_link_(_, CompoundPid)),
+    retractall(link(_, CompoundPid)),
+    forall(member(monitor(Watcher, Ref), Entries),
+           send(Watcher, down(Ref, CompoundPid, Reason))).
+
+%!  parse_halted_reply(+Raw, -Term) is semidet.
+%
+%   Convert a halted-reply value (an atom or string in JSON) back into a
+%   Prolog term.  The matching producer is node_response.pl's
+%   answer_to_json(halted(_, Reply), ...) clause, which serializes Reply
+%   via term_to_json_string/2.
+parse_halted_reply(Raw, Term) :-
+    (   atom(Raw)
+    ->  RawAtom = Raw
+    ;   string(Raw)
+    ->  atom_string(RawAtom, Raw)
+    ;   fail
+    ),
+    catch(term_to_atom(Term, RawAtom), _, fail).
 
 normalize_remote_pid(Pid0, Pid) :-
     integer(Pid0),
@@ -490,20 +714,31 @@ normalize_remote_pid_atom(PidAtom, Pid) :-
         Term = Pid@_
     ).
 
+%!  route_remote_event(+NodeURL, +RemotePid, +Dict) is det.
+%
+%   Fallback buffer for events that arrive before the local side
+%   has finished registering the pid (the race between
+%   remote_request_spawn returning a pid and spawn_remote calling
+%   register_remote_pid + setting monitors).  The buffered entries
+%   are drained later by flush_pending_for_pid/2.
 route_remote_event(NodeURL, RemotePid, Dict) :-
-    CompoundPid = RemotePid@NodeURL,
-    (   remote_pid_proxy(CompoundPid, LocalProxyPid)
-    ->  send(LocalProxyPid, '$ws_remote_event'(Dict))
-    ;
-        assertz(ws_pending_event(NodeURL, RemotePid, Dict))
-    ).
+    assertz(ws_pending_event(NodeURL, RemotePid, Dict)).
 
 remote_ws_connection_closed(NodeURL) :-
     ws_mutex(NodeURL, ws_connection_lock, Mutex),
     with_mutex(Mutex,
                remote_drop_connection(NodeURL)),
-    forall(remote_pid_proxy(_@NodeURL, LocalProxyPid),
-           send(LocalProxyPid, '$ws_remote_close')).
+    %  Controller-side connection-drop cleanup.  Walk the cross-node
+    %  monitor table for pids on NodeURL and fire down/3 with
+    %  reason=connection_closed to every watcher; drop target/link
+    %  state for the disconnected node.  Also drain the actor
+    %  module's monitor/3 table for those pids.
+    node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
+    forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
+           ( retractall(monitor(_, CompoundPid, _)),
+             send(Watcher, down(Ref, CompoundPid, connection_closed))
+           )),
+    node_controller:drop_remote_state_for_node(NodeURL).
 
 ws_mutex(NodeURL, Prefix, Mutex) :-
     format(atom(Mutex), '~w::~w', [Prefix, NodeURL]).
@@ -842,7 +1077,12 @@ stop(Pid, Parent) :-
     retractall(registered_service(_ServiceName, GlobalPid)),
     retractall(delayed_send(_ID, GlobalPid)),
     forall(retract(link(GlobalPid, ChildPid)),
-           exit(ChildPid, kill)), 
+           exit(ChildPid, kill)),
+    %  Step 2 mirror: drain the node_controller's view of this
+    %  parent's cross-node children too, keeping the controller
+    %  consistent with the proxy era's link/2 walk above.  Reading
+    %  side will move to this in step 5.
+    node_controller:take_remote_children_for_parent(GlobalPid, _DrainedRemoteChildren),
     down_reason(Pid, Reason),
     forall(retract(monitor(Other, GlobalPid, Ref)),
            Other ! down(Ref, GlobalPid, Reason)),
@@ -869,64 +1109,6 @@ down_reason(Pid, Reason) :-
     thread_property(ThreadId, status(Reason)),
     !.
 down_reason(_, noproc).
-
-
-%!  remote_actor_proxy(+NodeURL, +RemotePid, +Target) is det.
-%
-%   Local proxy process for a remotely spawned bare actor.
-remote_actor_proxy(NodeURL, RemotePid, Target) :-
-    CompoundPid = RemotePid@NodeURL,
-    ExitReason = reason(done),
-    catch(
-        remote_actor_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason),
-        _,
-        true
-    ),
-    arg(1, ExitReason, DownReason),
-    retractall(remote_pid_proxy(CompoundPid, _)),
-    forall(
-        retract(monitor(Other, CompoundPid, Ref)),
-        send(Other, down(Ref, CompoundPid, DownReason))
-    ).
-
-%!  remote_actor_proxy_loop(+NodeURL, +RemotePid, +CompoundPid,
-%!                          +Target, +ExitReason) is det.
-remote_actor_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason) :-
-    receive({
-        '$ws_remote_close' ->
-            nb_setarg(1, ExitReason, connection_closed)
-        ;
-        '$ws_remote_event'(Dict) ->
-            (   ws_json_down_reason(Dict, Reason)
-            ->  nb_setarg(1, ExitReason, Reason)
-            ;   ws_json_is_io_output(Dict)
-            ->  remote_actor_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason)
-            ;   ws_json_to_actor_event(Dict, CompoundPid, Event)
-            ->  send(Target, Event),
-                remote_actor_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason)
-            ;   remote_actor_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason)
-            )
-        ;
-        '$kill'(Reason) ->
-            term_to_wire_atom(Reason, ReasonAtom),
-            best_effort(remote_send_command(NodeURL, json{
-                command: exit,
-                pid: RemotePid,
-                reason: ReasonAtom
-            })),
-            nb_setarg(1, ExitReason, Reason)
-        ;
-        Message ->
-            term_to_wire_atom(Message, MsgAtom),
-            (   best_effort_fail(remote_send_command(NodeURL, json{
-                    command: send,
-                    pid: RemotePid,
-                    message: MsgAtom
-                }))
-            ->  remote_actor_proxy_loop(NodeURL, RemotePid, CompoundPid, Target, ExitReason)
-            ;   nb_setarg(1, ExitReason, connection_closed)
-            )
-    }).
 
 
 %!  actors(-Pids) is det.
@@ -1022,7 +1204,19 @@ monitor(Pid, Ref) :-
     self(Self),
     canonical_pid(Pid, CanonPid),
     make_id(Ref),
-    assertz(monitor(Self, CanonPid, Ref)).
+    assertz(monitor(Self, CanonPid, Ref)),
+    %  Step 2 mirror: if the watched pid is one the controller
+    %  already knows about (i.e. it was obtained from a cross-node
+    %  spawn that registered a remote_target_/2 row), also record
+    %  the monitor in the controller's cross-node table.  Using the
+    %  controller's own table as the discriminator -- rather than
+    %  `\+ local_node_url(Node)` -- keeps the check correct in the
+    %  in-process integration harness, where a single registered
+    %  self_node_url makes "remote" pids look local.
+    (   node_controller:current_remote_target(CanonPid, _)
+    ->  node_controller:add_remote_monitor(Self, CanonPid, Ref)
+    ;   true
+    ).
 
 
 demonitor(Ref) :-
@@ -1030,6 +1224,9 @@ demonitor(Ref) :-
 
 demonitor(Ref, Options) :-
     retractall(monitor(_, _, Ref)),
+    %  Step 2 mirror: keep node_controller's cross-node monitor
+    %  table in sync.
+    node_controller:remove_remote_monitor_by_ref(Ref),
     (   option(flush, Options)
     ->  receive({
             down(Ref, _, _) ->
@@ -1176,24 +1373,32 @@ exit(Reason) :-
 %!  exit(+Pid, Reason) is det.
 %
 %   Exit the actor known as Pid.  For remote compound Pids of the form
-%   `Id@Node`, routes through the local proxy actor.
+%   `Id@Node`, the kill is sent over the inter-node WebSocket via
+%   safe_remote_kill_send/4 (see manual.html:291).
 
+%  Step 5 of the proxy-less migration: cross-node exits no longer
+%  hop through the proxy's '$kill'(Reason) mailbox handler.  Instead,
+%  if the pid is known to the node controller (registered by a
+%  cross-node spawn) or its Node component is non-local, the kill
+%  goes straight over the per-node WebSocket via safe_remote_kill_send/4.
+%  The controller-table check comes first so the in-process
+%  integration harness still routes correctly when self_node_url makes
+%  a "remote" Node look local.  Observability policy is preserved:
+%  failures emit a remote_exit_failed event (transient on first try,
+%  terminal after the single retry) and never propagate, because
+%  exit/2 runs inside another actor's cleanup chain (stop/2) where a
+%  throw would corrupt link-driven termination.
 exit(Id@Node, Reason) :-
-    remote_pid_proxy(Id@Node, LocalPid),
-    !,
-    %  Don't use thread_signal/abort for proxy actors: instead send a '$kill'
-    %  message so the proxy loop can capture the reason and fire down events
-    %  synchronously before the thread exits.
-    send(LocalPid, '$kill'(Reason)).
-exit(Id@Node, Reason) :-
-    \+ local_node_url(Node),
+    (   node_controller:current_remote_target(Id@Node, _)
+    ;   \+ local_node_url(Node)
+    ),
     !,
     term_to_wire_atom(Reason, ReasonAtom),
-    best_effort(remote_send_command(Node, json{
+    safe_remote_kill_send(Node, Id, ReasonAtom, json{
         command: exit,
         pid: Id,
         reason: ReasonAtom
-    })).
+    }).
 exit(Id@Node, Reason) :-
     local_node_url(Node),
     !,
@@ -1215,13 +1420,18 @@ exit(Pid, Reason) :-
 Pid ! Message :-
     send(Pid, Message).
 
-%  Remote compound Pid: route via local proxy actor.
+%  Step 4 of the proxy-less migration: cross-node sends no longer
+%  hop through a per-pid proxy actor's mailbox.  Instead, if the pid
+%  is known to the node controller (because a cross-node spawn
+%  registered a remote_target_/2 row), or if its Node component is
+%  not the local node, the message goes directly over the per-node
+%  WebSocket via remote_send_command/2.  The controller-table check
+%  comes first so the in-process integration harness still routes
+%  correctly when self_node_url makes a "remote" Node look local.
 send(Id@Node, Message) :-
-    remote_pid_proxy(Id@Node, LocalPid),
-    !,
-    send(LocalPid, Message).
-send(Id@Node, Message) :-
-    \+ local_node_url(Node),
+    (   node_controller:current_remote_target(Id@Node, _)
+    ;   \+ local_node_url(Node)
+    ),
     !,
     term_to_wire_atom(Message, MsgAtom),
     best_effort(remote_send_command(Node, json{

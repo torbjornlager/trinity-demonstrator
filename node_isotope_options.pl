@@ -144,32 +144,36 @@ enforce_session_option(SpawnOptions0, [session(true)|SpawnOptions]) :-
 is_session_option(session(_)).
 
 
-parse_trace_value(true, true) :-
-    !.
-parse_trace_value(false, false) :-
-    !.
-parse_trace_value(@(true), true) :-
-    !.
-parse_trace_value(@(false), false) :-
-    !.
+%  Canonical Prolog booleans.
+parse_trace_value(true, true) :- !.
+parse_trace_value(false, false) :- !.
+%  JSON-decoded booleans from http_json.
+parse_trace_value(@(true), true) :- !.
+parse_trace_value(@(false), false) :- !.
+%  Textual forms (atom or string): case-fold, then match.  Earlier
+%  versions of this clause recursed back into parse_trace_value/2 with
+%  another string, which made parse_trace_value("true", _) loop
+%  forever because string_lower of an already-lowercased string is
+%  the same string.  Test
+%  tests/statechart_trace_options_tests.plt :: parse_string_true
+%  pins the non-looping behavior.
 parse_trace_value(Value0, Value) :-
-    atom(Value0),
+    (   atom(Value0)
+    ->  atom_string(Value0, S0)
+    ;   string(Value0)
+    ->  S0 = Value0
+    ;   fail
+    ),
     !,
-    atom_string(Value0, ValueString),
-    parse_trace_value(ValueString, Value).
-parse_trace_value(Value0, Value) :-
-    string(Value0),
-    !,
-    string_lower(Value0, ValueString),
-    parse_trace_value(ValueString, Value).
-parse_trace_value('true', true) :-
-    !.
-parse_trace_value('false', false) :-
-    !.
-parse_trace_value("true", true) :-
-    !.
-parse_trace_value("false", false) :-
-    !.
+    string_lower(S0, Lowered),
+    (   Lowered == "true"
+    ->  Value = true
+    ;   Lowered == "false"
+    ->  Value = false
+    ;   throw(error(domain_error(boolean, Value0),
+                    context(node_isotope_options:parse_trace_value/2,
+                            'trace must be true or false')))
+    ).
 parse_trace_value(Value, _) :-
     throw(error(domain_error(boolean, Value),
                 context(node_isotope_options:parse_trace_value/2,

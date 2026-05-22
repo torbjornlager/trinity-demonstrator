@@ -46,7 +46,8 @@ Architecture per connection:
     toplevel_call/3,
     toplevel_next/2,
     toplevel_stop/1,
-    toplevel_abort/1
+    toplevel_abort/1,
+    toplevel_halt/2
 ]).
 :- use_module(node_response, [answer_to_json/2]).
 :- use_module(node_log, [
@@ -222,13 +223,15 @@ ws_relay_loop_1(NodePort, WebSocket, Queue) :-
 
 %!  ws_relay_message(+WebSocket, +Message) is det.
 %
-%   Convert one actor message to JSON and send.  Normalizes 3-arg down/3
-%   messages to 2-arg down/2 for the external protocol.  Also normalizes
-%   any compound Pid (e.g. RemoteId@NodeURL) in the resulting JSON dict to
-%   a string so that atom_json_dict/3 can serialize it.
-ws_relay_message(WebSocket, down(_, Pid, Reason)) :-
-    !,
-    ws_relay_message(WebSocket, down(Pid, Reason)).
+%   Convert one actor message to JSON and send.  Compound Pids
+%   (e.g. RemoteId@NodeURL) in the resulting JSON dict are normalized
+%   to a string so that atom_json_dict/3 can serialize them.
+%
+%   Note: down/3 was previously downgraded to down/2 here for the
+%   external protocol.  That stripped the monitor Ref the manual
+%   documents (manual.html:210/231), so the conversion was removed --
+%   down/3 now passes through and is serialized by answer_to_json/2 in
+%   node_response.pl with a `ref` field included.
 ws_relay_message(WebSocket, Message) :-
     answer_to_json(Message, JSON),
     atom_json_dict(Text, JSON, []),
@@ -312,6 +315,8 @@ ws_action(toplevel_next, Dict, Queue, Principal) :-
     ws_action_toplevel_next(Dict, Queue, Principal).
 ws_action(toplevel_stop, Dict, Queue, Principal) :-
     ws_action_toplevel_stop(Dict, Queue, Principal).
+ws_action(toplevel_halt, Dict, Queue, Principal) :-
+    ws_action_toplevel_halt(Dict, Queue, Principal).
 ws_action(toplevel_abort, Dict, Queue, Principal) :-
     ws_action_toplevel_abort(Dict, Queue, Principal).
 ws_action(set_trace, Dict, Queue, Principal) :-
@@ -438,6 +443,23 @@ ws_action_toplevel_stop(Dict, Queue, Principal) :-
     ws_require_owned_session(Queue, Principal, Pid),
     toplevel_stop(Pid),
     thread_send_message(Queue, stop(Pid)).
+
+%!  ws_action_toplevel_halt(+Dict, +Queue, +Principal) is det.
+%
+%   Halt an idle local toplevel session and send a `halted(Pid, Reply)`
+%   event back over the connection.  Used to terminate cross-node
+%   toplevel_halt/2 calls: the remote-side proxy on the calling node
+%   sends a {command:toplevel_halt, pid} JSON command, this handler
+%   delivers '$halt'(Self) to the local toplevel, waits for its
+%   reply(_) message, then thread_send_message(Queue, halted(Pid, Reply)).
+%   The relay serializes that as {type:halted, pid, reply} which the
+%   calling node routes to its waiting remote_request_halt/3 caller.
+ws_action_toplevel_halt(Dict, Queue, Principal) :-
+    require_ws_command_access(Principal, toplevel_halt),
+    ws_get_pid(Dict, Pid),
+    ws_require_owned_session(Queue, Principal, Pid),
+    toplevel_halt(Pid, Reply),
+    thread_send_message(Queue, halted(Pid, Reply)).
 
 %!  ws_action_toplevel_abort(+Dict, +Queue, +Principal) is det.
 ws_action_toplevel_abort(Dict, Queue, Principal) :-
@@ -678,14 +700,13 @@ ws_kill_actor(Pid) :-
     cleanup_isotope_session(Pid),
     catch(actor:exit(Pid, kill), _, true).
 
-ws_note_message(down(_, Pid, Reason)) :-
+%  Canonical 3-arity down/3 (manual.html:210/231).  The 2-arity clause
+%  that used to live below has been removed -- all internal producers
+%  now emit down/3.
+ws_note_message(down(_Ref, Pid, Reason)) :-
     !,
     ignore(catch(finish_activity(ws_actor, Pid, Reason), _, true)),
-    forget_ws_actor_metadata(Pid),
-    forget_ws_actor_owner(Pid).
-ws_note_message(down(Pid, Reason)) :-
-    !,
-    ignore(catch(finish_activity(ws_actor, Pid, Reason), _, true)),
+    ws_forget_actor_registry(Pid),
     forget_ws_actor_metadata(Pid),
     forget_ws_actor_owner(Pid).
 ws_note_message(_).
@@ -722,6 +743,17 @@ prepare_inherited_ws_actor_spawn(ParentPid0, Options, Context) :-
 
 
 %!  commit_inherited_ws_actor_spawn(+Context, +Pid) is det.
+%
+%   Note: also installs a monitor from Pid back to the WS Queue so that
+%   when this actor exits (for ANY reason, including in-language spawns
+%   like remote_actor_proxy/3 and remote_toplevel_proxy/3 that do not
+%   themselves pass monitor_target), stop/2 in actor.pl sends a down/3
+%   to the Queue.  That down event is what triggers ws_note_message and
+%   ws_forget_actor_registry to retract this Pid's ws_actor/2 row.
+%   Without this monitor, the row leaks and /admin/runtime keeps
+%   listing the actor after its thread is gone (concretely observed
+%   for cross-node toplevel_halt where the local proxy on the calling
+%   node exits cleanly but its ws_actor record is never reaped).
 commit_inherited_ws_actor_spawn(none, _Pid) :-
     !.
 commit_inherited_ws_actor_spawn(inherited_ws_actor(Queue, Principal,
@@ -729,7 +761,10 @@ commit_inherited_ws_actor_spawn(inherited_ws_actor(Queue, Principal,
                                 Pid) :-
     assertz(ws_actor(Queue, Pid)),
     remember_ws_actor_metadata(Pid, Queue, Principal, Kind),
-    commit_ws_actor_capacity(Reservation, Pid).
+    commit_ws_actor_capacity(Reservation, Pid),
+    %  Install a WS-layer cleanup monitor; Pid itself is the sentinel
+    %  Ref (same convention as monitor(true) -- see manual.html:210).
+    assertz(actor:monitor(Queue, Pid, Pid)).
 
 
 %!  abort_inherited_ws_actor_spawn(+Context) is det.
@@ -959,7 +994,12 @@ ws_actor_queues(Pid0, Queues) :-
 notify_ws_actor_termination([], _Pid, _Reason).
 notify_ws_actor_termination([Queue|Queues], Pid, Reason) :-
     retractall(actor:monitor(Queue, Pid, _)),
-    catch(thread_send_message(Queue, down(Pid, Reason)), _, true),
+    %  Use the canonical 3-arity down(Ref, Pid, Reason) form
+    %  (manual.html:210).  No specific monitor Ref applies here -- this
+    %  is the WS layer fabricating a "your actor died" notification at
+    %  teardown time -- so we follow the monitor(true) convention from
+    %  manual.html:210 and use the Pid itself as the sentinel Ref.
+    catch(thread_send_message(Queue, down(Pid, Pid, Reason)), _, true),
     notify_ws_actor_termination(Queues, Pid, Reason).
 
 

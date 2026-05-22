@@ -109,6 +109,20 @@ answer_to_json(abort(Pid), json{type:abort, pid:JsonPid}) :-
     json_pid_value(Pid, JsonPid).
 answer_to_json(responded(Pid), json{type:responded, pid:JsonPid}) :-
     json_pid_value(Pid, JsonPid).
+answer_to_json(halted(Pid, Reply),
+               json{type:halted, pid:JsonPid, reply:ReplyString}) :-
+    json_pid_value(Pid, JsonPid),
+    term_to_json_string(Reply, ReplyString).
+%  Standard 3-arity down/3 (per manual.html:210/231).  Ref is serialized
+%  so the browser can correlate with the monitor it installed.
+answer_to_json(down(Ref, Pid, Reason),
+               json{type:down, ref:JsonRef, pid:JsonPid, reason:ReasonString}) :-
+    json_pid_value(Ref, JsonRef),
+    json_pid_value(Pid, JsonPid),
+    term_to_json_string(Reason, ReasonString).
+%  Legacy 2-arity form: kept as a fallback during transition.  Any new
+%  producer should emit down/3 with a sentinel Ref (e.g. Ref = Pid, the
+%  same convention monitor(true) uses -- see manual.html:210 / actor.pl).
 answer_to_json(down(Pid, Reason), json{type:down, pid:JsonPid, reason:ReasonString}) :-
     json_pid_value(Pid, JsonPid),
     term_to_json_string(Reason, ReasonString).

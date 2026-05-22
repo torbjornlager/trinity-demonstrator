@@ -9,6 +9,11 @@
 :- use_module('./tests/node_tests.pl', []).
 :- user:load_files('./tests/actor_tests.pl', []).
 :- user:load_files('./tests/toplevel_actor_tests.pl', []).
+:- user:load_files('./tests/actor_remote_exit_failure.plt', []).
+:- user:load_files('./tests/down_wire_format_tests.plt', []).
+:- user:load_files('./tests/statechart_trace_options_tests.plt', []).
+:- user:load_files('./tests/cross_node_lifecycle_tests.plt', []).
+:- user:load_files('./tests/node_controller_tests.plt', []).
 
 install_user_test_entrypoint :-
     (   current_predicate(user:test/0)
