@@ -181,6 +181,44 @@ drop_remote_state_for_node(+NodeURL) is det.
 The atomic drains (`take_*`) combine a `findall + retract` so a
 delivery path can pull state out exactly once.
 
+### 3.4 Controller topology
+
+The controller is node-scoped, not pid-scoped.  The only long-lived
+transport object between two nodes is the shared WebSocket connection;
+the controller tables say how events coming back on that connection
+map into local actor state.
+
+```mermaid
+flowchart LR
+    subgraph Local["local node"]
+        Parent["local actor / toplevel"]
+        Controller["node_controller tables"]
+        Conn["ws_connection(NodeURL)"]
+        Reader["reader thread"]
+        SpawnQ["spawn queue"]
+        Pending["ws_pending_event"]
+    end
+
+    subgraph Remote["remote node"]
+        WS["/ws handler"]
+        Queue["connection queue"]
+        RemoteActor["remote actor / toplevel"]
+    end
+
+    Parent -->|"spawn/send/exit/toplevel_*"| Conn
+    Conn <-->|"JSON frames"| WS
+    WS -->|"spawn/send/exit/toplevel_*"| RemoteActor
+    RemoteActor -->|"actor events"| Queue
+    WS -->|"spawned/halted/error"| Queue
+    WS -->|"success/output/prompt/down/..."| Queue
+    Queue -->|"serialized events"| Conn
+    Conn --> Reader
+    Reader -->|"spawned/halted/error"| SpawnQ
+    Reader -->|"pid event, target ready"| Controller
+    Reader -->|"pid event, target missing"| Pending
+    Controller -->|"send(Target, Event)"| Parent
+```
+
 ---
 
 ## 4. Wire protocol
@@ -207,10 +245,56 @@ HTTP request headers:
     X-Web-Prolog-User: node:<SelfURL>
     X-Web-Prolog-Capabilities: execute,internal_transport
 
-These headers let the remote node distinguish node-to-node traffic
-from end-user clients and bypass the user-facing sandbox.
+These headers are *claims*.  Whether the remote node honors them is
+governed by its peer-network policy — see §4.2 below.  If the
+remote node accepts the `internal_transport` capability claim, the
+connecting node bypasses ownership checks on ws_actors, rate limits,
+and per-principal resource caps on the remote node.  The Prolog-level
+sandbox is profile-based and is **not** bypassed by
+`internal_transport`.
 
-### 4.2 Outbound commands
+### 4.2 Trust model for `internal_transport`
+
+The `internal_transport` capability is a serious privilege escalation
+on the receiving node: it removes the boundary between independent
+clients.  A port must be careful about who is allowed to claim it.
+
+**The reference implementation grants `internal_transport` to a
+request iff all three conditions hold:**
+
+1. `X-Web-Prolog-User` starts with `"node:"`.
+2. `X-Web-Prolog-Capabilities` lists `internal_transport`.
+3. The HTTP peer address is either loopback (`127.0.0.1` / `::1`)
+   or in an RFC1918 private range (`10/8`, `172.16/12`,
+   `192.168/16`).
+
+The headers alone are not sufficient.  In particular, a
+`X-Web-Prolog-Internal-Proxy: true` header from a non-private peer is
+ignored — the peer-network position is the trust boundary.  This
+closes the failure mode where a node whose HTTP port is reachable
+from the internet without a header-stripping reverse proxy would
+otherwise grant `internal_transport` to any caller that sets the
+header.
+
+**Deployment implications**:
+
+- A node intended to be public should be fronted by a reverse proxy
+  that strips inbound `X-Web-Prolog-*` headers from external traffic
+  and only re-injects them on connections originating from the
+  trusted private network (e.g. a docker bridge).  The reference
+  Caddyfile is structured exactly this way.
+- The default RFC1918 trust is appropriate for self-contained
+  container networks.  On a shared corporate LAN it is too
+  permissive; in that environment a port should either narrow the
+  trusted CIDR set, or layer an HMAC / shared-secret token check on
+  top of the network check.
+- A port that wishes to support stronger mutual authentication can
+  add an `X-Web-Prolog-Auth` header carrying an HMAC over a nonce +
+  the principal id + the capabilities list, signed with a
+  per-cluster shared secret.  The network-peer check then becomes
+  defense in depth rather than the sole trust boundary.
+
+### 4.3 Outbound commands
 
 JSON object per WebSocket frame.  All commands have a `command`
 field.  Prolog terms in arguments are encoded as wire atoms via
@@ -228,7 +312,7 @@ field.  Prolog terms in arguments are encoded as wire atoms via
 | `toplevel_stop` | `pid` | `stop` |
 | `toplevel_halt` | `pid` | `halted` |
 
-### 4.3 Inbound events
+### 4.4 Inbound events
 
 Each inbound JSON frame has a `type` field plus event-specific
 arguments.
@@ -250,7 +334,7 @@ arguments.
 sender node) or strings of the form `"Id@URL"`.  The receiver
 normalizes both forms.
 
-### 4.4 Pid normalization
+### 4.5 Pid normalization
 
 ```prolog
 normalize_remote_pid(I, I) :- integer(I), !.
@@ -270,7 +354,7 @@ The integer form is the wire shorthand for "pid on the sender's own
 node"; the receiver pairs it with the connection's `NodeURL` to form
 the canonical compound.
 
-### 4.5 Reasons
+### 4.6 Reasons
 
 Exit reasons (`exit/2` Reason argument, `down/3` Reason field) are
 arbitrary Prolog terms encoded as wire atoms.  Common values:
@@ -286,7 +370,7 @@ arbitrary Prolog terms encoded as wire atoms.  Common values:
 The wire decoder for reasons tries `term_string/2` first; on
 failure it falls back to interpreting the value as an atom.
 
-### 4.6 Wire format conventions
+### 4.7 Wire format conventions
 
 - JSON booleans are `true` / `false`, never the strings `"true"` /
   `"false"`.
@@ -357,6 +441,32 @@ remote_request_spawn(NodeURL, Command, RemotePid) :-
 The spawn mutex serializes spawn-shaped round-trips on a given
 connection so that responses on the shared spawn queue are
 correctly attributed.
+
+The race-sensitive ordering is easier to see as a sequence:
+
+```mermaid
+sequenceDiagram
+    participant Caller as local actor
+    participant Conn as shared WS connection
+    participant Remote as remote /ws
+    participant Reader as local reader thread
+    participant Ctrl as node_controller
+    participant Pending as ws_pending_event
+
+    Caller->>Conn: spawn goal/options
+    Conn->>Remote: {"command":"spawn"}
+    Remote-->>Conn: {"type":"spawned","pid":Id}
+    Conn-->>Reader: spawned(Id)
+    Reader-->>Caller: spawned(Id) via spawn queue
+    Remote-->>Conn: possible early down/output/success
+    Conn-->>Reader: pid event
+    Reader->>Pending: buffer until target row exists
+    Caller->>Ctrl: add monitor/link rows
+    Caller->>Ctrl: register_remote_target(Id@URL, Target)
+    Caller->>Pending: flush_pending_for_pid(URL, Id)
+    Pending->>Reader: replay event
+    Reader->>Ctrl: deliver down or route actor event
+```
 
 ### 5.2 Send to a remote pid
 
@@ -627,6 +737,29 @@ The dispatcher and the replay handler share the same per-pid
 decision tree; this is what guarantees that buffered events behave
 identically to ones that arrive after setup.
 
+The dispatch tree, including the buffering and drop paths, is:
+
+```mermaid
+flowchart TD
+    Frame["inbound JSON frame"] --> Down{"type = down<br/>and has pid?"}
+    Down -- yes --> ReadyForDown{"target row exists?"}
+    ReadyForDown -- yes --> DeliverDown["drain remote_monitor_<br/>send down(Ref, Pid, Reason)<br/>forget target/link rows"]
+    ReadyForDown -- no --> BufferDown["buffer in ws_pending_event"]
+    Down -- no --> Spawned{"type = spawned?"}
+    Spawned -- yes --> SpawnQ["send spawned(Id)<br/>to spawn queue"]
+    Spawned -- no --> Halted{"type = halted?"}
+    Halted -- yes --> HaltQ["parse reply term<br/>send halted(Id, Reply)<br/>to spawn queue"]
+    Halted -- no --> SpawnError{"error without pid?"}
+    SpawnError -- yes --> ErrorQ["send spawn_error(Data)<br/>to spawn queue"]
+    SpawnError -- no --> IO{"output source = io?"}
+    IO -- yes --> DropIO["drop remote terminal I/O"]
+    IO -- no --> Target{"pid event and<br/>target row exists?"}
+    Target -- yes --> Forward["decode event<br/>send(Target, Event)"]
+    Target -- no --> HasPid{"has pid?"}
+    HasPid -- yes --> BufferEvent["buffer in ws_pending_event"]
+    HasPid -- no --> Drop["drop"]
+```
+
 ### 6.4 Wire→event mapping
 
 ```prolog
@@ -725,11 +858,15 @@ old pids on the remote are gone.
 The host's `stop/2` must, in addition to its usual link/monitor
 walk:
 
-1. Drain the controller's `remote_link_` rows whose parent is the
-   dying actor.  The drain is the atomic `take_*` form so each
-   remote child is processed exactly once.
-2. For each remote child, call `exit(ChildPid, kill)`.  This goes
-   through `safe_remote_kill_send` (§5.5).
+1. Kill linked children through the normal `link/2` walk.  Remote
+   child pids are present in this table too, so `exit(ChildPid,
+   kill)` goes through `safe_remote_kill_send` (§5.5).
+2. Drain the controller's `remote_link_` rows whose parent is the
+   dying actor.  In the reference implementation this second drain
+   is bookkeeping, because the `link/2` walk has already sent the
+   remote exits.  A port that stores cross-node links only in the
+   controller table should instead iterate the drained children and
+   call `exit(ChildPid, kill)` for each one.
 
 A minimal patch to `stop/2`:
 

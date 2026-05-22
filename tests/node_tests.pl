@@ -2208,7 +2208,14 @@ test(dev_request_principal_rejects_nonlocal_peer,
         with_dev_auth_config("carol", [admin],
             request_principal([peer(ip(192,0,2,1))], Principal))).
 
-test(request_principal_accepts_trusted_internal_transport_headers) :-
+test(request_principal_rejects_internal_transport_headers_with_only_proxy_marker) :-
+    %  The X-Web-Prolog-Internal-Proxy header on its own is no
+    %  longer sufficient: the request must also come from a
+    %  loopback or RFC1918 peer.  This pins the tightening of
+    %  request_internal_transport_trusted/1 -- otherwise a node
+    %  whose HTTP port is reachable from the internet without a
+    %  header-stripping reverse proxy would grant
+    %  internal_transport to anyone who sets the header.
     request_principal([
         x_web_prolog_user("node:https://n4.example"),
         x_web_prolog_capabilities("execute,internal_transport"),
@@ -2218,9 +2225,8 @@ test(request_principal_accepts_trusted_internal_transport_headers) :-
     principal_capabilities(Principal, Capabilities),
     get_dict(unknown, Principal, Unknown),
     assertion(PrincipalId == "node:https://n4.example"),
-    assertion(memberchk(execute, Capabilities)),
-    assertion(memberchk(internal_transport, Capabilities)),
-    assertion(Unknown == false).
+    assertion(Capabilities == []),
+    assertion(Unknown == true).
 
 test(request_principal_does_not_trust_internal_transport_headers_without_proxy_marker) :-
     request_principal([
@@ -2233,6 +2239,19 @@ test(request_principal_does_not_trust_internal_transport_headers_without_proxy_m
     assertion(PrincipalId == "node:https://n4.example"),
     assertion(Capabilities == []),
     assertion(Unknown == true).
+
+test(request_principal_accepts_internal_transport_headers_from_loopback_peer) :-
+    %  Companion to the private-peer test below: a loopback peer
+    %  is also a trusted source.
+    request_principal([
+        peer(ip(127, 0, 0, 1)),
+        x_web_prolog_user("node:https://n4.example"),
+        x_web_prolog_capabilities("execute,internal_transport")
+    ], Principal),
+    principal_id(Principal, PrincipalId),
+    principal_capabilities(Principal, Capabilities),
+    assertion(PrincipalId == "node:https://n4.example"),
+    assertion(memberchk(internal_transport, Capabilities)).
 
 test(request_principal_accepts_internal_transport_headers_from_private_peer) :-
     request_principal([

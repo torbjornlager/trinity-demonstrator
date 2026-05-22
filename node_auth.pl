@@ -264,17 +264,32 @@ internal_transport_principal(Request, PrincipalId, Capabilities) :-
     memberchk(internal_transport, Capabilities).
 
 
+%!  request_internal_transport_trusted(+Request) is semidet.
+%
+%   Decide whether a request may claim the `internal_transport`
+%   capability via its `X-Web-Prolog-*` headers.
+%
+%   The trust boundary is the peer's network position.  A direct
+%   loopback or RFC1918 private peer is trusted on its own; the
+%   `X-Web-Prolog-Internal-Proxy: true` header is treated only as a
+%   defence-in-depth signal that a header-stripping reverse proxy
+%   has approved this request -- it is not sufficient on its own.
+%
+%   Why the header is not sufficient: a node whose HTTP port is
+%   reachable from the internet without a reverse proxy that
+%   strips the `X-Web-Prolog-*` headers from inbound traffic would
+%   otherwise grant `internal_transport` to anyone who sets the
+%   header.  Requiring private/loopback peer in addition closes
+%   that hole for misconfigured deployments while keeping the
+%   intended Caddy-in-private-docker-network path working (Caddy's
+%   peer IP is in the private network range, AND Caddy sets the
+%   proxy header).
 request_internal_transport_trusted(Request) :-
-    request_header_value(Request,
-                         [x_web_prolog_internal_proxy],
-                         TrustedProxyValue0),
-    normalize_header_string(TrustedProxyValue0, TrustedProxyValue),
-    TrustedProxyValue == "true",
+    request_is_local(Request),
     !.
 request_internal_transport_trusted(Request) :-
-    request_is_local(Request).
-request_internal_transport_trusted(Request) :-
-    request_is_private_network(Request).
+    request_is_private_network(Request),
+    !.
 
 
 request_capabilities_header(Request, Capabilities) :-
