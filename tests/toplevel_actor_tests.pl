@@ -495,4 +495,22 @@ test(input, Results == true) :-
        down(_, Pid, Results) -> true
    }).
 
+test(toplevel_call_does_not_share_goal_variables_with_caller,
+     [Result == ok]) :-
+    %  Pin: variables in the Goal passed to toplevel_call/3 are
+    %  independent from the caller's perspective.  This relies on
+    %  thread_send_message/2 placing a copy of the message into the
+    %  receiver's mailbox; if a future port to another Prolog
+    %  system uses a queue that shares term storage, the
+    %  toplevel_call/3 path would need to re-introduce an explicit
+    %  copy_term/2 before send/2.  This test is the canary.
+    toplevel_spawn(Pid, [session(false), monitor(true)]),
+    toplevel_call(Pid, member(X, [a, b, c]), [template(X)]),
+    %  X must be unbound from the caller's view even after the
+    %  receiver runs the goal and binds its copy.
+    receive({ success(Pid, _Results, _More) -> true }),
+    assertion(var(X)),
+    receive({ down(_, Pid, _) -> true }),
+    Result = ok.
+
 :- end_tests(toplevels).

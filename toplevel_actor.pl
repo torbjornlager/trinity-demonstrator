@@ -299,8 +299,12 @@ toplevel_call(Pid, Goal) :-
     toplevel_call(Pid, Goal, []).
 
 toplevel_call(Pid, Goal, Options) :-
-    copy_term(Goal-Options, GoalCopy-OptionsCopy),
-    send(Pid, '$call'(GoalCopy, OptionsCopy)).
+    %  No explicit copy_term/2 here: send/2 to a local pid resolves
+    %  to thread_send_message/2, which places a copy of the term in
+    %  the receiver's mailbox; send/2 to a remote pid serializes
+    %  via term_to_wire_atom/2.  In either path the sender's term
+    %  is independent of what the receiver consumes.
+    send(Pid, '$call'(Goal, Options)).
 
 
 %!  toplevel_next(+Pid) is det.
@@ -310,8 +314,7 @@ toplevel_next(Pid) :-
     toplevel_next(Pid, []).
 
 toplevel_next(Pid, Options) :-
-    copy_term(Options, OptionsCopy),
-    send(Pid, '$next'(OptionsCopy)).
+    send(Pid, '$next'(Options)).
 
 
 %!  toplevel_halt(+Pid, -Reply) is det.
