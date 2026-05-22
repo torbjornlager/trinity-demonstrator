@@ -51,10 +51,17 @@ The local path is straightforward:
 5. Any user-supplied source is loaded.
 6. The start goal is executed in that module.
 
-Remote actors are represented locally by proxy actors. A remote spawn request
-goes over a shared WebSocket connection, the remote node creates the actor,
-and the local node keeps a proxy actor so ordinary `send/2`, `exit/2`, and
-monitor behaviour still work.
+Remote actors are routed through the node controller in
+[`node_controller.pl`](node_controller.pl), which owns three small
+tables tracking, for each remote pid this node knows about, the
+local target, the cross-node monitors, and the cross-node links.
+A remote spawn request goes over a shared WebSocket connection per
+remote node; inbound JSON events are dispatched directly from the
+WS reader to the registered local target or watcher.  Ordinary
+`send/2`, `exit/2`, and monitor delivery for a remote pid all flow
+through the controller without a per-pid local actor in between.
+See [`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md) for
+the wire protocol and lifecycle invariants.
 
 ### 2. Reusable actor behaviours
 
@@ -199,8 +206,16 @@ The purpose is to make distribution explicit and uniform. Local-only code can
 still often work with plain integers, but the runtime has enough information to
 route messages, exits, and session lookups correctly across node boundaries.
 
-Remote behaviour works through proxy actors and shared WebSocket connections.
-This lets higher-level code treat remote actors much like local ones.
+Cross-node messaging is mediated by the node controller in
+[`node_controller.pl`](node_controller.pl): one outbound WebSocket
+connection per remote URL, three dynamic tables on the local node
+(`remote_target_/2`, `remote_monitor_/3`, `remote_link_/2`), and a
+single dispatch loop in `actor.pl`'s `remote_ws_dispatch/3`.
+Higher-level code can treat remote actors much like local ones;
+the controller handles delivery, monitor firing, and link
+propagation transparently.  The full protocol and the lifecycle
+invariants are documented in
+[`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md).
 
 ## Response and Text Normalization
 
@@ -226,19 +241,23 @@ readable.
 A useful reading order is:
 
 1. [`actor.pl`](actor.pl)
-2. [`toplevel_actor.pl`](toplevel_actor.pl)
-3. [`node.pl`](node.pl)
-4. [`node_engine.pl`](node_engine.pl)
-5. [`node_session.pl`](node_session.pl)
-6. [`node_ws.pl`](node_ws.pl)
-7. Then the higher-level behaviours:
+2. [`node_controller.pl`](node_controller.pl) — small companion to
+   `actor.pl`; the three tables that drive cross-node routing
+3. [`toplevel_actor.pl`](toplevel_actor.pl)
+4. [`node.pl`](node.pl)
+5. [`node_engine.pl`](node_engine.pl)
+6. [`node_session.pl`](node_session.pl)
+7. [`node_ws.pl`](node_ws.pl)
+8. Then the higher-level behaviours:
    [`server.pl`](server.pl),
    [`supervisor_actor.pl`](supervisor_actor.pl),
    and
    [`statechart_actor.pl`](statechart_actor.pl)
 
 That order moves from the core runtime outward to the protocols built on top of
-it.
+it.  For a focused deep dive on the cross-node layer specifically, read
+[`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md) alongside
+the source files above.
 
 ## In One Sentence
 
