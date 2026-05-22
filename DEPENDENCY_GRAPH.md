@@ -16,15 +16,15 @@ python3 tools/generate_dependency_graph.py
 
 ## Summary
 
-- Prolog files scanned: `88`
-- Local dependency edges found: `251`
+- Prolog files scanned: `97`
+- Local dependency edges found: `258`
 - Source basis: static `use_module/1-2` directives only
 - Renderer: Graphviz `dot` -> SVG
 
 ## All Local Module Dependencies
 
-- Nodes: `67`
-- Edges: `251`
+- Nodes: `65`
+- Edges: `258`
 
 ![All Local Module Dependencies](docs/generated/dependency_graph/all-local-module-dependencies.svg)
 
@@ -32,8 +32,8 @@ python3 tools/generate_dependency_graph.py
 
 ## Root Modules
 
-- Nodes: `50`
-- Edges: `199`
+- Nodes: `52`
+- Edges: `207`
 
 ![Root Modules](docs/generated/dependency_graph/root-modules.svg)
 
@@ -41,8 +41,8 @@ python3 tools/generate_dependency_graph.py
 
 ## Node Runtime And Session Modules
 
-- Nodes: `41`
-- Edges: `168`
+- Nodes: `43`
+- Edges: `176`
 
 ![Node Runtime And Session Modules](docs/generated/dependency_graph/node-runtime-and-session-modules.svg)
 
@@ -68,8 +68,8 @@ python3 tools/generate_dependency_graph.py
 
 ## Tests
 
-- Nodes: `31`
-- Edges: `36`
+- Nodes: `32`
+- Edges: `38`
 
 ![Tests](docs/generated/dependency_graph/tests.svg)
 
@@ -84,19 +84,11 @@ python3 tools/generate_dependency_graph.py
 
 [Open SVG](docs/generated/dependency_graph/examples.svg) | [DOT source](docs/generated/dependency_graph/examples.dot)
 
-## PoC Libraries
-
-- Nodes: `5`
-- Edges: `3`
-
-![PoC Libraries](docs/generated/dependency_graph/poc-libraries.svg)
-
-[Open SVG](docs/generated/dependency_graph/poc-libraries.svg) | [DOT source](docs/generated/dependency_graph/poc-libraries.dot)
-
 ## Source To Local Imports
 
 | Source | Local imports |
 | --- | --- |
+| `Deployment/shared_db_actor_common.pl` | - |
 | `Deployment/shared_db_admin.pl` | - |
 | `Deployment/shared_db_common.pl` | - |
 | `Deployment/shared_db_n1.pl` | - |
@@ -109,36 +101,48 @@ python3 tools/generate_dependency_graph.py
 | `Deployment/start_n2.pl` | `Deployment/shared_db_paths.pl` |
 | `Deployment/start_n3.pl` | `Deployment/shared_db_paths.pl`, `actor.pl`, `examples/services/node_resident_services.pl`, `node_runtime_state.pl` |
 | `Deployment/start_n4.pl` | `Deployment/shared_db_paths.pl`, `actor.pl`, `examples/services/node_resident_services.pl`, `node_runtime_state.pl` |
-| `actor.pl` | `actor_source.pl`, `node_execution_context.pl`, `node_runtime_state.pl`, `pid_utils.pl`, `public_goal_guard.pl`, `remote_protocol.pl`, `source_loader.pl`, `source_utils.pl` |
+| `actor.pl` | `actor_source.pl`, `node_builtin_policy.pl`, `node_controller.pl`, `node_execution_context.pl`, `node_log.pl`, `node_runtime_state.pl`, `pid_utils.pl`, `public_goal_guard.pl`, `remote_protocol.pl`, `source_loader.pl`, `source_utils.pl` |
 | `actor_io_support.pl` | - |
 | `actor_source.pl` | `actor_io_support.pl`, `node_execution_context.pl`, `node_runtime_state.pl`, `source_loader.pl` |
 | `debug.pl` | - |
 | `dollar_expansion.pl` | `term_display.pl` |
-| `examples/actors/count_actor.pl` | - |
-| `examples/actors/dining_philosophers.pl` | - |
-| `examples/actors/expert-system.pl` | - |
-| `examples/actors/fridge.pl` | - |
-| `examples/actors/grammar.pl` | - |
-| `examples/actors/parallel.pl` | - |
-| `examples/actors/ping-pong.pl` | - |
-| `examples/actors/priority_queue.pl` | - |
-| `examples/actors/queens.pl` | - |
-| `examples/actors/simple_toplevel.pl` | - |
-| `examples/actors/yes_or_no.pl` | - |
+| `examples/actors/01 queens.pl` | - |
+| `examples/actors/02 grammar.pl` | - |
+| `examples/actors/03 expert-system.pl` | - |
+| `examples/actors/04 count_server.pl` | - |
+| `examples/actors/05 fridge.pl` | - |
+| `examples/actors/06 priority_queue.pl` | - |
+| `examples/actors/07 ping-pong.pl` | - |
+| `examples/actors/08 dining_philosophers.pl` | - |
+| `examples/actors/09 parallel.pl` | - |
+| `examples/actors/10 simple_toplevel.pl` | - |
+| `examples/actors/11 promise-and-yield.pl` | - |
+| `examples/actors/12 rpc.pl` | - |
+| `examples/actors/13 fridge_server.pl` | - |
 | `examples/services/node_resident_services.pl` | `actor.pl`, `node.pl` |
 | `examples/services/service_directory.pl` | - |
+| `examples/swi-wasm-examples/grammar.pl` | - |
+| `examples/swi-wasm-examples/promise-and-yield.pl` | - |
+| `examples/swi-wasm-examples/queens.pl` | - |
+| `examples/swi-wasm-examples/rpc.pl` | - |
+| `examples/tau-examples/grammar.pl` | - |
+| `examples/tau-examples/promise-and-yield.pl` | - |
+| `examples/tau-examples/queens.pl` | - |
+| `examples/tau-examples/rpc.pl` | - |
 | `goal_walker.pl` | - |
 | `load.pl` | `actor.pl`, `node.pl`, `parallel.pl`, `server_actor.pl`, `statechart_actor.pl`, `supervisor_actor.pl`, `toplevel_actor.pl` |
-| `node.pl` | `actor.pl`, `actor_io_support.pl`, `dollar_expansion.pl`, `node_admin.pl`, `node_auth.pl`, `node_builtin_policy.pl`, `node_call_context.pl`, `node_client.pl`, `node_engine.pl`, `node_execution_context.pl`, `node_input_limits.pl`, `node_isotope_controller.pl`, `node_limits.pl`, `node_log.pl`, `node_principal_policy.pl`, `node_profile_policy.pl`, `node_rate_limits.pl`, `node_relation_policy.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `node_startup_options.pl`, `node_ws.pl`, `pid_utils.pl`, `source_utils.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
+| `node.pl` | `actor.pl`, `actor_io_support.pl`, `dollar_expansion.pl`, `node_admin.pl`, `node_auth.pl`, `node_builtin_policy.pl`, `node_call_context.pl`, `node_client.pl`, `node_engine.pl`, `node_execution_context.pl`, `node_input_limits.pl`, `node_interaction_log.pl`, `node_isotope_controller.pl`, `node_limits.pl`, `node_log.pl`, `node_principal_policy.pl`, `node_profile_policy.pl`, `node_rate_limits.pl`, `node_relation_policy.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `node_startup_options.pl`, `node_ws.pl`, `pid_utils.pl`, `source_utils.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
 | `node_admin.pl` | `node_auth.pl`, `node_builtin_policy.pl`, `node_client.pl`, `node_input_limits.pl`, `node_limits.pl`, `node_log.pl`, `node_principal_policy.pl`, `node_profile_policy.pl`, `node_rate_limits.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `node_ws.pl`, `pid_utils.pl` |
 | `node_auth.pl` | `node_capabilities.pl`, `node_client.pl`, `node_principal_policy.pl`, `node_runtime_state.pl` |
 | `node_builtin_policy.pl` | `node_runtime_state.pl` |
 | `node_call_context.pl` | `actor.pl`, `node_client.pl`, `node_input_limits.pl` |
 | `node_capabilities.pl` | - |
 | `node_client.pl` | `actor.pl`, `pid_utils.pl`, `source_loader.pl`, `source_utils.pl` |
+| `node_controller.pl` | - |
 | `node_engine.pl` | `actor.pl`, `node_client.pl`, `node_runtime_state.pl`, `toplevel_actor.pl` |
 | `node_execution_context.pl` | `node_profile_policy.pl` |
 | `node_input_limits.pl` | `node_client.pl`, `node_limit_helpers.pl` |
+| `node_interaction_log.pl` | `node_auth.pl`, `node_log.pl`, `node_runtime_state.pl` |
 | `node_isotope_controller.pl` | `actor.pl`, `dollar_expansion.pl`, `node_call_context.pl`, `node_client.pl`, `node_execution_context.pl`, `node_isotope_options.pl`, `node_limits.pl`, `node_log.pl`, `node_profile_policy.pl`, `node_sandbox.pl`, `node_session.pl`, `pid_utils.pl`, `toplevel_actor.pl` |
 | `node_isotope_options.pl` | `node_auth.pl`, `node_client.pl`, `node_input_limits.pl`, `node_sandbox.pl` |
 | `node_limit_helpers.pl` | `node_runtime_state.pl` |
@@ -156,11 +160,6 @@ python3 tools/generate_dependency_graph.py
 | `node_ws.pl` | `actor.pl`, `dollar_expansion.pl`, `node_auth.pl`, `node_call_context.pl`, `node_client.pl`, `node_execution_context.pl`, `node_input_limits.pl`, `node_limits.pl`, `node_log.pl`, `node_profile_policy.pl`, `node_rate_limits.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `pid_utils.pl`, `toplevel_actor.pl` |
 | `parallel.pl` | `actor.pl` |
 | `pid_utils.pl` | `node_runtime_state.pl` |
-| `poc-libraries/actors.pl` | - |
-| `poc-libraries/actors_trealla.pl` | - |
-| `poc-libraries/parallel.pl` | - |
-| `poc-libraries/tests.pl` | `poc-libraries/actors.pl` |
-| `poc-libraries/tests_trealla.pl` | `poc-libraries/actors_trealla.pl`, `poc-libraries/parallel.pl` |
 | `public_goal_guard.pl` | `node_execution_context.pl` |
 | `remote_protocol.pl` | - |
 | `run.pl` | - |
@@ -178,13 +177,14 @@ python3 tools/generate_dependency_graph.py
 | `test.pl` | `tests/node_tests.pl`, `tests/statechart_actor_tests.pl`, `tests/supervisor_actor_tests.pl` |
 | `tests/actor_tests.pl` | `actor.pl`, `node.pl`, `toplevel_actor.pl` |
 | `tests/goal_walker_tests.pl` | `goal_walker.pl` |
+| `tests/multi_node_harness.pl` | `actor.pl`, `node.pl` |
 | `tests/node_tests.pl` | `actor.pl`, `dollar_expansion.pl`, `examples/services/node_resident_services.pl`, `goal_walker.pl`, `node.pl`, `node_auth.pl`, `node_call_context.pl`, `node_execution_context.pl`, `node_principal_policy.pl`, `node_profile_policy.pl`, `node_relation_policy.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `node_startup_options.pl`, `pid_utils.pl`, `public_goal_guard.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
 | `tests/parallel_tests.pl` | `actor.pl`, `parallel.pl` |
 | `tests/server_actor_tests.pl` | `actor.pl`, `server_actor.pl` |
 | `tests/statechart_actor_tests.pl` | `actor.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
 | `tests/supervisor_actor_tests.pl` | `actor.pl`, `server_actor.pl`, `supervisor_actor.pl` |
 | `tests/toplevel_actor_tests.pl` | `actor.pl`, `toplevel_actor.pl` |
-| `toplevel_actor.pl` | `actor.pl`, `public_goal_guard.pl`, `remote_protocol.pl`, `source_loader.pl` |
+| `toplevel_actor.pl` | `actor.pl`, `node_controller.pl`, `public_goal_guard.pl`, `remote_protocol.pl`, `source_loader.pl` |
 
 ## Notes
 

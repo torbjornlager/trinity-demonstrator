@@ -55,6 +55,11 @@ swipl -q -s test.pl -g test -t halt
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
   High-level structure of the runtime, node layer, and request flows.
+- [CROSS_NODE_ARCHITECTURE.md](CROSS_NODE_ARCHITECTURE.md)
+  Detailed specification of the cross-node actor layer: wire
+  protocol, controller tables, dispatch algorithm, lifecycle
+  invariants.  Written so a port to another Prolog system can be
+  checked against it line-by-line.
 - [WEB_PROLOG_BUILTINS.md](WEB_PROLOG_BUILTINS.md)
   Canonical built-ins catalog for the ACTOR profile surface.
 - [WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md](WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md)
