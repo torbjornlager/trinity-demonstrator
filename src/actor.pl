@@ -629,7 +629,7 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
         %  the terminal I/O channel).  Pinned by node_tests.pl tests
         %  ws_remote_actor_io_output_suppressed and
         %  ws_remote_toplevel_io_output_suppressed.
-        remote_event_pid(Dict, RemotePid),
+        remote_event_pid(Dict, _RemotePid),
         ws_json_is_io_output(Dict)
     ->  true
     ;   %  Forward non-down per-pid events (success, prompt, stop,
