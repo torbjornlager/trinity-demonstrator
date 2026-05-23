@@ -7,7 +7,7 @@ lifecycle invariants that a port must satisfy.
 
 The document is self-contained.  It assumes the host Prolog system
 already provides a local actor model in the style of Chapter 2–3 of
-[*The Prolog Trinity*](book.tex); §2 below restates the
+*The Prolog Trinity*; §2 below restates the
 prerequisites precisely.
 
 ---
