@@ -47,40 +47,40 @@ swipl -q -s test.pl -g test -t halt
 
 ### Start Here
 
-- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md)
   High-level structure of the runtime, node layer, and request flows.
-- [CROSS_NODE_ARCHITECTURE.md](CROSS_NODE_ARCHITECTURE.md)
+- [CROSS_NODE_ARCHITECTURE.md](docs/CROSS_NODE_ARCHITECTURE.md)
   Detailed specification of the cross-node actor layer: wire
   protocol, controller tables, dispatch algorithm, lifecycle
   invariants.  Written so a port to another Prolog system can be
   checked against it line-by-line.
-- [WEB_PROLOG_BUILTINS.md](WEB_PROLOG_BUILTINS.md)
+- [WEB_PROLOG_BUILTINS.md](docs/WEB_PROLOG_BUILTINS.md)
   Canonical built-ins catalog for the ACTOR profile surface.
-- [WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md](WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md)
+- [WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md](docs/WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md)
   Route-by-route verification of what client code is actually accepted.
-- [DEMONSTRATOR.md](DEMONSTRATOR.md)
+- [DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
   Current architecture and status of the browser demonstrator.
 
 ### Editing, Deployment, and Operations
 
-- [EDITING_AND_DEPLOYING.md](EDITING_AND_DEPLOYING.md)
+- [EDITING_AND_DEPLOYING.md](docs/EDITING_AND_DEPLOYING.md)
   Safe workflow for editing tutorial content and shared databases, then deploying.
 - [Deployment/README.md](Deployment/README.md)
   Deployment bundle layout and Docker-oriented operational notes.
-- [ADMIN-DEPLOYMENT-MANUAL.public.md](ADMIN-DEPLOYMENT-MANUAL.public.md)
+- [ADMIN-DEPLOYMENT-MANUAL.public.md](docs/ADMIN-DEPLOYMENT-MANUAL.public.md)
   Operator manual for a Docker-based deployment of the public Web Prolog nodes.
-- [ADMIN_TOOLS.md](ADMIN_TOOLS.md)
+- [ADMIN_TOOLS.md](docs/ADMIN_TOOLS.md)
   User guide for the demonstrator admin panel and admin API surface.
 
 ### Policy and Security
 
-- [SECURITY_REPORT.md](SECURITY_REPORT.md)
+- [SECURITY_REPORT.md](docs/SECURITY_REPORT.md)
   Consolidated description of the demonstrator's security posture:
   threat model, defences, known limitations, and what would change
   for a production deployment.
 - [AUTH_AND_PROFILE.md](docs/policy/AUTH_AND_PROFILE.md)
   Canonical summary of authentication, authorization, profile enforcement, and ownership.
-- [PROFILE_MATRIX.md](PROFILE_MATRIX.md)
+- [PROFILE_MATRIX.md](docs/PROFILE_MATRIX.md)
   Current profile contract matrix.
 - [SANDBOX_AND_HARDENING.md](docs/policy/SANDBOX_AND_HARDENING.md)
   Canonical summary of sandboxing, security boundaries, and public-deployment hardening.
@@ -106,7 +106,7 @@ swipl -q -s test.pl -g test -t halt
 ## Security Note
 
 Do not expose this node publicly without the deployment hardening described in
-[ADMIN-DEPLOYMENT-MANUAL.public.md](ADMIN-DEPLOYMENT-MANUAL.public.md),
+[ADMIN-DEPLOYMENT-MANUAL.public.md](docs/ADMIN-DEPLOYMENT-MANUAL.public.md),
 [Deployment/README.md](Deployment/README.md), and
 [SANDBOX_AND_HARDENING.md](docs/policy/SANDBOX_AND_HARDENING.md).
 

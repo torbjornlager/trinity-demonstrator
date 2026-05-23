@@ -80,7 +80,7 @@ A request to a node passes through these gates, in order:
    `X-Web-Prolog-Internal-Proxy`, and `X-Authenticated-User`
    headers are *stripped* before the request reaches the upstream.
    See `(common_proxy_headers)` in
-   [Deployment/Caddyfile](Deployment/Caddyfile).
+   [Deployment/Caddyfile](../Deployment/Caddyfile).
 3. **Path allow-list** at Caddy.  Each `@allowed` matcher lists
    exactly the paths the node exposes (e.g. `/call`, `/portal`,
    `/ws`, `/toplevel_*`).  Anything else gets `404` without
@@ -120,7 +120,7 @@ and can drive the node's normal user-facing surface (the `/call`
 endpoint, the portal, and on actor nodes the WS commands).
 
 `auth(dev)` is dormant on the production nodes and was hardened
-([node_auth.pl:381](node_auth.pl:381)) so that the default
+([node_auth.pl:381](../src/node_auth.pl:381)) so that the default
 `dev_capabilities` is `[execute]` rather than `[admin]` — the old
 default was a foot-gun.  `auth(dev)` requires the request peer to
 be loopback; the documentation now warns that a same-host reverse
@@ -135,11 +135,11 @@ recommends restricting `auth(dev)` to direct loopback access.
 it lets the bearer:
 
 - bypass per-pid ownership checks for `ws_actor` operations
-  ([node_ws.pl:661–663](node_ws.pl:661));
+  ([node_ws.pl:661–663](../src/node_ws.pl:661));
 - bypass the per-principal rate limit
-  ([node_rate_limits.pl:223](node_rate_limits.pl:223));
+  ([node_rate_limits.pl:223](../src/node_rate_limits.pl:223));
 - bypass the per-principal resource caps
-  ([node_limits.pl:287–289](node_limits.pl:287)).
+  ([node_limits.pl:287–289](../src/node_limits.pl:287)).
 
 It does **not** bypass the Prolog-level sandbox.  The sandbox is
 profile-based, not principal-based, and applies to every source
@@ -148,7 +148,7 @@ and every goal regardless of which principal submitted them.
 ### 4.1 Who is granted `internal_transport`
 
 A request is granted `internal_transport` iff *all three* of the
-following hold ([node_auth.pl:260–293](node_auth.pl:260)):
+following hold ([node_auth.pl:260–293](../src/node_auth.pl:260)):
 
 1. The `X-Web-Prolog-User` header value starts with `"node:"`.
 2. The `X-Web-Prolog-Capabilities` header lists
@@ -214,12 +214,12 @@ endpoint.  Without an Origin check, any page on the web can drive
 the actor surface of `n3`/`n4` from a victim's browser.
 
 The current policy is enforced by `ws_require_allowed_origin/1`
-([node_ws.pl:165–230](node_ws.pl:165)), called from `ws_handler/1`
+([node_ws.pl:165–230](../src/node_ws.pl:165)), called from `ws_handler/1`
 before the principal is resolved:
 
 - **No Origin header** → accept.  Native (non-browser) clients,
   including the inter-node WebSocket reader in
-  [actor.pl](actor.pl), do not set Origin; locking them out is not
+  [actor.pl](../src/actor.pl), do not set Origin; locking them out is not
   the intent.
 - **Origin equals the request's Host** → accept (same-origin).
   This is the typical browser case where a portal hosted at
@@ -230,7 +230,7 @@ before the principal is resolved:
 - **Otherwise** → throw
   `permission_error(open, websocket_origin, Origin)`.
 
-The unit tests in [tests/node_tests.pl](tests/node_tests.pl) (see
+The unit tests in [tests/node_tests.pl](../tests/node_tests.pl) (see
 the `ws_origin_*` test set) pin the four acceptance cases plus the
 rejection.
 
@@ -247,10 +247,10 @@ without affecting all of them — which is incompatible with the
 *invisibility* and *containment* mechanisms from §4.6 of the book.
 
 `n3` and `n4` set the runtime value `anon_per_ws_connection: true`
-([Deployment/start_n3.pl:64](Deployment/start_n3.pl:64),
-[Deployment/start_n4.pl:64](Deployment/start_n4.pl:64)).  With
+([Deployment/start_n3.pl:64](../Deployment/start_n3.pl:64),
+[Deployment/start_n4.pl:64](../Deployment/start_n4.pl:64)).  With
 this enabled, `ws_principal/2`
-([node_auth.pl:96–145](node_auth.pl:96)) replaces the shared
+([node_auth.pl:96–145](../src/node_auth.pl:96)) replaces the shared
 `anonymous` with a fresh `anon:<64-bit-hex>` principal at
 handshake time, carrying the same open-mode capabilities.
 
@@ -277,16 +277,16 @@ capabilities:
 
 - **Read-only root filesystem** inside the container; `/tmp` is
   the only writable area.  See
-  [Deployment/compose.yaml](Deployment/compose.yaml).
+  [Deployment/compose.yaml](../Deployment/compose.yaml).
 - **Dropped Linux capabilities** (`cap_drop: ALL`).
 - **No raw network access** beyond the per-container loopback and
   the Docker bridge that Caddy uses.
 - **Sandbox-blacklist mode** on all four nodes (`sandbox(blacklist)`),
   which disables file I/O, OS access, and similar predicate
   families at the language level.  See
-  [docs/policy/SANDBOX_AND_HARDENING.md](docs/policy/SANDBOX_AND_HARDENING.md)
+  [policy/SANDBOX_AND_HARDENING.md](policy/SANDBOX_AND_HARDENING.md)
   and
-  [docs/policy/BLACKLIST_SANDBOX_NOTES.md](docs/policy/BLACKLIST_SANDBOX_NOTES.md).
+  [policy/BLACKLIST_SANDBOX_NOTES.md](policy/BLACKLIST_SANDBOX_NOTES.md).
 - **Resource caps** per node: `max_inflight_calls`,
   `max_sessions_per_principal`, `max_ws_actors_per_principal`,
   `max_term_text_bytes`, `max_load_text_bytes`, and rate-limit
@@ -412,16 +412,16 @@ similar.
 ### 9.6 In-process integration test caveat
 
 The cross-node integration tests
-([tests/cross_node_lifecycle_tests.plt](tests/cross_node_lifecycle_tests.plt))
+([tests/cross_node_lifecycle_tests.plt](../tests/cross_node_lifecycle_tests.plt))
 run two nodes in the same Prolog process.  They share controller
-state in [node_controller.pl](node_controller.pl) — so bugs that
+state in [node_controller.pl](../src/node_controller.pl) — so bugs that
 only manifest with truly node-local state are not caught.  An
 OS-level multi-process test suite would be the right complement
 for a production system.
 
 ### 9.7 The `admin` HTTP route trusts loopback unconditionally
 
-`require_admin_access/1` ([node_auth.pl:170–179](node_auth.pl:170))
+`require_admin_access/1` ([node_auth.pl:170–179](../src/node_auth.pl:170))
 treats any request from a loopback peer as admin under
 `auth(open)`.  This is intentional for the operator workflow:
 `curl http://127.0.0.1:3053/admin/runtime` on the host machine

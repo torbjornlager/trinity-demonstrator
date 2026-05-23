@@ -17,11 +17,11 @@ route. In profile terms, `actor` includes the lower `relation`, `isobase`, and
 
 Primary basis:
 
-- [node_builtin_policy.pl](./node_builtin_policy.pl)
-- [node_profile_policy.pl](./node_profile_policy.pl)
-- [actor_io_support.pl](./actor_io_support.pl)
-- [node_sandbox.pl](./node_sandbox.pl)
-- [BLACKLIST_SANDBOX_NOTES.md](./docs/policy/BLACKLIST_SANDBOX_NOTES.md)
+- [node_builtin_policy.pl](../src/node_builtin_policy.pl)
+- [node_profile_policy.pl](../src/node_profile_policy.pl)
+- [actor_io_support.pl](../src/actor_io_support.pl)
+- [node_sandbox.pl](../src/node_sandbox.pl)
+- [BLACKLIST_SANDBOX_NOTES.md](policy/BLACKLIST_SANDBOX_NOTES.md)
 
 ## Notes on Scope
 
@@ -240,7 +240,7 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 ## Blacklisted (Not Available)
 
 For reference, the following ISO predicates are denied by the blacklist. See
-`docs/policy/BLACKLIST_SANDBOX_NOTES.md` for rationale.
+`policy/BLACKLIST_SANDBOX_NOTES.md` for rationale.
 
 - **Stream and file I/O (8.11–8.14):** `open/3-4`, `close/1-2`,
   `current_input/1`, `current_output/1`, `set_input/1`, `set_output/1`,

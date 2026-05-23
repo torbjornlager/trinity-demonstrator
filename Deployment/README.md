@@ -46,9 +46,9 @@ docker compose -f compose.yaml -f compose.examples-live.yaml up -d wp_n1 wp_n2 w
 For day-2 operations and maintenance, see:
 
 - public/redacted guide:
-  [`ADMIN-DEPLOYMENT-MANUAL.public.md`](ADMIN-DEPLOYMENT-MANUAL.public.md)
+  [`ADMIN-DEPLOYMENT-MANUAL.public.md`](../docs/ADMIN-DEPLOYMENT-MANUAL.public.md)
 - focused content-edit workflow:
-  [`EDITING_AND_DEPLOYING.md`](EDITING_AND_DEPLOYING.md)
+  [`EDITING_AND_DEPLOYING.md`](../docs/EDITING_AND_DEPLOYING.md)
 
 If you keep a more detailed local operator manual with home-network specifics,
 keep that one out of public git.

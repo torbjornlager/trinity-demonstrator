@@ -31,7 +31,7 @@ imported.
 
 ### 1. Actor runtime
 
-[`actor.pl`](actor.pl) is the foundation.
+[`actor.pl`](../src/actor.pl) is the foundation.
 
 It provides:
 
@@ -52,7 +52,7 @@ The local path is straightforward:
 6. The start goal is executed in that module.
 
 Remote actors are routed through the node controller in
-[`node_controller.pl`](node_controller.pl), which owns three small
+[`node_controller.pl`](../src/node_controller.pl), which owns three small
 tables tracking, for each remote pid this node knows about, the
 local target, the cross-node monitors, and the cross-node links.
 A remote spawn request goes over a shared WebSocket connection per
@@ -67,17 +67,17 @@ the wire protocol and lifecycle invariants.
 
 These modules all build on `actor.pl`:
 
-- [`toplevel_actor.pl`](toplevel_actor.pl)
+- [`toplevel_actor.pl`](../src/toplevel_actor.pl)
   implements a query engine actor. It accepts `'$call'`, `'$next'`, and
   `'$stop'` messages and returns `success`, `failure`, or `error` terms. This
   is the execution engine behind both `/call` continuations and ISOTOPE
   sessions.
-- [`server.pl`](server.pl)
+- [`server.pl`](../src/server.pl)
   provides a tiny `gen_server`-style request/reply loop with explicit state.
-- [`supervisor_actor.pl`](supervisor_actor.pl)
+- [`supervisor_actor.pl`](../src/supervisor_actor.pl)
   implements supervisor strategies such as `one_for_one`, `one_for_all`, and
   `rest_for_one`.
-- [`statechart_actor.pl`](statechart_actor.pl)
+- [`statechart_actor.pl`](../src/statechart_actor.pl)
   interprets the Web Prolog statechart profile by storing the parsed model in
   thread-local facts and driving execution through an actor event loop.
 
@@ -86,7 +86,7 @@ runtime is small, and richer behaviours are ordinary libraries on top of it.
 
 ### 3. Node layer
 
-[`node.pl`](node.pl) turns the
+[`node.pl`](../src/node.pl) turns the
 runtime into a networked node.
 
 It exposes three interaction styles:
@@ -107,14 +107,14 @@ recomputation across pagination.
 
 The flow is:
 
-1. [`node_call_context.pl`](node_call_context.pl)
+1. [`node_call_context.pl`](../src/node_call_context.pl)
    parses query parameters and turns text into a `Goal` and `Template`.
-2. [`node_engine.pl`](node_engine.pl)
+2. [`node_engine.pl`](../src/node_engine.pl)
    either reuses a cached toplevel actor or spawns a new one.
 3. The toplevel actor evaluates a slice of solutions.
 4. If more solutions remain, the toplevel pid is cached by goal hash and
    offset.
-5. [`node_response.pl`](node_response.pl)
+5. [`node_response.pl`](../src/node_response.pl)
    serializes the answer as Prolog text or JSON.
 
 Conceptually, `/call` is "stateless at the HTTP boundary, stateful
@@ -134,7 +134,7 @@ The flow is:
 4. `/toplevel_next`, `/toplevel_poll`, `/toplevel_respond`, and
    `/toplevel_abort` keep interacting with the same session actor.
 
-[`node_session.pl`](node_session.pl)
+[`node_session.pl`](../src/node_session.pl)
 holds most of the session-specific logic:
 
 - queue bookkeeping
@@ -142,13 +142,13 @@ holds most of the session-specific logic:
 - load-text persistence across calls
 - rewriting `write/1`, `writeln/1`, and `read/1` into actor I/O
 
-[`node_isotope_controller.pl`](node_isotope_controller.pl)
+[`node_isotope_controller.pl`](../src/node_isotope_controller.pl)
 is the thin controller layer that glues request parsing, session helpers, and
 toplevel actor commands together.
 
 ### ACTOR WebSocket mode
 
-[`node_ws.pl`](node_ws.pl)
+[`node_ws.pl`](../src/node_ws.pl)
 implements the ACTOR profile.
 
 Each WebSocket connection gets:
@@ -166,14 +166,14 @@ The browser can:
 - exit actors
 
 This is the most direct exposure of the actor runtime. The shell frontend in
-[`demonstrator.html`](demonstrator.html)
+[`demonstrator.html`](../web/demonstrator.html)
 is the current demonstrator frontend and switches between stateless HTTP,
 ISOTOPE, and ACTOR modes.
 
 ## Shared Database and Actor Code
 
 Node startup options are parsed by
-[`node_startup_options.pl`](node_startup_options.pl).
+[`node_startup_options.pl`](../src/node_startup_options.pl).
 They build one shared source text from:
 
 - `load_shared_db_text/1`
@@ -191,7 +191,7 @@ actor's private database. Actors keep private code isolation, but they all see
 the same shared predicates through module import.
 
 Separately, actor-specific source options are handled by `actor.pl` and
-[`source_utils.pl`](source_utils.pl).
+[`source_utils.pl`](../src/source_utils.pl).
 Those options affect only the spawned actor or session being prepared.
 
 ## Pids and Distribution
@@ -207,7 +207,7 @@ still often work with plain integers, but the runtime has enough information to
 route messages, exits, and session lookups correctly across node boundaries.
 
 Cross-node messaging is mediated by the node controller in
-[`node_controller.pl`](node_controller.pl): one outbound WebSocket
+[`node_controller.pl`](../src/node_controller.pl): one outbound WebSocket
 connection per remote URL, three dynamic tables on the local node
 (`remote_target_/2`, `remote_monitor_/3`, `remote_link_/2`), and a
 single dispatch loop in `actor.pl`'s `remote_ws_dispatch/3`.
@@ -221,15 +221,15 @@ invariants are documented in
 
 Several smaller modules keep the edge handling out of the main control code:
 
-- [`node_response.pl`](node_response.pl)
+- [`node_response.pl`](../src/node_response.pl)
   converts internal answer terms into JSON or Prolog output and simplifies
   common error messages.
-- [`node_client.pl`](node_client.pl)
+- [`node_client.pl`](../src/node_client.pl)
   implements the client side of the HTTP API and shared timeout/load-text
   normalization.
-- [`node_isotope_options.pl`](node_isotope_options.pl)
+- [`node_isotope_options.pl`](../src/node_isotope_options.pl)
   parses spawn options for ISOTOPE endpoints and injects the shell prelude.
-- [`dollar_expansion.pl`](dollar_expansion.pl)
+- [`dollar_expansion.pl`](../src/dollar_expansion.pl)
   stores recent variable bindings so the shell can support `$Var` expansion
   across queries.
 
@@ -240,19 +240,19 @@ readable.
 
 A useful reading order is:
 
-1. [`actor.pl`](actor.pl)
-2. [`node_controller.pl`](node_controller.pl) — small companion to
+1. [`actor.pl`](../src/actor.pl)
+2. [`node_controller.pl`](../src/node_controller.pl) — small companion to
    `actor.pl`; the three tables that drive cross-node routing
-3. [`toplevel_actor.pl`](toplevel_actor.pl)
-4. [`node.pl`](node.pl)
-5. [`node_engine.pl`](node_engine.pl)
-6. [`node_session.pl`](node_session.pl)
-7. [`node_ws.pl`](node_ws.pl)
+3. [`toplevel_actor.pl`](../src/toplevel_actor.pl)
+4. [`node.pl`](../src/node.pl)
+5. [`node_engine.pl`](../src/node_engine.pl)
+6. [`node_session.pl`](../src/node_session.pl)
+7. [`node_ws.pl`](../src/node_ws.pl)
 8. Then the higher-level behaviours:
-   [`server.pl`](server.pl),
-   [`supervisor_actor.pl`](supervisor_actor.pl),
+   [`server.pl`](../src/server.pl),
+   [`supervisor_actor.pl`](../src/supervisor_actor.pl),
    and
-   [`statechart_actor.pl`](statechart_actor.pl)
+   [`statechart_actor.pl`](../src/statechart_actor.pl)
 
 That order moves from the core runtime outward to the protocols built on top of
 it.  For a focused deep dive on the cross-node layer specifically, read

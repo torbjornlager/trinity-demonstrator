@@ -7,7 +7,7 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "DEPENDENCY_GRAPH.md"
+OUTPUT = ROOT / "docs" / "DEPENDENCY_GRAPH.md"
 ARTIFACT_DIR = ROOT / "docs" / "generated" / "dependency_graph"
 USE_MODULE_RE = re.compile(r":-\s*use_module\s*\(", re.MULTILINE)
 EXCLUDED_PARTS = {".git", ".claude", "Tau-Prolog", "node_modules", "__pycache__"}
@@ -145,6 +145,11 @@ def rel(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
 
 
+def link_rel(path: Path) -> str:
+    import os
+    return os.path.relpath(path, OUTPUT.parent).replace(os.sep, "/")
+
+
 def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
@@ -244,8 +249,8 @@ def graph_sections(all_edges: list[tuple[str, str]]) -> list[str]:
         if not unique_edges:
             continue
         dot_path, svg_path, node_count, edge_count = render_section_graph(title, unique_edges)
-        dot_rel = rel(dot_path)
-        svg_rel = rel(svg_path)
+        dot_rel = link_rel(dot_path)
+        svg_rel = link_rel(svg_path)
         lines.extend([
             f"## {title}",
             "",

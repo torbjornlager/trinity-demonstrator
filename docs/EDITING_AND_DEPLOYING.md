@@ -29,11 +29,11 @@ containers are rebuilt.
 
 Canonical source file:
 
-- [`tutorial.html`](tutorial.html)
+- [`tutorial.html`](../web/tutorial.html)
 
 Recommended pattern:
 
-1. Edit [`tutorial.html`](tutorial.html).
+1. Edit [`tutorial.html`](../web/tutorial.html).
 2. Save it.
 3. Rebuild the nodes that should serve the new tutorial.
 
@@ -61,15 +61,15 @@ overlay per node.
 
 Common file loaded by all deployed nodes:
 
-- [`Deployment/shared_db_common.pl`](Deployment/shared_db_common.pl)
+- [`Deployment/shared_db_common.pl`](../Deployment/shared_db_common.pl)
 
 Node-specific overlays:
 
-- `n1` -> [`Deployment/shared_db_n1.pl`](Deployment/shared_db_n1.pl)
-- `n2` -> [`Deployment/shared_db_n2.pl`](Deployment/shared_db_n2.pl)
-- `n3` -> [`Deployment/shared_db_n3.pl`](Deployment/shared_db_n3.pl)
-- `n4` -> [`Deployment/shared_db_n4.pl`](Deployment/shared_db_n4.pl)
-- `admin` -> [`Deployment/shared_db_admin.pl`](Deployment/shared_db_admin.pl)
+- `n1` -> [`Deployment/shared_db_n1.pl`](../Deployment/shared_db_n1.pl)
+- `n2` -> [`Deployment/shared_db_n2.pl`](../Deployment/shared_db_n2.pl)
+- `n3` -> [`Deployment/shared_db_n3.pl`](../Deployment/shared_db_n3.pl)
+- `n4` -> [`Deployment/shared_db_n4.pl`](../Deployment/shared_db_n4.pl)
+- `admin` -> [`Deployment/shared_db_admin.pl`](../Deployment/shared_db_admin.pl)
 
 How to decide what to edit:
 
@@ -114,7 +114,7 @@ docker compose -f Deployment/compose.yaml up --build -d
 
 For tutorial-only edits, use this pattern:
 
-1. Edit [`tutorial.html`](tutorial.html).
+1. Edit [`tutorial.html`](../web/tutorial.html).
 2. Tell Codex: `Deploy tutorial.html`.
 
 For shared database edits, use this pattern:

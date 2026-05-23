@@ -17,72 +17,72 @@ python3 tools/generate_dependency_graph.py
 ## Summary
 
 - Prolog files scanned: `97`
-- Local dependency edges found: `258`
+- Local dependency edges found: `259`
 - Source basis: static `use_module/1-2` directives only
 - Renderer: Graphviz `dot` -> SVG
 
 ## All Local Module Dependencies
 
 - Nodes: `65`
-- Edges: `258`
+- Edges: `259`
 
-![All Local Module Dependencies](docs/generated/dependency_graph/all-local-module-dependencies.svg)
+![All Local Module Dependencies](generated/dependency_graph/all-local-module-dependencies.svg)
 
-[Open SVG](docs/generated/dependency_graph/all-local-module-dependencies.svg) | [DOT source](docs/generated/dependency_graph/all-local-module-dependencies.dot)
+[Open SVG](generated/dependency_graph/all-local-module-dependencies.svg) | [DOT source](generated/dependency_graph/all-local-module-dependencies.dot)
 
 ## Root Modules
 
 - Nodes: `52`
 - Edges: `207`
 
-![Root Modules](docs/generated/dependency_graph/root-modules.svg)
+![Root Modules](generated/dependency_graph/root-modules.svg)
 
-[Open SVG](docs/generated/dependency_graph/root-modules.svg) | [DOT source](docs/generated/dependency_graph/root-modules.dot)
+[Open SVG](generated/dependency_graph/root-modules.svg) | [DOT source](generated/dependency_graph/root-modules.dot)
 
 ## Node Runtime And Session Modules
 
 - Nodes: `43`
 - Edges: `176`
 
-![Node Runtime And Session Modules](docs/generated/dependency_graph/node-runtime-and-session-modules.svg)
+![Node Runtime And Session Modules](generated/dependency_graph/node-runtime-and-session-modules.svg)
 
-[Open SVG](docs/generated/dependency_graph/node-runtime-and-session-modules.svg) | [DOT source](docs/generated/dependency_graph/node-runtime-and-session-modules.dot)
+[Open SVG](generated/dependency_graph/node-runtime-and-session-modules.svg) | [DOT source](generated/dependency_graph/node-runtime-and-session-modules.dot)
 
 ## Statechart Modules
 
 - Nodes: `10`
 - Edges: `14`
 
-![Statechart Modules](docs/generated/dependency_graph/statechart-modules.svg)
+![Statechart Modules](generated/dependency_graph/statechart-modules.svg)
 
-[Open SVG](docs/generated/dependency_graph/statechart-modules.svg) | [DOT source](docs/generated/dependency_graph/statechart-modules.dot)
+[Open SVG](generated/dependency_graph/statechart-modules.svg) | [DOT source](generated/dependency_graph/statechart-modules.dot)
 
 ## Deployment Modules
 
 - Nodes: `9`
 - Edges: `11`
 
-![Deployment Modules](docs/generated/dependency_graph/deployment-modules.svg)
+![Deployment Modules](generated/dependency_graph/deployment-modules.svg)
 
-[Open SVG](docs/generated/dependency_graph/deployment-modules.svg) | [DOT source](docs/generated/dependency_graph/deployment-modules.dot)
+[Open SVG](generated/dependency_graph/deployment-modules.svg) | [DOT source](generated/dependency_graph/deployment-modules.dot)
 
 ## Tests
 
-- Nodes: `32`
-- Edges: `38`
+- Nodes: `33`
+- Edges: `39`
 
-![Tests](docs/generated/dependency_graph/tests.svg)
+![Tests](generated/dependency_graph/tests.svg)
 
-[Open SVG](docs/generated/dependency_graph/tests.svg) | [DOT source](docs/generated/dependency_graph/tests.dot)
+[Open SVG](generated/dependency_graph/tests.svg) | [DOT source](generated/dependency_graph/tests.dot)
 
 ## Examples
 
 - Nodes: `3`
 - Edges: `2`
 
-![Examples](docs/generated/dependency_graph/examples.svg)
+![Examples](generated/dependency_graph/examples.svg)
 
-[Open SVG](docs/generated/dependency_graph/examples.svg) | [DOT source](docs/generated/dependency_graph/examples.dot)
+[Open SVG](generated/dependency_graph/examples.svg) | [DOT source](generated/dependency_graph/examples.dot)
 
 ## Source To Local Imports
 
@@ -178,7 +178,7 @@ python3 tools/generate_dependency_graph.py
 | `tests/actor_tests.pl` | `actor.pl`, `node.pl`, `toplevel_actor.pl` |
 | `tests/goal_walker_tests.pl` | `goal_walker.pl` |
 | `tests/multi_node_harness.pl` | `actor.pl`, `node.pl` |
-| `tests/node_tests.pl` | `actor.pl`, `dollar_expansion.pl`, `examples/services/node_resident_services.pl`, `goal_walker.pl`, `node.pl`, `node_auth.pl`, `node_call_context.pl`, `node_execution_context.pl`, `node_principal_policy.pl`, `node_profile_policy.pl`, `node_relation_policy.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `node_startup_options.pl`, `pid_utils.pl`, `public_goal_guard.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
+| `tests/node_tests.pl` | `actor.pl`, `dollar_expansion.pl`, `examples/services/node_resident_services.pl`, `goal_walker.pl`, `node.pl`, `node_auth.pl`, `node_call_context.pl`, `node_capabilities.pl`, `node_execution_context.pl`, `node_principal_policy.pl`, `node_profile_policy.pl`, `node_relation_policy.pl`, `node_response.pl`, `node_runtime_state.pl`, `node_sandbox.pl`, `node_session.pl`, `node_startup_options.pl`, `pid_utils.pl`, `public_goal_guard.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
 | `tests/parallel_tests.pl` | `actor.pl`, `parallel.pl` |
 | `tests/server_actor_tests.pl` | `actor.pl`, `server_actor.pl` |
 | `tests/statechart_actor_tests.pl` | `actor.pl`, `statechart_actor.pl`, `toplevel_actor.pl` |
