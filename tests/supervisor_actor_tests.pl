@@ -19,9 +19,9 @@
 
 
 
-:- use_module('../supervisor_actor.pl').
-:- use_module('../actor.pl', [receive/1, receive/2, monitor/2, exit/1, exit/2]).
-:- use_module('../server_actor.pl', [server_request/3, server_halt/2]).
+:- use_module('../src/supervisor_actor.pl').
+:- use_module('../src/actor.pl', [receive/1, receive/2, monitor/2, exit/1, exit/2]).
+:- use_module('../src/server_actor.pl', [server_request/3, server_halt/2]).
 
 :- use_module(library(debug)).
 :- use_module(library(plunit), [run_tests/1]).

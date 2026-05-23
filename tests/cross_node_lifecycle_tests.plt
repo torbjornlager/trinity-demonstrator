@@ -17,11 +17,11 @@
       - No proxy stragglers: remote_pid_proxy/2 retracted after halt.
 */
 
-:- use_module('../actor.pl').
-:- use_module('../toplevel_actor.pl').
-:- use_module('../node.pl').
-:- use_module('../node_log.pl').
-:- use_module('../node_controller.pl').
+:- use_module('../src/actor.pl').
+:- use_module('../src/toplevel_actor.pl').
+:- use_module('../src/node.pl').
+:- use_module('../src/node_log.pl').
+:- use_module('../src/node_controller.pl').
 :- use_module('multi_node_harness.pl').
 
 :- use_module(library(plunit)).

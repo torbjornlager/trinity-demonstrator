@@ -3,9 +3,9 @@
                 *             TESTS            *
                 *******************************/   
 
-:- use_module('../actor.pl').
-:- use_module('../toplevel_actor.pl').
-:- use_module('../node.pl').
+:- use_module('../src/actor.pl').
+:- use_module('../src/toplevel_actor.pl').
+:- use_module('../src/node.pl').
 
 :- use_module(library(plunit)).
 :- use_module(library(debug)).

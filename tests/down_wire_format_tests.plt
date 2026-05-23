@@ -8,8 +8,8 @@
     format so the standardization is not silently reverted.
 */
 
-:- use_module('../node_response.pl', [answer_to_json/2]).
-:- use_module('../actor.pl', [op(200, xfx, @)]).
+:- use_module('../src/node_response.pl', [answer_to_json/2]).
+:- use_module('../src/actor.pl', [op(200, xfx, @)]).
 
 :- use_module(library(plunit)).
 

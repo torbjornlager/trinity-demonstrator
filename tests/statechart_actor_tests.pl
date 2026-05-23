@@ -7,8 +7,8 @@
           ]).
 
 :- use_module(library(plunit)).
-:- use_module('../statechart_actor.pl').
-:- use_module('../actor.pl', [
+:- use_module('../src/statechart_actor.pl').
+:- use_module('../src/actor.pl', [
     spawn/2,
     spawn/3,
     self/1,
@@ -20,7 +20,7 @@
     unregister/1,
     exit/2
 ]).
-:- use_module('../toplevel_actor.pl', [
+:- use_module('../src/toplevel_actor.pl', [
     toplevel_spawn/2,
     toplevel_call/3
 ]).

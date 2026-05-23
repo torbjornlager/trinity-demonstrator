@@ -12,7 +12,7 @@
     pubsub_actor/1
 ]).
 
-:- use_module('../../actor.pl', [
+:- use_module('../../src/actor.pl', [
     spawn/3,
     register_service/2,
     unregister_service/1,
@@ -24,7 +24,7 @@
     op(200, xfx, @),
     op(1000, xfy, if)
 ]).
-:- use_module('../../node.pl', [node/2]).
+:- use_module('../../src/node.pl', [node/2]).
 :- use_module(library(http/thread_httpd), [http_stop_server/2]).
 :- use_module(library(lists), [select/3]).
 

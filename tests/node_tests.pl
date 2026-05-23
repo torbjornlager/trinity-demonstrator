@@ -4,8 +4,8 @@
 
 :- op(800, xfx, !).
 
-:- use_module('../node.pl').
-:- use_module('../node_auth.pl', [
+:- use_module('../src/node.pl').
+:- use_module('../src/node_auth.pl', [
     auth_mode/1,
     normalize_auth_mode/2,
     principal_from_id/2,
@@ -16,20 +16,20 @@
     request_principal/2,
     set_dev_auth_config/2
 ]).
-:- use_module('../node_capabilities.pl', [
+:- use_module('../src/node_capabilities.pl', [
     capability_granted/2
 ]).
-:- use_module('../node_profile_policy.pl', [
+:- use_module('../src/node_profile_policy.pl', [
     profile_check_route/1,
     profile_check_goal/2,
     profile_check_source_text/3
 ]).
-:- use_module('../node_call_context.pl', [parse_call_context/9]).
-:- use_module('../node_relation_policy.pl', [relation_check_call/3]).
-:- use_module('../node_principal_policy.pl', [normalize_principal_policies/2]).
-:- use_module('../node_startup_options.pl', [node_options/24]).
-:- use_module('../node_response.pl', [answer_to_json/2]).
-:- use_module('../node_sandbox.pl', [
+:- use_module('../src/node_call_context.pl', [parse_call_context/9]).
+:- use_module('../src/node_relation_policy.pl', [relation_check_call/3]).
+:- use_module('../src/node_principal_policy.pl', [normalize_principal_policies/2]).
+:- use_module('../src/node_startup_options.pl', [node_options/24]).
+:- use_module('../src/node_response.pl', [answer_to_json/2]).
+:- use_module('../src/node_sandbox.pl', [
     sandbox_check_goal/2,
     sandbox_check_goal_in_module/3,
     sandbox_check_goal_with_source/4,
@@ -37,29 +37,29 @@
     sandbox_check_source_options/3,
     normalize_sandbox_mode/2
 ]).
-:- use_module('../dollar_expansion.pl', [
+:- use_module('../src/dollar_expansion.pl', [
     expand_dollar_vars/3,
     capture_answer_bindings/1,
     session_bindings/2,
     clear_session_bindings/1
 ]).
-:- use_module('../goal_walker.pl', [walk_goal/2]).
-:- use_module('../public_goal_guard.pl', [
+:- use_module('../src/goal_walker.pl', [walk_goal/2]).
+:- use_module('../src/public_goal_guard.pl', [
     rewrite_goal_if_needed/3,
     rewrite_source_text_if_needed/3
 ]).
-:- use_module('../node_session.pl', [cleanup_isotope_session/1]).
-:- use_module('../node_runtime_state.pl', [
+:- use_module('../src/node_session.pl', [cleanup_isotope_session/1]).
+:- use_module('../src/node_runtime_state.pl', [
     register_node_runtime/2,
     with_node_port_context/2,
     current_node_value/2,
     update_current_node_runtime/1
 ]).
-:- use_module('../node_execution_context.pl', [with_public_execution_profile/2]).
-:- use_module('../toplevel_actor.pl', [toplevel_spawn/2, toplevel_call/3, toplevel_next/1]).
-:- use_module('../actor.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, op(200, xfx, @)]).
-:- use_module('../pid_utils.pl', [pid_local/2]).
-:- use_module('../statechart_actor.pl', [statechart_spawn/2]).
+:- use_module('../src/node_execution_context.pl', [with_public_execution_profile/2]).
+:- use_module('../src/toplevel_actor.pl', [toplevel_spawn/2, toplevel_call/3, toplevel_next/1]).
+:- use_module('../src/actor.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, op(200, xfx, @)]).
+:- use_module('../src/pid_utils.pl', [pid_local/2]).
+:- use_module('../src/statechart_actor.pl', [statechart_spawn/2]).
 :- use_module('../examples/services/node_resident_services.pl', [
     service_directory_file/1,
     start_counter_service/1,
@@ -740,8 +740,8 @@ test(node_manual_page_served,
 test(node_admin_and_portal_pages_include_manual_predicate_link_support) :-
     module_property(node, file(NodeFile)),
     file_directory_name(NodeFile, Dir),
-    directory_file_path(Dir, 'admin.html', AdminFile),
-    directory_file_path(Dir, 'demonstrator.html', DemonstratorFile),
+    directory_file_path(Dir, '../web/admin.html', AdminFile),
+    directory_file_path(Dir, '../web/demonstrator.html', DemonstratorFile),
     read_file_to_string(AdminFile, AdminBody, []),
     read_file_to_string(DemonstratorFile, DemonstratorBody, []),
     once((

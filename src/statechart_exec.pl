@@ -58,15 +58,32 @@ actor profile. Model and runtime facts live in `statechart_actor`.
 ]).
 
 
+%!  interpret(+File) is det.
+%
+%   Load a statechart from File, install the initial configuration, and
+%   run the event loop until the chart reaches a top-level final state
+%   or receives `'$stop'(_)`. Throws `exit(shutdown)` on termination.
+
 interpret(File) :-
     clean,
     statechart_actor_parse(File),
     interpret_parsed(_Root).
 
+%!  interpret_text(+Text) is det.
+%
+%   As interpret/1, but parses the statechart from the given XML Text
+%   (atom or string) instead of from a file.
+
 interpret_text(Text) :-
     clean,
     statechart_actor_parse_text(Text),
     interpret_parsed(_Root).
+
+%!  interpret_parsed(?Root) is det.
+%
+%   Run the interpreter against an already-parsed model. Root unifies
+%   with the parsed root state. Throws `existence_error(statechart,root)`
+%   if no <statechart> element was parsed.
 
 interpret_parsed(Root) :-
     (   root_state(Root)
@@ -138,6 +155,13 @@ main_event_loop(Event) :-
         main_event_loop
     ).
 
+
+%!  select_transitions(+Event, -EnabledTransitions) is semidet.
+%
+%   For the current configuration, collect transitions enabled by Event
+%   (use `null` for eventless/condition-only transitions), deduplicate
+%   them and remove pairs in conflict (preferring the descendant source).
+%   Fails when no transition is enabled.
 
 select_transitions(Event, EnabledTransitions) :-
     statechart_actor:configuration(Configuration),
@@ -244,6 +268,12 @@ remove_conflicting_transitions([Transition|Rest], Configuration, Selected0, Sele
     ).
 
 
+%!  microstep(+EnabledTransitions) is det.
+%
+%   Perform one SCXML microstep for the given set of enabled transitions:
+%   exit the states in the exit set, run the transitions' executable
+%   content, and enter the states in the entry set.
+
 microstep(EnabledTransitions) :-
     trace_microstep(EnabledTransitions),
     exit_states(EnabledTransitions),
@@ -293,6 +323,14 @@ process_states_to_exit([State|States]) :-
     configuration_delete(State),
     process_states_to_exit(States).
 
+%!  compute_exit_set(+Transitions, +Configuration, -StatesToExit) is det.
+%
+%   StatesToExit is the deduplicated set of currently-active states that
+%   must be exited when the given Transitions fire. For each transition
+%   `t(Source, Targets, _)`, every member of Configuration that is a
+%   descendant of the least common compound ancestor of Source and
+%   Targets is added to the result.
+
 compute_exit_set(Transitions, Configuration, StatesToExit) :-
     findall(State,
             ( member(t(Source, Targets, _), Transitions),
@@ -310,6 +348,13 @@ execute_transition_content(EnabledTransitions) :-
         fail
     ;   true
     ).
+
+%!  enter_states(+EnabledTransitions) is det.
+%
+%   Compute the entry set for EnabledTransitions, sort it in entry
+%   order, and enter each state in turn (running onentry handlers,
+%   updating the configuration, and emitting `done(_)` internal events
+%   when a final state completes its parent or a parallel region).
 
 enter_states(EnabledTransitions) :-
     compute_entry_set(EnabledTransitions, StatesToEnter),
@@ -341,6 +386,13 @@ process_states_to_enter([State|States]) :-
     ),
     process_states_to_enter(States).
 
+
+%!  compute_entry_set(+Transitions, -StatesToEnter) is det.
+%
+%   StatesToEnter is the deduplicated set of states that must be entered
+%   to take Transitions, including resolved history targets, default
+%   descendants of compound/parallel states, and intermediate ancestors
+%   up to (but not including) the least common compound ancestor.
 
 compute_entry_set(Transitions, StatesToEnter) :-
     compute_entry_set(Transitions, [], StatesToEnter0),

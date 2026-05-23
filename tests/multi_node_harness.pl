@@ -49,8 +49,8 @@ Each node's URL is stored under the global variable `node_url_<Tag>`
 read it inside the body.
 */
 
-:- use_module('../actor.pl').
-:- use_module('../node.pl').
+:- use_module('../src/actor.pl').
+:- use_module('../src/node.pl').
 :- use_module(library(socket)).
 :- use_module(library(http/thread_httpd), [http_stop_server/2]).
 :- use_module(library(http/http_client), [http_get/3]).

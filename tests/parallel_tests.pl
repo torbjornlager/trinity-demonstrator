@@ -3,8 +3,8 @@
 Tests for parallel/1 in parallel.pl.
 */
 
-:- use_module('../parallel.pl').
-:- use_module('../actor.pl', [spawn/3, receive/1, receive/2]).
+:- use_module('../src/parallel.pl').
+:- use_module('../src/actor.pl', [spawn/3, receive/1, receive/2]).
 :- use_module(library(plunit)).
 
 

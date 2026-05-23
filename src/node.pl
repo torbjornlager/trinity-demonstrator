@@ -1465,7 +1465,7 @@ node_tau_js_page(Request) :-
 node_tau_js_dir(Dir) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, 'Tau-Prolog', Dir).
+    directory_file_path(Dir0, '../Tau-Prolog', Dir).
 
 
 %!  node_demonstrator_file(-File) is det.
@@ -1474,7 +1474,7 @@ node_tau_js_dir(Dir) :-
 node_demonstrator_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'demonstrator.html', File).
+    directory_file_path(Dir, '../web/demonstrator.html', File).
 
 %!  node_calculator_file(-File) is det.
 %
@@ -1482,7 +1482,7 @@ node_demonstrator_file(File) :-
 node_calculator_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'calculator.html', File).
+    directory_file_path(Dir, '../web/calculator.html', File).
 
 %!  node_tutorial_file(-File) is det.
 %
@@ -1490,7 +1490,7 @@ node_calculator_file(File) :-
 node_tutorial_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'tutorial.html', File).
+    directory_file_path(Dir, '../web/tutorial.html', File).
 
 %!  node_manual_file(-File) is det.
 %
@@ -1498,7 +1498,7 @@ node_tutorial_file(File) :-
 node_manual_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'manual.html', File).
+    directory_file_path(Dir, '../web/manual.html', File).
 
 %!  node_editor_frame_file(-File) is det.
 %
@@ -1506,7 +1506,7 @@ node_manual_file(File) :-
 node_editor_frame_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'editor_frame.html', File).
+    directory_file_path(Dir, '../web/editor_frame.html', File).
 
 %!  node_image_dir(-Dir) is det.
 %
@@ -1514,7 +1514,7 @@ node_editor_frame_file(File) :-
 node_image_dir(Dir) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, 'img', Dir).
+    directory_file_path(Dir0, '../img', Dir).
 
 %!  node_examples_dir(-Dir) is det.
 %
@@ -1522,7 +1522,7 @@ node_image_dir(Dir) :-
 node_examples_dir(Dir) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, 'examples', Dir).
+    directory_file_path(Dir0, '../examples', Dir).
 
 %!  node_actor_examples_dir(-Dir) is det.
 %

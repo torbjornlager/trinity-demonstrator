@@ -175,7 +175,7 @@ admin_error_status(_, 500).
 node_admin_file(File) :-
     module_property(node_admin, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'admin.html', File).
+    directory_file_path(Dir, '../web/admin.html', File).
 
 
 admin_config_response(Request, JSON) :-

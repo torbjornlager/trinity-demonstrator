@@ -27,6 +27,13 @@ Shared normalization utilities for:
 :- op(200, xfx, @).
 
 
+%!  localhost_node(+Node) is semidet.
+%
+%   True if Node denotes the local node — the atom `localhost`, or any
+%   atom/string whose lowercase form is `"localhost"`. Used to short-
+%   circuit remote-dispatch paths when a "remote" URL actually points
+%   back at this process.
+
 localhost_node(localhost).
 localhost_node(Node) :-
     atom(Node),

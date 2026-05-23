@@ -7,7 +7,7 @@
     starts serving real routing decisions.
 */
 
-:- use_module('../node_controller.pl').
+:- use_module('../src/node_controller.pl').
 
 :- use_module(library(plunit)).
 

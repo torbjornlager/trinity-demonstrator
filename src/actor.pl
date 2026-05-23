@@ -1250,6 +1250,14 @@ register(Name, Pid) :-
     ensure_name_registration_available(Namespace, Name, Pid, CanonPid),
     asserta(registered(Namespace, Name, CanonPid)).
 
+%!  register_service(+Name, +Pid) is det.
+%
+%   Publish Pid under Name in the node-wide *service* registry, visible
+%   across all namespaces (unlike register/2, which is namespace-local).
+%   Throws `process_already_has_a_name(Pid)` if Pid is already
+%   registered, or `name_is_in_use(Name)` if Name is taken. Requires
+%   service-registry capability on the calling actor.
+
 register_service(Name, Pid) :-
     require_service_registry_access(register_service(Name, Pid)),
     must_be(atom, Name),
@@ -1265,6 +1273,11 @@ unregister(Name) :-
     current_registry_namespace(Namespace),
     retractall(registered(Namespace, Name, _)).
 
+%!  unregister_service(+Name) is det.
+%
+%   Remove Name from the service registry. Succeeds even if Name was
+%   not registered. Requires service-registry capability.
+
 unregister_service(Name) :-
     require_service_registry_access(unregister_service(Name)),
     must_be(atom, Name),
@@ -1278,6 +1291,12 @@ whereis(Name, Pid) :-
     current_registered(Name, Pid),
     !.
 whereis(_Name, undefined).
+
+%!  whereis_service(+Name, -Pid) is det.
+%
+%   Pid is the actor registered under Name in the service registry, or
+%   the atom `undefined` if no such registration exists. Requires
+%   service-registry capability.
 
 whereis_service(Name, Pid) :-
     require_service_registry_access(whereis_service(Name, Pid)),

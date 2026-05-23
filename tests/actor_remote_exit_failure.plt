@@ -7,8 +7,8 @@
     safe_remote_kill_send/4's docstring).
 */
 
-:- use_module('../actor.pl').
-:- use_module('../node_log.pl').
+:- use_module('../src/actor.pl').
+:- use_module('../src/node_log.pl').
 
 :- use_module(library(plunit)).
 

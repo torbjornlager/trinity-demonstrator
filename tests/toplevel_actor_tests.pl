@@ -1,7 +1,7 @@
 /*  Top-level actor tests extracted from actor_tests.pl */
 
-:- use_module('../actor.pl').
-:- use_module('../toplevel_actor.pl').
+:- use_module('../src/actor.pl').
+:- use_module('../src/toplevel_actor.pl').
 
 :- use_module(library(plunit)).
 

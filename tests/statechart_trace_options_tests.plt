@@ -6,7 +6,7 @@
       - Both keys absent => default false.
 */
 
-:- use_module('../node_isotope_options.pl').
+:- use_module('../src/node_isotope_options.pl').
 
 :- use_module(library(plunit)).
 

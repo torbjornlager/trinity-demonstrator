@@ -187,7 +187,7 @@ interpret_example(Name0) :-
     ),
     module_property(statechart_actor, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, 'examples', ExamplesDir),
+    directory_file_path(Dir, '../examples', ExamplesDir),
     directory_file_path(ExamplesDir, 'statecharts', StatechartsDir),
     directory_file_path(StatechartsDir, Name, Source),
     interpret(Source).

@@ -3,7 +3,7 @@
 Tests for goal_walker:walk_goal/2.
 */
 
-:- use_module('../goal_walker.pl').
+:- use_module('../src/goal_walker.pl').
 :- use_module(library(plunit)).
 
 
