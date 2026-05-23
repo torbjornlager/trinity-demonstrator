@@ -52,20 +52,34 @@ auth_mode(Mode) :-
     normalize_auth_mode(Mode0, Mode).
 
 
-%!  normalize_auth_mode(+Mode0, -Mode) is det.
-normalize_auth_mode(off, open) :-
-    !.
-normalize_auth_mode(public, open) :-
-    !.
-normalize_auth_mode(development, dev) :-
-    !.
-normalize_auth_mode(Mode, Mode) :-
-    valid_auth_mode(Mode),
-    !.
+%!  normalize_auth_mode(+Mode0, ?Mode) is semidet.
+normalize_auth_mode(Mode0, Mode) :-
+    normalize_auth_mode_(Mode0, Normal),
+    !,
+    Mode = Normal.
 normalize_auth_mode(Mode, _) :-
     throw(error(domain_error(node_auth_mode, Mode),
                 context(node_auth:normalize_auth_mode/2,
                         'auth mode must be open, private, dev, off, public, or development'))).
+
+
+normalize_auth_mode_(off, open) :-
+    !.
+normalize_auth_mode_(public, open) :-
+    !.
+normalize_auth_mode_(development, dev) :-
+    !.
+normalize_auth_mode_(Mode, Mode) :-
+    valid_auth_mode(Mode),
+    !.
+normalize_auth_mode_(Mode0, Mode) :-
+    text_to_string(Mode0, Text0),
+    string_lower(Text0, Text1),
+    normalize_space(string(Text), Text1),
+    atom_string(Atom, Text),
+    Atom \== Mode0,
+    !,
+    normalize_auth_mode_(Atom, Mode).
 
 
 valid_auth_mode(open).

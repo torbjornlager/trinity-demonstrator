@@ -1,11 +1,5 @@
-# Web Prolog PoC (SWI-Prolog)
+# The Trinity demonstrator (SWI-Prolog)
 
-A clarity-first proof-of-concept implementation of Web Prolog ideas in
-SWI-Prolog.
-
-The code in this repository prioritizes understandability over production
-hardening. The goal is to make core ideas easy to read, test, and port to
-other Prolog systems.
 
 ## What This Repository Contains
 
@@ -102,8 +96,7 @@ swipl -q -s test.pl -g test -t halt
 
 - [examples/services/README.md](examples/services/README.md)
   Node-resident service publication and discovery example.
-- [poc-libraries/TREALLA_PORT.md](poc-libraries/TREALLA_PORT.md)
-  Porting notes for the smaller actors library on Trealla Prolog.
+
 
 ### Historical Documents
 

@@ -6,6 +6,9 @@
 
 :- use_module('../node.pl').
 :- use_module('../node_auth.pl', [
+    auth_mode/1,
+    normalize_auth_mode/2,
+    principal_from_id/2,
     principal_capabilities/2,
     principal_id/2,
     principal_execution_authorized/1,
@@ -49,7 +52,8 @@
 :- use_module('../node_runtime_state.pl', [
     register_node_runtime/2,
     with_node_port_context/2,
-    current_node_value/2
+    current_node_value/2,
+    update_current_node_runtime/1
 ]).
 :- use_module('../node_execution_context.pl', [with_public_execution_profile/2]).
 :- use_module('../toplevel_actor.pl', [toplevel_spawn/2, toplevel_call/3, toplevel_next/1]).
@@ -798,6 +802,29 @@ test(node_info_route_announces_configured_auth_mode,
             read_json_answer(NodeInfoURL, JSON),
             Auth = JSON.get(auth)
         )).
+
+test(normalize_auth_mode_accepts_string_open,
+     true(Auth == open)) :-
+    normalize_auth_mode("open", Auth).
+
+test(normalize_auth_mode_accepts_uppercase_string_with_padding,
+     true(Auth == open)) :-
+    normalize_auth_mode(" OPEN ", Auth).
+
+test(normalize_auth_mode_fails_when_output_is_different,
+     [fail]) :-
+    normalize_auth_mode(open, dev).
+
+test(auth_mode_dev_check_fails_in_open_mode,
+     [fail]) :-
+    with_auth_mode(open,
+        auth_mode(dev)).
+
+test(principal_from_anon_id_does_not_throw_in_open_mode,
+     true(Capabilities == [])) :-
+    with_auth_mode(open,
+        principal_from_id("anon:example", Principal)),
+    principal_capabilities(Principal, Capabilities).
 
 test(node_info_route_announces_trusted_header_boundary,
      true((AuthBoundary == "trusted_headers",
@@ -3511,6 +3538,35 @@ test(ws_actor_toplevel_session_exposes_actor_primitives) :-
                 assertion(MonitorReply.type == "success"),
                 MonitorReply.data = [MonitorRow],
                 assertion(MonitorRow.'Reason' == "true")
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
+        )).
+
+test(ws_actor_toplevel_nested_spawn_accepts_per_connection_anon,
+     true(Type == "success")) :-
+    with_node_server_options([profile(actor), auth(open)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                uri_components(URI, URIComponents),
+                uri_data(authority, URIComponents, URIAuthority),
+                uri_authority_components(URIAuthority, URIAuthComponents),
+                uri_authority_data(port, URIAuthComponents, Port),
+                with_node_port_context(
+                    Port,
+                    update_current_node_runtime(_{anon_per_ws_connection:true})
+                ),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"spawn(true, Child)",
+                    format:"json"
+                }),
+                ws_receive_json(WS, Reply),
+                get_dict(type, Reply, Type)
             ),
             catch(ws_close(WS, 1000, done), _, true)
         )).

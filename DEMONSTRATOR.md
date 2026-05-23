@@ -2,7 +2,7 @@
 
 This document describes the current browser demonstrator at `/demonstrator`.
 
-The demonstrator is no longer just a plan. It is the current unified browser UI
+This is the current unified browser UI
 for editing, tutorial-driven exploration, terminal interaction, logging,
 settings, and admin access.
 
@@ -150,8 +150,6 @@ The current demonstrator still has deliberate rough edges:
   than a dedicated frontend API layer
 - the UI is a demonstrator-quality tool, not a polished product frontend
 
-None of this is accidental. The same clarity-first philosophy used in the
-Prolog codebase also shapes the frontend.
 
 ## Near-Term Documentation Goal
 
