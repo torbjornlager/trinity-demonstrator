@@ -2403,6 +2403,67 @@ test(ws_principal_individualised_when_per_connection_enabled) :-
     principal_capabilities(P1, Caps),
     assertion(memberchk(execute, Caps)).
 
+test(ws_send_to_other_connections_registered_name_is_rejected,
+     true((ReplyType == "error",
+           sub_string(ReplyData, _, _, _, "Not authorized to access actor")))) :-
+    %  Pin the per-connection namespace isolation invariant for
+    %  ws_require_send_target/3 in node_ws.pl.  The second clause of
+    %  that predicate accepts sends to any *atom* Name found by
+    %  actor:whereis/2 -- on its face this looks like it widens the
+    %  ownership check to "any registered actor on this node", but
+    %  actor:whereis/2 is scoped to current_registry_namespace/1, and
+    %  ws_main/4 installs a per-connection ws_client(NamespaceId)
+    %  namespace via with_public_execution_namespace/2.
+    %
+    %  Concretely: when connection A registers `secret_name`, that
+    %  registration lives only in A's namespace; from connection B
+    %  the same whereis returns `undefined`, the fallback ownership
+    %  check runs, and B is denied.  If a future refactor ever
+    %  moved the namespace context out of ws_main (or made the name
+    %  registry node-global), this test would start passing the send
+    %  through silently -- a real cross-tenant leak.
+    alice_full_principal_option(AlicePolicy),
+    bob_session_user_option(BobPolicy),
+    with_node_server_options(
+        [auth(private), AlicePolicy, BobPolicy],
+        URI,
+        setup_call_cleanup(
+            (
+                principal_headers("alice", AliceHeaders),
+                principal_headers("bob", BobHeaders),
+                ws_open_headers(URI, AliceHeaders, WSA),
+                ws_open_headers(URI, BobHeaders, WSB)
+            ),
+            (
+                %  Alice spawns a bare actor that registers
+                %  `secret_name` in her per-connection namespace, then
+                %  sleeps long enough for Bob's send below to be
+                %  processed before the actor exits.
+                ws_send_json(WSA, json{
+                    command:spawn,
+                    goal:"register(secret_name, self), sleep(5)",
+                    options:"[]"
+                }),
+                ws_receive_json(WSA, _SpawnReply),
+
+                %  Bob attempts to send to `secret_name`.  From Bob's
+                %  namespace the name is unregistered, so the fallback
+                %  ownership check runs and rejects.
+                ws_send_json(WSB, json{
+                    command:send,
+                    pid:"secret_name",
+                    message:"hello"
+                }),
+                ws_receive_json(WSB, ReplyJSON),
+                ReplyType = ReplyJSON.get(type),
+                ReplyData = ReplyJSON.get(data)
+            ),
+            (
+                catch(ws_close(WSA, 1000, "done"), _, true),
+                catch(ws_close(WSB, 1000, "done"), _, true)
+            )
+        )).
+
 test(request_principal_accepts_internal_transport_headers_from_private_peer) :-
     request_principal([
         peer(ip(172, 18, 0, 5)),
