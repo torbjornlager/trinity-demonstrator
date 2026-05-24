@@ -7018,6 +7018,17 @@
               this.terminal.echo(this.basePrompt() + (typeof displayText === "string" ? displayText : command));
             }
             this.handleTerminalCommand(command, this.terminal);
+            // Up-arrow history: jquery.terminal only records commands that
+            // come through its own Enter handler, so menu-driven submissions
+            // (Examples, editor Run, ...) would otherwise be invisible to
+            // Up-arrow recall.  Push the command here too -- but only when
+            // the displayed text matches the actual command, since callers
+            // like runStatechart pass a redacted display ("[...]") for an
+            // expanded goal that users would not want recalled verbatim.
+            if (this.terminal && typeof this.terminal.history === "function"
+                && (displayText === command || displayText === undefined)) {
+              try { this.terminal.history().append(command); } catch (_) {}
+            }
             this.focusTerminalSoon(true);
             return true;
           },
