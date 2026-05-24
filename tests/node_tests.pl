@@ -667,7 +667,7 @@ test(node_tutorial_and_image_routes_served,
         (
             format(atom(TutorialURL), '~w/tutorial', [URI]),
             read_text(TutorialURL, TutorialBody),
-            format(atom(ImageURL), '~w/img/an-actor.png', [URI]),
+            format(atom(ImageURL), '~w/img/spider-agent.png', [URI]),
             read_bytes(ImageURL, 8, Bytes)
         )).
 
