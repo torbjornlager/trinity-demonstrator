@@ -993,7 +993,7 @@ test(admin_config_open_local_anonymous_updates_actor_builtin_family,
             setup_call_cleanup(
                 ws_open(URI, WS),
                 (
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Spawned),
                     get_dict(type, Spawned, "spawned"),
                     get_dict(pid, Spawned, Pid),
@@ -1019,7 +1019,7 @@ test(admin_config_open_local_anonymous_updates_actor_builtin_family,
                     DownPid = Down.pid,
                     DownReason = Down.reason,
 
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Respawned),
                     RespawnType = Respawned.type,
                     get_dict(pid, Respawned, NewPid),
@@ -1954,7 +1954,7 @@ test(private_ws_allows_authenticated_principal,
                 ws_open_headers(URI, Headers, WebSocket)
             ),
             (
-                ws_send_json(WebSocket, json{command:toplevel_spawn}),
+                ws_send_json(WebSocket, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WebSocket, Reply),
                 Type = Reply.type
             ),
@@ -2088,7 +2088,7 @@ test(private_ws_actor_limit_counts_nested_spawn_from_toplevel_call,
                 ws_open_headers(URI, Headers, WebSocket)
             ),
             (
-                ws_send_json(WebSocket, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WebSocket, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WebSocket, Spawned),
                 get_dict(pid, Spawned, Pid),
 
@@ -2114,11 +2114,11 @@ test(ws_command_rate_limit_rejects_second_command_in_window,
         setup_call_cleanup(
             ws_open(URI, WebSocket),
             (
-                ws_send_json(WebSocket, json{command:toplevel_spawn}),
+                ws_send_json(WebSocket, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WebSocket, Reply1),
                 Pid = Reply1.pid,
 
-                ws_send_json(WebSocket, json{command:toplevel_spawn}),
+                ws_send_json(WebSocket, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WebSocket, Reply2),
                 Type2 = Reply2.type,
                 Data2 = Reply2.data
@@ -2138,7 +2138,7 @@ test(dev_ws_allows_local_requests,
         setup_call_cleanup(
             ws_open(URI, WebSocket),
             (
-                ws_send_json(WebSocket, json{command:toplevel_spawn}),
+                ws_send_json(WebSocket, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WebSocket, Reply),
                 Type = Reply.type
             ),
@@ -2152,7 +2152,7 @@ test(ws_rejects_unowned_toplevel_pid_without_sandbox,
         setup_call_cleanup(
             (ws_open(URI, WS1), ws_open(URI, WS2)),
             (
-                ws_send_json(WS1, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS1, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS1, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
 
@@ -2183,7 +2183,7 @@ test(private_ws_remote_echo_actor_roundtrip_between_nodes,
                     ws_open_headers(URI1, Headers, WS)
                 ),
                 (
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Spawned),
                     get_dict(pid, Spawned, ToplevelPid),
 
@@ -2462,6 +2462,123 @@ test(ws_send_to_other_connections_registered_name_is_rejected,
                 catch(ws_close(WSA, 1000, "done"), _, true),
                 catch(ws_close(WSB, 1000, "done"), _, true)
             )
+        )).
+
+test(ws_toplevel_spawn_session_defaults_to_false,
+     true((FirstType == "success",
+           SecondType == "error",
+           sub_string(SecondData, _, _, _, "Not authorized to access session")))) :-
+    %  Regression pin: toplevel_spawn over /ws must honour the
+    %  documented default of `session(false)` (manual.html:408) when
+    %  the caller does not pass an explicit session option.  Earlier
+    %  versions of ws_build_toplevel_options/3 hardcoded session(true),
+    %  silently turning every WS-routed spawn (including cross-node
+    %  spawns routed via /ws) into a long-lived session.
+    %
+    %  Behaviour pinned: spawn with no session option, run one goal
+    %  to completion, drain the resulting down/3 event, then attempt
+    %  a second toplevel_call against the same pid.  The second call
+    %  must fail because the toplevel exited after the first goal
+    %  completed and the WS layer dropped the ws_actor row.
+    with_node_server_options([auth(open)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[]"
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"true",
+                    template:"true"
+                }),
+                ws_receive_json_first_of(WS, ["success"], FirstReply),
+                FirstType = FirstReply.type,
+
+                %  Drain the down/3 event the WS layer emits when the
+                %  non-session toplevel exits.
+                ws_receive_json_first_of(WS, ["down"], _Down),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"true",
+                    template:"true"
+                }),
+                ws_receive_json_first_of(WS, ["error"], SecondReply),
+                SecondType = SecondReply.type,
+                SecondData = SecondReply.data
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
+
+%!  ws_receive_json_first_of(+WS, +Types, -Reply) is semidet.
+%
+%   Read JSON frames from WS, skipping any whose `type` is not in
+%   Types, and unify Reply with the first that matches.  Used in
+%   session-default tests to drain interleaved events (e.g. down/3
+%   monitor notifications) between expected replies.  Bounded by 30
+%   attempts at 1s each.
+ws_receive_json_first_of(WS, Types, Reply) :-
+    ws_receive_json_first_of_(WS, Types, 30, Reply).
+
+ws_receive_json_first_of_(_, _, Attempts, _) :-
+    Attempts =< 0,
+    !,
+    fail.
+ws_receive_json_first_of_(WS, Types, Attempts, Reply) :-
+    ws_receive(WS, Frame, [timeout(1)]),
+    atom_json_dict(Frame.data, Dict, []),
+    (   get_dict(type, Dict, Type),
+        memberchk(Type, Types)
+    ->  Reply = Dict
+    ;   Next is Attempts - 1,
+        ws_receive_json_first_of_(WS, Types, Next, Reply)
+    ).
+
+
+test(ws_toplevel_spawn_session_true_keeps_toplevel_alive,
+     true((FirstType == "success",
+           SecondType == "success"))) :-
+    %  Companion to the session-defaults-to-false test: when the
+    %  caller DOES pass session(true), the toplevel survives between
+    %  calls.  This pins that ws_build_toplevel_options/3 actually
+    %  forwards the user's explicit choice into spawn options.
+    with_node_server_options([auth(open)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true)]"
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"true",
+                    template:"true"
+                }),
+                ws_receive_json(WS, FirstReply),
+                FirstType = FirstReply.type,
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"true",
+                    template:"true"
+                }),
+                ws_receive_json(WS, SecondReply),
+                SecondType = SecondReply.type
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
         )).
 
 test(request_principal_accepts_internal_transport_headers_from_private_peer) :-
@@ -3508,7 +3625,7 @@ test(ws_toplevel_spawn_honors_initial_trace_flag,
             (
                 ws_send_json(WS, json{
                     command:toplevel_spawn,
-                    options:"[]",
+                    options:"[session(true)]",
                     trace:"true"
                 }),
                 ws_receive_json(WS, Spawned),
@@ -3542,7 +3659,7 @@ test(ws_toplevel_next_preserves_member_solutions,
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
                 ws_send_json(WS, json{
@@ -3576,7 +3693,7 @@ test(ws_actor_toplevel_session_exposes_actor_primitives) :-
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
                 ws_send_json(WS, json{
@@ -3617,7 +3734,7 @@ test(ws_actor_toplevel_nested_spawn_accepts_per_connection_anon,
                     Port,
                     update_current_node_runtime(_{anon_per_ws_connection:true})
                 ),
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
                 ws_send_json(WS, json{
@@ -3637,7 +3754,7 @@ test(ws_actor_toplevel_monitor_notification_visible_to_flush) :-
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
                 ws_send_json(WS, json{
@@ -5073,7 +5190,7 @@ test(public_actor_client_sees_service_as_sendable_but_not_client_registered,
             setup_call_cleanup(
                 ws_open(URI, WS),
                 (
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Spawned),
                     get_dict(pid, Spawned, ToplevelPid),
                     ws_send_json(WS, json{
@@ -5101,7 +5218,7 @@ test(public_actor_client_cannot_access_service_registry_predicates) :-
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
 
@@ -5154,10 +5271,10 @@ test(public_ws_clients_have_isolated_registered_name_namespaces,
         setup_call_cleanup(
             (ws_open(URI, WS1), ws_open(URI, WS2)),
             (
-                ws_send_json(WS1, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS1, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS1, Spawned1),
                 get_dict(pid, Spawned1, ToplevelPid1),
-                ws_send_json(WS2, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS2, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS2, Spawned2),
                 get_dict(pid, Spawned2, ToplevelPid2),
 
@@ -5225,11 +5342,11 @@ test(public_actor_client_actors_list_is_namespace_scoped,
             setup_call_cleanup(
                 (ws_open(URI, WS1), ws_open(URI, WS2)),
                 (
-                    ws_send_json(WS1, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS1, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS1, Spawned1),
                     get_dict(pid, Spawned1, ToplevelPid1),
 
-                    ws_send_json(WS2, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS2, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS2, Spawned2),
                     get_dict(pid, Spawned2, ToplevelPid2),
 
@@ -5275,11 +5392,11 @@ test(public_actor_client_listing_by_pid_is_namespace_scoped,
         setup_call_cleanup(
             (ws_open(URI, WS1), ws_open(URI, WS2)),
             (
-                ws_send_json(WS1, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS1, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS1, Spawned1),
                 get_dict(pid, Spawned1, ToplevelPid1),
 
-                ws_send_json(WS2, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS2, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS2, Spawned2),
                 get_dict(pid, Spawned2, ToplevelPid2),
 
@@ -5679,7 +5796,7 @@ test(ws_remote_echo_actor_roundtrip_between_nodes,
             setup_call_cleanup(
                 ws_open(URI1, WS),
                 (
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Spawned),
                     get_dict(pid, Spawned, ToplevelPid),
 
@@ -5793,7 +5910,7 @@ test(ws_direct_echo_actor_roundtrip,
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
 
@@ -5888,7 +6005,7 @@ test(sandbox_public_paths) :-
                             get_dict(data, RejectReply, RejectData),
                             sub_string(RejectData, _, _, _, "sandboxed"),
 
-                            ws_send_json(WS1, json{command:toplevel_spawn, options:"[]"}),
+                            ws_send_json(WS1, json{command:toplevel_spawn, options:"[session(true)]"}),
                             ws_receive_json(WS1, Spawned),
                             get_dict(pid, Spawned, ToplevelPid),
 
@@ -6055,7 +6172,7 @@ test(sandbox_on_ws_toplevel_call_allows_nested_spawn_load_uri,
                 setup_call_cleanup(
                     ws_open(URI, WS),
                     (
-                        ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                        ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                         ws_receive_json(WS, Spawned),
                         get_dict(pid, Spawned, Pid),
                         format(string(GoalText),
@@ -6088,7 +6205,7 @@ test(sandbox_on_ws_toplevel_call_allows_computed_nested_spawn_load_list,
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
                 GoalText = "findall(s(N), between(1,3,N), Ns), spawn(true, _Pid, [load_list(Ns), link(false)])",
@@ -6115,7 +6232,7 @@ test(sandbox_on_ws_toplevel_call_reports_size_error_for_computed_nested_spawn_lo
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
                 GoalText = "findall(s(N), between(1,2000,N), Ns), spawn(receive({}), _Pid, [load_list(Ns), link(false)])",
@@ -6146,7 +6263,7 @@ test(sandbox_on_ws_toplevel_call_repeats_size_error_for_computed_nested_spawn_lo
         setup_call_cleanup(
             ws_open(URI, WS),
             (
-                ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
                 GoalText = "findall(s(N), between(1,250,N), Ns), spawn(receive({}), _Pid, [load_list(Ns), link(false)])",
@@ -6238,7 +6355,7 @@ test(admin_config_builtin_family_update_recycles_ws_toplevel_session,
             setup_call_cleanup(
                 ws_open_headers(URI, Headers, WS),
                 (
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Spawned),
                     get_dict(type, Spawned, "spawned"),
                     get_dict(pid, Spawned, Pid),
@@ -6262,7 +6379,7 @@ test(admin_config_builtin_family_update_recycles_ws_toplevel_session,
                     DownPid = Down.pid,
                     DownReason = Down.reason,
 
-                    ws_send_json(WS, json{command:toplevel_spawn, options:"[]"}),
+                    ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                     ws_receive_json(WS, Respawned),
                     RespawnType = Respawned.type,
                     get_dict(pid, Respawned, NewPid),

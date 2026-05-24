@@ -697,14 +697,21 @@ ws_parse_options_value(Value, Options) :-
 
 %!  ws_build_toplevel_options(+Queue, +UserOptions, -SpawnOptions) is det.
 %
-%   Build spawn options for a WebSocket toplevel: session mode, target queue,
-%   and no link. Shared DB and actor I/O are provided by the actor module
+%   Build spawn options for a WebSocket-dispatched toplevel: target
+%   queue and no link.  `session/1` is NOT injected; the caller's
+%   session value is preserved if supplied, and otherwise falls
+%   through to toplevel_spawn/2's documented default of `false`
+%   (manual.html:408).  Earlier versions hardcoded `session(true)`
+%   here, silently turning every WS-routed spawn -- including
+%   cross-node ones routed via /ws -- into a long-lived session
+%   regardless of the caller's intent.
+%
+%   Shared DB and actor I/O are provided by the actor module
 %   import/setup path.
 ws_build_toplevel_options(Queue, UserOptions, SpawnOptions) :-
     make_id(Ref),
     exclude(ws_reserved_option, UserOptions, FilteredOptions),
     SpawnOptions = [
-        session(true),
         target(Queue),
         link(false),
         monitor_target(Queue),
@@ -724,7 +731,12 @@ ws_build_bare_options(Queue, UserOptions, SpawnOptions) :-
         | FilteredOptions
     ].
 
-ws_reserved_option(session(_)).
+%  session/1 is intentionally NOT reserved: the user's explicit value
+%  must survive into SpawnOptions so that toplevel_spawn/2 can honour
+%  the documented default of `false`.  target/1 and link/1 stay
+%  reserved because the WS dispatcher owns those (the queue is the
+%  caller's reply channel; link is fixed false because the WS layer
+%  uses its own monitor for cleanup).
 ws_reserved_option(target(_)).
 ws_reserved_option(link(_)).
 

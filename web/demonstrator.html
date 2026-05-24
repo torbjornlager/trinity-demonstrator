@@ -10341,6 +10341,12 @@
                 self.wsSpawnReject = reject;
                 var spawnCmd = {
                   command: "toplevel_spawn",
+                  // The portal REPL needs a long-lived toplevel so the
+                  // user can issue successive queries against the same
+                  // bindings.  toplevel_spawn defaults session/1 to
+                  // false per the manual, so the portal must opt in
+                  // explicitly.
+                  options: "[session(true)]",
                   statechart_trace: self.isTraceLoggingEnabled()
                 };
                 spawnLoadSpec = self.spawnLoadSpec();
