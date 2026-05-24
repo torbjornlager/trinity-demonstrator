@@ -540,7 +540,7 @@ private_request_peer(Peer) :-
     text_to_string(Peer, Text),
     (   sub_string(Text, 0, 3, _, "10.")
     ;   sub_string(Text, 0, 8, _, "192.168.")
-    ;   sub_string(Text, 0, 10, _, "127.0.0.1")
+    ;   sub_string(Text, 0, 9, _, "127.0.0.1")
     ;   sub_string(Text, 0, 3, _, "::1")
     ;   split_string(Text, ".", "", ["172", BStr | _]),
         catch(number_string(B, BStr), _, fail),

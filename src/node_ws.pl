@@ -225,16 +225,48 @@ ws_origin_allowed(Origin, Request) :-
 ws_request_host_origin(Request, HostOrigin) :-
     memberchk(host(HostValue), Request),
     text_to_string(HostValue, HostString),
-    (   sub_string(HostString, _, _, _, "://")
+    (   host_string_has_scheme(HostString)
     ->  HostOrigin = HostString
     ;   ws_request_scheme(Request, Scheme),
         format(string(HostOrigin), "~w://~w", [Scheme, HostString])
     ).
 
+%!  host_string_has_scheme(+HostString) is semidet.
+%
+%   True when HostString already begins with an http:// or https://
+%   prefix.  Anchored to position 0 so a Host header like
+%   `evil.com://attacker.com` is NOT mistaken for a fully-qualified
+%   origin -- only a real scheme prefix at the start of the string
+%   counts.  Case-insensitive per RFC 3986 scheme rules.
+host_string_has_scheme(HostString) :-
+    string_lower(HostString, Lower),
+    (   sub_string(Lower, 0, 7, _, "http://")
+    ;   sub_string(Lower, 0, 8, _, "https://")
+    ),
+    !.
+
+%!  ws_request_scheme(+Request, -Scheme) is det.
+%
+%   Resolve the wire scheme of the request, in priority order:
+%
+%     1. `X-Forwarded-Proto` header set by the upstream reverse proxy
+%        (the typical Caddy-fronted production path).
+%     2. The HTTP connection's own `protocol(https)` if the node
+%        terminates TLS directly.
+%     3. Fall back to `"http"`.
+%
+%   The fallback makes the computed same-origin host_origin start with
+%   `http://`, which will not match a browser's `https://` Origin.  If
+%   the node ever serves browsers over TLS without an upstream that
+%   sets X-Forwarded-Proto, the missing protocol/2 entry in the request
+%   would otherwise silently drop same-origin connections.
 ws_request_scheme(Request, Scheme) :-
     memberchk(x_forwarded_proto(Proto), Request),
     !,
     text_to_string(Proto, Scheme).
+ws_request_scheme(Request, "https") :-
+    memberchk(protocol(https), Request),
+    !.
 ws_request_scheme(_, "http").
 
 normalize_origin_text(Value0, Norm) :-
