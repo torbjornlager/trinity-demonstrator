@@ -87,10 +87,6 @@ swipl -q -s test.pl -g test -t halt
 - [BLACKLIST_SANDBOX_NOTES.md](docs/policy/BLACKLIST_SANDBOX_NOTES.md)
   Detailed blacklist rationale and sandbox inventory notes.
 
-### Book and Manuscript Alignment
-
-- [IMPLEMENTATION_ALIGNMENT.md](docs/book/IMPLEMENTATION_ALIGNMENT.md)
-  Consolidated comparison between the implementation and the current book-facing descriptions.
 
 ### Examples and Side Documents
 
