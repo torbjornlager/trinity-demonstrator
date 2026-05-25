@@ -132,6 +132,7 @@ Design notes:
     log_interaction_request/2,
     log_browser_interaction_request/2
 ]).
+:- use_module(node_log_viewer, []).
 :- use_module(node_sandbox).
 :- use_module(node_response, [respond_with_answer/2]).
 :- use_module(node_session, [

@@ -33,6 +33,7 @@ services:
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
+      WEB_PROLOG_VIEWER_TOKEN: ${WEB_PROLOG_VIEWER_TOKEN:-}
     volumes:
       - interaction_logs:/var/log/webprolog
     ports:
@@ -62,6 +63,7 @@ services:
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
+      WEB_PROLOG_VIEWER_TOKEN: ${WEB_PROLOG_VIEWER_TOKEN:-}
     volumes:
       - interaction_logs:/var/log/webprolog
     ports:
@@ -91,6 +93,7 @@ services:
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
+      WEB_PROLOG_VIEWER_TOKEN: ${WEB_PROLOG_VIEWER_TOKEN:-}
     volumes:
       - interaction_logs:/var/log/webprolog
     ports:
@@ -120,6 +123,7 @@ services:
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
+      WEB_PROLOG_VIEWER_TOKEN: ${WEB_PROLOG_VIEWER_TOKEN:-}
     volumes:
       - interaction_logs:/var/log/webprolog
     ports:
@@ -149,6 +153,7 @@ services:
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
+      WEB_PROLOG_VIEWER_TOKEN: ${WEB_PROLOG_VIEWER_TOKEN:-}
     volumes:
       - interaction_logs:/var/log/webprolog
     ports:

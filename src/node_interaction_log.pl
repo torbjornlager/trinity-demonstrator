@@ -19,6 +19,7 @@ in-memory activity log for the admin UI.
 :- use_module(node_auth, [request_principal/2]).
 :- use_module(node_log, [request_client_meta/3]).
 :- use_module(node_runtime_state, [current_node_value/2]).
+:- use_module(node_owner_tag, [request_owner_tagged/1]).
 
 :- setting(interaction_log_file, atom, 'logs/interactions.jsonl',
            'Append-only JSONL file for public demonstrator interaction events').
@@ -31,8 +32,16 @@ in-memory activity log for the admin UI.
 log_interaction_request(Request, Event0) :-
     request_principal(Request, Principal),
     request_client_meta(Request, Principal, ClientMeta0),
-    interaction_client_meta(ClientMeta0, ClientMeta),
+    interaction_client_meta(ClientMeta0, ClientMeta1),
+    add_owner_tag(Request, ClientMeta1, ClientMeta),
     append_interaction_event(ClientMeta, Event0).
+
+
+add_owner_tag(Request, Meta0, Meta) :-
+    (   catch(request_owner_tagged(Request), _, fail)
+    ->  put_dict(owner, Meta0, true, Meta)
+    ;   Meta = Meta0
+    ).
 
 
 %!  log_browser_interaction_request(+Request, +Event) is det.
