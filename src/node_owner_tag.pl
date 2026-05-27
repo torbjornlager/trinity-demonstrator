@@ -1,6 +1,8 @@
 :- module(node_owner_tag, [
     viewer_token/1,
+    agent_token/1,
     request_owner_tagged/1,
+    request_agent_tagged/1,
     secure_eq_text/2
 ]).
 
@@ -33,6 +35,45 @@ request_owner_tagged(Request) :-
     viewer_token(Token),
     request_cookie(Request, wp_owner, Value),
     secure_eq_text(Value, Token).
+
+
+%!  agent_token(-Token:string) is semidet.
+%
+%   True when WEB_PROLOG_AGENT_TOKEN is set to a non-empty value.
+agent_token(Token) :-
+    catch(getenv('WEB_PROLOG_AGENT_TOKEN', Raw), _, fail),
+    Raw \== '',
+    atom_string(Raw, Token),
+    string_length(Token, Len),
+    Len > 0.
+
+
+%!  request_agent_tagged(+Request) is semidet.
+%
+%   True when the request carries either the `X-WP-Agent` header or the
+%   `wp_agent` cookie with a value matching `WEB_PROLOG_AGENT_TOKEN`.
+request_agent_tagged(Request) :-
+    agent_token(Token),
+    (   request_header_value(Request, x_wp_agent, HeaderValue),
+        secure_eq_text(HeaderValue, Token)
+    ->  true
+    ;   request_cookie(Request, wp_agent, CookieValue),
+        secure_eq_text(CookieValue, Token)
+    ).
+
+
+request_header_value(Request, NameLower, Value) :-
+    Term =.. [NameLower, Raw],
+    memberchk(Term, Request),
+    !,
+    text_to_string(Raw, Value).
+request_header_value(Request, NameLower, Value) :-
+    atom_string(NameLower, NameLowerS),
+    split_string(NameLowerS, "_", "", Parts),
+    atomic_list_concat(Parts, '-', HyphenName),
+    Term =.. [HyphenName, Raw],
+    memberchk(Term, Request),
+    text_to_string(Raw, Value).
 
 
 request_cookie(Request, Name, Value) :-

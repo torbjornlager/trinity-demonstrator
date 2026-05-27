@@ -19,7 +19,7 @@ in-memory activity log for the admin UI.
 :- use_module(node_auth, [request_principal/2]).
 :- use_module(node_log, [request_client_meta/3]).
 :- use_module(node_runtime_state, [current_node_value/2]).
-:- use_module(node_owner_tag, [request_owner_tagged/1]).
+:- use_module(node_owner_tag, [request_owner_tagged/1, request_agent_tagged/1]).
 
 :- setting(interaction_log_file, atom, 'logs/interactions.jsonl',
            'Append-only JSONL file for public demonstrator interaction events').
@@ -33,13 +33,21 @@ log_interaction_request(Request, Event0) :-
     request_principal(Request, Principal),
     request_client_meta(Request, Principal, ClientMeta0),
     interaction_client_meta(ClientMeta0, ClientMeta1),
-    add_owner_tag(Request, ClientMeta1, ClientMeta),
+    add_owner_tag(Request, ClientMeta1, ClientMeta2),
+    add_agent_tag(Request, ClientMeta2, ClientMeta),
     append_interaction_event(ClientMeta, Event0).
 
 
 add_owner_tag(Request, Meta0, Meta) :-
     (   catch(request_owner_tagged(Request), _, fail)
     ->  put_dict(owner, Meta0, true, Meta)
+    ;   Meta = Meta0
+    ).
+
+
+add_agent_tag(Request, Meta0, Meta) :-
+    (   catch(request_agent_tagged(Request), _, fail)
+    ->  put_dict(agent, Meta0, "claude", Meta)
     ;   Meta = Meta0
     ).
 
@@ -120,6 +128,7 @@ browser_interaction_event(Event0, Event) :-
 
 allowed_browser_event("tutorial_call").
 allowed_browser_event("example_spawn").
+allowed_browser_event("portal_view").
 
 
 include_allowed_browser_field(Event, EventName, Pairs) :-
@@ -135,9 +144,10 @@ include_allowed_browser_field(Event, EventName, Pairs) :-
     ).
 
 
-allowed_browser_fields("tutorial_call", [example, example_label]).
+allowed_browser_fields("tutorial_call", [example, example_label, device]).
 allowed_browser_fields("example_spawn",
-                       [example, example_url, source_kind, transport, origin]).
+                       [example, example_url, source_kind, transport, origin, device]).
+allowed_browser_fields("portal_view", [device, route]).
 
 
 browser_field_value(Key, Value0, Value) :-
@@ -152,6 +162,8 @@ max_field_length(example_url, 300).
 max_field_length(source_kind, 40).
 max_field_length(transport, 40).
 max_field_length(origin, 40).
+max_field_length(device, 24).
+max_field_length(route, 40).
 max_field_length(_, 200).
 
 
@@ -222,8 +234,9 @@ event_clock(Now, At) :-
 
 
 interaction_client_meta(ClientMeta0, ClientMeta) :-
-    (   del_dict(user_agent, ClientMeta0, _, ClientMeta1)
-    ->  true
+    (   get_dict(user_agent, ClientMeta0, UA0), UA0 \== ""
+    ->  truncate_text(UA0, 240, UA),
+        put_dict(user_agent, ClientMeta0, UA, ClientMeta1)
     ;   ClientMeta1 = ClientMeta0
     ),
     (   get_dict(principal, ClientMeta1, "anonymous"),

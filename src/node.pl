@@ -234,6 +234,7 @@ HTTP endpoint layout:
 :- http_handler(root(statecharts), node_statecharts_page, [prefix]).
 :- http_handler(root('tau-examples'), node_tau_examples_page, [prefix]).
 :- http_handler(root('swi-wasm-examples'), node_swi_wasm_examples_page, [prefix]).
+:- http_handler(root('ciao-wasm-examples'), node_ciao_wasm_examples_page, [prefix]).
 :- http_handler(root('Tau-Prolog'), node_tau_js_page, [prefix]).
 
 %!  node_controller_root(+Request) is det.
@@ -1239,15 +1240,18 @@ node_examples_index_page_1 :-
     node_statecharts_dir(StatechartDir),
     node_tau_examples_dir(TauDir),
     node_swi_wasm_examples_dir(SwiWasmDir),
+    node_ciao_wasm_examples_dir(CiaoWasmDir),
     example_directory_entries(ActorDir, '/examples/actors/', prolog, ActorEntries),
     example_directory_entries(StatechartDir, '/examples/statecharts/', statechart, StatechartEntries),
     example_directory_entries(TauDir, '/tau-examples/', prolog, TauEntries),
     example_directory_entries(SwiWasmDir, '/swi-wasm-examples/', prolog, SwiWasmEntries),
+    example_directory_entries(CiaoWasmDir, '/ciao-wasm-examples/', prolog, CiaoWasmEntries),
     reply_json(json{
         actors:ActorEntries,
         statecharts:StatechartEntries,
         tau:TauEntries,
-        swi_wasm:SwiWasmEntries
+        swi_wasm:SwiWasmEntries,
+        ciao_wasm:CiaoWasmEntries
     }).
 
 
@@ -1450,6 +1454,16 @@ node_swi_wasm_examples_page(Request) :-
     safe_asset_file(Dir, RelPath, File),
     http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
 
+%!  node_ciao_wasm_examples_page(+Request) is det.
+%
+%   Serve CIAO-WASM example files from examples/ciao-wasm-examples/.
+node_ciao_wasm_examples_page(Request) :-
+    node_ciao_wasm_examples_dir(Dir),
+    option(path_info(PathInfo), Request, ''),
+    asset_relative_path(PathInfo, RelPath),
+    safe_asset_file(Dir, RelPath, File),
+    http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
+
 %!  node_tau_js_page(+Request) is det.
 %
 %   Serve bundled Tau-Prolog JS files from Tau-Prolog/.
@@ -1548,6 +1562,11 @@ node_tau_examples_dir(Dir) :-
 node_swi_wasm_examples_dir(Dir) :-
     node_examples_dir(ExamplesDir),
     directory_file_path(ExamplesDir, 'swi-wasm-examples', Dir).
+
+%!  node_ciao_wasm_examples_dir(-Dir) is det.
+node_ciao_wasm_examples_dir(Dir) :-
+    node_examples_dir(ExamplesDir),
+    directory_file_path(ExamplesDir, 'ciao-wasm-examples', Dir).
 
 %!  example_directory_entries(+Dir, +BaseURL, +Kind, -Entries) is det.
 %

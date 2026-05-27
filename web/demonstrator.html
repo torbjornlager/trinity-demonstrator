@@ -2662,7 +2662,7 @@
               <a v-for="node in headerNodeButtons"
                  :key="node.id"
                  class="wb-header-card wb-header-card-node"
-                 :class="{active: !isTauMode && !isSwiWasmMode && isCurrentPortalNode(node)}"
+                 :class="{active: !isTauMode && !isSwiWasmMode && !isCiaoWasmMode && isCurrentPortalNode(node)}"
                  :href="node.href">{{ node.label.toLowerCase() }}</a>
             </div>
             <p v-if="showCurrentNodeLink" class="wb-header-section-note">
@@ -2675,7 +2675,7 @@
             <div class="wb-header-section-title-row">
               <div class="wb-header-section-title">Browser runtimes</div>
               <span class="wb-header-note-help"
-                    :data-tooltip="'Select the browser-based Prolog implementation to talk to below:\n\n[SWI-WASM] SWI-Prolog compiled to WASM\n[Tau-JS] Tau-Prolog implemented in JavaScript'"
+                    :data-tooltip="'Select the browser-based Prolog implementation to talk to below:\n\n[SWI-WASM] SWI-Prolog compiled to WASM\n[Ciao-WASM] Ciao Prolog compiled to WASM\n[Tau-JS] Tau-Prolog implemented in JavaScript'"
                     aria-label="Browser help">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
@@ -3022,7 +3022,7 @@
                       </svg>
                     </button>
                     <div v-if="profileMenuOpen" class="terminal-profile-menu">
-                      <div class="terminal-profile-note">{{ isTauMode || isSwiWasmMode ? 'Runtime' : 'Node' }}: {{ nodeProfileLabel }}</div>
+                      <div class="terminal-profile-note">{{ isTauMode || isSwiWasmMode || isCiaoWasmMode ? 'Runtime' : 'Node' }}: {{ nodeProfileLabel }}</div>
                       <div class="terminal-profile-note">Principal: {{ principalSummaryLabel }}</div>
                       <div class="terminal-profile-note">Auth: {{ nodeAuthLabel }}</div>
                       <button class="terminal-profile-item"
@@ -5072,13 +5072,19 @@
             handledTutorialDeepLink: "",
             isTauMode: (new URLSearchParams(window.location.search)).get("node") === "tau",
             isSwiWasmMode: (new URLSearchParams(window.location.search)).get("node") === "swi-wasm",
+            isCiaoWasmMode: (new URLSearchParams(window.location.search)).get("node") === "ciao-wasm",
             tauSession: null,
             swiWasmProlog: null,
             swiWasmModule: null,
             swiWasmSolutions: [],
             swiWasmSolIndex: 0,
             swiWasmHasMore: false,
-            swiWasmOutputBuffer: ""
+            swiWasmOutputBuffer: "",
+            ciaoToplevel: null,
+            ciaoAdapter: null,
+            ciaoLoadedCode: null,
+            ciaoBusy: false,
+            ciaoPendingSol: null
           };
         },
         computed: {
@@ -5096,10 +5102,10 @@
             return String(this.currentPortalNodeUrl || window.location.origin).replace(/\/$/, "");
           },
           showCurrentNodeLink: function() {
-            return !this.isTauMode && !this.isSwiWasmMode;
+            return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
           },
           loggerEnabledForRuntime: function() {
-            return !this.isTauMode && !this.isSwiWasmMode;
+            return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
           },
           effectiveLoggerVisible: function() {
             return this.loggerEnabledForRuntime && this.loggerVisible;
@@ -5107,6 +5113,7 @@
           currentPortalNodeDisplay: function() {
             if (this.isTauMode) return "tau-prolog (in-browser)";
             if (this.isSwiWasmMode) return "swi-prolog wasm (in-browser)";
+            if (this.isCiaoWasmMode) return "ciao-prolog wasm (in-browser)";
             var normalized = normalizeNodeUrl(this.currentPortalNodeUrl);
             return normalized ? normalized.href : String(this.currentPortalNodeUrl || window.location.origin);
           },
@@ -5114,6 +5121,7 @@
             var nodes = derivePortalNodeUrls(this.currentPortalNodeUrl);
             nodes.push({ id: "tau", url: null, href: "?node=tau", label: "Tau" });
             nodes.push({ id: "swi-wasm", url: null, href: "?node=swi-wasm", label: "SWI-WASM" });
+            nodes.push({ id: "ciao-wasm", url: null, href: "?node=ciao-wasm", label: "Ciao-WASM" });
             return nodes;
           },
           headerNodeButtons: function() {
@@ -5124,6 +5132,7 @@
           headerBrowserButtons: function() {
             return [
               { id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isSwiWasmMode },
+              { id: "ciao-wasm", href: "?node=ciao-wasm", label: "Ciao-WASM", active: this.isCiaoWasmMode },
               { id: "tau", href: "?node=tau", label: "Tau-JS", active: this.isTauMode }
             ];
           },
@@ -5263,7 +5272,7 @@
             return this.nodeAnnouncedProfile !== "relation";
           },
           showTutorialExamples: function() {
-            return this.hasWorkspacePane && !this.isTauMode && !this.isSwiWasmMode;
+            return this.hasWorkspacePane && !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
           },
           showActorTutorialExamples: function() {
             return this.nodeAnnouncedProfile === "actor" ||
@@ -5278,7 +5287,7 @@
             return this.hasEditorPane;
           },
           showStatechartExamples: function() {
-            return !this.isTauMode && !this.isSwiWasmMode && (
+            return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode && (
               this.nodeAnnouncedProfile === "actor" ||
               this.nodeAnnouncedProfile === "workbench"
             );
@@ -5416,7 +5425,7 @@
           this.restoreTerminalSpacingSettings();
           this.restoreTerminalLinkSettings();
           this.restoreCodeColoringSettings();
-          if (this.isTauMode) { this.initTauSession(); } else if (this.isSwiWasmMode) { this.initSwiWasmSession(); } else { this.fetchNodeInfo(); }
+          if (this.isTauMode) { this.initTauSession(); } else if (this.isSwiWasmMode) { this.initSwiWasmSession(); } else if (this.isCiaoWasmMode) { this.initCiaoWasmSession(); } else { this.fetchNodeInfo(); }
           this.fetchExamplesIndex();
           this.applyThemeSettings();
           this.applyTypographySettings();
@@ -5437,6 +5446,9 @@
           window.addEventListener("resize", this.handleWindowResize);
           window.addEventListener("focus", this.handleWindowFocus);
           this.runInitialTutorialDeepLink();
+          try {
+            this.reportInteraction({ event: "portal_view", route: "portal" });
+          } catch (_error) {}
         },
         beforeUnmount: function() {
           if (typeof this.adminConfigHelpPopoverCleanup === "function") {
@@ -5704,12 +5716,17 @@
               var statecharts = Array.isArray(json && json.statecharts) ? json.statecharts : [];
               var tau = Array.isArray(json && json.tau) ? json.tau : [];
               var swiWasm = Array.isArray(json && json.swi_wasm) ? json.swi_wasm : [];
+              var ciaoWasm = Array.isArray(json && json.ciao_wasm) ? json.ciao_wasm : [];
               if (self.isTauMode) {
                 self.actorExamples = tau
                   .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
                   .filter(Boolean);
               } else if (self.isSwiWasmMode) {
                 self.actorExamples = swiWasm
+                  .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
+                  .filter(Boolean);
+              } else if (self.isCiaoWasmMode) {
+                self.actorExamples = ciaoWasm
                   .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
                   .filter(Boolean);
               } else {
@@ -7096,12 +7113,36 @@
             }
             return s.slice(0, maxLen) + "...";
           },
+          detectDevice: function() {
+            try {
+              var ua = navigator.userAgent || "";
+              var platform = (navigator.platform || "").toLowerCase();
+              var touch = (navigator.maxTouchPoints || 0) > 1;
+              if (/iPad/.test(ua)) { return "ipad"; }
+              if (/iPhone|iPod/.test(ua)) { return "iphone"; }
+              // iPadOS 13+ Safari masquerades as Mac: MacIntel + touch = iPad.
+              if (platform === "macintel" && touch) { return "ipad"; }
+              if (/Android/i.test(ua)) {
+                return /Mobile/.test(ua) ? "android-phone" : "android-tablet";
+              }
+              if (/Macintosh|Mac OS X/i.test(ua)) { return "mac"; }
+              if (/Windows/i.test(ua)) { return "windows"; }
+              if (/CrOS/i.test(ua)) { return "chromeos"; }
+              if (/Linux/i.test(ua)) { return "linux"; }
+              return "other";
+            } catch (_error) {
+              return "other";
+            }
+          },
           reportInteraction: function(payload) {
             var body;
             if (!payload || typeof payload !== "object") {
               return;
             }
             try {
+              if (payload.device === undefined) {
+                payload.device = this.detectDevice();
+              }
               body = JSON.stringify(payload);
             } catch (_error) {
               return;
@@ -8212,6 +8253,8 @@
               this.runTauQuery(term);
             } else if (this.isSwiWasmMode) {
               this.runSwiWasmQuery(term);
+            } else if (this.isCiaoWasmMode) {
+              this.runCiaoWasmQuery(term);
             } else if (this.transportMode === "actor") {
               this.askCurrentWs(term);
             } else if (this.transportMode === "isotope") {
@@ -8232,6 +8275,11 @@
             if (this.isSwiWasmMode) {
               term.echo(term.get_prompt() + ";");
               this.nextSwiWasmSolution(term);
+              return;
+            }
+            if (this.isCiaoWasmMode) {
+              term.echo(term.get_prompt() + ";");
+              this.nextCiaoWasmSolution(term);
               return;
             }
             if (this.transportMode === "actor") {
@@ -8262,6 +8310,11 @@
             }
             if (this.isSwiWasmMode) {
               this.swiWasmSolutions = [];
+              this.resetQueryState(term);
+              return;
+            }
+            if (this.isCiaoWasmMode) {
+              this.stopCiaoWasmQuery(term);
               this.resetQueryState(term);
               return;
             }
@@ -9480,6 +9533,400 @@
               return text;
             }
             return "'" + text.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
+          },
+          initCiaoWasmSession: function() {
+            var self = this;
+            if (this.terminal) {
+              this.terminal.pause();
+              this.terminal.echo("% Loading Ciao Prolog WASM runtime (from ciao-lang.org)...");
+            }
+            // The Ciao playground bundle uses globals urlPREFIX/urlVERS/res_URL to
+            // resolve worker and engine assets. We point them at ciao-lang.org.
+            window.urlPREFIX = "https://ciao-lang.org";
+            window.urlVERS = "?v=6";
+            window.res_URL = function(u) { return window.urlPREFIX + u + window.urlVERS; };
+            window.toplevelCfg = Object.assign(window.toplevelCfg || {}, { use_webworker: true, statistics: false });
+            // Cross-origin Workers (script URL on ciao-lang.org loaded from our origin)
+            // are blocked. Pre-fetch the worker source and route Worker(...) to a
+            // same-origin blob URL.
+            var workerUrl = window.urlPREFIX + "/js/ciao-webworker.js" + window.urlVERS;
+            var workerReady = fetch(workerUrl).then(function(r) {
+              if (!r.ok) throw new Error("worker fetch " + r.status);
+              return r.text();
+            }).then(function(src) {
+              var blob = new Blob([src], { type: "application/javascript" });
+              var blobUrl = URL.createObjectURL(blob);
+              if (!window._ciaoWorkerPatched) {
+                window._ciaoWorkerPatched = true;
+                var OrigWorker = window.Worker;
+                window.Worker = function(url, opts) {
+                  var s = String(url || "");
+                  if (s.indexOf("ciao-webworker.js") !== -1) {
+                    url = blobUrl;
+                  }
+                  return new OrigWorker(url, opts);
+                };
+                window.Worker.prototype = OrigWorker.prototype;
+              }
+            });
+            workerReady.then(function() {
+              return import("https://ciao-lang.org/js/ciao-prolog.js");
+            }).then(function(mod) {
+              var QueryState = mod.QueryState;
+              var ToplevelProc = mod.ToplevelProc;
+              var adapter = self.makeCiaoComintAdapter(QueryState);
+              var tlp = new ToplevelProc(window.urlPREFIX + "/ciao/", window.urlVERS, undefined);
+              adapter.tlp = tlp;
+              // Ciao's internal classes (CiaoWorker, engine wrapper) use private
+              // class fields whose brand check fails when the receiver is a Vue
+              // reactivity Proxy. markRaw prevents Vue from wrapping them.
+              var raw = (window.Vue && window.Vue.markRaw) ? window.Vue.markRaw : function(x) { return x; };
+              self.ciaoToplevel = raw(tlp);
+              self.ciaoAdapter = raw(adapter);
+              self.ciaoQueryState = QueryState;
+              return tlp.ensure_started(adapter).then(function() {
+                return tlp.w.writeFile("/ciao_rpc_preamble.pl", self.ciaoRpcPreamble());
+              }).then(function() {
+                self.ciaoFlushAdapter();
+                return tlp.run_query(adapter, "use_module('/ciao_rpc_preamble')", {});
+              }).then(function() {
+                self.ciaoFlushAdapter();
+                if (self.terminal) {
+                  if (adapter.versionText) {
+                    self.terminal.echo(adapter.versionText.replace(/\n$/, ""));
+                  }
+                  self.terminal.set_prompt(self.basePrompt());
+                  self.terminal.resume();
+                }
+                self.log("info", "Ciao Prolog WASM runtime ready.", "ciao-wasm");
+                self.fetchExamplesIndex();
+              });
+            }).catch(function(err) {
+              if (self.terminal) { self.terminal.resume(); }
+              self.log("error", "Failed to initialize Ciao Prolog WASM: " + String(err), "ciao-wasm");
+              self.fetchExamplesIndex();
+            });
+          },
+          makeCiaoComintAdapter: function(QueryState) {
+            var self = this;
+            return {
+              QueryState: QueryState,
+              tlp: null,
+              with_prompt: true,
+              versionText: "",
+              outBuffer: "",
+              solBuffer: "",
+              lastStatus: null,
+              update_inner_layout: function() {},
+              set_log: function(msg) {},
+              display: function(text) { this.outBuffer += text; },
+              print_out: function(text) { this.outBuffer += text; },
+              print_msg: function(text) { this.outBuffer += text; },
+              print_sol: function(text) { this.solBuffer = text; },
+              print_prompt: function() {},
+              print_promptval: function() {},
+              display_status: function(s) { this.lastStatus = s; },
+              display_status_new_prompt: function(s) { this.lastStatus = s; },
+              pg: {
+                on_cproc_start: function() {},
+                show_version: function(text) { self.ciaoAdapter && (self.ciaoAdapter.versionText = text || ""); },
+                upload_code_to_worker: function() {},
+                mark_errs: function() {},
+                set_auto_action: function() {},
+                mark_srcdbg_info: function() {}
+              }
+            };
+          },
+          ciaoRpcPreamble: function() {
+            return [
+              ":- module(_, [rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3, term_to_text/2, text_to_term/2], [foreign_js, hiord]).",
+              ":- use_module(library(lists)).",
+              ":- use_module(library(aggregates), [findall/3]).",
+              ":- use_module(library(read), [read_term/3]).",
+              ":- use_module(library(stream_utils), [file_to_string/2, string_to_file/2]).",
+              ":- use_module(library(streams)).",
+              ":- use_module(library(terms_vars), [varset/2]).",
+              ":- use_module(library(write), [writeq/2]).",
+              "",
+              "js_def(ciao_rpc_call(\"Base\", \"GoalA\", \"TplA\", \"Off\", \"Lim\", \"LT\", \"Resp\"), [ret, async], \"",
+              "  try {",
+              "    const u = new URL(Base + '/call');",
+              "    u.searchParams.set('goal', '(' + GoalA + ')');",
+              "    u.searchParams.set('template', TplA);",
+              "    u.searchParams.set('format', 'prolog');",
+              "    u.searchParams.set('offset', String(Off));",
+              "    u.searchParams.set('limit', String(Lim));",
+              "    if (LT) u.searchParams.set('load_text', LT);",
+              "    const r = await fetch(u.toString());",
+              "    if (!r.ok) return null;",
+              "    return await r.text();",
+              "  } catch(e) { return null; }",
+              "\").",
+              "",
+              "js_def(ciao_rpc_start(\"Base\", \"GoalA\", \"TplA\", \"Off\", \"Lim\", \"LT\", \"Ref\"), [ret, async], \"",
+              "  globalThis._ciaoPromiseStore = globalThis._ciaoPromiseStore || { items: {}, next: 1 };",
+              "  const u = new URL(Base + '/call');",
+              "  u.searchParams.set('goal', '(' + GoalA + ')');",
+              "  u.searchParams.set('template', TplA);",
+              "  u.searchParams.set('format', 'prolog');",
+              "  u.searchParams.set('offset', String(Off));",
+              "  u.searchParams.set('limit', String(Lim));",
+              "  if (LT) u.searchParams.set('load_text', LT);",
+              "  const ref = globalThis._ciaoPromiseStore.next++;",
+              "  const entry = { status: 'pending', text: null };",
+              "  globalThis._ciaoPromiseStore.items[ref] = entry;",
+              "  entry.promise = fetch(u.toString())",
+              "    .then(r => r.text())",
+              "    .then(t => { entry.status = 'done'; entry.text = t; })",
+              "    .catch(_ => { entry.status = 'done'; entry.text = 'error(rpc_error(fetch_failed)).'; });",
+              "  return ref;",
+              "\").",
+              "",
+              "js_def(ciao_promise_wait(\"Ref\", \"Timeout\", \"Resp\"), [ret, async], \"",
+              "  const store = globalThis._ciaoPromiseStore;",
+              "  const entry = store && store.items[Ref];",
+              "  if (!entry) return null;",
+              "  await new Promise((resolve) => {",
+              "    if (entry.status === 'done') return resolve();",
+              "    let t = null;",
+              "    if (Timeout >= 0) t = setTimeout(resolve, Math.round(Timeout * 1000));",
+              "    entry.promise.then(() => { if (t !== null) clearTimeout(t); resolve(); });",
+              "  });",
+              "  if (entry.status !== 'done') return null;",
+              "  delete store.items[Ref];",
+              "  return entry.text;",
+              "\").",
+              "",
+              "% --- term <-> code list via temp files in the in-memory FS ---",
+              "",
+              "term_to_text(Term, Codes) :-",
+              "    open('/.ciao_rpc_w', write, Out),",
+              "    writeq(Out, Term),",
+              "    close(Out),",
+              "    file_to_string('/.ciao_rpc_w', Codes).",
+              "",
+              "text_to_term(Input, Term) :-",
+              "    input_codes(Input, Codes),",
+              "    string_to_file(Codes, '/.ciao_rpc_r'),",
+              "    open('/.ciao_rpc_r', read, In),",
+              "    read_term(In, Term, []),",
+              "    close(In).",
+              "",
+              "input_codes(string(Cs), Cs) :- !.",
+              "input_codes(Atom, Codes) :- atom(Atom), !, atom_codes(Atom, Codes).",
+              "input_codes(Codes, Codes).",
+              "",
+              "to_codes(string(Cs), Cs) :- !.",
+              "to_codes(A, Codes) :- atom(A), !, atom_codes(A, Codes).",
+              "to_codes(Codes, Codes).",
+              "",
+              "codes_join([], _, []).",
+              "codes_join([C], _, C).",
+              "codes_join([C,D|T], Sep, R) :-",
+              "    codes_join([D|T], Sep, R1),",
+              "    append(C, Sep, C1),",
+              "    append(C1, R1, R).",
+              "",
+              "load_part(Opts, Codes) :-",
+              "    member(load_text(T0), Opts),",
+              "    to_codes(T0, Codes).",
+              "load_part(Opts, Codes) :-",
+              "    member(load_list(Terms), Opts),",
+              "    findall(C, (member(Tm, Terms), term_to_text(Tm, C0), append(C0, \".\", C)), Cs),",
+              "    codes_join(Cs, \"\\n\", Codes).",
+              "load_part(Opts, Codes) :-",
+              "    % load_predicates/1: send the whole current editor source.",
+              "    % Ciao's static-procedure semantics make selective clause/2 enumeration",
+              "    % impractical, so we ship /user_main.pl in full.",
+              "    member(load_predicates(_), Opts),",
+              "    catch(file_to_string('/user_main.pl', Codes), _, Codes = []).",
+              "",
+              "collect_load_text(Opts, Codes) :-",
+              "    findall(P, load_part(Opts, P), Parts),",
+              "    codes_join(Parts, \"\\n\", Codes).",
+              "",
+              "% --- rpc ---",
+              "",
+              "rpc(URL, Goal) :- rpc(URL, Goal, []).",
+              "",
+              "rpc(URL, Goal, Opts) :-",
+              "    varset(Goal, Vars),",
+              "    Template =.. [v|Vars],",
+              "    ( member(limit(Lim), Opts) -> true ; Lim = 10000 ),",
+              "    ( member(offset(Off), Opts) -> true ; Off = 0 ),",
+              "    collect_load_text(Opts, LT),",
+              "    to_codes(URL, URLCs),",
+              "    rpc_page(URLCs, Goal, Template, Off, Lim, LT, Bound),",
+              "    Template = Bound.",
+              "",
+              "rpc_page(URLCs, Goal, Template, Off, Lim, LTCs, Bound) :-",
+              "    term_to_text(Goal, GoalCs),",
+              "    term_to_text(Template, TplCs),",
+              "    js_call(ciao_rpc_call(string(URLCs), string(GoalCs), string(TplCs), Off, Lim, string(LTCs), Resp)),",
+              "    ( Resp == null -> throw(rpc_error(fetch_failed)) ; true ),",
+              "    text_to_term(Resp, Response),",
+              "    rpc_handle(Response, URLCs, Goal, Template, Off, Lim, LTCs, Bound).",
+              "",
+              "rpc_handle(success(Slice, true), URLCs, Goal, Template, Off, Lim, LTCs, Bound) :-",
+              "    ( member(Bound, Slice)",
+              "    ; NextOff is Off + Lim,",
+              "      rpc_page(URLCs, Goal, Template, NextOff, Lim, LTCs, Bound)",
+              "    ).",
+              "rpc_handle(success(Slice, false), _, _, _, _, _, _, Bound) :-",
+              "    member(Bound, Slice).",
+              "rpc_handle(failure, _, _, _, _, _, _, _) :- !, fail.",
+              "rpc_handle(error(E), _, _, _, _, _, _, _) :- throw(rpc_error(E)).",
+              "",
+              "% --- promise / yield ---",
+              "",
+              "promise(URL, Goal, Ref) :- promise(URL, Goal, Ref, []).",
+              "",
+              "promise(URL, Goal, Ref, Opts) :-",
+              "    ( member(template(Tpl), Opts) -> true ; Tpl = Goal ),",
+              "    ( member(offset(Off), Opts) -> true ; Off = 0 ),",
+              "    ( member(limit(Lim), Opts) -> true ; Lim = 10000000 ),",
+              "    collect_load_text(Opts, LTCs),",
+              "    to_codes(URL, URLCs),",
+              "    term_to_text(Goal, GoalCs),",
+              "    term_to_text(Tpl, TplCs),",
+              "    js_call(ciao_rpc_start(string(URLCs), string(GoalCs), string(TplCs), Off, Lim, string(LTCs), Ref)).",
+              "",
+              "yield(Ref, Msg) :- yield(Ref, Msg, []).",
+              "",
+              "yield(Ref, Msg, Opts) :-",
+              "    ( member(timeout(T), Opts) -> true ; T = -1 ),",
+              "    js_call(ciao_promise_wait(Ref, T, Resp)),",
+              "    ( Resp == null ->",
+              "        ( member(on_timeout(OT), Opts) -> call(OT) ; fail )",
+              "    ;   text_to_term(Resp, Msg)",
+              "    )."
+            ].join("\n");
+          },
+          ciaoFlushAdapter: function() {
+            var a = this.ciaoAdapter;
+            if (!a) return { out: "", sol: "", status: null };
+            var snap = { out: a.outBuffer, sol: a.solBuffer, status: a.lastStatus };
+            a.outBuffer = "";
+            a.solBuffer = "";
+            a.lastStatus = null;
+            return snap;
+          },
+          ciaoEchoTrim: function(text) {
+            if (!text) return;
+            this.terminal.echo(String(text).replace(/\n$/, ""));
+          },
+          runCiaoWasmQuery: function(term) {
+            var self = this;
+            var tlp = this.ciaoToplevel;
+            if (!tlp || !this.ciaoAdapter) {
+              this.finishError(term, "Ciao Prolog WASM runtime not ready. Please wait a moment and try again.");
+              this.resumeTerm(term);
+              return;
+            }
+            if (this.ciaoBusy) {
+              this.finishError(term, "Ciao Prolog WASM runtime is busy.");
+              this.resumeTerm(term);
+              return;
+            }
+            var goal = this.activeGoal;
+            var editorText = this.currentLoadText();
+            this.pauseTerm(term);
+            this.ciaoBusy = true;
+            this.recordSessionEvent("session", "Query: " + this.clipText(goal, 140), "ciao-wasm", "ciao-wasm");
+            this.log("transport", "?- " + goal + ".", "ciao-wasm", "request");
+            var QS = this.ciaoQueryState;
+            var loadStep = Promise.resolve();
+            if (editorText && editorText !== this.ciaoLoadedCode) {
+              loadStep = tlp.w.writeFile("/user_main.pl", editorText).then(function() {
+                self.ciaoFlushAdapter();
+                return tlp.run_query(self.ciaoAdapter, "ensure_loaded('/user_main')", {});
+              }).then(function() {
+                var snap = self.ciaoFlushAdapter();
+                if (snap.out) self.ciaoEchoTrim(snap.out);
+                self.ciaoLoadedCode = editorText;
+                // If the consult left us in VALIDATING (shouldn't happen for ensure_loaded), end it.
+                if (tlp.state === QS.VALIDATING) {
+                  return tlp.send_line(self.ciaoAdapter, "");
+                }
+              });
+            } else if (!editorText) {
+              this.ciaoLoadedCode = null;
+            }
+            loadStep.then(function() {
+              self.ciaoFlushAdapter();
+              return tlp.run_query(self.ciaoAdapter, goal, {});
+            }).then(function() {
+              self.afterCiaoStep(term);
+            }).catch(function(err) {
+              self.ciaoBusy = false;
+              self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + String(err)));
+              self.resumeTerm(term);
+            });
+          },
+          nextCiaoWasmSolution: function(term) {
+            var self = this;
+            var tlp = this.ciaoToplevel;
+            if (!tlp || !this.ciaoAdapter) return;
+            this.ciaoBusy = true;
+            this.ciaoFlushAdapter();
+            tlp.send_line(this.ciaoAdapter, ";").then(function() {
+              self.afterCiaoStep(term);
+            }).catch(function(err) {
+              self.ciaoBusy = false;
+              self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + String(err)));
+              self.resumeTerm(term);
+            });
+          },
+          stopCiaoWasmQuery: function(term) {
+            var tlp = this.ciaoToplevel;
+            if (!tlp || !this.ciaoAdapter) return;
+            var QS = this.ciaoQueryState;
+            if (tlp.state === QS.VALIDATING) {
+              tlp.send_line(this.ciaoAdapter, "").catch(function() {});
+            }
+            this.ciaoBusy = false;
+            this.ciaoFlushAdapter();
+          },
+          afterCiaoStep: function(term) {
+            var tlp = this.ciaoToplevel;
+            var QS = this.ciaoQueryState;
+            var snap = this.ciaoFlushAdapter();
+            if (snap.out) this.ciaoEchoTrim(snap.out);
+            this.ciaoBusy = false;
+            if (tlp.state === QS.VALIDATING) {
+              // Ciao convention: display "X = a ?" and await `;` (more) or `.` (accept).
+              var sol = snap.sol || "true";
+              this.log("transport", sol + " ?", "ciao-wasm", "response");
+              this.recordSessionEvent("success", sol, "ciao-wasm", "ciao-wasm");
+              this.queryState = "more";
+              term.set_prompt(sol + " ? ");
+              this.resumeTerm(term);
+              return;
+            }
+            // READY: solution complete
+            var status = snap.status;
+            if (status === "no") {
+              // Ciao convention: print "no" rather than SWI's "false."
+              this.log("transport", "no", "ciao-wasm", "response");
+              this.terminal.echo("no");
+              this.resetQueryState(term);
+              this.appendQueryCompletionSpacing(term);
+              this.resumeTerm(term);
+              return;
+            }
+            if (status === "aborted") {
+              this.finishError(term, snap.out || "aborted");
+              this.resumeTerm(term);
+              return;
+            }
+            // "yes" — deterministic success.
+            var answer = snap.sol || "true";
+            this.log("transport", answer + ".", "ciao-wasm", "response");
+            this.recordSessionEvent("success", answer + ".", "ciao-wasm", "ciao-wasm");
+            this.terminal.echo(answer + ".");
+            this.resetQueryState(term);
+            this.appendQueryCompletionSpacing(term);
+            this.resumeTerm(term);
           },
           reconnectActiveTransport: function() {
             var self = this;

@@ -8,8 +8,8 @@ infrastructure made this project possible.
 
 - **Jan Wielemaker** — author and maintainer of [SWI-Prolog](https://www.swi-prolog.org/),
   the Prolog system on which the server-side of the Trinity Demonstrator runs.
-  SWI-Prolog provides the engine, the standard libraries, the HTTP stack, and
-  the Pengines infrastructure that this project depends on.
+  SWI-Prolog provides the engine, the standard libraries, the HTTP and WebSocket stacks, and
+  the other wonderful infrastructure that this project depends on.
 
 - **José Antonio Riaza Valverde** — author and maintainer of
   [Tau Prolog](http://tau-prolog.org/), the in-browser Prolog interpreter used

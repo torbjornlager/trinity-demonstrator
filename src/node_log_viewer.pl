@@ -124,9 +124,13 @@ viewer_html(Html) :-
   th { background: #1a1a1a; position: sticky; top: 0; color: #aaa; font-weight: 600; }
   tr.owner { color: #777; }
   tr.owner td.tag::before { content: '\\1F511 '; color: #c93; }
+  tr.agent { color: #9b8; }
+  tr.agent td.tag::before { content: '\\1F916 '; color: #6c9; }
   td.event { color: #6cf; }
   td.client { color: #aaa; }
   td.extra { color: #bbb; white-space: pre-wrap; word-break: break-word; max-width: 32rem; }
+  td.ua { color: #999; font-size: 11px; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.ua:hover { white-space: normal; word-break: break-all; }
   .pill { display: inline-block; padding: 0 .35rem; border-radius: 3px; background: #2a2a2a; color: #ddd; font-size: 11px; }
   a, a:visited { color: #6af; }
 </style>
@@ -134,7 +138,24 @@ viewer_html(Html) :-
 <body>
 <h1>Interaction log <span class=\"pill\" id=\"count\">0</span></h1>
 <div class=\"controls\">
-  <label><input type=\"checkbox\" id=\"hideOwner\" checked> Hide owner traffic</label>
+  <label><input type=\"checkbox\" id=\"hideOwner\" checked> Hide owner</label>
+  <label><input type=\"checkbox\" id=\"hideAgent\" checked> Hide agent</label>
+  <label><input type=\"checkbox\" id=\"publicOnly\"> Public only</label>
+  <label>Device
+    <select id=\"deviceFilter\">
+      <option value=\"\">(any)</option>
+      <option value=\"ipad\">ipad</option>
+      <option value=\"iphone\">iphone</option>
+      <option value=\"android-phone\">android-phone</option>
+      <option value=\"android-tablet\">android-tablet</option>
+      <option value=\"mac\">mac</option>
+      <option value=\"windows\">windows</option>
+      <option value=\"linux\">linux</option>
+      <option value=\"chromeos\">chromeos</option>
+      <option value=\"other\">other</option>
+      <option value=\"__none__\">(no device)</option>
+    </select>
+  </label>
   <label><input type=\"checkbox\" id=\"tail\" checked> Tail</label>
   <label>Filter <input type=\"text\" id=\"filter\" placeholder=\"substring (event/client/route/...)\"></label>
   <button id=\"clear\">Clear view</button>
@@ -144,7 +165,7 @@ viewer_html(Html) :-
 </div>
 <table>
   <thead><tr>
-    <th>At</th><th>Event</th><th>Client</th><th>Route</th><th>Source</th><th>Peer</th><th>Tag</th><th>Extra</th>
+    <th>At</th><th>Event</th><th>Who</th><th>Route</th><th>Device</th><th>Source</th><th>Tag</th><th>UA</th><th>Extra</th>
   </tr></thead>
   <tbody id=\"rows\"></tbody>
 </table>
@@ -154,13 +175,16 @@ viewer_html(Html) :-
   const statusEl = $('status');
   const countEl = $('count');
   const hideOwnerEl = $('hideOwner');
+  const hideAgentEl = $('hideAgent');
+  const publicOnlyEl = $('publicOnly');
+  const deviceFilterEl = $('deviceFilter');
   const tailEl = $('tail');
   const filterEl = $('filter');
   let lastTs = 0;
   let events = [];
   const MAX_KEEP = 5000;
 
-  const HIDE_KEYS = new Set(['at','ts','event','client_id','route','source','peer','principal','user_agent','owner']);
+  const HIDE_KEYS = new Set(['at','ts','event','client_id','route','source','peer','principal','user_agent','owner','agent','device']);
 
   function fmtExtra(e) {
     const extra = {};
@@ -170,7 +194,18 @@ viewer_html(Html) :-
   }
 
   function passesFilter(e) {
-    if (hideOwnerEl.checked && e.owner === true) return false;
+    if (publicOnlyEl.checked) {
+      if (e.owner === true || e.agent) return false;
+    } else {
+      if (hideOwnerEl.checked && e.owner === true) return false;
+      if (hideAgentEl.checked && e.agent) return false;
+    }
+    const dev = deviceFilterEl.value;
+    if (dev === '__none__') {
+      if (e.device) return false;
+    } else if (dev) {
+      if (e.device !== dev) return false;
+    }
     const f = filterEl.value.trim().toLowerCase();
     if (!f) return true;
     return JSON.stringify(e).toLowerCase().includes(f);
@@ -184,14 +219,20 @@ viewer_html(Html) :-
       if (!passesFilter(e)) continue;
       const tr = document.createElement('tr');
       if (e.owner === true) tr.classList.add('owner');
+      else if (e.agent) tr.classList.add('agent');
+      const tagText = e.owner === true ? 'owner' : (e.agent ? String(e.agent) : '');
+      const peer = e.peer || '';
+      const cid  = e.client_id || '';
+      const who  = (cid && cid !== 'peer:' + peer) ? cid : peer;
       tr.innerHTML =
         '<td>' + esc(e.at || '') + '</td>' +
         '<td class=\"event\">' + esc(e.event || '') + '</td>' +
-        '<td class=\"client\">' + esc(e.client_id || e.principal || '') + '</td>' +
+        '<td class=\"client\">' + esc(who) + '</td>' +
         '<td>' + esc(e.route || '') + '</td>' +
+        '<td>' + esc(e.device || '') + '</td>' +
         '<td>' + esc(e.source || '') + '</td>' +
-        '<td>' + esc(e.peer || '') + '</td>' +
-        '<td class=\"tag\">' + (e.owner === true ? 'owner' : '') + '</td>' +
+        '<td class=\"tag\">' + esc(tagText) + '</td>' +
+        '<td class=\"ua\" title=\"' + esc(e.user_agent || '') + '\">' + esc(e.user_agent || '') + '</td>' +
         '<td class=\"extra\">' + esc(fmtExtra(e)) + '</td>';
       f.appendChild(tr);
       shown++;
@@ -234,7 +275,39 @@ viewer_html(Html) :-
     }
   }
 
-  hideOwnerEl.addEventListener('change', render);
+  const PREFS_KEY = 'wp_viewer_prefs';
+
+  function savePrefs() {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        hideOwner:  hideOwnerEl.checked,
+        hideAgent:  hideAgentEl.checked,
+        publicOnly: publicOnlyEl.checked,
+        tail:       tailEl.checked,
+        device:     deviceFilterEl.value
+      }));
+    } catch (_) {}
+  }
+
+  function loadPrefs() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null');
+      if (!saved) return;
+      if (saved.hideOwner  !== undefined) hideOwnerEl.checked  = saved.hideOwner;
+      if (saved.hideAgent  !== undefined) hideAgentEl.checked  = saved.hideAgent;
+      if (saved.publicOnly !== undefined) publicOnlyEl.checked = saved.publicOnly;
+      if (saved.tail       !== undefined) tailEl.checked       = saved.tail;
+      if (saved.device     !== undefined) deviceFilterEl.value = saved.device;
+    } catch (_) {}
+  }
+
+  loadPrefs();
+
+  hideOwnerEl.addEventListener('change', () => { savePrefs(); render(); });
+  hideAgentEl.addEventListener('change', () => { savePrefs(); render(); });
+  publicOnlyEl.addEventListener('change', () => { savePrefs(); render(); });
+  deviceFilterEl.addEventListener('change', () => { savePrefs(); render(); });
+  tailEl.addEventListener('change', savePrefs);
   filterEl.addEventListener('input', render);
   $('clear').addEventListener('click', () => { events = []; lastTs = 0; render(); });
   $('tagOwner').addEventListener('click', () => { location.href = subPath('tag/owner'); });
