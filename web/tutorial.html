@@ -363,28 +363,24 @@
 
 <p>
    Web Prolog is Prolog with two things added: a network and a process model.
-   Every node in this tutorial is an ordinary Prolog system that also speaks
-   HTTP and WebSocket, and every running query lives inside an Erlang-style
-   actor with its own mailbox. That combination &mdash; logic programming,
-   message-passing concurrency, and network-transparent addressing &mdash; is
-   what the rest of these pages explore.
+   The simplest nodes just speak HTTP and evaluate logical queries on demand;
+   the richer ones also speak WebSocket and host Erlang-style actors, each
+   with its own mailbox.
 </p>
 
 <p>
-   Concretely, by the end of the tutorial you will have run logical queries
-   against a remote node as easily as against a local one, spawned actors that
-   survive on other machines and reply back to your shell, swapped a running
-   server's code without dropping its state, and driven a hierarchical state
-   machine by sending it messages. The same predicates work whether the other
-   side of the conversation is a function on this node, an actor across the
-   room, or a service on another continent.
+   The same Prolog predicates work whether the other side of the conversation
+   is a function on this node, an actor across the room, or a service on
+   another continent &mdash; remote calls that read like local ones,
+   distribution that disappears into the language.
 </p>
 
 <p>
-   Web Prolog nodes do not all have to do everything. The book defines a small
-   hierarchy of profiles &mdash; ISOBASE, ISOTOPE, ACTOR &mdash; and this
-   tutorial walks up it: pure relational queries first, then session state,
-   then actors, then the higher-level patterns (server behaviours, statecharts)
+   Web Prolog nodes do not all have to do everything. A small hierarchy of
+   profiles &mdash; ISOBASE, ISOTOPE, ACTOR &mdash; lets a node advertise
+   exactly how much of the system it implements, and this tutorial walks up
+   that hierarchy: pure relational queries first, then session state, then
+   actors, then the higher-level patterns (server behaviours, statecharts)
    that build on actors. You can stop at any level; each one is a coherent way
    to use the system.
 </p>
@@ -490,8 +486,9 @@ father_child(mike, tom).
 <h2>Parsing and generating with a DCG</h2>
 
 <p>
-    This node also hosts a small grammar written as a Definite Clause Grammar
-    (DCG). You can query it directly to parse or generate sentences.
+    A Definite Clause Grammar (DCG) is a clean Prolog notation for grammars.
+    Load this small one into your session, and you can use it to parse or
+    generate sentences:
 </p>
 
 <pre id="dcg1">s(s(NP,VP)) --&gt; np(NP, Num), vp(VP, Num).
@@ -650,6 +647,14 @@ human(Who) :-
     The answer is returned as the same Prolog term format used by the stateless
     remote call. The promise is useful when the caller has other work to do
     before it needs the result.
+</p>
+
+<p>
+    That is essentially all of distributed ISOBASE: synchronous remote calls
+    via <code>rpc/2-3</code>, plus their asynchronous cousins
+    <code>promise/3-4</code> and <code>yield/2-3</code>. Anything more &mdash;
+    session state, side effects, actors that survive between requests &mdash;
+    needs the ISOTOPE or ACTOR profile, which the rest of the tutorial covers.
 </p>
 
 </section>
@@ -878,28 +883,144 @@ X = aristotle.
 </section>
 
 
+<section id="tutorial-semantic-web">
+<h1>Programming with the Semantic Web</h1>
+
+<p>
+    The Semantic Web envisions a machine-readable layer over the existing Web,
+    built on shared identifiers (URIs), a triple-based data model (RDF), and a
+    rule layer for inference. Web Prolog overlaps that vision substantially:
+    Prolog is already a rule-based language operating over relational facts.
+    The simplest way to bring the two together is to represent triples as
+    Prolog facts and write the application's public interface as ordinary
+    predicates over them.
+</p>
+
+<h2>RDF triples and rules over them</h2>
+
+<p>
+    An RDF triple has the form &lt;subject, predicate, object&gt;. In Web
+    Prolog we represent each triple as a three-argument fact
+    <code>rdf/3</code>. The fragment below uses two well-known vocabularies
+    &mdash; FOAF for people and knows-relations, and schema.org for typed
+    values &mdash; and adds one Prolog rule,
+    <code>known_with_birthdate/3</code>, that joins two triples to answer
+    "people that someone knows, together with their birthdates":
+</p>
+
+<pre id="sw-source">:- dynamic rdf/3.
+
+rdf('http://example.org/bob#me',
+    'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+    'http://xmlns.com/foaf/0.1/Person').
+
+rdf('http://example.org/bob#me',
+    'http://xmlns.com/foaf/0.1/knows',
+    'http://example.org/alice#me').
+
+rdf('http://example.org/bob#me',
+    'http://xmlns.com/foaf/0.1/knows',
+    'http://example.org/charlie#me').
+
+rdf('http://example.org/alice#me',
+    'http://schema.org/birthDate',
+    literal(type('http://www.w3.org/2001/XMLSchema#date', '1990-07-04'))).
+
+rdf('http://example.org/charlie#me',
+    'http://schema.org/birthDate',
+    literal(type('http://www.w3.org/2001/XMLSchema#date', '1985-12-23'))).
+
+known_with_birthdate(Me, He, Date) :-
+    rdf(Me, 'http://xmlns.com/foaf/0.1/knows', He),
+    rdf(He, 'http://schema.org/birthDate', Date).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#sw-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>
+    The URIs are deliberately long because they are real identifiers, not
+    local names. Two parties using <code>http://xmlns.com/foaf/0.1/knows</code>
+    are talking about the same relation no matter which Prolog system or
+    database the data came from. That is the value the Semantic Web adds:
+    shared meaning through shared identifiers.
+</p>
+
+<p>
+    With the data and rule loaded, first query the raw triples &mdash; who
+    does Bob know?
+</p>
+
+<pre id="sw-rdf-query">?- rdf('http://example.org/bob#me',
+       'http://xmlns.com/foaf/0.1/knows',
+       Who).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sw-rdf-query&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Then query through the rule, which joins two triples in one step:
+</p>
+
+<pre id="sw-rule-query">?- known_with_birthdate(Me, He, Date).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sw-rule-query&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    This is the essence of one Prolog Web cooperation pattern: RDF is the
+    interchange format and the storage substrate, but the application's
+    public interface is named Prolog predicates. Callers do not need to know
+    which triples were consulted; they ask
+    <code>known_with_birthdate/3</code>, and the predicate is free to evolve
+    internally &mdash; more clauses, additional joins, cross-vocabulary
+    mapping &mdash; without changing the contract.
+</p>
+
+<p>
+    The same code can also be hosted by an ISOBASE node and queried from
+    anywhere with <code>rpc/2-3</code>, exactly like the family program
+    earlier in the tutorial. RDF provides interoperable identifiers and
+    shared meaning; Prolog provides an executable, composable, reusable rule
+    layer on top of them. The Semantic Web and the Prolog Web compose
+    naturally.
+</p>
+
+</section>
+
+
 <section id="tutorial-local-actor-programming">
 <h1>Local ACTOR programming</h1>
 
 <p>
-    These examples make one point clear: Web Prolog actors do not just borrow
-    Erlang's vocabulary. If you program them in the Erlang style, they behave
-    that way too.
+    Web Prolog extends Prolog with Erlang-style message-passing concurrency.
+    An <em>actor</em> is a lightweight isolated process with its own mailbox
+    and its own private Prolog database, identified by a process id called a
+    <em>pid</em>; actors interact only by sending each other messages, never
+    by sharing memory.
 </p>
 
 <p>
-    Web Prolog extends Prolog with Erlang-style message-passing concurrency.
-    The terminal session to the right is itself an actor with a mailbox. We
-    will use it to send messages, inspect the mailbox, spawn other actors, and
-    watch what happens when actors terminate.
+    The terminal session to the right is itself an actor. We will use it to
+    send messages, inspect the mailbox, spawn other actors, and watch what
+    happens when actors terminate. The examples that follow do not just
+    borrow Erlang's vocabulary &mdash; programmed in the Erlang style, actors
+    here behave the way Erlang actors do.
 </p>
 
-<div class="alert alert-info">
-  <strong>Tip!</strong> The session is persistent. Run the examples in order. 
-  If you want to inspect the WebSocket traffic, open the Logger and tick <code>API</code>.
-</div>
+<p>
+    The session is persistent, so run the examples in order &mdash; later
+    examples build on bindings and actors created by earlier ones.
+</p>
 
-<h2>Your shell has a pid</h2>
+<h2>The shell's pid</h2>
 
 <p>
     The terminal to the right is running a Web Prolog shell. The core of a
@@ -920,7 +1041,7 @@ X = aristotle.
     actor a message.
 </p>
 
-<h2>Send a message to yourself</h2>
+<h2>Sending a message</h2>
 
 <p>
     The shell understands dollar notation: <code>$Self</code> means "use the
@@ -952,7 +1073,7 @@ X = aristotle.
     <code>receive/1</code> waits until a matching message arrives.
 </p>
 
-<h2>Inspect the mailbox without blocking</h2>
+<h2>Inspecting the mailbox</h2>
 
 <p>
     <code>flush/0</code> is a shell utility: it prints every pending message
@@ -980,7 +1101,7 @@ X = aristotle.
     while you are experimenting.
 </p>
 
-<h2>Spawn an actor and talk to it</h2>
+<h2>Spawning an actor</h2>
 
 <p>
     An actor is capable of spawning other actors and then talking to them.
@@ -1028,7 +1149,94 @@ X = aristotle.
 </button>
 </p>
 
-<h2>Monitors tell you when an actor dies</h2>
+<h2>Visible actors</h2>
+
+<p>
+    Web Prolog supports the predicate <code>actors/1</code>, which binds its
+    argument to the list of pids of all actors visible from your current
+    session:
+</p>
+
+<pre id="mpc-link-default-actors">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The first item is the pid of your shell; the echo actor you just spawned
+    should also be in the list.
+</p>
+
+<h2>Linking</h2>
+
+<p>
+    By default, a child is linked to its parent. If the parent exits, linked
+    children are terminated too.
+</p>
+
+<pre id="mpc-link-default">?- spawn(spawn(receive({}))).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Now inspect the actors visible from your current session again:
+</p>
+
+<pre id="mpc-link-default-actors-after">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors-after&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The inner nonterminating actor does not survive as a new long-lived child
+    because linking ensures that when the outer spawned actor terminates, its
+    child is taken down with it.
+</p>
+
+<p>
+    Linking is one-way. A child that exits does not kill its parent:
+</p>
+
+<pre id="mpc-link-one-way">?- spawn((spawn(exit(kill)), receive({})), Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-link-one-way-check">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way-check&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You should now see one extra live actor: the parent is still there even
+    though its child exited immediately. Clean it up before moving on:
+</p>
+
+<pre id="mpc-link-one-way-cleanup">?- exit($Pid, cleanup).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way-cleanup&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Monitors</h2>
 
 <p>
     If you spawn with <code>monitor(true)</code>, the child sends a
@@ -1061,7 +1269,7 @@ X = aristotle.
     actor succeeds normally, so the reason should be <code>true</code>.
 </p>
 
-<h2>More on monitors</h2>
+<h2>Explicit monitors</h2>
 
 <p>
     <code>monitor(true)</code> is the simple case. You can also install
@@ -1111,11 +1319,12 @@ X = aristotle.
 </div>
 
 
-<h2>Names are easier to remember than pids</h2>
+<h2>Registered names</h2>
 
 <p>
     You can register a pid under a name and use the name instead of the pid.
-    Here the shell registers itself under the name <code>shell</code>:
+    The inverse, <code>unregister/1</code>, drops the name when you no longer
+    need it. Here the shell registers itself under the name <code>shell</code>:
 </p>
 
 <pre id="mpc-register-shell">?- self(Self), register(shell, Self).
@@ -1125,10 +1334,6 @@ X = aristotle.
   <button onclick="pasteAndAskExample(&quot;#mpc-register-shell&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
 </p>
-
-<div class="alert alert-info">
-  <strong>Tip!</strong> It is good to know that you can also unregister an actor by calling <code>unregister/1</code> with its name.
-</div>
 
 <pre id="mpc-send-name">?- shell ! hello.
 </pre>
@@ -1154,7 +1359,7 @@ X = aristotle.
 </button>
 </p>
 
-<h2>Kill an actor from the outside</h2>
+<h2>Killing an actor</h2>
 
 <p>
     Some actors do not stop on their own. Here we spawn a monitored echo actor,
@@ -1192,7 +1397,7 @@ X = aristotle.
 </button>
 </p>
 
-<h2>An actor can choose its own exit reason</h2>
+<h2>Choosing an exit reason</h2>
 
 <p>
     A monitored actor can stop itself with <code>exit/1</code>. The reason
@@ -1267,7 +1472,7 @@ wait_goodbye :-
     Erlang-style message passing.
 </p>
 
-<h2>Receive can do more than one thing</h2>
+<h2>Multi-clause receive</h2>
 
 <p>
     A receive call can have several clauses. The first matching clause wins,
@@ -1329,91 +1534,6 @@ wait_goodbye :-
   <button onclick="pasteAndAskExample(&quot;#mpc-timeout&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
 </p>
-
-<h2>Look at all your actors</h2>
-
-<p>
-    Web Prolog support the predicate <code>actors/1</code> that binds the argument to the list of pids identifying all actors that are visible from your current session:
-</p>
-
-<pre id="mpc-link-default-actors">?- actors(Alive).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p> 
-
-<p>
-    Note that the first (and perhaps only) item in the list is pid of your shell. 
-</p>
-
-<h2>Linking controls child lifetime</h2>
-
-<p>
-    By default, a child is linked to its parent. If the parent exits, linked
-    children are terminated too. 
-</p>
-
-<pre id="mpc-link-default">?- spawn(spawn(receive({}))).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-default&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    Now inspect the actors visible from your current session again:
-</p>
-
-<pre id="mpc-link-default-actors-after">?- actors(Alive).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors-after&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    The inner nonterminating actor does not survive as a new long-lived child
-    because linking ensures that when the outer spawned actor terminates, its
-    child is taken down with it.
-</p>
-
-<p>
-    Linking is one-way. A child that exits does not kill its parent:
-</p>
-
-<pre id="mpc-link-one-way">?- spawn((spawn(exit(kill)), receive({})), Pid).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="mpc-link-one-way-check">?- actors(Alive).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way-check&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    You should now see one extra live actor: the parent is still there even
-    though its child exited immediately. Clean it up before moving on:
-</p>
-
-<pre id="mpc-link-one-way-cleanup">?- exit($Pid, cleanup).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way-cleanup&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
 
 <h2>A small priority queue</h2>
 
@@ -1769,9 +1889,10 @@ ping_pong :-
     Erlang, but that the interaction pattern is the same: send, receive,
     recurse, terminate.
 </p>
-<div id="tutorial-programming-with-toplevels"></div>
+</section>
 
-<h2>Programming with toplevel actors</h2>
+<section id="tutorial-programming-with-toplevels">
+<h1>Programming with toplevel actors</h1>
 
 <p>
     A shell is itself a toplevel, but Web Prolog also lets one actor spawn
@@ -1808,7 +1929,7 @@ ping_pong :-
     The most recent binding of <code>Pid</code> is the one used below.
 </p>
 
-<h2>Make it call a goal</h2>
+<h2>Calling a goal</h2>
 
 <p>
     Use <code>toplevel_call/2-3</code> to make the spawned toplevel run a goal.
@@ -2093,7 +2214,7 @@ ping_pong :-
   points at the other node.
 </div>
 
-<h2>Actor talking to remote actor</h2>
+<h2>Talking to a remote actor</h2>
 
 <p>
     First spawn an <code>echo_actor/0</code> on the other node, monitor
@@ -2199,7 +2320,7 @@ ping_pong :-
     node.
 </p>
 
-<h2>The node option works for toplevels too</h2>
+<h2>Remote toplevels</h2>
 
 <p>
     You can also spawn a toplevel on a remote node. The mechanism is the same:
@@ -2216,8 +2337,8 @@ ping_pong :-
 </p>
 
 <p>
-    The remote nodes both host two simple <code>human/1</code> facts, so
-    we can ask the remote toplevel for one answer at a time:
+    Both <code>n3</code> and <code>n4</code> host a <code>human/1</code>
+    predicate, so we can ask the remote toplevel for one answer at a time:
 </p>
 
 <pre id="cpw-remote-toplevel-call">?- toplevel_call($Pid, human(Who), [
@@ -2913,6 +3034,77 @@ fridge2(_Other,      List, error(unknown_request), List).
     machine has moved to its final state.
 </p>
 
+<h2>A dialogue governor</h2>
+
+<p>
+    Statecharts are a good fit for dialogue control: a conversation has
+    turn-taking, confirmations, repair after misunderstandings, and an
+    overall flow that is easier to read as a hierarchy of states than as
+    branching <code>receive/1-2</code> code. This example is a small
+    conversational agent that asks the user for the color and size of a
+    box. Unrecognized input falls back to a history state, which re-enters
+    the most recently active substate and re-asks its question.
+</p>
+
+<pre id="sc-dialog-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/11%20boxshop-1.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnDialog(&quot;#sc-dialog-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    On entering the <code>color</code> state the machine asks "What color do
+    you want?". Use the Examples menu to reply. An adjective alone
+    (<code>[red]</code>, <code>[blue]</code>) or a full noun phrase
+    (<code>[a, red, box]</code>) parses; anything else triggers the repair
+    transition.
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([red]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as color, advances to the <code>size</code> state</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([a, big, box]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as size, reaches the final state</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([hello]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">does not parse; the agent says "I did not understand" and re-asks the current question</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+    Three pieces of statechart machinery do the work. First, the
+    <code>&lt;datamodel&gt;</code> holds a small DCG and two dynamic
+    predicates (<code>color/1</code> and <code>size/1</code>) that act as
+    extracted-fact slots. Second, transitions use
+    <code>if="phrase(np(color(C)), Input)"</code> to call the DCG as a
+    guard: the transition only fires when the input parses as the expected
+    structure, and Prolog variables bound by the parse are in scope in the
+    transition body. Third, the <code>&lt;history&gt;</code> state and the
+    outer fallback <code>&lt;go to="h" on="input(Input)"&gt;</code> together
+    implement local repair: any unparseable input is caught, the agent
+    apologises, and the history state restores whichever question was
+    pending, so the conversation continues from where it broke down instead
+    of restarting.
+</p>
+
+<p>
+    The whole pattern &mdash; explicit states for turn-taking, DCG parsing
+    as a transition guard, and a history-based repair loop &mdash; is a
+    compact illustration of why statecharts are well suited to user-facing
+    agents. The same skeleton scales to richer dialogues by adding more
+    states and richer grammars.
+</p>
+
 <h2>Process invocation and communication</h2>
 
 <p>
@@ -2994,18 +3186,29 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 
-<div class="alert alert-info">
-  <strong>Tip!</strong> The examples above are just a starting point. More statecharts are
-    available in the <strong>Examples drawer</strong>; click the arrow to open it and select any file from the <em>Statecharts</em> section. Loading a file opens it in the editor and
-    populates the terminal&rsquo;s Examples menu with its built-in queries,
-    ready to run.
-</div>
+<p>
+    The examples above are just a starting point. More statecharts are
+    available in the <strong>Examples drawer</strong>; click the arrow to open
+    it and select any file from the <em>Statecharts</em> section. Loading a
+    file opens it in the editor and populates the terminal's Examples menu
+    with its built-in queries, ready to run.
+</p>
 
 
 </section>
 
 <section id="web-apis">
-<h1>Exercising the web APIs</h1>
+<h1>The node's web APIs</h1>
+
+<p>
+    Everything so far has used Web Prolog as a programming language &mdash;
+    you wrote code, the portal sent it to a node, and the node replied. This
+    closing section looks at the same node from the outside: not as a place
+    to write Prolog, but as a service that other systems can talk to over
+    HTTP and WebSocket. It is the wire-level reference you would consult to
+    embed a Web Prolog node in a JavaScript app, a Python client, or another
+    service.
+</p>
 
 <p>
     A Web Prolog node currently exposes three web-facing APIs. The stateless
@@ -3600,6 +3803,23 @@ fridge2(_Other,      List, error(unknown_request), List).
                 { label: '$Pid ! oper(div).',   query: '$Pid ! oper(div).'   },
                 { label: '$Pid ! point.',       query: '$Pid ! point.'       },
                 { label: '$Pid ! ce.',          query: '$Pid ! ce.'          }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnDialog(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! input([red]).',           query: '$Pid ! input([red]).'           },
+                { label: '$Pid ! input([blue]).',          query: '$Pid ! input([blue]).'          },
+                { label: '$Pid ! input([a, red, box]).',   query: '$Pid ! input([a, red, box]).'   },
+                { label: '$Pid ! input([big]).',           query: '$Pid ! input([big]).'           },
+                { label: '$Pid ! input([small]).',         query: '$Pid ! input([small]).'         },
+                { label: '$Pid ! input([a, big, box]).',   query: '$Pid ! input([a, big, box]).'   },
+                { label: '$Pid ! input([a, small, box]).', query: '$Pid ! input([a, small, box]).' },
+                { label: '$Pid ! input([hello]).',         query: '$Pid ! input([hello]).'         }
             ]);
         }
         pasteAndAskExample(exampleId);
