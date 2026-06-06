@@ -236,6 +236,7 @@ HTTP endpoint layout:
 :- http_handler(root('swi-wasm-examples'), node_swi_wasm_examples_page, [prefix]).
 :- http_handler(root('ciao-wasm-examples'), node_ciao_wasm_examples_page, [prefix]).
 :- http_handler(root('Tau-Prolog'), node_tau_js_page, [prefix]).
+:- http_handler(root('wasm'), node_wasm_modules_page, [prefix]).
 
 %!  node_controller_root(+Request) is det.
 %
@@ -1464,6 +1465,18 @@ node_ciao_wasm_examples_page(Request) :-
     safe_asset_file(Dir, RelPath, File),
     http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
 
+%!  node_wasm_modules_page(+Request) is det.
+%
+%   Serve the WASM-port statechart Prolog modules from src/wasm/ so
+%   that the in-browser SWI-Prolog WASM can fetch and consult them
+%   into its virtual file system.
+node_wasm_modules_page(Request) :-
+    node_wasm_modules_dir(Dir),
+    option(path_info(PathInfo), Request, ''),
+    asset_relative_path(PathInfo, RelPath),
+    safe_asset_file(Dir, RelPath, File),
+    http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
+
 %!  node_tau_js_page(+Request) is det.
 %
 %   Serve bundled Tau-Prolog JS files from Tau-Prolog/.
@@ -1567,6 +1580,15 @@ node_swi_wasm_examples_dir(Dir) :-
 node_ciao_wasm_examples_dir(Dir) :-
     node_examples_dir(ExamplesDir),
     directory_file_path(ExamplesDir, 'ciao-wasm-examples', Dir).
+
+%!  node_wasm_modules_dir(-Dir) is det.
+%
+%   Resolve absolute path to the `src/wasm` directory containing the
+%   WASM-port statechart modules served to the in-browser SWI-Prolog.
+node_wasm_modules_dir(Dir) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir0),
+    directory_file_path(Dir0, 'wasm', Dir).
 
 %!  example_directory_entries(+Dir, +BaseURL, +Kind, -Entries) is det.
 %

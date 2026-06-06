@@ -5080,6 +5080,8 @@
             swiWasmSolIndex: 0,
             swiWasmHasMore: false,
             swiWasmOutputBuffer: "",
+            swiWasmStatechartLoaded: false,
+            swiWasmStatechartActive: false,
             ciaoToplevel: null,
             ciaoAdapter: null,
             ciaoLoadedCode: null,
@@ -5105,7 +5107,10 @@
             return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
           },
           loggerEnabledForRuntime: function() {
-            return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
+            if (this.isSwiWasmMode) {
+              return true;
+            }
+            return !this.isTauMode && !this.isCiaoWasmMode;
           },
           effectiveLoggerVisible: function() {
             return this.loggerEnabledForRuntime && this.loggerVisible;
@@ -5287,10 +5292,14 @@
             return this.hasEditorPane;
           },
           showStatechartExamples: function() {
-            return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode && (
-              this.nodeAnnouncedProfile === "actor" ||
-              this.nodeAnnouncedProfile === "workbench"
-            );
+            if (this.isTauMode || this.isCiaoWasmMode) {
+              return false;
+            }
+            if (this.isSwiWasmMode) {
+              return true;
+            }
+            return this.nodeAnnouncedProfile === "actor" ||
+                   this.nodeAnnouncedProfile === "workbench";
           },
 	          nodeAuthLabel: function() {
 	            if (this.nodeAnnouncedAuthMode === "private") {
@@ -5319,9 +5328,13 @@
               && (this.transportMode === "actor" || this.isSwiWasmMode);
           },
           canHaltStatechart: function() {
-            if (this.editorKind !== "statechart" ||
-                this.transportMode !== "actor" ||
-                !this.canSubmitNewQuery) {
+            if (this.editorKind !== "statechart" || !this.canSubmitNewQuery) {
+              return false;
+            }
+            if (this.isSwiWasmMode) {
+              return this.swiWasmStatechartActive;
+            }
+            if (this.transportMode !== "actor") {
               return false;
             }
             return !!this.statechartStopCommand();
@@ -5724,6 +5737,9 @@
               } else if (self.isSwiWasmMode) {
                 self.actorExamples = swiWasm
                   .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
+                  .filter(Boolean);
+                self.statechartExamples = statecharts
+                  .map(function(entry) { return self.normalizeExampleEntry(entry, "statechart"); })
                   .filter(Boolean);
               } else if (self.isCiaoWasmMode) {
                 self.actorExamples = ciaoWasm
@@ -7081,6 +7097,10 @@
               this.log("warn", "Statechart editor is empty.");
               return;
             }
+            if (this.isSwiWasmMode) {
+              this.runSwiWasmStatechart(xml);
+              return;
+            }
             var escaped = xml.replace(/\\/g, "\\\\").replace(/'/g, "''");
             var opts = ["load_text('" + escaped + "')", "monitor(true)"];
             var goal = "statechart_spawn(Pid, [" + opts.join(", ") + "]).";
@@ -7092,6 +7112,11 @@
             }
           },
           haltStatechart: function() {
+            if (this.isSwiWasmMode) {
+              window.__calcRemoveAll();
+              this.haltSwiWasmStatechart();
+              return;
+            }
             var goal = this.statechartStopCommand();
             if (!goal) {
               return;
@@ -9134,12 +9159,19 @@
                   _wasmOk = !!_opCheck;
                 } catch(e) {}
                 console.log("[SWI-INIT] library(wasm) := available:", _wasmOk);
-                if (self.terminal) {
-                  self.terminal.set_prompt(self.basePrompt());
-                  self.terminal.resume();
-                }
-                self.log("info", "SWI-Prolog WASM runtime ready.", "swi-wasm");
-                self.fetchExamplesIndex();
+                // Lazy-load the statechart WASM modules so the editor's
+                // Run button can drive charts via statechart_start/1.
+                // Failure is non-fatal — the SWI-WASM Prolog session
+                // remains usable for ordinary queries.
+                self.preloadSwiWasmStatechart(Prolog, Module).then(function(ok) {
+                  console.log("[SWI-INIT] statechart_wasm loaded:", ok);
+                  if (self.terminal) {
+                    self.terminal.set_prompt(self.basePrompt());
+                    self.terminal.resume();
+                  }
+                  self.log("info", "SWI-Prolog WASM runtime ready.", "swi-wasm");
+                  self.fetchExamplesIndex();
+                });
               }).catch(function(err) {
                 if (self.terminal) {
                   self.terminal.set_prompt(self.basePrompt());
@@ -9287,6 +9319,227 @@
               "        atomic_list_concat([HA,' :-\\n    ',BA,'.'], Text)",
               "    )."
             ].join("\n");
+          },
+          // ---- WASM-port statechart integration -----------------------
+          //
+          // The in-browser SWI-Prolog can run the headless statechart
+          // interpreter that lives in src/wasm/.  We fetch the four
+          // modules once per session, write them into the virtual FS,
+          // and consult statechart_wasm.pl.  Subsequent Run clicks call
+          // statechart_start(text(XML)); user events go through normal
+          // queries like statechart_send(play).
+          preloadSwiWasmStatechart: function(Prolog, Module) {
+            var self = this;
+            if (self.swiWasmStatechartLoaded) {
+              return Promise.resolve(true);
+            }
+            if (!Module || !Module.FS) {
+              return Promise.resolve(false);
+            }
+            var names = [
+              "statechart_wasm_runtime.pl",
+              "statechart_wasm_model.pl",
+              "statechart_wasm_exec.pl",
+              "statechart_wasm.pl"
+            ];
+            try { Module.FS.mkdir("/wasm"); } catch(_) { /* exists */ }
+            return Promise.all(names.map(function(name) {
+              // cache: 'no-store' so a rebuilt node always reaches the
+              // browser; statechart_wasm modules embed their own build
+              // tag in directives that run at consult time, so a stale
+              // copy silently breaks subtle things like sleep/1.
+              return fetch("/wasm/" + name, { cache: "no-store" }).then(function(r) {
+                if (!r.ok) throw new Error("HTTP " + r.status + " for /wasm/" + name);
+                return r.text().then(function(src) { return { name: name, src: src }; });
+              });
+            })).then(function(files) {
+              files.forEach(function(f) {
+                Module.FS.writeFile("/wasm/" + f.name, f.src);
+              });
+              Prolog.query("use_module('/wasm/statechart_wasm.pl')").once();
+              // Expose a JS-side trace receiver so the in-browser
+              // Prolog can stream statechart events back to the Vue
+              // app via library(wasm)'s :=/2.
+              window.wasmStatechartTrace = function(text) {
+                try { self.handleSwiWasmTrace(text); } catch(e) {
+                  console.warn("[SWI-WASM] trace dispatch threw:", e);
+                }
+              };
+              // No JS-side sleep wiring needed: library(wasm)
+              // exports a sleep/1 that yields via promise_sleep +
+              // await when the Prolog engine is in async context.
+              // Importing library(wasm) into statechart_wasm makes
+              // that visible as statechart_wasm:sleep/1.
+              // Install the Prolog trace hook that bridges every
+              // statechart event to the JS callback.  term_to_atom/2
+              // gives us the canonical Prolog-term text that
+              // humanizeStatechartTrace knows how to parse.
+              Prolog.query(
+                "statechart_wasm:set_trace_hook(" +
+                "[E]>>(term_to_atom(E, A), _ := wasmStatechartTrace(#A)))"
+              ).once();
+              self.swiWasmStatechartLoaded = true;
+              return true;
+            }).catch(function(err) {
+              console.warn("[SWI-INIT] statechart_wasm preload failed:", err);
+              self.log("warn", "Statechart WASM modules unavailable: " + String(err), "swi-wasm");
+              return false;
+            });
+          },
+          // Receive a single trace event (as Prolog term text) from
+          // the in-browser SWI Prolog and route it to the Logger and
+          // the tutorial bridge.  Mirrors the actor/isotope flows that
+          // server-sent events take.
+          handleSwiWasmTrace: function(text) {
+            var traceText = this.formatStatechartTraceDisplay(text, "swi-wasm");
+            if (traceText) {
+              this.log("trace", traceText, "statechart");
+            }
+            this.notifyTutorialStatechartTrace(text);
+          },
+          // Run a statechart in SWI-WASM mode.  Equivalent in spirit to
+          // runStatechart()'s actor-mode `statechart_spawn(Pid, [...])`
+          // but synchronous and PID-less.  Echoes the initial config
+          // and a help banner; the user drives the chart by typing
+          // statechart_send(Event). in the terminal.
+          runSwiWasmStatechart: function(xml) {
+            var self = this;
+            var Prolog = self.swiWasmProlog;
+            if (!Prolog) {
+              self.log("error", "SWI-Prolog WASM runtime not ready yet.", "swi-wasm");
+              return;
+            }
+            if (!self.swiWasmStatechartLoaded) {
+              self.log("error", "Statechart WASM modules not loaded.", "swi-wasm");
+              return;
+            }
+            if (!self.canSubmitNewQuery) {
+              self.log("warn", "Finish the current interaction before starting a new chart.", "swi-wasm");
+              return;
+            }
+            self.selectDock("terminal");
+            var term = self.terminal;
+            // If a previous chart is still running, stop it first so
+            // start_parsed/1 doesn't run on stale state.  statechart_stop
+            // is synchronous (no await), so .once() is fine here.
+            try { Prolog.query("statechart_stop").once(); } catch(_) {}
+            self.swiWasmOutputBuffer = "";
+            // Mark active eagerly so a fresh Run click can't re-enter
+            // while we're still inside the async start.  We'll refine
+            // the value once the start resolves.
+            self.swiWasmStatechartActive = true;
+
+            // Output streaming.  Time-driven charts call sleep/1 and
+            // therefore stay inside statechart_start for as long as
+            // they're running.  Anything written to user_output during
+            // that time would otherwise only reach the terminal once
+            // the chart halts.  Drain the buffer to the terminal on a
+            // short timer and clean up when the chart resolves.
+            self.startSwiWasmOutputStreaming();
+            if (term) {
+              term.echo("% Starting chart...");
+            }
+
+            // statechart_start/1 may yield through await/2 if the
+            // chart calls sleep/1.  Use forEach (returns a Promise)
+            // instead of .once() so the engine can suspend and resume
+            // across JS event-loop turns.
+            Prolog.forEach("statechart_start(text(XML))", { XML: xml }, function() {})
+              .then(function() {
+                self.stopSwiWasmOutputStreaming();
+                self.drainSwiWasmOutputToTerminal();
+                var reasonQ = Prolog.query("statechart_halt_reason(R)").once();
+                var reason = (reasonQ && reasonQ.R) || "unknown";
+                self.swiWasmStatechartActive = (reason === "running");
+                self.echoSwiWasmStatechartConfig();
+                if (term) {
+                  if (reason === "running") {
+                    term.echo("% Statechart running. Send events with:  statechart_send(Event).");
+                    term.echo("% Inspect state with:  statechart_configuration(C).  or  statechart_in(State).");
+                    term.echo("% Halt with the Stop button or:  statechart_stop.");
+                  } else if (reason === "final") {
+                    term.echo("% Statechart reached a top-level final state.");
+                  } else if (reason === "budget_exhausted") {
+                    term.echo("% Statechart halted: microstep budget exhausted.");
+                    term.echo("% (Unbounded transition loop that never yields, even via sleep/1.)");
+                  } else if (reason === "stopped") {
+                    term.echo("% Statechart halted by user.");
+                  } else {
+                    term.echo("% Statechart halted (" + reason + ").");
+                  }
+                }
+                var payload = self.exampleSpawnInteractionPayload("statechart", "swi-wasm", "editor");
+                if (payload) {
+                  self.reportInteraction(payload);
+                }
+              })
+              .catch(function(err) {
+                self.stopSwiWasmOutputStreaming();
+                self.drainSwiWasmOutputToTerminal();
+                self.swiWasmStatechartActive = false;
+                self.log("error", "statechart_start failed: " + String(err), "swi-wasm");
+                if (term) term.echo("% Statechart start failed: " + String(err));
+              });
+          },
+          startSwiWasmOutputStreaming: function() {
+            var self = this;
+            if (self._swiWasmOutputTimer) return;
+            self._swiWasmOutputTimer = setInterval(function() {
+              self.drainSwiWasmOutputToTerminal();
+            }, 100);
+          },
+          stopSwiWasmOutputStreaming: function() {
+            if (this._swiWasmOutputTimer) {
+              clearInterval(this._swiWasmOutputTimer);
+              this._swiWasmOutputTimer = null;
+            }
+          },
+          drainSwiWasmOutputToTerminal: function() {
+            var buf = this.swiWasmOutputBuffer;
+            if (!buf) return;
+            this.swiWasmOutputBuffer = "";
+            // jQuery-terminal's echo expects a complete line.  Strip
+            // the trailing newline that on_output adds.
+            if (this.terminal) {
+              this.terminal.echo(buf.replace(/\n$/, ""));
+            }
+          },
+          echoSwiWasmStatechartConfig: function() {
+            var Prolog = this.swiWasmProlog;
+            var term = this.terminal;
+            if (!Prolog || !term) return;
+            try {
+              var r = Prolog.query("statechart_configuration(C)").once();
+              if (r && r.C) {
+                term.echo("% Configuration: " + JSON.stringify(r.C));
+              }
+            } catch(_) {}
+          },
+          haltSwiWasmStatechart: function() {
+            var Prolog = this.swiWasmProlog;
+            if (!Prolog) return;
+            // The chart may be suspended inside an await/2 (e.g.
+            // sleep/1 mid-tick).  We can't issue a full statechart_stop
+            // synchronously without re-entering Prolog while the engine
+            // is mid-step.  Instead, just retract running/0 and record
+            // the halt reason; when the pending await resolves, the
+            // next iteration of run_to_quiescence will see \+ running
+            // and exit cleanly.  The eventual .then() of the forEach
+            // Promise then runs exit actions via statechart_stop.
+            try {
+              Prolog.query("retractall(statechart_wasm:running)").once();
+              Prolog.query("retractall(statechart_wasm:last_halt_reason(_)), assertz(statechart_wasm:last_halt_reason(stopped))").once();
+            } catch(e) {
+              this.log("warn", "Halt signal failed: " + String(e), "swi-wasm");
+            }
+            this.swiWasmStatechartActive = false;
+            // Don't echo immediately; the running forEach's .then will
+            // print "% Statechart halted by user." when the chart
+            // actually wakes up and observes the retracted running.
+            // If no chart was running, give the user feedback now.
+            if (this.terminal && !this._swiWasmOutputTimer) {
+              this.terminal.echo("% Statechart stopped.");
+            }
           },
           loadSwiWasmExamples: function() {
             var examples = [

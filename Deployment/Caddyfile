@@ -36,7 +36,7 @@ n1.elfenbenstornet.se {
 		respond 204
 	}
 
-	@allowed path / /call /manual /node_info /img* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples*
+	@allowed path / /call /manual /node_info /img* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /wasm*
 	handle @allowed {
 		reverse_proxy wp_n1:3051 {
 			import common_proxy_headers
@@ -56,7 +56,7 @@ n2.elfenbenstornet.se {
 	}
 
 	@allowed {
-		path / /call /manual /node_info /img* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+		path / /call /manual /node_info /img* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /wasm* /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
 	}
 	handle @allowed {
 		reverse_proxy wp_n2:3052 {
@@ -81,7 +81,7 @@ n3.elfenbenstornet.se {
 		remote_ip private_ranges
 	}
 	@allowed {
-		path / /call /manual /node_info /img* /portal /demonstrator /calculator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+		path / /call /manual /node_info /img* /portal /demonstrator /calculator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /wasm* /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
 	}
 	handle @trusted_internal_ws {
 		reverse_proxy wp_n3:3053 {
@@ -112,7 +112,7 @@ n4.elfenbenstornet.se {
 		remote_ip private_ranges
 	}
 	@allowed {
-		path / /call /manual /node_info /img* /portal /demonstrator /calculator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+		path / /call /manual /node_info /img* /portal /demonstrator /calculator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /Tau-Prolog* /tau-examples* /swi-wasm-examples* /ciao-wasm-examples* /wasm* /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
 	}
 	handle @trusted_internal_ws {
 		reverse_proxy wp_n4:3055 {
