@@ -38,7 +38,6 @@ to the desktop implementation.
     execute_content/1,
     enqueue_internal_event/1,
     dequeue_internal_event/1,
-    internal_queue_empty/0,
     update_eventdata/1,
     configuration_add/1,
     configuration_delete/1,

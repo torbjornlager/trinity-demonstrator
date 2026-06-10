@@ -1,13 +1,11 @@
 :- module(statechart_wasm_runtime, [
     clean/0,
-    with_internal_queue/1,
     root_state/1,
     initial_state/2,
     exit_interpreter/0,
     execute_content/1,
     enqueue_internal_event/1,
     dequeue_internal_event/1,
-    internal_queue_empty/0,
     update_eventdata/1,
     configuration_add/1,
     configuration_delete/1,
@@ -52,10 +50,7 @@ Differences from the desktop `statechart_runtime`:
   - No dependency on `actor` or `toplevel_actor`.
 */
 
-:- use_module(library(option)).
 :- use_module(library(lists)).
-
-:- meta_predicate with_internal_queue(0).
 
 
 %!  clean is det.
@@ -79,14 +74,6 @@ clean :-
     retractall(statechart_wasm:invoked(_, _)),
     retractall(statechart_wasm:internal_queue(_)),
     retractall(statechart_wasm:running).
-
-
-with_internal_queue(Goal) :-
-    setup_call_cleanup(
-        assertz(statechart_wasm:internal_queue([])),
-        Goal,
-        retractall(statechart_wasm:internal_queue(_))
-    ).
 
 
 root_state(Root) :-
@@ -128,9 +115,6 @@ enqueue_internal_event(Event) :-
 dequeue_internal_event(Event) :-
     retract(statechart_wasm:internal_queue([Event|Q])),
     assertz(statechart_wasm:internal_queue(Q)).
-
-internal_queue_empty :-
-    statechart_wasm:internal_queue([]).
 
 update_eventdata(Event) :-
     retractall(statechart_wasm:event(_)),
