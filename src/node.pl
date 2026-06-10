@@ -1469,13 +1469,26 @@ node_ciao_wasm_examples_page(Request) :-
 %
 %   Serve the WASM-port statechart Prolog modules from src/wasm/ so
 %   that the in-browser SWI-Prolog WASM can fetch and consult them
-%   into its virtual file system.
+%   into its virtual file system.  This is the first time a directory
+%   under src/ is web-exposed, so only the modules the WASM port
+%   actually needs are servable, regardless of what else lands in
+%   src/wasm/ (editor backups, scratch files, ...).
 node_wasm_modules_page(Request) :-
     node_wasm_modules_dir(Dir),
     option(path_info(PathInfo), Request, ''),
     asset_relative_path(PathInfo, RelPath),
+    wasm_module_file_name(RelPath),
     safe_asset_file(Dir, RelPath, File),
     http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
+
+%!  wasm_module_file_name(+RelPath) is semidet.
+%
+%   True iff RelPath names one of the modules the SWI-WASM statechart
+%   port loads from /wasm/.
+wasm_module_file_name('statechart_wasm.pl').
+wasm_module_file_name('statechart_wasm_model.pl').
+wasm_module_file_name('statechart_wasm_exec.pl').
+wasm_module_file_name('statechart_wasm_runtime.pl').
 
 %!  node_tau_js_page(+Request) is det.
 %
@@ -1643,15 +1656,19 @@ safe_asset_file(Dir, RelPath, File) :-
 %!  safe_relative_file(+Dir, +RelPath, -File) is semidet.
 %
 %   Resolve RelPath under Dir, rejecting any traversal attempt.
-%   Guards against `..`, symlink escapes, and encoded sequences by
-%   canonicalizing both paths and confirming the result stays under Dir.
+%   Guards against `..`, absolute paths, symlink escapes, and encoded
+%   sequences by canonicalizing both paths and confirming the result
+%   stays under Dir (with a path-separator boundary, so a sibling
+%   directory whose name merely extends Dir's name cannot pass).
 safe_relative_file(Dir, RelPath, File) :-
     \+ sub_atom(RelPath, _, _, _, '..'),
+    \+ is_absolute_file_name(RelPath),
     directory_file_path(Dir, RelPath, File),
     exists_file(File),
     absolute_file_name(Dir, CanonicalDir),
     absolute_file_name(File, CanonicalFile),
-    atom_concat(CanonicalDir, _, CanonicalFile).
+    directory_file_path(CanonicalDir, '', CanonicalDirSlash),
+    sub_atom(CanonicalFile, 0, _, _, CanonicalDirSlash).
 
 %!  effective_timeout(+RequestedTimeout0, -EffectiveTimeout) is det.
 %
