@@ -167,8 +167,13 @@ statechart_stop :-
 %!  statechart_send(+Event) is det.
 %
 %   Inject one external event and run to quiescence.  No-op if the
-%   chart has terminated.
+%   chart has terminated, and a true no-op (halt reason stays `idle`)
+%   if no chart has been started yet.
 
+statechart_send(_Event) :-
+    \+ running,
+    \+ last_halt_reason(_),
+    !.
 statechart_send(Event) :-
     send_event(Event),
     record_natural_halt_reason,

@@ -105,6 +105,17 @@ test(top_level_final_stops_interpreter, [cleanup(statechart_stop)]) :-
     statechart_send(end),
     \+ statechart_running.
 
+% statechart_send/1 before any statechart_start/1 is a true no-op: the
+% halt reason stays `idle`, not `final`.  Force a clean idle state
+% first since earlier tests' cleanup(statechart_stop) leaves
+% last_halt_reason(stopped) behind.
+test(send_before_start_stays_idle) :-
+    retractall(statechart_wasm:running),
+    retractall(statechart_wasm:last_halt_reason(_)),
+    assertion(statechart_halt_reason(idle)),
+    statechart_send(go),
+    assertion(statechart_halt_reason(idle)).
+
 % Trace hook receives external_event/internal_event/transition events.
 test(trace_hook_receives_events, [cleanup((clear_trace_hook, statechart_stop))]) :-
     nb_setval(trace_collected, []),
