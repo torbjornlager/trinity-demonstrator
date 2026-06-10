@@ -370,12 +370,11 @@ process_states_to_enter([State|States]) :-
     states_to_invoke_add(State),
     forall(statechart_actor:onentry(State, Content), execute_content(Content)),
     (   is_final(State)
-    ->  (   has_parent(State, Parent),
-            is_statechart_element(Parent)
+    ->  once(has_parent(State, Parent)),
+        (   is_statechart_element(Parent)
         ->  retractall(statechart_actor:running)
-        ;   has_parent(State, Parent),
-            enqueue_internal_event(done(Parent)),
-            has_parent(Parent, Grandparent),
+        ;   enqueue_internal_event(done(Parent)),
+            once(has_parent(Parent, Grandparent)),
             (   is_parallel(Grandparent),
                 forall(has_parent(Child, Grandparent), is_in_final_state(Child))
             ->  enqueue_internal_event(done(Grandparent))
