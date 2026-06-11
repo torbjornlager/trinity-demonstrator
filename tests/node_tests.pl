@@ -2332,6 +2332,19 @@ test(ws_origin_trailing_slash_normalized) :-
         origin("https://n3.example.com/")
     ]).
 
+test(ws_origin_same_origin_with_explicit_port_allowed) :-
+    %  The local-node shape: SWI's HTTP layer splits
+    %  "Host: localhost:3057" into separate host/port request fields,
+    %  and the browser's Origin carries the port.  This is the
+    %  portal's ACTOR mode against `node(3057)` — it must be accepted
+    %  as same-origin (it used to be rejected because the rebuilt
+    %  host origin dropped the port).
+    node_ws:ws_require_allowed_origin([
+        host(localhost),
+        port(3057),
+        origin("http://localhost:3057")
+    ]).
+
 test(ws_origin_cross_origin_rejected,
      [throws(error(permission_error(open, websocket_origin, _), _))]) :-
     node_ws:ws_require_allowed_origin([
