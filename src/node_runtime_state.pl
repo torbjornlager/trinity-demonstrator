@@ -35,13 +35,29 @@ register_node_runtime(Port, Runtime) :-
 
 
 %!  node_request_port(+Request, -Port) is det.
+%
+%   Resolve which local node (keyed by its bind port) serves this
+%   request.  Prefer the thread-pool client id `httpd@<bind-port>`,
+%   which names the socket the node actually listens on.  Only fall
+%   back to the request's port(_) field — which SWI derives from the
+%   (client-controlled) Host header — when no pool id is present.
+%
+%   The Host-header port disagrees with the bind port behind any
+%   port-remapping front end (a Docker `-p 8080:3060` publish, several
+%   nodes behind one reverse proxy on distinct external ports, ...).
+%   Keying node identity on it made such nodes resolve to a
+%   non-existent runtime and report themselves permanently not-ready.
 node_request_port(Request, Port) :-
-    (   memberchk(port(Port0), Request)
+    (   request_pool_port(Request, Port0)
     ->  Port = Port0
-    ;   memberchk(pool(client(ClientId, _, _, _)), Request),
-        pool_client_port(ClientId, Port)
+    ;   memberchk(port(Port0), Request),
+        Port = Port0
     ),
     must_be(integer, Port).
+
+request_pool_port(Request, Port) :-
+    memberchk(pool(client(ClientId, _, _, _)), Request),
+    pool_client_port(ClientId, Port).
 
 pool_client_port(ClientId, Port) :-
     atom(ClientId),

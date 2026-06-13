@@ -647,6 +647,23 @@ rp(right).
 
 :- begin_tests(node).
 
+%  node_request_port must key node identity on the bind port (the
+%  `httpd@<port>` pool client id), not on the request's port(_) field,
+%  which SWI derives from the client-controlled Host header.  Behind a
+%  port-remapping front end (Docker `-p 8080:3060`, a multi-node reverse
+%  proxy) the Host port differs from the bind port; preferring it
+%  resolved a non-existent runtime, so /readyz reported 503 and per-node
+%  work broke.
+test(request_port_prefers_bind_port_over_host_header, Port == 3060) :-
+    Request = [ pool(client('httpd@3060', user:http_dispatch, in, out)),
+                port(8080),                 % Host-header-derived, remapped
+                host(localhost), method(get), path('/readyz') ],
+    node_runtime_state:node_request_port(Request, Port).
+
+test(request_port_falls_back_to_host_port_without_pool, Port == 7000) :-
+    Request = [ port(7000), host(localhost), method(get), path('/readyz') ],
+    node_runtime_state:node_request_port(Request, Port).
+
 test(node_1_starts_http_endpoint, true(Answer == success([true], false))) :-
     with_node_server(URI,
         (
