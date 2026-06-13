@@ -2300,6 +2300,41 @@ test(request_principal_accepts_internal_transport_headers_from_loopback_peer) :-
     assertion(PrincipalId == "node:https://n4.example"),
     assertion(memberchk(internal_transport, Capabilities)).
 
+%  2026-06-13 (back-port from web-prolog): the forwarded identity header
+%  (X-Web-Prolog-User) is a claimed identity with no secret, so a
+%  configured principal's capabilities are granted only from a trusted
+%  front end (loopback / private-network peer). A directly reachable node
+%  would otherwise let any client assume any principal — including an
+%  admin — just by setting the header.
+test(forwarded_identity_trusted_only_for_local_or_private_peer) :-
+    assertion(node_auth:request_forwarded_identity_trusted([peer(ip(127,0,0,1))])),
+    assertion(node_auth:request_forwarded_identity_trusted([peer(ip(172,17,0,5))])),
+    assertion(\+ node_auth:request_forwarded_identity_trusted([peer(ip(8,8,8,8))])),
+    assertion(\+ node_auth:request_forwarded_identity_trusted([])).
+
+test(forwarded_user_header_grants_policy_caps_from_trusted_peer, [
+        setup(node_principal_policy:set_principal_policies([principal("wp-alice", [execute])])),
+        cleanup(node_principal_policy:set_principal_policies([]))
+     ]) :-
+    request_principal(
+        [x_web_prolog_user("wp-alice"), peer(ip(127,0,0,1)), method(get), path('/call')],
+        Principal),
+    principal_id(Principal, PrincipalId),
+    principal_capabilities(Principal, Capabilities),
+    assertion(PrincipalId == "wp-alice"),
+    assertion(memberchk(execute, Capabilities)).
+
+test(forwarded_user_header_denied_from_public_peer, [
+        setup(node_principal_policy:set_principal_policies([principal("wp-alice", [execute])])),
+        cleanup(node_principal_policy:set_principal_policies([]))
+     ]) :-
+    request_principal(
+        [x_web_prolog_user("wp-alice"), peer(ip(8,8,8,8)), method(get), path('/call')],
+        Principal),
+    principal_capabilities(Principal, Capabilities),
+    %  a public client that merely sets the header gets no execute
+    assertion(\+ memberchk(execute, Capabilities)).
+
 test(internal_transport_does_not_imply_execute) :-
     %  Regression pin: holding internal_transport alone must not
     %  grant the execute capability.  Cross-node peers always send

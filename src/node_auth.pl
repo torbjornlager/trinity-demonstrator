@@ -306,8 +306,29 @@ request_authenticated_principal(Request, principal{
     PrincipalId \== "",
     (   internal_transport_principal(Request, PrincipalId, Capabilities)
     ->  Unknown = false
-    ;   authenticated_principal_policy(PrincipalId, Capabilities, Unknown)
+    ;   request_forwarded_identity_trusted(Request)
+    ->  authenticated_principal_policy(PrincipalId, Capabilities, Unknown)
+    ;   %  Untrusted peer: surface the claimed id for the audit log, but
+        %  grant nothing — the policy lookup (and its capabilities) is
+        %  gated, so a public client cannot assume a configured principal.
+        Capabilities = [],
+        Unknown = true
     ).
+
+
+%!  request_forwarded_identity_trusted(+Request) is semidet.
+%
+%   A forwarded identity header (X-Web-Prolog-User / -Principal /
+%   X-Authenticated-User, and its -Capabilities) is honoured ONLY from a
+%   trusted front end: a loopback or private-network peer — the
+%   authenticating reverse proxy that sets the header and strips any
+%   inbound copy. On the open Web the node's HTTP port must sit behind
+%   such a proxy; a directly reachable node would otherwise let any
+%   client claim any principal just by setting the header. Same trust
+%   boundary as the internal transport.
+request_forwarded_identity_trusted(Request) :-
+    request_internal_transport_trusted(Request).
+
 
 authenticated_principal_policy(PrincipalId, Capabilities, Unknown) :-
     (   principal_policy(PrincipalId, PolicyCapabilities)
