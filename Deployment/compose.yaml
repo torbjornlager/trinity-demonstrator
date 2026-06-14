@@ -8,6 +8,8 @@ services:
       - wp_n1
       - wp_n2
       - wp_n3
+      - wp_n5
+      - oauth2_n5
     ports:
       - "80:80"
       - "443:443"
@@ -173,6 +175,87 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+
+  # ── n5: the layered web-prolog production node, behind SSO ──────────
+  # Built from a SIBLING checkout of the web-prolog repo:
+  #     <parent>/trinity-demonstrator   (this repo)
+  #     <parent>/web-prolog             (git clone of torbjornlager/web-prolog)
+  # so build.context ../../web-prolog resolves. The node runs WP_AUTH=
+  # private; oauth2_n5 authenticates each visitor and the n5 Caddy vhost
+  # injects the verified identity as X-Web-Prolog-User (trusted only from
+  # this private proxy peer). Logged-in users get the WP_AUTHENTICATED_
+  # DEFAULT_CAPS "registered" tier.
+  wp_n5:
+    build:
+      context: ../../web-prolog
+      dockerfile: Deployment/Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m
+    environment:
+      HOME: /tmp
+      TZ: Europe/Stockholm
+      WP_PORT: "3060"
+      WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
+      WP_PROFILE: "${WP_N5_PROFILE:-actor}"
+      WP_AUTH: "private"
+      WP_SANDBOX: "${WP_N5_SANDBOX:-whitelist}"
+      # SSO users (verified by oauth2_n5, injected as X-Web-Prolog-User)
+      # with no explicit policy entry get this capability tier.
+      WP_AUTHENTICATED_DEFAULT_CAPS: "${WP_N5_DEFAULT_CAPS:-execute}"
+      WP_OWNER: "${WP_N5_OWNER:-}"
+      # Resource ceilings (now actually forwarded — see compose passthrough).
+      WP_MAX_ACTORS: "${WP_N5_MAX_ACTORS:-10000}"
+      WP_MAX_CALL_INFERENCES: "${WP_N5_MAX_CALL_INFERENCES:-1000000000}"
+      WP_MAX_ACTOR_STACK_BYTES: "${WP_N5_MAX_ACTOR_STACK_BYTES:-268435456}"
+      WP_MAX_LOG_BYTES: "${WP_N5_MAX_LOG_BYTES:-52428800}"
+      WP_MAX_LOG_BACKUPS: "${WP_N5_MAX_LOG_BACKUPS:-5}"
+      WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
+    volumes:
+      - interaction_logs:/var/log/webprolog
+    expose:
+      - "3060"
+    networks:
+      - wp_net
+    mem_limit: 1g
+    cpus: 1.00
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # oauth2-proxy sidecar for n5: forward_auth target for the n5 Caddy
+  # vhost. Credentials come from .env (keep them out of public git).
+  oauth2_n5:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: unless-stopped
+    environment:
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      # forward_auth-only: no real upstream, just answer /oauth2/auth.
+      OAUTH2_PROXY_UPSTREAMS: "static://202"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_REDIRECT_URL: "https://n5.elfenbenstornet.se/oauth2/callback"
+      OAUTH2_PROXY_PROVIDER: "${OAUTH2_PROXY_PROVIDER:-github}"
+      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PROXY_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PROXY_CLIENT_SECRET}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      # Registration allowlist — set the one(s) matching your provider.
+      # NB: --email-domain is repeatable, so the env var is PLURAL
+      # (OAUTH2_PROXY_EMAIL_DOMAINS); the singular form is silently ignored.
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_EMAIL_DOMAINS:-*}"
+      OAUTH2_PROXY_GITHUB_ORG: "${OAUTH2_PROXY_GITHUB_ORG:-}"
+      OAUTH2_PROXY_GITHUB_USERS: "${OAUTH2_PROXY_GITHUB_USERS:-}"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "${OAUTH2_PROXY_OIDC_ISSUER_URL:-}"
+    expose:
+      - "4180"
+    networks:
+      - wp_net
+    mem_limit: 128m
+    cpus: 0.25
 
 networks:
   wp_net:
