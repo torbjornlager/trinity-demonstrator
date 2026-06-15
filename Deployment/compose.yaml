@@ -201,7 +201,7 @@ services:
       WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
       WP_PROFILE: "${WP_N5_PROFILE:-actor}"
       WP_AUTH: "private"
-      WP_SANDBOX: "${WP_N5_SANDBOX:-whitelist}"
+      WP_SANDBOX: "${WP_N5_SANDBOX:-blacklist}"
       # SSO users (verified by oauth2_n5, injected as X-Web-Prolog-User)
       # with no explicit policy entry get this capability tier.
       WP_AUTHENTICATED_DEFAULT_CAPS: "${WP_N5_DEFAULT_CAPS:-execute}"
