@@ -5,19 +5,15 @@
     <meta charset="utf-8">
     <title>The Prolog Trinity portal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="shortcut icon" href="/img/swi-logo.png">
     <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap">
+          href="/vendor/fonts/ibm-plex-mono.css">
 
     <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          href="/vendor/bootstrap.min.css"
           crossorigin="anonymous">
     <link rel="stylesheet"
-          href="https://unpkg.com/jquery.terminal@2.45.2/css/jquery.terminal.min.css"
-          integrity="sha384-8hEcXO2gge9WKcabluN5yofJ89Er/L9l7FIQsBGZspccCNgSeJpZMR9KzlzB03b7"
+          href="/vendor/jquery.terminal.min.css"
           crossorigin="anonymous">
 
     <style>
@@ -104,9 +100,6 @@
         --builtin-cell-bad-bg: #f8d7da;
         --splash-hero-start: #f7fbf7;
         --splash-hero-end: #eef7f0;
-        --logo-badge-bg: rgba(255, 255, 255, 0.98);
-        --logo-badge-line: rgba(212, 212, 212, 0.95);
-        --logo-badge-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
         --yes-no-button-bg: #f3f4f6;
         --yes-no-button-ink: #1f2937;
         --yes-no-button-line: #cbd5e1;
@@ -202,9 +195,6 @@
         --builtin-cell-bad-bg: #2b171a;
         --splash-hero-start: #152118;
         --splash-hero-end: #1b2c20;
-        --logo-badge-bg: rgba(248, 250, 252, 0.96);
-        --logo-badge-line: rgba(203, 213, 225, 0.75);
-        --logo-badge-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
         --yes-no-button-bg: #202a34;
         --yes-no-button-ink: #e5edf5;
         --yes-no-button-line: #415163;
@@ -258,9 +248,6 @@
         padding: 4px;
         box-sizing: border-box;
         border-radius: 50%;
-        background: var(--logo-badge-bg);
-        border: 1px solid var(--logo-badge-line);
-        box-shadow: var(--logo-badge-shadow);
         object-fit: contain;
         flex: 0 0 auto;
         transform: translateY(calc(-50% - 4px));
@@ -379,12 +366,6 @@
       .wb-header-card-runtime {
         min-width: clamp(50px, 3.8vw, 82px);
         font-size: clamp(8px, 0.68vw, 10px);
-      }
-
-      .wb-header-card-runtime-tau {
-        min-width: clamp(36px, 2.7vw, 58px);
-        padding-left: 4px;
-        padding-right: 4px;
       }
 
       .wb-header-section-note {
@@ -2637,10 +2618,10 @@
       <header class="wb-header">
         <div class="wb-brand">
           <a href="https://trinity.elfenbenstornet.se" target="_blank" rel="noopener noreferrer">
-            <img class="wb-logo" src="/img/spider-agent.png" alt="Web Prolog logo">
+            <img class="wb-logo" src="/img/swi-logo.png" alt="Web Prolog logo">
           </a>
           <div class="wb-brand-copy">
-            <h1 class="wb-title">Trinity demonstrator</h1>
+            <h1 class="wb-title">Trinity shell</h1>
             <p class="wb-subtitle">&nbsp;Your portal to the Prolog Web</p>
           </div>
         </div>
@@ -2649,7 +2630,7 @@
             <div class="wb-header-section-title-row">
               <div class="wb-header-section-title">Remote nodes</div>
               <span class="wb-header-note-help"
-                    :data-tooltip="'Select the profile of the node to talk to below:\n\n[n1] An ISOBASE node\n[n2] An ISOTOPE node\n[n3] An ACTOR node\n[n4] An ACTOR node\n\nA link appears that opens the node-resident source code for this node in a new tab.'"
+                    :data-tooltip="'Select the profile of the node to talk to below:\n\n[n1] An ISOBASE node\n[n2] An ISOTOPE node\n[n3] An ACTOR node\n[n4] An ACTOR node\n[n5] An ACTOR node\n\nA link appears that opens the node-resident source code for this node in a new tab.'"
                     aria-label="Node help">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
@@ -2662,7 +2643,7 @@
               <a v-for="node in headerNodeButtons"
                  :key="node.id"
                  class="wb-header-card wb-header-card-node"
-                 :class="{active: !isTauMode && !isSwiWasmMode && !isCiaoWasmMode && isCurrentPortalNode(node)}"
+                 :class="{active: !isSwiWasmMode && isCurrentPortalNode(node)}"
                  :href="node.href">{{ node.label.toLowerCase() }}</a>
             </div>
             <p v-if="showCurrentNodeLink" class="wb-header-section-note">
@@ -2675,7 +2656,7 @@
             <div class="wb-header-section-title-row">
               <div class="wb-header-section-title">Browser runtimes</div>
               <span class="wb-header-note-help"
-                    :data-tooltip="'Select the browser-based Prolog implementation to talk to below:\n\n[SWI-WASM] SWI-Prolog compiled to WASM\n[Ciao-WASM] Ciao Prolog compiled to WASM\n[Tau-JS] Tau-Prolog implemented in JavaScript'"
+                    :data-tooltip="'Select the browser-based Prolog implementation to talk to below:\n\n[SWI-WASM] SWI-Prolog compiled to WASM'"
                     aria-label="Browser help">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
@@ -2688,15 +2669,21 @@
               <a v-for="browser in headerBrowserButtons"
                  :key="browser.id"
                  class="wb-header-card wb-header-card-runtime"
-                 :class="{
-                   active: browser.active,
-                   'wb-header-card-runtime-tau': browser.id === 'tau'
-                 }"
+                 :class="{active: browser.active}"
                  :href="browser.href">{{ browser.label }}</a>
             </div>
           </section>
           <section class="wb-header-section wb-header-section-tools">
             <div class="wb-header-actions">
+              <a v-if="nodeIsAdmin"
+                 class="wb-icon-button"
+                 href="/admin"
+                 aria-label="Open admin console"
+                 title="Admin console">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3l7 3v5c0 4.6-3.1 7.7-7 9-3.9-1.3-7-4.4-7-9V6l7-3z"></path>
+                </svg>
+              </a>
               <button type="button"
                       class="wb-icon-button"
                       :class="{active: dockTab === 'help'}"
@@ -2747,9 +2734,8 @@
           </div>
           <div class="portal-splash-body">
             <section class="portal-splash-hero">
-              <h2 class="portal-splash-title">Trinity demonstrator</h2>
-              <p class="portal-splash-copy">Live demonstrator for the ideas in the book <i>The Prolog Trinity ecosystem</i> &mdash; runs in your browser, talks to a real Prolog node or to a browser-based runtime system.</p>
-              <p class="portal-splash-copy">{{ currentPortalNodeDisplay }} &middot; {{ nodeProfileLabel }} profile</p>
+              <h2 class="portal-splash-title">Trinity shell {{ portalVersionLabel }}</h2>
+              <p class="portal-splash-copy">Targeting production... &mdash; runs in your browser, talks to a real Prolog node or to a browser-based runtime system.</p>
               <div class="portal-splash-link-row">
                 <a class="wb-button"
                    :href="bookManuscriptUrl"
@@ -2905,8 +2891,10 @@
               <div v-if="hasEditorPane && workspaceTab !== 'tutorial'" class="editor-toolbar-source">
                 <span class="editor-source-label" :title="editorPanelTitle">{{ editorPanelTitle }}</span>
               </div>
-              <div class="wb-toolbar-group editor-toolbar-actions" v-if="hasEditorPane && editorKind === 'statechart'">
+              <div class="wb-toolbar-group editor-toolbar-actions"
+                   v-if="hasEditorPane && (editorKind === 'statechart' || (isSwiWasmMode && swiWasmStatechartActive))">
                 <button class="terminal-action call"
+                        v-if="editorKind === 'statechart'"
                         type="button"
                         tabindex="-1"
                         @mousedown.prevent
@@ -3022,7 +3010,7 @@
                       </svg>
                     </button>
                     <div v-if="profileMenuOpen" class="terminal-profile-menu">
-                      <div class="terminal-profile-note">{{ isTauMode || isSwiWasmMode || isCiaoWasmMode ? 'Runtime' : 'Node' }}: {{ nodeProfileLabel }}</div>
+                      <div class="terminal-profile-note">{{ isSwiWasmMode ? 'Runtime' : 'Node' }}: {{ nodeProfileLabel }}</div>
                       <div class="terminal-profile-note">Principal: {{ principalSummaryLabel }}</div>
                       <div class="terminal-profile-note">Auth: {{ nodeAuthLabel }}</div>
                       <button class="terminal-profile-item"
@@ -3878,12 +3866,10 @@
       </footer>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-            integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs"
+    <script src="/vendor/jquery.min.js"
             crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://unpkg.com/jquery.terminal@2.45.2/js/jquery.terminal.min.js"
-            integrity="sha384-n58/IQmKMWceAevFGntSlAmfTiD+JugAbTq2Fx4NyZBM9QFpJAmBosi3TTFN9tNj"
+    <script src="/vendor/vue.global.prod.js"></script>
+    <script src="/vendor/jquery.terminal.min.js"
             crossorigin="anonymous"></script>
     <script>
       var DEFAULT_PROLOG = "";
@@ -4278,6 +4264,9 @@
         if (port === "3055") {
           return "N4";
         }
+        if (port === "3056") {
+          return "N5";
+        }
         return null;
       }
 
@@ -4327,7 +4316,7 @@
 
         domainMatch = normalized.hostname.match(/^(admin|n[0-9]+)\.(.+)$/i);
         if (domainMatch) {
-          (domainMatch[1].toLowerCase() === "admin" ? ["admin", "n1", "n2", "n3", "n4"] : ["n1", "n2", "n3", "n4"]).forEach(function(host) {
+          (domainMatch[1].toLowerCase() === "admin" ? ["admin", "n1", "n2", "n3", "n4", "n5"] : ["n1", "n2", "n3", "n4", "n5"]).forEach(function(host) {
             push(normalized.protocol + "//" + host + "." + domainMatch[2]);
           });
           return nodes;
@@ -4335,10 +4324,10 @@
 
         if (isLoopbackHost(normalized.hostname)) {
           var port = normalized.port || (normalized.protocol === "https:" ? "443" : "80");
-          if (["3051", "3052", "3053", "3054", "3055"].indexOf(port) >= 0) {
+          if (["3051", "3052", "3053", "3054", "3055", "3056"].indexOf(port) >= 0) {
             (port === "3054"
-              ? ["3054", "3051", "3052", "3053", "3055"]
-              : ["3051", "3052", "3053", "3055"]).forEach(function(itemPort) {
+              ? ["3054", "3051", "3052", "3053", "3055", "3056"]
+              : ["3051", "3052", "3053", "3055", "3056"]).forEach(function(itemPort) {
                 push(normalized.protocol + "//" + normalized.hostname + ":" + itemPort);
               });
             return nodes;
@@ -5017,6 +5006,7 @@
             terminalExamples: [],
             examplesMenuOpen: false,
             adminLoading: false,
+            nodeIsAdmin: false,
             adminAccess: "unknown",
             adminStatusMessage: "",
             adminStatusKind: "info",
@@ -5068,26 +5058,32 @@
             },
             introVisible: false,
             introSuppressFuture: false,
+            portalVersion: "0.2.0",
             tutorialSrc: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? "/tutorial" + window.location.hash : "/tutorial",
             handledTutorialDeepLink: "",
-            isTauMode: (new URLSearchParams(window.location.search)).get("node") === "tau",
             isSwiWasmMode: (new URLSearchParams(window.location.search)).get("node") === "swi-wasm",
-            isCiaoWasmMode: (new URLSearchParams(window.location.search)).get("node") === "ciao-wasm",
-            tauSession: null,
             swiWasmProlog: null,
             swiWasmModule: null,
             swiWasmSolutions: [],
             swiWasmSolIndex: 0,
             swiWasmHasMore: false,
             swiWasmOutputBuffer: "",
+            swiWasmActorWorkers: {},
+            swiWasmNextWorkerActorId: 1,
+            swiWasmNextActorRefId: 1,
+            swiWasmNextActorDelayId: 1,
+            swiWasmActorMainMailbox: [],
+            swiWasmActorMainWaiters: [],
+            swiWasmActorNames: {},
+            swiWasmActorServices: {},
+            swiWasmActorMonitors: [],
+            swiWasmActorDelayedSends: {},
             swiWasmStatechartLoaded: false,
+            swiWasmStatechartLoadError: "",
             swiWasmStatechartActive: false,
             swiWasmChartPending: false,
-            ciaoToplevel: null,
-            ciaoAdapter: null,
-            ciaoLoadedCode: null,
-            ciaoBusy: false,
-            ciaoPendingSol: null
+            swiWasmQueryPending: false,
+            swiWasmQueryAbortRequested: false
           };
         },
         computed: {
@@ -5105,41 +5101,32 @@
             return String(this.currentPortalNodeUrl || window.location.origin).replace(/\/$/, "");
           },
           showCurrentNodeLink: function() {
-            return !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
+            return !this.isSwiWasmMode;
           },
           loggerEnabledForRuntime: function() {
-            if (this.isSwiWasmMode) {
-              return true;
-            }
-            return !this.isTauMode && !this.isCiaoWasmMode;
+            return true;
           },
           effectiveLoggerVisible: function() {
             return this.loggerEnabledForRuntime && this.loggerVisible;
           },
           currentPortalNodeDisplay: function() {
-            if (this.isTauMode) return "tau-prolog (in-browser)";
             if (this.isSwiWasmMode) return "swi-prolog wasm (in-browser)";
-            if (this.isCiaoWasmMode) return "ciao-prolog wasm (in-browser)";
             var normalized = normalizeNodeUrl(this.currentPortalNodeUrl);
             return normalized ? normalized.href : String(this.currentPortalNodeUrl || window.location.origin);
           },
           portalNodes: function() {
             var nodes = derivePortalNodeUrls(this.currentPortalNodeUrl);
-            nodes.push({ id: "tau", url: null, href: "?node=tau", label: "Tau" });
             nodes.push({ id: "swi-wasm", url: null, href: "?node=swi-wasm", label: "SWI-WASM" });
-            nodes.push({ id: "ciao-wasm", url: null, href: "?node=ciao-wasm", label: "Ciao-WASM" });
             return nodes;
           },
           headerNodeButtons: function() {
             return this.portalNodes.filter(function(node) {
-              return !!node.url && /^N[1-4]$/i.test(String(node.label || ""));
+              return !!node.url && /^N[1-5]$/i.test(String(node.label || ""));
             });
           },
           headerBrowserButtons: function() {
             return [
-              { id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isSwiWasmMode },
-              { id: "ciao-wasm", href: "?node=ciao-wasm", label: "Ciao-WASM", active: this.isCiaoWasmMode },
-              { id: "tau", href: "?node=tau", label: "Tau-JS", active: this.isTauMode }
+              { id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isSwiWasmMode }
             ];
           },
           repositoryUrl: function() {
@@ -5147,6 +5134,9 @@
           },
           bookManuscriptUrl: function() {
             return PORTAL_BOOK_MANUSCRIPT_URL;
+          },
+          portalVersionLabel: function() {
+            return this.portalVersion ? "v" + this.portalVersion : "";
           },
           splashNodeCards: function() {
             var self = this;
@@ -5278,7 +5268,7 @@
             return this.nodeAnnouncedProfile !== "relation";
           },
           showTutorialExamples: function() {
-            return this.hasWorkspacePane && !this.isTauMode && !this.isSwiWasmMode && !this.isCiaoWasmMode;
+            return this.hasWorkspacePane && !this.isSwiWasmMode;
           },
           showActorTutorialExamples: function() {
             return this.nodeAnnouncedProfile === "actor" ||
@@ -5293,9 +5283,6 @@
             return this.hasEditorPane;
           },
           showStatechartExamples: function() {
-            if (this.isTauMode || this.isCiaoWasmMode) {
-              return false;
-            }
             if (this.isSwiWasmMode) {
               return true;
             }
@@ -5330,11 +5317,14 @@
               && (this.transportMode === "actor" || this.isSwiWasmMode);
           },
           canHaltStatechart: function() {
-            if (this.editorKind !== "statechart" || !this.canSubmitNewQuery) {
+            if (!this.canSubmitNewQuery) {
               return false;
             }
             if (this.isSwiWasmMode) {
               return this.swiWasmStatechartActive;
+            }
+            if (this.editorKind !== "statechart") {
+              return false;
             }
             if (this.transportMode !== "actor") {
               return false;
@@ -5348,6 +5338,13 @@
             return !!this.terminal && this.queryState === "more" && !this.terminalBusy;
           },
           canAbortSession: function() {
+            if (this.isSwiWasmMode) {
+              return !!this.terminal &&
+                (this.swiWasmQueryPending ||
+                 this.queryState === "more" ||
+                 this.terminalBusy ||
+                 !!this.currentAbortTargetPid());
+            }
             if (this.transportMode !== "actor" && this.transportMode !== "isotope") {
               return false;
             }
@@ -5440,7 +5437,8 @@
           this.restoreTerminalSpacingSettings();
           this.restoreTerminalLinkSettings();
           this.restoreCodeColoringSettings();
-          if (this.isTauMode) { this.initTauSession(); } else if (this.isSwiWasmMode) { this.initSwiWasmSession(); } else if (this.isCiaoWasmMode) { this.initCiaoWasmSession(); } else { this.fetchNodeInfo(); }
+          this.fetchPortalVersion();
+          if (this.isSwiWasmMode) { this.initSwiWasmSession(); } else { this.fetchNodeInfo(); this.probeAdminAccess(); }
           this.fetchExamplesIndex();
           this.applyThemeSettings();
           this.applyTypographySettings();
@@ -5729,23 +5727,13 @@
             }).then(function(json) {
               var actors = Array.isArray(json && json.actors) ? json.actors : [];
               var statecharts = Array.isArray(json && json.statecharts) ? json.statecharts : [];
-              var tau = Array.isArray(json && json.tau) ? json.tau : [];
               var swiWasm = Array.isArray(json && json.swi_wasm) ? json.swi_wasm : [];
-              var ciaoWasm = Array.isArray(json && json.ciao_wasm) ? json.ciao_wasm : [];
-              if (self.isTauMode) {
-                self.actorExamples = tau
-                  .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
-                  .filter(Boolean);
-              } else if (self.isSwiWasmMode) {
-                self.actorExamples = swiWasm
+              if (self.isSwiWasmMode) {
+                self.actorExamples = (swiWasm.length > 0 ? swiWasm : actors)
                   .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
                   .filter(Boolean);
                 self.statechartExamples = statecharts
                   .map(function(entry) { return self.normalizeExampleEntry(entry, "statechart"); })
-                  .filter(Boolean);
-              } else if (self.isCiaoWasmMode) {
-                self.actorExamples = ciaoWasm
-                  .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
                   .filter(Boolean);
               } else {
                 self.actorExamples = actors
@@ -5790,6 +5778,32 @@
 	            }).catch(function() {
 	            });
 	          },
+          fetchPortalVersion: function() {
+            var self = this;
+            return fetch("/version", {
+              headers: { Accept: "application/json" }
+            }).then(function(response) {
+              if (!response.ok) {
+                throw new Error(response.status + " " + response.statusText);
+              }
+              return response.json();
+            }).then(function(json) {
+              if (json && json.web_prolog) {
+                self.portalVersion = String(json.web_prolog);
+              }
+            }).catch(function() {
+            });
+          },
+          probeAdminAccess: function() {
+            // Show the header admin shortcut only when /admin would let us
+            // in. A cheap GET to an admin-gated endpoint answers that
+            // (200 = admin, 403 = not) without changing the /node_info
+            // protocol surface.
+            var self = this;
+            return fetch("/admin/config", { headers: { Accept: "application/json" } })
+              .then(function(response) { self.nodeIsAdmin = response.ok; })
+              .catch(function() { self.nodeIsAdmin = false; });
+          },
           normalizeAnnouncedNodeProfile: function(profile) {
             if (profile === "workbench") {
               return "workbench";
@@ -7410,6 +7424,21 @@
             });
             return found;
           },
+          unresolvedDollarVars: function() {
+            var self = this;
+            return this.lastDollarVars.filter(function(name) {
+              return !Object.prototype.hasOwnProperty.call(self.lastBindings, name);
+            });
+          },
+          reportUnresolvedDollarVars: function(term, missing) {
+            var text = missing.length === 1
+              ? "No previous binding for $" + missing[0] + "."
+              : "No previous bindings for " + missing.map(function(name) { return "$" + name; }).join(", ") + ".";
+            if (term && typeof term.error === "function") {
+              term.error(text);
+            }
+            this.log("warn", text);
+          },
           expandDollarVars: function(text) {
             var self = this;
             if (!text || typeof text !== "string") {
@@ -7621,7 +7650,7 @@
             if (this.nodeAnnouncedProfile === "stateless" || this.nodeAnnouncedProfile === "relation") {
               return "";
             }
-            if (this.workspaceTab === "tutorial") {
+            if (this.workspaceTab === "tutorial" && !this.isSwiWasmMode) {
               return "";
             }
             if (this.editorKind !== "prolog") {
@@ -8217,6 +8246,11 @@
               return;
             }
             window.__calcRemoveAll();
+            if (this.isSwiWasmMode && this.swiWasmQueryPending) {
+              this.abortSwiWasmQuery(this.terminal);
+              this.focusTerminalIfAppropriate();
+              return;
+            }
             if (!(this.queryState === "prompt" || this.queryState === "more" || this.terminalBusy)) {
               pid = this.currentAbortTargetPid();
               if (pid) {
@@ -8232,6 +8266,22 @@
             }
             this.abortIsotopeComputation(this.terminal);
             this.focusTerminalIfAppropriate();
+          },
+          abortSwiWasmQuery: function(term) {
+            if (!this.swiWasmProlog || !this.swiWasmQueryPending) {
+              return false;
+            }
+            this.swiWasmQueryAbortRequested = true;
+            this.setPendingCompletionMessage("Computation aborted.", "error");
+            this.recordSessionEvent("session", "Abort requested.", "swi-wasm", "swi-wasm");
+            try {
+              this.swiWasmProlog.abort();
+              this.log("transport", "Abort requested.", "swi-wasm", "request");
+            } catch (error) {
+              this.log("warn", "Abort request failed: " + String(error), "swi-wasm");
+              return false;
+            }
+            return true;
           },
           abortBoundActor: function(term, pid) {
             var goal = "exit(" + pid + ", stop)";
@@ -8270,18 +8320,20 @@
               ? commandLine
               : this.queryBuffer + "\n" + commandLine;
             var rawGoal;
+            var unresolvedDollarVars;
             this.queryBuffer = "";
             rawGoal = combined.replace(/\s*\.\s*$/, "");
             this.lastDollarVars = this.extractDollarVars(rawGoal);
+            unresolvedDollarVars = this.unresolvedDollarVars();
+            if (unresolvedDollarVars.length > 0) {
+              this.reportUnresolvedDollarVars(term, unresolvedDollarVars);
+              return;
+            }
             this.activeGoal = this.expandDollarVars(rawGoal);
             this.activeOffset = 0;
             this.activeLoadText = this.currentLoadText();
-            if (this.isTauMode) {
-              this.runTauQuery(term);
-            } else if (this.isSwiWasmMode) {
+            if (this.isSwiWasmMode) {
               this.runSwiWasmQuery(term);
-            } else if (this.isCiaoWasmMode) {
-              this.runCiaoWasmQuery(term);
             } else if (this.transportMode === "actor") {
               this.askCurrentWs(term);
             } else if (this.transportMode === "isotope") {
@@ -8294,19 +8346,9 @@
             if (this.queryState !== "more") {
               return;
             }
-            if (this.isTauMode) {
-              term.echo(term.get_prompt() + ";");
-              this.nextTauSolution(term);
-              return;
-            }
             if (this.isSwiWasmMode) {
               term.echo(term.get_prompt() + ";");
               this.nextSwiWasmSolution(term);
-              return;
-            }
-            if (this.isCiaoWasmMode) {
-              term.echo(term.get_prompt() + ";");
-              this.nextCiaoWasmSolution(term);
               return;
             }
             if (this.transportMode === "actor") {
@@ -8330,18 +8372,8 @@
                 term.echo(current + ".");
               }
             }
-            if (this.isTauMode) {
-              this.tauSession = null;
-              this.resetQueryState(term);
-              return;
-            }
             if (this.isSwiWasmMode) {
               this.swiWasmSolutions = [];
-              this.resetQueryState(term);
-              return;
-            }
-            if (this.isCiaoWasmMode) {
-              this.stopCiaoWasmQuery(term);
               this.resetQueryState(term);
               return;
             }
@@ -8458,568 +8490,7 @@
             this.pendingPromptPid = null;
             this.resetIsotopeTransport();
             this.resetActorTransport();
-          },
-          initTauSession: function() {
-            var self = this;
-            var scripts = ["Tau-Prolog/core.js", "Tau-Prolog/lists.js", "Tau-Prolog/format.js"];
-            function loadNext(index) {
-              if (index >= scripts.length) {
-                self.log("info", "Tau-Prolog in-browser runtime ready.", "tau");
-                self.fetchExamplesIndex();
-                if (self.terminal) { self.terminal.set_prompt(self.basePrompt()); }
-                return;
-              }
-              var el = document.createElement("script");
-              el.src = scripts[index];
-              el.onload = function() { loadNext(index + 1); };
-              el.onerror = function() {
-                self.log("error", "Failed to load " + scripts[index] + ". Tau runtime unavailable on this server.", "tau");
-              };
-              document.head.appendChild(el);
-            }
-            loadNext(0);
-          },
-          loadTauExamples: function() {
-            var examples = [
-              {
-                name: "Family",
-                kind: "prolog",
-                url: null,
-                text: "parent(tom, bob).\nparent(tom, liz).\nparent(bob, ann).\nparent(bob, pat).\n\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n\n\n/** <examples>\n\n?- parent(tom, X).\n\n?- ancestor(tom, X).\n\n?- ancestor(X, ann).\n\n*/"
-              },
-              {
-                name: "Lists",
-                kind: "prolog",
-                url: null,
-                text: ":- use_module(library(lists)).\n\ndouble([], []).\ndouble([H|T], [H,H|T2]) :- double(T, T2).\n\nmy_reverse([], []).\nmy_reverse([H|T], R) :- my_reverse(T, RT), append(RT, [H], R).\n\n\n/** <examples>\n\n?- double([1,2,3], X).\n\n?- my_reverse([a,b,c,d], X).\n\n?- append([1,2], [3,4], X).\n\n?- msort([3,1,4,1,5,9,2,6], X).\n\n*/"
-              },
-              {
-                name: "Arithmetic",
-                kind: "prolog",
-                url: null,
-                text: "fact(0, 1) :- !.\nfact(N, F) :- N > 0, N1 is N - 1, fact(N1, F1), F is N * F1.\n\nfib(0, 0) :- !.\nfib(1, 1) :- !.\nfib(N, F) :- N > 1, N1 is N-1, N2 is N-2, fib(N1, F1), fib(N2, F2), F is F1 + F2.\n\n\n/** <examples>\n\n?- fact(10, F).\n\n?- fib(10, F).\n\n?- X is 2**32.\n\n?- X is max(3*4, 2**4).\n\n*/"
-              },
-              {
-                name: "N-Queens",
-                kind: "prolog",
-                url: null,
-                text: ":- use_module(library(lists)).\n\n%%  queens(+N, -Queens) is nondet.\n%\n%\t@param\tQueens is a list of column numbers for placing the queens.\n%\t@author Richard A. O'Keefe (The Craft of Prolog)\n\nqueens(N, Queens) :-\n    length(Queens, N),\n\tboard(Queens, Board, 0, N, _, _),\n\tqueens(Board, 0, Queens).\n\nboard([], [], N, N, _, _).\nboard([_|Queens], [Col-Vars|Board], Col0, N, [_|VR], VC) :-\n\tCol is Col0+1,\n\tfunctor(Vars, f, N),\n\tconstraints(N, Vars, VR, VC),\n\tboard(Queens, Board, Col, N, VR, [_|VC]).\n\nconstraints(0, _, _, _) :- !.\nconstraints(N, Row, [R|Rs], [C|Cs]) :-\n\targ(N, Row, R-C),\n\tM is N-1,\n\tconstraints(M, Row, Rs, Cs).\n\nqueens([], _, []).\nqueens([C|Cs], Row0, [Col|Solution]) :-\n\tRow is Row0+1,\n\tselect(Col-Vars, [C|Cs], Board),\n\targ(Row, Vars, Row-Row),\n\tqueens(Board, Row, Solution).\n\n\n/** <examples>\n\n?- queens(8, Queens).\n\n*/"
-              },
-              {
-                name: "Sorting",
-                kind: "prolog",
-                url: null,
-                text: "msort_my([], []).\nmsort_my([H|T], Sorted) :-\n    msort_my(T, SortedT),\n    insert(H, SortedT, Sorted).\n\ninsert(X, [], [X]).\ninsert(X, [H|T], [X,H|T]) :- X @=< H, !.\ninsert(X, [H|T], [H|T2]) :- insert(X, T, T2).\n\n\n/** <examples>\n\n?- msort_my([3,1,4,1,5,9,2,6], Sorted).\n\n?- msort_my([the,cat,sat,on,the,mat], Sorted).\n\n?- msort_my([], Sorted).\n\n*/"
-              },
-              {
-                name: "RPC",
-                kind: "prolog",
-                url: null,
-                text: "% Local predicates \u2014 sent to a remote node via load_predicates.\n\nedge(a, b).\nedge(b, c).\nedge(c, d).\nedge(a, d).\n\npath(X, Y) :- edge(X, Y).\npath(X, Y) :- edge(X, Z), path(Z, Y).\n\n\n/** <examples>\n\n?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).\n\n?- rpc('https://n1.elfenbenstornet.se', between(1, 5, X)).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_list([p(a),p(b),p(c)])\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_text('p(a). p(b). p(c).')\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', path(a, X), [\n       load_predicates([edge/2, path/2])\n   ]).\n\n*/"
-              }
-            ];
-            this.actorExamples = examples;
-          },
-          setupTauRpc: function(session) {
-            var self = this;
-            var Term = pl.type.Term;
-            var Var = pl.type.Var;
-            var Num = pl.type.Num;
-            var State = pl.type.State;
-            var Rule = pl.type.Rule;
-            if (!self.tauPromiseStore) {
-              self.tauPromiseStore = { items: {} };
-            }
-
-            session.rules["rpc/2"] = [new Rule(
-              new Term("rpc", [new Var("U"), new Var("G")]),
-              new Term("rpc", [new Var("U"), new Var("G"), new Term("[]", [])])
-            )];
-            session.rules["promise/3"] = [new Rule(
-              new Term("promise", [new Var("U"), new Var("G"), new Var("R")]),
-              new Term("promise", [new Var("U"), new Var("G"), new Var("R"), new Term("[]", [])])
-            )];
-            session.rules["yield/2"] = [new Rule(
-              new Term("yield", [new Var("R"), new Var("M")]),
-              new Term("yield", [new Var("R"), new Var("M"), new Term("[]", [])])
-            )];
-            session.rules["sleep/1"] = function(thread, point, atom) {
-              var seconds = atom.args[0].apply(point.substitution);
-              if (!pl.type.is_number(seconds)) {
-                thread.throw_error(pl.error.type("number", seconds, "sleep/1"));
-                return;
-              }
-              setTimeout(function() {
-                thread.prepend([new State(point.goal.replace(null), point.substitution, point)]);
-                thread.again();
-              }, Math.max(0, seconds.value) * 1000);
-              return true;
-            };
-
-            function plTermToString(term) {
-              if (pl.type.is_atom(term)) return term.id;
-              var chars = [], cur = term;
-              while (pl.type.is_term(cur) && cur.indicator === "./2") {
-                var h = cur.args[0];
-                if (pl.type.is_number(h)) chars.push(String.fromCodePoint(h.value));
-                else if (pl.type.is_atom(h)) chars.push(h.id);
-                else return null;
-                cur = cur.args[1];
-              }
-              return (pl.type.is_term(cur) && cur.indicator === "[]/0") ? chars.join("") : null;
-            }
-
-            function normalizeText(t) {
-              t = t.trim();
-              return t && !/\.\s*$/.test(t) ? t + "." : t;
-            }
-
-            function parseTauResponse(text, onResponse, onError) {
-              var termText = String(text || "").trim().replace(/\.\s*$/, "");
-              var tmpSess = pl.create(100000);
-              try {
-                tmpSess.query("_R = (" + termText + ").");
-              } catch(e) {
-                onError(new Term("rpc_error", [new Term("parse_failed", [])]));
-                return;
-              }
-              tmpSess.answer(function(ans) {
-                if (!ans || ans === false || ans === null || pl.type.is_error(ans)) {
-                  onError(new Term("rpc_error", [new Term("parse_failed", [])]));
-                  return;
-                }
-                var response = null;
-                for (var k in ans.links) {
-                  if (ans.links.hasOwnProperty(k)) {
-                    response = ans.links[k];
-                    break;
-                  }
-                }
-                if (response) onResponse(response);
-                else onError(new Term("rpc_error", [new Term("parse_failed", [])]));
-              });
-            }
-
-            function serializePredicates(indicators, subs) {
-              var text = "", cur = indicators;
-              while (pl.type.is_term(cur) && cur.indicator === "./2") {
-                var ind = cur.args[0].apply(subs);
-                if (pl.type.is_term(ind) && ind.indicator === "//2") {
-                  var nm = ind.args[0].apply(subs), ar = ind.args[1].apply(subs);
-                  if (pl.type.is_atom(nm) && pl.type.is_number(ar)) {
-                    var rules = session.rules[nm.id + "/" + ar.value];
-                    if (Array.isArray(rules)) {
-                      rules.forEach(function(r) {
-                        var opts = {quoted: true, numbervars: true};
-                        text += r.body === null
-                          ? r.head.toString(opts) + ".\n"
-                          : r.head.toString(opts) + " :-\n    " + r.body.toString(opts) + ".\n";
-                      });
-                    }
-                  }
-                }
-                cur = cur.args[1].apply(subs);
-              }
-              return text;
-            }
-
-            function parseCommonRpcOptions(optsTerm, subs, defaults) {
-              var parsed = {
-                limit: defaults && defaults.limit !== undefined ? defaults.limit : 10000,
-                offset: defaults && defaults.offset !== undefined ? defaults.offset : 0,
-                template: defaults && defaults.template !== undefined ? defaults.template : null,
-                timeout: null,
-                onTimeout: null,
-                loadParts: [],
-                loadUriStr: null
-              };
-              var cur = optsTerm;
-              while (pl.type.is_term(cur) && cur.indicator === "./2") {
-                var opt = cur.args[0].apply(subs);
-                if (pl.type.is_term(opt) && opt.indicator === "limit/1") {
-                  var lv = opt.args[0].apply(subs);
-                  if (pl.type.is_number(lv)) parsed.limit = lv.value;
-                } else if (pl.type.is_term(opt) && opt.indicator === "offset/1") {
-                  var ov = opt.args[0].apply(subs);
-                  if (pl.type.is_number(ov)) parsed.offset = ov.value;
-                } else if (pl.type.is_term(opt) && opt.indicator === "template/1") {
-                  parsed.template = opt.args[0].apply(subs);
-                } else if (pl.type.is_term(opt) && opt.indicator === "timeout/1") {
-                  var tv = opt.args[0].apply(subs);
-                  if (pl.type.is_number(tv)) parsed.timeout = Math.max(0, tv.value);
-                } else if (pl.type.is_term(opt) && opt.indicator === "on_timeout/1") {
-                  parsed.onTimeout = opt.args[0].apply(subs);
-                } else if (pl.type.is_term(opt) && opt.indicator === "load_text/1") {
-                  var s = plTermToString(opt.args[0].apply(subs));
-                  if (s !== null) parsed.loadParts.push(normalizeText(s));
-                } else if (pl.type.is_term(opt) && opt.indicator === "load_list/1") {
-                  var lp = opt.args[0].apply(subs), lt = "";
-                  while (pl.type.is_term(lp) && lp.indicator === "./2") {
-                    lt += lp.args[0].apply(subs).toString({quoted: true}) + ".\n";
-                    lp = lp.args[1].apply(subs);
-                  }
-                  if (lt) parsed.loadParts.push(lt);
-                } else if (pl.type.is_term(opt) && opt.indicator === "load_predicates/1") {
-                  var ps = serializePredicates(opt.args[0].apply(subs), subs);
-                  if (ps) parsed.loadParts.push(ps);
-                } else if (pl.type.is_term(opt) && opt.indicator === "load_uri/1") {
-                  var us = plTermToString(opt.args[0].apply(subs));
-                  if (us !== null) parsed.loadUriStr = us;
-                }
-                cur = cur.args[1].apply(subs);
-              }
-              return parsed;
-            }
-
-            function tauRpcUrl(baseUri, goalTerm, templateTerm, opts, extraText) {
-              var loadParts = opts.loadParts.slice();
-              if (extraText) loadParts.unshift(normalizeText(extraText));
-              var loadText = loadParts.join("\n") || null;
-              var u = new URL("/call", resolveBrowserRpcBaseUri(baseUri, opts.loadUriStr));
-              u.searchParams.set("goal", "(" + goalTerm.toString({quoted: true}) + ")");
-              u.searchParams.set("template", templateTerm.toString({quoted: true}));
-              u.searchParams.set("offset", String(opts.offset || 0));
-              u.searchParams.set("limit", String(opts.limit));
-              u.searchParams.set("format", "prolog");
-              if (loadText) u.searchParams.set("load_text", loadText);
-              return u.toString();
-            }
-
-            function isTauTrue(term) {
-              return pl.type.is_term(term) && term.indicator === "true/0";
-            }
-
-            session.rules["rpc/3"] = function(thread, point, atom) {
-              var subs = point.substitution;
-              var uriTerm = atom.args[0].apply(subs);
-              var goalTerm = atom.args[1].apply(subs);
-              var optsTerm = atom.args[2].apply(subs);
-
-              if (!pl.type.is_atom(uriTerm)) {
-                thread.throw_error(pl.error.type("atom", uriTerm, "rpc/3"));
-                return;
-              }
-              if (!pl.type.is_callable(goalTerm)) {
-                thread.throw_error(pl.error.type("callable", goalTerm, "rpc/3"));
-                return;
-              }
-
-              var varIds = goalTerm.variables().filter(function(id, i, arr) {
-                return arr.indexOf(id) === i;
-              });
-              var templateTerm = new Term("v", varIds.map(function(id) { return new Var(id); }));
-              var opts = parseCommonRpcOptions(optsTerm, subs, {
-                limit: 10000,
-                offset: 0,
-                template: templateTerm
-              });
-              var baseUri = uriTerm.id;
-
-              function doFetch(extraText) {
-                var url;
-                try {
-                  url = tauRpcUrl(baseUri, goalTerm, templateTerm, opts, extraText);
-                } catch(e) {
-                  thread.prepend([new State(
-                    point.goal.replace(new Term("throw", [pl.error.type("atom", uriTerm, "rpc/3")])),
-                    subs, point
-                  )]);
-                  thread.again();
-                  return;
-                }
-                function fetchPage(offset, states) {
-                  opts.offset = offset;
-                  url = tauRpcUrl(baseUri, goalTerm, templateTerm, opts, extraText);
-                  fetch(url)
-                  .then(function(r) { return r.text(); })
-                  .then(function(text) {
-                    parseTauResponse(text, function(response) {
-                      if (response.indicator === "failure/0") {
-                        if (states.length > 0) {
-                          thread.prepend(states);
-                        }
-                      } else if (response.indicator === "error/1") {
-                        thread.prepend([new State(
-                          point.goal.replace(new Term("throw", [response.args[0]])),
-                          subs, point
-                        )]);
-                      } else if (response.indicator === "success/2") {
-                        var lc = response.args[0];
-                        while (pl.type.is_term(lc) && lc.indicator === "./2") {
-                          states.push(new State(
-                            point.goal.replace(new Term("=", [templateTerm, lc.args[0]])),
-                            subs, point
-                          ));
-                          lc = lc.args[1];
-                        }
-                        if (isTauTrue(response.args[1])) {
-                          fetchPage(offset + opts.limit, states);
-                          return;
-                        }
-                        thread.prepend(states);
-                      }
-                      thread.again();
-                    }, function(errorTerm) {
-                      thread.prepend([new State(
-                        point.goal.replace(new Term("throw", [errorTerm])),
-                        subs, point
-                      )]);
-                      thread.again();
-                    });
-                  })
-                  .catch(function() {
-                    thread.prepend([new State(
-                      point.goal.replace(new Term("throw", [new Term("rpc_error", [new Term("fetch_failed", [])])])),
-                      subs, point
-                    )]);
-                    thread.again();
-                  });
-                }
-                fetchPage(opts.offset || 0, []);
-              }
-
-              if (opts.loadUriStr) {
-                fetch(opts.loadUriStr)
-                  .then(function(r) { return r.text(); })
-                  .then(function(t) { doFetch(t); })
-                  .catch(function() { doFetch(null); });
-              } else {
-                doFetch(null);
-              }
-
-              return true;
-            };
-
-            session.rules["promise/4"] = function(thread, point, atom) {
-              var subs = point.substitution;
-              var uriTerm = atom.args[0].apply(subs);
-              var goalTerm = atom.args[1].apply(subs);
-              var refTerm = atom.args[2].apply(subs);
-              var optsTerm = atom.args[3].apply(subs);
-
-              if (!pl.type.is_atom(uriTerm)) {
-                thread.throw_error(pl.error.type("atom", uriTerm, "promise/4"));
-                return;
-              }
-              if (!pl.type.is_callable(goalTerm)) {
-                thread.throw_error(pl.error.type("callable", goalTerm, "promise/4"));
-                return;
-              }
-
-              var opts = parseCommonRpcOptions(optsTerm, subs, {
-                limit: 10000000000,
-                offset: 0,
-                template: goalTerm
-              });
-              if (!opts.template) opts.template = goalTerm;
-              var store = self.tauPromiseStore;
-              var ref = self.makeBrowserPromiseRef(store.items);
-              var entry = { status: "pending", text: null };
-              store.items[String(ref)] = entry;
-
-              function finish(text) {
-                entry.status = "done";
-                entry.text = text;
-              }
-              function failPromise() {
-                finish("error(rpc_error(fetch_failed)).");
-              }
-              function doFetch(extraText) {
-                var url;
-                try {
-                  url = tauRpcUrl(uriTerm.id, goalTerm, opts.template, opts, extraText);
-                } catch(e) {
-                  finish("error(rpc_error(bad_uri)).");
-                  return;
-                }
-                fetch(url)
-                  .then(function(r) { return r.text(); })
-                  .then(finish)
-                  .catch(failPromise);
-              }
-
-              if (opts.loadUriStr) {
-                fetch(opts.loadUriStr)
-                  .then(function(r) { return r.text(); })
-                  .then(function(t) { doFetch(t); })
-                  .catch(function() { doFetch(null); });
-              } else {
-                doFetch(null);
-              }
-
-              thread.prepend([new State(
-                point.goal.replace(new Term("=", [refTerm, new Num(ref, false)])),
-                subs, point
-              )]);
-              thread.again();
-              return true;
-            };
-
-            session.rules["yield/3"] = function(thread, point, atom) {
-              var subs = point.substitution;
-              var refTerm = atom.args[0].apply(subs);
-              var messageTerm = atom.args[1].apply(subs);
-              var optsTerm = atom.args[2].apply(subs);
-
-              if (!pl.type.is_number(refTerm)) {
-                thread.throw_error(pl.error.type("integer", refTerm, "yield/3"));
-                return;
-              }
-
-              var opts = parseCommonRpcOptions(optsTerm, subs, {});
-              var store = self.tauPromiseStore;
-              var key = String(refTerm.value);
-              var entry = store.items[key];
-
-              function timeoutOrFail() {
-                delete store.items[key];
-                if (opts.onTimeout) {
-                  thread.prepend([new State(point.goal.replace(opts.onTimeout), subs, point)]);
-                }
-                thread.again();
-              }
-
-              function deliver(text) {
-                delete store.items[key];
-                parseTauResponse(text, function(response) {
-                  thread.prepend([new State(
-                    point.goal.replace(new Term("=", [messageTerm, response])),
-                    subs, point
-                  )]);
-                  thread.again();
-                }, function(errorTerm) {
-                  thread.prepend([new State(
-                    point.goal.replace(new Term("throw", [errorTerm])),
-                    subs, point
-                  )]);
-                  thread.again();
-                });
-              }
-
-              if (!entry) {
-                timeoutOrFail();
-                return true;
-              }
-              if (entry.status === "done") {
-                deliver(entry.text);
-                return true;
-              }
-
-              var settled = false;
-              var timeoutId = null;
-              function poll() {
-                if (settled) return;
-                if (!store.items[key]) {
-                  settled = true;
-                  thread.again();
-                  return;
-                }
-                if (entry.status === "done") {
-                  settled = true;
-                  if (timeoutId !== null) clearTimeout(timeoutId);
-                  deliver(entry.text);
-                } else {
-                  setTimeout(poll, 20);
-                }
-              }
-              if (opts.timeout !== null) {
-                timeoutId = setTimeout(function() {
-                  if (settled) return;
-                  settled = true;
-                  timeoutOrFail();
-                }, opts.timeout * 1000);
-              }
-              poll();
-              return true;
-            };
-          },
-          runTauQuery: function(term) {
-            var self = this;
-            var goal = this.activeGoal;
-            var editorText = this.currentLoadText();
-            var preamble = ":- use_module(library(lists)).\n"
-                         + ":- use_module(library(format)).\n"
-                         + "writeln(Term) :- write(Term), flush_output.\n"
-                         + "time(Goal) :- get_time(T0), call(Goal), get_time(T1), Wall is (T1 - T0) / 1000, write('% Wall time: '), write(Wall), writeln(' seconds').\n";
-            var fullText = editorText ? (preamble + editorText) : preamble;
-            this.pauseTerm(term);
-            this.recordSessionEvent("session", "Query: " + this.clipText(goal, 140), "tau", "tau");
-            this.log("transport", "?- " + goal + ".", "tau", "request");
-            var session = pl.create(100000);
-            this.tauSession = session;
-            this.tauOutputBuffer = "";
-            var tauOut = {
-              put: function(text, _) { self.tauOutputBuffer += text; return true; },
-              flush: function() { return true; }
-            };
-            session.streams["user_output"].stream = tauOut;
-            session.streams["user_error"].stream = tauOut;
-            this.setupTauRpc(session);
-            session.consult(fullText, {
-              success: function() {
-                session.query(goal + ".");
-                self.nextTauSolution(term);
-              },
-              error: function(err) {
-                var msg = normalizeRuntimeErrorMessage(
-                  "Load error: " + (pl.format_answer ? pl.format_answer(err, session) : String(err))
-                );
-                self.recordSessionEvent("error", msg, "tau", "tau");
-                self.finishError(term, msg);
-                self.resumeTerm(term);
-              }
-            });
-          },
-          nextTauSolution: function(term) {
-            var self = this;
-            var session = this.tauSession;
-            if (!session) {
-              this.finishError(term, "No Tau-Prolog session.");
-              this.resumeTerm(term);
-              return;
-            }
-            this.tauOutputBuffer = "";
-            session.answer(function(answer) {
-              var answerStr;
-              if (self.tauOutputBuffer) {
-                self.terminal.echo(self.tauOutputBuffer.replace(/\n$/, ""));
-                self.tauOutputBuffer = "";
-              }
-              if (answer === false) {
-                self.log("transport", "false.", "tau", "response");
-                self.recordSessionEvent("failure", "false.", "tau", "tau");
-                self.finishFailure(term);
-                self.resumeTerm(term);
-              } else if (answer === null) {
-                self.log("transport", "limit exceeded.", "tau", "response");
-                self.recordSessionEvent("error", "Inference limit exceeded.", "tau", "tau");
-                self.finishError(term, "Inference limit exceeded.");
-                self.resumeTerm(term);
-              } else if (pl.type.is_error(answer)) {
-                answerStr = normalizeRuntimeErrorMessage(pl.format_answer(answer, session));
-                self.log("transport", answerStr, "tau", "response");
-                self.recordSessionEvent("error", answerStr, "tau", "tau");
-                self.finishError(term, answerStr);
-                self.resumeTerm(term);
-              } else {
-                answerStr = self.formatTauAnswer(session.format_answer(answer) || "true");
-                var hasMore = session.thread.points.length > 0;
-                if (hasMore) {
-                  self.log("transport", answerStr, "tau", "response");
-                  self.recordSessionEvent("success", answerStr, "tau", "tau");
-                  self.queryState = "more";
-                  term.set_prompt(answerStr + " ");
-                  self.resumeTerm(term);
-                } else {
-                  self.log("transport", answerStr + ".", "tau", "response");
-                  self.recordSessionEvent("success", answerStr + ".", "tau", "tau");
-                  self.terminal.echo(answerStr + ".");
-                  self.resetQueryState(term);
-                  self.appendQueryCompletionSpacing(term);
-                  self.resumeTerm(term);
-                }
-              }
-            });
+            this.resetSwiWasmActorWorkers();
           },
           initSwiWasmSession: function() {
             var self = this;
@@ -9047,6 +8518,10 @@
             window.swiResolveRpcBase = function(baseUri, loadUri) {
               return resolveBrowserRpcBaseUri(baseUri, loadUri);
             };
+            window.swiResolveAssetUrl = function(uri) {
+              return new URL(String(uri || ""), window.location.origin).href;
+            };
+            this.installSwiWasmActorBridge();
             window._swiPromiseStore = window._swiPromiseStore || { items: {} };
             window.swiPromiseStart = function(url) {
               var ref = self.makeBrowserPromiseRef(window._swiPromiseStore.items);
@@ -9093,7 +8568,7 @@
               });
             };
             var el = document.createElement("script");
-            el.src = "https://wasm.swi-prolog.org/wasm/swipl-bundle.js";
+            el.src = "/swipl-bundle.js";
             el.onload = function() {
               self.swiWasmOutputBuffer = "";
               SWIPL({
@@ -9189,13 +8664,1041 @@
             };
             el.onerror = function() {
               if (self.terminal) { self.terminal.resume(); }
-              self.log("error", "Failed to load SWI-Prolog WASM bundle from wasm.swi-prolog.org.", "swi-wasm");
+              self.log("error", "Failed to load the SWI-Prolog WASM bundle (/swipl-bundle.js).", "swi-wasm");
             };
             document.head.appendChild(el);
+          },
+          installSwiWasmActorBridge: function() {
+            var self = this;
+            window.swiWasmActorSpawn = function(goalText, extraSourceText) {
+              return self.spawnSwiWasmWorkerActor(goalText, extraSourceText);
+            };
+            window.swiWasmActorReservePid = function() {
+              return self.reserveSwiWasmWorkerActorPid();
+            };
+            window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText) {
+              return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText);
+            };
+            window.swiWasmActorSend = function(pidText, messageText) {
+              return self.sendSwiWasmActorMessage(pidText, messageText);
+            };
+            window.swiWasmActorSendDelayed = function(pidText, messageText, delaySeconds, idText) {
+              return self.sendSwiWasmActorMessageDelayed(pidText, messageText, delaySeconds, idText);
+            };
+            window.swiWasmActorCancel = function(idText) {
+              return self.cancelSwiWasmActorMessage(idText);
+            };
+            window.swiWasmActorReceive = function(timeoutSeconds) {
+              return self.receiveSwiWasmActorMessage(timeoutSeconds);
+            };
+            window.swiWasmActorMakeRef = function() {
+              return "ref(" + self.swiWasmNextActorRefId++ + ")";
+            };
+            window.swiWasmActorActors = function() {
+              return self.swiWasmActorListText();
+            };
+            window.swiWasmActorRegister = function(kind, nameText, pidText) {
+              return self.registerSwiWasmActorName(kind, nameText, pidText);
+            };
+            window.swiWasmActorUnregister = function(kind, nameText) {
+              return self.unregisterSwiWasmActorName(kind, nameText);
+            };
+            window.swiWasmActorWhereis = function(kind, nameText) {
+              return self.whereisSwiWasmActorName(kind, nameText);
+            };
+            window.swiWasmActorMonitor = function(pidText, refText) {
+              return self.monitorSwiWasmActor("main", pidText, refText);
+            };
+            window.swiWasmActorDemonitor = function(refText) {
+              return self.demonitorSwiWasmActor("main", refText);
+            };
+            window.swiWasmActorExit = function(pidText, reasonText) {
+              return self.exitSwiWasmActor(pidText, reasonText);
+            };
+            window.swiWasmActorAbort = function(pidText) {
+              return self.abortSwiWasmActor(pidText);
+            };
+            window.swiWasmActorTerminalOutput = function(text) {
+              if (self.terminal) {
+                self.terminal.echo(String(text));
+              }
+              return true;
+            };
+            window.swiWasmActorInput = function(promptText) {
+              var answer = window.prompt(String(promptText || ""));
+              return answer === null ? null : answer;
+            };
+          },
+          reserveSwiWasmWorkerActorPid: function() {
+            var id = this.swiWasmNextWorkerActorId++;
+            return "worker_actor(" + id + ")";
+          },
+          spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText) {
+            var self = this;
+            var pid = pidText ? String(pidText) : this.reserveSwiWasmWorkerActorPid();
+            var worker;
+            var entry;
+            if (this.swiWasmActorWorkers[pid]) {
+              throw new Error("worker actor already exists: " + pid);
+            }
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260615-worker-pid-fields";
+            try {
+              worker = new Worker(workerUrl, { name: pid });
+            } catch (_error) {
+              worker = new Worker(workerUrl);
+            }
+            entry = {
+              pid: pid,
+              worker: worker,
+              ready: false,
+              done: false,
+              reason: null,
+              goal: String(goalText || "")
+            };
+            this.swiWasmActorWorkers[pid] = entry;
+            worker.onmessage = this.handleSwiWasmWorkerActorMessage.bind(this, pid);
+            worker.onerror = function(error) {
+              var message = error && error.message ? error.message : String(error);
+              self.log("error", pid + " worker error: " + message, "swi-wasm");
+            };
+            worker.postMessage({
+              command: "start",
+              pid: pid,
+              goal: entry.goal,
+              source: this.currentLoadText() + "\n" + String(extraSourceText || "")
+            });
+            this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
+            return pid;
+          },
+          handleSwiWasmWorkerActorMessage: function(pid, event) {
+            var entry = this.swiWasmActorWorkers[pid];
+            var message = event && event.data ? event.data : {};
+            if (!entry) {
+              return;
+            }
+            if (message.type === "ready") {
+              entry.ready = true;
+              this.log("transport", pid + " ready.", "swi-wasm", "response");
+              return;
+            }
+            if (message.type === "started") {
+              this.log("transport", pid + " started.", "swi-wasm", "response");
+              return;
+            }
+            if (message.type === "output") {
+              if (message.output && this.terminal) {
+                this.terminal.echo(String(message.output).replace(/\n$/, ""));
+              }
+              return;
+            }
+            if (message.type === "answer") {
+              if (message.output && this.terminal) {
+                this.terminal.echo(String(message.output).replace(/\n$/, ""));
+              }
+              return;
+            }
+            if (message.type === "aborted") {
+              this.log("transport", pid + " aborted current goal.", "swi-wasm", "response");
+              return;
+            }
+            if (message.type === "send") {
+              this.routeSwiWasmActorMessage(pid, message.to, message.message);
+              return;
+            }
+            if (message.type === "request") {
+              this.handleSwiWasmActorRequest(pid, message);
+              return;
+            }
+            if (message.type === "send_delayed") {
+              this.sendSwiWasmActorMessageDelayed(message.to, message.message, message.delay, message.id);
+              return;
+            }
+            if (message.type === "cancel") {
+              this.cancelSwiWasmActorMessage(message.id);
+              return;
+            }
+            if (message.type === "monitor") {
+              this.monitorSwiWasmActor(pid, message.target, message.ref);
+              return;
+            }
+            if (message.type === "demonitor") {
+              this.demonitorSwiWasmActor(pid, message.ref);
+              return;
+            }
+            if (message.type === "register") {
+              this.registerSwiWasmActorName(message.kind, message.name, message.pid || pid);
+              return;
+            }
+            if (message.type === "unregister") {
+              this.unregisterSwiWasmActorName(message.kind, message.name);
+              return;
+            }
+            if (message.type === "exit") {
+              this.exitSwiWasmActor(message.pid || pid, message.reason || "true");
+              return;
+            }
+            if (message.type === "done") {
+              if (!entry.done) {
+                entry.done = true;
+                entry.reason = message.reason || "true";
+                this.notifySwiWasmActorMonitors(pid, entry.reason);
+              } else if (!entry.reason && message.reason) {
+                entry.reason = message.reason;
+              }
+              if (message.output && this.terminal) {
+                this.terminal.echo(String(message.output).replace(/\n$/, ""));
+              }
+              // The spawned actor's goal has returned (or it exited
+              // itself) - reap its worker so a finished actor does not
+              // keep a whole SWI-WASM engine alive.
+              if (pid !== "main" && entry.worker) {
+                try { entry.worker.terminate(); } catch (_reapError) {}
+              }
+              this.log("transport", pid + " done.", "swi-wasm", "response");
+              return;
+            }
+            if (message.type === "error") {
+              if (!entry.done) {
+                entry.done = true;
+                entry.reason = "error(" + JSON.stringify(String(message.error || "unknown_error")) + ")";
+                this.notifySwiWasmActorMonitors(pid, entry.reason);
+              }
+              this.log("error", pid + " failed: " + String(message.error || "unknown error"), "swi-wasm");
+              if (message.output && this.terminal) {
+                this.terminal.echo(String(message.output).replace(/\n$/, ""));
+              }
+            }
+          },
+          handleSwiWasmActorRequest: function(pid, message) {
+            var entry = this.swiWasmActorWorkers[pid];
+            var result = null;
+            var ok = true;
+            var error = "";
+            try {
+              switch (String(message.action || "")) {
+              case "reserve_pid":
+                result = this.reserveSwiWasmWorkerActorPid();
+                break;
+              case "spawn":
+                result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "");
+                break;
+              case "send":
+                result = this.sendSwiWasmActorMessage(message.to, message.message);
+                break;
+              case "send_delayed":
+                result = this.sendSwiWasmActorMessageDelayed(message.to, message.message, message.delay, message.id);
+                break;
+              case "cancel":
+                result = this.cancelSwiWasmActorMessage(message.id);
+                break;
+              case "actors":
+                result = this.swiWasmActorListText();
+                break;
+              case "register":
+                result = this.registerSwiWasmActorName(message.kind, message.name, message.pid || pid);
+                break;
+              case "unregister":
+                result = this.unregisterSwiWasmActorName(message.kind, message.name);
+                break;
+              case "whereis":
+                result = this.whereisSwiWasmActorName(message.kind, message.name);
+                break;
+              case "monitor":
+                result = this.monitorSwiWasmActor(pid, message.target, message.ref);
+                break;
+              case "demonitor":
+                result = this.demonitorSwiWasmActor(pid, message.ref);
+                break;
+              case "exit":
+                result = this.exitSwiWasmActor(message.pid || pid, message.reason || "true");
+                break;
+              case "abort":
+                result = this.abortSwiWasmActor(message.pid || pid);
+                break;
+              case "input":
+                result = window.prompt(String(message.prompt || ""));
+                break;
+              default:
+                ok = false;
+                error = "unknown actor request: " + String(message.action || "");
+              }
+            } catch (requestError) {
+              ok = false;
+              error = requestError && requestError.message ? requestError.message : String(requestError);
+              this.log("error", pid + " request " + String(message.action || "") + " failed: " + error, "swi-wasm");
+            }
+            if (entry && entry.worker) {
+              entry.worker.postMessage({
+                command: "reply",
+                id: message.id,
+                ok: ok,
+                result: result,
+                error: error
+              });
+            }
+          },
+          routeSwiWasmActorMessage: function(fromPid, toText, messageText) {
+            var to = String(toText || "");
+            var message = String(messageText || "true");
+            if (to === "main") {
+              this.deliverSwiWasmMainActorMessage(message);
+              this.log("transport", fromPid + " -> main: " + message, "swi-wasm", "response");
+              return true;
+            }
+            return this.sendSwiWasmActorMessage(to, message);
+          },
+          resolveSwiWasmActorTarget: function(pidText) {
+            var pid = String(pidText || "");
+            if (pid === "self") {
+              return "main";
+            }
+            if (this.swiWasmActorNames[pid]) {
+              return this.swiWasmActorNames[pid];
+            }
+            if (this.swiWasmActorServices[pid]) {
+              return this.swiWasmActorServices[pid];
+            }
+            return pid;
+          },
+          swiWasmActorListText: function() {
+            var pids = ["main"];
+            Object.keys(this.swiWasmActorWorkers || {}).sort().forEach(function(pid) {
+              var entry = this.swiWasmActorWorkers[pid];
+              if (entry && !entry.done) {
+                pids.push(pid);
+              }
+            }.bind(this));
+            return "[" + pids.join(",") + "]";
+          },
+          sendSwiWasmActorMessage: function(pidText, messageText) {
+            var pid = this.resolveSwiWasmActorTarget(pidText);
+            var entry = this.swiWasmActorWorkers[pid];
+            if (pid === "main") {
+              this.deliverSwiWasmMainActorMessage(String(messageText || "true"));
+              this.log("transport", "main -> main: " + String(messageText || "true"), "swi-wasm", "request");
+              return true;
+            }
+            if (!entry || !entry.worker || entry.done) {
+              if (/^worker_actor\([1-9][0-9]*\)$/.test(pid)) {
+                this.log("transport", "drop message to dead SWI-WASM worker actor " + pid + ".", "swi-wasm");
+                return true;
+              }
+              this.log("warn", "No live SWI-WASM worker actor for " + pid + ".", "swi-wasm");
+              return false;
+            }
+            entry.worker.postMessage({
+              command: "deliver",
+              message: String(messageText || "true")
+            });
+            this.log("transport", "main -> " + pid + ": " + String(messageText || "true"), "swi-wasm", "request");
+            return true;
+          },
+          sendSwiWasmActorMessageDelayed: function(pidText, messageText, delaySeconds, idText) {
+            var self = this;
+            var id = String(idText || "");
+            var delay = Number(delaySeconds);
+            if (!id) {
+              id = "delay(" + this.swiWasmNextActorDelayId++ + ")";
+            }
+            if (!isFinite(delay) || delay < 0) {
+              return false;
+            }
+            if (this.swiWasmActorDelayedSends[id]) {
+              window.clearTimeout(this.swiWasmActorDelayedSends[id]);
+            }
+            this.swiWasmActorDelayedSends[id] = window.setTimeout(function() {
+              delete self.swiWasmActorDelayedSends[id];
+              self.sendSwiWasmActorMessage(pidText, messageText);
+            }, delay * 1000);
+            return true;
+          },
+          cancelSwiWasmActorMessage: function(idText) {
+            var id = String(idText || "");
+            var timer = this.swiWasmActorDelayedSends[id];
+            if (!timer) {
+              return false;
+            }
+            window.clearTimeout(timer);
+            delete this.swiWasmActorDelayedSends[id];
+            return true;
+          },
+          registerSwiWasmActorName: function(kind, nameText, pidText) {
+            var registry = String(kind || "actor") === "service" ? this.swiWasmActorServices : this.swiWasmActorNames;
+            var name = String(nameText || "");
+            var pid = this.resolveSwiWasmActorTarget(pidText);
+            if (!name || !this.swiWasmActorPidLive(pid)) {
+              return false;
+            }
+            if (registry[name] && registry[name] !== pid) {
+              return false;
+            }
+            if (Object.keys(registry).some(function(existing) {
+              if (registry[existing] === pid && existing !== name) {
+                return true;
+              }
+              return false;
+            })) {
+              return false;
+            }
+            registry[name] = pid;
+            return true;
+          },
+          unregisterSwiWasmActorName: function(kind, nameText) {
+            var registry = String(kind || "actor") === "service" ? this.swiWasmActorServices : this.swiWasmActorNames;
+            var name = String(nameText || "");
+            if (!Object.prototype.hasOwnProperty.call(registry, name)) {
+              return false;
+            }
+            delete registry[name];
+            return true;
+          },
+          whereisSwiWasmActorName: function(kind, nameText) {
+            var registry = String(kind || "actor") === "service" ? this.swiWasmActorServices : this.swiWasmActorNames;
+            var name = String(nameText || "");
+            return registry[name] || "undefined";
+          },
+          swiWasmActorPidLive: function(pidText) {
+            var pid = String(pidText || "");
+            if (pid === "main") {
+              return true;
+            }
+            var entry = this.swiWasmActorWorkers[pid];
+            return !!(entry && entry.worker && !entry.done);
+          },
+          monitorSwiWasmActor: function(watcherText, pidText, refText) {
+            var watcher = this.resolveSwiWasmActorTarget(watcherText);
+            var pid = this.resolveSwiWasmActorTarget(pidText);
+            var ref = String(refText || "");
+            if (!ref || !this.swiWasmActorPidLive(watcher)) {
+              return false;
+            }
+            this.swiWasmActorMonitors.push({ watcher: watcher, pid: pid, ref: ref });
+            if (!this.swiWasmActorPidLive(pid)) {
+              this.deliverSwiWasmActorDown(watcher, ref, pid, "noproc");
+            }
+            return true;
+          },
+          demonitorSwiWasmActor: function(watcherText, refText) {
+            var watcher = this.resolveSwiWasmActorTarget(watcherText);
+            var ref = String(refText || "");
+            var removed = false;
+            this.swiWasmActorMonitors = this.swiWasmActorMonitors.filter(function(monitor) {
+              var keep = !(monitor.watcher === watcher && monitor.ref === ref);
+              if (!keep) {
+                removed = true;
+              }
+              return keep;
+            });
+            return removed;
+          },
+          notifySwiWasmActorMonitors: function(pidText, reasonText) {
+            var pid = String(pidText || "");
+            var monitors = this.swiWasmActorMonitors.filter(function(monitor) {
+              return monitor.pid === pid;
+            });
+            this.swiWasmActorMonitors = this.swiWasmActorMonitors.filter(function(monitor) {
+              return monitor.pid !== pid;
+            });
+            monitors.forEach(function(monitor) {
+              this.deliverSwiWasmActorDown(monitor.watcher, monitor.ref, pid, reasonText || "true");
+            }.bind(this));
+            this.clearSwiWasmActorNamesForPid(pid);
+          },
+          deliverSwiWasmActorDown: function(watcherText, refText, pidText, reasonText) {
+            var message = "down(" + refText + "," + pidText + "," + String(reasonText || "true") + ")";
+            this.sendSwiWasmActorMessage(watcherText, message);
+          },
+          clearSwiWasmActorNamesForPid: function(pidText) {
+            var pid = String(pidText || "");
+            [this.swiWasmActorNames, this.swiWasmActorServices].forEach(function(registry) {
+              Object.keys(registry).forEach(function(name) {
+                if (registry[name] === pid) {
+                  delete registry[name];
+                }
+              });
+            });
+          },
+          exitSwiWasmActor: function(pidText, reasonText) {
+            var pid = this.resolveSwiWasmActorTarget(pidText);
+            var reason = String(reasonText || "true");
+            if (pid === "main") {
+              return false;
+            }
+            var entry = this.swiWasmActorWorkers[pid];
+            if (!entry || !entry.worker || entry.done) {
+              return true;
+            }
+            entry.done = true;
+            entry.reason = reason;
+            try {
+              entry.worker.postMessage({ command: "terminate", reason: reason });
+              entry.worker.terminate();
+            } catch (_error) {
+            }
+            this.notifySwiWasmActorMonitors(pid, reason);
+            this.log("transport", pid + " exited: " + reason + ".", "swi-wasm", "response");
+            return true;
+          },
+          abortSwiWasmActor: function(pidText) {
+            var pid = this.resolveSwiWasmActorTarget(pidText);
+            if (pid === "main") {
+              return false;
+            }
+            var entry = this.swiWasmActorWorkers[pid];
+            if (!entry || !entry.worker || entry.done) {
+              return false;
+            }
+            entry.worker.postMessage({ command: "abort" });
+            this.log("transport", pid + " abort requested.", "swi-wasm", "request");
+            return true;
+          },
+          deliverSwiWasmMainActorMessage: function(messageText) {
+            var text = String(messageText);
+            if (this.swiWasmActorMainWaiters.length > 0) {
+              this.swiWasmActorMainWaiters.shift().resolve(text);
+              return;
+            }
+            this.swiWasmActorMainMailbox.push(text);
+          },
+          receiveSwiWasmActorMessage: function(timeoutSeconds) {
+            var self = this;
+            if (this.swiWasmActorMainMailbox.length > 0) {
+              return Promise.resolve(this.swiWasmActorMainMailbox.shift());
+            }
+            return new Promise(function(resolve) {
+              var waiter = { resolve: resolve, timer: null };
+              var timeout = Number(timeoutSeconds);
+              if (isFinite(timeout) && timeout >= 0) {
+                waiter.timer = window.setTimeout(function() {
+                  var index = self.swiWasmActorMainWaiters.indexOf(waiter);
+                  if (index >= 0) {
+                    self.swiWasmActorMainWaiters.splice(index, 1);
+                  }
+                  resolve(null);
+                }, timeout * 1000);
+              }
+              waiter.resolve = function(value) {
+                if (waiter.timer !== null) {
+                  window.clearTimeout(waiter.timer);
+                }
+                resolve(value);
+              };
+              self.swiWasmActorMainWaiters.push(waiter);
+            });
+          },
+          resetSwiWasmActorWorkers: function() {
+            Object.keys(this.swiWasmActorWorkers || {}).forEach(function(pid) {
+              var entry = this.swiWasmActorWorkers[pid];
+              if (entry && entry.worker) {
+                try {
+                  entry.worker.postMessage({ command: "terminate" });
+                  entry.worker.terminate();
+                } catch (_error) {
+                }
+              }
+            }.bind(this));
+            this.swiWasmActorWorkers = {};
+            this.swiWasmActorMainMailbox = [];
+            Object.keys(this.swiWasmActorDelayedSends || {}).forEach(function(id) {
+              window.clearTimeout(this.swiWasmActorDelayedSends[id]);
+            }.bind(this));
+            this.swiWasmActorDelayedSends = {};
+            this.swiWasmActorNames = {};
+            this.swiWasmActorServices = {};
+            this.swiWasmActorMonitors = [];
+            this.swiWasmActorMainWaiters.splice(0).forEach(function(waiter) {
+              if (waiter.timer !== null) {
+                window.clearTimeout(waiter.timer);
+              }
+              waiter.resolve(null);
+            });
           },
           swiWasmRpcProlog: function() {
             return [
               "% library(wasm), lists, apply pre-loaded at startup",
+              "% Experimental browser-only worker actor bridge.",
+              ":- module(swi_wasm_actor_bridge, [",
+              "    op(800, xfx, !),",
+              "    op(1000, xfy, if),",
+              "    self/1,",
+              "    spawn/1, spawn/2, spawn/3, spawn_worker_actor/2,",
+              "    actors/1, make_ref/1, canonical_pid/2,",
+              "    send/2, send/3, (!)/2, cancel/1,",
+              "    monitor/2, demonitor/1, demonitor/2,",
+              "    exit/1, exit/2,",
+              "    register/2, register_service/2,",
+              "    unregister/1, unregister_service/1,",
+              "    whereis/2, whereis_service/2,",
+              "    respond/2,",
+              "    toplevel_spawn/1, toplevel_spawn/2,",
+              "    toplevel_call/2, toplevel_call/3,",
+              "    toplevel_next/1, toplevel_next/2,",
+              "    toplevel_halt/2, toplevel_stop/1, toplevel_abort/1,",
+              "    statechart_spawn/1, statechart_spawn/2,",
+              "    output/1, output/2, terminal_output/1, terminal_output/2,",
+              "    input/2, input/3, with_io_target/2, flush/0,",
+              "    receive/1, receive/2,",
+              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
+              "]).",
+              ":- op(800, xfx, !).",
+              ":- op(1000, xfy, if).",
+              ":- op(990, xfx, :=).",
+              ":- op(100, fx, #).",
+              ":- use_module(library(wasm)).",
+              ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0).",
+              ":- dynamic deferred/1, io_target/1.",
+              "",
+              "self(main).",
+              "",
+              "spawn(Goal) :- spawn(Goal, _).",
+              "",
+              "spawn(Goal, Pid) :- spawn(Goal, Pid, []).",
+              "",
+              "spawn(Goal, Pid, Options) :-",
+              "    option(node(Node), Options, localhost),",
+              "    (   Node == localhost",
+              "    ->  true",
+              "    ;   throw(error(existence_error(actor_node, Node), spawn/3))",
+              "    ),",
+              "    collect_spawn_source(Options, ExtraSource),",
+              "    PidText := swiWasmActorReservePid(),",
+              "    term_string(Pid, PidText),",
+              "    term_string(Goal, GoalText),",
+              "    SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+              "    (   SpawnedText = null",
+              "    ->  throw(error(resource_error(swi_wasm_worker_actor), spawn/3))",
+              "    ;   SpawnedText == PidText",
+              "    ),",
+              "    install_spawn_monitor(Pid, Options).",
+              "",
+              "spawn_worker_actor(Goal, Pid) :- spawn(Goal, Pid).",
+              "",
+              "collect_spawn_source(Options, Source) :-",
+              "    findall(Text, spawn_source_option(Options, Text), Texts),",
+              "    atomic_list_concat(Texts, '\\n', Source).",
+              "",
+              "spawn_source_option(Options, Text) :-",
+              "    member(load_text(Text), Options).",
+              "spawn_source_option(Options, Text) :-",
+              "    member(load_list(Terms), Options),",
+              "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
+              "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+              "spawn_source_option(Options, Text) :-",
+              "    member(load_predicates(Indicators), Options),",
+              "    findall(ClauseText,",
+              "            ( member(Name/Arity, Indicators),",
+              "              functor(Head, Name, Arity),",
+              "              catch(user:clause(Head, Body), _, fail),",
+              "              (Body == true -> Clause = Head ; Clause = (Head :- Body)),",
+              "              clause_source_text(Clause, ClauseText)",
+              "            ),",
+              "            ClauseTexts),",
+              "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+              "",
+              "clause_source_text(Clause, Text) :-",
+              "    copy_term(Clause, Copy),",
+              "    numbervars(Copy, 0, _),",
+              "    with_output_to(string(Body), write_term(Copy, [quoted(true), numbervars(true)])),",
+              "    string_concat(Body, '.', Text).",
+              "",
+              "install_spawn_monitor(Pid, Options) :-",
+              "    option(monitor(true), Options, false),",
+              "    !,",
+              "    term_string(Pid, PidText),",
+              "    _ := swiWasmActorMonitor(#PidText, #PidText).",
+              "install_spawn_monitor(_, _).",
+              "",
+              "actors(Pids) :-",
+              "    PidsText := swiWasmActorActors(),",
+              "    term_string(Pids, PidsText).",
+              "",
+              "make_ref(Ref) :-",
+              "    RefText := swiWasmActorMakeRef(),",
+              "    term_string(Ref, RefText).",
+              "",
+              "canonical_pid(Pid, Pid).",
+              "",
+              "Pid ! Message :- send(Pid, Message).",
+              "",
+              "send(statechart, Message) :-",
+              "    statechart_wasm:statechart_send(Message),",
+              "    !.",
+              "",
+              "send(statechart, Message, _) :-",
+              "    statechart_wasm:statechart_send(Message),",
+              "    !.",
+              "",
+              "send(Pid, Message) :- send_worker_actor(Pid, Message).",
+              "",
+              "send(Pid, Message, Options) :-",
+              "    option(delay(Delay), Options),",
+              "    !,",
+              "    delayed_send_id(Options, Id),",
+              "    term_string(Pid, PidText),",
+              "    term_string(Message, MessageText),",
+              "    term_string(Id, IdText),",
+              "    Sent := swiWasmActorSendDelayed(#PidText, #MessageText, #Delay, #IdText),",
+              "    Sent == true.",
+              "send(Pid, Message, _) :- send(Pid, Message).",
+              "",
+              "delayed_send_id(Options, Id) :-",
+              "    (   member(id(Id0), Options)",
+              "    ->  (var(Id0) -> make_ref(Id0) ; true),",
+              "        Id = Id0",
+              "    ;   make_ref(Id)",
+              "    ).",
+              "",
+              "cancel(Id) :-",
+              "    term_string(Id, IdText),",
+              "    Cancelled := swiWasmActorCancel(#IdText),",
+              "    Cancelled == true.",
+              "",
+              "send_worker_actor(Pid, Message) :-",
+              "    term_string(Pid, PidText),",
+              "    term_string(Message, MessageText),",
+              "    Sent := swiWasmActorSend(#PidText, #MessageText),",
+              "    (   Sent == true",
+              "    ->  true",
+              "    ;   throw(error(existence_error(actor, Pid), send/2))",
+              "    ).",
+              "",
+              "monitor(Pid, Ref) :-",
+              "    make_ref(Ref),",
+              "    term_string(Pid, PidText),",
+              "    term_string(Ref, RefText),",
+              "    Monitored := swiWasmActorMonitor(#PidText, #RefText),",
+              "    Monitored == true.",
+              "",
+              "demonitor(Ref) :- demonitor(Ref, []).",
+              "",
+              "demonitor(Ref, Options) :-",
+              "    term_string(Ref, RefText),",
+              "    _ := swiWasmActorDemonitor(#RefText),",
+              "    (   member(flush, Options)",
+              "    ->  flush_down(Ref)",
+              "    ;   true",
+              "    ).",
+              "",
+              "flush_down(Ref) :-",
+              "    receive({down(Ref, _, _) -> flush_down(Ref)}, [timeout(0)]),",
+              "    !.",
+              "flush_down(_).",
+              "",
+              "exit(Reason) :- exit(main, Reason).",
+              "",
+              "exit(Pid, Reason) :-",
+              "    term_string(Pid, PidText),",
+              "    term_string(Reason, ReasonText),",
+              "    Exited := swiWasmActorExit(#PidText, #ReasonText),",
+              "    Exited == true.",
+              "",
+              "register(Name, Pid) :- register_name(actor, Name, Pid).",
+              "register_service(Name, Pid) :- register_name(service, Name, Pid).",
+              "",
+              "register_name(Kind, Name, Pid) :-",
+              "    term_string(Name, NameText),",
+              "    term_string(Pid, PidText),",
+              "    Registered := swiWasmActorRegister(#Kind, #NameText, #PidText),",
+              "    (   Registered == true",
+              "    ->  true",
+              "    ;   throw(error(permission_error(register, actor_name, Name), register/2))",
+              "    ).",
+              "",
+              "unregister(Name) :- unregister_name(actor, Name).",
+              "unregister_service(Name) :- unregister_name(service, Name).",
+              "",
+              "unregister_name(Kind, Name) :-",
+              "    term_string(Name, NameText),",
+              "    _ := swiWasmActorUnregister(#Kind, #NameText).",
+              "",
+              "whereis(Name, Pid) :- whereis_name(actor, Name, Pid).",
+              "whereis_service(Name, Pid) :- whereis_name(service, Name, Pid).",
+              "",
+              "whereis_name(Kind, Name, Pid) :-",
+              "    term_string(Name, NameText),",
+              "    PidText := swiWasmActorWhereis(#Kind, #NameText),",
+              "    PidText \\== \"undefined\",",
+              "    term_string(Pid, PidText).",
+              "",
+              "respond(Pid, Answer) :-",
+              "    self(Self),",
+              "    send(Pid, '$input'(Self, Answer)).",
+              "",
+              "toplevel_spawn(Pid) :- toplevel_spawn(Pid, []).",
+              "",
+              "toplevel_spawn(Pid, Options) :-",
+              "    self(Self),",
+              "    option(session(Session), Options, false),",
+              "    option(target(Target), Options, Self),",
+              "    collect_spawn_source(Options, ExtraSource),",
+              "    PidText := swiWasmActorReservePid(),",
+              "    term_string(Pid, PidText),",
+              "    term_string(ptcp(Pid, Target, Session), GoalText),",
+              "    SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+              "    (   SpawnedText = null",
+              "    ->  throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2))",
+              "    ;   SpawnedText == PidText",
+              "    ),",
+              "    install_spawn_monitor(Pid, Options),",
+              "    maybe_register_toplevel_name(Options, Pid).",
+              "",
+              "maybe_register_toplevel_name(Options, Pid) :-",
+              "    (   option(name(Name), Options)",
+              "    ->  register(Name, Pid)",
+              "    ;   true",
+              "    ).",
+              "",
+              "ptcp(Pid, Target, Session) :-",
+              "    catch(state_1(Pid, Target, Session), '$abort_goal', ptcp(Pid, Target, Session)).",
+              "",
+              "state_1(Pid, Target0, Session) :-",
+              "    Control = control(continue),",
+              "    receive({",
+              "        '$call'(Goal, Options) ->",
+              "            option(template(Template0), Options, Goal),",
+              "            strip_module(Template0, _, Template),",
+              "            option(offset(Offset), Options, 0),",
+              "            option(limit(Limit0), Options, 10000000000),",
+              "            option(once(Once), Options, false),",
+              "            option(target(Target1), Options, Target0),",
+              "            Limit = count(Limit0),",
+              "            Target = target(Target1),",
+              "            state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),",
+              "            arg(1, Target, Out),",
+              "            send(Out, Answer),",
+              "            (   arg(3, Answer, true)",
+              "            ->  state_3(Limit, Target)",
+              "            ;   true",
+              "            ) ;",
+              "        '$halt'(From) ->",
+              "            send(From, reply(true)),",
+              "            nb_setarg(1, Control, halt)",
+              "        }),",
+              "    (   arg(1, Control, halt)",
+              "    ->  true",
+              "    ;   Session == false",
+              "    ->  true",
+              "    ;   state_1(Pid, Target0, Session)",
+              "    ).",
+              "",
+              "state_2(Goal0, Template, Offset, Limit, Once, TargetBox, Pid, Answer) :-",
+              "    strip_module(Goal0, _, PlainGoal),",
+              "    arg(1, TargetBox, Target),",
+              "    with_io_target(Target,",
+              "        (   Once == true",
+              "        ->  once(answer(PlainGoal, Template, Offset, Limit, Answer0))",
+              "        ;   answer(PlainGoal, Template, Offset, Limit, Answer0)",
+              "        )),",
+              "    apply_once_answer(Once, Answer0, Answer1),",
+              "    add_pid(Answer1, Pid, Answer).",
+              "",
+              "state_3(Limit, Target) :-",
+              "    receive({",
+              "        '$next'(Options2) ->",
+              "            (   option(limit(NewLimit), Options2)",
+              "            ->  nb_setarg(1, Limit, NewLimit)",
+              "            ;   true",
+              "            ),",
+              "            (   option(target(NewTarget), Options2)",
+              "            ->  nb_setarg(1, Target, NewTarget)",
+              "            ;   true",
+              "            ),",
+              "            fail ;",
+              "        '$stop' -> true",
+              "    }).",
+              "",
+              "answer(Goal, Template, Offset, Limit, Answer) :-",
+              "    catch(call_cleanup(slice(Goal, Template, Offset, Limit, Slice), Det = true), Error, true),",
+              "    (   nonvar(Error), Error == '$abort_goal'",
+              "    ->  throw('$abort_goal')",
+              "    ;   Slice == []",
+              "    ->  Answer = failure",
+              "    ;   nonvar(Error)",
+              "    ->  Answer = error(Error)",
+              "    ;   var(Det)",
+              "    ->  Answer = success(Slice, true)",
+              "    ;   Det == true",
+              "    ->  Answer = success(Slice, false)",
+              "    ).",
+              "",
+              "slice(Goal, Template, Offset, count(Limit), Slice) :-",
+              "    findnsols(Limit, Template, offset(Offset, Goal), Slice).",
+              "",
+              "apply_once_answer(true, success(Slice, _), success(Slice, false)) :- !.",
+              "apply_once_answer(_, Answer, Answer).",
+              "",
+              "add_pid(success(Slice, More), Pid, success(Pid, Slice, More)).",
+              "add_pid(failure, Pid, failure(Pid)).",
+              "add_pid(error(Term), Pid, error(Pid, Term)).",
+              "",
+              "toplevel_call(Pid, Goal) :- toplevel_call(Pid, Goal, []).",
+              "toplevel_call(Pid, Goal, Options) :- send(Pid, '$call'(Goal, Options)).",
+              "",
+              "toplevel_next(Pid) :- toplevel_next(Pid, []).",
+              "toplevel_next(Pid, Options) :- send(Pid, '$next'(Options)).",
+              "",
+              "toplevel_halt(Pid, Reply) :-",
+              "    self(Self),",
+              "    send(Pid, '$halt'(Self)),",
+              "    receive({reply(Reply) -> true}).",
+              "",
+              "toplevel_stop(Pid) :- send(Pid, '$stop').",
+              "",
+              "toplevel_abort(Pid) :-",
+              "    term_string(Pid, PidText),",
+              "    Aborted := swiWasmActorAbort(#PidText),",
+              "    Aborted == true.",
+              "",
+              "statechart_spawn(Pid) :- statechart_spawn(Pid, []).",
+              "",
+              "statechart_spawn(Pid, Options) :-",
+              "    statechart_spawn_source(Options, XML),",
+              "    statechart_trace_option(Options),",
+              "    statechart_wasm:statechart_start(text(XML)),",
+              "    Pid = statechart.",
+              "",
+              "statechart_spawn_source(Options, XML) :-",
+              "    member(load_text(XML), Options),",
+              "    !.",
+              "statechart_spawn_source(Options, XML) :-",
+              "    member(load_uri(URI), Options),",
+              "    !,",
+              "    URIText := swiResolveAssetUrl(#URI),",
+              "    XML := swiRpcGet(#URIText),",
+              "    (   XML = null",
+              "    ->  throw(error(existence_error(source_sink, URI), statechart_spawn/2))",
+              "    ;   true",
+              "    ).",
+              "statechart_spawn_source(_, _) :-",
+              "    throw(error(domain_error(statechart_source_option, load_text_or_load_uri), statechart_spawn/2)).",
+              "",
+              "statechart_trace_option(_).",
+              "",
+              "output(Term) :- output(Term, []).",
+              "",
+              "output(Term, Options) :-",
+              "    self(Self),",
+              "    (   option(target(Target), Options)",
+              "    ->  send(Target, output(Self, Term))",
+              "    ;   io_target(Target)",
+              "    ->  send(Target, output(Self, Term))",
+              "    ;   terminal_output(Term)",
+              "    ).",
+              "",
+              "terminal_output(Term) :- terminal_output(Term, []).",
+              "",
+              "terminal_output(Term, Options) :-",
+              "    self(Self),",
+              "    (   option(target(Target), Options)",
+              "    ->  send(Target, terminal_output(Self, Term))",
+              "    ;   io_target(Target)",
+              "    ->  send(Target, terminal_output(Self, Term))",
+              "    ;   terminal_output_direct(Term)",
+              "    ).",
+              "",
+              "terminal_output_direct(Term) :-",
+              "    (   string(Term)",
+              "    ->  Text = Term",
+              "    ;   term_string(Term, Text)",
+              "    ),",
+              "    _ := swiWasmActorTerminalOutput(#Text).",
+              "",
+              "input(Prompt, Answer) :- input(Prompt, Answer, []).",
+              "",
+              "input(Prompt, Answer, Options) :-",
+              "    self(Self),",
+              "    (   option(target(Target), Options)",
+              "    ->  send(Target, prompt(Self, Prompt)),",
+              "        receive({'$input'(_, Answer) -> true})",
+              "    ;   io_target(Target)",
+              "    ->  send(Target, prompt(Self, Prompt)),",
+              "        receive({'$input'(_, Answer) -> true})",
+              "    ;   term_string(Prompt, PromptText),",
+              "        AnswerText := swiWasmActorInput(#PromptText),",
+              "        AnswerText \\== null,",
+              "        term_string(Answer, AnswerText)",
+              "    ).",
+              "",
+              "with_io_target(Target, Goal) :-",
+              "    asserta(io_target(Target), Ref),",
+              "    call_cleanup(call(Goal), erase(Ref)).",
+              "",
+              "flush :-",
+              "    receive({Message ->",
+              "        term_to_atom(Message, Atom),",
+              "        atomics_to_string(['Shell got ', Atom], MessageString),",
+              "        terminal_output(MessageString),",
+              "        flush",
+              "    }, [timeout(0)]).",
+              "",
+              "receive(Clauses) :- receive(Clauses, []).",
+              "",
+              "receive(Clauses, Options) :-",
+              "    (   receive_plain_var(Clauses)",
+              "    ->  throw(error(instantiation_error, receive/1))",
+              "    ;   clause(deferred(Msg), true, Ref),",
+              "        select_body(Clauses, Msg, Module, Body)",
+              "    ->  erase(Ref),",
+              "        call(Module:Body)",
+              "    ;   receive_loop(Clauses, Options)",
+              "    ).",
+              "",
+              "receive_plain_var(_:Var) :- var(Var), !.",
+              "receive_plain_var({Var}) :- var(Var), !.",
+              "receive_plain_var(Var) :- var(Var).",
+              "",
+              "receive_loop(Clauses, Options) :-",
+              "    receive_timeout(Options, Timeout),",
+              "    Promise := swiWasmActorReceive(#Timeout),",
+              "    await(Promise, MessageText),",
+              "    (   MessageText = null",
+              "    ->  option(on_timeout(Goal), Options, true),",
+              "        clauses_module(Clauses, Module),",
+              "        call(Module:Goal)",
+              "    ;   term_string(Msg, MessageText),",
+              "        (   select_body(Clauses, Msg, Module, Body)",
+              "        ->  call(Module:Body)",
+              "        ;   assertz(deferred(Msg)),",
+              "            receive_loop(Clauses, Options)",
+              "        )",
+              "    ).",
+              "",
+              "receive_timeout(Options, Timeout) :-",
+              "    (   option(timeout(Timeout0), Options)",
+              "    ->  Timeout = Timeout0",
+              "    ;   Timeout = -1",
+              "    ).",
+              "",
+              "clauses_module(M:_, M) :- !.",
+              "clauses_module(_, user).",
+              "",
+              "select_body(M:{Clauses}, Message, M, Body) :- !,",
+              "    select_body_aux(Clauses, Message, M, Body).",
+              "select_body(M:Clauses, Message, M, Body) :- !,",
+              "    select_body_aux(Clauses, Message, M, Body).",
+              "select_body({Clauses}, Message, user, Body) :- !,",
+              "    select_body_aux(Clauses, Message, user, Body).",
+              "select_body(Clauses, Message, user, Body) :-",
+              "    select_body_aux(Clauses, Message, user, Body).",
+              "",
+              "select_body_aux(Head, Message, _, true) :-",
+              "    var(Head),",
+              "    !,",
+              "    Head = Message.",
+              "",
+              "select_body_aux((Clause ; Clauses), Message, Module, Body) :-",
+              "    (   select_body_aux(Clause, Message, Module, Body)",
+              "    ;   select_body_aux(Clauses, Message, Module, Body)",
+              "    ).",
+              "select_body_aux((Head -> Body), Message, Module, Body) :-",
+              "    (   subsumes_term(if(Pattern, Guard), Head)",
+              "    ->  if(Pattern, Guard) = Head,",
+              "        subsumes_term(Pattern, Message),",
+              "        Pattern = Message,",
+              "        catch(once(Module:Guard), _, fail)",
+              "    ;   subsumes_term(Head, Message),",
+              "        Head = Message",
+              "    ).",
               "",
               "rpc(URL, Goal) :- rpc(URL, Goal, []).",
               "",
@@ -9318,7 +9821,7 @@
               "",
               "rpc_clause_text(Name, Arity, Text) :-",
               "    functor(Head, Name, Arity),",
-              "    catch(clause(Head, Body), _, fail),",
+              "    catch(user:clause(Head, Body), _, fail),",
               "    (Body == true",
               "    ->  term_to_atom(Head, HA), atom_concat(HA, '.', Text)",
               "    ;   term_to_atom(Head, HA), term_to_atom(Body, BA),",
@@ -9329,7 +9832,7 @@
           // ---- WASM-port statechart integration -----------------------
           //
           // The in-browser SWI-Prolog can run the headless statechart
-          // interpreter that lives in src/wasm/.  We fetch the four
+          // interpreter served from src/wasm/.  We fetch the four
           // modules once per session, write them into the virtual FS,
           // and consult statechart_wasm.pl.  Subsequent Run clicks call
           // statechart_start(text(XML)); user events go through normal
@@ -9340,6 +9843,7 @@
               return Promise.resolve(true);
             }
             if (!Module || !Module.FS) {
+              self.swiWasmStatechartLoadError = "SWI-WASM virtual filesystem not ready";
               return Promise.resolve(false);
             }
             var names = [
@@ -9401,8 +9905,10 @@
                 throw new Error("set_trace_hook/1 failed");
               }
               self.swiWasmStatechartLoaded = true;
+              self.swiWasmStatechartLoadError = "";
               return true;
             }).catch(function(err) {
+              self.swiWasmStatechartLoadError = String(err);
               console.warn("[SWI-INIT] statechart_wasm preload failed:", err);
               self.log("warn", "Statechart WASM modules unavailable: " + String(err), "swi-wasm");
               return false;
@@ -9427,20 +9933,38 @@
           runSwiWasmStatechart: function(xml) {
             var self = this;
             var Prolog = self.swiWasmProlog;
+            var term = self.terminal;
             if (!Prolog) {
               self.log("error", "SWI-Prolog WASM runtime not ready yet.", "swi-wasm");
+              if (term) term.echo("% SWI-Prolog WASM runtime not ready yet.");
               return;
             }
             if (!self.swiWasmStatechartLoaded) {
-              self.log("error", "Statechart WASM modules not loaded.", "swi-wasm");
+              self.selectDock("terminal");
+              term = self.terminal;
+              if (term) term.echo("% Loading statechart WASM modules...");
+              self.preloadSwiWasmStatechart(Prolog, self.swiWasmModule).then(function(ok) {
+                if (ok) {
+                  self.runSwiWasmStatechart(xml);
+                  return;
+                }
+                self.log("error", "Statechart WASM modules not loaded.", "swi-wasm");
+                if (term) {
+                  term.echo("% Statechart WASM modules not available.");
+                  if (self.swiWasmStatechartLoadError) {
+                    term.echo("% " + self.swiWasmStatechartLoadError);
+                  }
+                }
+              });
               return;
             }
             if (!self.canSubmitNewQuery) {
               self.log("warn", "Finish the current interaction before starting a new chart.", "swi-wasm");
+              if (term) term.echo("% Finish the current interaction before starting a new chart.");
               return;
             }
             self.selectDock("terminal");
-            var term = self.terminal;
+            term = self.terminal;
             // If a previous chart halted on its own (reached a final
             // state, exhausted its budget, ...) but its exit actions
             // were never run, clean up before starting the new one.
@@ -9450,7 +9974,7 @@
             // point: canRunStatechart is gated on
             // !swiWasmChartPending, which stays true for the entire
             // duration of the previous chart's forEach.
-            try { Prolog.query("statechart_stop").once(); } catch(_) {}
+            try { Prolog.query("statechart_wasm:statechart_stop").once(); } catch(_) {}
             self.swiWasmOutputBuffer = "";
             // Mark active eagerly so a fresh Run click can't re-enter
             // while we're still inside the async start.  We'll refine
@@ -9477,18 +10001,20 @@
             // chart calls sleep/1.  Use forEach (returns a Promise)
             // instead of .once() so the engine can suspend and resume
             // across JS event-loop turns.
-            Prolog.forEach("statechart_start(text(XML))", { XML: xml }, function() {})
+            Prolog.forEach("statechart_wasm:statechart_start(text(XML))", { XML: xml }, function() {})
               .then(function() {
                 self.swiWasmChartPending = false;
                 self.stopSwiWasmOutputStreaming();
                 self.drainSwiWasmOutputToTerminal();
-                var reasonQ = Prolog.query("statechart_halt_reason(R)").once();
+                var reasonQ = Prolog.query("statechart_wasm:statechart_halt_reason(R)").once();
                 var reason = (reasonQ && reasonQ.R) || "unknown";
                 self.swiWasmStatechartActive = (reason === "running");
                 self.echoSwiWasmStatechartConfig();
                 if (term) {
                   if (reason === "running") {
+                    self.captureBindingsFromRows([{ Pid: "statechart" }]);
                     term.echo("% Statechart running. Send events with:  statechart_send(Event).");
+                    term.echo("% Actor-style shorthand also works:  $Pid ! Event.");
                     term.echo("% Inspect state with:  statechart_configuration(C).  or  statechart_in(State).");
                     term.echo("% Halt with the Stop button or:  statechart_stop.");
                   } else if (reason === "final") {
@@ -9544,7 +10070,7 @@
             var term = this.terminal;
             if (!Prolog || !term) return;
             try {
-              var r = Prolog.query("statechart_configuration(C)").once();
+              var r = Prolog.query("statechart_wasm:statechart_configuration(C)").once();
               if (r && r.C) {
                 term.echo("% Configuration: " + JSON.stringify(r.C));
               }
@@ -9559,11 +10085,14 @@
               // current configuration's onexit actions and records
               // last_halt_reason(stopped).
               try {
-                Prolog.query("statechart_stop").once();
+                Prolog.query("statechart_wasm:statechart_stop").once();
               } catch(e) {
                 this.log("warn", "Halt failed: " + String(e), "swi-wasm");
               }
               this.swiWasmStatechartActive = false;
+              if (this.lastBindings.Pid === "statechart") {
+                delete this.lastBindings.Pid;
+              }
               this.drainSwiWasmOutputToTerminal();
               if (this.terminal) {
                 this.terminal.echo("% Statechart stopped.");
@@ -9586,6 +10115,9 @@
               this.log("warn", "Halt signal failed: " + String(e), "swi-wasm");
             }
             this.swiWasmStatechartActive = false;
+            if (this.lastBindings.Pid === "statechart") {
+              delete this.lastBindings.Pid;
+            }
             // Don't echo immediately; the running forEach's .then will
             // print "% Statechart halted by user." when the chart
             // actually wakes up and observes the retracted running.
@@ -9641,6 +10173,29 @@
                        url: "/examples/statecharts/" + name + ".xml" };
             });
           },
+          swiWasmGoalNeedsStatechart: function(goal) {
+            return /\bstatechart_(spawn|start|send|stop|running|configuration|in|halt_reason)\b/.test(String(goal || "")) ||
+              /(^|[^A-Za-z0-9_])statechart\s*!/.test(String(goal || ""));
+          },
+          syncSwiWasmStatechartStatus: function(Prolog) {
+            var running = false;
+            if (!Prolog) {
+              return;
+            }
+            try {
+              running = !!Prolog.query("statechart_wasm:statechart_running").once();
+            } catch (_) {
+              return;
+            }
+            this.swiWasmStatechartActive = running;
+            if (running) {
+              if (!Object.prototype.hasOwnProperty.call(this.lastBindings, "Pid")) {
+                this.lastBindings.Pid = "statechart";
+              }
+            } else if (this.lastBindings.Pid === "statechart") {
+              delete this.lastBindings.Pid;
+            }
+          },
           runSwiWasmQuery: function(term) {
             var self = this;
             var Prolog = this.swiWasmProlog;
@@ -9656,6 +10211,19 @@
             }
             var goal = this.activeGoal;
             var editorText = this.currentLoadText();
+            if (this.swiWasmGoalNeedsStatechart(goal) && !this.swiWasmStatechartLoaded) {
+              this.pauseTerm(term);
+              if (term) term.echo("% Loading statechart WASM modules...");
+              this.preloadSwiWasmStatechart(Prolog, this.swiWasmModule).then(function(ok) {
+                self.resumeTerm(term);
+                if (ok) {
+                  self.runSwiWasmQuery(term);
+                  return;
+                }
+                self.finishError(term, "Statechart WASM modules not loaded: " + self.swiWasmStatechartLoadError);
+              });
+              return;
+            }
             this.pauseTerm(term);
             this.recordSessionEvent("session", "Query: " + this.clipText(goal, 140), "swi-wasm", "swi-wasm");
             this.log("transport", "?- " + goal + ".", "swi-wasm", "request");
@@ -9663,16 +10231,20 @@
             this.swiWasmSolIndex = 0;
             this.swiWasmHasMore = false;
             this.swiWasmOutputBuffer = "";
+            this.swiWasmQueryPending = true;
+            this.swiWasmQueryAbortRequested = false;
             var Module = this.swiWasmModule;
             var loadErr = null;
-            var codeToLoad = this.swiWasmRpcProlog() + (editorText ? "\n" + editorText : "");
+            var bridgeCode = this.swiWasmRpcProlog();
+            var codeToLoad = editorText || "";
             // library(wasm) is already loaded (preloaded at init), so :=/2 and #/1
-            // operators are defined before consult runs — no use_module in the file.
+            // operators are defined before consult runs.
             if (Module && Module.FS) {
               try {
-                try {
-                  Prolog.query("forall(member(Name/Arity, [rpc/2,rpc/3,promise/3,promise/4,yield/2,yield/3,web_rpc_page/7,web_rpc_call_url/7,web_rpc_base_url/3,web_rpc_url/7,web_parse_rpc_response/2,collect_rpc_load/2,rpc_load_part/2,rpc_clause_text/3]), abolish(Name/Arity))").once();
-                } catch(e) {}
+                Module.FS.writeFile("/swi_wasm_actor_bridge.pl", bridgeCode);
+                Prolog.query("consult('/swi_wasm_actor_bridge.pl')").once();
+                Prolog.query("use_module('/swi_wasm_actor_bridge.pl')").once();
+                Prolog.query("retractall(swi_wasm_actor_bridge:deferred(_))").once();
                 Module.FS.writeFile("/user_code.pl", codeToLoad);
                 self.swiWasmOutputBuffer = "";
                 Prolog.query("consult('/user_code.pl')").once();
@@ -9700,6 +10272,13 @@
               }, { heartbeat: 10000 }).then(function() {
                 var trailingOutput = self.swiWasmOutputBuffer;
                 self.swiWasmOutputBuffer = "";
+                self.swiWasmQueryPending = false;
+                if (self.swiWasmQueryAbortRequested) {
+                  self.swiWasmQueryAbortRequested = false;
+                  self.finishError(term, "Computation aborted.");
+                  self.resumeTerm(term);
+                  return;
+                }
                 if (trailingOutput) {
                   if (solutions.length > 0) {
                     solutions[solutions.length - 1].output =
@@ -9712,7 +10291,15 @@
                 self.nextSwiWasmSolution(term);
               });
             }).catch(function(err) {
-              self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + String(err)));
+              var message = String(err);
+              self.swiWasmQueryPending = false;
+              self.swiWasmOutputBuffer = "";
+              if (self.swiWasmQueryAbortRequested || /Execution Aborted/i.test(message)) {
+                self.swiWasmQueryAbortRequested = false;
+                self.finishError(term, "Computation aborted.");
+              } else {
+                self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + message));
+              }
               self.resumeTerm(term);
             });
           },
@@ -9737,6 +10324,8 @@
             if (sol.output) {
               this.terminal.echo(sol.output.replace(/\n$/, ""));
             }
+            this.captureSwiWasmBindings(sol.value);
+            this.syncSwiWasmStatechartStatus(Prolog);
             var answerStr = this.formatSwiWasmAnswer(sol.value, Prolog);
             var isLast = (this.swiWasmSolIndex >= solutions.length && !this.swiWasmHasMore);
             if (isLast) {
@@ -9767,6 +10356,25 @@
             if (parts.length === 0) return "true";
             return parts.join(",\n");
           },
+          captureSwiWasmBindings: function(bindings) {
+            var keys;
+            var row = {};
+            var self = this;
+            if (!bindings || typeof bindings !== "object") {
+              return;
+            }
+            keys = Object.keys(bindings).filter(function(key) {
+              return /^[A-Z_]/.test(key) && key !== "_" &&
+                !self.isSwiWasmUnboundVariable(bindings[key]);
+            });
+            if (keys.length === 0) {
+              return;
+            }
+            keys.forEach(function(key) {
+              row[key] = self.formatSwiWasmValue(bindings[key]);
+            });
+            this.captureBindingsFromRows([row]);
+          },
           makeBrowserPromiseRef: function(existing) {
             var ref;
             var store = existing || {};
@@ -9784,9 +10392,6 @@
               ref = Math.floor(ref);
             } while (Object.prototype.hasOwnProperty.call(store, String(ref)));
             return ref;
-          },
-          formatTauAnswer: function(answer) {
-            return String(answer).replace(/, (?=[A-Z_][A-Za-z0-9_]*\s*=)/g, ",\n");
           },
           isSwiWasmUnboundVariable: function(value) {
             return !!(value && value.$t === "v");
@@ -9840,400 +10445,6 @@
               return text;
             }
             return "'" + text.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
-          },
-          initCiaoWasmSession: function() {
-            var self = this;
-            if (this.terminal) {
-              this.terminal.pause();
-              this.terminal.echo("% Loading Ciao Prolog WASM runtime (from ciao-lang.org)...");
-            }
-            // The Ciao playground bundle uses globals urlPREFIX/urlVERS/res_URL to
-            // resolve worker and engine assets. We point them at ciao-lang.org.
-            window.urlPREFIX = "https://ciao-lang.org";
-            window.urlVERS = "?v=6";
-            window.res_URL = function(u) { return window.urlPREFIX + u + window.urlVERS; };
-            window.toplevelCfg = Object.assign(window.toplevelCfg || {}, { use_webworker: true, statistics: false });
-            // Cross-origin Workers (script URL on ciao-lang.org loaded from our origin)
-            // are blocked. Pre-fetch the worker source and route Worker(...) to a
-            // same-origin blob URL.
-            var workerUrl = window.urlPREFIX + "/js/ciao-webworker.js" + window.urlVERS;
-            var workerReady = fetch(workerUrl).then(function(r) {
-              if (!r.ok) throw new Error("worker fetch " + r.status);
-              return r.text();
-            }).then(function(src) {
-              var blob = new Blob([src], { type: "application/javascript" });
-              var blobUrl = URL.createObjectURL(blob);
-              if (!window._ciaoWorkerPatched) {
-                window._ciaoWorkerPatched = true;
-                var OrigWorker = window.Worker;
-                window.Worker = function(url, opts) {
-                  var s = String(url || "");
-                  if (s.indexOf("ciao-webworker.js") !== -1) {
-                    url = blobUrl;
-                  }
-                  return new OrigWorker(url, opts);
-                };
-                window.Worker.prototype = OrigWorker.prototype;
-              }
-            });
-            workerReady.then(function() {
-              return import("https://ciao-lang.org/js/ciao-prolog.js");
-            }).then(function(mod) {
-              var QueryState = mod.QueryState;
-              var ToplevelProc = mod.ToplevelProc;
-              var adapter = self.makeCiaoComintAdapter(QueryState);
-              var tlp = new ToplevelProc(window.urlPREFIX + "/ciao/", window.urlVERS, undefined);
-              adapter.tlp = tlp;
-              // Ciao's internal classes (CiaoWorker, engine wrapper) use private
-              // class fields whose brand check fails when the receiver is a Vue
-              // reactivity Proxy. markRaw prevents Vue from wrapping them.
-              var raw = (window.Vue && window.Vue.markRaw) ? window.Vue.markRaw : function(x) { return x; };
-              self.ciaoToplevel = raw(tlp);
-              self.ciaoAdapter = raw(adapter);
-              self.ciaoQueryState = QueryState;
-              return tlp.ensure_started(adapter).then(function() {
-                return tlp.w.writeFile("/ciao_rpc_preamble.pl", self.ciaoRpcPreamble());
-              }).then(function() {
-                self.ciaoFlushAdapter();
-                return tlp.run_query(adapter, "use_module('/ciao_rpc_preamble')", {});
-              }).then(function() {
-                self.ciaoFlushAdapter();
-                if (self.terminal) {
-                  if (adapter.versionText) {
-                    self.terminal.echo(adapter.versionText.replace(/\n$/, ""));
-                  }
-                  self.terminal.set_prompt(self.basePrompt());
-                  self.terminal.resume();
-                }
-                self.log("info", "Ciao Prolog WASM runtime ready.", "ciao-wasm");
-                self.fetchExamplesIndex();
-              });
-            }).catch(function(err) {
-              if (self.terminal) { self.terminal.resume(); }
-              self.log("error", "Failed to initialize Ciao Prolog WASM: " + String(err), "ciao-wasm");
-              self.fetchExamplesIndex();
-            });
-          },
-          makeCiaoComintAdapter: function(QueryState) {
-            var self = this;
-            return {
-              QueryState: QueryState,
-              tlp: null,
-              with_prompt: true,
-              versionText: "",
-              outBuffer: "",
-              solBuffer: "",
-              lastStatus: null,
-              update_inner_layout: function() {},
-              set_log: function(msg) {},
-              display: function(text) { this.outBuffer += text; },
-              print_out: function(text) { this.outBuffer += text; },
-              print_msg: function(text) { this.outBuffer += text; },
-              print_sol: function(text) { this.solBuffer = text; },
-              print_prompt: function() {},
-              print_promptval: function() {},
-              display_status: function(s) { this.lastStatus = s; },
-              display_status_new_prompt: function(s) { this.lastStatus = s; },
-              pg: {
-                on_cproc_start: function() {},
-                show_version: function(text) { self.ciaoAdapter && (self.ciaoAdapter.versionText = text || ""); },
-                upload_code_to_worker: function() {},
-                mark_errs: function() {},
-                set_auto_action: function() {},
-                mark_srcdbg_info: function() {}
-              }
-            };
-          },
-          ciaoRpcPreamble: function() {
-            return [
-              ":- module(_, [rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3, term_to_text/2, text_to_term/2], [foreign_js, hiord]).",
-              ":- use_module(library(lists)).",
-              ":- use_module(library(aggregates), [findall/3]).",
-              ":- use_module(library(read), [read_term/3]).",
-              ":- use_module(library(stream_utils), [file_to_string/2, string_to_file/2]).",
-              ":- use_module(library(streams)).",
-              ":- use_module(library(terms_vars), [varset/2]).",
-              ":- use_module(library(write), [writeq/2]).",
-              "",
-              "js_def(ciao_rpc_call(\"Base\", \"GoalA\", \"TplA\", \"Off\", \"Lim\", \"LT\", \"Resp\"), [ret, async], \"",
-              "  try {",
-              "    const u = new URL(Base + '/call');",
-              "    u.searchParams.set('goal', '(' + GoalA + ')');",
-              "    u.searchParams.set('template', TplA);",
-              "    u.searchParams.set('format', 'prolog');",
-              "    u.searchParams.set('offset', String(Off));",
-              "    u.searchParams.set('limit', String(Lim));",
-              "    if (LT) u.searchParams.set('load_text', LT);",
-              "    const r = await fetch(u.toString());",
-              "    if (!r.ok) return null;",
-              "    return await r.text();",
-              "  } catch(e) { return null; }",
-              "\").",
-              "",
-              "js_def(ciao_rpc_start(\"Base\", \"GoalA\", \"TplA\", \"Off\", \"Lim\", \"LT\", \"Ref\"), [ret, async], \"",
-              "  globalThis._ciaoPromiseStore = globalThis._ciaoPromiseStore || { items: {}, next: 1 };",
-              "  const u = new URL(Base + '/call');",
-              "  u.searchParams.set('goal', '(' + GoalA + ')');",
-              "  u.searchParams.set('template', TplA);",
-              "  u.searchParams.set('format', 'prolog');",
-              "  u.searchParams.set('offset', String(Off));",
-              "  u.searchParams.set('limit', String(Lim));",
-              "  if (LT) u.searchParams.set('load_text', LT);",
-              "  const ref = globalThis._ciaoPromiseStore.next++;",
-              "  const entry = { status: 'pending', text: null };",
-              "  globalThis._ciaoPromiseStore.items[ref] = entry;",
-              "  entry.promise = fetch(u.toString())",
-              "    .then(r => r.text())",
-              "    .then(t => { entry.status = 'done'; entry.text = t; })",
-              "    .catch(_ => { entry.status = 'done'; entry.text = 'error(rpc_error(fetch_failed)).'; });",
-              "  return ref;",
-              "\").",
-              "",
-              "js_def(ciao_promise_wait(\"Ref\", \"Timeout\", \"Resp\"), [ret, async], \"",
-              "  const store = globalThis._ciaoPromiseStore;",
-              "  const entry = store && store.items[Ref];",
-              "  if (!entry) return null;",
-              "  await new Promise((resolve) => {",
-              "    if (entry.status === 'done') return resolve();",
-              "    let t = null;",
-              "    if (Timeout >= 0) t = setTimeout(resolve, Math.round(Timeout * 1000));",
-              "    entry.promise.then(() => { if (t !== null) clearTimeout(t); resolve(); });",
-              "  });",
-              "  if (entry.status !== 'done') return null;",
-              "  delete store.items[Ref];",
-              "  return entry.text;",
-              "\").",
-              "",
-              "% --- term <-> code list via temp files in the in-memory FS ---",
-              "",
-              "term_to_text(Term, Codes) :-",
-              "    open('/.ciao_rpc_w', write, Out),",
-              "    writeq(Out, Term),",
-              "    close(Out),",
-              "    file_to_string('/.ciao_rpc_w', Codes).",
-              "",
-              "text_to_term(Input, Term) :-",
-              "    input_codes(Input, Codes),",
-              "    string_to_file(Codes, '/.ciao_rpc_r'),",
-              "    open('/.ciao_rpc_r', read, In),",
-              "    read_term(In, Term, []),",
-              "    close(In).",
-              "",
-              "input_codes(string(Cs), Cs) :- !.",
-              "input_codes(Atom, Codes) :- atom(Atom), !, atom_codes(Atom, Codes).",
-              "input_codes(Codes, Codes).",
-              "",
-              "to_codes(string(Cs), Cs) :- !.",
-              "to_codes(A, Codes) :- atom(A), !, atom_codes(A, Codes).",
-              "to_codes(Codes, Codes).",
-              "",
-              "codes_join([], _, []).",
-              "codes_join([C], _, C).",
-              "codes_join([C,D|T], Sep, R) :-",
-              "    codes_join([D|T], Sep, R1),",
-              "    append(C, Sep, C1),",
-              "    append(C1, R1, R).",
-              "",
-              "load_part(Opts, Codes) :-",
-              "    member(load_text(T0), Opts),",
-              "    to_codes(T0, Codes).",
-              "load_part(Opts, Codes) :-",
-              "    member(load_list(Terms), Opts),",
-              "    findall(C, (member(Tm, Terms), term_to_text(Tm, C0), append(C0, \".\", C)), Cs),",
-              "    codes_join(Cs, \"\\n\", Codes).",
-              "load_part(Opts, Codes) :-",
-              "    % load_predicates/1: send the whole current editor source.",
-              "    % Ciao's static-procedure semantics make selective clause/2 enumeration",
-              "    % impractical, so we ship /user_main.pl in full.",
-              "    member(load_predicates(_), Opts),",
-              "    catch(file_to_string('/user_main.pl', Codes), _, Codes = []).",
-              "",
-              "collect_load_text(Opts, Codes) :-",
-              "    findall(P, load_part(Opts, P), Parts),",
-              "    codes_join(Parts, \"\\n\", Codes).",
-              "",
-              "% --- rpc ---",
-              "",
-              "rpc(URL, Goal) :- rpc(URL, Goal, []).",
-              "",
-              "rpc(URL, Goal, Opts) :-",
-              "    varset(Goal, Vars),",
-              "    Template =.. [v|Vars],",
-              "    ( member(limit(Lim), Opts) -> true ; Lim = 10000 ),",
-              "    ( member(offset(Off), Opts) -> true ; Off = 0 ),",
-              "    collect_load_text(Opts, LT),",
-              "    to_codes(URL, URLCs),",
-              "    rpc_page(URLCs, Goal, Template, Off, Lim, LT, Bound),",
-              "    Template = Bound.",
-              "",
-              "rpc_page(URLCs, Goal, Template, Off, Lim, LTCs, Bound) :-",
-              "    term_to_text(Goal, GoalCs),",
-              "    term_to_text(Template, TplCs),",
-              "    js_call(ciao_rpc_call(string(URLCs), string(GoalCs), string(TplCs), Off, Lim, string(LTCs), Resp)),",
-              "    ( Resp == null -> throw(rpc_error(fetch_failed)) ; true ),",
-              "    text_to_term(Resp, Response),",
-              "    rpc_handle(Response, URLCs, Goal, Template, Off, Lim, LTCs, Bound).",
-              "",
-              "rpc_handle(success(Slice, true), URLCs, Goal, Template, Off, Lim, LTCs, Bound) :-",
-              "    ( member(Bound, Slice)",
-              "    ; NextOff is Off + Lim,",
-              "      rpc_page(URLCs, Goal, Template, NextOff, Lim, LTCs, Bound)",
-              "    ).",
-              "rpc_handle(success(Slice, false), _, _, _, _, _, _, Bound) :-",
-              "    member(Bound, Slice).",
-              "rpc_handle(failure, _, _, _, _, _, _, _) :- !, fail.",
-              "rpc_handle(error(E), _, _, _, _, _, _, _) :- throw(rpc_error(E)).",
-              "",
-              "% --- promise / yield ---",
-              "",
-              "promise(URL, Goal, Ref) :- promise(URL, Goal, Ref, []).",
-              "",
-              "promise(URL, Goal, Ref, Opts) :-",
-              "    ( member(template(Tpl), Opts) -> true ; Tpl = Goal ),",
-              "    ( member(offset(Off), Opts) -> true ; Off = 0 ),",
-              "    ( member(limit(Lim), Opts) -> true ; Lim = 10000000 ),",
-              "    collect_load_text(Opts, LTCs),",
-              "    to_codes(URL, URLCs),",
-              "    term_to_text(Goal, GoalCs),",
-              "    term_to_text(Tpl, TplCs),",
-              "    js_call(ciao_rpc_start(string(URLCs), string(GoalCs), string(TplCs), Off, Lim, string(LTCs), Ref)).",
-              "",
-              "yield(Ref, Msg) :- yield(Ref, Msg, []).",
-              "",
-              "yield(Ref, Msg, Opts) :-",
-              "    ( member(timeout(T), Opts) -> true ; T = -1 ),",
-              "    js_call(ciao_promise_wait(Ref, T, Resp)),",
-              "    ( Resp == null ->",
-              "        ( member(on_timeout(OT), Opts) -> call(OT) ; fail )",
-              "    ;   text_to_term(Resp, Msg)",
-              "    )."
-            ].join("\n");
-          },
-          ciaoFlushAdapter: function() {
-            var a = this.ciaoAdapter;
-            if (!a) return { out: "", sol: "", status: null };
-            var snap = { out: a.outBuffer, sol: a.solBuffer, status: a.lastStatus };
-            a.outBuffer = "";
-            a.solBuffer = "";
-            a.lastStatus = null;
-            return snap;
-          },
-          ciaoEchoTrim: function(text) {
-            if (!text) return;
-            this.terminal.echo(String(text).replace(/\n$/, ""));
-          },
-          runCiaoWasmQuery: function(term) {
-            var self = this;
-            var tlp = this.ciaoToplevel;
-            if (!tlp || !this.ciaoAdapter) {
-              this.finishError(term, "Ciao Prolog WASM runtime not ready. Please wait a moment and try again.");
-              this.resumeTerm(term);
-              return;
-            }
-            if (this.ciaoBusy) {
-              this.finishError(term, "Ciao Prolog WASM runtime is busy.");
-              this.resumeTerm(term);
-              return;
-            }
-            var goal = this.activeGoal;
-            var editorText = this.currentLoadText();
-            this.pauseTerm(term);
-            this.ciaoBusy = true;
-            this.recordSessionEvent("session", "Query: " + this.clipText(goal, 140), "ciao-wasm", "ciao-wasm");
-            this.log("transport", "?- " + goal + ".", "ciao-wasm", "request");
-            var QS = this.ciaoQueryState;
-            var loadStep = Promise.resolve();
-            if (editorText && editorText !== this.ciaoLoadedCode) {
-              loadStep = tlp.w.writeFile("/user_main.pl", editorText).then(function() {
-                self.ciaoFlushAdapter();
-                return tlp.run_query(self.ciaoAdapter, "ensure_loaded('/user_main')", {});
-              }).then(function() {
-                var snap = self.ciaoFlushAdapter();
-                if (snap.out) self.ciaoEchoTrim(snap.out);
-                self.ciaoLoadedCode = editorText;
-                // If the consult left us in VALIDATING (shouldn't happen for ensure_loaded), end it.
-                if (tlp.state === QS.VALIDATING) {
-                  return tlp.send_line(self.ciaoAdapter, "");
-                }
-              });
-            } else if (!editorText) {
-              this.ciaoLoadedCode = null;
-            }
-            loadStep.then(function() {
-              self.ciaoFlushAdapter();
-              return tlp.run_query(self.ciaoAdapter, goal, {});
-            }).then(function() {
-              self.afterCiaoStep(term);
-            }).catch(function(err) {
-              self.ciaoBusy = false;
-              self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + String(err)));
-              self.resumeTerm(term);
-            });
-          },
-          nextCiaoWasmSolution: function(term) {
-            var self = this;
-            var tlp = this.ciaoToplevel;
-            if (!tlp || !this.ciaoAdapter) return;
-            this.ciaoBusy = true;
-            this.ciaoFlushAdapter();
-            tlp.send_line(this.ciaoAdapter, ";").then(function() {
-              self.afterCiaoStep(term);
-            }).catch(function(err) {
-              self.ciaoBusy = false;
-              self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + String(err)));
-              self.resumeTerm(term);
-            });
-          },
-          stopCiaoWasmQuery: function(term) {
-            var tlp = this.ciaoToplevel;
-            if (!tlp || !this.ciaoAdapter) return;
-            var QS = this.ciaoQueryState;
-            if (tlp.state === QS.VALIDATING) {
-              tlp.send_line(this.ciaoAdapter, "").catch(function() {});
-            }
-            this.ciaoBusy = false;
-            this.ciaoFlushAdapter();
-          },
-          afterCiaoStep: function(term) {
-            var tlp = this.ciaoToplevel;
-            var QS = this.ciaoQueryState;
-            var snap = this.ciaoFlushAdapter();
-            if (snap.out) this.ciaoEchoTrim(snap.out);
-            this.ciaoBusy = false;
-            if (tlp.state === QS.VALIDATING) {
-              // Ciao convention: display "X = a ?" and await `;` (more) or `.` (accept).
-              var sol = snap.sol || "true";
-              this.log("transport", sol + " ?", "ciao-wasm", "response");
-              this.recordSessionEvent("success", sol, "ciao-wasm", "ciao-wasm");
-              this.queryState = "more";
-              term.set_prompt(sol + " ? ");
-              this.resumeTerm(term);
-              return;
-            }
-            // READY: solution complete
-            var status = snap.status;
-            if (status === "no") {
-              // Ciao convention: print "no" rather than SWI's "false."
-              this.log("transport", "no", "ciao-wasm", "response");
-              this.terminal.echo("no");
-              this.resetQueryState(term);
-              this.appendQueryCompletionSpacing(term);
-              this.resumeTerm(term);
-              return;
-            }
-            if (status === "aborted") {
-              this.finishError(term, snap.out || "aborted");
-              this.resumeTerm(term);
-              return;
-            }
-            // "yes" — deterministic success.
-            var answer = snap.sol || "true";
-            this.log("transport", answer + ".", "ciao-wasm", "response");
-            this.recordSessionEvent("success", answer + ".", "ciao-wasm", "ciao-wasm");
-            this.terminal.echo(answer + ".");
-            this.resetQueryState(term);
-            this.appendQueryCompletionSpacing(term);
-            this.resumeTerm(term);
           },
           reconnectActiveTransport: function() {
             var self = this;
@@ -10415,7 +10626,7 @@
             this.refreshPanels();
           },
           handleWindowFocus: function() {
-            if (!this.isTauMode && !this.isSwiWasmMode) {
+            if (!this.isSwiWasmMode) {
               this.fetchExamplesIndex();
             }
           },
@@ -10534,7 +10745,7 @@
               self.handleTerminalCommand(command, term);
             }, {
               greetings: this.terminalGreetingText(),
-              prompt: (this.isTauMode || this.isSwiWasmMode) ? " " : this.basePrompt(),
+              prompt: this.isSwiWasmMode ? " " : this.basePrompt(),
               convertLinks: this.terminalConvertLinks,
               keypress: function(event) {
                 if (self.queryState === "more" && (event.which === 59 || event.which === 32)) {

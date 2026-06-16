@@ -221,7 +221,10 @@ HTTP endpoint layout:
 :- http_handler(root(tutorial), node_tutorial_page, []).
 :- http_handler(root(manual), node_manual_page, []).
 :- http_handler(root(editor_frame), node_editor_frame_page, []).
+:- http_handler(root('swi_wasm_actor_worker.js'), node_swi_wasm_actor_worker_page, []).
+:- http_handler(root('swipl-bundle.js'), node_swipl_bundle_page, []).
 :- http_handler(root(node_info), node_info_page, []).
+:- http_handler(root(version), node_version_page, []).
 :- http_handler(root(examples_index), node_examples_index_page, []).
 :- http_handler(root(interaction_log), node_interaction_log_page, []).
 :- http_handler(root(admin), node_admin_page, []).
@@ -230,13 +233,10 @@ HTTP endpoint layout:
 :- http_handler(root('admin/runtime'), node_admin_runtime_page, []).
 :- http_handler(root('admin/reclaim'), node_admin_reclaim_page, []).
 :- http_handler(root(img), node_image_page, [prefix]).
+:- http_handler(root(vendor), node_vendor_page, [prefix]).
 :- http_handler(root(examples), node_examples_page, [prefix]).
 :- http_handler(root(statecharts), node_statecharts_page, [prefix]).
-:- http_handler(root('tau-examples'), node_tau_examples_page, [prefix]).
-:- http_handler(root('swi-wasm-examples'), node_swi_wasm_examples_page, [prefix]).
-:- http_handler(root('ciao-wasm-examples'), node_ciao_wasm_examples_page, [prefix]).
-:- http_handler(root('Tau-Prolog'), node_tau_js_page, [prefix]).
-:- http_handler(root('wasm'), node_wasm_modules_page, [prefix]).
+:- http_handler(root(wasm), node_wasm_modules_page, [prefix]).
 
 %!  node_controller_root(+Request) is det.
 %
@@ -1171,11 +1171,28 @@ node_editor_frame_page(Request) :-
     node_editor_frame_file(File),
     reply_uncached_file(File, Request).
 
+%!  node_swi_wasm_actor_worker_page(+Request) is det.
+%
+%   Serve the experimental SWI-WASM worker actor runtime.
+node_swi_wasm_actor_worker_page(Request) :-
+    node_swi_wasm_actor_worker_file(File),
+    reply_uncached_file(File, [mime_type('text/javascript; charset=UTF-8')], Request).
+
+%!  node_swipl_bundle_page(+Request) is det.
+%
+%   Serve the vendored SWI-Prolog WASM bundle used by the browser runtime.
+node_swipl_bundle_page(Request) :-
+    node_swipl_bundle_file(File),
+    reply_uncached_file(File, [mime_type('text/javascript; charset=UTF-8')], Request).
+
 %!  reply_uncached_file(+File, +Request) is det.
 %
 %   Serve a static file with caching disabled. This keeps the browser-facing
 %   demonstrator HTML in sync with local edits during development.
 reply_uncached_file(File, Request) :-
+    reply_uncached_file(File, [], Request).
+
+reply_uncached_file(File, ExtraOptions, Request) :-
     http_reply_file(
         File,
         [ unsafe(true),
@@ -1185,7 +1202,7 @@ reply_uncached_file(File, Request) :-
               pragma('no-cache'),
               expires('0')
           ])
-        ],
+        | ExtraOptions ],
         Request
     ).
 
@@ -1229,6 +1246,12 @@ node_info_page_1(Request) :-
         principal_execution:PrincipalExecution
     }).
 
+%!  node_version_page(+Request) is det.
+%
+%   Return the demonstrator version label consumed by the browser splash.
+node_version_page(_Request) :-
+    reply_json(json{web_prolog:"0.2.0"}).
+
 %!  node_examples_index_page(+Request) is det.
 %
 %   Return the file names and URLs for the actor and statechart example sets.
@@ -1239,20 +1262,12 @@ node_examples_index_page(Request) :-
 node_examples_index_page_1 :-
     node_actor_examples_dir(ActorDir),
     node_statecharts_dir(StatechartDir),
-    node_tau_examples_dir(TauDir),
-    node_swi_wasm_examples_dir(SwiWasmDir),
-    node_ciao_wasm_examples_dir(CiaoWasmDir),
     example_directory_entries(ActorDir, '/examples/actors/', prolog, ActorEntries),
     example_directory_entries(StatechartDir, '/examples/statecharts/', statechart, StatechartEntries),
-    example_directory_entries(TauDir, '/tau-examples/', prolog, TauEntries),
-    example_directory_entries(SwiWasmDir, '/swi-wasm-examples/', prolog, SwiWasmEntries),
-    example_directory_entries(CiaoWasmDir, '/ciao-wasm-examples/', prolog, CiaoWasmEntries),
     reply_json(json{
         actors:ActorEntries,
         statecharts:StatechartEntries,
-        tau:TauEntries,
-        swi_wasm:SwiWasmEntries,
-        ciao_wasm:CiaoWasmEntries
+        swi_wasm:ActorEntries
     }).
 
 
@@ -1414,6 +1429,36 @@ node_image_page(Request) :-
     safe_image_file(Dir, RelPath, File),
     http_reply_file(File, [unsafe(true)], Request).
 
+%!  node_vendor_page(+Request) is det.
+%
+%   Serve vendored third-party browser assets from this node so the
+%   demonstrator works without CDN access.
+node_vendor_page(Request) :-
+    node_vendor_dir(Dir),
+    option(path_info(PathInfo), Request, ''),
+    asset_relative_path(PathInfo, RelPath),
+    safe_asset_file(Dir, RelPath, File),
+    vendor_asset_mime(RelPath, Mime),
+    http_reply_file(File, [unsafe(true), mime_type(Mime)], Request).
+
+node_vendor_dir(Dir) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, ModuleDir),
+    directory_file_path(ModuleDir, '../web/vendor', Dir).
+
+vendor_asset_mime(RelPath, Mime) :-
+    file_name_extension(_, Ext, RelPath),
+    (   vendor_ext_mime(Ext, Mime)
+    ->  true
+    ;   Mime = 'application/octet-stream'
+    ).
+
+vendor_ext_mime(js,    'text/javascript; charset=UTF-8').
+vendor_ext_mime(css,   'text/css; charset=UTF-8').
+vendor_ext_mime(woff2, 'font/woff2').
+vendor_ext_mime(woff,  'font/woff').
+vendor_ext_mime(map,   'application/json; charset=UTF-8').
+
 %!  node_examples_page(+Request) is det.
 %
 %   Serve example source files under examples/.
@@ -1434,36 +1479,6 @@ node_statecharts_page(Request) :-
     safe_asset_file(Dir, RelPath, File),
     http_reply_file(File, [unsafe(true), mime_type('text/xml; charset=UTF-8')], Request).
 
-
-%!  node_tau_examples_page(+Request) is det.
-%
-%   Serve Tau-Prolog example files from examples/tau-examples/.
-node_tau_examples_page(Request) :-
-    node_tau_examples_dir(Dir),
-    option(path_info(PathInfo), Request, ''),
-    asset_relative_path(PathInfo, RelPath),
-    safe_asset_file(Dir, RelPath, File),
-    http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
-
-%!  node_swi_wasm_examples_page(+Request) is det.
-%
-%   Serve SWI-WASM example files from examples/swi-wasm-examples/.
-node_swi_wasm_examples_page(Request) :-
-    node_swi_wasm_examples_dir(Dir),
-    option(path_info(PathInfo), Request, ''),
-    asset_relative_path(PathInfo, RelPath),
-    safe_asset_file(Dir, RelPath, File),
-    http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
-
-%!  node_ciao_wasm_examples_page(+Request) is det.
-%
-%   Serve CIAO-WASM example files from examples/ciao-wasm-examples/.
-node_ciao_wasm_examples_page(Request) :-
-    node_ciao_wasm_examples_dir(Dir),
-    option(path_info(PathInfo), Request, ''),
-    asset_relative_path(PathInfo, RelPath),
-    safe_asset_file(Dir, RelPath, File),
-    http_reply_file(File, [unsafe(true), mime_type('text/plain; charset=UTF-8')], Request).
 
 %!  node_wasm_modules_page(+Request) is det.
 %
@@ -1489,25 +1504,6 @@ wasm_module_file_name('statechart_wasm.pl').
 wasm_module_file_name('statechart_wasm_model.pl').
 wasm_module_file_name('statechart_wasm_exec.pl').
 wasm_module_file_name('statechart_wasm_runtime.pl').
-
-%!  node_tau_js_page(+Request) is det.
-%
-%   Serve bundled Tau-Prolog JS files from Tau-Prolog/.
-node_tau_js_page(Request) :-
-    node_tau_js_dir(Dir),
-    option(path_info(PathInfo), Request, ''),
-    asset_relative_path(PathInfo, RelPath),
-    safe_asset_file(Dir, RelPath, File),
-    http_reply_file(File, [unsafe(true)], Request).
-
-%!  node_tau_js_dir(-Dir) is det.
-%
-%   Resolve absolute path to the bundled Tau-Prolog JS directory.
-node_tau_js_dir(Dir) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, '../Tau-Prolog', Dir).
-
 
 %!  node_demonstrator_file(-File) is det.
 %
@@ -1549,6 +1545,22 @@ node_editor_frame_file(File) :-
     file_directory_name(ThisFile, Dir),
     directory_file_path(Dir, '../web/editor_frame.html', File).
 
+%!  node_swi_wasm_actor_worker_file(-File) is det.
+%
+%   Resolve absolute path to the SWI-WASM worker actor runtime.
+node_swi_wasm_actor_worker_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, '../web/swi_wasm_actor_worker.js', File).
+
+%!  node_swipl_bundle_file(-File) is det.
+%
+%   Resolve absolute path to the vendored SWI-Prolog WASM bundle.
+node_swipl_bundle_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, '../web/swipl-bundle.js', File).
+
 %!  node_image_dir(-Dir) is det.
 %
 %   Resolve absolute path to the `img` asset directory shipped with this module.
@@ -1578,21 +1590,6 @@ node_actor_examples_dir(Dir) :-
 node_statecharts_dir(Dir) :-
     node_examples_dir(ExamplesDir),
     directory_file_path(ExamplesDir, 'statecharts', Dir).
-
-%!  node_tau_examples_dir(-Dir) is det.
-node_tau_examples_dir(Dir) :-
-    node_examples_dir(ExamplesDir),
-    directory_file_path(ExamplesDir, 'tau-examples', Dir).
-
-%!  node_swi_wasm_examples_dir(-Dir) is det.
-node_swi_wasm_examples_dir(Dir) :-
-    node_examples_dir(ExamplesDir),
-    directory_file_path(ExamplesDir, 'swi-wasm-examples', Dir).
-
-%!  node_ciao_wasm_examples_dir(-Dir) is det.
-node_ciao_wasm_examples_dir(Dir) :-
-    node_examples_dir(ExamplesDir),
-    directory_file_path(ExamplesDir, 'ciao-wasm-examples', Dir).
 
 %!  node_wasm_modules_dir(-Dir) is det.
 %
