@@ -68,8 +68,281 @@ run_tier :-
                 t4_doctor,
                 t4_posture,
                 t4_ws_spawn_cleanup,
-                t4_deviations
+                t4_deviations,
+                t4_compute_answer,
+                t4_shared_db_io,
+                t4_remote_self
               ]).
+
+%  The node_engine answer-batching surface (compute_answer/5): the
+%  windowed slicing that ISOBASE /call and ISOTOPE sessions sit on.
+%  Ported from the demonstrator's actor_tests.pl `compute_answer` group
+%  (node:compute_answer/5 verbatim) so its offset/limit windowing, the
+%  final-slice `false` flag, failure, and error shapes stay pinned at
+%  the node tier — they had no coverage anywhere in T0–T5 before.
+:- begin_tests(t4_compute_answer).
+
+test(compute_answer_1a, Response == success([1,2,3,4,5],true)) :-
+    once(node:compute_answer(between(1, 12, N), N, 0, 5, Response)).
+
+test(compute_answer_1b, Response == success([6,7,8,9,10],true)) :-
+    once(node:compute_answer(between(1, 12, N), N, 5, 5, Response)).
+
+test(compute_answer_1c, Response == success([11,12],false)) :-
+    node:compute_answer(between(1, 12, N), N, 10, 5, Response).
+
+test(compute_answer_2, Response == failure) :-
+    node:compute_answer(between(1, 12, N), N, 15, 5, Response).
+
+test(compute_answer_3,
+        Response = error(error(existence_error(procedure, _:unknown/0),_))) :-
+    node:compute_answer(unknown, unknown, 0, 1, Response).
+
+:- end_tests(t4_compute_answer).
+
+%  The shared_db half of the demonstrator's I/O-target inheritance
+%  matrix: a child spawned against the node-wide shared database (rather
+%  than load_text) still inherits the parent's I/O target.  Ported
+%  verbatim from actor_tests.pl — they depend on node:shared_db/1 and
+%  node:set_node_shared_db/1, so they belong at the node tier (the
+%  spawned/load_text variants live in T1).
+:- begin_tests(t4_shared_db_io).
+
+test(shared_db_child_inherits_io_target_for_writeln, Data == 'Alarm ringing!') :-
+   node:shared_db(Prev),
+   setup_call_cleanup(
+       node:set_node_shared_db("
+alarm :-
+    receive({
+        ring ->
+            writeln('Alarm ringing!');
+        stop ->
+            true
+    }).
+"),
+       (
+           self(Self),
+           with_io_target(Self,
+               spawn(alarm, Pid, [
+                   monitor(true)
+               ])),
+           send(Pid, ring, [
+               delay(0.05)
+           ]),
+           receive({
+               terminal_output(Pid, Data) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ]),
+           receive({
+               down(_, Pid, true) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ])
+       ),
+       node:set_node_shared_db(Prev)
+   ).
+
+test(shared_db_child_inherits_io_target_for_format, Data == "Alarm ringing!") :-
+   node:shared_db(Prev),
+   setup_call_cleanup(
+       node:set_node_shared_db("
+alarm :-
+    receive({
+        ring ->
+            format('Alarm ~w!', [ringing]);
+        stop ->
+            true
+    }).
+"),
+       (
+           self(Self),
+           with_io_target(Self,
+               spawn(alarm, Pid, [
+                   monitor(true)
+               ])),
+           send(Pid, ring, [
+               delay(0.05)
+           ]),
+           receive({
+               terminal_output(Pid, Data) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ]),
+           receive({
+               down(_, Pid, true) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ])
+       ),
+       node:set_node_shared_db(Prev)
+   ).
+
+test(shared_db_child_inherits_io_target_for_write_term, Data == "'Alarm ringing!'") :-
+   node:shared_db(Prev),
+   setup_call_cleanup(
+       node:set_node_shared_db("
+alarm :-
+    receive({
+        ring ->
+            write_term('Alarm ringing!', [quoted(true)]);
+        stop ->
+            true
+    }).
+"),
+       (
+           self(Self),
+           with_io_target(Self,
+               spawn(alarm, Pid, [
+                   monitor(true)
+               ])),
+           send(Pid, ring, [
+               delay(0.05)
+           ]),
+           receive({
+               terminal_output(Pid, Data) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ]),
+           receive({
+               down(_, Pid, true) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ])
+       ),
+       node:set_node_shared_db(Prev)
+   ).
+
+test(shared_db_child_inherits_io_target_for_display, Data == "+(1,2)") :-
+   node:shared_db(Prev),
+   setup_call_cleanup(
+       node:set_node_shared_db("
+alarm :-
+    receive({
+        ring ->
+            display(1+2);
+        stop ->
+            true
+    }).
+"),
+       (
+           self(Self),
+           with_io_target(Self,
+               spawn(alarm, Pid, [
+                   monitor(true)
+               ])),
+           send(Pid, ring, [
+               delay(0.05)
+           ]),
+           receive({
+               terminal_output(Pid, Data) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ]),
+           receive({
+               down(_, Pid, true) -> true
+           }, [
+               timeout(1),
+               on_timeout(fail)
+           ])
+       ),
+       node:set_node_shared_db(Prev)
+   ).
+
+:- end_tests(t4_shared_db_io).
+
+%  The remote-self cases from the demonstrator's actor_tests.pl: an actor
+%  spawned on a (loopback) remote node can address the originating shell
+%  through global self, and the per-node WebSocket connection is shared
+%  across remote spawns rather than reopened.  Ported verbatim except the
+%  internal qualifier actor:ws_connection/4 -> distribution:ws_connection/4
+%  (the client-side connection pool moved from src/actor.pl into the
+%  distribution layer).  with_node_server/2 is the node tier's harness.
+:- begin_tests(t4_remote_self).
+
+test(spawn_remote_can_message_global_self, Msg == hello) :-
+   test_node:with_node_server(URI,
+      (
+         self(Self),
+         spawn(send(Self, hello), Pid, [
+             monitor(true),
+             node(URI)
+         ]),
+         receive({
+             hello -> true
+         }, [
+             timeout(2),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }, [
+             timeout(2),
+             on_timeout(fail)
+         ]),
+         Msg = hello
+      )).
+
+test(spawn_remote_can_message_global_self_with_bang, Msg == hello) :-
+   test_node:with_node_server(URI,
+      (
+         self(Self),
+         spawn(Self ! hello, Pid, [
+             monitor(true),
+             node(URI)
+         ]),
+         receive({
+             hello -> true
+         }, [
+             timeout(2),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }, [
+             timeout(2),
+             on_timeout(fail)
+         ]),
+         Msg = hello
+      )).
+
+test(remote_node_reuses_shared_ws_connection, Connections == 1) :-
+   test_node:with_node_server(URI,
+      (
+         toplevel_spawn(ToplevelPid, [
+             session(true),
+             monitor(true),
+             node(URI)
+         ]),
+         spawn(true, Pid, [
+             monitor(true),
+             node(URI)
+         ]),
+         findall(Conn, distribution:ws_connection(URI, Conn, _, _), Conns),
+         length(Conns, Connections),
+         exit(ToplevelPid, kill),
+         receive({
+             down(_, ToplevelPid, kill) -> true
+         }, [
+             timeout(2),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }, [
+             timeout(2),
+             on_timeout(fail)
+         ])
+      )).
+
+:- end_tests(t4_remote_self).
 
 %  Resource ceilings (Phase 8): a public node must survive a single
 %  client's runaway goal. Wall-clock timeouts don't stop a memory bomb

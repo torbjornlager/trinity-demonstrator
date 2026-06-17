@@ -22,7 +22,8 @@ run_tier :-
     run_tests([ t0_receive,
                 t0_actors,
                 t0_postmortem,
-                t0_hooks
+                t0_hooks,
+                t0_programs
               ]),
     ensure_mailbox_empty.
 
@@ -330,6 +331,27 @@ test(send_with_delay_delivers, Value == ok) :-
        on_timeout(Value = timeout)
    ]).
 
+%  cancel/1 cancels *every* pending delayed send sharing the id, not
+%  just the first (ported from actor_tests.pl; make_id/1 -> make_ref/1).
+test(cancel_all_delayed_sends_with_same_id, Result == timeout) :-
+   self(Self),
+   make_ref(ID),
+   send(Self, delayed(one, ID), [
+       delay(0.4),
+       id(ID)
+   ]),
+   send(Self, delayed(two, ID), [
+       delay(0.4),
+       id(ID)
+   ]),
+   cancel(ID),
+   receive({
+       delayed(_, ID) -> Result = delivered
+   }, [
+       timeout(0.6),
+       on_timeout(Result = timeout)
+   ]).
+
 test(demonitor_flush_discards_down, Result == clean) :-
    spawn(receive({}), Pid, []),
    monitor(Pid, Ref),
@@ -524,3 +546,253 @@ test(hook_thread_options_caps_actor_memory, [
    assertion(Reason = exception(error(resource_error(_), _))).
 
 :- end_tests(t0_hooks).
+
+
+                /*******************************
+                *           PROGRAMS           *
+                *******************************/
+
+%  The demonstrator's actor_tests.pl `programs` group: small end-to-end
+%  actor programs (echo/count servers, priority receive, a fridge, a
+%  generic server, a process ring, ping-pong) that exercise the actor
+%  core in combination.  Ported verbatim except for the make_id/1 ->
+%  make_ref/1 rename in rpc_synch/3 (the layer-0 monitor-reference
+%  primitive was renamed in prolog/web_prolog/actors.pl).  program8
+%  (myfindall) needs the toplevel layer and lives in T2.
+
+program_echo_server  :-
+   receive({
+      echo(Pid, Msg) ->
+         Pid ! Msg,
+         program_echo_server
+   }).
+
+program_count_server(Count0) :-
+   receive({
+      count(From) ->
+         Count is Count0 + 1,
+         From ! Count,
+         program_count_server(Count);
+      stop ->
+         true
+   }).
+
+important(Messages) :-
+   receive({
+      Priority-Message if Priority > 10 ->
+         Messages = [Message|MoreMessages],
+         important(MoreMessages)
+   },[ timeout(0),
+       on_timeout(normal(Messages))
+   ]).
+
+normal(Messages) :-
+   receive({
+      _-Message ->
+         Messages = [Message|MoreMessages],
+         normal(MoreMessages)
+   },[ timeout(0),
+       on_timeout(Messages=[])
+   ]).
+
+fridge(FoodList0) :-
+    receive({
+        store(From, Food) ->
+            self(Self),
+            From ! Self-ok,
+            fridge([Food|FoodList0]);
+        take(From, Food) ->
+            self(Self),
+            (   select(Food, FoodList0, FoodList)
+            ->  From ! Self-ok(Food),
+                fridge(FoodList)
+            ;   From ! Self-not_found,
+                fridge(FoodList0)
+            );
+        terminate ->
+            true
+    }).
+
+store(Pid, Food, Response) :-
+    self(Self),
+    Pid ! store(Self, Food),
+    receive({
+        Pid-Response -> true
+    }).
+
+take(Pid, Food, Response) :-
+    self(Self),
+    Pid ! take(Self, Food),
+    receive({
+        Pid-Response -> true
+    }).
+
+server(Pred, State0) :-
+    receive({
+        rpc(From, Ref, Request) ->
+            call(Pred, Request, State0, Response, State),
+            From ! Ref-Response,
+            server(Pred, State);
+        upgrade(Pred1) ->
+            server(Pred1, State0);
+        terminate ->
+            true
+    }).
+
+fridge(store(Food), FoodList, ok, [Food|FoodList]).
+fridge(take(Food), FoodList, ok(Food), FoodListRest) :-
+    select(Food, FoodList, FoodListRest), !.
+fridge(take(_Food), FoodList, not_found, FoodList).
+
+rpc_synch(To, Request, Response) :-
+    self(Self),
+    make_ref(Ref),
+    To ! rpc(Self, Ref, Request),
+    receive({
+        Ref-Response -> true
+    }).
+
+ring(NumberProcesses, Message) :-
+   spawn(create(NumberProcesses, Message)).
+
+create(NumberProcesses, Message) :-
+   self(Self),
+   create(NumberProcesses, Self, Message).
+
+create(1, NextProcess, Message) :- !,
+   self(Self),
+   format("Process ~p connected with ~p~n", [Self, NextProcess]),
+   format("Process ~p injects message ~p~n", [Self, Message]),
+   NextProcess ! Message.
+create(NumberProcesses, NextProcess, Message) :-
+   spawn(loop(NextProcess), Prev, [
+       link(true)
+   ]),
+   format("Process ~p created and connected with ~p~n", [Prev, NextProcess]),
+   NumberProcesses1 is NumberProcesses - 1,
+   create(NumberProcesses1, Prev, Message).
+
+loop(NextProcess) :-
+   receive({
+      Msg ->
+         format("Got message ~p, passing it to ~p~n", [Msg, NextProcess]),
+         NextProcess ! Msg
+    }).
+
+ping(0, Pong_Pid) :-
+    Pong_Pid ! finished,
+    format('Ping finished~n',[]).
+ping(N, Pong_Pid) :-
+    self(Self),
+    Pong_Pid ! ping(Self),
+    receive({
+        pong ->
+            format('Ping received pong~n',[])
+    }),
+    N1 is N - 1,
+    ping(N1, Pong_Pid).
+
+pong :-
+    receive({
+        finished ->
+            format('Pong finished~n',[]);
+        ping(Ping_Pid) ->
+            format('Pong received ping~n',[]),
+            Ping_Pid ! pong,
+            pong
+    }).
+
+ping_pong :-
+    spawn(pong, Pong_Pid, [
+        monitor(true)
+    ]),
+    spawn(ping(3, Pong_Pid), Ping_Pid, [
+        monitor(true)
+    ]),
+    receive({
+       down(_, Ping_Pid, true) ->
+          true
+    }),
+    receive({
+       down(_, Pong_Pid, true) ->
+          true
+    }).
+
+:- begin_tests(t0_programs, [
+   setup(flush_shell_mailbox),
+   cleanup(ensure_mailbox_empty)
+]).
+
+test(program1, Msg == hello) :-
+   spawn(program_echo_server, Pid, [
+      monitor(true)
+   ]),
+   self(Self),
+   Pid ! echo(Self, hello),
+   receive({Msg -> true}),
+   Pid ! echo(Self, hello),
+   receive({Msg -> true}),
+   exit(Pid, kill),
+   receive({
+       down(_, Pid, kill) -> true
+   }).
+
+test(program2, Count == 3) :-
+   spawn(program_count_server(0), Pid, [
+      monitor(true)
+   ]),
+   self(Self),
+   Pid ! count(Self),
+   receive({Count1 -> true}),
+   Pid ! count(Self),
+   receive({Count2 -> true}),
+   Count is Count1 + Count2,
+   Pid ! stop,
+   receive({
+       down(_, Pid, true) -> true
+   }).
+
+test(program3, Messages == [high,high,low,low]) :-
+    self(S),
+    S ! 15-high, S ! 7-low, S ! 1-low, S ! 17-high,
+    important(Messages),
+    S ! 15-high, S ! 7-low, S ! 1-low, S ! 17-high,
+    important(Messages).
+
+test(program4, Response == ok(cheese)) :-
+   spawn(fridge([]), Pid, [
+       monitor(true)
+   ]),
+   store(Pid, cheese, ok),
+   take(Pid, cheese, Response),
+   Pid ! terminate,
+   receive({
+       down(_, Pid, true) -> true
+   }).
+
+test(program5, Response == ok(meat)) :-
+   spawn(server(fridge, []), Pid, [
+       monitor(true)
+   ]),
+   rpc_synch(Pid, store(meat), ok),
+   rpc_synch(Pid, take(meat), Response),
+   Pid ! upgrade(fridge),
+   rpc_synch(Pid, store(meat), ok),
+   rpc_synch(Pid, take(meat), Response),
+   Pid ! terminate,
+   receive({
+       down(_, Pid, true) -> true
+   }).
+
+test(program6, Done == true) :-
+   ring(12, hello),
+   sleep(0.1),
+   Done = true.
+
+test(program7, Done == true) :-
+    ping_pong,
+    sleep(0.05),
+    flush_shell_mailbox,
+    Done = true.
+
+:- end_tests(t0_programs).

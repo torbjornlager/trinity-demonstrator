@@ -19,7 +19,9 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner) :-
 run_tier :-
     layer_honesty,
     run_tests([ t2_toplevels,
-                t2_hooks
+                t2_hooks,
+                t2_programs,
+                t2_shell_io
               ]),
     ensure_mailbox_empty.
 
@@ -610,3 +612,98 @@ test(toplevel_spawn_remote_without_distribution_raises,
    nonvar(Error).
 
 :- end_tests(t2_hooks).
+
+
+%  The toplevel half of the demonstrator's actor_tests.pl `programs`
+%  group: myfindall/3 collects a goal's solutions through a one-shot
+%  toplevel query actor (the success/failure/error reply protocol).
+%  Ported verbatim — it needs toplevel_spawn/2 + toplevel_call/3, so it
+%  belongs here rather than in T0 with program1..7.
+
+myfindall(Template, Goal, Solutions) :-
+    toplevel_spawn(Pid, [
+        session(false)
+    ]),
+    toplevel_call(Pid, Goal, [
+        template(Template)
+    ]),
+    receive({
+        success(Pid, Solutions, false) ->
+            true ;
+        failure(Pid) ->
+            Solutions = [] ;
+        error(Pid, Error) ->
+            throw(Error)
+    }).
+
+:- begin_tests(t2_programs, [
+   setup(flush_shell_mailbox),
+   cleanup(ensure_mailbox_empty)
+]).
+
+test(program8_myfindall_1, Results == [1,2,3]) :-
+    myfindall(N, between(1,3,N), Results).
+
+test(program8_myfindall_2, Results == []) :-
+    myfindall(_N, fail, Results).
+
+test(program8_myfindall_3, Error = error(_,_)) :-
+    catch(myfindall(N, N is 1/0, _Results), Error, true).
+
+:- end_tests(t2_programs).
+
+
+%  Two shell-side I/O cases from the demonstrator's actor_tests.pl that
+%  need the toplevel layer: an injected program that itself spawns a
+%  toplevel query actor, and the shell's flush/0 preserving both the
+%  output/1 and terminal_output wrappers in its printout.  Ported
+%  verbatim.
+
+wait_for_injected_toplevel_success_and_down(Pid) :-
+   wait_for_injected_toplevel_success_and_down(Pid, false, false).
+
+wait_for_injected_toplevel_success_and_down(_Pid, true, true) :-
+   !.
+wait_for_injected_toplevel_success_and_down(Pid, GotSuccess0, GotDown0) :-
+   receive({
+       success(_ToplevelPid, [true], false) ->
+           GotSuccess = true,
+           GotDown = GotDown0 ;
+       down(_, Pid, true) ->
+           GotSuccess = GotSuccess0,
+           GotDown = true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   wait_for_injected_toplevel_success_and_down(Pid, GotSuccess, GotDown).
+
+:- begin_tests(t2_shell_io, [
+   setup(flush_shell_mailbox),
+   cleanup(ensure_mailbox_empty)
+]).
+
+test(injected_program_calls_toplevel_spawn, Result == true) :-
+   self(Self),
+   spawn(run_toplevel(Self), Pid, [
+       monitor(true),
+       load_list([
+           (run_toplevel(Parent) :-
+               toplevel_spawn(ToplevelPid, [target(Parent), link(false)]),
+               toplevel_call(ToplevelPid, true, [template(true), limit(1)]))
+       ])
+   ]),
+   wait_for_injected_toplevel_success_and_down(Pid),
+   Result = true.
+
+test(flush_preserves_child_output_and_terminal_output_wrappers) :-
+   spawn((output(hi), writeln(line)), _Pid, [link(false)]),
+   sleep(0.1),
+   with_output_to(string(Output), flush),
+   sub_string(Output, _, _, _, "Shell got output("),
+   sub_string(Output, _, _, _, ",hi)"),
+   sub_string(Output, _, _, _, "Shell got terminal_output("),
+   sub_string(Output, _, _, _, ",line)"),
+   !.
+
+:- end_tests(t2_shell_io).

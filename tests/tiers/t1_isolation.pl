@@ -29,7 +29,9 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner) :-
 run_tier :-
     layer_honesty,
     run_tests([ t1_isolation,
-                t1_hooks
+                t1_hooks,
+                t1_io_inheritance,
+                t1_load_options
               ]),
     ensure_mailbox_empty.
 
@@ -275,3 +277,525 @@ test(hooks_inert_without_clauses, Msg == plain) :-
    ]).
 
 :- end_tests(t1_hooks).
+
+
+                /*******************************
+                *      I/O-TARGET MATRIX       *
+                *******************************/
+
+%  The demonstrator's actor_tests.pl per-builtin I/O-target inheritance
+%  cases: a child spawned under with_io_target/2 must route each output
+%  builtin through the inherited target as a terminal_output/2 message.
+%  Ported verbatim (load_text needs isolation, so they belong here, not
+%  in T0).  The shared_db/2 variants depend on node:set_node_shared_db/1
+%  and live in T4 with the rest of the node surface.
+
+:- begin_tests(t1_io_inheritance, [
+   setup(flush_shell_mailbox),
+   cleanup(ensure_mailbox_empty)
+]).
+
+test(spawned_child_inherits_io_target_for_writeln, Data == 'Alarm ringing!') :-
+   self(Self),
+   with_io_target(Self,
+       spawn(alarm, Pid, [
+           monitor(true),
+           load_text("
+alarm :-
+    receive({
+        ring ->
+            writeln('Alarm ringing!');
+        stop ->
+            true
+    }).
+")
+       ])),
+   send(Pid, ring, [
+       delay(0.05)
+   ]),
+   receive({
+       terminal_output(Pid, Data) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+test(spawned_child_inherits_io_target_for_format, Data == "Alarm ringing!") :-
+   self(Self),
+   with_io_target(Self,
+       spawn(alarm, Pid, [
+           monitor(true),
+           load_text("
+alarm :-
+    receive({
+        ring ->
+            format('Alarm ~w!', [ringing]);
+        stop ->
+            true
+    }).
+")
+       ])),
+   send(Pid, ring, [
+       delay(0.05)
+   ]),
+   receive({
+       terminal_output(Pid, Data) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+test(spawned_child_inherits_io_target_for_writeq, Data == "'Alarm ringing!'") :-
+   self(Self),
+   with_io_target(Self,
+       spawn(alarm, Pid, [
+           monitor(true),
+           load_text("
+alarm :-
+    receive({
+        ring ->
+            writeq('Alarm ringing!');
+        stop ->
+            true
+    }).
+")
+       ])),
+   send(Pid, ring, [
+       delay(0.05)
+   ]),
+   receive({
+       terminal_output(Pid, Data) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+test(spawned_child_inherits_io_target_for_nl, Data == "\n") :-
+   self(Self),
+   with_io_target(Self,
+       spawn(alarm, Pid, [
+           monitor(true),
+           load_text("
+alarm :-
+    receive({
+        ring ->
+            nl;
+        stop ->
+            true
+    }).
+")
+       ])),
+   send(Pid, ring, [
+       delay(0.05)
+   ]),
+   receive({
+       terminal_output(Pid, Data) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+test(spawned_child_inherits_io_target_for_print, Data == "1+2") :-
+   self(Self),
+   with_io_target(Self,
+       spawn(alarm, Pid, [
+           monitor(true),
+           load_text("
+alarm :-
+    receive({
+        ring ->
+            print(1+2);
+        stop ->
+            true
+    }).
+")
+       ])),
+   send(Pid, ring, [
+       delay(0.05)
+   ]),
+   receive({
+       terminal_output(Pid, Data) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+test(spawned_child_inherits_io_target_for_write_canonical, Data == "+(1,2)") :-
+   self(Self),
+   with_io_target(Self,
+       spawn(alarm, Pid, [
+           monitor(true),
+           load_text("
+alarm :-
+    receive({
+        ring ->
+            write_canonical(1+2);
+        stop ->
+            true
+    }).
+")
+       ])),
+   send(Pid, ring, [
+       delay(0.05)
+   ]),
+   receive({
+       terminal_output(Pid, Data) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+:- end_tests(t1_io_inheritance).
+
+
+                /*******************************
+                *      LOAD-OPTION SURFACE     *
+                *******************************/
+
+%  The remaining load_* / load_uri cases from the demonstrator's
+%  actor_tests.pl: option aliases, cross-actor private-db isolation,
+%  listing_private/1 targeting a selected actor, and the load_uri/1 URI
+%  parsing variants (path, file://, shorthand, relative, and the
+%  user-bang-operator independence of the loader).  Ported verbatim
+%  except: actor:listing_private/1 -> listing_private/1 (isolation
+%  reexports it) and the example-path resolver is anchored two levels
+%  deeper than the demonstrator's (this file lives in tests/tiers/).
+
+:- dynamic t1_tests_directory/1.
+:- prolog_load_context(directory, T1Dir),
+   retractall(t1_tests_directory(_)),
+   asserta(t1_tests_directory(T1Dir)).
+
+t1_actor_example_path(FileName, Path) :-
+   t1_tests_directory(TestDir),
+   atomic_list_concat(['../../examples/actors/', FileName], RelativePath),
+   absolute_file_name(RelativePath, Path, [
+       relative_to(TestDir),
+       access(read),
+       file_errors(fail)
+   ]).
+
+collect_from_messages(Count, Pairs) :-
+   collect_from_messages(Count, [], Pairs).
+
+collect_from_messages(0, Acc, Pairs) :-
+   !,
+   reverse(Acc, Pairs).
+collect_from_messages(Count, Acc, Pairs) :-
+   Count > 0,
+   receive({
+       from(Pid, Value) ->
+           true
+   }),
+   Next is Count - 1,
+   collect_from_messages(Next, [Pid-Value|Acc], Pairs).
+
+wait_for_downs([]) :- !.
+wait_for_downs(Pids) :-
+   receive({
+       down(_, Pid, true) ->
+           true
+   }),
+   remove_pid(Pid, Pids, Rest),
+   wait_for_downs(Rest).
+
+remove_pid(Pid, [Pid|Rest], Rest) :- !.
+remove_pid(Pid, [Other|Rest], [Other|Rest1]) :-
+   remove_pid(Pid, Rest, Rest1),
+   !.
+
+:- begin_tests(t1_load_options, [
+   setup(flush_shell_mailbox),
+   cleanup(ensure_mailbox_empty)
+]).
+
+test(load_list_alias, Result == true) :-
+   self(Self),
+   spawn(run(Self), Pid, [
+       monitor(true),
+       load_list([
+           run(Parent) :-
+               Parent ! ready
+       ])
+   ]),
+   receive({
+       ready -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }),
+   Result = true.
+
+test(load_text_alias, Result == true) :-
+   self(Self),
+   spawn(run(Self), Pid, [
+       monitor(true),
+       load_text("run(Parent) :- Parent ! ready.")
+   ]),
+   receive({
+       ready -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }),
+   Result = true.
+
+test(load_predicates_alias, Result == true) :-
+   self(Self),
+   spawn(user:run(Self), Pid, [
+       monitor(true),
+       load_predicates([actor_test_p/1]),
+       load_list([
+           (run(Parent) :-
+               actor_test_p(Value),
+               send(Parent, Value),
+               !)
+       ])
+   ]),
+   receive({
+       a -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   receive({
+       down(_, Pid, true) -> true
+   }),
+   Result = true.
+
+test(isolation_load_list, Sorted == [a,b]) :-
+   self(Self),
+   spawn(run(Self), PidA, [
+       monitor(true),
+       load_list([
+           (run(Parent) :-
+               self(Pid),
+               id(Value),
+               Parent ! from(Pid, Value)),
+           id(a)
+       ])
+   ]),
+   spawn(run(Self), PidB, [
+       monitor(true),
+       load_list([
+           (run(Parent) :-
+               self(Pid),
+               id(Value),
+               Parent ! from(Pid, Value)),
+           id(b)
+       ])
+   ]),
+   collect_from_messages(2, Pairs),
+   memberchk(PidA-a, Pairs),
+   memberchk(PidB-b, Pairs),
+   findall(Value, member(_-Value, Pairs), Values),
+   sort(Values, Sorted),
+   wait_for_downs([PidA, PidB]).
+
+test(listing_private_by_pid_targets_selected_actor_db) :-
+   setup_call_cleanup(
+       (
+           spawn(receive({stop -> true}), Pid1, [
+               monitor(true),
+               link(false),
+               load_text("hello(a).")
+           ]),
+           spawn(receive({stop -> true}), Pid2, [
+               monitor(true),
+               link(false),
+               load_text("goodbye(b).")
+           ])
+       ),
+       (
+           with_output_to(string(Output), listing_private(Pid2)),
+           sub_string(Output, _, _, _, "goodbye(b)."),
+           \+ sub_string(Output, _, _, _, "hello(a).")
+       ),
+       (
+           catch(send(Pid1, stop), _, true),
+           catch(send(Pid2, stop), _, true),
+           receive({down(_, Pid1, _) -> true}, [timeout(1), on_timeout(true)]),
+           receive({down(_, Pid2, _) -> true}, [timeout(1), on_timeout(true)])
+       )
+   ),
+   !.
+
+test(load_uri_path, Result == true) :-
+   self(Self),
+   setup_call_cleanup(
+       ( tmp_file_stream(text, File, Stream),
+         format(Stream, 'run(Parent) :- Parent ! ready.~n', []),
+         close(Stream)
+       ),
+       ( spawn(run(Self), Pid, [
+             monitor(true),
+             load_uri(File)
+         ]),
+         receive({
+             ready -> true
+         }, [
+             timeout(1),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }),
+         Result = true
+       ),
+       catch(delete_file(File), _, true)
+   ).
+
+test(load_uri_file_scheme_shorthand, Result == true) :-
+   self(Self),
+   setup_call_cleanup(
+       ( tmp_file_stream(text, File, Stream),
+         format(Stream, 'run(Parent) :- Parent ! ready.~n', []),
+         close(Stream),
+         sub_atom(File, 1, _, 0, TrimmedFile),
+         atomic_list_concat(['file://', TrimmedFile], ShortFileURI)
+       ),
+       ( spawn(run(Self), Pid, [
+             monitor(true),
+             load_uri(ShortFileURI)
+         ]),
+         receive({
+             ready -> true
+         }, [
+             timeout(1),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }),
+         Result = true
+       ),
+       catch(delete_file(File), _, true)
+   ).
+
+test(load_uri_file_scheme_relative, Result == true) :-
+   self(Self),
+   setup_call_cleanup(
+       ( tmp_file_stream(text, File, Stream),
+         format(Stream, 'run(Parent) :- Parent ! ready.~n', []),
+         close(Stream),
+         working_directory(Cwd, Cwd),
+         relative_file_name(File, Cwd, RelFile),
+         atomic_list_concat(['file://', RelFile], RelFileURI)
+       ),
+       ( spawn(run(Self), Pid, [
+             monitor(true),
+             load_uri(RelFileURI)
+         ]),
+         receive({
+             ready -> true
+         }, [
+             timeout(1),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }),
+         Result = true
+       ),
+       catch(delete_file(File), _, true)
+   ).
+
+test(load_uri_with_node_localhost, Result == true) :-
+   self(Self),
+   setup_call_cleanup(
+       ( tmp_file_stream(text, File, Stream),
+         format(Stream, 'run(Parent) :- Parent ! ready.~n', []),
+         close(Stream)
+       ),
+       ( spawn(run(Self), Pid, [
+             monitor(true),
+             node(localhost),
+             load_uri(File)
+         ]),
+         receive({
+             ready -> true
+         }, [
+             timeout(1),
+             on_timeout(fail)
+         ]),
+         receive({
+             down(_, Pid, true) -> true
+         }),
+         Result = true
+       ),
+       catch(delete_file(File), _, true)
+   ).
+
+test(load_uri_without_user_bang_operator, Result == true) :-
+   self(Self),
+   setup_call_cleanup(
+       ( current_op(Pri, Type, !),
+         t1_actor_example_path('04 count_server.pl', CountActorPath),
+         op(0, xfx, !)
+       ),
+       ( spawn(count_server(0), Pid, [
+             monitor(true),
+             load_uri(CountActorPath)
+         ]),
+         send(Pid, count(Self)),
+         receive({
+             count(1) -> true
+         }, [
+             timeout(1),
+             on_timeout(fail)
+         ]),
+         exit(Pid, kill),
+         receive({
+             down(_, Pid, kill) -> true
+         }, [
+             timeout(1),
+             on_timeout(fail)
+         ]),
+         Result = true
+       ),
+       op(Pri, Type, !)
+   ).
+
+:- end_tests(t1_load_options).
