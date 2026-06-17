@@ -228,19 +228,7 @@ ws_request_host_origin(Request, HostOrigin) :-
     (   host_string_has_scheme(HostString)
     ->  HostOrigin = HostString
     ;   ws_request_scheme(Request, Scheme),
-        %  SWI's HTTP layer splits "Host: example.com:3060" into
-        %  separate host(example.com) and port(3060) request fields,
-        %  so the port must be re-attached or a browser's
-        %  "http://example.com:3060" Origin can never compare equal —
-        %  which rejected same-origin browsers (the portal's ACTOR
-        %  mode) on any non-default port.  Unnoticed in deployment
-        %  because the reverse proxy serves on the default port.
-        (   sub_string(HostString, _, _, _, ":")
-        ->  format(string(HostOrigin), "~w://~w", [Scheme, HostString])
-        ;   memberchk(port(Port), Request)
-        ->  format(string(HostOrigin), "~w://~w:~w", [Scheme, HostString, Port])
-        ;   format(string(HostOrigin), "~w://~w", [Scheme, HostString])
-        )
+        format(string(HostOrigin), "~w://~w", [Scheme, HostString])
     ).
 
 %!  host_string_has_scheme(+HostString) is semidet.

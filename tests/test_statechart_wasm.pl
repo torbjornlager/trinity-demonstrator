@@ -1,6 +1,6 @@
 /*  Statechart WASM-port tests
 
-    Exercises the step-style statechart interpreter in src/wasm/.
+    Exercises the step-style statechart interpreter served to SWI-WASM.
     Loads existing XML examples that do not rely on <spawn> (which is
     deferred in the WASM port) and asserts configurations after event
     sequences.
@@ -11,7 +11,7 @@
           ]).
 
 :- use_module(library(plunit)).
-:- use_module('../src/wasm/statechart_wasm.pl').
+:- use_module('../prolog/web_prolog/wasm/statechart_wasm.pl').
 
 :- dynamic test_dir/1.
 :- prolog_load_context(directory, ThisDir),

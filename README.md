@@ -1,115 +1,106 @@
-# The Trinity demonstrator (SWI-Prolog)
+# web-prolog
 
+A Web Prolog implementation for SWI-Prolog: Erlang-style actors, toplevel
+query actors (pengines), actor behaviours, and distributed nodes — organized
+as independently loadable library layers, with a production node server on
+top.
 
-## What This Repository Contains
+**Status: pre-release.** The layered restructuring is complete through
+the node layer: the implementation lives under `prolog/web_prolog/` and
+loads as `library(web_prolog)`. The original demonstrator code is kept
+under `src/` purely as the frozen conformance reference for the LEGACY
+test tier. The migration plan — layer map, hook inventory, conformance
+strategy — is in
+[docs/LAYERED_REAL_NODE_PLAN.md](docs/LAYERED_REAL_NODE_PLAN.md).
 
-- Erlang-style actor runtime and actor-local code loading
-- Toplevel/session actors for shell-like workflows
-- Generic servers and Erlang-style supervisors
-- Statechart actors
-- Stateless HTTP, semi-stateful HTTP, and stateful WebSocket node APIs
-- Browser tooling: demonstrator, tutorial, logger, admin panel, editors
-- Docker deployment bundle for the public node setup
+## The layers (target state)
 
-## Quick Start
+| layer | library | gives you |
+|---|---|---|
+| 0 | `library(web_prolog/actors)` | spawn/send/receive, links, monitors, registration — a stand-alone actor library; full SWI-Prolog available |
+| 1 | `library(web_prolog/isolation)` | per-actor temporary modules, `load_text/1` & friends |
+| 2 | `library(web_prolog/toplevel_actors)` | query actors: `'$call'`/`'$next'`/`'$stop'` protocol |
+| 2b | server, supervisor, statechart, parallel | reusable actor behaviours |
+| 3 | `library(web_prolog/distribution)` + `rpc` | `Id@Node` pids, remote spawn/send/monitor/link, `rpc/2-3`, `promise/3-4`, `yield/2-3` |
+| 4 | the node server | ISOBASE `/call`, ISOTOPE sessions, ACTOR WebSocket; auth, profiles, sandbox, limits |
+| 5 | `library(web_prolog)` | everything, composed |
 
-Load the core modules:
+Lower layers never depend on higher ones; the connections run through
+multifile hooks, following the pattern of [swi-web-prolog]. Web Prolog
+syntax and semantics are frozen to the trinity-demonstrator's — see
+[DEVIATIONS.md](DEVIATIONS.md), which is expected to stay empty.
 
-From the repository root:
+## Running
+
+Requires SWI-Prolog ≥ 9.x with threads.
 
 ```bash
 swipl load.pl
 ```
 
-Start a local node:
+```prolog
+?- node(3060).
+```
+
+Or load layers selectively:
 
 ```prolog
-?- [load].
-?- node(3010).
-true.
+?- use_module(library(web_prolog/actors)).   % just actors, full SWI
+?- use_module(library(web_prolog/rpc)).      % rpc/promise/yield client
+?- use_module(library(web_prolog)).          % everything
 ```
 
-Then try the stateless API in a browser:
+Then try:
 
-- [http://localhost:3010/call?goal=member(X,[a,b])&format=prolog](http://localhost:3010/call?goal=member(X,[a,b])&format=prolog)
+- the shell at <http://localhost:3060/portal>
+- the stateless API:
+  `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 
-## Run Tests
+## Deploying as a production node
 
-Run the full suite:
-
-From the repository root:
+The node **executes untrusted code from clients** — that is the product —
+so it is **secure by default**: `auth=private`, and it *refuses to start
+world-open* (`auth=open`) unless you set `WP_ACK_PUBLIC=yes`. The
+[`Deployment/`](Deployment/) directory is a turn-key bundle with three
+paths; the fastest is Docker + Caddy with automatic Let's Encrypt TLS:
 
 ```bash
-swipl -q -s test.pl -g test -t halt
+cp Deployment/.env.example Deployment/.env
+$EDITOR Deployment/.env          # set SITE_ADDRESS, ACME_EMAIL, WP_AUTH, …
+docker compose -f Deployment/compose.yaml --env-file Deployment/.env up -d
+curl https://your-node.example.com/healthz      # {"status":"ok"}
 ```
 
-## Documentation Map
+The full guide — systemd and bare-`swipl` paths, the config-file vs.
+environment-variable surfaces (env > file > built-in), operational
+endpoints (`/healthz` `/readyz` `/version` `/metrics`, `/admin`), graceful
+drain, and the **secure-config checklist** — is in
+[Deployment/README.md](Deployment/README.md). SSO-gated deployments are
+covered in [Deployment/SSO.md](Deployment/SSO.md).
 
-### Start Here
+Validate a configuration without starting the server:
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-  High-level structure of the runtime, node layer, and request flows.
-- [CROSS_NODE_ARCHITECTURE.md](docs/CROSS_NODE_ARCHITECTURE.md)
-  Detailed specification of the cross-node actor layer: wire
-  protocol, controller tables, dispatch algorithm, lifecycle
-  invariants.  Written so a port to another Prolog system can be
-  checked against it line-by-line.
-- [WEB_PROLOG_BUILTINS.md](docs/WEB_PROLOG_BUILTINS.md)
-  Canonical built-ins catalog for the ACTOR profile surface.
-- [WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md](docs/WEB_PROLOG_BUILTINS_ACCEPTANCE_MATRIX.md)
-  Route-by-route verification of what client code is actually accepted.
-- [DEMONSTRATOR.md](docs/DEMONSTRATOR.md)
-  Current architecture and status of the browser demonstrator.
+```bash
+WP_CHECK=1 WP_PROFILE=actor WP_AUTH=private swipl Deployment/start_node.pl
+```
 
-### Editing, Deployment, and Operations
+## Tests
 
-- [EDITING_AND_DEPLOYING.md](docs/EDITING_AND_DEPLOYING.md)
-  Safe workflow for editing tutorial content and shared databases, then deploying.
-- [Deployment/README.md](Deployment/README.md)
-  Deployment bundle layout and Docker-oriented operational notes.
-- [ADMIN-DEPLOYMENT-MANUAL.public.md](docs/ADMIN-DEPLOYMENT-MANUAL.public.md)
-  Operator manual for a Docker-based deployment of the public Web Prolog nodes.
-- [ADMIN_TOOLS.md](docs/ADMIN_TOOLS.md)
-  User guide for the demonstrator admin panel and admin API surface.
+```bash
+./tools/test.sh          # all tiers, each in a fresh SWI-Prolog process
+```
 
-### Policy and Security
+The tier structure (see `tests/tiers/README.md`): the `LEGACY` tier runs the
+full demonstrator suite against `src/`; tiers `T0`–`T5` come online as the
+corresponding layers are extracted, and each asserts that the layers above
+it are *not* loaded.
 
-- [SECURITY_REPORT.md](docs/SECURITY_REPORT.md)
-  Consolidated description of the demonstrator's security posture:
-  threat model, defences, known limitations, and what would change
-  for a production deployment.
-- [AUTH_AND_PROFILE.md](docs/policy/AUTH_AND_PROFILE.md)
-  Canonical summary of authentication, authorization, profile enforcement, and ownership.
-- [PROFILE_MATRIX.md](docs/PROFILE_MATRIX.md)
-  Current profile contract matrix.
-- [SANDBOX_AND_HARDENING.md](docs/policy/SANDBOX_AND_HARDENING.md)
-  Canonical summary of sandboxing, security boundaries, and public-deployment hardening.
-- [BLACKLIST_SANDBOX_NOTES.md](docs/policy/BLACKLIST_SANDBOX_NOTES.md)
-  Detailed blacklist rationale and sandbox inventory notes.
+## Provenance
 
+- [trinity-demonstrator] — the semantic reference this fork preserves
+  (full git history included here).
+- [swi-web-prolog] — Torbjörn Lager & Jan Wielemaker's earlier
+  implementation, whose hook-based layering this project adopts.
 
-### Examples and Side Documents
-
-- [examples/services/README.md](examples/services/README.md)
-  Node-resident service publication and discovery example.
-
-
-### Historical Documents
-
-- [docs/archive/README.md](docs/archive/README.md)
-  Archived plans and superseded notes removed from the repository root.
-
-## Security Note
-
-Do not expose this node publicly without the deployment hardening described in
-[ADMIN-DEPLOYMENT-MANUAL.public.md](docs/ADMIN-DEPLOYMENT-MANUAL.public.md),
-[Deployment/README.md](Deployment/README.md), and
-[SANDBOX_AND_HARDENING.md](docs/policy/SANDBOX_AND_HARDENING.md).
-
-In particular, public deployment should rely on container isolation,
-reverse-proxy control, and resource limits rather than trusting Prolog-level
-sandboxing alone.
-
-## License
-
-MIT. See `LICENSE`.
+[trinity-demonstrator]: https://github.com/torbjornlager/trinity-demonstrator
+[swi-web-prolog]: https://github.com/Web-Prolog/swi-web-prolog

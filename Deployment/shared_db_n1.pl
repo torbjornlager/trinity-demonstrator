@@ -6,3 +6,6 @@ deployment_node(n1).
 
 human(plato).
 human(aristotle).
+
+% Owner-curated contract, surfaced via /node_info (harvested by a discovery hub).
+provides(human/1).

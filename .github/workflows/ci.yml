@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same ref supersedes in-flight runs, so they don't
+# pile up (and a hung run gets cancelled when the fix lands).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-add-repository -y ppa:swi-prolog/stable
+          sudo apt-get update
+          sudo apt-get install -y swi-prolog
+          swipl --version
+      - name: Run tiered test suite
+        run: |
+          set -u
+          # Run each tier separately with its own timeout so a deadlocked
+          # receive/await surfaces as a fast, attributable failure instead
+          # of hanging the whole job to the runner limit. Every tier runs
+          # even if an earlier one fails, so one CI run shows the full
+          # picture. (Each invocation is a fresh swipl, as the layer-honesty
+          # assertions require.)
+          status=0
+          for tier in LINT LEGACY T0 T1 T2 T3 T4 T5; do
+            echo "::group::Tier $tier"
+            if timeout 360 ./tools/test.sh "$tier"; then
+              echo "Tier $tier OK"
+            else
+              code=$?
+              if [ "$code" -eq 124 ]; then
+                echo "::error::Tier $tier TIMED OUT (likely a deadlocked receive/await)"
+              else
+                echo "::error::Tier $tier FAILED (exit $code)"
+              fi
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"

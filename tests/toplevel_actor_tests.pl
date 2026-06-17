@@ -22,10 +22,10 @@ test(simple, Results == [a,b,c]) :-
    receive({
        success(Pid, Results, false) ->
            true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(simple_load_list, Results == [1,2]) :-
    toplevel_spawn(Pid, [
@@ -39,10 +39,10 @@ test(simple_load_list, Results == [1,2]) :-
    receive({
        success(Pid, Results, false) ->
            true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(session_exposes_actor_primitives) :-
    toplevel_spawn(Pid, [
@@ -55,11 +55,11 @@ test(session_exposes_actor_primitives) :-
    receive({
        success(Pid, [Self0], false) ->
            assertion(nonvar(Self0))
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    catch(exit(Pid, kill), _, true),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(session_spawn_monitor_receive_down) :-
    toplevel_spawn(Pid, [
@@ -75,11 +75,42 @@ test(session_spawn_monitor_receive_down) :-
        success(Pid, [Child0-Reason0], false) ->
            assertion(nonvar(Child0)),
            assertion(Reason0 == true)
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    catch(exit(Pid, kill), _, true),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
+
+%  Flushing races the asynchronous `down` printout from a monitored
+%  child: a single flush can run before the shell has buffered it. Poll
+%  flush until the expected output appears (as ws_flush_until_output does
+%  in the node suite), so the test asserts the eventual state rather than
+%  one fixed interleaving.
+flush_until_down_output(Pid, Text) :-
+   flush_until_down_output(Pid, 50, Text).
+
+flush_until_down_output(_, 0, _) :-
+   !,
+   throw(flush_no_down_output).
+flush_until_down_output(Pid, Attempts, Text) :-
+   toplevel_call(Pid, flush, [template(true)]),
+   receive({
+       terminal_output(Pid, T) -> FlushOut = output(T) ;
+       success(Pid, [true], false) -> FlushOut = empty
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   (   FlushOut = output(_)
+   ->  receive({
+           success(Pid, [true], false) -> true
+       }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ])
+   ;   true
+   ),
+   (   FlushOut = output(Got),
+       sub_string(Got, _, _, _, "Shell got down(")
+   ->  Text = Got
+   ;   sleep(0.02),
+       Attempts1 is Attempts - 1,
+       flush_until_down_output(Pid, Attempts1, Text)
+   ).
 
 test(session_spawn_monitor_flush_output) :-
    toplevel_spawn(Pid, [
@@ -92,22 +123,14 @@ test(session_spawn_monitor_flush_output) :-
    receive({
        success(Pid, [Child0], false) ->
            assertion(nonvar(Child0))
-   }),
-   toplevel_call(Pid, flush, [
-       template(true)
-   ]),
-   receive({
-       terminal_output(Pid, Text) ->
-           assertion(sub_string(Text, _, _, _, "Shell got down(")),
-           assertion(sub_string(Text, _, _, _, "true"))
-   }),
-   receive({
-       success(Pid, [true], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   flush_until_down_output(Pid, Text),
+   assertion(sub_string(Text, _, _, _, "Shell got down(")),
+   assertion(sub_string(Text, _, _, _, "true")),
    catch(exit(Pid, kill), _, true),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(session_link_default_child_dies_with_parent) :-
    toplevel_spawn(Pid, [
@@ -132,14 +155,14 @@ test(session_link_default_child_dies_with_parent) :-
    receive({
        terminal_output(Pid, Text) ->
            assertion(sub_string(Text, _, _, _, "No pong arrived."))
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        success(Pid, [true], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    catch(exit(Pid, kill), _, true),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(session_link_false_child_survives_parent) :-
    toplevel_spawn(Pid, [
@@ -165,14 +188,14 @@ test(session_link_false_child_survives_parent) :-
    receive({
        terminal_output(Pid, Text) ->
            assertion(sub_string(Text, _, _, _, "Child survived the parent."))
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        success(Pid, [true], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    catch(exit(Pid, kill), _, true),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(session_spawn_load_text_priority_queue_persists_across_calls,
      Messages == [high,high,low,low]) :-
@@ -209,17 +232,17 @@ test(session_spawn_load_text_priority_queue_persists_across_calls,
                  [template(true)]),
    receive({
        success(Pid, [true], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_call(Pid, important(Messages), [
        template(Messages)
    ]),
    receive({
        success(Pid, [Messages], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    catch(exit(Pid, kill), _, true),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(name_option_registers_toplevel_pid) :-
    setup_call_cleanup(
@@ -250,15 +273,15 @@ test(simple_load_list_next, Results == [2]) :-
    receive({
        success(Pid, [1], true) ->
            true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_next(Pid),
    receive({
        success(Pid, Results, false) ->
            true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(load_predicates_from_caller_module,
      Results == [socrates-xantippa, aristotle-pythias]) :-
@@ -272,10 +295,10 @@ test(load_predicates_from_caller_module,
    ]),
    receive({
        success(Pid, Results, false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(next_1, Results == [11,12]) :-
    toplevel_spawn(Pid, [
@@ -287,15 +310,15 @@ test(next_1, Results == [11,12]) :-
    ]),
    receive({
        success(Pid, [1,2,3,4,5], true) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_next(Pid),
    receive({
        success(Pid, [6,7,8,9,10], true) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_next(Pid),
    receive({
        success(Pid, Results, false) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 
 test(next_2, Results == [11,12]) :-
@@ -309,17 +332,17 @@ test(next_2, Results == [11,12]) :-
    ]),
    receive({
        success(Pid, [3,4], true) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_next(Pid, [
        limit(6)
    ]),
    receive({
        success(Pid, [5,6,7,8,9,10], true) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_next(Pid),
    receive({
        success(Pid, Results, false) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(next_wrong_order, Result == true) :-
    toplevel_spawn(Pid, [
@@ -338,16 +361,16 @@ test(next_wrong_order, Result == true) :-
    ]),
    receive({
        success(Pid, [1,2], true) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        success(Pid, [3,4,5,6,7], true) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        success(Pid, [8,9,10,11,12], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, Result) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(once_true, Result == true) :-
    toplevel_spawn(Pid, [
@@ -361,7 +384,7 @@ test(once_true, Result == true) :-
    ]),
    receive({
        success(Pid, [1], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_next(Pid),
    receive({
        success(Pid, _, _) ->
@@ -373,7 +396,7 @@ test(once_true, Result == true) :-
    exit(Pid, kill),
    receive({
        down(_, Pid, kill) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(exit_false, Results == kill) :-
    toplevel_spawn(Pid, [
@@ -386,25 +409,25 @@ test(exit_false, Results == kill) :-
    ]),
    receive({
        success(Pid, [a,b], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_call(Pid, true, [
        template(.)
    ]),
    receive({
        success(Pid, [.], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_call(Pid, true),
    receive({
        success(Pid, [true], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    toplevel_call(Pid, fail),
    receive({
        failure(Pid) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    exit(Pid, kill),
    receive({
        down(_, Pid, Results) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(stop, Results = [a]) :-
    toplevel_spawn(Pid, [
@@ -417,7 +440,7 @@ test(stop, Results = [a]) :-
    toplevel_stop(Pid),
    receive({
        success(Pid, Results, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(halt_idle, true((Reply == true, Down == true))) :-
    toplevel_spawn(Pid, [
@@ -427,7 +450,7 @@ test(halt_idle, true((Reply == true, Down == true))) :-
    toplevel_halt(Pid, Reply),
    receive({
        down(_, Pid, Down) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(failure, Result = failure) :-
    toplevel_spawn(Pid, [
@@ -438,10 +461,10 @@ test(failure, Result = failure) :-
    receive({
        failure(Pid) ->
           Result = failure
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(exception, Error = error(existence_error(procedure, _:unknown/0),_)) :-
    toplevel_spawn(Pid, [
@@ -450,7 +473,7 @@ test(exception, Error = error(existence_error(procedure, _:unknown/0),_)) :-
    toplevel_call(Pid, unknown),
    receive({
        error(Pid, Error) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(output, Results = [.]) :-
    toplevel_spawn(Pid, [
@@ -462,16 +485,16 @@ test(output, Results = [.]) :-
    ]),
    receive({
        output(Pid, a) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        success(Pid, Results, false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        output(Pid, b) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, true) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(input, Results == true) :-
    toplevel_spawn(Pid, [
@@ -484,16 +507,16 @@ test(input, Results == true) :-
    receive({
        prompt(Pid, prompt) ->
            respond(Pid, hello)
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        output(Pid, hello) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        success(Pid, [.], false) -> true
-   }),
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
        down(_, Pid, Results) -> true
-   }).
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(toplevel_call_does_not_share_goal_variables_with_caller,
      [Result == ok]) :-

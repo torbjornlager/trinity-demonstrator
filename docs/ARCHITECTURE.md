@@ -1,22 +1,30 @@
 # High-Level Architecture
 
-This repository implements a small Web Prolog system in layers.
+This repository implements a production Web Prolog node for SWI-Prolog as a
+stack of **independently loadable layers connected by multifile hooks**. The
+syntax and semantics are frozen to the trinity-demonstrator; the layering is
+the engineering difference (see
+[`LAYERED_REAL_NODE_PLAN.md`](LAYERED_REAL_NODE_PLAN.md) for the full design
+and rationale).
 
-At the bottom is an actor runtime. On top of that sit a few reusable actor
-behaviours such as toplevel query actors, generic servers, supervisors, and a
-statechart interpreter. Above those behaviours sits the "node" layer, which
-exposes the system over HTTP and WebSocket so it can be used as a remote
-Prolog node.
+The runtime code lives under [`prolog/web_prolog/`](../prolog/web_prolog) and
+is loaded as `library(web_prolog)` — the umbrella module
+[`prolog/web_prolog.pl`](../prolog/web_prolog.pl) reexports the public layers.
+`?- [load].` then `?- node(3060).` starts a node.
 
-The design goal is clarity rather than production hardening: most features are
-implemented in direct, explicit code with minimal hidden machinery.
+> **Note on `src/`.** The repository also contains [`src/`](../src), the
+> original demonstrator code. It is **not** loaded by the node; it is kept
+> frozen as the *conformance reference* exercised by the LEGACY test tier, so
+> the layered node can be checked for behavioural parity against it. When
+> reading the architecture, ignore `src/` — the important code is under
+> `prolog/web_prolog/`.
 
 ## The Main Idea
 
 The central abstraction is an actor:
 
 - one actor is one SWI-Prolog thread
-- each actor has a stable logical pid
+- each actor has a stable, **opaque** pid
 - actors communicate by mailbox messages
 - actors can be linked and monitored
 - each actor runs in its own temporary Prolog module
@@ -27,240 +35,206 @@ it also gets a private module where `load_text/1`, `load_list/1`,
 code environments while still allowing a node-wide shared database to be
 imported.
 
+## How the layers compose
+
+The decisive pattern is that **a lower layer never imports a higher one**. The
+actor core does not know about isolation, distribution, or the node; each upper
+layer attaches itself by providing clauses for `multifile` hook predicates that
+the lower layer calls. A LINT test tier enforces that imports only point
+downward.
+
+- [`actors.pl`](../prolog/web_prolog/actors.pl) declares hooks such as
+  `hook_goal/3`, `hook_spawn/3`, `hook_send/2`, `hook_self/1`,
+  `hook_admit_spawn/2`, and `hook_spawn_commit/2` — each with a single call
+  site in the core.
+- A layer like [`distribution.pl`](../prolog/web_prolog/distribution.pl)
+  supplies `actors:hook_self/1`, `hook_spawn/3`, and `hook_send/2` to add
+  `Id@Node` pids without the core knowing anything about networking.
+- The actors↔isolation coupling lives **only** in the composition spine
+  [`composition.pl`](../prolog/web_prolog/composition.pl), which wires
+  isolation's `with_source/2` into every local spawn through `actors:hook_goal`.
+
+Because the wiring is external, each layer is also usable on its own:
+`library(web_prolog/actors)` is a stand-alone actor core with full SWI-Prolog
+available and no further dependencies; `library(web_prolog/isolation)`,
+`library(web_prolog/toplevel_actors)`, the behaviours,
+`library(web_prolog/distribution)`, and `library(web_prolog/rpc)` are each
+usable without the layers above them.
+
 ## Layered Structure
 
-### 1. Actor runtime
+### 1. Actor runtime (layer 0)
 
-[`actor.pl`](../src/actor.pl) is the foundation.
+[`actors.pl`](../prolog/web_prolog/actors.pl) is the foundation. It has **zero
+project imports** — only `library` dependencies and its own hooks.
 
 It provides:
 
-- spawning local actors and remote actors
-- pids, links, monitors, name registration, and delayed sends
+- spawning local actors
+- opaque pids, links, monitors, name registration, and delayed sends
 - selective receive
 - actor I/O via `output/1` and `input/2`
-- per-actor module preparation and source loading
-- global pid normalization via `Id@Node`
+- spawn-admission and spawn lifecycle hooks (so an upper layer can impose a
+  global actor ceiling, cap per-actor stack, or take over spawning)
 
-The local path is straightforward:
+The public façade is [`actor_api.pl`](../prolog/web_prolog/actor_api.pl).
 
-1. `spawn/3` allocates a fresh pid.
+The local spawn path is straightforward:
+
+1. `spawn/3` allocates a fresh opaque pid and reserves an admission slot.
 2. A new thread is created.
-3. The actor gets a private module.
+3. The actor gets a private module (via the isolation hook).
 4. Shared-db predicates are imported.
 5. Any user-supplied source is loaded.
 6. The start goal is executed in that module.
 
-Remote actors are routed through the node controller in
-[`node_controller.pl`](../src/node_controller.pl), which owns three small
-tables tracking, for each remote pid this node knows about, the
-local target, the cross-node monitors, and the cross-node links.
-A remote spawn request goes over a shared WebSocket connection per
-remote node; inbound JSON events are dispatched directly from the
-WS reader to the registered local target or watcher.  Ordinary
-`send/2`, `exit/2`, and monitor delivery for a remote pid all flow
-through the controller without a per-pid local actor in between.
-See [`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md) for
-the wire protocol and lifecycle invariants.
+### 2. Isolation
 
-### 2. Reusable actor behaviours
+[`isolation.pl`](../prolog/web_prolog/isolation.pl) is freestanding (it depends
+on module machinery, not on actors). It owns per-actor module preparation and
+source loading, exposing `with_source/2` plus its own hooks
+(`prepare_module`, `prepare_goal`, `approve_source`) that the node layer fills
+in with sandbox policy. The actor core invokes it only through
+[`composition.pl`](../prolog/web_prolog/composition.pl).
 
-These modules all build on `actor.pl`:
+### 3. Reusable actor behaviours
 
-- [`toplevel_actor.pl`](../src/toplevel_actor.pl)
-  implements a query engine actor. It accepts `'$call'`, `'$next'`, and
-  `'$stop'` messages and returns `success`, `failure`, or `error` terms. This
-  is the execution engine behind both `/call` continuations and ISOTOPE
-  sessions.
-- [`server.pl`](../src/server.pl)
-  provides a tiny `gen_server`-style request/reply loop with explicit state.
-- [`supervisor_actor.pl`](../src/supervisor_actor.pl)
-  implements supervisor strategies such as `one_for_one`, `one_for_all`, and
-  `rest_for_one`.
-- [`statechart_actor.pl`](../src/statechart_actor.pl)
-  interprets the Web Prolog statechart profile by storing the parsed model in
-  thread-local facts and driving execution through an actor event loop.
+These build on the actor core as ordinary libraries:
 
-Together, these modules show the intended programming model: the core actor
-runtime is small, and richer behaviours are ordinary libraries on top of it.
+- [`toplevel_actors.pl`](../prolog/web_prolog/toplevel_actors.pl) implements a
+  query-engine actor (the pengine protocol). It accepts `'$call'`, `'$next'`,
+  and `'$stop'` messages and returns `success`, `failure`, or `error`. This is
+  the execution engine behind both `/call` continuations and ISOTOPE sessions.
+  [`dollar_expansion.pl`](../prolog/web_prolog/dollar_expansion.pl) supports
+  `$Var` expansion across queries.
+- [`server_actor.pl`](../prolog/web_prolog/server_actor.pl) provides a tiny
+  `gen_server`-style request/reply loop with explicit state.
+- [`supervisor_actor.pl`](../prolog/web_prolog/supervisor_actor.pl) implements
+  supervisor strategies (`one_for_one`, `one_for_all`, `rest_for_one`).
+- [`statechart_actor.pl`](../prolog/web_prolog/statechart_actor.pl) interprets
+  the Web Prolog statechart profile.
+- [`parallel.pl`](../prolog/web_prolog/parallel.pl) implements `parallel/1`.
 
-### 3. Node layer
+### 4. Distribution
 
-[`node.pl`](../src/node.pl) turns the
-runtime into a networked node.
+[`distribution.pl`](../prolog/web_prolog/distribution.pl) adds `Id@Node` pids
+and remote spawn/send/monitor/link by supplying actor hooks;
+[`remote_protocol.pl`](../prolog/web_prolog/remote_protocol.pl) is the wire
+protocol, and [`rpc.pl`](../prolog/web_prolog/rpc.pl) exposes the client
+helpers `rpc/2-3`, `promise/3-4`, and `yield/2-3`. The full protocol and
+lifecycle invariants are in
+[`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md).
 
-It exposes three interaction styles:
+### 5. Node layer
 
-- ISOBASE: stateless HTTP query execution through `/call`
-- ISOTOPE: semi-stateful shell/session endpoints built on toplevel actors
-- ACTOR: full actor access over WebSocket through `/ws`
+[`node.pl`](../prolog/web_prolog/node.pl) turns the runtime into a networked
+node. It exposes three interaction styles:
 
-It also exports client helpers like `rpc/2-3`, `promise/3-4`, and `yield/2-3`
-so one node can call another.
+- **ISOBASE**: stateless HTTP query execution through `/call`
+- **ISOTOPE**: semi-stateful shell/session endpoints built on toplevel actors
+- **ACTOR**: full actor access over WebSocket through `/ws`
+
+The node attaches all of its policy to the lower layers **through their hooks**,
+concentrated in [`node_glue.pl`](../prolog/web_prolog/node_glue.pl): the global
+`max_actors` ceiling via `hook_admit_spawn/2`, the per-actor stack cap via
+`hook_thread_options/1`, sandbox checks via the isolation hooks, the
+registry/visibility namespace, and the WS-owned-actor lifecycle. Profiles,
+auth, capabilities, rate/concurrency/input limits, IP policy, logging, metrics,
+and the admin surface are separate `node_*.pl` modules.
 
 ## Request Flows
 
 ### Stateless `/call`
 
-The stateless path is designed to look simple to clients while still avoiding
-recomputation across pagination.
+"Stateless at the HTTP boundary, stateful internally" — it avoids recomputation
+across pagination:
 
-The flow is:
-
-1. [`node_call_context.pl`](../src/node_call_context.pl)
-   parses query parameters and turns text into a `Goal` and `Template`.
-2. [`node_engine.pl`](../src/node_engine.pl)
-   either reuses a cached toplevel actor or spawns a new one.
+1. [`node_call_context.pl`](../prolog/web_prolog/node_call_context.pl) parses
+   query parameters into a `Goal` and `Template`.
+2. [`node_engine.pl`](../prolog/web_prolog/node_engine.pl) reuses a cached
+   toplevel actor or spawns a new one.
 3. The toplevel actor evaluates a slice of solutions.
-4. If more solutions remain, the toplevel pid is cached by goal hash and
-   offset.
-5. [`node_response.pl`](../src/node_response.pl)
-   serializes the answer as Prolog text or JSON.
-
-Conceptually, `/call` is "stateless at the HTTP boundary, stateful
-internally".
+4. If more remain, the toplevel pid is cached by goal hash and offset.
+5. [`node_response.pl`](../prolog/web_prolog/node_response.pl) serializes the
+   answer as Prolog text or JSON.
 
 ### ISOTOPE session endpoints
 
-ISOTOPE is the shell/session layer. A session is a long-lived toplevel actor
-plus a dedicated message queue.
-
-The flow is:
+A session is a long-lived toplevel actor plus a dedicated message queue:
 
 1. `/toplevel_spawn` creates a toplevel actor and registers a session queue.
 2. `/toplevel_call` optionally refreshes the session's private loaded code and
-   sends a query to the actor.
+   sends a query.
 3. Output, prompts, success, failure, and errors are collected from the queue.
 4. `/toplevel_next`, `/toplevel_poll`, `/toplevel_respond`, and
-   `/toplevel_abort` keep interacting with the same session actor.
+   `/toplevel_abort` keep interacting with the same session.
 
-[`node_session.pl`](../src/node_session.pl)
-holds most of the session-specific logic:
-
-- queue bookkeeping
-- session readiness handshake
-- load-text persistence across calls
-- rewriting `write/1`, `writeln/1`, and `read/1` into actor I/O
-
-[`node_isotope_controller.pl`](../src/node_isotope_controller.pl)
-is the thin controller layer that glues request parsing, session helpers, and
-toplevel actor commands together.
+[`node_session.pl`](../prolog/web_prolog/node_session.pl) holds the
+session-specific logic (queue bookkeeping, readiness handshake, load-text
+persistence across calls, and rewriting `write/1`, `writeln/1`, `read/1` into
+actor I/O). [`node_isotope_controller.pl`](../prolog/web_prolog/node_isotope_controller.pl)
+is the thin controller that glues request parsing, session helpers, and
+toplevel-actor commands together.
 
 ### ACTOR WebSocket mode
 
-[`node_ws.pl`](../src/node_ws.pl)
-implements the ACTOR profile.
-
-Each WebSocket connection gets:
-
-- a reader loop that receives JSON commands
-- a relay thread that sends JSON events back
-- a per-connection queue that actors target for output/events
-
-The browser can:
-
-- spawn toplevel actors
-- call/next/stop/abort/respond to them
-- spawn bare actors
-- send messages to actors
-- exit actors
-
-This is the most direct exposure of the actor runtime. The shell frontend in
-[`demonstrator.html`](../web/demonstrator.html)
-is the current demonstrator frontend and switches between stateless HTTP,
-ISOTOPE, and ACTOR modes.
+[`node_ws.pl`](../prolog/web_prolog/node_ws.pl) implements the ACTOR profile.
+Each WebSocket connection gets a reader loop (JSON commands in), a relay thread
+(JSON events out), and a per-connection queue that actors target for
+output/events. The browser can spawn toplevel actors, call/next/stop/abort/
+respond to them, spawn bare actors, send messages, and exit actors. This is the
+most direct exposure of the actor runtime; the demonstrator frontend is
+[`demonstrator.html`](../web/demonstrator.html), and the owner console is
+[`admin.html`](../web/admin.html).
 
 ## Shared Database and Actor Code
 
 Node startup options are parsed by
-[`node_startup_options.pl`](../src/node_startup_options.pl).
-They build one shared source text from:
-
-- `load_shared_db_text/1`
-- `load_shared_db_file/1`
-- `load_shared_db_uri/1`
-
-That shared database is:
-
-- served at the node root `/`
-- loaded once into a dedicated runtime module
-- imported by actors when their private modules are prepared
-
-This is an important design choice: shared-db clauses are not copied into each
-actor's private database. Actors keep private code isolation, but they all see
-the same shared predicates through module import.
-
-Separately, actor-specific source options are handled by `actor.pl` and
-[`source_utils.pl`](../src/source_utils.pl).
-Those options affect only the spawned actor or session being prepared.
+[`node_startup_options.pl`](../prolog/web_prolog/node_startup_options.pl). They
+build one shared source text (from `load_shared_db_text/1`,
+`load_shared_db_file/1`, `load_shared_db_uri/1`) that is served at the node root
+`/`, loaded once into a dedicated runtime module, and **imported** by actors
+when their private modules are prepared. Shared-db clauses are not copied into
+each actor; actors keep private code isolation but all see the same shared
+predicates through module import. Actor-specific source options are handled by
+the isolation layer.
 
 ## Pids and Distribution
 
-The code now uses a global pid model:
-
-- local actors can be represented as `Id@Node`
-- remote actors are represented as `Id@RemoteNode`
-- helper predicates normalize between integer, atom/string, and compound forms
-
-The purpose is to make distribution explicit and uniform. Local-only code can
-still often work with plain integers, but the runtime has enough information to
-route messages, exits, and session lookups correctly across node boundaries.
-
-Cross-node messaging is mediated by the node controller in
-[`node_controller.pl`](../src/node_controller.pl): one outbound WebSocket
-connection per remote URL, three dynamic tables on the local node
-(`remote_target_/2`, `remote_monitor_/3`, `remote_link_/2`), and a
-single dispatch loop in `actor.pl`'s `remote_ws_dispatch/3`.
-Higher-level code can treat remote actors much like local ones;
-the controller handles delivery, monitor firing, and link
-propagation transparently.  The full protocol and the lifecycle
-invariants are documented in
+The core uses **opaque pids**: a pid is an abstract token, not a structured
+`Id@Node` term baked into the runtime. Distribution is layered on top — when
+[`distribution.pl`](../prolog/web_prolog/distribution.pl) is loaded, it
+globalizes self and routes sends through `Id@Node` via the actor hooks, so
+local-only code is unaffected and cross-node code gets uniform routing. Cross
+-node messaging, monitor firing, and link propagation are documented in
 [`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md).
-
-## Response and Text Normalization
-
-Several smaller modules keep the edge handling out of the main control code:
-
-- [`node_response.pl`](../src/node_response.pl)
-  converts internal answer terms into JSON or Prolog output and simplifies
-  common error messages.
-- [`node_client.pl`](../src/node_client.pl)
-  implements the client side of the HTTP API and shared timeout/load-text
-  normalization.
-- [`node_isotope_options.pl`](../src/node_isotope_options.pl)
-  parses spawn options for ISOTOPE endpoints and injects the shell prelude.
-- [`dollar_expansion.pl`](../src/dollar_expansion.pl)
-  stores recent variable bindings so the shell can support `$Var` expansion
-  across queries.
-
-These modules do not define new execution models. They keep the data plumbing
-readable.
 
 ## How to Read the Code
 
-A useful reading order is:
+A useful reading order moves from the core outward:
 
-1. [`actor.pl`](../src/actor.pl)
-2. [`node_controller.pl`](../src/node_controller.pl) — small companion to
-   `actor.pl`; the three tables that drive cross-node routing
-3. [`toplevel_actor.pl`](../src/toplevel_actor.pl)
-4. [`node.pl`](../src/node.pl)
-5. [`node_engine.pl`](../src/node_engine.pl)
-6. [`node_session.pl`](../src/node_session.pl)
-7. [`node_ws.pl`](../src/node_ws.pl)
-8. Then the higher-level behaviours:
-   [`server.pl`](../src/server.pl),
-   [`supervisor_actor.pl`](../src/supervisor_actor.pl),
-   and
-   [`statechart_actor.pl`](../src/statechart_actor.pl)
-
-That order moves from the core runtime outward to the protocols built on top of
-it.  For a focused deep dive on the cross-node layer specifically, read
-[`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md) alongside
-the source files above.
+1. [`actors.pl`](../prolog/web_prolog/actors.pl) — the layer-0 core and its hooks
+2. [`isolation.pl`](../prolog/web_prolog/isolation.pl) and
+   [`composition.pl`](../prolog/web_prolog/composition.pl) — module isolation
+   and the spine that wires it into spawning
+3. [`toplevel_actors.pl`](../prolog/web_prolog/toplevel_actors.pl)
+4. [`distribution.pl`](../prolog/web_prolog/distribution.pl) +
+   [`rpc.pl`](../prolog/web_prolog/rpc.pl) (with
+   [`CROSS_NODE_ARCHITECTURE.md`](CROSS_NODE_ARCHITECTURE.md))
+5. [`node.pl`](../prolog/web_prolog/node.pl) and
+   [`node_glue.pl`](../prolog/web_prolog/node_glue.pl) — the node and how its
+   policy attaches through hooks
+6. [`node_engine.pl`](../prolog/web_prolog/node_engine.pl),
+   [`node_session.pl`](../prolog/web_prolog/node_session.pl),
+   [`node_ws.pl`](../prolog/web_prolog/node_ws.pl)
+7. The behaviours:
+   [`server_actor.pl`](../prolog/web_prolog/server_actor.pl),
+   [`supervisor_actor.pl`](../prolog/web_prolog/supervisor_actor.pl),
+   [`statechart_actor.pl`](../prolog/web_prolog/statechart_actor.pl)
 
 ## In One Sentence
 
-This codebase is a compact actor-oriented Prolog runtime with three network
-faces: stateless query calls, session-style shell calls, and full actor access
-over WebSocket.
+This codebase is a compact, hook-layered actor-oriented Prolog runtime with
+three network faces — stateless query calls, session-style shell calls, and
+full actor access over WebSocket — frozen in semantics to the demonstrator kept
+under `src/`.

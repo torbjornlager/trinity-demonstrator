@@ -12,18 +12,6 @@
 <text text-anchor="middle" x="51.9062" y="-120" font-family="Helvetica,sans-Serif" font-size="20.00">Examples</text>
 <!-- n0 -->
 <g id="node1" class="node"><title>n0</title>
-<polyline fill="none" stroke="#666666" points="94,-36 64,-36 "/>
-<path fill="none" stroke="#666666" d="M64,-36C58,-36 52,-30 52,-24"/>
-<polyline fill="none" stroke="#666666" points="52,-24 52,-12 "/>
-<path fill="none" stroke="#666666" d="M52,-12C52,-6 58,-0 64,-0"/>
-<polyline fill="none" stroke="#666666" points="64,-0 94,-0 "/>
-<path fill="none" stroke="#666666" d="M94,-0C100,-0 106,-6 106,-12"/>
-<polyline fill="none" stroke="#666666" points="106,-12 106,-24 "/>
-<path fill="none" stroke="#666666" d="M106,-24C106,-30 100,-36 94,-36"/>
-<text text-anchor="middle" x="79" y="-13.6" font-family="Helvetica,sans-Serif" font-size="11.00">actor.pl</text>
-</g>
-<!-- n1 -->
-<g id="node2" class="node"><title>n1</title>
 <polyline fill="none" stroke="#666666" points="220.499,-112 11.5012,-112 "/>
 <path fill="none" stroke="#666666" d="M11.5012,-112C5.50121,-112 -0.498785,-106 -0.498785,-100"/>
 <polyline fill="none" stroke="#666666" points="-0.498785,-100 -0.498785,-88 "/>
@@ -34,27 +22,39 @@
 <path fill="none" stroke="#666666" d="M232.499,-100C232.499,-106 226.499,-112 220.499,-112"/>
 <text text-anchor="middle" x="116" y="-89.6" font-family="Helvetica,sans-Serif" font-size="11.00">examples/services/node_resident_services.pl</text>
 </g>
-<!-- n1&#45;&gt;n0 -->
-<g id="edge2" class="edge"><title>n1&#45;&gt;n0</title>
-<path fill="none" stroke="#555555" d="M107.418,-75.8369C102.468,-65.9368 96.1732,-53.3465 90.7666,-42.5332"/>
-<polygon fill="#555555" stroke="#555555" points="92.8569,-41.2353 87.535,-36.07 88.4742,-43.4267 92.8569,-41.2353"/>
+<!-- n1 -->
+<g id="node2" class="node"><title>n1</title>
+<polyline fill="none" stroke="#666666" points="94.3919,-36 53.6081,-36 "/>
+<path fill="none" stroke="#666666" d="M53.6081,-36C47.6081,-36 41.6081,-30 41.6081,-24"/>
+<polyline fill="none" stroke="#666666" points="41.6081,-24 41.6081,-12 "/>
+<path fill="none" stroke="#666666" d="M41.6081,-12C41.6081,-6 47.6081,-0 53.6081,-0"/>
+<polyline fill="none" stroke="#666666" points="53.6081,-0 94.3919,-0 "/>
+<path fill="none" stroke="#666666" d="M94.3919,-0C100.392,-0 106.392,-6 106.392,-12"/>
+<polyline fill="none" stroke="#666666" points="106.392,-12 106.392,-24 "/>
+<path fill="none" stroke="#666666" d="M106.392,-24C106.392,-30 100.392,-36 94.3919,-36"/>
+<text text-anchor="middle" x="74" y="-13.6" font-family="Helvetica,sans-Serif" font-size="11.00">src/actor.pl</text>
+</g>
+<!-- n0&#45;&gt;n1 -->
+<g id="edge2" class="edge"><title>n0&#45;&gt;n1</title>
+<path fill="none" stroke="#555555" d="M106.259,-75.8369C100.587,-65.8434 93.359,-53.1087 87.1833,-42.2277"/>
+<polygon fill="#555555" stroke="#555555" points="89.2744,-40.9485 83.6884,-36.07 85.0129,-43.3672 89.2744,-40.9485"/>
 </g>
 <!-- n2 -->
 <g id="node3" class="node"><title>n2</title>
-<polyline fill="none" stroke="#666666" points="168,-36 138,-36 "/>
-<path fill="none" stroke="#666666" d="M138,-36C132,-36 126,-30 126,-24"/>
-<polyline fill="none" stroke="#666666" points="126,-24 126,-12 "/>
-<path fill="none" stroke="#666666" d="M126,-12C126,-6 132,-0 138,-0"/>
-<polyline fill="none" stroke="#666666" points="138,-0 168,-0 "/>
-<path fill="none" stroke="#666666" d="M168,-0C174,-0 180,-6 180,-12"/>
-<polyline fill="none" stroke="#666666" points="180,-12 180,-24 "/>
-<path fill="none" stroke="#666666" d="M180,-24C180,-30 174,-36 168,-36"/>
-<text text-anchor="middle" x="153" y="-13.6" font-family="Helvetica,sans-Serif" font-size="11.00">node.pl</text>
+<polyline fill="none" stroke="#666666" points="179.357,-36 138.643,-36 "/>
+<path fill="none" stroke="#666666" d="M138.643,-36C132.643,-36 126.643,-30 126.643,-24"/>
+<polyline fill="none" stroke="#666666" points="126.643,-24 126.643,-12 "/>
+<path fill="none" stroke="#666666" d="M126.643,-12C126.643,-6 132.643,-0 138.643,-0"/>
+<polyline fill="none" stroke="#666666" points="138.643,-0 179.357,-0 "/>
+<path fill="none" stroke="#666666" d="M179.357,-0C185.357,-0 191.357,-6 191.357,-12"/>
+<polyline fill="none" stroke="#666666" points="191.357,-12 191.357,-24 "/>
+<path fill="none" stroke="#666666" d="M191.357,-24C191.357,-30 185.357,-36 179.357,-36"/>
+<text text-anchor="middle" x="159" y="-13.6" font-family="Helvetica,sans-Serif" font-size="11.00">src/node.pl</text>
 </g>
-<!-- n1&#45;&gt;n2 -->
-<g id="edge4" class="edge"><title>n1&#45;&gt;n2</title>
-<path fill="none" stroke="#555555" d="M124.582,-75.8369C129.532,-65.9368 135.827,-53.3465 141.233,-42.5332"/>
-<polygon fill="#555555" stroke="#555555" points="143.526,-43.4267 144.465,-36.07 139.143,-41.2353 143.526,-43.4267"/>
+<!-- n0&#45;&gt;n2 -->
+<g id="edge4" class="edge"><title>n0&#45;&gt;n2</title>
+<path fill="none" stroke="#555555" d="M125.973,-75.8369C131.78,-65.8434 139.18,-53.1087 145.503,-42.2277"/>
+<polygon fill="#555555" stroke="#555555" points="147.682,-43.3533 149.081,-36.07 143.446,-40.8915 147.682,-43.3533"/>
 </g>
 </g>
 </svg>

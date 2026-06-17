@@ -1,0 +1,18 @@
+# Build-context ignore.  Lives at the repo root because the node image is
+# built with the repo root as the context (`docker build -f Deployment/Dockerfile .`
+# / compose `context: ..`), and Docker only consults the .dockerignore at
+# the context root — a Deployment/.dockerignore is silently ignored.  The
+# image needs only the runtime tree (see the Dockerfile COPY lines);
+# everything else — tests, the frozen src/ reference, docs, CI, runtime
+# logs — is excluded to keep the context small and the attack surface minimal.
+.git
+.github
+src
+tests
+docs
+tools
+logs
+test.pl
+run.pl
+*.md
+**/*.plt

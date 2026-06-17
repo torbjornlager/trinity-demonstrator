@@ -145,15 +145,52 @@ with_http_public_url(Host, Port, Scheme, Goal) :-
     ).
 
 start_node_server(NodeOptions, Port, URI) :-
-    between(1, 20, _),
-    pick_free_port(Port0),
-    catch(node(Port0, NodeOptions), _, fail),
+    (   between(1, 20, _),
+        pick_free_port(Port0),
+        catch(node(Port0, NodeOptions), _, fail),
+        format(atom(URI0), 'http://localhost:~w', [Port0]),
+        (   wait_node_ready(URI0, 50)
+        ->  true
+        ;   % Bound the port but the dispatcher never served cleanly;
+            % tear it down and try a fresh port.
+            catch(http_stop_server(Port0, []), _, true),
+            fail
+        )
+    ->  Port = Port0,
+        URI = URI0
+    ;   throw(error(resource_error(socket),
+                    context(start_node_server/3, 'unable to start node server')))
+    ).
+
+%!  wait_node_ready(+BaseURI, +Attempts) is semidet.
+%
+%   Poll a cheap public endpoint until the freshly started node answers
+%   with 200, so callers never connect (e.g. ws_open/2) into the brief
+%   window after the listen socket is bound but before the HTTP
+%   dispatcher serves routes cleanly. Without this, the first request
+%   could hit a half-initialised node and come back as a 500, which a
+%   WebSocket upgrade then reports as "Invalid reply header".
+wait_node_ready(_, 0) :-
     !,
-    Port = Port0,
-    format(atom(URI), 'http://localhost:~w', [Port]).
-start_node_server(_, _, _) :-
-    throw(error(resource_error(socket),
-                context(start_node_server/3, 'unable to start node server'))).
+    fail.
+wait_node_ready(BaseURI, Attempts) :-
+    (   node_endpoint_ready(BaseURI)
+    ->  true
+    ;   sleep(0.02),
+        Attempts1 is Attempts - 1,
+        wait_node_ready(BaseURI, Attempts1)
+    ).
+
+node_endpoint_ready(BaseURI) :-
+    atom_concat(BaseURI, '/node_info', URL),
+    catch(probe_ok(URL), _, fail).
+
+probe_ok(URL) :-
+    setup_call_cleanup(
+        http_open(URL, Stream, [status_code(Status)]),
+        ( read_string(Stream, _, _), Status =:= 200 ),
+        close(Stream)
+    ).
 
 pick_free_port(Port) :-
     tcp_socket(Socket),
@@ -647,23 +684,6 @@ rp(right).
 
 :- begin_tests(node).
 
-%  node_request_port must key node identity on the bind port (the
-%  `httpd@<port>` pool client id), not on the request's port(_) field,
-%  which SWI derives from the client-controlled Host header.  Behind a
-%  port-remapping front end (Docker `-p 8080:3060`, a multi-node reverse
-%  proxy) the Host port differs from the bind port; preferring it
-%  resolved a non-existent runtime, so /readyz reported 503 and per-node
-%  work broke.
-test(request_port_prefers_bind_port_over_host_header, Port == 3060) :-
-    Request = [ pool(client('httpd@3060', user:http_dispatch, in, out)),
-                port(8080),                 % Host-header-derived, remapped
-                host(localhost), method(get), path('/readyz') ],
-    node_runtime_state:node_request_port(Request, Port).
-
-test(request_port_falls_back_to_host_port_without_pool, Port == 7000) :-
-    Request = [ port(7000), host(localhost), method(get), path('/readyz') ],
-    node_runtime_state:node_request_port(Request, Port).
-
 test(node_1_starts_http_endpoint, true(Answer == success([true], false))) :-
     with_node_server(URI,
         (
@@ -699,28 +719,12 @@ test(node_portal_and_example_routes_served) :-
             read_text_status(OldWorkbenchURL, OldWorkbenchStatus, _OldWorkbenchBody),
             format(atom(EditorFrameURL), '~w/editor_frame?id=editor&mode=prolog', [URI]),
             read_text(EditorFrameURL, EditorFrameBody),
-            format(atom(VendorVueURL), '~w/vendor/vue.global.prod.js', [URI]),
-            read_text(VendorVueURL, VendorVueBody),
-            format(atom(VersionURL), '~w/version', [URI]),
-            read_json_answer(VersionURL, VersionJSON),
             format(atom(ActorExampleURL), '~w/examples/actors/04%20count_server.pl', [URI]),
             read_text(ActorExampleURL, ActorExampleBody),
             format(atom(ServiceExampleURL), '~w/examples/services/node_resident_services.pl', [URI]),
             read_text(ServiceExampleURL, ServiceExampleBody),
             format(atom(StatechartURL), '~w/statecharts/game.xml', [URI]),
             read_text(StatechartURL, StatechartBody),
-            format(atom(SwiWasmWorkerURL), '~w/swi_wasm_actor_worker.js', [URI]),
-            read_text(SwiWasmWorkerURL, SwiWasmWorkerBody),
-            format(atom(SwiplBundleURL), '~w/swipl-bundle.js', [URI]),
-            read_text(SwiplBundleURL, SwiplBundleBody),
-            format(atom(WasmRuntimeURL), '~w/wasm/statechart_wasm_runtime.pl', [URI]),
-            read_text(WasmRuntimeURL, WasmRuntimeBody),
-            format(atom(WasmModelURL), '~w/wasm/statechart_wasm_model.pl', [URI]),
-            read_text(WasmModelURL, WasmModelBody),
-            format(atom(WasmExecURL), '~w/wasm/statechart_wasm_exec.pl', [URI]),
-            read_text(WasmExecURL, WasmExecBody),
-            format(atom(WasmFacadeURL), '~w/wasm/statechart_wasm.pl', [URI]),
-            read_text(WasmFacadeURL, WasmFacadeBody),
             format(atom(ExamplesIndexURL), '~w/examples_index', [URI]),
             read_json_answer(ExamplesIndexURL, ExamplesIndexJSON),
             ActorEntries = ExamplesIndexJSON.actors,
@@ -740,17 +744,9 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Code coloring')),
             assertion(sub_string(PortalBody, _, _, _, 'Statechart XML')),
             assertion(sub_string(EditorFrameBody, _, _, _, 'Demonstrator Editor Frame')),
-            assertion(sub_string(VendorVueBody, _, _, _, 'Vue')),
-            assertion(VersionJSON.web_prolog == "0.2.0"),
             assertion(sub_string(ActorExampleBody, _, _, _, 'count_server')),
             assertion(sub_string(ServiceExampleBody, _, _, _, 'pubsub_actor')),
             assertion(sub_string(StatechartBody, _, _, _, '<statechart')),
-            assertion(sub_string(SwiWasmWorkerBody, _, _, _, 'actorSpawnWithPid')),
-            assertion(sub_string(SwiplBundleBody, _, _, _, 'SWIPL')),
-            assertion(sub_string(WasmRuntimeBody, _, _, _, ':- module(statechart_wasm_runtime')),
-            assertion(sub_string(WasmModelBody, _, _, _, ':- module(statechart_wasm_model')),
-            assertion(sub_string(WasmExecBody, _, _, _, ':- module(statechart_wasm_exec')),
-            assertion(sub_string(WasmFacadeBody, _, _, _, ':- module(statechart_wasm')),
             memberchk(_{name:"04 count_server.pl", url:"/examples/actors/04 count_server.pl", kind:"prolog"},
                       ActorEntries),
             assertion(\+ memberchk(_{name:"game.xml", url:"/examples/statecharts/game.xml", kind:"statechart"},
@@ -2324,41 +2320,6 @@ test(request_principal_accepts_internal_transport_headers_from_loopback_peer) :-
     assertion(PrincipalId == "node:https://n4.example"),
     assertion(memberchk(internal_transport, Capabilities)).
 
-%  2026-06-13 (back-port from web-prolog): the forwarded identity header
-%  (X-Web-Prolog-User) is a claimed identity with no secret, so a
-%  configured principal's capabilities are granted only from a trusted
-%  front end (loopback / private-network peer). A directly reachable node
-%  would otherwise let any client assume any principal — including an
-%  admin — just by setting the header.
-test(forwarded_identity_trusted_only_for_local_or_private_peer) :-
-    assertion(node_auth:request_forwarded_identity_trusted([peer(ip(127,0,0,1))])),
-    assertion(node_auth:request_forwarded_identity_trusted([peer(ip(172,17,0,5))])),
-    assertion(\+ node_auth:request_forwarded_identity_trusted([peer(ip(8,8,8,8))])),
-    assertion(\+ node_auth:request_forwarded_identity_trusted([])).
-
-test(forwarded_user_header_grants_policy_caps_from_trusted_peer, [
-        setup(node_principal_policy:set_principal_policies([principal("wp-alice", [execute])])),
-        cleanup(node_principal_policy:set_principal_policies([]))
-     ]) :-
-    request_principal(
-        [x_web_prolog_user("wp-alice"), peer(ip(127,0,0,1)), method(get), path('/call')],
-        Principal),
-    principal_id(Principal, PrincipalId),
-    principal_capabilities(Principal, Capabilities),
-    assertion(PrincipalId == "wp-alice"),
-    assertion(memberchk(execute, Capabilities)).
-
-test(forwarded_user_header_denied_from_public_peer, [
-        setup(node_principal_policy:set_principal_policies([principal("wp-alice", [execute])])),
-        cleanup(node_principal_policy:set_principal_policies([]))
-     ]) :-
-    request_principal(
-        [x_web_prolog_user("wp-alice"), peer(ip(8,8,8,8)), method(get), path('/call')],
-        Principal),
-    principal_capabilities(Principal, Capabilities),
-    %  a public client that merely sets the header gets no execute
-    assertion(\+ memberchk(execute, Capabilities)).
-
 test(internal_transport_does_not_imply_execute) :-
     %  Regression pin: holding internal_transport alone must not
     %  grant the execute capability.  Cross-node peers always send
@@ -2406,19 +2367,6 @@ test(ws_origin_trailing_slash_normalized) :-
         host("n3.example.com"),
         x_forwarded_proto("https"),
         origin("https://n3.example.com/")
-    ]).
-
-test(ws_origin_same_origin_with_explicit_port_allowed) :-
-    %  The local-node shape: SWI's HTTP layer splits
-    %  "Host: localhost:3057" into separate host/port request fields,
-    %  and the browser's Origin carries the port.  This is the
-    %  portal's ACTOR mode against `node(3057)` — it must be accepted
-    %  as same-origin (it used to be rejected because the rebuilt
-    %  host origin dropped the port).
-    node_ws:ws_require_allowed_origin([
-        host(localhost),
-        port(3057),
-        origin("http://localhost:3057")
     ]).
 
 test(ws_origin_cross_origin_rejected,

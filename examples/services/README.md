@@ -136,3 +136,61 @@ Meta = meta(actor, protocol(pubsub_v1)).
 
 This keeps discovery separate from process introspection. Clients learn only
 the names that the node owner chose to publish.
+
+## Discovery hub
+
+`discovery_hub.pl` and `discovery_directory.pl` take that idea one step
+further: instead of a node publishing *its own* services, a **discovery hub**
+(node **n0**) publishes a live register of *other* nodes, queryable through
+the same `/call` API. Service discovery is then just a query — finding a node
+is running a goal against the hub's database. The full design is in
+[`docs/DISCOVERY_HUB_PLAN.md`](../../docs/DISCOVERY_HUB_PLAN.md); this is
+slice 1 (probe-only, no self-registration).
+
+Two files, mirroring the service-directory split:
+
+- `discovery_hub.pl` — owner-local bootstrap. Starts n0 as an `actor` node
+  and runs the **registry custodian**: a `receive`-loop actor that holds the
+  records, and on a 30s heartbeat fans out one transient prober per node to
+  fetch `/node_info`, folds the results in, and republishes a
+  generation-buffered read replica.
+- `discovery_directory.pl` — the hub's shared database (the read side). Turns
+  the replica back into queryable relations; `node_status/2` is **derived at
+  read time** (up / amber `unreachable` / down) from observed timestamps, so
+  a dead node cannot leave a stale `up` stranded.
+
+Start a hub (after `?- [load].`):
+
+```prolog
+?- use_module('examples/services/discovery_hub.pl').
+?- start_discovery_hub(3060).
+```
+
+Then discovery is a query against the hub over `/call`:
+
+```prolog
+?- rpc('http://localhost:3060', node_record(n0, R)).
+?- rpc('http://localhost:3060', (node_profile(N, actor), node_status(N, up))).
+```
+
+The default seed lists the public n1–n5 nodes; override it for a local demo
+or test with `set_seed/1` before starting:
+
+```prolog
+?- set_seed([ seed_node(n1, 'http://localhost:3071',
+                        "a local peer", "its shared db", "") ]).
+?- start_discovery_hub(3060).
+```
+
+The browser demonstrator's intro panel renders this register as a live
+**directory** (status dots, a ~10s poll, and graceful fallback to the static
+seed when the hub is unreachable). The hub URL the directory queries is the
+`PORTAL_HUB_URL` constant in `web/demonstrator.html` (empty = same origin, so
+the node serving the page is itself the hub).
+
+Tests: [`tests/discovery_hub_tests.pl`](../../tests/discovery_hub_tests.pl)
+(status derivation + a hub/peer integration pass).
+
+> **Schema note.** The plan sketches the membership relation as `node/1`;
+> the implementation uses `node_id/1`, because the node server already owns
+> `node/1` and the hub's shared module would otherwise shadow it.

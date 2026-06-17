@@ -27,6 +27,22 @@
 	header_up X-Web-Prolog-Internal-Proxy true
 }
 
+n0.elfenbenstornet.se {
+	encode zstd gzip
+	import cors_headers
+	@options method OPTIONS
+	handle @options {
+		respond 204
+	}
+	@allowed path / /call /discovery-hub /admin/tabler.min.css /manual /node_info /version /healthz /readyz /img* /vendor* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js
+	handle @allowed {
+		reverse_proxy n0:3060 {
+			import common_proxy_headers
+		}
+	}
+	respond "Not found" 404
+}
+
 n1.elfenbenstornet.se {
 	encode zstd gzip
 	import cors_headers

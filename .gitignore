@@ -15,9 +15,15 @@
 # SWI-Prolog
 *.qlf
 
-# Local env / build artifacts
+# Local env / build artifacts — ignore real env files (they hold
+# secrets), but keep the committed *.example templates.
 .env
 .env.local
+.env.*
+!.env.*.example
 
 # Runtime logs
 logs/
+
+# Runtime logs (written by test runs)
+tests/logs/

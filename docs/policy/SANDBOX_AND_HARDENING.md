@@ -36,6 +36,19 @@ for:
 - untrusted source text
 - untrusted spawn options
 
+## In-browser runtimes are NOT sandboxed
+
+The sandbox above applies to the **server** node's execution paths. The
+in-browser runtimes the portal can switch to — SWI-WASM (including the
+SWI-WASM ACTOR mode, where each actor is a Web Worker with its own
+`library(wasm)` `:=` JS bridge), Ciao-WASM, and Tau-JS — run Prolog
+**unsandboxed**, entirely in the visitor's own browser. They are not
+governed by `sandbox(...)`; code there can do anything the page/worker's
+JavaScript context can. This is by design (the point is to showcase the
+real runtimes) and carries **no server-side risk** — the work and any
+side effects stay within the visitor's own browser and privileges, like a
+JS console. Do not rely on the node sandbox for browser-runtime code.
+
 ## What the Sandbox Covers
 
 User-controlled execution paths include:

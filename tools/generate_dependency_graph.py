@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "docs" / "DEPENDENCY_GRAPH.md"
 ARTIFACT_DIR = ROOT / "docs" / "generated" / "dependency_graph"
 USE_MODULE_RE = re.compile(r":-\s*use_module\s*\(", re.MULTILINE)
-EXCLUDED_PARTS = {".git", ".claude", "Tau-Prolog", "node_modules", "__pycache__"}
+EXCLUDED_PARTS = {".git", ".claude", "node_modules", "__pycache__"}
 
 
 def project_files() -> list[Path]:
@@ -212,33 +212,36 @@ def imports_table(edges_by_source: dict[str, set[str]]) -> list[str]:
 
 
 def section_groups(all_edges: list[tuple[str, str]]) -> list[tuple[str, list[tuple[str, str]]]]:
-    root_sources = {source for source, _ in all_edges if "/" not in source}
+    root_sources = {
+        source for source, _ in all_edges
+        if "/" not in source or source.startswith("src/")
+    }
     node_sources = {
         source
         for source, _ in all_edges
-        if source == "node.pl"
-        or source.startswith("node_")
+        if source == "src/node.pl"
+        or source.startswith("src/node_")
         or source in {
-            "actor.pl",
-            "actor_io_support.pl",
-            "toplevel_actor.pl",
-            "pid_utils.pl",
-            "dollar_expansion.pl",
-            "node_client.pl",
-            "statechart_actor.pl",
+            "src/actor.pl",
+            "src/actor_io_support.pl",
+            "src/toplevel_actor.pl",
+            "src/pid_utils.pl",
+            "src/dollar_expansion.pl",
+            "src/node_client.pl",
+            "src/statechart_actor.pl",
         }
     }
-    statechart_sources = {source for source, _ in all_edges if source.startswith("statechart")}
+    statechart_sources = {
+        source for source, _ in all_edges if source.startswith("src/statechart")
+    }
 
     return [
         ("All Local Module Dependencies", all_edges),
         ("Root Modules", [edge for edge in all_edges if edge[0] in root_sources]),
         ("Node Runtime And Session Modules", [edge for edge in all_edges if edge[0] in node_sources]),
         ("Statechart Modules", [edge for edge in all_edges if edge[0] in statechart_sources]),
-        ("Deployment Modules", [edge for edge in all_edges if edge[0].startswith("Deployment/")]),
         ("Tests", [edge for edge in all_edges if edge[0].startswith("tests/")]),
         ("Examples", [edge for edge in all_edges if edge[0].startswith("examples/")]),
-        ("PoC Libraries", [edge for edge in all_edges if edge[0].startswith("poc-libraries/")]),
     ]
 
 
@@ -263,6 +266,118 @@ def graph_sections(all_edges: list[tuple[str, str]]) -> list[str]:
             "",
         ])
     return lines
+
+
+#  ---------------------------------------------------------------
+#  Layering lint (LAYERED_REAL_NODE_PLAN.md §4.3)
+#
+#  Every module under prolog/ is assigned a layer; a use_module edge
+#  may only point at the same or a lower layer.  Files added under
+#  prolog/ without an assignment fail the lint, so new modules must
+#  be classified deliberately.  src/ (legacy reference), tests/, and
+#  examples/ are exempt.
+#  ---------------------------------------------------------------
+
+_WP = "prolog/web_prolog/"
+LAYERS = {
+    # layer 0 — stand-alone actor core
+    _WP + "actors.pl": 0,
+    # layer 1 — isolation
+    _WP + "source_utils.pl": 1,
+    _WP + "actor_io_support.pl": 1,
+    _WP + "isolation.pl": 1,
+    # layer 2 — toplevels and behaviours
+    _WP + "toplevel_actors.pl": 2,
+    _WP + "dollar_expansion.pl": 2,
+    _WP + "term_display.pl": 2,
+    _WP + "server_actor.pl": 2,
+    _WP + "supervisor_actor.pl": 2,
+    _WP + "parallel.pl": 2,
+    _WP + "statechart_model.pl": 2,
+    _WP + "statechart_runtime.pl": 2,
+    _WP + "statechart_exec.pl": 2,
+    _WP + "statechart_actor.pl": 2,
+    # layer 3 — distribution
+    _WP + "pid_utils.pl": 3,
+    _WP + "node_controller.pl": 3,
+    _WP + "remote_protocol.pl": 3,
+    _WP + "distribution.pl": 3,
+    _WP + "rpc.pl": 3,
+    # the composition spine is loaded by node_glue (layer 4) and the
+    # umbrella alike; it must sit at the lowest layer that loads it
+    # (its own imports are layers 0-1 only)
+    _WP + "composition.pl": 4,
+    # layer 5 — the umbrella
+    "prolog/web_prolog.pl": 5,
+}
+
+def _layer_of(rel_path: str):
+    if rel_path in LAYERS:
+        return LAYERS[rel_path]
+    if rel_path.startswith(_WP):
+        # The browser (SWI-WASM) statechart runtime: a self-contained port
+        # of the statechart behaviour (imports only library/ and its own
+        # siblings), so it sits at the behaviour layer.
+        if rel_path.startswith(_WP + "wasm/"):
+            return 2
+        # everything else under prolog/web_prolog/ is the node layer
+        if rel_path.split("/")[-1].startswith("node") or rel_path.split("/")[-1] in (
+            "goal_walker.pl", "public_goal_guard.pl", "shared_db.pl",
+            "debug.pl", "actor_api.pl", "node_glue.pl",
+        ):
+            return 4
+        return None          # unassigned: lint error
+    return "exempt"
+
+
+def layering_violations(all_edges):
+    problems = []
+    for src, dst in sorted(all_edges):
+        ls, ld = _layer_of(src), _layer_of(dst)
+        if ls == "exempt" or ld == "exempt":
+            continue
+        if ls is None:
+            problems.append(f"UNASSIGNED LAYER: {src}")
+            continue
+        if ld is None:
+            problems.append(f"UNASSIGNED LAYER: {dst}")
+            continue
+        if ld > ls:
+            problems.append(
+                f"UPWARD IMPORT: {src} (layer {ls}) -> {dst} (layer {ld})")
+    return sorted(set(problems))
+
+
+def collect_edges():
+    files = project_files()
+    edges = set()
+    edges_by_source = defaultdict(set)
+    for source in files:
+        text = source.read_text(encoding="utf-8")
+        source_rel = rel(source)
+        edges_by_source.setdefault(source_rel, set())
+        for args_text in extract_use_module_args(text):
+            first_arg = split_first_arg(args_text)
+            target = resolve_local_import(source, first_arg)
+            if target is None:
+                continue
+            target_rel = rel(target)
+            if target_rel == source_rel:
+                continue
+            edges.add((source_rel, target_rel))
+            edges_by_source[source_rel].add(target_rel)
+    return edges, edges_by_source
+
+
+def check_main() -> None:
+    edges, _ = collect_edges()
+    problems = layering_violations(edges)
+    if problems:
+        print("Layering lint FAILED:")
+        for p in problems:
+            print("  " + p)
+        raise SystemExit(1)
+    print("Layering lint OK (%d edges checked)" % len(edges))
 
 
 def main() -> None:
@@ -332,4 +447,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--check" in sys.argv:
+        check_main()
+    else:
+        check_main()
+        main()

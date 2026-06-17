@@ -6,17 +6,16 @@ Usage:
 
   `swipl load.pl`
 
-After loading, all core modules are available in the REPL.
+Loads the full layered Web Prolog system (library(web_prolog)): actors,
+isolation, toplevel query actors, behaviours, distribution, rpc, and
+the node server.  Start a node with ?- node(3060).
+
+The legacy demonstrator code under src/ is kept as the conformance
+reference for the LEGACY test tier and is no longer loaded from here.
 */
 
 :- prolog_load_context(directory, ThisDir),
-   atom_concat(ThisDir, '/src', SrcDir),
-   assertz(user:file_search_path(library, SrcDir)).
+   atom_concat(ThisDir, '/prolog', LibDir),
+   assertz(user:file_search_path(library, LibDir)).
 
-:- use_module(library(actor)).
-:- use_module(library(toplevel_actor)).
-:- use_module(library(server_actor)).
-:- use_module(library(parallel)).
-:- use_module(library(supervisor_actor)).
-:- use_module(library(statechart_actor)).
-:- use_module(library(node)).
+:- use_module(library(web_prolog)).

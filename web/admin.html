@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Web Prolog Admin</title>
+    <link rel="stylesheet" href="/admin/tabler.min.css">
     <style>
       :root {
         --bg: #f5f5f5;
@@ -194,9 +195,10 @@
         gap: 10px;
       }
 
-      .section-nav a {
+      .section-nav a,
+      .section-nav .tab-link {
         text-decoration: none;
-        font-size: 12px;
+        font-size: 15px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -204,6 +206,57 @@
         padding: 7px 12px;
         border: 1px solid var(--line);
         background: transparent;
+      }
+
+      .section-nav .tab-link {
+        cursor: pointer;
+      }
+
+      .section-nav .tab-link.is-active {
+        color: var(--panel);
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      /* Hide rule must out-specify .card { display: grid }; :not() keeps
+         the active panel on its natural .card grid display. */
+      .tab-panel:not(.is-active) {
+        display: none;
+      }
+
+      .token-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      .token-table th,
+      .token-table td {
+        border: 1px solid var(--line);
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .token-table th {
+        background: var(--panel-2);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .token-table tr.is-revoked td {
+        opacity: 0.5;
+      }
+
+      .token-secret {
+        display: block;
+        word-break: break-all;
+        font-family: var(--mono-font);
+        padding: 8px;
+        background: var(--panel-2);
+        border: 1px solid var(--line);
       }
 
       .card {
@@ -285,6 +338,31 @@
       .config-help-button:focus-visible {
         outline: 2px solid #9fb2c4;
         outline-offset: 1px;
+      }
+
+      /* Section header with an inline help "?" to its right. */
+      .runtime-title-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .runtime-title-row .config-help-button {
+        margin-left: 0;
+      }
+      /* The Doctor panel uses an <h2>; drop its bottom margin in the row. */
+      .card .runtime-title-row h2 {
+        margin: 0;
+      }
+      /* Roomier vertical rhythm for the read-only Overview sections. */
+      .overview-section {
+        display: grid;
+        gap: 14px;
+      }
+      .overview-section .config-grid {
+        row-gap: 18px;
+      }
+      .overview-section .field {
+        gap: 8px;
       }
 
       .config-help-popover {
@@ -377,6 +455,10 @@
 
       .family-wrap {
         overflow: auto;
+        /* As a grid item of .card, default min-width:auto (=min-content,
+           760px) would stretch the whole tab on narrow viewports instead
+           of letting overflow:auto scroll the table locally. */
+        min-width: 0;
       }
 
       .family-table {
@@ -568,6 +650,217 @@
           font-size: 28px;
         }
       }
+
+      /* ── Tabler re-skin ── Tabler is loaded first as the base/palette;
+         these rules (last in source) restyle the panel chrome to Tabler's
+         look via its design tokens. Specialised components (family matrix,
+         runtime grid, help popover, status banner) keep their own styles. */
+      body {
+        background: var(--tblr-body-bg, #f6f7f9);
+        color: var(--tblr-body-color, #1d273b);
+        font-family: var(--tblr-font-sans-serif);
+        font-size: 14px;
+      }
+      .page {
+        display: block;
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 24px 20px 64px;
+      }
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+        background: var(--tblr-bg-surface, #fff);
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+        box-shadow: var(--tblr-box-shadow-card, 0 1px 2px rgba(15,23,42,.06));
+        padding: 16px 20px;
+        margin-bottom: 18px;
+      }
+      .eyebrow { color: var(--tblr-secondary, #667382); }
+      .hero h1 { color: var(--tblr-body-color, #1d273b); margin: 2px 0 4px; }
+      .hero-meta { color: var(--tblr-secondary, #667382); }
+      .card {
+        display: grid;
+        gap: 14px;
+        /* minmax(0,1fr) (not the default auto/min-content) lets wide grid
+           items like .family-wrap shrink and scroll instead of blowing out
+           the card width on narrow viewports. */
+        grid-template-columns: minmax(0, 1fr);
+        background: var(--tblr-bg-surface, #fff);
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+        box-shadow: var(--tblr-box-shadow-card, 0 1px 2px rgba(15,23,42,.06));
+        padding: 20px;
+      }
+      .card h2 { font-size: 1.15rem; margin: 0 0 4px; }
+      .note { color: var(--tblr-secondary, #667382); }
+      .runtime-title { color: var(--tblr-body-color, #1d273b); }
+      .button {
+        background: var(--tblr-bg-surface, #fff);
+        color: var(--tblr-body-color, #1d273b);
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+        padding: 7px 12px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .button:hover { background: var(--tblr-active-bg, #f1f3f7); }
+      .button.accent {
+        background: var(--tblr-primary, #066fd1);
+        border-color: var(--tblr-primary, #066fd1);
+        color: #fff;
+      }
+      .button.accent:hover { filter: brightness(0.95); }
+      .button.subtle { background: transparent; }
+      input[type="text"], input[type="number"], select, textarea {
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+        padding: 7px 10px;
+        font-size: 13px;
+        background: var(--tblr-bg-forms, #fff);
+        color: var(--tblr-body-color, #1d273b);
+      }
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--tblr-primary, #066fd1);
+        box-shadow: 0 0 0 2px rgba(var(--tblr-primary-rgb, 6,111,209), 0.15);
+      }
+      .section-nav {
+        gap: 2px;
+        border-bottom: 1px solid var(--tblr-border-color, #e6e7e9);
+        margin-bottom: 18px;
+      }
+      .section-nav .tab-link {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--tblr-secondary, #667382);
+        padding: 9px 14px;
+        font-size: 15px;
+        font-weight: 700;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .section-nav .tab-link:hover { color: var(--tblr-body-color, #1d273b); }
+      .section-nav .tab-link.is-active {
+        color: var(--tblr-primary, #066fd1);
+        border-bottom-color: var(--tblr-primary, #066fd1);
+        background: transparent;
+      }
+      .config-state {
+        background: var(--tblr-success-lt, #e9f7ef);
+        color: var(--tblr-success, #2fb344);
+        border: 1px solid var(--tblr-success, #2fb344);
+        border-radius: var(--tblr-border-radius, 6px);
+        padding: 6px 10px;
+      }
+      .config-toolbar-panel {
+        background: var(--tblr-bg-surface-secondary, #f7f8fa);
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+      }
+      .status {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1080;
+        max-width: 360px;
+        padding: 12px 16px;
+        border-radius: var(--tblr-border-radius, 6px);
+        box-shadow: var(--tblr-box-shadow, 0 8px 24px rgba(15,23,42,.18));
+        cursor: pointer;
+      }
+      .status.success { background: var(--tblr-success-lt, #e9f7ef); color: var(--tblr-success, #2fb344); border: 1px solid var(--tblr-success, #2fb344); }
+      .status.error   { background: var(--tblr-danger-lt, #fde8e8); color: var(--tblr-danger, #d63939); border: 1px solid var(--tblr-danger, #d63939); }
+      .status.info    { background: var(--tblr-info-lt, #e7f3fb); color: var(--tblr-info, #4299e1); border: 1px solid var(--tblr-info, #4299e1); }
+      .token-table th { background: var(--tblr-bg-surface-secondary, #f7f8fa); }
+
+      /* Doctor: green / amber / red */
+      .doctor-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .doctor-table th, .doctor-table td {
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        padding: 8px 10px; text-align: left; vertical-align: top;
+      }
+      .doctor-table th {
+        background: var(--tblr-bg-surface-secondary, #f7f8fa);
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+        color: var(--tblr-secondary, #667382);
+      }
+      .doctor-status {
+        display: inline-block; min-width: 54px; text-align: center;
+        padding: 2px 8px; border-radius: 999px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+      }
+      .doctor-ok   { background: var(--tblr-success-lt, #e9f7ef); color: var(--tblr-success, #2fb344); }
+      .doctor-warn { background: var(--tblr-warning-lt, #fff5e6); color: var(--tblr-warning, #f59f00); }
+      .doctor-fail { background: var(--tblr-danger-lt, #fde8e8); color: var(--tblr-danger, #d63939); }
+      /* The always-visible Doctor status button in the hero. */
+      .doctor-hero-button { font-weight: 600; }
+      .doctor-hero-button.doctor-ok   { background: var(--tblr-success-lt, #e9f7ef); color: var(--tblr-success, #2fb344); border-color: var(--tblr-success, #2fb344); }
+      .doctor-hero-button.doctor-warn { background: var(--tblr-warning-lt, #fff5e6); color: var(--tblr-warning, #f59f00); border-color: var(--tblr-warning, #f59f00); }
+      .doctor-hero-button.doctor-fail { background: var(--tblr-danger-lt, #fde8e8); color: var(--tblr-danger, #d63939); border-color: var(--tblr-danger, #d63939); }
+
+      /* Runtime: each panel is a bordered card; buckets read as nested items */
+      .runtime-panel {
+        background: var(--tblr-bg-surface, #fff);
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+        padding: 14px 16px;
+      }
+      .runtime-item {
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: var(--tblr-border-radius, 6px);
+        background: var(--tblr-bg-surface-secondary, #f7f8fa);
+      }
+      .empty {
+        color: var(--tblr-secondary, #667382);
+        text-align: center;
+        padding: 14px 0;
+      }
+
+      /* Inline warning for high-risk config combinations */
+      .config-warning {
+        background: var(--tblr-danger-lt, #fde8e8);
+        color: var(--tblr-danger, #d63939);
+        border: 1px solid var(--tblr-danger, #d63939);
+        border-radius: var(--tblr-border-radius, 6px);
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      /* Read-only security posture (Overview) */
+      .posture-grid {
+        display: grid;
+        grid-template-columns: minmax(180px, max-content) minmax(0, 1fr);
+        gap: 8px 18px;
+        font-size: 13px;
+        align-items: baseline;
+      }
+      .posture-label {
+        color: var(--tblr-secondary, #667382);
+        font-weight: 600;
+      }
+      .posture-value { color: var(--tblr-body-color, #1d273b); overflow-wrap: anywhere; }
+      .posture-value .muted { color: var(--tblr-secondary, #667382); }
+      .posture-chip {
+        display: inline-block;
+        background: var(--tblr-bg-surface-secondary, #f7f8fa);
+        border: 1px solid var(--tblr-border-color, #e6e7e9);
+        border-radius: 999px;
+        padding: 1px 9px;
+        margin: 0 4px 4px 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      .posture-flag-on  { color: var(--tblr-warning, #f59f00); font-weight: 600; }
+      @media (max-width: 560px) {
+        .posture-grid { grid-template-columns: 1fr; gap: 2px 0; }
+        .posture-label { margin-top: 8px; }
+      }
     </style>
   </head>
   <body>
@@ -581,6 +874,7 @@
           </div>
         </div>
         <div class="hero-actions">
+          <button id="doctorHeroButton" class="button doctor-hero-button" type="button" title="Go to the Doctor diagnostics">Doctor: —</button>
           <a class="button subtle" href="/portal">Open Portal</a>
           <button id="reloadAllButton" class="button accent" type="button">Reload All</button>
         </div>
@@ -588,16 +882,80 @@
 
       <div id="status" class="status" hidden></div>
 
-      <nav class="section-nav">
-        <a href="#config">Config</a>
-        <a href="#principals">Principals</a>
-        <a href="#runtime">Runtime</a>
+      <nav class="section-nav" role="tablist">
+        <button class="tab-link" type="button" data-tab="overview" role="tab" aria-selected="false">Overview</button>
+        <button class="tab-link" type="button" data-tab="config" role="tab" aria-selected="false">Config</button>
+        <button class="tab-link" type="button" data-tab="principals" role="tab" aria-selected="false">Principals</button>
+        <button class="tab-link" type="button" data-tab="runtime" role="tab" aria-selected="false">Runtime</button>
+        <button class="tab-link" type="button" data-tab="tokens" role="tab" aria-selected="false">Tokens</button>
+        <button class="tab-link" type="button" data-tab="doctor" role="tab" aria-selected="false">Doctor</button>
       </nav>
 
-      <section id="config" class="card">
+      <section id="overview" class="card tab-panel">
+        <div>
+          <h2>Overview</h2>
+          <p>Node status, posture, and build at a glance. The resource ceilings below are startup-configured and read-only here.</p>
+        </div>
+        <div class="config-toolbar-panel">
+          <div class="config-toolbar">
+            <div id="maintenanceBadge" class="config-state">Maintenance: unknown</div>
+            <div class="toolbar">
+              <button id="maintenanceToggleButton" class="button" type="button">Enter Maintenance</button>
+            </div>
+          </div>
+        </div>
+        <div class="note">Maintenance mode drains the node: <code>/readyz</code> reports 503 so a load balancer stops routing, and new work is refused while in-flight sessions finish. Liveness (<code>/healthz</code>) is unaffected.</div>
+
+        <div class="overview-section">
+          <div class="runtime-title-row">
+            <div class="runtime-title">Resource Ceilings &amp; Log Rotation</div>
+            <button class="config-help-button" type="button" data-help-id="resource_ceilings" aria-label="Help for Resource Ceilings and Log Rotation">?</button>
+          </div>
+          <div class="config-grid">
+            <div class="field">
+              <label for="config-max-actors" class="field-label-row"><span>Max Actors</span><button class="config-help-button" type="button" data-help-id="max_actors" aria-label="Help for Max Actors">?</button></label>
+              <input id="config-max-actors" type="number" disabled>
+            </div>
+            <div class="field">
+              <label for="config-max-call-inferences" class="field-label-row"><span>Max /call Inferences</span><button class="config-help-button" type="button" data-help-id="max_call_inferences" aria-label="Help for Max /call Inferences">?</button></label>
+              <input id="config-max-call-inferences" type="number" disabled>
+            </div>
+            <div class="field">
+              <label for="config-max-actor-stack-bytes" class="field-label-row"><span>Max Actor Stack Bytes</span><button class="config-help-button" type="button" data-help-id="max_actor_stack_bytes" aria-label="Help for Max Actor Stack Bytes">?</button></label>
+              <input id="config-max-actor-stack-bytes" type="number" disabled>
+            </div>
+            <div class="field">
+              <label for="config-max-log-bytes" class="field-label-row"><span>Log Rotation Bytes</span><button class="config-help-button" type="button" data-help-id="max_interaction_log_bytes" aria-label="Help for Log Rotation Bytes">?</button></label>
+              <input id="config-max-log-bytes" type="number" disabled>
+            </div>
+            <div class="field">
+              <label for="config-max-log-backups" class="field-label-row"><span>Log Backups Kept</span><button class="config-help-button" type="button" data-help-id="max_interaction_log_backups" aria-label="Help for Log Backups Kept">?</button></label>
+              <input id="config-max-log-backups" type="number" disabled>
+            </div>
+          </div>
+        </div>
+
+        <div class="overview-section">
+          <div class="runtime-title-row">
+            <div class="runtime-title">Security Posture</div>
+            <button class="config-help-button" type="button" data-help-id="security_posture" aria-label="Help for Security Posture">?</button>
+          </div>
+          <div id="postureBody" class="posture-grid"><div class="empty">Loading posture…</div></div>
+        </div>
+
+        <div>
+          <div class="runtime-title">Build</div>
+          <div id="versionFooter" class="note">Loading build info…</div>
+        </div>
+      </section>
+
+      <section id="config" class="card tab-panel">
         <div>
           <h2>Config</h2>
           <p>Change the current node runtime configuration and the built-in capability offering for each public profile.</p>
+        </div>
+        <div id="configRiskWarning" class="config-warning" role="alert" hidden>
+          <strong>High-risk combination:</strong> OPEN auth with NO SANDBOX lets any anonymous client run unrestricted Prolog on this node. Only apply this if the node is not publicly reachable.
         </div>
         <div class="config-grid">
           <div class="field">
@@ -752,7 +1110,7 @@
         </div>
       </section>
 
-      <section id="principals" class="card">
+      <section id="principals" class="card tab-panel">
         <div>
           <h2>Principals</h2>
           <p>Edit the principal policy as JSON. Each entry should have an <code>id</code> and a capability list.</p>
@@ -766,7 +1124,7 @@
         <div class="note">Example: <code>[{"id":"alice","capabilities":["execute"]}]</code></div>
       </section>
 
-      <section id="runtime" class="card">
+      <section id="runtime" class="card tab-panel">
         <div>
           <h2>Runtime</h2>
           <p>Inspect live sessions, WebSocket connections and actors, per-principal activity, concurrent resource usage, rate buckets, and recent retained events.</p>
@@ -775,6 +1133,59 @@
           <button id="refreshRuntimeButton" class="button" type="button">Refresh Runtime</button>
         </div>
         <div id="runtimeGrid" class="runtime-grid"></div>
+      </section>
+
+      <section id="tokens" class="card tab-panel">
+        <div>
+          <h2>Tokens</h2>
+          <p>Bearer API tokens for clients that call this node directly (CLI tools, agents, scripts). A token authenticates as a principal with a capability scope; the secret is shown once at issue time and stored only as a hash.</p>
+        </div>
+        <div class="config-grid">
+          <div class="field">
+            <label for="token-principal">Principal</label>
+            <input id="token-principal" type="text" placeholder="e.g. ci-bot" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="token-capabilities">Capabilities</label>
+            <input id="token-capabilities" type="text" value="execute" placeholder="execute, public_read" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="token-expires">Expires in (seconds)</label>
+            <input id="token-expires" type="number" min="1" step="1" placeholder="blank = never">
+          </div>
+          <div class="field">
+            <label for="token-label">Label</label>
+            <input id="token-label" type="text" placeholder="optional note" autocomplete="off">
+          </div>
+        </div>
+        <div class="toolbar">
+          <button id="issueTokenButton" class="button accent" type="button">Issue Token</button>
+          <button id="refreshTokensButton" class="button" type="button">Refresh</button>
+        </div>
+        <div class="note">Capabilities: <code>execute</code>, <code>public_read</code>, <code>source_load_server_predicates</code>, <code>source_load_uri</code>, <code>admin</code>. A token with only <code>public_read</code> can read but not run goals.</div>
+
+        <div id="tokenSecretPanel" class="config-toolbar-panel" hidden>
+          <div class="runtime-title">New token — copy it now; it is shown only once</div>
+          <code id="tokenSecretValue" class="token-secret"></code>
+        </div>
+
+        <div id="tokensTableWrap"></div>
+      </section>
+
+      <section id="doctor" class="card tab-panel">
+        <div class="runtime-title-row">
+          <h2>Doctor</h2>
+          <button class="config-help-button" type="button" data-help-id="doctor" aria-label="Help for Doctor">?</button>
+        </div>
+        <div class="config-toolbar-panel">
+          <div class="config-toolbar">
+            <div class="note">The overall status is always shown in the header above.</div>
+            <div class="toolbar">
+              <button id="refreshDoctorButton" class="button" type="button">Run checks</button>
+            </div>
+          </div>
+        </div>
+        <div id="doctorChecks"></div>
       </section>
     </div>
 
@@ -800,7 +1211,15 @@
           rate_window_seconds: "Length of the fixed window used for request and spawn rate limits. The per-window limits below are counted inside this interval.",
           max_call_requests_per_window: "Maximum number of /call requests one principal may issue during one rate window. Use it to throttle rapid stateless querying.",
           max_session_spawns_per_window: "Maximum number of session spawns one principal may request during one rate window. This limits repeated toplevel_spawn churn.",
-          max_ws_commands_per_window: "Maximum number of WebSocket commands one principal may send during one rate window. Use it to contain high-rate stateful traffic."
+          max_ws_commands_per_window: "Maximum number of WebSocket commands one principal may send during one rate window. Use it to contain high-rate stateful traffic.",
+          resource_ceilings: "Resource ceilings and log rotation are startup-configured and read-only here - set them with node/2 options or the WP_* environment variables. 0 means unlimited / off.",
+          max_actors: "Global cap on the number of live actors on this node (backpressure). A spawn beyond the cap is refused with resource_error(actors). 0 = unlimited.",
+          max_call_inferences: "Per-/call inference ceiling. Bounds a single query's work so a fast-but-infinite goal (e.g. between(1, inf, _), fail) cannot hog the node past the wall-clock timeout. 0 = unlimited.",
+          max_actor_stack_bytes: "Per-actor thread stack cap in bytes, applied at spawn. With Max Actors this bounds worst-case node memory (roughly Max Actors x this value). 0 = SWI's default (about 1 GiB per thread).",
+          max_interaction_log_bytes: "Rotate the durable interaction/audit JSONL once it reaches this size in bytes. 0 = no rotation (the file can grow unbounded).",
+          max_interaction_log_backups: "How many rotated interaction-log files to keep (interactions.jsonl.1 ... .N) after each rotation.",
+          security_posture: "Security and operations settings configured outside the editable Config form (or startup-only): the registered tier, anonymous per-IP identity, source_load_uri origins, advertised RELATION patterns, IP allow/block/auto-ban, and the in-memory event-log capacity/retention. Read-only here, so the active posture can be audited from one place.",
+          doctor: "Self-diagnostics: a green / amber / red review of the node's security and operational posture. Each check is informational; warnings and failures are worth addressing before exposing the node."
         });
         var MANUAL_PREDICATE_ANCHORS = Object.freeze({
           "!/2": true,
@@ -1014,6 +1433,8 @@
         };
 
         var statusNode = document.getElementById("status");
+        var statusTimer = null;
+        statusNode.addEventListener("click", function () { setStatus("", ""); });
         var heroMetaNode = document.getElementById("heroMeta");
         var configSectionNode = document.getElementById("config");
         var configStateBadgeNode = document.getElementById("configStateBadge");
@@ -1107,9 +1528,18 @@
         }
 
         function setStatus(kind, message) {
+          if (statusTimer) {
+            clearTimeout(statusTimer);
+            statusTimer = null;
+          }
           statusNode.hidden = !message;
           statusNode.className = "status" + (kind ? " " + kind : "");
           statusNode.textContent = message || "";
+          // Errors persist until the next action (or a click); success/info
+          // messages are transient and auto-dismiss.
+          if (message && kind !== "error") {
+            statusTimer = setTimeout(function () { setStatus("", ""); }, 3000);
+          }
         }
 
         function clearStatus() {
@@ -1221,6 +1651,11 @@
             max_ws_commands_per_window: json && typeof json.max_ws_commands_per_window === "number"
               ? json.max_ws_commands_per_window
               : 1000,
+            max_actors: json && typeof json.max_actors === "number" ? json.max_actors : 0,
+            max_call_inferences: json && typeof json.max_call_inferences === "number" ? json.max_call_inferences : 0,
+            max_actor_stack_bytes: json && typeof json.max_actor_stack_bytes === "number" ? json.max_actor_stack_bytes : 0,
+            max_interaction_log_bytes: json && typeof json.max_interaction_log_bytes === "number" ? json.max_interaction_log_bytes : 0,
+            max_interaction_log_backups: json && typeof json.max_interaction_log_backups === "number" ? json.max_interaction_log_backups : 0,
             builtin_families: normalizeBuiltinFamilies(json && json.builtin_families)
           };
         }
@@ -1263,6 +1698,11 @@
           setFieldValue("config-max-call-window", configState.max_call_requests_per_window);
           setFieldValue("config-max-spawn-window", configState.max_session_spawns_per_window);
           setFieldValue("config-max-ws-window", configState.max_ws_commands_per_window);
+          setFieldValue("config-max-actors", configState.max_actors);
+          setFieldValue("config-max-call-inferences", configState.max_call_inferences);
+          setFieldValue("config-max-actor-stack-bytes", configState.max_actor_stack_bytes);
+          setFieldValue("config-max-log-bytes", configState.max_interaction_log_bytes);
+          setFieldValue("config-max-log-backups", configState.max_interaction_log_backups);
           renderBuiltinFamilies(configState.builtin_families);
           updateHeroMeta();
           updateConfigToolbar();
@@ -1405,6 +1845,18 @@
               : "Runtime Config Applied";
           saveConfigButtonNode.disabled = !!busy.config || !dirty;
           reloadConfigButtonNode.disabled = !!busy.loading || !!busy.config;
+          updateConfigWarning();
+        }
+
+        function configComboIsRisky() {
+          var authEl = document.getElementById("config-auth");
+          var sandboxEl = document.getElementById("config-sandbox");
+          return !!(authEl && sandboxEl &&
+            authEl.value === "open" && sandboxEl.value === "off");
+        }
+
+        function updateConfigWarning() {
+          document.getElementById("configRiskWarning").hidden = !configComboIsRisky();
         }
 
         function normalizeRuntime(json) {
@@ -1536,13 +1988,14 @@
                   "limit " + escapeHtml(String(entry.limit || 0))
                 ], "");
               })
-            ), "No active resource reservations."),
+            ), null, "No active resource reservations."),
             runtimePanel("Rate Buckets (" + escapeHtml(String(runtimeState.rate_limits.window_seconds)) + "s window)",
               [].concat(
                 runtimeRateItems("call requests", runtimeState.rate_limits.call_requests || []),
                 runtimeRateItems("session spawns", runtimeState.rate_limits.session_spawns || []),
                 runtimeRateItems("ws commands", runtimeState.rate_limits.ws_commands || [])
               ),
+              null,
               "No active rate buckets."
             ),
             runtimePanel("Recent Events", runtimeState.recent_events, function(entry) {
@@ -1702,6 +2155,7 @@
           return loadConfig()
             .then(loadPrincipals)
             .then(loadRuntime)
+            .then(function() { return loadPosture().catch(function() {}); })
             .then(function() {
               setStatus("success", "Admin data loaded.");
             })
@@ -1721,6 +2175,12 @@
         }
 
         function saveConfig() {
+          if (configComboIsRisky() && !window.confirm(
+              "Apply OPEN auth with NO SANDBOX?\n\n" +
+              "This lets any anonymous client run unrestricted Prolog on " +
+              "this node. Only do this if the node is not publicly reachable.")) {
+            return Promise.resolve();
+          }
           busy.config = true;
           updateConfigToolbar();
           clearStatus();
@@ -1785,6 +2245,301 @@
           });
         }
 
+        var maintenanceEnabled = null;
+
+        function renderMaintenance() {
+          var badge = document.getElementById("maintenanceBadge");
+          var button = document.getElementById("maintenanceToggleButton");
+          if (!badge || !button) {
+            return;
+          }
+          if (maintenanceEnabled === null) {
+            badge.textContent = "Maintenance: unknown";
+            button.textContent = "Enter Maintenance";
+            return;
+          }
+          badge.textContent = maintenanceEnabled ? "Maintenance: DRAINING" : "Maintenance: off";
+          badge.classList.toggle("is-nonconformant", !!maintenanceEnabled);
+          button.textContent = maintenanceEnabled ? "Exit Maintenance" : "Enter Maintenance";
+        }
+
+        function loadMaintenance() {
+          requestJson("/admin/maintenance").then(function(json) {
+            maintenanceEnabled = !!(json && json.maintenance);
+            renderMaintenance();
+          }).catch(function() {
+            maintenanceEnabled = null;
+            renderMaintenance();
+          });
+        }
+
+        function setMaintenance(enabled) {
+          if (busy.maintenance) {
+            return;
+          }
+          busy.maintenance = true;
+          clearStatus();
+          requestJson("/admin/maintenance", {
+            method: "POST",
+            jsonBody: { enabled: enabled }
+          }).then(function(json) {
+            maintenanceEnabled = !!(json && json.maintenance);
+            renderMaintenance();
+            setStatus("success", maintenanceEnabled
+              ? "Node draining: /readyz now 503, new work refused."
+              : "Maintenance off; serving normally.");
+          }).catch(function(error) {
+            setStatus("error", error && error.message ? error.message : "Failed to toggle maintenance.");
+          }).finally(function() {
+            busy.maintenance = false;
+          });
+        }
+
+        function loadVersion() {
+          var footer = document.getElementById("versionFooter");
+          if (!footer) {
+            return;
+          }
+          requestJson("/version").then(function(json) {
+            footer.textContent = "web-prolog " + (json.web_prolog || "?") +
+              " · protocol " + (json.protocol == null ? "?" : json.protocol) +
+              " · SWI " + (json.swipl || "?") +
+              (json.git && json.git !== "unknown" ? " · " + String(json.git).slice(0, 10) : "");
+          }).catch(function() {
+            footer.textContent = "";
+          });
+        }
+
+        function formatEpoch(seconds) {
+          if (!seconds || seconds <= 0) {
+            return "—";
+          }
+          try {
+            return new Date(seconds * 1000).toISOString().replace("T", " ").replace(/\..*/, "") + "Z";
+          } catch (_error) {
+            return String(seconds);
+          }
+        }
+
+        function doctorStatusClass(status) {
+          if (status === "ok") { return "doctor-ok"; }
+          if (status === "fail") { return "doctor-fail"; }
+          return "doctor-warn";
+        }
+
+        function renderDoctor(report) {
+          var overall = (report && report.status) || "unknown";
+          var heroButton = document.getElementById("doctorHeroButton");
+          if (heroButton) {
+            var label = overall === "unknown"
+              ? "—"
+              : overall.charAt(0).toUpperCase() + overall.slice(1);
+            heroButton.textContent = "Doctor: " + label;
+            heroButton.className = "button doctor-hero-button " + doctorStatusClass(overall);
+          }
+          var checks = (report && report.checks) || [];
+          var wrap = document.getElementById("doctorChecks");
+          if (!checks.length) {
+            wrap.innerHTML = '<div class="note">No checks reported.</div>';
+            return;
+          }
+          var rows = checks.map(function(check) {
+            return '<tr><td><code>' + escapeHtml(check.id) + '</code></td>' +
+              '<td><span class="doctor-status ' + doctorStatusClass(check.status) + '">' +
+              escapeHtml(check.status) + '</span></td>' +
+              '<td>' + escapeHtml(check.message) + '</td></tr>';
+          }).join("");
+          wrap.innerHTML = '<table class="doctor-table"><thead><tr>' +
+            '<th>Check</th><th>Status</th><th>Detail</th></tr></thead><tbody>' +
+            rows + '</tbody></table>';
+        }
+
+        function loadDoctor() {
+          return requestJson("/admin/doctor").then(function(json) {
+            renderDoctor(json);
+          }).catch(function(error) {
+            renderDoctor({ status: "unknown", checks: [] });
+            if (error && error.status === 403) {
+              return;
+            }
+            throw error;
+          });
+        }
+
+        function postureChips(items, emptyLabel) {
+          if (!items || !items.length) {
+            return '<span class="muted">' + escapeHtml(emptyLabel) + '</span>';
+          }
+          return items.map(function(item) {
+            return '<span class="posture-chip">' + escapeHtml(String(item)) + '</span>';
+          }).join("");
+        }
+
+        function postureOrigins(value) {
+          // load_uri_allowed_origins is either the string "unrestricted" (any
+          // origin — permissive) or a list of allowed origins.
+          if (typeof value === "string") {
+            return value === "unrestricted"
+              ? '<span class="posture-flag-on">unrestricted (any origin)</span>'
+              : '<span class="posture-chip">' + escapeHtml(value) + '</span>';
+          }
+          return postureChips(value, "none (no origin allowed)");
+        }
+
+        function postureAutoBan(p) {
+          var threshold = Number(p.auto_ban_threshold) || 0;
+          if (threshold <= 0) {
+            return '<span class="muted">off</span>';
+          }
+          return '<span class="posture-flag-on">on</span> — ' + threshold +
+            ' offenses / ' + formatRuntimeAge(p.auto_ban_window_seconds) +
+            ' → ban ' + formatRuntimeAge(p.auto_ban_seconds);
+        }
+
+        function postureRow(label, valueHtml) {
+          return '<div class="posture-label">' + escapeHtml(label) + '</div>' +
+            '<div class="posture-value">' + valueHtml + '</div>';
+        }
+
+        function renderPosture(p) {
+          var body = document.getElementById("postureBody");
+          if (!body) {
+            return;
+          }
+          if (!p) {
+            body.innerHTML = '<div class="empty">Posture unavailable.</div>';
+            return;
+          }
+          var anonPerIp = p.anon_per_ip === true || p.anon_per_ip === "true";
+          var rows = [
+            postureRow("Registered tier (authenticated default capabilities)",
+              postureChips(p.authenticated_default_capabilities,
+                "off — unlisted authenticated principals are denied")),
+            postureRow("Anonymous identity", anonPerIp
+              ? '<span class="posture-flag-on">per client IP</span>'
+              : '<span class="muted">shared (one bucket for all anonymous traffic)</span>'),
+            postureRow("source_load_uri origins", postureOrigins(p.load_uri_allowed_origins)),
+            postureRow("Advertised RELATION patterns", postureChips(p.relation_patterns, "none")),
+            postureRow("IP allowlist", postureChips(p.ip_allowlist, "none (allow all)")),
+            postureRow("IP blocklist", postureChips(p.ip_blocklist, "none")),
+            postureRow("Auto-ban", postureAutoBan(p)),
+            postureRow("Event log (in-memory)",
+              (Number(p.log_capacity) || 0) + " events · " +
+              formatRuntimeAge(p.log_retention_seconds) + " retention")
+          ];
+          body.innerHTML = rows.join("");
+        }
+
+        function loadPosture() {
+          return requestJson("/admin/posture").then(function(json) {
+            renderPosture(json);
+          }).catch(function(error) {
+            renderPosture(null);
+            if (error && error.status === 403) {
+              return;
+            }
+            throw error;
+          });
+        }
+
+        function renderTokens(tokens) {
+          var wrap = document.getElementById("tokensTableWrap");
+          if (!wrap) {
+            return;
+          }
+          if (!tokens || !tokens.length) {
+            wrap.innerHTML = '<div class="note">No tokens issued.</div>';
+            return;
+          }
+          var rows = tokens.map(function(token) {
+            var caps = (token.capabilities || []).join(", ");
+            var expires = token.expires_at && token.expires_at > 0 ? formatEpoch(token.expires_at) : "never";
+            var revoked = token.revoked === true;
+            var action = revoked
+              ? '<span class="note">revoked</span>'
+              : '<button class="button subtle" type="button" data-revoke-token="' + escapeHtmlAttr(token.id) + '">Revoke</button>';
+            return '<tr class="' + (revoked ? "is-revoked" : "") + '">' +
+              '<td><code>' + escapeHtml(token.id) + '</code></td>' +
+              '<td>' + escapeHtml(token.principal_id || "") + '</td>' +
+              '<td>' + escapeHtml(caps) + '</td>' +
+              '<td>' + escapeHtml(token.label || "") + '</td>' +
+              '<td>' + escapeHtml(formatEpoch(token.created_at)) + '</td>' +
+              '<td>' + escapeHtml(expires) + '</td>' +
+              '<td>' + escapeHtml(formatEpoch(token.last_used_at)) + '</td>' +
+              '<td>' + action + '</td>' +
+              '</tr>';
+          }).join("");
+          wrap.innerHTML = '<table class="token-table"><thead><tr>' +
+            '<th>ID</th><th>Principal</th><th>Capabilities</th><th>Label</th>' +
+            '<th>Created</th><th>Expires</th><th>Last used</th><th></th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table>';
+        }
+
+        function loadTokens() {
+          return requestJson("/admin/tokens").then(function(json) {
+            renderTokens((json && json.tokens) || []);
+          }).catch(function(error) {
+            renderTokens([]);
+            if (error && error.status === 403) {
+              return;
+            }
+            throw error;
+          });
+        }
+
+        function issueToken() {
+          if (busy.tokens) {
+            return;
+          }
+          var principal = document.getElementById("token-principal").value.trim();
+          if (!principal) {
+            setStatus("error", "A token needs a principal.");
+            return;
+          }
+          var capsRaw = document.getElementById("token-capabilities").value.trim();
+          var capabilities = capsRaw
+            ? capsRaw.split(",").map(function(s) { return s.trim(); }).filter(Boolean)
+            : [];
+          var body = { principal: principal, capabilities: capabilities };
+          var expiresRaw = document.getElementById("token-expires").value.trim();
+          if (expiresRaw) {
+            body.expires_in = parseInt(expiresRaw, 10);
+          }
+          var label = document.getElementById("token-label").value.trim();
+          if (label) {
+            body.label = label;
+          }
+          busy.tokens = true;
+          clearStatus();
+          requestJson("/admin/tokens", { method: "POST", jsonBody: body }).then(function(json) {
+            document.getElementById("tokenSecretValue").textContent = json.token || "";
+            document.getElementById("tokenSecretPanel").hidden = false;
+            renderTokens((json && json.tokens) || []);
+            document.getElementById("token-label").value = "";
+            setStatus("success", "Token issued. Copy the secret now — it will not be shown again.");
+          }).catch(function(error) {
+            setStatus("error", error && error.message ? error.message : "Failed to issue token.");
+          }).finally(function() {
+            busy.tokens = false;
+          });
+        }
+
+        function revokeToken(id) {
+          if (busy.tokens) {
+            return;
+          }
+          busy.tokens = true;
+          clearStatus();
+          requestJson("/admin/tokens?id=" + encodeURIComponent(id), { method: "DELETE" }).then(function(json) {
+            renderTokens((json && json.tokens) || []);
+            setStatus("success", "Token revoked.");
+          }).catch(function(error) {
+            setStatus("error", error && error.message ? error.message : "Failed to revoke token.");
+          }).finally(function() {
+            busy.tokens = false;
+          });
+        }
+
         function escapeHtml(value) {
           return String(value)
             .replace(/&/g, "&amp;")
@@ -1824,6 +2579,10 @@
 
         document.getElementById("reloadAllButton").addEventListener("click", function() {
           loadAll();
+        });
+
+        document.getElementById("doctorHeroButton").addEventListener("click", function() {
+          showTab("doctor");
         });
 
         saveConfigButtonNode.addEventListener("click", function() {
@@ -1895,6 +2654,57 @@
           });
         });
 
+        document.getElementById("maintenanceToggleButton").addEventListener("click", function() {
+          setMaintenance(!maintenanceEnabled);
+        });
+
+        document.getElementById("issueTokenButton").addEventListener("click", issueToken);
+        document.getElementById("refreshTokensButton").addEventListener("click", function() {
+          loadTokens().catch(function(error) {
+            setStatus("error", error && error.message ? error.message : "Failed to load tokens.");
+          });
+        });
+        document.getElementById("tokensTableWrap").addEventListener("click", function(event) {
+          var button = event.target.closest("[data-revoke-token]");
+          if (button) {
+            revokeToken(button.getAttribute("data-revoke-token"));
+          }
+        });
+
+        document.getElementById("refreshDoctorButton").addEventListener("click", function() {
+          loadDoctor().catch(function(error) {
+            setStatus("error", error && error.message ? error.message : "Failed to run diagnostics.");
+          });
+        });
+
+        var TAB_NAMES = ["overview", "config", "principals", "runtime", "tokens", "doctor"];
+
+        function showTab(name) {
+          if (TAB_NAMES.indexOf(name) < 0) {
+            name = "overview";
+          }
+          var panels = document.querySelectorAll(".tab-panel");
+          for (var i = 0; i < panels.length; i++) {
+            panels[i].classList.toggle("is-active", panels[i].id === name);
+          }
+          var links = document.querySelectorAll(".section-nav .tab-link");
+          for (var j = 0; j < links.length; j++) {
+            var active = links[j].getAttribute("data-tab") === name;
+            links[j].classList.toggle("is-active", active);
+            links[j].setAttribute("aria-selected", active ? "true" : "false");
+          }
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, "", "#" + name);
+          }
+        }
+
+        var tabLinks = document.querySelectorAll(".section-nav .tab-link");
+        for (var ti = 0; ti < tabLinks.length; ti++) {
+          tabLinks[ti].addEventListener("click", function() {
+            showTab(this.getAttribute("data-tab"));
+          });
+        }
+
         runtimeGridNode.addEventListener("click", function(event) {
           var button = event.target.closest("[data-reclaim-action]");
           if (!button) {
@@ -1914,9 +2724,15 @@
           }
         });
 
+        showTab((window.location.hash || "").replace(/^#/, ""));
         renderRuntime();
+        renderMaintenance();
         updateConfigToolbar();
         loadAll();
+        loadMaintenance();
+        loadVersion();
+        loadTokens().catch(function() {});
+        loadDoctor().catch(function() {});
       })();
     </script>
   </body>

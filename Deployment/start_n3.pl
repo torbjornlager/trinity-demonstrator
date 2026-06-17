@@ -5,13 +5,13 @@
     actor_common_shared_db_path/1,
     node_overlay_shared_db_path/2
 ]).
-:- use_module('../src/actor.pl', [
+:- use_module(library(web_prolog/actor_api), [
     whereis_service/2
 ]).
 :- use_module('../examples/services/node_resident_services.pl', [
     start_example_services/2
 ]).
-:- use_module('../src/node_runtime_state.pl', [
+:- use_module(library(web_prolog/node_runtime_state), [
     with_node_port_context/2,
     update_current_node_runtime/1
 ]).

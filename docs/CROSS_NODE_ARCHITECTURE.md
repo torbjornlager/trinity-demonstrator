@@ -21,6 +21,23 @@ sending JSON frames over WebSockets.  Within a node, ordinary local
 actor primitives (`spawn/3`, `send/2`, `exit/2`, `monitor/2`,
 `receive/1`, link/monitor tables) are unchanged.
 
+### Protocol version
+
+The wire protocol is versioned. The current version is **1**, defined
+by `remote_protocol:protocol_version/1` (the single source of truth).
+Version 1 is bit-compatible with the trinity-demonstrator's protocol,
+which carries no version field at all. A node:
+
+- exposes its version at `GET /version` (the `protocol` field), and
+- announces it when opening an outbound cross-node connection, via the
+  `X-Web-Prolog-Protocol` request header on the `/ws` upgrade.
+
+The field is **additive and backward-compatible**: a demonstrator-era
+peer ignores the unknown header, and a versioned node tolerates its
+absence (treating a peer as version 1). It exists so future
+incompatible changes are detectable — it carries no negotiation yet.
+Bump `protocol_version/1` only on an incompatible wire change.
+
 For cross-node operations, each node hosts a **node controller**:
 a Prolog module that owns three dynamic tables and a small set of
 helper predicates.  The controller is the only mediator between

@@ -11,11 +11,6 @@ infrastructure made this project possible.
   SWI-Prolog provides the engine, the standard libraries, the HTTP and WebSocket stacks, and
   the other wonderful infrastructure that this project depends on.
 
-- **José Antonio Riaza Valverde** — author and maintainer of
-  [Tau Prolog](http://tau-prolog.org/), the in-browser Prolog interpreter used
-  on the client side of the Trinity Demonstrator. A vendored copy of Tau Prolog
-  lives under `Tau-Prolog/`.
-
 ## Libraries and example programs
 
 - **Richard O'Keefe** — for various libraries and example programs from

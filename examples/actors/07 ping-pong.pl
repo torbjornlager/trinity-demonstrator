@@ -27,12 +27,8 @@ pong :-
     }).
 
 ping_pong :-
-    spawn(pong, Pong_Pid, [
-        load_predicates([pong/0])
-    ]),
-    spawn(ping(3, Pong_Pid), _, [
-        load_predicates([ping/2])
-    ]).
+    spawn(pong, Pong_Pid),
+    spawn(ping(3, Pong_Pid)).
 
 
 /** <examples>

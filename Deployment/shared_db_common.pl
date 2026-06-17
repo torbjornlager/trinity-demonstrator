@@ -15,3 +15,7 @@ mother_child(trude, sally).
 father_child(tom, sally).
 father_child(tom, erica).
 father_child(mike, tom).
+
+% Owner-curated contract, surfaced via /node_info (harvested by a discovery hub).
+provides(ancestor_descendant/2).
+provides(parent_child/2).

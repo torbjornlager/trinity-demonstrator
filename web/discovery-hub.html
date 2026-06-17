@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discovery Hub</title>
+  <link rel="stylesheet" href="/admin/tabler.min.css">
+  <style>
+    .dh-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .dh-query { font-family: var(--tblr-font-monospace); white-space: pre-wrap; word-break: break-word; }
+    .dh-card.is-down { opacity: .7; }
+    .dh-chip { font-family: var(--tblr-font-monospace); font-size: .75rem; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-wrapper">
+      <header class="navbar navbar-expand-md d-print-none">
+        <div class="container-xl">
+          <h1 class="navbar-brand d-flex align-items-center gap-2 m-0">
+            <span class="status-dot status-dot-animated bg-green"></span>
+            Discovery Hub
+          </h1>
+          <div class="navbar-nav flex-row order-md-last">
+            <a href="/demonstrator" class="btn btn-sm">Open the shell</a>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-header d-print-none">
+        <div class="container-xl">
+          <div class="row align-items-center">
+            <div class="col">
+              <div class="text-secondary">
+                The live register of Prolog Web nodes. This hub (n0) probes each node and
+                publishes the result &mdash; discovery is a query against <code>/call</code>,
+                not a protocol stack.
+              </div>
+            </div>
+            <div class="col-auto"><span id="dh-updated" class="text-muted small"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-body">
+        <div class="container-xl">
+          <div id="dh-alert"></div>
+
+          <!-- Query builder -->
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-sm-auto">
+                  <label class="form-label">Profile</label>
+                  <div class="btn-group w-100" id="dh-profile" role="group"></div>
+                </div>
+                <div class="col-sm-auto">
+                  <label class="form-label">Auth</label>
+                  <select class="form-select" id="dh-auth">
+                    <option value="">Any</option>
+                    <option value="open">open</option>
+                    <option value="private">private</option>
+                  </select>
+                </div>
+                <div class="col-sm">
+                  <label class="form-label">Capability (a served predicate or service)</label>
+                  <input class="form-control" id="dh-cap" list="dh-caps" placeholder="e.g. human/1 or counter" autocomplete="off">
+                  <datalist id="dh-caps"></datalist>
+                </div>
+                <div class="col-sm-auto">
+                  <button class="btn" id="dh-clear" type="button">Clear</button>
+                </div>
+              </div>
+
+              <div class="mt-3">
+                <div class="d-flex align-items-center mb-1">
+                  <span class="text-secondary small">The filter is this goal, run on the hub:</span>
+                  <button class="btn btn-sm btn-primary ms-auto" id="dh-run" type="button">Run on hub</button>
+                </div>
+                <div class="dh-query bg-secondary-lt p-3 rounded" id="dh-goal"></div>
+                <div id="dh-run-result" class="small text-muted mt-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="dh-summary" class="mb-3"></div>
+          <div id="dh-cards" class="row row-cards"></div>
+
+          <div class="text-muted small mt-3">
+            Status is derived at read time from the hub's probes: a fresh success is
+            <strong class="text-green">up</strong>; one missed probe after a good one is the amber
+            <strong class="text-yellow">unreachable</strong> band; anything stale past the TTL is
+            <strong class="text-red">down</strong>.
+            <code>provides</code> is owner-curated (a node's advertised contract), not a scrape.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var POLL_MS = 10000;
+    var lastFetch = 0;
+    var ALL = [];                                  // latest rows
+    var FILTERS = { profileMin: "", auth: "", capability: "" };
+
+    var PROFILES = ["relation", "isobase", "isotope", "actor"];
+    var STATUS = {
+      up:          { rank: 0, color: "green",     label: "up" },
+      unreachable: { rank: 1, color: "yellow",    label: "unreachable" },
+      unknown:     { rank: 2, color: "secondary", label: "status unknown" },
+      down:        { rank: 3, color: "red",       label: "down" }
+    };
+    var PROFILE_COLOR = { relation: "azure", isobase: "blue", isotope: "teal", actor: "purple" };
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+      });
+    }
+    // /call's format=json stringifies a Prolog string/quoted-atom WITH quotes.
+    function unq(s) {
+      if (s == null) return "";
+      s = String(s);
+      if (s.length >= 2 && (s[0] === '"' || s[0] === "'") && s[s.length - 1] === s[0]) {
+        s = s.slice(1, -1).replace(/\\(.)/g, "$1");
+      }
+      return s;
+    }
+    function profRank(p) { var i = PROFILES.indexOf(p); return i < 0 ? -1 : i; }
+    function relTime(epoch) {
+      if (!epoch) return "";
+      var d = Math.max(0, Math.floor(Date.now() / 1000) - epoch);
+      if (d < 60) return d + "s ago";
+      if (d < 3600) return Math.floor(d / 60) + "m ago";
+      return Math.floor(d / 3600) + "h ago";
+    }
+
+    function callJSON(goal) {
+      var qs = new URLSearchParams({ goal: "(" + goal + ")", template: "(" + goal + ")", format: "json", offset: "0", limit: "2000" });
+      return fetch("/call?" + qs.toString(), { headers: { Accept: "application/json" } })
+        .then(function (r) { return r.json(); });
+    }
+
+    // ---- the query the current filter corresponds to ----
+    function buildGoal(f) {
+      var conj = [];
+      if (f.profileMin) conj.push("node_profile_at_least(Id, " + f.profileMin + ")");
+      if (f.auth) conj.push("node_auth(Id, " + f.auth + ")");
+      if (f.capability) {
+        conj.push(f.capability.indexOf("/") >= 0
+          ? "node_provides(Id, '" + f.capability + "')"
+          : "node_service(Id, " + f.capability + ")");
+      }
+      if (!conj.length) conj.push("node_id(Id)");
+      return conj.join(",\n   ");
+    }
+
+    function applyFilters(rows, f) {
+      return rows.filter(function (r) {
+        if (f.profileMin && profRank(r.profile) < profRank(f.profileMin)) return false;
+        if (f.auth && r.auth !== f.auth) return false;
+        if (f.capability) {
+          var caps = (r.services || []).concat(r.provides || []);
+          if (caps.indexOf(f.capability) < 0) return false;
+        }
+        return true;
+      });
+    }
+
+    function chips(items, color) {
+      if (!items || !items.length) return '<span class="text-muted small">&mdash;</span>';
+      return items.map(function (c) {
+        return '<span class="badge bg-' + color + '-lt dh-chip me-1 mb-1">' + esc(c) + "</span>";
+      }).join("");
+    }
+
+    function nodeCard(r) {
+      var st = STATUS[r.status] || STATUS.unknown;
+      var profile = (r.profile && r.profile !== "unknown") ? r.profile : "";
+      var badges = "";
+      if (profile) badges += '<span class="badge bg-' + (PROFILE_COLOR[profile] || "secondary") + '-lt text-uppercase">' + esc(profile) + "</span> ";
+      if (r.auth && r.auth !== "unknown") badges += '<span class="badge bg-' + (r.auth === "private" ? "orange" : "green") + '-lt">' + esc(r.auth) + "</span> ";
+      if (r.isHub) badges += '<span class="badge bg-purple-lt">registry</span> ';
+
+      var meta = [];
+      var seen = relTime(r.lastSeen);
+      if (seen) meta.push("last seen " + seen);
+      if (r.latencyMs) meta.push(r.latencyMs + "ms");
+
+      var dot = '<span class="status-dot' + (r.status === "up" ? " status-dot-animated" : "") + ' bg-' + st.color + '"></span>';
+      var openable = r.status === "up" || r.status === "unreachable";
+      var dis = openable ? "" : " disabled";
+      var shellUrl = r.url ? r.url.replace(/\/$/, "") + "/demonstrator" : "";
+      var link = r.url
+        ? '<div class="btn-list ms-auto">' +
+            '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" class="btn btn-sm' + dis + '" title="Shared data and programs">Data</a>' +
+            '<a href="' + esc(shellUrl) + '" target="_blank" rel="noopener" class="btn btn-sm btn-primary' + dis + '" title="Open a shell against this node">Shell</a>' +
+          "</div>"
+        : "";
+
+      var caps = "";
+      if ((r.provides && r.provides.length) || (r.services && r.services.length)) {
+        caps =
+          '<div class="mt-2"><div class="text-muted small mb-1">provides</div>' + chips(r.provides, "azure") + "</div>" +
+          (r.services && r.services.length ? '<div class="mt-2"><div class="text-muted small mb-1">services</div>' + chips(r.services, "lime") + "</div>" : "");
+      }
+
+      return '' +
+        '<div class="col-sm-6 col-lg-4">' +
+          '<div class="card dh-card' + (r.status === "down" ? " is-down" : "") + '">' +
+            '<div class="card-status-start bg-' + st.color + '"></div>' +
+            '<div class="card-header">' +
+              '<h3 class="card-title text-uppercase">' + esc(r.id) + "</h3>" +
+              '<div class="card-actions"><span class="status status-' + st.color + '">' + dot + " " + esc(st.label) + "</span></div>" +
+            "</div>" +
+            '<div class="card-body">' +
+              '<div class="mb-2">' + badges + "</div>" +
+              '<p class="text-secondary dh-desc mb-1">' + esc(r.description) + "</p>" +
+              (r.note ? '<p class="text-muted small mb-0">' + esc(r.note) + "</p>" : "") +
+              caps +
+            "</div>" +
+            '<div class="card-footer d-flex align-items-center">' +
+              '<span class="text-muted small">' + esc(meta.join(" · ")) + "</span>" + link +
+            "</div>" +
+          "</div>" +
+        "</div>";
+    }
+
+    function summary(shown, total) {
+      var c = { up: 0, unreachable: 0, down: 0, unknown: 0 };
+      shown.forEach(function (r) { c[r.status] = (c[r.status] || 0) + 1; });
+      function pill(n, color, label) { return n ? '<span class="badge bg-' + color + '-lt me-2">' + n + " " + label + "</span>" : ""; }
+      var filtered = shown.length !== total ? '<span class="text-muted me-2">' + shown.length + " of " + total + "</span>" : "";
+      return "<div>" + filtered + pill(c.up, "green", "up") + pill(c.unreachable, "yellow", "unreachable") +
+        pill(c.down, "red", "down") + pill(c.unknown, "secondary", "unknown") + "</div>";
+    }
+
+    function renderGoal() {
+      document.getElementById("dh-goal").textContent = "?- " + buildGoal(FILTERS) + ".";
+      document.getElementById("dh-run-result").innerHTML = "";
+    }
+
+    function render() {
+      var shown = applyFilters(ALL, FILTERS);
+      shown.sort(function (a, b) {
+        var ra = (STATUS[a.status] || STATUS.unknown).rank, rb = (STATUS[b.status] || STATUS.unknown).rank;
+        return ra - rb || a.id.localeCompare(b.id);
+      });
+      document.getElementById("dh-cards").innerHTML = shown.map(nodeCard).join("");
+      document.getElementById("dh-summary").innerHTML = summary(shown, ALL.length);
+      renderGoal();
+    }
+
+    function rebuildCapList() {
+      var set = {};
+      ALL.forEach(function (r) {
+        (r.provides || []).forEach(function (c) { set[c] = 1; });
+        (r.services || []).forEach(function (c) { set[c] = 1; });
+      });
+      document.getElementById("dh-caps").innerHTML =
+        Object.keys(set).sort().map(function (c) { return '<option value="' + esc(c) + '">'; }).join("");
+    }
+
+    function offline(msg) {
+      document.getElementById("dh-alert").innerHTML =
+        '<div class="alert alert-warning"><strong>Hub unreachable.</strong> ' + esc(msg) + "</div>";
+    }
+
+    function tick() {
+      Promise.all([
+        callJSON("node_directory_row(Id,Status,Profile,Auth,LatencyMs,LastSeen,Url,Description,Note)"),
+        callJSON("node_service(Id,Service)"),
+        callJSON("node_provides(Id,Predicate)")
+      ]).then(function (res) {
+        if (res.some(function (j) { return !j || j.type !== "success"; })) throw new Error("the hub did not answer the directory query");
+        var byId = {};
+        (res[0].data || []).forEach(function (d) {
+          byId[d.Id] = {
+            id: d.Id, status: d.Status || "down", profile: d.Profile, auth: d.Auth,
+            latencyMs: Number(d.LatencyMs) || 0, lastSeen: Number(d.LastSeen) || 0,
+            url: unq(d.Url), description: unq(d.Description), note: unq(d.Note),
+            isHub: d.Id === "n0", services: [], provides: []
+          };
+        });
+        (res[1].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].services.push(unq(d.Service)); });
+        (res[2].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].provides.push(unq(d.Predicate)); });
+        ALL = Object.keys(byId).map(function (k) { return byId[k]; });
+        rebuildCapList();
+        render();
+        document.getElementById("dh-updated").textContent = "updated just now";
+        lastFetch = Date.now();
+      }).catch(function (e) { offline(e.message); });
+    }
+
+    function runOnHub() {
+      var goal = buildGoal(FILTERS);
+      var out = document.getElementById("dh-run-result");
+      out.innerHTML = "running…";
+      callJSON(goal).then(function (j) {
+        if (!j || j.type === "error") throw new Error(j && j.data ? j.data : "error");
+        var ids = (j.data || []).map(function (d) { return d.Id; });
+        out.innerHTML = ids.length
+          ? '<span class="text-green">✓ ' + ids.length + " node(s):</span> " + ids.map(esc).join(", ")
+          : '<span class="text-muted">no nodes match</span>';
+      }).catch(function (e) { out.innerHTML = '<span class="text-danger">error: ' + esc(e.message) + "</span>"; });
+    }
+
+    // ---- filter controls ----
+    function buildProfileControl() {
+      var opts = [{ v: "", l: "Any" }, { v: "isobase", l: "ISOBASE+" }, { v: "isotope", l: "ISOTOPE+" }, { v: "actor", l: "ACTOR" }];
+      document.getElementById("dh-profile").innerHTML = opts.map(function (o) {
+        return '<button type="button" class="btn btn-sm" data-v="' + o.v + '">' + o.l + "</button>";
+      }).join("");
+      document.querySelectorAll("#dh-profile button").forEach(function (b) {
+        b.addEventListener("click", function () {
+          FILTERS.profileMin = b.getAttribute("data-v");
+          document.querySelectorAll("#dh-profile button").forEach(function (x) { x.classList.remove("active", "btn-primary"); });
+          b.classList.add("active", "btn-primary");
+          render();
+        });
+      });
+      document.querySelector('#dh-profile button[data-v=""]').classList.add("active", "btn-primary");
+    }
+
+    buildProfileControl();
+    document.getElementById("dh-auth").addEventListener("change", function (e) { FILTERS.auth = e.target.value; render(); });
+    document.getElementById("dh-cap").addEventListener("input", function (e) { FILTERS.capability = e.target.value.trim(); render(); });
+    document.getElementById("dh-run").addEventListener("click", runOnHub);
+    document.getElementById("dh-clear").addEventListener("click", function () {
+      FILTERS = { profileMin: "", auth: "", capability: "" };
+      document.getElementById("dh-auth").value = "";
+      document.getElementById("dh-cap").value = "";
+      document.querySelectorAll("#dh-profile button").forEach(function (x) { x.classList.remove("active", "btn-primary"); });
+      document.querySelector('#dh-profile button[data-v=""]').classList.add("active", "btn-primary");
+      render();
+    });
+
+    setInterval(function () {
+      if (lastFetch) document.getElementById("dh-updated").textContent = "updated " + Math.floor((Date.now() - lastFetch) / 1000) + "s ago";
+    }, 1000);
+    renderGoal();
+    tick();
+    setInterval(tick, POLL_MS);
+  </script>
+</body>
+</html>

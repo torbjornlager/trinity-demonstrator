@@ -3,9 +3,9 @@ digraph dependency_graph {
   node [shape=box, style="rounded", color="#666666", fontname="Helvetica", fontsize=11, margin="0.08,0.05"];
   edge [color="#555555", arrowsize=0.7, penwidth=1.0];
   label="Examples";
-  n0 [label="actor.pl"];
-  n1 [label="examples/services/node_resident_services.pl"];
-  n2 [label="node.pl"];
-  n1 -> n0;
-  n1 -> n2;
+  n0 [label="examples/services/node_resident_services.pl"];
+  n1 [label="src/actor.pl"];
+  n2 [label="src/node.pl"];
+  n0 -> n1;
+  n0 -> n2;
 }

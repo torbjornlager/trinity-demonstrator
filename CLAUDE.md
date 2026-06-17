@@ -1,48 +1,37 @@
 # Notes for Claude
 
-## Interaction-log tagging
+## What this project is
 
-When you (Claude) make HTTP requests against the **deployed** demonstrator
-nodes (`*.elfenbenstornet.se`, or any host running this stack), always
-include the agent header so the interaction log can distinguish your
-traffic from real public visitors and from the owner's own browsing.
+A production Web Prolog node for SWI-Prolog, forked from the
+trinity-demonstrator and being restructured into hook-connected layers.
+The plan is `docs/LAYERED_REAL_NODE_PLAN.md` — read it before structural
+work.
 
-The token lives on the user's machine in the environment variable
-`WEB_PROLOG_AGENT_TOKEN` (typically loaded from `Deployment/.env` or the
-user's shell). Read it from the environment — never hardcode it.
+## Hard rules
 
-### curl
+- **Semantics freeze.** Web Prolog syntax and semantics must match the
+  trinity-demonstrator exactly. Any intentional observable deviation goes
+  in `DEVIATIONS.md` (which must stay empty through v1). The demonstrator's
+  test suite is the spec.
+- **No upward imports.** Layer N may only import layers ≤ N
+  (actors < isolation < toplevel/behaviours < distribution < node <
+  umbrella). Cross-layer connections go through multifile hooks, declared
+  in the lower layer, with the glue defined in the umbrella.
+- **No integer pids below distribution.** Layer-0 pids are opaque local
+  handles behind `hook_make_pid/2` / `hook_resolve_pid/2`; integers and
+  `Id@Node` arrive with `distribution.pl` (plan §2.4).
+- **Relocation and behavior changes never share a commit.** Code moves
+  verbatim; hook indirections are introduced in their own commits.
 
-```bash
-curl -H "X-WP-Agent: $WEB_PROLOG_AGENT_TOKEN" https://n3.elfenbenstornet.se/...
-```
+## Building and testing
 
-### Inside `docker compose exec`
+- Run the suite with `./tools/test.sh` (tiered; each tier is a fresh
+  process). The LEGACY tier is the full demonstrator suite against `src/`.
+- On this development machine, `~/bin/swipl` shadows a broken ancient
+  build; use `SWIPL=/Applications/SWI-Prolog.app/Contents/MacOS/swipl`.
 
-The token is also injected into the containers, so when issuing requests
-from inside a container you can do the same:
+## Relation to other checkouts
 
-```bash
-docker compose exec -T wp_n3 sh -c \
-  'curl -H "X-WP-Agent: $WEB_PROLOG_AGENT_TOKEN" http://localhost:3053/...'
-```
-
-### What this affects
-
-Every interaction log line emitted while servicing such a request gets
-`"agent":"claude"` added. The secret viewer
-(`/__viewer/<WEB_PROLOG_VIEWER_TOKEN>`) hides agent traffic by default,
-and offers a **Public only** checkbox that hides both `owner` and
-`agent` lines so the user can see only real public visitors.
-
-### When *not* to send it
-
-- Requests against **local** dev servers that are not the deployed stack
-  (e.g. ad-hoc `swipl` test servers) — no log is being filtered there.
-- Requests where you're explicitly testing the public-visitor code path
-  and want to see what an untagged request looks like. Say so in your
-  reply when you do this.
-
-If `WEB_PROLOG_AGENT_TOKEN` is unset in the environment, just omit the
-header — the server will silently treat the request as public, which is
-the correct fallback.
+- `/Users/lager/trinity-demonstrator` is the upstream reference (git
+  remote `demonstrator` here). Never edit it as part of work in this
+  repo; it is also the interop peer for tier T5.
