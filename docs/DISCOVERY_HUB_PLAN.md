@@ -164,8 +164,8 @@ node_profile_at_least(N, Min) :-
 Almost nothing here is new data — it is relocating and lifting:
 
 - `profile`, `auth` — straight from `node_info_page_1/1` in
-  [node.pl](../src/node.pl) (line 1206), the handler registered at
-  `/node_info` ([node.pl](../src/node.pl) line 225), which already returns
+  [node.pl](../prolog/web_prolog/node.pl) (line 1206), the handler registered at
+  `/node_info` ([node.pl](../prolog/web_prolog/node.pl) line 225), which already returns
   `self_url`, `profile`, `auth`, and the trusted-header policy.
 - `description`, `shared_db` — lifted verbatim from `splashNodeCards`;
   this is where that prose finally gets a real home.
@@ -175,7 +175,7 @@ Almost nothing here is new data — it is relocating and lifting:
   endpoint, so it defers with `services` / `provides` (§9) rather than
   riding along in slice 1.
 - `services` — the node tracks these (`whereis_service/2` in
-  [actor.pl](../src/actor.pl)), but `node_info_page_1/1` does **not** expose
+  [actor.pl](../prolog/web_prolog/actors.pl)), but `node_info_page_1/1` does **not** expose
   them today, so harvesting them needs a small `/node_info` addition (or a
   new endpoint).  It is therefore *not* free: `node_service/2` defers
   alongside `provides`, past slice 1 (§9).
@@ -212,7 +212,7 @@ network call.**  Roles are split the way the actor model wants:
 
 ### 3.2 Message protocol
 
-`receive/2` in [actor.pl](../src/actor.pl) (line 1617) does **not** loop: it
+`receive/2` in [actor.pl](../prolog/web_prolog/actors.pl) (line 1617) does **not** loop: it
 calls the matched clause body — or, on timeout, the `on_timeout` goal — and
 returns whatever that returns.  So, exactly as `count_actor/1` does, **every
 path must carry its own continuation by recursing**, and there is no trailing

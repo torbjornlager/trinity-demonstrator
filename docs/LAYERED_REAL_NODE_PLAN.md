@@ -44,7 +44,7 @@ actors alone.
 
 ### 1.2 Where the demonstrator is entangled
 
-`src/actor.pl` (1725 lines) hard-imports all three upper concerns:
+The demonstrator's `actor.pl` (1725 lines) hard-imports all three upper concerns:
 
 - **distribution** — `node_controller` (22 call sites), `remote_protocol`,
   plus the entire outbound WS client (`spawn_remote/4`,
@@ -395,7 +395,8 @@ small hook indirections.
   `hook_spawn_options`/`hook_spawn_context`, and
   `hook_setting`/`hook_event` turned out not to be needed in layer 0.
   The hooks live in `prolog/web_prolog/actors.pl`, module `actors`;
-  `src/actor.pl` is the untouched pre-layering reference.)*
+  the demonstrator's `actor.pl` (upstream / git history) is the
+  pre-layering reference.)*
 - **Phase 2 — `isolation.pl`.** From `actor_source` + `source_loader` +
   `source_utils` + `actor_io_support`, with `prepare_module/3`,
   `prepare_goal/3`, `approve_source/2` hooks; minimal umbrella glue defined

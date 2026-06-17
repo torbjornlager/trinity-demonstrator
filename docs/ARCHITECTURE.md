@@ -12,13 +12,6 @@ is loaded as `library(web_prolog)` — the umbrella module
 [`prolog/web_prolog.pl`](../prolog/web_prolog.pl) reexports the public layers.
 `?- [load].` then `?- node(3060).` starts a node.
 
-> **Note on `src/`.** The repository also contains [`src/`](../src), the
-> original demonstrator code. It is **not** loaded by the node; it is kept
-> frozen as the *conformance reference* exercised by the LEGACY test tier, so
-> the layered node can be checked for behavioural parity against it. When
-> reading the architecture, ignore `src/` — the important code is under
-> `prolog/web_prolog/`.
-
 ## The Main Idea
 
 The central abstraction is an actor:
@@ -236,5 +229,5 @@ A useful reading order moves from the core outward:
 
 This codebase is a compact, hook-layered actor-oriented Prolog runtime with
 three network faces — stateless query calls, session-style shell calls, and
-full actor access over WebSocket — frozen in semantics to the demonstrator kept
-under `src/`.
+full actor access over WebSocket — frozen in semantics to the trinity-demonstrator,
+whose test suite now lives across the `T0`–`T5` tiers.

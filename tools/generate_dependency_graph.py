@@ -214,25 +214,26 @@ def imports_table(edges_by_source: dict[str, set[str]]) -> list[str]:
 def section_groups(all_edges: list[tuple[str, str]]) -> list[tuple[str, list[tuple[str, str]]]]:
     root_sources = {
         source for source, _ in all_edges
-        if "/" not in source or source.startswith("src/")
+        if "/" not in source or source.startswith("prolog/web_prolog/")
     }
     node_sources = {
         source
         for source, _ in all_edges
-        if source == "src/node.pl"
-        or source.startswith("src/node_")
+        if source == "prolog/web_prolog/node.pl"
+        or source.startswith("prolog/web_prolog/node_")
         or source in {
-            "src/actor.pl",
-            "src/actor_io_support.pl",
-            "src/toplevel_actor.pl",
-            "src/pid_utils.pl",
-            "src/dollar_expansion.pl",
-            "src/node_client.pl",
-            "src/statechart_actor.pl",
+            "prolog/web_prolog/actors.pl",
+            "prolog/web_prolog/actor_io_support.pl",
+            "prolog/web_prolog/toplevel_actors.pl",
+            "prolog/web_prolog/pid_utils.pl",
+            "prolog/web_prolog/dollar_expansion.pl",
+            "prolog/web_prolog/statechart_actor.pl",
         }
     }
     statechart_sources = {
-        source for source, _ in all_edges if source.startswith("src/statechart")
+        source
+        for source, _ in all_edges
+        if source.startswith("prolog/web_prolog/statechart")
     }
 
     return [
@@ -274,8 +275,7 @@ def graph_sections(all_edges: list[tuple[str, str]]) -> list[str]:
 #  Every module under prolog/ is assigned a layer; a use_module edge
 #  may only point at the same or a lower layer.  Files added under
 #  prolog/ without an assignment fail the lint, so new modules must
-#  be classified deliberately.  src/ (legacy reference), tests/, and
-#  examples/ are exempt.
+#  be classified deliberately.  tests/ and examples/ are exempt.
 #  ---------------------------------------------------------------
 
 _WP = "prolog/web_prolog/"
