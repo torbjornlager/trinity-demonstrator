@@ -7,10 +7,10 @@ top.
 
 **Status: pre-release.** The layered restructuring is complete through
 the node layer: the implementation lives under `prolog/web_prolog/` and
-loads as `library(web_prolog)`. The original demonstrator code is kept
-under `src/` purely as the frozen conformance reference for the LEGACY
-test tier. The migration plan — layer map, hook inventory, conformance
-strategy — is in
+loads as `library(web_prolog)`. The demonstrator's conformance suite has
+been fully relocated into the `T0`–`T5` tiers under `tests/tiers/`, so the
+original in-tree `src/` copy has been removed. The migration plan — layer
+map, hook inventory, conformance strategy — is in
 [docs/LAYERED_REAL_NODE_PLAN.md](docs/LAYERED_REAL_NODE_PLAN.md).
 
 ## The layers (target state)
@@ -90,10 +90,10 @@ WP_CHECK=1 WP_PROFILE=actor WP_AUTH=private swipl Deployment/start_node.pl
 ./tools/test.sh          # all tiers, each in a fresh SWI-Prolog process
 ```
 
-The tier structure (see `tests/tiers/README.md`): the `LEGACY` tier runs the
-full demonstrator suite against `src/`; tiers `T0`–`T5` come online as the
-corresponding layers are extracted, and each asserts that the layers above
-it are *not* loaded.
+The tier structure (see `tests/tiers/README.md`): tiers `T0`–`T5` carry the
+full demonstrator suite against the layered modules, one layer per tier,
+and each asserts that the layers above it are *not* loaded. `LINT` checks
+that imports only point downward.
 
 ## Provenance
 

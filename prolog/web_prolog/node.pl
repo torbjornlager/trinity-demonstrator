@@ -1799,15 +1799,8 @@ node_wasm_modules_dir(Dir) :-
     file_directory_name(ThisFile, Dir0),
     directory_file_path(Dir0, 'wasm', Dir).
 node_wasm_modules_dir(Dir) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, '../../src/wasm', Dir).
-node_wasm_modules_dir(Dir) :-
     working_directory(Cwd, Cwd),
     directory_file_path(Cwd, 'prolog/web_prolog/wasm', Dir).
-node_wasm_modules_dir(Dir) :-
-    working_directory(Cwd, Cwd),
-    directory_file_path(Cwd, 'src/wasm', Dir).
 
 %!  example_directory_entries(+Dir, +BaseURL, +Kind, -Entries) is det.
 %

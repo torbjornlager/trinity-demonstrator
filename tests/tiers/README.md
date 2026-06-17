@@ -4,9 +4,14 @@ Each tier is run by `tools/test.sh` in a **fresh SWI-Prolog process** and
 corresponds to one layer combination from
 [`docs/LAYERED_REAL_NODE_PLAN.md`](../../docs/LAYERED_REAL_NODE_PLAN.md) §4.
 
+The demonstrator's full suite now lives across these tiers (its own test
+files copied verbatim into `behaviours/` and `node/`, plus the lower-layer
+cases adapted into `t0`–`t2`). The former `LEGACY` tier — the demonstrator
+suite run against an in-tree `src/` copy — was retired once `T0`–`T5`
+subsumed it, and `src/` was removed.
+
 | tier | loads | runs | layer-honesty assertion |
 |---|---|---|---|
-| LEGACY | `src/` via `test.pl` | the full demonstrator suite | — (removed when `src/` is dismantled) |
 | T0 | `actors` only | actor tests not needing source options | no isolation/toplevel/distribution/node modules loaded |
 | T1 | + `isolation` + minimal glue | module prep, `load_text/1` & friends | no toplevel/distribution/node |
 | T2 | + `toplevel_actors` | toplevel actor tests | no distribution/node |

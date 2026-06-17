@@ -43,7 +43,6 @@ if selected LINT; then
     fi
 fi
 
-run_tier LEGACY test.pl                    test
 run_tier T0     tests/tiers/t0_actors.pl     run_tier
 run_tier T1     tests/tiers/t1_isolation.pl  run_tier
 run_tier T2     tests/tiers/t2_toplevel.pl   run_tier

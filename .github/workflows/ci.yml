@@ -32,7 +32,7 @@ jobs:
           # picture. (Each invocation is a fresh swipl, as the layer-honesty
           # assertions require.)
           status=0
-          for tier in LINT LEGACY T0 T1 T2 T3 T4 T5; do
+          for tier in LINT T0 T1 T2 T3 T4 T5; do
             echo "::group::Tier $tier"
             if timeout 360 ./tools/test.sh "$tier"; then
               echo "Tier $tier OK"

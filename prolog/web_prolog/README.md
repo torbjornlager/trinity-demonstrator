@@ -169,6 +169,7 @@ hooks. The composition spine and node-layer glue also live here.
 
 > Web Prolog syntax and semantics are **frozen** to the
 > trinity-demonstrator — see [../../DEVIATIONS.md](../../DEVIATIONS.md),
-> which is expected to stay empty. The frozen demonstrator sources live
-> under [`../../src/`](../../src/) as the LEGACY-tier conformance
-> reference; do not edit them to change behaviour.
+> which is expected to stay empty. Conformance is pinned by the
+> demonstrator's test suite, relocated into the `T0`–`T5` tiers under
+> [`../../tests/tiers/`](../../tests/tiers/); do not change these modules'
+> observable behaviour without a corresponding DEVIATIONS.md entry.
