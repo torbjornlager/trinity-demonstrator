@@ -17,10 +17,10 @@ route. In profile terms, `actor` includes the lower `relation`, `isobase`, and
 
 Primary basis:
 
-- [node_builtin_policy.pl](../src/node_builtin_policy.pl)
-- [node_profile_policy.pl](../src/node_profile_policy.pl)
-- [actor_io_support.pl](../src/actor_io_support.pl)
-- [node_sandbox.pl](../src/node_sandbox.pl)
+- [node_builtin_policy.pl](../prolog/web_prolog/node_builtin_policy.pl)
+- [node_profile_policy.pl](../prolog/web_prolog/node_profile_policy.pl)
+- [actor_io_support.pl](../prolog/web_prolog/actor_io_support.pl)
+- [node_sandbox.pl](../prolog/web_prolog/node_sandbox.pl)
 - [BLACKLIST_SANDBOX_NOTES.md](policy/BLACKLIST_SANDBOX_NOTES.md)
 
 ## Notes on Scope

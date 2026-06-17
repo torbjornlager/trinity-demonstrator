@@ -25,7 +25,7 @@ proved through meta-calls or dynamically constructed goals.
 | `actor` | `/call`, `/toplevel_*`, `/ws` |
 
 Current route enforcement lives in
-[node_profile_policy.pl](../src/node_profile_policy.pl).
+[node_profile_policy.pl](../prolog/web_prolog/node_profile_policy.pl).
 
 
 ## Language Matrix
