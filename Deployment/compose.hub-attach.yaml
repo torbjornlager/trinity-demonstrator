@@ -1,0 +1,57 @@
+# COEXIST: run ONLY the n0 discovery hub, joined to the EXISTING
+# demonstrator stack's network so its Caddy can route to it. n1–n5 stay
+# up and untouched; we just add n0.
+#
+#   docker compose -f Deployment/compose.hub-attach.yaml up -d --build
+#
+# Prereqs:
+#   - The demonstrator stack is running (its network deployment_wp_net
+#     and nodes wp_n1..wp_n5 exist).
+#   - You added an `n0.elfenbenstornet.se` vhost to that stack's Caddyfile
+#     (reverse_proxy n0:3060) and rebuilt/restarted its Caddy, so it
+#     terminates TLS for n0 and proxies to this container.
+#
+# n0 probes the peers internally over deployment_wp_net (see
+# discovery-seed.coexist.pl) and self-probes localhost, so nothing here
+# depends on NAT hairpin or public reachability.
+
+name: web-prolog-hub
+
+services:
+  n0:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.node
+    restart: unless-stopped
+    init: true
+    environment:
+      WP_PORT: "3060"
+      WP_PUBLIC_URL: "https://n0.elfenbenstornet.se"
+      WP_DISCOVERY_HUB: "yes"
+      WP_DISCOVERY_SEED_FILE: "/app/Deployment/discovery-seed.coexist.pl"
+      WP_PROFILE: "relation"
+      WP_AUTH: "open"
+      WP_ACK_PUBLIC: "yes"
+      WP_SANDBOX: "blacklist"
+      WEB_PROLOG_INTERACTION_LOG: /var/lib/web-prolog/interactions.jsonl
+      TZ: Europe/Stockholm
+    volumes:
+      - n0_state:/var/lib/web-prolog
+    expose:
+      - "3060"
+    networks:
+      wp_net:
+        aliases:
+          - n0           # the demonstrator Caddy reaches this as n0:3060
+    mem_limit: 512m
+    cpus: 0.50
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  wp_net:
+    name: deployment_wp_net
+    external: true
+
+volumes:
+  n0_state:

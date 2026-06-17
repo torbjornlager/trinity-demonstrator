@@ -1,0 +1,103 @@
+# Caddy for the elfenbenstornet.se n0 + n5 deployment.
+#
+# Two vhosts, automatic HTTPS (Let's Encrypt):
+#   n0.elfenbenstornet.se -> the discovery hub (RELATION, open). Plain
+#                            reverse proxy; no identity needed.
+#   n5.elfenbenstornet.se -> the layered node (private), behind GitHub
+#                            SSO via oauth2-proxy (forward_auth), which
+#                            injects the verified identity as
+#                            X-Web-Prolog-User.
+#
+# Used by compose.elfenbenstornet.yaml. ACME_EMAIL comes from the env
+# file; the hostnames are explicit so each vhost gets its own cert.
+
+{
+	email {$ACME_EMAIL}
+}
+
+# ── n0: the discovery hub ───────────────────────────────────────────
+n0.elfenbenstornet.se {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	reverse_proxy n0:3060 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up Host {host}
+
+		# n0 is open and identity-free; strip every client-supplied
+		# trust header so nothing can claim a principal or an internal
+		# grant. Caddy is the only private-network peer the node trusts.
+		header_up -X-Web-Prolog-User
+		header_up -X-Web-Prolog-Principal
+		header_up -X-Authenticated-User
+		header_up -X-Web-Prolog-Capabilities
+		header_up -X-Web-Prolog-Caps
+		header_up -X-Web-Prolog-Internal-Proxy
+		header_up -X-Web-Prolog-Protocol
+	}
+}
+
+# ── n5: the layered node, behind GitHub SSO ─────────────────────────
+n5.elfenbenstornet.se {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# oauth2-proxy's own endpoints: sign-in, OAuth callback, sign-out.
+	handle /oauth2/* {
+		reverse_proxy oauth2_n5:4180 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Uri {uri}
+		}
+	}
+
+	# Everything else requires a valid session.
+	handle {
+		forward_auth oauth2_n5:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email
+
+			# Not signed in -> bounce to the sign-in page.
+			@unauth status 401
+			handle_response @unauth {
+				redir https://{host}/oauth2/sign_in?rd={scheme}://{host}{uri}
+			}
+		}
+
+		reverse_proxy n5:3060 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up Host {host}
+
+			# Strip client-supplied trust headers, then set the node's
+			# principal from the verified identity ONLY. NB: do NOT delete
+			# X-Web-Prolog-User — Caddy applies deletes after sets, so the
+			# Set below would be wiped and every request would be anonymous.
+			header_up -X-Web-Prolog-Principal
+			header_up -X-Authenticated-User
+			header_up -X-Web-Prolog-Capabilities
+			header_up -X-Web-Prolog-Caps
+			header_up -X-Web-Prolog-Internal-Proxy
+			header_up -X-Web-Prolog-Protocol
+			header_up X-Web-Prolog-User {http.request.header.X-Auth-Request-Email}
+
+			# ACTOR mode is long-lived WebSocket; don't time it out.
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+}

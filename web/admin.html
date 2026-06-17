@@ -6,12 +6,19 @@
     <title>Web Prolog Admin</title>
     <link rel="stylesheet" href="/admin/tabler.min.css">
     <style>
+      /* Sharper text: Tabler defaults to antialiased smoothing (thin /
+         washed-out on macOS); use crisp smoothing instead. */
+      html, body {
+        -webkit-font-smoothing: auto;
+        -moz-osx-font-smoothing: auto;
+        text-rendering: optimizeLegibility;
+      }
       :root {
         --bg: #f5f5f5;
         --panel: #ffffff;
         --panel-2: #efefef;
-        --ink: #1f2937;
-        --muted: #6b7280;
+        --ink: #16202e;
+        --muted: #57606e;
         --line: #d4d4d4;
         --accent: #374151;
         --accent-soft: #e5e7eb;
@@ -959,13 +966,6 @@
         </div>
         <div class="config-grid">
           <div class="field">
-            <span class="field-label-row">
-              <span>Self URL</span>
-              <button class="config-help-button" type="button" data-help-id="self_url" aria-label="Help for Self URL">?</button>
-            </span>
-            <input id="config-self-url" type="text" readonly>
-          </div>
-          <div class="field">
             <label for="config-profile" class="field-label-row">
               <span>Profile</span>
               <button class="config-help-button" type="button" data-help-id="profile" aria-label="Help for Profile">?</button>
@@ -1195,7 +1195,6 @@
       (function() {
         var PROFILE_KEYS = ["relation", "isobase", "isotope", "actor"];
         var ADMIN_CONFIG_HELP_TEXT = Object.freeze({
-          self_url: "Canonical node address used to construct global pids such as Pid@Node. Change it only when this node should advertise a different public URL.",
           profile: "Sets the node capability ceiling. RELATION offers only /call, ISOBASE adds stateless execution and RPC, ISOTOPE adds semi-stateful HTTP toplevel sessions, and ACTOR enables the full actor runtime and WebSocket API.",
           auth: "Controls the authentication boundary. OPEN accepts unauthenticated requests, DEV trusts local development identity, and PRIVATE requires authenticated principals from the node policy.",
           sandbox: "Chooses the language sandbox policy. NO SANDBOX disables checks, WHITELIST keeps the current SWI-Prolog safe-goal policy, and BLACKLIST applies an initial deny-list over risky runtime and ISO predicates.",
@@ -1681,7 +1680,6 @@
           if (!configState) {
             return;
           }
-          setFieldValue("config-self-url", configState.self_url || "");
           setFieldValue("config-profile", configState.profile || "actor");
           setFieldValue("config-auth", configState.auth || "open");
           setFieldValue("config-sandbox", configState.sandbox || "blacklist");

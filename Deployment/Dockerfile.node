@@ -1,0 +1,57 @@
+# web-prolog node image.
+#
+# Build from the repository root:
+#   docker build -f Deployment/Dockerfile -t web-prolog-node .
+#
+# Or via compose.yaml (recommended), which also runs Caddy for TLS.
+
+# Pinned to a stable SWI-Prolog 10.x. The node resolves which local node
+# serves an HTTP request from the request's port(_) field, which is
+# present in SWI 10.x but NOT in 9.2.x — on 9.2.x the node context never
+# resolves and /readyz (plus per-node work) breaks. The conformance gate
+# is validated on 10.1.3; 10.x is the supported runtime.
+FROM swipl:10.0.2
+
+LABEL org.opencontainers.image.title="web-prolog node" \
+      org.opencontainers.image.source="https://github.com/Web-Prolog/web-prolog"
+
+# The node runs as an unprivileged user.
+RUN useradd --create-home --uid 10001 webprolog
+
+WORKDIR /app
+
+# Copy only what the node needs at runtime (tests, docs, and the legacy
+# src/ reference are intentionally excluded via .dockerignore).
+COPY prolog/   /app/prolog/
+COPY web/      /app/web/
+COPY examples/ /app/examples/
+COPY img/      /app/img/
+COPY pack.pl   /app/pack.pl
+COPY Deployment/start_node.pl /app/Deployment/start_node.pl
+# Discovery-hub seed files are baked in (small data files, used only when
+# WP_DISCOVERY_SEED_FILE points at one) so a hub deployment needs no host
+# bind mount — portable across hosts and not subject to Docker Desktop
+# file-sharing on macOS.
+COPY Deployment/discovery-seed.*.pl /app/Deployment/
+
+# Fail the build if the node cannot load and its config cannot resolve.
+RUN WP_CHECK=1 swipl /app/Deployment/start_node.pl
+
+USER webprolog
+
+# WP_PORT must match the EXPOSE / compose mapping.
+ENV WP_PORT=3060
+EXPOSE 3060
+
+# Liveness for orchestrators (compose/k8s can also probe /healthz).
+# halt/1 must stay OUTSIDE the catch: in SWI 10.x halt(N) unwinds via an
+# unwind(halt(N)) exception, which a catch(_, ...) would swallow — so a
+# halt(0) inside the protected goal turns into the recovery's halt(1) and
+# the check always reports unhealthy.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD swipl -q -g "use_module(library(http/http_open)), \
+        ( catch((http_open('http://localhost:3060/healthz', S, [timeout(3)]), close(S)), _, fail) \
+          -> halt(0) ; halt(1) )" \
+        -t 'halt(1)'
+
+ENTRYPOINT ["swipl", "/app/Deployment/start_node.pl"]

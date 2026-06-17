@@ -176,19 +176,17 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # ── n5: the layered web-prolog production node, behind SSO ──────────
-  # Built from a SIBLING checkout of the web-prolog repo:
-  #     <parent>/trinity-demonstrator   (this repo)
-  #     <parent>/web-prolog             (git clone of torbjornlager/web-prolog)
-  # so build.context ../../web-prolog resolves. The node runs WP_AUTH=
-  # private; oauth2_n5 authenticates each visitor and the n5 Caddy vhost
-  # injects the verified identity as X-Web-Prolog-User (trusted only from
-  # this private proxy peer). Logged-in users get the WP_AUTHENTICATED_
-  # DEFAULT_CAPS "registered" tier.
+  # ── n5: the layered production node, behind SSO ────────────────────
+  # Built from THIS repo via the lean env-driven image (Dockerfile.node +
+  # start_node.pl), self-contained — no sibling web-prolog checkout. The
+  # node runs WP_AUTH=private; oauth2_n5 authenticates each visitor and
+  # the n5 Caddy vhost injects the verified identity as X-Web-Prolog-User
+  # (trusted only from this private proxy peer). Logged-in users get the
+  # WP_AUTHENTICATED_DEFAULT_CAPS "registered" tier.
   wp_n5:
     build:
-      context: ../../web-prolog
-      dockerfile: Deployment/Dockerfile
+      context: ..
+      dockerfile: Deployment/Dockerfile.node
     restart: unless-stopped
     init: true
     read_only: true

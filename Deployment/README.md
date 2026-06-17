@@ -1,25 +1,35 @@
 # Deployment Bundle
 
-This folder contains a first practical deployment bundle for exposing four
-Web Prolog nodes on the public internet and keeping one admin node local-only.
+This folder is the practical deployment for the public `elfenbenstornet.se`
+Web Prolog nodes: a **discovery hub**, four public demo nodes, one
+**SSO-gated production node**, and a local-only admin node. It is
+**self-contained** — every container builds from this repo (no sibling
+`web-prolog` checkout is needed).
 
 Target hostnames:
 
+- `n0.elfenbenstornet.se`: public **discovery hub** — a `profile(relation)`
+  node that probes the others and publishes the live register; serves the
+  directory at `/discovery-hub`. See [Discovery hub (n0)](#discovery-hub-n0).
 - `n1.elfenbenstornet.se`: public, `profile(isobase)`, most conservative
 - `n2.elfenbenstornet.se`: public, `profile(isotope)`
 - `n3.elfenbenstornet.se`: public ACTOR demo, `profile(actor)`
 - `n4.elfenbenstornet.se`: second public ACTOR demo, `profile(actor)`
-- `admin.elfenbenstornet.se`: reserved admin hostname, but not publicly routed
+- `n5.elfenbenstornet.se`: the layered production node, `profile(actor)`,
+  `auth(private)`, behind GitHub SSO. See [SSO node (n5)](#sso-node-n5).
+- `admin.elfenbenstornet.se`: reserved admin hostname, not publicly routed
 
 The shape is:
 
 ```text
 Internet
-  -> DNS for n1 / n2 / n3 / n4
+  -> DNS for n0 / n1 / n2 / n3 / n4 / n5
   -> router forwards 80 and 443 to the host
   -> Caddy container
-  -> private Docker network
-  -> wp_n1 / wp_n2 / wp_n3 / wp_n4 / wp_admin containers
+  -> private Docker network (deployment_wp_net)
+  -> wp_n1 / wp_n2 / wp_n3 / wp_n4 / wp_admin   (Dockerfile, start_nX.pl)
+  -> wp_n5 + oauth2_n5                          (Dockerfile.node, GitHub SSO)
+  -> n0 discovery hub                           (Dockerfile.node, compose.hub-attach.yaml)
 ```
 
 Each node is also bound on the host loopback interface for local-only admin
@@ -55,21 +65,37 @@ keep that one out of public git.
 
 ## Files
 
-- `Dockerfile`: image for all five SWI-Prolog nodes
-- `compose.yaml`: the 6-service Docker Compose stack
+Images and orchestration:
+
+- `Dockerfile`: image for `n1`–`n4` + `admin` (copies the repo, launched by
+  the per-node `start_nX.pl` scripts below)
+- `Dockerfile.node`: lean, env-driven image for `n5` and the `n0` hub —
+  `ENTRYPOINT` is `start_node.pl`, configured entirely by `WP_*` env vars
+- `compose.yaml`: the main stack — Caddy, `wp_n1`–`wp_n4`, `wp_admin`,
+  `wp_n5`, and the `oauth2_n5` SSO sidecar
+- `compose.hub-attach.yaml`: the `n0` discovery hub, joined to the main
+  stack's `deployment_wp_net` so it can probe the peers internally
 - `Caddyfile`: public routing and TLS termination
-- `start_n1.pl`: launcher for `n1.elfenbenstornet.se`
-- `start_n2.pl`: launcher for `n2.elfenbenstornet.se`
-- `start_n3.pl`: launcher for `n3.elfenbenstornet.se`
-- `start_n4.pl`: launcher for `n4.elfenbenstornet.se`
-- `start_admin.pl`: launcher for the local-only admin node
+- `.env` / `.env.n5-sso.example`: stack config; the SSO secrets for `n5`
+
+Node launchers / config:
+
+- `start_n1.pl` … `start_n4.pl`, `start_admin.pl`: per-node launchers
+- `start_node.pl`: the generic env-driven launcher (used by `n5` and `n0`)
+- `discovery-seed.coexist.pl`: the `n0` hub's seed — probes `wp_n1`–`wp_n5`
+  over the container network (see [Discovery hub (n0)](#discovery-hub-n0))
+- `discovery-seed.elfenbenstornet.pl`: a public-URL seed variant
+
+Shared databases:
+
 - `shared_db_common.pl`: common shared database loaded by every deployment node
 - `shared_db_actor_common.pl`: shared database loaded by ACTOR-profile nodes (`n3`, `n4`)
-- `shared_db_n1.pl`: per-node overlay for `n1`
-- `shared_db_n2.pl`: per-node overlay for `n2`
-- `shared_db_n3.pl`: per-node overlay for `n3`
-- `shared_db_n4.pl`: per-node overlay for `n4`
+- `shared_db_n1.pl` … `shared_db_n4.pl`: per-node overlays for `n1`–`n4`
 - `shared_db_admin.pl`: per-node overlay for `admin`
+- `n5` uses the repo default `shared_db.pl` (no overlay); `n0` serves
+  `examples/services/discovery_directory.pl` as its shared database
+- `provides/1` facts in these files are the owner-curated capability lists
+  the hub harvests (surfaced via `/node_info`, not queryable relations)
 
 ## Before You Start
 
@@ -84,10 +110,12 @@ docker compose version
 
 3. In DNS for `elfenbenstornet.se`, create `A` records for:
 
+   - `n0.elfenbenstornet.se`
    - `n1.elfenbenstornet.se`
    - `n2.elfenbenstornet.se`
    - `n3.elfenbenstornet.se`
    - `n4.elfenbenstornet.se`
+   - `n5.elfenbenstornet.se`
 
    Point them to your current public IPv4.
 
@@ -95,20 +123,31 @@ docker compose version
 
 5. Forward router ports `80` and `443` to the host.
 
+6. For `n5`'s SSO, register a GitHub OAuth App with callback
+   `https://n5.elfenbenstornet.se/oauth2/callback`, then put its client id /
+   secret and a cookie secret in `.env` (see `.env.n5-sso.example`).
+
 ## Start The Stack
 
-From this folder:
+From this folder, bring up the main stack (Caddy, `n1`–`n4`, `admin`,
+`n5` + `oauth2_n5`):
 
 ```bash
 cd Deployment
 docker compose up --build -d
 ```
 
+Then bring up the `n0` discovery hub, which attaches to the same network:
+
+```bash
+docker compose -f compose.hub-attach.yaml up -d --build
+```
+
 Check status:
 
 ```bash
 docker compose ps
-docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
+docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 ```
 
 ## What Gets Exposed
@@ -203,6 +242,48 @@ Then use:
 http://admin.elfenbenstornet.se:3054/portal
 ```
 
+## Discovery hub (n0)
+
+`n0.elfenbenstornet.se` is a `profile(relation)` node — clients can only
+**query the published register** over `/call`; there is no `/ws` and no
+arbitrary execution, so an outside client cannot create actors on it. It
+runs the registry custodian internally: every 30 s it probes each node's
+`/node_info`, derives up / unreachable / down status, and republishes a
+generation-buffered read replica into its shared database. Discovery is
+then a query (a RELATION node serves conjunctions of advertised relations):
+
+```prolog
+?- node_profile(N, actor), node_status(N, up), node_provides(N, 'human/1').
+```
+
+The browser directory at `https://n0.elfenbenstornet.se/discovery-hub`
+renders the register live (status dots, a ~10 s poll, `provides`/`services`
+chips) with a query builder that runs the composed goal on the hub.
+
+n0 is its own compose file so it can join the main stack's network and
+probe the peers internally (no NAT hairpin):
+
+```bash
+docker compose -f compose.hub-attach.yaml up -d --build
+```
+
+It builds from `Dockerfile.node` with `WP_DISCOVERY_HUB=yes`, seeding from
+`discovery-seed.coexist.pl` (which probes `wp_n1:3051` … `wp_n5:3060`). Add
+an `n0.elfenbenstornet.se` vhost to the `Caddyfile` — a plain
+`reverse_proxy n0:3060`, mirroring the `n1` block plus `/discovery-hub` and
+`/admin/tabler.min.css` in the path allowlist — so Caddy terminates TLS for it.
+
+## SSO node (n5)
+
+`n5.elfenbenstornet.se` is the layered production node at `profile(actor)`,
+`auth(private)`. The `oauth2_n5` sidecar authenticates each visitor against
+GitHub; the n5 Caddy vhost runs `forward_auth` and injects the verified
+identity as `X-Web-Prolog-User` (trusted only from the private proxy peer,
+so a public client cannot spoof it). Signed-in users get the
+`WP_AUTHENTICATED_DEFAULT_CAPS` ("registered") capability tier. It builds
+from `Dockerfile.node` (context `..`) and uses the repo default
+`shared_db.pl`.
+
 ## Security Model
 
 This bundle is a practical first step, not a complete hardening story.
@@ -217,6 +298,11 @@ Current protections:
 - Linux capabilities are dropped
 - `sandbox(blacklist)` is enabled on all nodes
 - `admin` is local-only
+- `n0` advertises the narrowest public surface (`profile(relation)`): query
+  the register over `/call` only — no `/ws`, no arbitrary goal execution
+- `n5` is `auth(private)` behind GitHub SSO; the forwarded identity header
+  is trusted only from the private proxy peer, so a public client cannot
+  assume an identity by setting it
 
 ## Testing Node-Local Logs
 

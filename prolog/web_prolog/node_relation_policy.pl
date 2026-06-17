@@ -162,6 +162,11 @@ relation_source_pattern(Term, Pattern) :-
 relation_source_head_pattern(relation_filter(_), _) :-
     !,
     fail.
+%  provides/1 is an owner-curated capability list surfaced via /node_info,
+%  not a queryable relation — keep it out of the advertised patterns.
+relation_source_head_pattern(provides(_), _) :-
+    !,
+    fail.
 relation_source_head_pattern(Head, Pattern) :-
     callable(Head),
     !,

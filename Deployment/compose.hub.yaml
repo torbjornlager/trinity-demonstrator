@@ -1,0 +1,70 @@
+# Discovery hub (node n0) in Docker — a self-contained local demo.
+#
+#   docker compose -f Deployment/compose.hub.yaml up --build
+#
+# Then open http://localhost:3060/demonstrator — the intro panel's
+# directory is live, fed by the hub's own /call. Query it directly:
+#
+#   curl 'http://localhost:3060/call?goal=node_record(n0,R)&template=R&format=json'
+#
+# The hub probes its seed nodes every 30s and publishes the live
+# register (see docs/DISCOVERY_HUB_PLAN.md). It is published straight to
+# the host here (no Caddy/TLS) so the demonstrator and /call are
+# reachable for a local demo.
+#
+# AUTH=open is deliberate: the browser directory fetches the register
+# anonymously over /call, which a private-auth node would deny. A public
+# deployment should front this with the TLS stack in compose.yaml (set
+# WP_DISCOVERY_HUB=yes there) and consider a narrower public contract for
+# n0 per DISCOVERY_HUB_PLAN.md §10.
+
+# Own project name so this demo's lifecycle is isolated from the main
+# multi-node stack in compose.yaml (no orphan-container warnings).
+name: web-prolog-hub
+
+services:
+  hub:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.node
+    restart: unless-stopped
+    environment:
+      WP_PORT: "3060"
+      # Public URL the hub advertises (its own n0 card + cross-node
+      # addressing). For a plain localhost demo this is fine as-is.
+      WP_PUBLIC_URL: "${WP_PUBLIC_URL:-http://localhost:3060}"
+      # The hub's PUBLIC contract is querying the published register, so
+      # it advertises `relation` — the narrowest honest profile (plan §10).
+      # A RELATION node answers ONLY the advertised relation_filter/1
+      # patterns over /call: no /ws and no toplevel routes (so an outside
+      # client cannot spawn actors on n0 — actor creation is blocked at the
+      # route gate, not by a per-request filter), and not even arbitrary
+      # /call goals. The registry custodian still uses spawn/receive
+      # INTERNALLY; the node profile gates public routes, not owner-side
+      # actor code.
+      #
+      # Note: a RELATION node serves single advertised relations, not
+      # CONJUNCTIONS — `node_profile(N,actor),node_status(N,up)` is goal
+      # evaluation, which needs `isobase`. The directory UI only queries
+      # the single relation `node_card/6`, so it works as-is. Set
+      # WP_PROFILE=isobase if you want clients to compose discovery goals.
+      WP_PROFILE: "${WP_PROFILE:-relation}"
+      WP_AUTH: "open"
+      WP_ACK_PUBLIC: "yes"
+      WP_SANDBOX: "blacklist"
+      # Turn this node into the discovery hub: serve discovery_directory.pl
+      # and run the registry custodian.
+      WP_DISCOVERY_HUB: "yes"
+      # Optional: a host file of `seed_node/5.` facts overriding the
+      # built-in n1–n5 public seed. Mount it under volumes below.
+      WP_DISCOVERY_SEED_FILE: "${WP_DISCOVERY_SEED_FILE:-}"
+      WP_DRAIN_GRACE_SECONDS: "${WP_DRAIN_GRACE_SECONDS:-10}"
+    ports:
+      - "${WP_HOST_PORT:-3060}:3060"
+    volumes:
+      - wp_hub_state:/var/lib/web-prolog
+      # Provide a custom seed and point WP_DISCOVERY_SEED_FILE at it:
+      # - ./hub-seed.pl:/data/seed.pl:ro
+
+volumes:
+  wp_hub_state:

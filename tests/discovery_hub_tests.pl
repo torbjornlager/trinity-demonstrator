@@ -37,7 +37,8 @@
 :- use_module('../examples/services/discovery_hub.pl').
 
 run :-
-    run_tests([discovery_status, discovery_integration]).
+    run_tests([discovery_status, discovery_integration,
+               relation_conjunction, relation_provides_exclusion]).
 
 
                 /*******************************
@@ -339,3 +340,44 @@ test(bare_arbitrary_goal_refused) :-
     assertion(nonvar(E)).
 
 :- end_tests(relation_conjunction).
+
+
+%  When a RELATION node advertises by parsing shared-DB clause heads (no
+%  explicit relation_filter), `provides/1` is excluded — it is an
+%  owner-curated capability list for /node_info, not a queryable relation.
+
+relp_port(3974).
+relp_url(Url) :- relp_port(P), format(atom(Url), 'http://localhost:~w', [P]).
+
+:- dynamic relp_db_file/1.
+
+relation_provides_setup :-
+    tmp_file_stream(text, File, S),
+    %  seen/1 has a variable head, so its advertised pattern is general
+    %  (source-parsed fact heads keep their constants — a separate quirk).
+    write(S, "provides(secret/1).\nvisible(1).\nvisible(2).\nseen(X) :- visible(X).\n"),
+    close(S),
+    retractall(relp_db_file(_)),
+    assertz(relp_db_file(File)),
+    relp_port(P),
+    node(P, [profile(relation), load_shared_db_file(File)]).
+
+relation_provides_cleanup :-
+    relp_port(P),
+    catch(http_stop_server(P, []), _, true),
+    ( relp_db_file(F) -> catch(delete_file(F), _, true) ; true ),
+    retractall(relp_db_file(_)).
+
+:- begin_tests(relation_provides_exclusion,
+               [ setup(relation_provides_setup), cleanup(relation_provides_cleanup) ]).
+
+test(source_parsed_relation_is_served, Xs == [1, 2]) :-
+    relp_url(U),
+    findall(X, rpc(U, seen(X)), Xs).
+
+test(provides_is_not_an_advertised_relation) :-
+    relp_url(U),
+    catch(rpc(U, provides(_)), E, true),
+    assertion(nonvar(E)).
+
+:- end_tests(relation_provides_exclusion).

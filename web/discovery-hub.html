@@ -6,9 +6,21 @@
   <title>Discovery Hub</title>
   <link rel="stylesheet" href="/admin/tabler.min.css">
   <style>
+    /* Sharper text: Tabler defaults to antialiased (thin/washed-out on
+       macOS); use crisp smoothing and raise the body-text contrast. */
+    html, body {
+      -webkit-font-smoothing: auto;
+      -moz-osx-font-smoothing: auto;
+      text-rendering: optimizeLegibility;
+    }
+    body { --tblr-body-color: #1a2230; }
+    .text-secondary, .dh-desc { color: #38465c !important; }   /* was light gray */
+    .text-muted { color: #5b6a7d !important; }                 /* darker muted */
+    .card-title, .page-title, .navbar-brand { color: #16202e; }
+
     .dh-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .dh-query { font-family: var(--tblr-font-monospace); white-space: pre-wrap; word-break: break-word; }
-    .dh-card.is-down { opacity: .7; }
+    .dh-query { font-family: var(--tblr-font-monospace); white-space: pre-wrap; word-break: break-word; color: #1a2230; }
+    .dh-card.is-down { opacity: .72; }
     .dh-chip { font-family: var(--tblr-font-monospace); font-size: .75rem; }
   </style>
 </head>

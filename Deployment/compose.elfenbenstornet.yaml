@@ -1,0 +1,142 @@
+# elfenbenstornet.se deployment: the discovery hub (n0) + the layered
+# SSO node (n5), fronted by Caddy with automatic TLS.
+#
+#   cp Deployment/.env.elfenbenstornet.example Deployment/.env.elfenbenstornet
+#   $EDITOR Deployment/.env.elfenbenstornet      # ACME email + GitHub OAuth
+#   docker compose -f Deployment/compose.elfenbenstornet.yaml \
+#       --env-file Deployment/.env.elfenbenstornet up -d --build
+#
+#   n0.elfenbenstornet.se/demonstrator  -> the live directory (RELATION hub)
+#   n5.elfenbenstornet.se               -> the layered node, behind GitHub SSO
+#
+# Caddy binds 80/443, so any other web server on this host (e.g. the
+# demonstrator stack's own Caddy) must be stopped first.
+
+name: web-prolog-elfenbenstornet
+
+services:
+  # ── n0: the discovery hub ─────────────────────────────────────────
+  # RELATION profile, open: clients only query the published register
+  # over /call (no /ws, no actor spawning). The registry custodian runs
+  # internally. n0 self-probes localhost and probes n5 over wp_net.
+  n0:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.node
+    restart: unless-stopped
+    init: true
+    environment:
+      WP_PORT: "3060"
+      WP_PUBLIC_URL: "https://n0.elfenbenstornet.se"
+      WP_DISCOVERY_HUB: "yes"
+      WP_DISCOVERY_SEED_FILE: "/app/Deployment/discovery-seed.elfenbenstornet.pl"
+      WP_PROFILE: "relation"
+      WP_AUTH: "open"
+      WP_ACK_PUBLIC: "yes"
+      WP_SANDBOX: "blacklist"
+      WEB_PROLOG_INTERACTION_LOG: /var/lib/web-prolog/interactions.jsonl
+      TZ: Europe/Stockholm
+    volumes:
+      - n0_state:/var/lib/web-prolog
+    expose:
+      - "3060"
+    networks:
+      - wp_net
+    mem_limit: 512m
+    cpus: 0.50
+    security_opt:
+      - no-new-privileges:true
+
+  # ── n5: the layered web-prolog node, behind SSO ───────────────────
+  # WP_AUTH=private: oauth2_n5 authenticates each visitor and the n5
+  # Caddy vhost injects the verified identity as X-Web-Prolog-User
+  # (trusted only from this private proxy peer). Signed-in users get the
+  # WP_AUTHENTICATED_DEFAULT_CAPS "registered" tier.
+  n5:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.node
+    restart: unless-stopped
+    init: true
+    environment:
+      WP_PORT: "3060"
+      WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
+      WP_PROFILE: "${WP_N5_PROFILE:-actor}"
+      WP_AUTH: "private"
+      WP_SANDBOX: "${WP_N5_SANDBOX:-blacklist}"
+      WP_AUTHENTICATED_DEFAULT_CAPS: "${WP_N5_DEFAULT_CAPS:-execute}"
+      WP_OWNER: "${WP_N5_OWNER:-}"
+      WP_MAX_ACTORS: "${WP_N5_MAX_ACTORS:-10000}"
+      WP_MAX_CALL_INFERENCES: "${WP_N5_MAX_CALL_INFERENCES:-1000000000}"
+      WP_MAX_ACTOR_STACK_BYTES: "${WP_N5_MAX_ACTOR_STACK_BYTES:-268435456}"
+      WEB_PROLOG_INTERACTION_LOG: /var/lib/web-prolog/interactions.jsonl
+      TZ: Europe/Stockholm
+    volumes:
+      - n5_state:/var/lib/web-prolog
+    expose:
+      - "3060"
+    networks:
+      - wp_net
+    mem_limit: 1g
+    cpus: 1.00
+    security_opt:
+      - no-new-privileges:true
+
+  # ── oauth2-proxy sidecar for n5 (forward_auth target) ─────────────
+  oauth2_n5:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    restart: unless-stopped
+    environment:
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      # forward_auth-only: no real upstream, just answer /oauth2/auth.
+      OAUTH2_PROXY_UPSTREAMS: "static://202"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_REDIRECT_URL: "https://n5.elfenbenstornet.se/oauth2/callback"
+      OAUTH2_PROXY_PROVIDER: "${OAUTH2_PROXY_PROVIDER:-github}"
+      OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PROXY_CLIENT_ID}"
+      OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PROXY_CLIENT_SECRET}"
+      OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
+      # Registration allowlist — set the one matching your provider.
+      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_EMAIL_DOMAINS:-*}"
+      OAUTH2_PROXY_GITHUB_ORG: "${OAUTH2_PROXY_GITHUB_ORG:-}"
+      OAUTH2_PROXY_GITHUB_USERS: "${OAUTH2_PROXY_GITHUB_USERS:-}"
+      OAUTH2_PROXY_OIDC_ISSUER_URL: "${OAUTH2_PROXY_OIDC_ISSUER_URL:-}"
+    expose:
+      - "4180"
+    networks:
+      - wp_net
+    mem_limit: 128m
+    cpus: 0.25
+
+  # ── Caddy: TLS + routing for both vhosts ──────────────────────────
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - n0
+      - n5
+      - oauth2_n5
+    environment:
+      ACME_EMAIL: "${ACME_EMAIL}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.elfenbenstornet:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - wp_net
+    mem_limit: 256m
+    cpus: 0.50
+
+networks:
+  wp_net:
+
+volumes:
+  caddy_data:
+  caddy_config:
+  n0_state:
+  n5_state:
