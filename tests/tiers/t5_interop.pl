@@ -1,11 +1,17 @@
 /*  Tier T5: wire-level interop against the unmodified demonstrator.
 
     The strongest "semantics exactly preserved" check in the plan:
-    the remote side is the demonstrator node (src/, running in a
+    the remote side is the unmodified demonstrator node, running in a
     separate OS process — module tables genuinely node-local, unlike
-    the in-process harness); the local side is the new layered stack
+    the in-process harness; the local side is the new layered stack
     acting as a client: actors + isolation + toplevel_actors +
     distribution + rpc.
+
+    The demonstrator source was removed from the working tree once the
+    tiers subsumed the LEGACY suite; its last in-tree state is preserved
+    under the `demonstrator-peer` git tag, which this tier extracts into
+    a throwaway temp directory to launch the peer (see
+    materialize_demonstrator/1).
 
     Covered here (client->server direction):
       - rpc/2-3 solutions and transparent paging over /call,
@@ -31,6 +37,7 @@
 :- use_module(library(process)).
 :- use_module(library(http/http_open)).
 :- use_module(library(pcre)).
+:- use_module(library(filesex), [delete_directory_and_contents/1]).
 
 %  No tier-local hook_start_body glue: node.pl loads node_glue, which
 %  is the composition.
@@ -97,6 +104,10 @@ flush_shell_mailbox :-
                 *******************************/
 
 :- dynamic t5_node/2.                   % Process, URL
+:- dynamic t5_peer_dir/1.               % extracted demonstrator tree
+
+%  The git tag whose tree still carries the in-tree demonstrator (src/).
+demonstrator_peer_tag('demonstrator-peer').
 
 swipl_executable(Exe) :-
     (   getenv('SWIPL', Exe0)
@@ -109,22 +120,58 @@ pick_free_port(Port) :-
     tcp_bind(Socket, Port),
     tcp_close_socket(Socket).
 
+%!  materialize_demonstrator(-PeerDir) is det.
+%
+%   Extract the demonstrator tree at the `demonstrator-peer` tag into a
+%   fresh temp directory. The peer process is then launched from there
+%   with `use_module('src/node.pl')`, exactly as it ran when src/ lived
+%   in the working tree — but without keeping that copy in the repo.
+materialize_demonstrator(PeerDir) :-
+    t5_dir(TiersDir),
+    file_directory_name(TiersDir, TestsDir),
+    file_directory_name(TestsDir, RepoDir),
+    demonstrator_peer_tag(Tag),
+    (   git_in(RepoDir, ['rev-parse', '--verify', '--quiet', Tag], _)
+    ->  true
+    ;   throw(error(t5_demonstrator_tag_missing(Tag), _))
+    ),
+    tmp_file(t5_demonstrator, Base),
+    make_directory(Base),
+    PeerDir = Base,
+    format(atom(Cmd),
+           "git -C '~w' archive '~w' | tar -x -C '~w'",
+           [RepoDir, Tag, PeerDir]),
+    process_create(path(sh), ['-c', Cmd],
+                   [ process(P), stdout(null), stderr(null) ]),
+    process_wait(P, Status),
+    (   Status == exit(0)
+    ->  true
+    ;   catch(delete_directory_and_contents(PeerDir), _, true),
+        throw(error(t5_demonstrator_checkout_failed(Tag, Status), _))
+    ).
+
+%!  git_in(+Dir, +Args, -Status) is det.
+git_in(Dir, Args, Status) :-
+    process_create(path(git), ['-C', Dir | Args],
+                   [ process(P), stdout(null), stderr(null) ]),
+    process_wait(P, Status),
+    Status == exit(0).
+
 start_demonstrator_node :-
     retractall(t5_node(_, _)),
+    materialize_demonstrator(PeerDir),
+    assertz(t5_peer_dir(PeerDir)),
     pick_free_port(Port),
     format(atom(URL), 'http://localhost:~w', [Port]),
     format(atom(Goal),
            "use_module('src/node.pl'), node(~w, [profile(actor), auth(open)])",
            [Port]),
     swipl_executable(Exe),
-    t5_dir(TiersDir),
-    file_directory_name(TiersDir, TestsDir),
-    file_directory_name(TestsDir, RepoDir),
     %  The -t goal must be ground (it is stored in a prolog flag);
     %  waiting for a message that never arrives blocks forever.
     process_create(Exe,
                    [ '-q', '-g', Goal, '-t', 'thread_get_message(quit)' ],
-                   [ cwd(RepoDir),
+                   [ cwd(PeerDir),
                      process(Process),
                      stdout(null),
                      stderr(null)
@@ -162,7 +209,9 @@ stop_demonstrator_node :-
     forall(retract(t5_node(Process, _)),
            ( catch(process_kill(Process), _, true),
              catch(process_wait(Process, _), _, true)
-           )).
+           )),
+    forall(retract(t5_peer_dir(Dir)),
+           catch(delete_directory_and_contents(Dir), _, true)).
 
 node_url(URL) :-
     t5_node(_, URL).
