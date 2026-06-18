@@ -169,6 +169,29 @@ n5.elfenbenstornet.se {
 		}
 	}
 
+	# Public, read-only demo assets. The node serves /examples and
+	# /statecharts as unauthenticated static routes, and resolves
+	# node-relative load_uri against its own public URL -- so e.g.
+	# statechart_spawn(_, [load_uri('/examples/statecharts/...')]) (as in
+	# the tutorial) makes the node fetch its own /examples URL
+	# server-side, with no oauth2 cookie. Gating these behind forward_auth
+	# bounces that self-fetch to the sign-in page, so the statechart
+	# parser sees HTML ("No <statechart> root element found"). Serve them
+	# without auth, stripping every client trust header so no anonymous
+	# caller can claim a principal.
+	@public_assets path /examples/* /statecharts/*
+	handle @public_assets {
+		reverse_proxy wp_n5:3060 {
+			header_up -X-Web-Prolog-User
+			header_up -X-Web-Prolog-Principal
+			header_up -X-Authenticated-User
+			header_up -X-Web-Prolog-Capabilities
+			header_up -X-Web-Prolog-Caps
+			header_up -X-Web-Prolog-Internal-Proxy
+			header_up X-Forwarded-Proto https
+		}
+	}
+
 	# Everything else requires a valid session.
 	handle {
 		forward_auth oauth2_n5:4180 {
