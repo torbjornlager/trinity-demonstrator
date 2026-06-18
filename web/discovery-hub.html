@@ -302,6 +302,7 @@
         ALL = Object.keys(byId).map(function (k) { return byId[k]; });
         rebuildCapList();
         render();
+        document.getElementById("dh-alert").innerHTML = "";  // a recovered poll clears any stale "unreachable" banner
         document.getElementById("dh-updated").textContent = "updated just now";
         lastFetch = Date.now();
       }).catch(function (e) { offline(e.message); });
