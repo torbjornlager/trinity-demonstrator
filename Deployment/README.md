@@ -273,6 +273,29 @@ an `n0.elfenbenstornet.se` vhost to the `Caddyfile` — a plain
 `reverse_proxy n0:3060`, mirroring the `n1` block plus `/discovery-hub` and
 `/admin/tabler.min.css` in the path allowlist — so Caddy terminates TLS for it.
 
+### Redeploying n0 after code changes
+
+`n0` bakes `web/`, `prolog/`, and `examples/` into its image at build time
+(`Dockerfile.node`), so edits to the hub UI (`web/discovery-hub.html`), the
+registry service (`examples/services/discovery_hub.pl`,
+`examples/services/discovery_directory.pl`), or the node engine
+(`prolog/web_prolog/`) only go live after a **rebuild + recreate** — the
+same command as first bring-up; `--build` is what matters:
+
+```bash
+docker compose -f compose.hub-attach.yaml up -d --build
+```
+
+The hub only ever shows what it harvests from each node's `/node_info`. So a
+change that adds or alters a `/node_info` field (for example a new capability
+flag the hub surfaces) also needs the **peer** nodes rebuilt before they
+report it — until then the hub shows the old or absent value for them, while
+n0 (which self-probes and was just rebuilt) shows the new one:
+
+```bash
+docker compose up --build -d        # rebuilds caddy, wp_n1..wp_n5, wp_admin
+```
+
 ## SSO node (n5)
 
 `n5.elfenbenstornet.se` is the layered production node at `profile(actor)`,
