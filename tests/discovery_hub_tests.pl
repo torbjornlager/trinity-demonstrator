@@ -224,6 +224,23 @@ test(published_record_drops_internal_probe_url) :-
     assertion(\+ get_dict(probe_url, Rec, _)),
     assertion(get_dict(url, Rec, u)).
 
+%  node_self_contained reads the harvested portability flag, defaulting
+%  to `unknown` for a record that predates the field (or is unprobed).
+test(self_contained_defaults_unknown, V == unknown) :-
+    seed_replica(scn, 100, 0),          % seed_replica/3 sets no self_contained
+    node_self_contained(scn, V).
+
+test(self_contained_read_from_record, V == false) :-
+    retractall(user:node_record_gen(_, _, _)),
+    retractall(user:current_gen(_)),
+    Rec = node{id:scr, url:u, description:"", shared_db:"", note:"",
+               profile:actor, auth:open, version:"", services:[], provides:[],
+               self_contained:false,
+               last_seen:100, last_error:0, latency_ms:0},
+    assertz(user:node_record_gen(1, scr, Rec)),
+    assertz(user:current_gen(1)),
+    node_self_contained(scr, V).
+
 :- end_tests(discovery_status).
 
 
@@ -279,6 +296,13 @@ test(hub_appears_in_its_own_directory, S == up) :-
     hub_url(Hub),
     wait_until(rpc(Hub, node_status(n0, up)), 25),
     rpc(Hub, node_status(n0, S)).
+
+%  End-to-end harvest: the live peer runs the default (self-contained)
+%  shared DB, so once probed the hub's replica reports it self-contained.
+test(live_peer_self_contained_harvested, V == true) :-
+    hub_url(Hub),
+    wait_until(rpc(Hub, node_status(n1, up)), 25),
+    rpc(Hub, node_self_contained(n1, V)).
 
 :- end_tests(discovery_integration).
 

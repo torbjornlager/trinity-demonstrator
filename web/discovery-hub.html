@@ -193,6 +193,8 @@
       if (profile) badges += '<span class="badge bg-' + (PROFILE_COLOR[profile] || "secondary") + '-lt text-uppercase">' + esc(profile) + "</span> ";
       if (r.auth && r.auth !== "unknown") badges += '<span class="badge bg-' + (r.auth === "private" ? "orange" : "green") + '-lt">' + esc(r.auth) + "</span> ";
       if (r.isHub) badges += '<span class="badge bg-purple-lt">registry</span> ';
+      if (r.selfContained === "true") badges += '<span class="badge bg-green-lt" title="Shared DB is self-contained — directly portable to another node">self-contained</span> ';
+      else if (r.selfContained === "false") badges += '<span class="badge bg-yellow-lt" title="Shared DB is dependent — relies on a custom module or undefined predicate">dependent</span> ';
 
       var meta = [];
       var seen = relTime(r.lastSeen);
@@ -281,7 +283,8 @@
       Promise.all([
         callJSON("node_directory_row(Id,Status,Profile,Auth,_,LastSeen,Url,Description,Note)"),
         callJSON("node_service(Id,Service)"),
-        callJSON("node_provides(Id,Predicate)")
+        callJSON("node_provides(Id,Predicate)"),
+        callJSON("node_self_contained(Id,SelfContained)")
       ]).then(function (res) {
         if (res.some(function (j) { return !j || j.type !== "success"; })) throw new Error("the hub did not answer the directory query");
         var byId = {};
@@ -290,11 +293,12 @@
             id: d.Id, status: d.Status || "down", profile: d.Profile, auth: d.Auth,
             lastSeen: Number(d.LastSeen) || 0,
             url: unq(d.Url), description: unq(d.Description), note: unq(d.Note),
-            isHub: d.Id === "n0", services: [], provides: []
+            isHub: d.Id === "n0", services: [], provides: [], selfContained: "unknown"
           };
         });
         (res[1].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].services.push(unq(d.Service)); });
         (res[2].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].provides.push(unq(d.Predicate)); });
+        (res[3].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].selfContained = d.SelfContained; });
         ALL = Object.keys(byId).map(function (k) { return byId[k]; });
         rebuildCapList();
         render();

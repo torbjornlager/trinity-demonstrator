@@ -281,6 +281,7 @@ seed_to_node(Node) :-
         version: "",
         services: [],
         provides: [],
+        self_contained: unknown,
         last_seen: 0,
         last_error: 0,
         latency_ms: 0
@@ -404,11 +405,13 @@ apply_outcome(ok(Info, LatencyMs), Now, Node0, Node) :-
     info_field(auth, Info, Auth),
     info_list(services, Info, Services),
     info_list(provides, Info, Provides),
+    info_bool(self_contained, Info, SelfContained),
     Node = Node0.put(_{
         profile: Profile,
         auth: Auth,
         services: Services,
         provides: Provides,
+        self_contained: SelfContained,
         last_seen: Now,
         latency_ms: LatencyMs
     }).
@@ -430,6 +433,20 @@ info_list(Key, Info, List) :-
         is_list(Raw)
     ->  maplist(to_atom, Raw, List)
     ;   List = []
+    ).
+
+%!  info_bool(+Key, +Info, -Value) is det.
+%
+%   Harvest a self-reported boolean (e.g. self_contained) as true/false;
+%   absent or unrecognised ⇒ unknown.  json_read_dict may surface JSON
+%   booleans as true/false or @(true)/@(false).
+info_bool(Key, Info, Value) :-
+    (   get_dict(Key, Info, Raw)
+    ->  (   ( Raw == true ; Raw == @(true) )  -> Value = true
+        ;   ( Raw == false ; Raw == @(false) ) -> Value = false
+        ;   Value = unknown
+        )
+    ;   Value = unknown
     ).
 
 to_atom(A, A) :- atom(A), !.

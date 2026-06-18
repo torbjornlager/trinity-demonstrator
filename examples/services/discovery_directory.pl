@@ -37,6 +37,7 @@ relation_filter(node_card(_, _, _, _, _, _)).
 relation_filter(node_directory_row(_, _, _, _, _, _, _, _, _)).
 relation_filter(node_service(_, _)).
 relation_filter(node_provides(_, _)).
+relation_filter(node_self_contained(_, _)).
 relation_filter(node_profile_at_least(_, _)).
 
 
@@ -193,6 +194,20 @@ node_provides(Id, Predicate) :-
     node_record(Id, Record),
     get_dict(provides, Record, Provides),
     member(Predicate, Provides).
+
+
+%!  node_self_contained(?Id, -SelfContained) is nondet.
+%
+%   The portability axis a node reports through /node_info, harvested
+%   into the replica: `true` if its shared DB is self-contained,
+%   `false` if dependent, `unknown` until first probed (or if an older
+%   record predates the field).
+node_self_contained(Id, SelfContained) :-
+    node_record(Id, Record),
+    (   get_dict(self_contained, Record, SC)
+    ->  SelfContained = SC
+    ;   SelfContained = unknown
+    ).
 
 
 %!  node_profile_at_least(?Id, +Min) is nondet.
