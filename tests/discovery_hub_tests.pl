@@ -25,6 +25,8 @@
 :- use_module(library(web_prolog/rpc)).
 :- use_module(library(plunit)).
 :- use_module(library(http/thread_httpd), [http_stop_server/2]).
+:- use_module(library(http/http_open), [http_open/3]).
+:- use_module(library(http/json), [json_read_dict/2]).
 
 %  The read side, loaded here so we can drive its dynamic replica facts
 %  directly with known timestamps.  A plain (non-module) file's clauses
@@ -38,7 +40,8 @@
 
 run :-
     run_tests([discovery_status, discovery_integration,
-               relation_conjunction, relation_provides_exclusion]).
+               relation_conjunction, relation_provides_exclusion,
+               node_resident_provides]).
 
 
                 /*******************************
@@ -381,3 +384,67 @@ test(provides_is_not_an_advertised_relation) :-
     assertion(nonvar(E)).
 
 :- end_tests(relation_provides_exclusion).
+
+
+%  /node_info's `provides` is derived from the shared DB itself (no
+%  hand-curated provides/1 list): the node-resident predicates the DB
+%  defines OR imports via use_module/2, with the I/O prelude, the actor
+%  API, SWI built-ins, and the control facts (provides/1, relation_filter/1)
+%  subtracted.
+
+nrp_port(3975).
+nrp_url(Url) :- nrp_port(P), format(atom(Url), 'http://localhost:~w', [P]).
+
+:- dynamic nrp_db_file/1.
+
+node_resident_provides_setup :-
+    tmp_file_stream(text, File, S),
+    write(S, ":- use_module(library(lists), [last/2]).\n\c
+              local_fact(1).\n\c
+              local_rule(X) :- local_fact(X).\n\c
+              provides(ignored/9).\n"),
+    close(S),
+    retractall(nrp_db_file(_)),
+    assertz(nrp_db_file(File)),
+    nrp_port(P),
+    node(P, [profile(isobase), load_shared_db_file(File)]).
+
+node_resident_provides_cleanup :-
+    nrp_port(P),
+    catch(http_stop_server(P, []), _, true),
+    ( nrp_db_file(F) -> catch(delete_file(F), _, true) ; true ),
+    retractall(nrp_db_file(_)).
+
+fetch_provides(Provides) :-
+    nrp_url(U),
+    atom_concat(U, '/node_info', InfoURL),
+    setup_call_cleanup(
+        http_open(InfoURL, Stream, [request_header('Accept'='application/json')]),
+        json_read_dict(Stream, Dict),
+        close(Stream)),
+    Provides = Dict.provides.
+
+:- begin_tests(node_resident_provides,
+               [ setup(node_resident_provides_setup),
+                 cleanup(node_resident_provides_cleanup) ]).
+
+test(includes_locally_defined) :-
+    fetch_provides(P),
+    assertion(memberchk("local_fact/1", P)),
+    assertion(memberchk("local_rule/1", P)).
+
+test(includes_use_module_imports) :-
+    fetch_provides(P),
+    assertion(memberchk("last/2", P)).
+
+test(excludes_control_facts) :-
+    fetch_provides(P),
+    assertion(\+ memberchk("provides/1", P)).
+
+test(excludes_io_prelude_and_builtins) :-
+    fetch_provides(P),
+    assertion(\+ memberchk("write/1", P)),
+    assertion(\+ memberchk("nl/0", P)),
+    assertion(\+ memberchk("atom/1", P)).
+
+:- end_tests(node_resident_provides).

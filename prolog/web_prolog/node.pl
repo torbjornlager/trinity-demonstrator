@@ -1423,20 +1423,90 @@ node_info_services(Services) :-
 
 %!  node_info_provides(-Provides:list(string)) is det.
 %
-%   The owner-curated list of predicates the node advertises as its
-%   contract, taken from `provides/1` facts in the shared database (a
-%   deliberate publication, mirroring service_directory.pl — not a scrape
-%   of everything loaded). Absent ⇒ empty.
+%   The predicates the node advertises as its contract, derived from the
+%   shared database itself rather than hand-curated: every predicate the
+%   shared-DB source defines or imports via use_module/2, minus the Web
+%   Prolog machinery (the I/O prelude and the actor API import, captured
+%   by the baseline below), SWI built-ins, and the control facts an owner
+%   may place in the shared DB (provides/1, relation_filter/1).  Absent
+%   shared DB ⇒ empty.
 node_info_provides(Provides) :-
-    (   current_shared_db_module(Module),
-        current_predicate(Module:provides/1)
+    (   current_shared_db_module(Module)
     ->  findall(S,
-                ( Module:provides(PI),
+                ( node_resident_predicate(Module, PI),
                   format(string(S), "~w", [PI]) ),
                 Provides0),
         sort(Provides0, Provides)
     ;   Provides = []
     ).
+
+%!  node_resident_predicate(+SharedModule, -PI) is nondet.
+%
+%   PI (Name/Arity) is a node-resident predicate: one the owner's shared
+%   DB contributes itself — defined in its source or imported into it
+%   with use_module/2 — as opposed to the I/O prelude, the actor API
+%   import, and SWI built-ins, which are present in every shared module
+%   and are subtracted via the baseline.  The module boundary does the
+%   work: we never enumerate "all Web Prolog predicates", we just
+%   subtract what a stock shared module already has.  (Self-contained vs
+%   dependent — whether resolved imports are carried with the DB — is a
+%   separate portability property, not encoded here.)
+node_resident_predicate(SharedModule, Name/Arity) :-
+    current_predicate(SharedModule:Name/Arity),
+    atom(Name),
+    \+ sub_atom(Name, 0, 1, _, '$'),
+    \+ shared_db_contract_excluded(Name/Arity),
+    \+ shared_db_baseline_predicate(Name/Arity),
+    functor(Head, Name, Arity),
+    \+ predicate_property(SharedModule:Head, built_in).
+
+%  Web Prolog control facts an owner may write into the shared DB; they
+%  drive node behaviour and are not part of the advertised contract.
+shared_db_contract_excluded(provides/1).
+shared_db_contract_excluded(relation_filter/1).
+
+%!  shared_db_baseline_predicate(?PI) is nondet.
+%
+%   True for a predicate that a shared module carries before any owner
+%   data is loaded: the I/O prelude (write/1, nl/0, format/1-2, …) and
+%   the actor API import.  Computed once into a throwaway module and
+%   cached, so it always tracks the real prelude.
+shared_db_baseline_predicate(PI) :-
+    shared_db_baseline_set(Set),
+    memberchk(PI, Set).
+
+:- dynamic shared_db_baseline_set_cache/1.
+
+shared_db_baseline_set(Set) :-
+    (   shared_db_baseline_set_cache(Set0)
+    ->  Set = Set0
+    ;   compute_shared_db_baseline_set(Set0),
+        assertz(shared_db_baseline_set_cache(Set0)),
+        Set = Set0
+    ).
+
+compute_shared_db_baseline_set(Set) :-
+    Baseline = node_shared_db_baseline,
+    configure_shared_db_module(Baseline),
+    actor_io_prelude_text(Prelude),
+    shared_db_source_id(Baseline, node_shared_db_prelude, PreludeSourceId),
+    %  The I/O prelude interleaves clauses for several predicates, which
+    %  raises (harmless) discontiguous warnings on load. Suppress them
+    %  thread-locally for this throwaway baseline load; real errors still
+    %  surface (the hook only swallows warning/informational messages).
+    setup_call_cleanup(
+        asserta((user:thread_message_hook(_, Kind, _) :-
+                    memberchk(Kind, [warning, informational])), Ref),
+        load_shared_db_source(PreludeSourceId, Baseline, Prelude),
+        erase(Ref)),
+    findall(Name/Arity,
+            ( current_predicate(Baseline:Name/Arity),
+              atom(Name),
+              functor(Head, Name, Arity),
+              \+ predicate_property(Baseline:Head, built_in)
+            ),
+            Set0),
+    sort(Set0, Set).
 
 %!  node_examples_index_page(+Request) is det.
 %

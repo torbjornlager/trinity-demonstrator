@@ -10,12 +10,11 @@ the node's trusted computing base.
 
 % Default node-wide shared database.
 
-%  Owner-curated contract: the predicates this node advertises as
-%  available, surfaced through /node_info and harvested by a discovery
-%  hub into node_provides/2. A deliberate publication, not a scrape.
-provides(human/1).
-provides(ancestor_descendant/2).
-provides(parent_child/2).
+%  The node's advertised contract (surfaced through /node_info and
+%  harvested by a discovery hub into node_provides/2) is derived
+%  automatically from the predicates this file defines or imports —
+%  see node_info_provides/1 — so there is no hand-curated provides/1
+%  list to keep in sync.
 
 human(socrates).
 human(plato).
