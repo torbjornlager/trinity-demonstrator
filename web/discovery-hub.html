@@ -19,8 +19,43 @@
     .card-title, .page-title, .navbar-brand { color: #16202e; }
 
     .dh-query { font-family: var(--tblr-font-monospace); white-space: pre-wrap; word-break: break-word; color: #1a2230; }
+    .dh-card { height: 32rem; }
+    .dh-card .card-header { min-height: 4.2rem; }
+    .dh-card .card-body { display: flex; flex-direction: column; overflow: hidden; }
+    .dh-card .card-footer { min-height: 4.1rem; }
     .dh-card.is-down { opacity: .72; }
+    .dh-badges { min-height: 2.1rem; max-height: 2.1rem; overflow: hidden; }
     .dh-chip { font-family: var(--tblr-font-monospace); font-size: .75rem; }
+    .dh-scroll {
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(91, 106, 125, .55) transparent;
+    }
+    .dh-scroll::-webkit-scrollbar { width: .45rem; height: .45rem; }
+    .dh-scroll::-webkit-scrollbar-thumb { background: rgba(91, 106, 125, .45); border-radius: 999px; }
+    .dh-desc-slot { min-height: 6.1rem; max-height: 6.1rem; white-space: normal; }
+    .dh-cap-slot { min-height: 13.8rem; max-height: 13.8rem; overflow: hidden; }
+    .dh-cap-block { overflow: hidden; }
+    .dh-cap-block-provides { height: calc(8.05rem - 8px); }
+    .dh-cap-block-services { height: 5.4rem; }
+    .dh-cap-block-services .dh-cap-label { margin-top: .6rem; }
+    .dh-cap-label {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      color: #374151;
+      margin-top: .25rem;
+      margin-bottom: .35rem;
+    }
+    .dh-chip-list {
+      display: block;
+      width: 100%;
+      max-height: calc(6.35rem - 8px);
+      padding-right: .15rem;
+    }
+    .dh-cap-block-services .dh-chip-list { max-height: 3.8rem; }
+    .dh-empty-slot { color: #5b6a7d; font-size: .875rem; }
   </style>
 </head>
 <body>
@@ -150,7 +185,20 @@
     function callJSON(goal) {
       var qs = new URLSearchParams({ goal: "(" + goal + ")", template: "(" + goal + ")", format: "json", offset: "0", limit: "2000" });
       return fetch("/call?" + qs.toString(), { headers: { Accept: "application/json" } })
-        .then(function (r) { return r.json(); });
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        });
+    }
+
+    function successful(j) {
+      return j && j.type === "success";
+    }
+
+    function optionalCall(goal) {
+      return callJSON(goal).catch(function (e) {
+        return { type: "error", data: e.message || String(e) };
+      });
     }
 
     // ---- the query the current filter corresponds to ----
@@ -186,6 +234,16 @@
       }).join("");
     }
 
+    function capBlock(r, kind, label, items, color) {
+      var body = items && items.length
+        ? '<div class="dh-chip-list dh-scroll">' + chips(items, color) + "</div>"
+        : '<div class="dh-empty-slot">&mdash;</div>';
+      return '<div class="dh-cap-block dh-cap-block-' + esc(kind) + '">' +
+        '<div class="dh-cap-label mb-1">' + esc(label) + "</div>" +
+        body +
+      "</div>";
+    }
+
     function nodeCard(r) {
       var st = STATUS[r.status] || STATUS.unknown;
       var profile = (r.profile && r.profile !== "unknown") ? r.profile : "";
@@ -198,7 +256,7 @@
 
       var meta = [];
       var seen = relTime(r.lastSeen);
-      if (seen) meta.push("last seen " + seen);
+      if (seen) meta.push("Last seen " + seen);
 
       var dot = '<span class="status-dot' + (r.status === "up" ? " status-dot-animated" : "") + ' bg-' + st.color + '"></span>';
       var openable = r.status === "up" || r.status === "unreachable";
@@ -211,13 +269,6 @@
           "</div>"
         : "";
 
-      var caps = "";
-      if ((r.provides && r.provides.length) || (r.services && r.services.length)) {
-        caps =
-          '<div class="mt-2"><div class="text-muted small mb-1">provides</div>' + chips(r.provides, "azure") + "</div>" +
-          (r.services && r.services.length ? '<div class="mt-2"><div class="text-muted small mb-1">services</div>' + chips(r.services, "lime") + "</div>" : "");
-      }
-
       return '' +
         '<div class="col-sm-6 col-lg-4">' +
           '<div class="card dh-card' + (r.status === "down" ? " is-down" : "") + '">' +
@@ -227,10 +278,12 @@
               '<div class="card-actions"><span class="status status-' + st.color + '">' + dot + " " + esc(st.label) + "</span></div>" +
             "</div>" +
             '<div class="card-body">' +
-              '<div class="mb-2">' + badges + "</div>" +
-              '<p class="text-secondary dh-desc mb-1">' + esc(r.description) + "</p>" +
-              (r.note ? '<p class="text-muted small mb-0">' + esc(r.note) + "</p>" : "") +
-              caps +
+              '<div class="dh-badges mb-2">' + badges + "</div>" +
+              '<div class="dh-desc-slot dh-scroll text-secondary dh-desc mb-2">' + esc(r.description || "") + "</div>" +
+              '<div class="dh-cap-slot mt-auto">' +
+                capBlock(r, "provides", "provides", r.provides || [], "azure") +
+                capBlock(r, "services", "services", r.services || [], "lime") +
+              "</div>" +
             "</div>" +
             '<div class="card-footer d-flex align-items-center">' +
               '<span class="text-muted small">' + esc(meta.join(" · ")) + "</span>" + link +
@@ -280,13 +333,18 @@
     }
 
     function tick() {
-      Promise.all([
-        callJSON("node_directory_row(Id,Status,Profile,Auth,_,LastSeen,Url,Description,Note)"),
-        callJSON("node_service(Id,Service)"),
-        callJSON("node_provides(Id,Predicate)"),
-        callJSON("node_self_contained(Id,SelfContained)")
-      ]).then(function (res) {
-        if (res.some(function (j) { return !j || j.type !== "success"; })) throw new Error("the hub did not answer the directory query");
+      callJSON("node_directory_row(Id,Status,Profile,Auth,_,LastSeen,Url,Description,Note)")
+      .then(function (directory) {
+        if (!successful(directory)) throw new Error("the hub did not answer the directory query");
+        return Promise.all([
+          optionalCall("node_service(Id,Service)"),
+          optionalCall("node_provides(Id,Predicate)"),
+          optionalCall("node_self_contained(Id,SelfContained)")
+        ]).then(function (extras) {
+          return [directory].concat(extras);
+        });
+      }).then(function (res) {
+        if (!successful(res[0])) throw new Error("the hub did not answer the directory query");
         var byId = {};
         (res[0].data || []).forEach(function (d) {
           byId[d.Id] = {
@@ -296,13 +354,16 @@
             isHub: d.Id === "n0", services: [], provides: [], selfContained: "unknown"
           };
         });
-        (res[1].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].services.push(unq(d.Service)); });
-        (res[2].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].provides.push(unq(d.Predicate)); });
-        (res[3].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].selfContained = d.SelfContained; });
+        if (successful(res[1])) (res[1].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].services.push(unq(d.Service)); });
+        if (successful(res[2])) (res[2].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].provides.push(unq(d.Predicate)); });
+        if (successful(res[3])) (res[3].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].selfContained = d.SelfContained; });
         ALL = Object.keys(byId).map(function (k) { return byId[k]; });
         rebuildCapList();
         render();
-        document.getElementById("dh-alert").innerHTML = "";  // a recovered poll clears any stale "unreachable" banner
+        var partial = res.slice(1).some(function (j) { return !successful(j); });
+        document.getElementById("dh-alert").innerHTML = partial
+          ? '<div class="alert alert-warning"><strong>Directory loaded.</strong> Capability details are temporarily incomplete.</div>'
+          : "";  // a recovered poll clears any stale "unreachable" banner
         document.getElementById("dh-updated").textContent = "updated just now";
         lastFetch = Date.now();
       }).catch(function (e) { offline(e.message); });

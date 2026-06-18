@@ -19,17 +19,34 @@ seed_node(n5, 'https://n5.elfenbenstornet.se',
     "Behind SSO — sign in to use it.").
 seed_probe_url(n5, 'http://n5:3060').
 
-% The public demonstrator nodes n1–n4 live in a separate stack. To show
-% them in this directory too, uncomment them. They are probed over the
-% public internet, so the hub's host must be able to reach those URLs
-% (NAT hairpin if they sit on the same server); otherwise give each an
-% internal seed_probe_url/2 the way n5 has one.
-%
-% seed_node(n1, 'https://n1.elfenbenstornet.se',
-%     "The conservative stateless node (ISOBASE).", "Family + human facts.", "").
-% seed_node(n2, 'https://n2.elfenbenstornet.se',
-%     "The semi-stateful HTTP node (ISOTOPE).", "Family facts + rpc demo.", "").
-% seed_node(n3, 'https://n3.elfenbenstornet.se',
-%     "The fully stateful node (ACTOR).", "Actor-common layer + services.", "").
-% seed_node(n4, 'https://n4.elfenbenstornet.se',
-%     "A second public ACTOR node.", "Same actor-common layer as n3.", "").
+% The public demonstrator nodes n1–n4 live in a separate stack and are
+% probed over their public URLs. If this stack runs on the same host and
+% public hairpinning is unreliable, switch these to internal
+% seed_probe_url/2 targets as in discovery-seed.coexist.pl.
+seed_node(n1, 'https://n1.elfenbenstornet.se',
+    "The conservative stateless node.  Relational querying and stateless \c
+     Prolog execution over the /call API.",
+    "Family predicates from the common deployment layer, plus \c
+     human(plato), human(aristotle), and deployment_node(n1).",
+    "").
+
+seed_node(n2, 'https://n2.elfenbenstornet.se',
+    "The semi-stateful HTTP node.  Adds toplevel sessions, private \c
+     session databases, incremental loading, and an rpc/2-3 demo.",
+    "Common family predicates plus mortal/1, ancestor/2, descendant/2, \c
+     human(socrates), and a distributed human/1.",
+    "").
+
+seed_node(n3, 'https://n3.elfenbenstornet.se',
+    "The fully stateful node.  Adds /ws, direct actor messaging, \c
+     node-resident services, and the statechart demonstrator.",
+    "Common base + actor-common layer + the n3 overlay, with registered \c
+     counter / pubsub_service services.",
+    "").
+
+seed_node(n4, 'https://n4.elfenbenstornet.se',
+    "A second public ACTOR node for cross-node actor and statechart \c
+     demonstrations.  Pair it with n3 for distributed messaging.",
+    "Common base + the same actor-common layer as n3, plus an n4 overlay \c
+     providing human(plato) / human(aristotle).",
+    "").
