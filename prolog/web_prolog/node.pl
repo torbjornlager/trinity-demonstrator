@@ -1388,6 +1388,7 @@ node_info_page_1(Request) :-
     ),
     node_info_services(Services),
     node_info_provides(Provides),
+    node_info_self_contained(SelfContained),
     reply_json(json{
         self_url:SelfURL,
         profile:Profile,
@@ -1406,7 +1407,8 @@ node_info_page_1(Request) :-
         principal_id:PrincipalId,
         principal_execution:PrincipalExecution,
         services:Services,
-        provides:Provides
+        provides:Provides,
+        self_contained:SelfContained
     }).
 
 %!  node_info_services(-Services:list(string)) is det.
@@ -1507,6 +1509,112 @@ compute_shared_db_baseline_set(Set) :-
             ),
             Set0),
     sort(Set0, Set).
+
+
+%!  node_info_self_contained(-SelfContained:boolean) is det.
+%
+%   A shared DB is *self-contained* when it could be copied to a fresh
+%   stock node and still work: every predicate its node-resident clauses
+%   call resolves either locally (a node-resident clause) or on any node
+%   (a built-in, the actor API, or a standard SWI library).  It is
+%   *dependent* when it imports from a custom — non-library — module
+%   (which would not travel) or calls a predicate that is undefined here.
+%   Absent shared DB ⇒ self-contained (nothing to depend on).
+node_info_self_contained(SelfContained) :-
+    (   current_shared_db_module(Module),
+        shared_db_dependent(Module)
+    ->  SelfContained = false
+    ;   SelfContained = true
+    ).
+
+%!  shared_db_dependent(+SharedModule) is semidet.
+shared_db_dependent(Module) :-
+    (   shared_db_custom_import(Module, _)
+    ->  true
+    ;   shared_db_undefined_call(Module, _)
+    ).
+
+%!  shared_db_custom_import(+SharedModule, -PI) is nondet.
+%
+%   A node-resident predicate imported from a module that is not a
+%   standard SWI library (so it would not be carried to another node).
+shared_db_custom_import(Module, Name/Arity) :-
+    node_resident_predicate(Module, Name/Arity),
+    functor(Head, Name, Arity),
+    predicate_property(Module:Head, imported_from(Source)),
+    \+ library_module(Source).
+
+%!  shared_db_undefined_call(+SharedModule, -PI) is nondet.
+%
+%   A predicate called by a locally-defined node-resident clause that
+%   does not resolve on a stock node — not local, built-in, autoloadable
+%   from a library, nor imported.
+shared_db_undefined_call(Module, Name/Arity) :-
+    shared_db_called_predicates(Module, PIs),
+    member(Name/Arity, PIs),
+    functor(Head, Name, Arity),
+    \+ stock_resolvable(Module, Head).
+
+stock_resolvable(Module, Head) :-
+    (   predicate_property(Module:Head, built_in)
+    ;   predicate_property(Module:Head, defined)
+    ;   predicate_property(Module:Head, autoload(_))
+    ;   predicate_property(Module:Head, imported_from(_))
+    ),
+    !.
+
+node_resident_local_clause_body(Module, Body) :-
+    node_resident_predicate(Module, Name/Arity),
+    functor(Head, Name, Arity),
+    \+ predicate_property(Module:Head, imported_from(_)),
+    \+ predicate_property(Module:Head, built_in),
+    clause(Module:Head, Body).
+
+:- thread_local shared_db_called_pi_/1.
+
+%!  shared_db_called_predicates(+Module, -PIs) is det.
+%
+%   The set of (unqualified) predicate indicators called from the bodies
+%   of the module's locally-defined node-resident clauses.  Module-
+%   qualified calls are the owner's explicit choice and are skipped.
+shared_db_called_predicates(Module, PIs) :-
+    setup_call_cleanup(
+        retractall(shared_db_called_pi_(_)),
+        forall(node_resident_local_clause_body(Module, Body),
+               ignore(goal_walker:walk_goal(node:record_called_pi_, Body))),
+        true),
+    findall(PI, retract(shared_db_called_pi_(PI)), PIs0),
+    sort(PIs0, PIs).
+
+record_called_pi_(Goal) :-
+    (   nonvar(Goal),
+        Goal \= _:_,
+        callable(Goal),
+        functor(Goal, Name, Arity),
+        atom(Name)
+    ->  assertz(shared_db_called_pi_(Name/Arity))
+    ;   true
+    ).
+
+%!  library_module(+Module) is semidet.
+%
+%   True when Module's source file lives under an SWI library directory,
+%   i.e. it is a standard library present on any node.
+library_module(Module) :-
+    module_property(Module, file(File)),
+    file_in_library_dir(File),
+    !.
+
+file_in_library_dir(File) :-
+    absolute_file_name(library('.'), LibDir0,
+                       [ file_type(directory), solutions(all),
+                         file_errors(fail), access(read) ]),
+    (   sub_atom(LibDir0, _, 1, 0, '/')
+    ->  LibDir = LibDir0
+    ;   atom_concat(LibDir0, '/', LibDir)
+    ),
+    atom_concat(LibDir, _, File),
+    !.
 
 %!  node_examples_index_page(+Request) is det.
 %

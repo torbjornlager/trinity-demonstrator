@@ -41,7 +41,8 @@
 run :-
     run_tests([discovery_status, discovery_integration,
                relation_conjunction, relation_provides_exclusion,
-               node_resident_provides]).
+               node_resident_provides,
+               dependent_undefined_call, dependent_custom_import]).
 
 
                 /*******************************
@@ -415,14 +416,21 @@ node_resident_provides_cleanup :-
     ( nrp_db_file(F) -> catch(delete_file(F), _, true) ; true ),
     retractall(nrp_db_file(_)).
 
-fetch_provides(Provides) :-
-    nrp_url(U),
-    atom_concat(U, '/node_info', InfoURL),
+node_info_at(Port, Dict) :-
+    format(atom(InfoURL), 'http://localhost:~w/node_info', [Port]),
     setup_call_cleanup(
         http_open(InfoURL, Stream, [request_header('Accept'='application/json')]),
         json_read_dict(Stream, Dict),
-        close(Stream)),
+        close(Stream)).
+
+fetch_provides(Provides) :-
+    nrp_port(P),
+    node_info_at(P, Dict),
     Provides = Dict.provides.
+
+%  json_read_dict may surface JSON booleans as true/false or @(true)/@(false).
+dh_truthy(true).   dh_truthy(@(true)).
+dh_falsy(false).   dh_falsy(@(false)).
 
 :- begin_tests(node_resident_provides,
                [ setup(node_resident_provides_setup),
@@ -447,4 +455,93 @@ test(excludes_io_prelude_and_builtins) :-
     assertion(\+ memberchk("nl/0", P)),
     assertion(\+ memberchk("atom/1", P)).
 
+%  A library import (use_module(library(lists))) is universally
+%  resolvable, so a DB using only locals + libraries stays self-contained.
+test(self_contained_with_library_import) :-
+    nrp_port(P),
+    node_info_at(P, Dict),
+    assertion(dh_truthy(Dict.self_contained)).
+
 :- end_tests(node_resident_provides).
+
+
+%  self_contained = false when the shared DB calls a predicate that is
+%  undefined here (the manuscript's `philosopher/1` case): copy this DB to
+%  another node and it would not work.
+
+dep_undef_port(3976).
+
+:- dynamic dep_undef_file/1.
+
+dependent_undefined_setup :-
+    tmp_file_stream(text, File, S),
+    write(S, "mortal(X) :- human(X).\n\c
+              human(socrates).\n\c
+              human(X) :- philosopher(X).\n"),
+    close(S),
+    retractall(dep_undef_file(_)),
+    assertz(dep_undef_file(File)),
+    dep_undef_port(P),
+    node(P, [profile(isobase), load_shared_db_file(File)]).
+
+dependent_undefined_cleanup :-
+    dep_undef_port(P),
+    catch(http_stop_server(P, []), _, true),
+    ( dep_undef_file(F) -> catch(delete_file(F), _, true) ; true ),
+    retractall(dep_undef_file(_)).
+
+:- begin_tests(dependent_undefined_call,
+               [ setup(dependent_undefined_setup),
+                 cleanup(dependent_undefined_cleanup) ]).
+
+test(undefined_call_is_dependent) :-
+    dep_undef_port(P),
+    node_info_at(P, Dict),
+    assertion(dh_falsy(Dict.self_contained)).
+
+:- end_tests(dependent_undefined_call).
+
+
+%  self_contained = false when the DB imports from a custom (non-library)
+%  module: that module would not travel with the DB.
+
+dep_cust_port(3977).
+
+:- dynamic dep_cust_file/1.
+:- dynamic dep_cust_mod_file/1.
+
+dependent_custom_import_setup :-
+    tmp_file(custommod, Base),
+    atom_concat(Base, '.pl', ModFile),
+    setup_call_cleanup(
+        open(ModFile, write, MS),
+        format(MS, ":- module(custommod, [philosopher/1]).~nphilosopher(plato).~n", []),
+        close(MS)),
+    tmp_file_stream(text, DbFile, DS),
+    format(DS, ":- use_module('~w').~nmortal(X) :- philosopher(X).~n", [ModFile]),
+    close(DS),
+    retractall(dep_cust_file(_)),
+    retractall(dep_cust_mod_file(_)),
+    assertz(dep_cust_file(DbFile)),
+    assertz(dep_cust_mod_file(ModFile)),
+    dep_cust_port(P),
+    node(P, [profile(isobase), load_shared_db_file(DbFile)]).
+
+dependent_custom_import_cleanup :-
+    dep_cust_port(P),
+    catch(http_stop_server(P, []), _, true),
+    ( dep_cust_file(F) -> catch(delete_file(F), _, true) ; true ),
+    ( dep_cust_mod_file(M) -> catch(delete_file(M), _, true) ; true ),
+    retractall(dep_cust_file(_)),
+    retractall(dep_cust_mod_file(_)).
+
+:- begin_tests(dependent_custom_import,
+               [ setup(dependent_custom_import_setup),
+                 cleanup(dependent_custom_import_cleanup) ]).
+
+test(custom_import_is_dependent) :-
+    dep_cust_port(P),
+    node_info_at(P, Dict),
+    assertion(dh_falsy(Dict.self_contained)).
+
+:- end_tests(dependent_custom_import).
