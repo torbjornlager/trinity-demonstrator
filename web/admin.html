@@ -352,6 +352,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
+        margin-top: 14px;
       }
       .runtime-title-row .config-help-button {
         margin-left: 0;
@@ -429,7 +430,7 @@
       }
 
       .config-toolbar-panel {
-        margin: 14px 0 16px;
+        margin: 6px 0;
         padding: 12px 14px;
         border: 1px solid var(--line);
         background: var(--panel-2);
@@ -901,17 +902,8 @@
       <section id="overview" class="card tab-panel">
         <div>
           <h2>Overview</h2>
-          <p>Node status, posture, and build at a glance. The resource ceilings below are startup-configured and read-only here.</p>
+          <p>Startup configurations at a glance.</p>
         </div>
-        <div class="config-toolbar-panel">
-          <div class="config-toolbar">
-            <div id="maintenanceBadge" class="config-state">Maintenance: unknown</div>
-            <div class="toolbar">
-              <button id="maintenanceToggleButton" class="button" type="button">Enter Maintenance</button>
-            </div>
-          </div>
-        </div>
-        <div class="note">Maintenance mode drains the node: <code>/readyz</code> reports 503 so a load balancer stops routing, and new work is refused while in-flight sessions finish. Liveness (<code>/healthz</code>) is unaffected.</div>
 
         <div class="overview-section">
           <div class="runtime-title-row">
@@ -948,6 +940,21 @@
             <button class="config-help-button" type="button" data-help-id="security_posture" aria-label="Help for Security Posture">?</button>
           </div>
           <div id="postureBody" class="posture-grid"><div class="empty">Loading posture…</div></div>
+        </div>
+
+        <div class="overview-section">
+          <div class="runtime-title-row">
+            <div class="runtime-title">Maintenance mode</div>
+            <button class="config-help-button" type="button" data-help-id="maintenance_mode" aria-label="Help for Maintenance mode">?</button>
+          </div>
+          <div class="config-toolbar-panel">
+            <div class="config-toolbar">
+              <div class="toolbar">
+                <button id="maintenanceToggleButton" class="button" type="button">Enter Maintenance</button>
+              </div>
+              <div id="maintenanceBadge" class="config-state">Maintenance: unknown</div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -1218,7 +1225,8 @@
           max_interaction_log_bytes: "Rotate the durable interaction/audit JSONL once it reaches this size in bytes. 0 = no rotation (the file can grow unbounded).",
           max_interaction_log_backups: "How many rotated interaction-log files to keep (interactions.jsonl.1 ... .N) after each rotation.",
           security_posture: "Security and operations settings configured outside the editable Config form (or startup-only): the registered tier, anonymous per-IP identity, source_load_uri origins, advertised RELATION patterns, IP allow/block/auto-ban, and the in-memory event-log capacity/retention. Read-only here, so the active posture can be audited from one place.",
-          doctor: "Self-diagnostics: a green / amber / red review of the node's security and operational posture. Each check is informational; warnings and failures are worth addressing before exposing the node."
+          doctor: "Self-diagnostics: a green / amber / red review of the node's security and operational posture. Each check is informational; warnings and failures are worth addressing before exposing the node.",
+          maintenance_mode: "Maintenance mode drains the node: /readyz reports 503 so a load balancer stops routing, and new work is refused while in-flight sessions finish. Liveness (/healthz) is unaffected."
         });
         var MANUAL_PREDICATE_ANCHORS = Object.freeze({
           "!/2": true,

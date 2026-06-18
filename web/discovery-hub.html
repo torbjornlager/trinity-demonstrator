@@ -18,7 +18,6 @@
     .text-muted { color: #5b6a7d !important; }                 /* darker muted */
     .card-title, .page-title, .navbar-brand { color: #16202e; }
 
-    .dh-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .dh-query { font-family: var(--tblr-font-monospace); white-space: pre-wrap; word-break: break-word; color: #1a2230; }
     .dh-card.is-down { opacity: .72; }
     .dh-chip { font-family: var(--tblr-font-monospace); font-size: .75rem; }
@@ -198,7 +197,6 @@
       var meta = [];
       var seen = relTime(r.lastSeen);
       if (seen) meta.push("last seen " + seen);
-      if (r.latencyMs) meta.push(r.latencyMs + "ms");
 
       var dot = '<span class="status-dot' + (r.status === "up" ? " status-dot-animated" : "") + ' bg-' + st.color + '"></span>';
       var openable = r.status === "up" || r.status === "unreachable";
@@ -281,7 +279,7 @@
 
     function tick() {
       Promise.all([
-        callJSON("node_directory_row(Id,Status,Profile,Auth,LatencyMs,LastSeen,Url,Description,Note)"),
+        callJSON("node_directory_row(Id,Status,Profile,Auth,_,LastSeen,Url,Description,Note)"),
         callJSON("node_service(Id,Service)"),
         callJSON("node_provides(Id,Predicate)")
       ]).then(function (res) {
@@ -290,7 +288,7 @@
         (res[0].data || []).forEach(function (d) {
           byId[d.Id] = {
             id: d.Id, status: d.Status || "down", profile: d.Profile, auth: d.Auth,
-            latencyMs: Number(d.LatencyMs) || 0, lastSeen: Number(d.LastSeen) || 0,
+            lastSeen: Number(d.LastSeen) || 0,
             url: unq(d.Url), description: unq(d.Description), note: unq(d.Note),
             isHub: d.Id === "n0", services: [], provides: []
           };

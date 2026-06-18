@@ -1,3 +1,6 @@
 {"at":"2026-06-16T20:45:08Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1781635508.698798,"user_agent":"SWI-Prolog"}
 {"at":"2026-06-16T20:45:08Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1781635508.706384,"user_agent":"SWI-Prolog"}
 {"at":"2026-06-16T20:45:08Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1781635508.847327,"user_agent":"SWI-Prolog"}
+{"at":"2026-06-17T19:49:02Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1781718542.559344,"user_agent":"SWI-Prolog"}
+{"at":"2026-06-17T19:49:02Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1781718542.565498,"user_agent":"SWI-Prolog"}
+{"at":"2026-06-17T19:49:02Z","client_id":"peer:127.0.0.1","event":"portal_load","peer":"127.0.0.1","principal":"anonymous","route":"portal","source":"server","ts":1781718542.711557,"user_agent":"SWI-Prolog"}
