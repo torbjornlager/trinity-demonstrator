@@ -874,6 +874,16 @@ test(node_info_route_announces_configured_auth_mode,
             Auth = JSON.get(auth)
         )).
 
+test(node_info_route_announces_tutorial_sections,
+     true(Sections == ["local_isobase", "movie_database"])) :-
+    with_node_server_options(
+        [tutorial_sections([local_isobase, movie_database])], URI,
+        (
+            format(atom(NodeInfoURL), '~w/node_info', [URI]),
+            read_json_answer(NodeInfoURL, JSON),
+            Sections = JSON.get(tutorial_sections)
+        )).
+
 test(normalize_auth_mode_accepts_string_open,
      true(Auth == open)) :-
     normalize_auth_mode("open", Auth).

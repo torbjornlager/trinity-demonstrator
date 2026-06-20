@@ -204,6 +204,8 @@ services:
       # with no explicit policy entry get this capability tier.
       WP_AUTHENTICATED_DEFAULT_CAPS: "${WP_N5_DEFAULT_CAPS:-execute}"
       WP_OWNER: "${WP_N5_OWNER:-}"
+      # n5 is the complete reference node; its tutorial retains every section.
+      WP_TUTORIAL_SECTIONS: "${WP_N5_TUTORIAL_SECTIONS:-all}"
       # Resource ceilings (now actually forwarded — see compose passthrough).
       WP_MAX_ACTORS: "${WP_N5_MAX_ACTORS:-10000}"
       WP_MAX_CALL_INFERENCES: "${WP_N5_MAX_CALL_INFERENCES:-1000000000}"

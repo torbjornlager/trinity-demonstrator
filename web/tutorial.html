@@ -385,7 +385,7 @@
 
 </section>
 
-<section id="tutorial-local-isobase-programming">
+<section id="tutorial-local-isobase-programming" data-tutorial-sections="local_isobase">
 <h1 id="tutorial-introduction">Local ISOBASE programming</h1>
 
 <p>
@@ -481,7 +481,49 @@ father_child(mike, tom).
 
 
 
-<h2>Parsing and generating with a DCG</h2>
+</section>
+
+<section id="tutorial-movie-database" data-tutorial-sections="movie_database">
+<h1>Movie database</h1>
+
+<p>
+    Node <code>n1</code> hosts a movie database. Its facts describe films,
+    directors, actors, and actresses, and can be queried directly through the
+    stateless <code>/call</code> API.
+</p>
+
+<h2>Find films by year</h2>
+
+<pre id="movie-by-year">?- movie(Film, 2000).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#movie-by-year&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Find co-stars</h2>
+
+<p>
+    This query finds pairs of performers who appeared in the same film:
+</p>
+
+<pre id="movie-co-stars">?- actor(Film, First, _), actor(Film, Second, _), First @&gt; Second.</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#movie-co-stars&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Find directors who also acted</h2>
+
+<pre id="movie-actor-director">?- actor(_, Person, _), director(_, Person).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#movie-actor-director&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+</section>
+
+<section id="tutorial-dcg" data-tutorial-sections="dcg">
+<h1>Parsing and generating with a DCG</h1>
 
 <p>
     A Definite Clause Grammar (DCG) is a clean Prolog notation for grammars.
@@ -552,7 +594,7 @@ p(p(with)) --&gt; [with].
 
 </section>
 
-<section id="tutorial-distributed-isobase-programming">
+<section id="tutorial-distributed-isobase-programming" data-tutorial-sections="distributed_isobase">
 <h1>Distributed ISOBASE programming</h1>
 
 <p>
@@ -658,7 +700,7 @@ human(Who) :-
 </section>
 
 
-<section id="tutorial-local-isotope-programming">
+<section id="tutorial-local-isotope-programming" data-tutorial-sections="local_isotope">
 <h1>Local ISOTOPE programming</h1>
 
 <p>
@@ -741,7 +783,7 @@ assert_many(Count) :-
 </section>
 
 
-<section id="tutorial-distributed-isotope-programming">
+<section id="tutorial-distributed-isotope-programming" data-tutorial-sections="distributed_isotope">
 <h1>Distributed ISOTOPE programming</h1>
 
 <h2>Predicate shipping</h2>
@@ -881,7 +923,7 @@ X = aristotle.
 </section>
 
 
-<section id="tutorial-semantic-web">
+<section id="tutorial-semantic-web" data-tutorial-sections="semantic_web">
 <h1>Programming with the Semantic Web</h1>
 
 <p>
@@ -994,7 +1036,7 @@ known_with_birthdate(Me, He, Date) :-
 </section>
 
 
-<section id="tutorial-local-actor-programming">
+<section id="tutorial-local-actor-programming" data-tutorial-sections="local_actor">
 <h1>Local ACTOR programming</h1>
 
 <p>
@@ -1889,7 +1931,7 @@ ping_pong :-
 </p>
 </section>
 
-<section id="tutorial-programming-with-toplevels">
+<section id="tutorial-programming-with-toplevels" data-tutorial-sections="toplevels">
 <h1>Programming with toplevel actors</h1>
 
 <p>
@@ -2195,7 +2237,7 @@ ping_pong :-
 
 </section>
 
-<section id="tutorial-distributed-actor-programming">
+<section id="tutorial-distributed-actor-programming" data-tutorial-sections="distributed_actor">
 <h1>Distributed ACTOR programming</h1>
 
 <p>
@@ -2385,7 +2427,7 @@ ping_pong :-
 </section>
 
 
-<section id="tutorial-programming-with-behaviours">
+<section id="tutorial-programming-with-behaviours" data-tutorial-sections="behaviours">
 <h1>Programming with behaviours</h1>
 
 <h2>The server behaviour</h2>
@@ -2606,7 +2648,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </section>
 
 
-<section id="tutorial-programming-with-statecharts">
+<section id="tutorial-programming-with-statecharts" data-tutorial-sections="statecharts">
 <h1>Programming with statecharts</h1>
 
 <p>
@@ -3554,6 +3596,58 @@ fridge2(_Other,      List, error(unknown_request), List).
             heading.appendChild(button);
         });
     }
+    function normalizeTutorialSections(value) {
+        if (!Array.isArray(value) || !value.length) {
+            return ["all"];
+        }
+        return value.map(function(section) { return String(section); });
+    }
+    function tutorialSectionEnabled(section, allowed) {
+        return allowed.indexOf("all") >= 0 || allowed.indexOf(section) >= 0;
+    }
+    function applyTutorialSections(value) {
+        var allowed = normalizeTutorialSections(value);
+        var firstVisible = null;
+        Array.prototype.forEach.call(
+            document.querySelectorAll("[data-tutorial-sections]"),
+            function(section) {
+                var names = String(section.getAttribute("data-tutorial-sections") || "")
+                    .split(/\s+/)
+                    .filter(Boolean);
+                var visible = names.some(function(name) {
+                    return tutorialSectionEnabled(name, allowed);
+                });
+                section.hidden = !visible;
+                section.setAttribute("aria-hidden", visible ? "false" : "true");
+                if (visible && !firstVisible) {
+                    firstVisible = section;
+                }
+            }
+        );
+        if (window.location.hash) {
+            var target = document.getElementById(window.location.hash.slice(1));
+            if (target && target.closest("section[hidden]") && firstVisible) {
+                window.location.hash = firstVisible.id;
+            }
+        }
+    }
+    function loadTutorialSections(bridge) {
+        if (bridge && typeof bridge.tutorialSections === "function") {
+            applyTutorialSections(bridge.tutorialSections());
+        }
+        fetch("/node_info", { headers: { Accept: "application/json" } })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error("node_info unavailable");
+                }
+                return response.json();
+            })
+            .then(function(info) {
+                applyTutorialSections(info && info.tutorial_sections);
+                buildTutorialToc();
+            })
+            .catch(function() {});
+    }
     function buildTutorialToc() {
         var tutorial = document.getElementById("tutorial");
         var toc = document.getElementById("tutorial-toc");
@@ -3567,6 +3661,9 @@ fridge2(_Other,      List, error(unknown_request), List).
             tutorial.querySelectorAll("h1, h2, h3")
         ).filter(function(heading) {
             if (toc.contains(heading)) {
+                return false;
+            }
+            if (heading.closest("section[hidden]")) {
                 return false;
             }
             if (!firstTitleSeen && heading.tagName === "H1") {
@@ -3621,6 +3718,7 @@ fridge2(_Other,      List, error(unknown_request), List).
             recursiveReplaceHost(document.body, currentHost);
             recursiveReplacePengine(document.body, tutorialCurrentSession());
             recursiveReplaceActorPeerHost(document.body, tutorialActorPeerHost(currentHost));
+            loadTutorialSections(bridge);
             buildTutorialToc();
             if (bridge && typeof bridge.appearanceOptions === "function") {
                 applyTutorialAppearance(bridge.appearanceOptions());

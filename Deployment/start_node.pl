@@ -302,8 +302,10 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
     env_int('WP_MAX_LOG_BACKUPS', 5, MaxLogBackups),
     csv_atoms('WP_WS_ALLOWED_ORIGINS', WsOrigins),
     csv_atoms('WP_LOAD_URI_ORIGINS', LoadUriOrigins),
+    csv_atoms('WP_TUTORIAL_SECTIONS', TutorialSections0),
     ws_origins_option(WsOrigins, WsOpts),
     load_uri_option(LoadUriOrigins, LoadUriOpts),
+    tutorial_sections_option(TutorialSections0, TutorialOpts),
     owner_option(Auth, OwnerOpts),
     shared_db_option(SharedOpts),
     append([
@@ -324,6 +326,7 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
         ],
         WsOpts,
         LoadUriOpts,
+        TutorialOpts,
         OwnerOpts,
         SharedOpts
     ], Options).
@@ -345,6 +348,9 @@ ws_origins_option(Origins, [ws_allowed_origins(Origins)]).
 
 load_uri_option([], []) :- !.
 load_uri_option(Origins, [load_uri_allowed_origins(Origins)]).
+
+tutorial_sections_option([], [tutorial_sections([all])]) :- !.
+tutorial_sections_option(Sections, [tutorial_sections(Sections)]).
 
 owner_option(private, [owner(Owner)]) :-
     getenv('WP_OWNER', Owner),

@@ -809,6 +809,7 @@ isobase_event(Principal, GoalAtom, TemplateAtom0, Offset, Limit, Format, LoadTex
 %     - max_load_text_bytes(+Bytes)
 %     - max_ws_frame_bytes(+Bytes)
 %     - max_admin_json_bytes(+Bytes)
+%     - tutorial_sections(+Sections)  % names of the tutorial sections shown by this node
 %     - rate_window_seconds(+Seconds)
 %     - max_call_requests_per_window(+Count)
 %     - max_session_spawns_per_window(+Count)
@@ -841,7 +842,8 @@ node(Port, Options0) :-
     extract_resource_ceiling(max_actors, Options2, MaxActors, Options3),
     extract_resource_ceiling(max_interaction_log_bytes, Options3, MaxLogBytes, Options4),
     extract_plain_option(max_interaction_log_backups, 5, Options4, MaxLogBackups, Options),
-    node_options(Options, SharedDB, SandboxMode, Profile, AuthMode,
+    extract_tutorial_sections(Options, TutorialSections, Options5),
+    node_options(Options5, SharedDB, SandboxMode, Profile, AuthMode,
                  DevPrincipal0, DevCapabilities0, PrincipalPolicies0,
                  Timeout0, CacheSize0, MaxInflightCalls0,
                  MaxSessionsPerPrincipal0, MaxWSActorsPerPrincipal0,
@@ -928,6 +930,7 @@ node(Port, Options0) :-
         max_actors:MaxActors,
         max_interaction_log_bytes:MaxLogBytes,
         max_interaction_log_backups:MaxLogBackups,
+        tutorial_sections:TutorialSections,
         started_at:StartedAt,
         dev_principal:DevPrincipal,
         dev_capabilities:DevCapabilities,
@@ -1389,6 +1392,7 @@ node_info_page_1(Request) :-
     node_info_services(Services),
     node_info_provides(Provides),
     node_info_self_contained(SelfContained),
+    node_info_tutorial_sections(TutorialSections),
     reply_json(json{
         self_url:SelfURL,
         profile:Profile,
@@ -1408,8 +1412,19 @@ node_info_page_1(Request) :-
         principal_execution:PrincipalExecution,
         services:Services,
         provides:Provides,
-        self_contained:SelfContained
+        self_contained:SelfContained,
+        tutorial_sections:TutorialSections
     }).
+
+%!  node_info_tutorial_sections(-Sections:list(string)) is det.
+%
+%   The tutorial sections this node presents.  This is presentation metadata,
+%   not an execution capability: the node profile remains authoritative.
+node_info_tutorial_sections(Sections) :-
+    (   current_node_value(tutorial_sections, Sections0)
+    ->  maplist(atom_string, Sections0, Sections)
+    ;   Sections = ["all"]
+    ).
 
 %!  node_info_services(-Services:list(string)) is det.
 %
@@ -2082,6 +2097,31 @@ extract_plain_option(Name, Default, Options0, Value, Options) :-
         exclude_ceiling(Name, Options1, Options)
     ;   Value = Default,
         Options = Options0
+    ).
+
+%!  extract_tutorial_sections(+Options0, -Sections, -Options) is det.
+%
+%   Keep the tutorial catalogue node-scoped without extending the pinned
+%   node_options/24 interface.  `all` is the backwards-compatible default.
+extract_tutorial_sections(Options0, Sections, Options) :-
+    (   select(tutorial_sections(Raw), Options0, Options1)
+    ->  must_be(list, Raw),
+        maplist(normalize_tutorial_section, Raw, Sections0),
+        sort(Sections0, Sections),
+        exclude(is_tutorial_sections_option, Options1, Options)
+    ;   Sections = [all],
+        Options = Options0
+    ).
+
+is_tutorial_sections_option(tutorial_sections(_)).
+
+normalize_tutorial_section(Value, Section) :-
+    must_be(atom, Value),
+    (   Value == ''
+    ->  throw(error(domain_error(tutorial_section, Value),
+                    context(node:extract_tutorial_sections/3,
+                            'tutorial section names must be non-empty atoms')))
+    ;   Section = Value
     ).
 
 log_bytes_setting(unlimited, 0) :- !.

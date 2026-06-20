@@ -32,6 +32,8 @@ start_n2 :-
         max_call_requests_per_window(120),
         max_session_spawns_per_window(20),
         max_ws_commands_per_window(200),
+        tutorial_sections([dcg, distributed_isobase, local_isotope,
+                           semantic_web]),
         load_uri_allowed_origins([
             'https://n1.elfenbenstornet.se',
             'https://n2.elfenbenstornet.se',

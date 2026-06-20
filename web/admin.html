@@ -461,6 +461,12 @@
         color: var(--info-ink);
       }
 
+      .config-state.is-maintenance {
+        border-color: var(--info-line);
+        background: var(--info-bg);
+        color: var(--info-ink);
+      }
+
       .family-wrap {
         overflow: auto;
         /* As a grid item of .card, default min-width:auto (=min-content,
@@ -765,6 +771,11 @@
         border: 1px solid var(--tblr-success, #2fb344);
         border-radius: var(--tblr-border-radius, 6px);
         padding: 6px 10px;
+      }
+      .config-state.is-maintenance {
+        background: var(--tblr-info-lt, #e7f3fb);
+        color: var(--tblr-info, #4299e1);
+        border-color: var(--tblr-info, #4299e1);
       }
       .config-toolbar-panel {
         background: var(--tblr-bg-surface-secondary, #f7f8fa);
@@ -2261,11 +2272,12 @@
           }
           if (maintenanceEnabled === null) {
             badge.textContent = "Maintenance: unknown";
+            badge.classList.remove("is-maintenance");
             button.textContent = "Enter Maintenance";
             return;
           }
           badge.textContent = maintenanceEnabled ? "Maintenance: DRAINING" : "Maintenance: off";
-          badge.classList.toggle("is-nonconformant", !!maintenanceEnabled);
+          badge.classList.toggle("is-maintenance", !!maintenanceEnabled);
           button.textContent = maintenanceEnabled ? "Exit Maintenance" : "Enter Maintenance";
         }
 
@@ -2291,7 +2303,7 @@
           }).then(function(json) {
             maintenanceEnabled = !!(json && json.maintenance);
             renderMaintenance();
-            setStatus("success", maintenanceEnabled
+            setStatus(maintenanceEnabled ? "info" : "success", maintenanceEnabled
               ? "Node draining: /readyz now 503, new work refused."
               : "Maintenance off; serving normally.");
           }).catch(function(error) {

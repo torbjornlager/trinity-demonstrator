@@ -2630,7 +2630,7 @@
             <div class="wb-header-section-title-row">
               <div class="wb-header-section-title">Remote nodes</div>
               <span class="wb-header-note-help"
-                    :data-tooltip="'Select the profile of the node to talk to below:\n\n[n1] An ISOBASE node\n[n2] An ISOTOPE node\n[n3] An ACTOR node\n[n4] An ACTOR node\n[n5] An ACTOR node\n\nA link appears that opens the node-resident source code for this node in a new tab.'"
+                    :data-tooltip="'Open the live Discovery Hub to inspect available nodes, status, profiles, services, and advertised predicates.'"
                     aria-label="Node help">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
@@ -2640,11 +2640,10 @@
               </span>
             </div>
             <div class="wb-header-card-row">
-              <a v-for="node in headerNodeButtons"
-                 :key="node.id"
+              <a :href="discoveryHubUrl"
                  class="wb-header-card wb-header-card-node"
-                 :class="{active: !isSwiWasmMode && isCurrentPortalNode(node)}"
-                 :href="node.href">{{ node.label.toLowerCase() }}</a>
+                 target="_blank"
+                 rel="noopener noreferrer">Discovery Hub</a>
             </div>
             <p v-if="showCurrentNodeLink" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
@@ -2810,42 +2809,52 @@
                          href="/tutorial#tutorial-getting-started"
                          @click.prevent="openTutorialSection('tutorial-getting-started')">Prolog nodes and their profiles</a>
                     </li>
-                    <li class="project-list-item">
+                    <li v-if="tutorialSectionEnabled('local_isobase')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-local-isobase-programming"
                          @click.prevent="openTutorialSection('tutorial-local-isobase-programming')">Local ISOBASE programming</a>
                     </li>
-                    <li class="project-list-item">
+                    <li v-if="tutorialSectionEnabled('movie_database')" class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         href="/tutorial#tutorial-movie-database"
+                         @click.prevent="openTutorialSection('tutorial-movie-database')">Movie database</a>
+                    </li>
+                    <li v-if="tutorialSectionEnabled('dcg')" class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         href="/tutorial#tutorial-dcg"
+                         @click.prevent="openTutorialSection('tutorial-dcg')">Parsing and generating with a DCG</a>
+                    </li>
+                    <li v-if="tutorialSectionEnabled('distributed_isobase')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-distributed-isobase-programming"
                          @click.prevent="openTutorialSection('tutorial-distributed-isobase-programming')">Distributed ISOBASE programming</a>
                     </li>
-                    <li class="project-list-item">
+                    <li v-if="tutorialSectionEnabled('local_isotope')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-local-isotope-programming"
                          @click.prevent="openTutorialSection('tutorial-local-isotope-programming')">Local ISOTOPE programming</a>
                     </li>
-                    <li class="project-list-item">
+                    <li v-if="tutorialSectionEnabled('distributed_isotope')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-distributed-isotope-programming"
                          @click.prevent="openTutorialSection('tutorial-distributed-isotope-programming')">Distributed ISOTOPE programming</a>
                     </li>
-                    <li v-if="showActorTutorialExamples" class="project-list-item">
+                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('local_actor')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-local-actor-programming"
                          @click.prevent="openTutorialSection('tutorial-local-actor-programming')">Local ACTOR programming</a>
                     </li>
-                    <li v-if="showActorTutorialExamples" class="project-list-item">
+                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('distributed_actor')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-distributed-actor-programming"
                          @click.prevent="openTutorialSection('tutorial-distributed-actor-programming')">Distributed ACTOR programming</a>
                     </li>
-                    <li v-if="showActorTutorialExamples" class="project-list-item">
+                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('behaviours')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-programming-with-behaviours"
                          @click.prevent="openTutorialSection('tutorial-programming-with-behaviours')">Programming with behaviours</a>
                     </li>
-                    <li v-if="showActorTutorialExamples" class="project-list-item">
+                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('statecharts')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-programming-with-statecharts"
                          @click.prevent="openTutorialSection('tutorial-programming-with-statecharts')">Programming with statecharts</a>
@@ -4968,6 +4977,7 @@
 	            nodeAnnouncedProfile: "actor",
 	            principalAnnouncedId: "anonymous",
 	            principalExecutionAuthorized: true,
+            tutorialSections: ["all"],
             nodeAnnouncedAuthMode: "open",
             hideLocalNodeInPid: true,
             showTerminalGreeting: true,
@@ -5104,6 +5114,9 @@
           showCurrentNodeLink: function() {
             return !this.isSwiWasmMode;
           },
+          discoveryHubUrl: function() {
+            return "https://n0.elfenbenstornet.se/discovery-hub";
+          },
           loggerEnabledForRuntime: function() {
             return true;
           },
@@ -5119,11 +5132,6 @@
             var nodes = derivePortalNodeUrls(this.currentPortalNodeUrl);
             nodes.push({ id: "swi-wasm", url: null, href: "?node=swi-wasm", label: "SWI-WASM" });
             return nodes;
-          },
-          headerNodeButtons: function() {
-            return this.portalNodes.filter(function(node) {
-              return !!node.url && /^N[1-5]$/i.test(String(node.label || ""));
-            });
           },
           headerBrowserButtons: function() {
             return [
@@ -5519,6 +5527,9 @@
               currentSessionPid: function() {
                 return self.currentTutorialSessionPid();
               },
+              tutorialSections: function() {
+                return self.tutorialSections;
+              },
               askExample: function(query, id) {
                 self.handleTutorialAsk(query, id);
               },
@@ -5776,6 +5787,9 @@
 	              if (json && Object.prototype.hasOwnProperty.call(json, "principal_execution")) {
 	                self.applyAnnouncedPrincipalInfo(json.principal_id, json.principal_execution);
 	              }
+	              if (json && Array.isArray(json.tutorial_sections)) {
+	                self.applyAnnouncedTutorialSections(json.tutorial_sections);
+	              }
 	            }).catch(function() {
 	            });
 	          },
@@ -5902,6 +5916,16 @@
 	              }
 	            }
 	          },
+            applyAnnouncedTutorialSections: function(sections) {
+              var normalized = Array.isArray(sections) && sections.length
+                ? sections.map(function(section) { return String(section); })
+                : ["all"];
+              this.tutorialSections = normalized;
+            },
+            tutorialSectionEnabled: function(section) {
+              return this.tutorialSections.indexOf("all") >= 0 ||
+                this.tutorialSections.indexOf(section) >= 0;
+            },
 	          privateAuthHint: function() {
 	            return "Node auth is PRIVATE. Browser requests need proxy-injected identity headers.";
 	          },

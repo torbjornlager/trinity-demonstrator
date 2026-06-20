@@ -78,21 +78,29 @@ record_with_status(Rec0, Record) :-
     Now is integer(NowF),
     get_dict(last_seen, Rec0, Seen),
     get_dict(last_error, Rec0, Err),
-    node_live_status(Now, Seen, Err, Status),
+    (   get_dict(maintenance, Rec0, Maintenance)
+    ->  true
+    ;   Maintenance = false
+    ),
+    node_live_status(Now, Seen, Err, Maintenance, Status),
     put_dict(status, Rec0, Status, Record).
 
-%!  node_live_status(+Now, +LastSeen, +LastError, -Status) is det.
+%!  node_live_status(+Now, +LastSeen, +LastError, +Maintenance, -Status) is det.
 %
 %   `up` needs a *fresh* success that is not superseded by a newer
 %   error; one missed probe after a good one is the amber `unreachable`
-%   band; anything stale (or never seen) is `down`.  TTL = 75s ≈ 2×30s
-%   sweep, wide enough that a single dropped probe never flaps a healthy
-%   node to down (plan §4).
+%   band; an alive node whose `/readyz` reports not-ready is
+%   `maintenance`; anything stale (or never seen) is `down`.  TTL = 75s
+%   ≈ 2×30s sweep, wide enough that a single dropped probe never flaps
+%   a healthy node to down (plan §4).
 
-node_live_status(Now, Seen, Err, Status) :-
+node_live_status(Now, Seen, Err, Maintenance, Status) :-
     (   Seen > 0,
         Now - Seen =< 75
-    ->  ( Err > Seen -> Status = unreachable ; Status = up )
+    ->  (   Maintenance == true -> Status = maintenance
+        ;   Err > Seen          -> Status = unreachable
+        ;   Status = up
+        )
     ;   Status = down
     ).
 

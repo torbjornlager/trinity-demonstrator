@@ -139,6 +139,32 @@ test(old_error_does_not_supersede_fresh_success, S == up) :-
     seed_replica(n1, Now, OldErr),
     node_status(n1, S).
 
+test(fresh_maintenance_is_maintenance, S == maintenance) :-
+    retractall(user:node_record_gen(_, _, _)),
+    retractall(user:current_gen(_)),
+    get_time(F), Now is integer(F),
+    Rec = node{id:n1, url:u, description:"", shared_db:"", note:"",
+               profile:actor, auth:open, version:"",
+               services:[], provides:[],
+               maintenance:true,
+               last_seen:Now, last_error:0, latency_ms:1},
+    assertz(user:node_record_gen(1, n1, Rec)),
+    assertz(user:current_gen(1)),
+    node_status(n1, S).
+
+test(stale_maintenance_is_down, S == down) :-
+    retractall(user:node_record_gen(_, _, _)),
+    retractall(user:current_gen(_)),
+    get_time(F), Old is integer(F) - 100,
+    Rec = node{id:n1, url:u, description:"", shared_db:"", note:"",
+               profile:actor, auth:open, version:"",
+               services:[], provides:[],
+               maintenance:true,
+               last_seen:Old, last_error:0, latency_ms:1},
+    assertz(user:node_record_gen(1, n1, Rec)),
+    assertz(user:current_gen(1)),
+    node_status(n1, S).
+
 test(record_carries_derived_status_and_seed_fields) :-
     get_time(F), Now is integer(F),
     seed_replica(n2, Now, 0),

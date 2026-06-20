@@ -32,6 +32,7 @@ start_n1 :-
         max_call_requests_per_window(60),
         max_session_spawns_per_window(10),
         max_ws_commands_per_window(60),
+        tutorial_sections([local_isobase, movie_database]),
         load_uri_allowed_origins([
             'https://n1.elfenbenstornet.se',
             'https://n2.elfenbenstornet.se',

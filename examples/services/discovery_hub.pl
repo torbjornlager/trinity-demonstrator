@@ -282,6 +282,7 @@ seed_to_node(Node) :-
         services: [],
         provides: [],
         self_contained: unknown,
+        maintenance: false,
         last_seen: 0,
         last_error: 0,
         latency_ms: 0
@@ -366,8 +367,10 @@ fetch_info(Url, Info, LatencyMs) :-
                   [ request_header('Accept'='application/json'),
                     timeout(5)
                   ]),
-        json_read_dict(Stream, Info),
+        json_read_dict(Stream, Info0),
         close(Stream)),
+    readiness_maintenance(Url, Maintenance),
+    Info = Info0.put(maintenance, Maintenance),
     get_time(T1),
     LatencyMs is integer((T1 - T0) * 1000).
 
@@ -375,6 +378,28 @@ node_info_url(Url, InfoUrl) :-
     atom_string(Url, S),
     ( string_concat(Base, "/", S) -> true ; Base = S ),
     atomic_list_concat([Base, '/node_info'], InfoUrl).
+
+readiness_maintenance(Url, Maintenance) :-
+    readyz_url(Url, ReadyUrl),
+    (   catch(http_status(ReadyUrl, Status), _, fail)
+    ->  ( Status =:= 503 -> Maintenance = true ; Maintenance = false )
+    ;   Maintenance = false
+    ).
+
+readyz_url(Url, ReadyUrl) :-
+    atom_string(Url, S),
+    ( string_concat(Base, "/", S) -> true ; Base = S ),
+    atomic_list_concat([Base, '/readyz'], ReadyUrl).
+
+http_status(URL, Status) :-
+    setup_call_cleanup(
+        http_open(URL, Stream,
+                  [ request_header('Accept'='application/json'),
+                    status_code(Status),
+                    timeout(5)
+                  ]),
+        read_string(Stream, _, _),
+        close(Stream)).
 
 
                 /*******************************
@@ -406,12 +431,14 @@ apply_outcome(ok(Info, LatencyMs), Now, Node0, Node) :-
     info_list(services, Info, Services),
     info_list(provides, Info, Provides),
     info_bool(self_contained, Info, SelfContained),
+    info_bool(maintenance, Info, Maintenance),
     Node = Node0.put(_{
         profile: Profile,
         auth: Auth,
         services: Services,
         provides: Provides,
         self_contained: SelfContained,
+        maintenance: Maintenance,
         last_seen: Now,
         latency_ms: LatencyMs
     }).

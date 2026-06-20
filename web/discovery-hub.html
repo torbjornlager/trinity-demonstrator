@@ -24,6 +24,7 @@
     .dh-card .card-body { display: flex; flex-direction: column; overflow: hidden; }
     .dh-card .card-footer { min-height: 4.1rem; }
     .dh-card.is-down { opacity: .72; }
+    .dh-filter-control { height: 28px; min-height: 28px; }
     .dh-badges { min-height: 2.1rem; max-height: 2.1rem; overflow: hidden; }
     .dh-chip { font-family: var(--tblr-font-monospace); font-size: .75rem; }
     .dh-scroll {
@@ -67,9 +68,6 @@
             <span class="status-dot status-dot-animated bg-green"></span>
             Discovery Hub
           </h1>
-          <div class="navbar-nav flex-row order-md-last">
-            <a href="/demonstrator" class="btn btn-sm">Open the shell</a>
-          </div>
         </div>
       </header>
 
@@ -78,9 +76,8 @@
           <div class="row align-items-center">
             <div class="col">
               <div class="text-secondary">
-                The live register of Prolog Web nodes. This hub (n0) probes each node and
-                publishes the result &mdash; discovery is a query against <code>/call</code>,
-                not a protocol stack.
+                The live register of Prolog Web nodes. It probes each node and
+                publishes the result. Discovery is a query against the stateless API.
               </div>
             </div>
             <div class="col-auto"><span id="dh-updated" class="text-muted small"></span></div>
@@ -102,7 +99,7 @@
                 </div>
                 <div class="col-sm-auto">
                   <label class="form-label">Auth</label>
-                  <select class="form-select" id="dh-auth">
+                  <select class="form-select form-select-sm dh-filter-control" id="dh-auth">
                     <option value="">Any</option>
                     <option value="open">open</option>
                     <option value="private">private</option>
@@ -110,11 +107,11 @@
                 </div>
                 <div class="col-sm">
                   <label class="form-label">Capability (a served predicate or service)</label>
-                  <input class="form-control" id="dh-cap" list="dh-caps" placeholder="e.g. human/1 or counter" autocomplete="off">
+                  <input class="form-control form-control-sm dh-filter-control" id="dh-cap" list="dh-caps" placeholder="e.g. human/1 or counter" autocomplete="off">
                   <datalist id="dh-caps"></datalist>
                 </div>
                 <div class="col-sm-auto">
-                  <button class="btn" id="dh-clear" type="button">Clear</button>
+                  <button class="btn btn-sm" id="dh-clear" type="button">Clear</button>
                 </div>
               </div>
 
@@ -134,10 +131,10 @@
 
           <div class="text-muted small mt-3">
             Status is derived at read time from the hub's probes: a fresh success is
-            <strong class="text-green">up</strong>; one missed probe after a good one is the amber
-            <strong class="text-yellow">unreachable</strong> band; anything stale past the TTL is
+            <strong class="text-green">up</strong>; one missed probe after a good one is deemed
+            <strong class="text-yellow">unreachable</strong>; a node that is alive but draining is
+            <strong class="text-blue">maintenance</strong>; and anything that remains unreachable long enough is
             <strong class="text-red">down</strong>.
-            <code>provides</code> is owner-curated (a node's advertised contract), not a scrape.
           </div>
         </div>
       </div>
@@ -154,8 +151,9 @@
     var STATUS = {
       up:          { rank: 0, color: "green",     label: "up" },
       unreachable: { rank: 1, color: "yellow",    label: "unreachable" },
-      unknown:     { rank: 2, color: "secondary", label: "status unknown" },
-      down:        { rank: 3, color: "red",       label: "down" }
+      maintenance: { rank: 2, color: "blue",      label: "maintenance" },
+      unknown:     { rank: 3, color: "secondary", label: "status unknown" },
+      down:        { rank: 4, color: "red",       label: "down" }
     };
     var PROFILE_COLOR = { relation: "azure", isobase: "blue", isotope: "teal", actor: "purple" };
 
@@ -293,11 +291,12 @@
     }
 
     function summary(shown, total) {
-      var c = { up: 0, unreachable: 0, down: 0, unknown: 0 };
+      var c = { up: 0, unreachable: 0, maintenance: 0, down: 0, unknown: 0 };
       shown.forEach(function (r) { c[r.status] = (c[r.status] || 0) + 1; });
       function pill(n, color, label) { return n ? '<span class="badge bg-' + color + '-lt me-2">' + n + " " + label + "</span>" : ""; }
       var filtered = shown.length !== total ? '<span class="text-muted me-2">' + shown.length + " of " + total + "</span>" : "";
       return "<div>" + filtered + pill(c.up, "green", "up") + pill(c.unreachable, "yellow", "unreachable") +
+        pill(c.maintenance, "blue", "maintenance") +
         pill(c.down, "red", "down") + pill(c.unknown, "secondary", "unknown") + "</div>";
     }
 
