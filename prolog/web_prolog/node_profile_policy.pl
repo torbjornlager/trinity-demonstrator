@@ -364,6 +364,15 @@ source_option_like(load_uri(_)).
 %  Both the legacy module name (actor — clients may still send goals
 %  qualified that way; the surface is frozen) and the layered fork's
 %  module name (actors) get the same vetting.
+%  send_with_delay/3 is the implementation goal spawned by the public
+%  send/3 delay option.  It carries no capability beyond send/3 itself,
+%  but reaches this check as an explicitly qualified nested spawn goal.
+profile_check_qualified_goal(Profile, actor, send_with_delay(_, _, _)) :-
+    !,
+    ensure_goal_profile(Profile, send(_, _, _)).
+profile_check_qualified_goal(Profile, actors, send_with_delay(_, _, _)) :-
+    !,
+    ensure_goal_profile(Profile, send(_, _, _)).
 profile_check_qualified_goal(Profile, actor, Goal) :-
     !,
     ensure_public_actor_goal(Goal),

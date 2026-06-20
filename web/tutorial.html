@@ -479,6 +479,59 @@ father_child(mike, tom).
 </button>
 </p>
 
+<h2>Stateless API limitations</h2>
+
+<p>
+    ISOBASE requests are independent: the server returns an answer or reaches
+    its request limit, then forgets the execution context. This deliberately
+    rules out the controls available on persistent ISOTOPE and ACTOR sessions.
+</p>
+
+<p>
+    That trade-off is useful when each query is self-contained: clients can
+    use ordinary HTTP, requests cannot leave session state behind, and the
+    node can enforce a clear time and resource bound for every call.
+</p>
+
+<h3>No abort</h3>
+
+<p>
+    There is no client-side abort operation for a stateless call. This goal
+    runs until n1's request timeout expires (currently two seconds):
+</p>
+
+<pre id="isobase-no-abort">?- repeat, fail.</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#isobase-no-abort&quot;)" class="btn btn-xs btn-primary" type="button">Call (times out)</button>
+</p>
+
+<h3>No I/O</h3>
+
+<p>
+    Output and input need a persistent conversation with the client, so they
+    are not part of the stateless API. The node rejects this call:
+</p>
+
+<pre id="isobase-no-io">?- writeln(hello).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#isobase-no-io&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h3>No dynamic database manipulation</h3>
+
+<p>
+    A change made during one stateless request would have no session in which
+    to persist, so dynamic database updates are unavailable as well:
+</p>
+
+<pre id="isobase-no-dynamic-db">?- assertz(p(1)).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#isobase-no-dynamic-db&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
 
 
 </section>
@@ -794,7 +847,7 @@ assert_many(Count) :-
     the duration of the remote query:
 </p>
 
-<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', mortal(Who), [
+<pre id="rpc2">?- rpc('https://n1.elfenbenstornet.se', mortal(Who), [
        load_text("mortal(Who) :- human(Who).")
    ]).
 </pre>
@@ -831,7 +884,7 @@ assert_many(Count) :-
 </p>
 
 <div class="alert alert-info">
-  <strong>Note.</strong> This example only works on <code>n3</code>, which has
+  <strong>Note.</strong> This example runs on <code>n2</code>, which has
   the distributed <code>mortal/1</code> and <code>human/1</code> definitions
   in its shared database.
 </div>
@@ -861,7 +914,7 @@ prove(A, A/Proof) :-
 </p>
 
 <p>
-    On <code>n3</code>, the shared database contains:
+    On <code>n2</code>, the shared database contains:
 </p>
 
 <pre>:- dynamic mortal/1, human/1.
@@ -869,11 +922,11 @@ prove(A, A/Proof) :-
 mortal(X) :- human(X).
 
 human(socrates).
-human(X) :- rpc('https://n4.elfenbenstornet.se', human(X)).
+human(X) :- rpc('https://n1.elfenbenstornet.se', human(X)).
 </pre>
 
 <p>
-    while <code>n4</code> hosts:
+    while <code>n1</code> hosts:
 </p>
 
 <pre>:- dynamic human/1.
@@ -907,9 +960,9 @@ X = aristotle.
 </pre>
 
 <p>
-    The first answer is proved entirely on <code>n3</code>. The second and
-    third are proved by delegating to <code>n4</code>, and the annotation
-    <code>@'https://n4.elfenbenstornet.se'</code> documents exactly where each
+    The first answer is proved entirely on <code>n2</code>. The second and
+    third are proved by delegating to <code>n1</code>, and the annotation
+    <code>@'https://n1.elfenbenstornet.se'</code> documents exactly where each
     remote step was resolved. The proof term is ordinary Prolog data: it can be
     inspected, stored, or rendered into a human-readable explanation.
 </p>

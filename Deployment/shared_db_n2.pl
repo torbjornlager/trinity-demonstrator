@@ -2,6 +2,8 @@
 
 deployment_node(n2).
 
+:- dynamic mortal/1, human/1.
+
 mortal(X) :-
     human(X).
 

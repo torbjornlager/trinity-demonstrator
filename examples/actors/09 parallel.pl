@@ -93,6 +93,6 @@ drain_mailbox(Pid) :-
 ?- time(parallel([(X=a,sleep(1)),(Y=b,fail),(Z=c,sleep(2))])).
 ?- time(parallel([(X=a,sleep(1)),(Y=b,sleep(a)),(Z=c,sleep(2))])).
     
-?- first_solution(X, [(sleep(2),X=a),(sleep(1),X=b)]).
+?- time(first_solution(X, [(sleep(2),X=a),(sleep(1),X=b)])).
 
 */

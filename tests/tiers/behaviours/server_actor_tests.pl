@@ -194,7 +194,16 @@ test(fail_fast_server_crash,
     server_request(Pid, anything, _).
 
 
-%% 15. server_request/4 with timeout: completes promptly when server is slow.
+%% 15. A callback with no matching clause is also a crash.  The
+%% explicit exit(false) in server_loop/2 must notify the request monitor
+%% rather than leaving its caller blocked indefinitely.
+test(fail_fast_callback_failure,
+     throws(server_down(false))) :-
+    server_spawn(test_fridge, [], Pid),
+    server_request(Pid, unknown_request, _).
+
+
+%% 16. server_request/4 with timeout: completes promptly when server is slow.
 %%     receive/2 calls the on_timeout goal (default: true) and succeeds;
 %%     the request returns with Response unbound after the deadline.
 test(request_timeout, [timeout(2)]) :-

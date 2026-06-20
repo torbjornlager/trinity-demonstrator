@@ -44,8 +44,8 @@ start_n3 :-
         max_call_requests_per_window(120),
         max_session_spawns_per_window(30),
         max_ws_commands_per_window(400),
-        tutorial_sections([distributed_isotope, local_actor, toplevels,
-                           behaviours]),
+        tutorial_sections([local_actor, toplevels, distributed_actor,
+                           behaviours, statecharts]),
         load_uri_allowed_origins([
             'https://n1.elfenbenstornet.se',
             'https://n2.elfenbenstornet.se',

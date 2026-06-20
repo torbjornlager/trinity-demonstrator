@@ -2844,6 +2844,11 @@
                          href="/tutorial#tutorial-local-actor-programming"
                          @click.prevent="openTutorialSection('tutorial-local-actor-programming')">Local ACTOR programming</a>
                     </li>
+                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('toplevels')" class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         href="/tutorial#tutorial-programming-with-toplevels"
+                         @click.prevent="openTutorialSection('tutorial-programming-with-toplevels')">Programming with toplevel actors</a>
+                    </li>
                     <li v-if="showActorTutorialExamples && tutorialSectionEnabled('distributed_actor')" class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-distributed-actor-programming"
@@ -5094,7 +5099,8 @@
             swiWasmStatechartActive: false,
             swiWasmChartPending: false,
             swiWasmQueryPending: false,
-            swiWasmQueryAbortRequested: false
+            swiWasmQueryAbortRequested: false,
+            swiWasmUserSourceText: ""
           };
         },
         computed: {
@@ -8701,8 +8707,8 @@
             window.swiWasmActorReservePid = function() {
               return self.reserveSwiWasmWorkerActorPid();
             };
-            window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText) {
-              return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText);
+            window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText, nameText) {
+              return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText, nameText);
             };
             window.swiWasmActorSend = function(pidText, messageText) {
               return self.sendSwiWasmActorMessage(pidText, messageText);
@@ -8749,6 +8755,12 @@
               }
               return true;
             };
+            window.swiWasmUserSource = function() {
+              return self.swiWasmUserSourceText || "";
+            };
+            window.swiWasmBehaviourSource = function() {
+              return self.swiWasmBehaviourProlog();
+            };
             window.swiWasmActorInput = function(promptText) {
               var answer = window.prompt(String(promptText || ""));
               return answer === null ? null : answer;
@@ -8758,7 +8770,7 @@
             var id = this.swiWasmNextWorkerActorId++;
             return "worker_actor(" + id + ")";
           },
-          spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText) {
+          spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText, nameText) {
             var self = this;
             var pid = pidText ? String(pidText) : this.reserveSwiWasmWorkerActorPid();
             var worker;
@@ -8766,7 +8778,7 @@
             if (this.swiWasmActorWorkers[pid]) {
               throw new Error("worker actor already exists: " + pid);
             }
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260615-worker-pid-fields";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260620-server-supervisor-registration";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -8781,6 +8793,9 @@
               goal: String(goalText || "")
             };
             this.swiWasmActorWorkers[pid] = entry;
+            if (nameText) {
+              this.registerSwiWasmActorName("actor", nameText, pid);
+            }
             worker.onmessage = this.handleSwiWasmWorkerActorMessage.bind(this, pid);
             worker.onerror = function(error) {
               var message = error && error.message ? error.message : String(error);
@@ -8790,7 +8805,7 @@
               command: "start",
               pid: pid,
               goal: entry.goal,
-              source: this.currentLoadText() + "\n" + String(extraSourceText || "")
+              source: String(extraSourceText || this.currentLoadText() || "")
             });
             this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
             return pid;
@@ -8905,7 +8920,7 @@
                 result = this.reserveSwiWasmWorkerActorPid();
                 break;
               case "spawn":
-                result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "");
+                result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "", message.name || "");
                 break;
               case "send":
                 result = this.sendSwiWasmActorMessage(message.to, message.message);
@@ -9238,6 +9253,123 @@
               waiter.resolve(null);
             });
           },
+          swiWasmBehaviourProlog: function() {
+            return [
+              "% Browser-worker implementation of generic servers and supervisors.",
+              ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -).",
+              "server_spawn(Pred, State, Pid) :- server_spawn(Pred, State, Pid, []).",
+              "server_spawn(Pred0, State, Pid, Options) :-",
+              "    strip_module(Pred0, Module, PlainPred), Pred = Module:PlainPred,",
+              "    ( behaviour_spawn_options(PlainPred, 4, Options, SpawnOptions) -> true ; throw(error(server_spawn_source_failed(PlainPred), server_spawn/4)) ),",
+              "    ( spawn(wasm_server_loop(Pred, State), Pid, SpawnOptions) -> true ; throw(error(server_worker_spawn_failed(PlainPred), server_spawn/4)) ),",
+              "    ( option(name(Name), Options) -> ( register(Name, Pid) -> true ; throw(error(server_registration_failed(Name, Pid), server_spawn/4)) ) ; true ).",
+              "",
+              "behaviour_spawn_options(_Pred, _Arity, Options, SpawnOptions) :-",
+              "    wasm_behaviour_source(Behaviour), wasm_user_source(User),",
+              "    append([load_text(Behaviour), load_text(User)], Options, SpawnOptions).",
+              "",
+              "wasm_behaviour_source(Source) :- Source := swiWasmBehaviourSource().",
+              "wasm_user_source(Source) :- Source := swiWasmUserSource().",
+              "",
+              "wasm_server_loop(Pred, State0) :-",
+              "    receive({",
+              "      '$call'(From, Ref, Request) ->",
+              "        ( call(Pred, Request, State0, Reply, State) -> send(From, Ref-Reply), wasm_server_loop(Pred, State) ; exit(false) ) ;",
+              "      '$upgrade'(Pred1) -> wasm_server_loop(Pred1, State0) ;",
+              "      '$stop'(From) -> send(From, reply(true))",
+              "    }).",
+              "",
+              "server_promise(To, Request, Ref) :- self(Self), make_ref(Ref), send(To, '$call'(Self, Ref, Request)).",
+              "server_promise(To, Request, Ref, MonRef) :- monitor(To, MonRef), server_promise(To, Request, Ref).",
+              "server_yield(Ref, Reply) :- server_yield(Ref, Reply, []).",
+              "server_yield(Ref, Reply, Options) :- receive({Ref-Reply -> true}, Options).",
+              "server_yield(Ref, MonRef, Reply, Options) :- receive({Ref-Reply0 -> demonitor(MonRef), Reply = Reply0 ; down(MonRef, _, Reason) -> throw(server_down(Reason))}, Options).",
+              "server_request(To, Request, Reply) :- server_request(To, Request, Reply, []).",
+              "server_request(To, Request, Reply, Options) :- server_promise(To, Request, Ref, MonRef), server_yield(Ref, MonRef, Reply, Options).",
+              "server_upgrade(To, Pred) :- send(To, '$upgrade'(Pred)).",
+              "server_halt(To, Reply) :- self(Self), send(To, '$stop'(Self)), receive({reply(Reply) -> true}).",
+              "server_stop(To, Reply) :- server_halt(To, Reply).",
+              "",
+              "supervisor_spawn(Specs, Pid) :- supervisor_spawn(Specs, Pid, []).",
+              "supervisor_spawn(Specs0, Pid, Options) :-",
+              "    strip_module(Specs0, _Caller, Specs),",
+              "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
+              "    wasm_behaviour_source(Behaviour), wasm_user_source(User),",
+              "    spawn(wasm_supervisor_init(Specs, sup(Strategy, Max, Period, [], [])), Pid, [load_text(Behaviour), load_text(User)|Options]),",
+              "    wasm_wait_supervisor_ready(Pid),",
+              "    ( option(name(Name), Options) -> register(Name, Pid) ; true ).",
+              "",
+              "wasm_wait_supervisor_ready(Pid) :-",
+              "    self(Self),",
+              "    ( Self == main -> receive({'$supervisor_ready'(Pid) -> true ; '$supervisor_failed'(Pid, Reason) -> throw(error(supervisor_start_failed(Pid, Reason), supervisor_spawn/3))}, [timeout(10), on_timeout(throw(error(timeout_error(supervisor_start, Pid), supervisor_spawn/3)))]) ; true ).",
+              "",
+              "wasm_supervisor_init(Specs, State0) :-",
+              "    self(Self),",
+              "    catch(",
+              "      ( wasm_start_specs(Specs, State0, State)",
+              "      -> send(main, '$supervisor_ready'(Self)), wasm_supervisor_loop(State)",
+              "      ;  send(main, '$supervisor_failed'(Self, start_failed)), exit(start_failed)",
+              "      ),",
+              "      Error,",
+              "      ( send(main, '$supervisor_failed'(Self, Error)), exit(exception(Error)) )",
+              "    ).",
+              "wasm_start_specs([], State, State).",
+              "wasm_start_specs([Spec|Rest], State0, State) :- wasm_start_child(Spec, State0, State1), wasm_start_specs(Rest, State1, State).",
+              "",
+              "wasm_start_child(child(Id, ChildOptions), sup(Str, Max, Period, Children, Restarts), sup(Str, Max, Period, Children1, Restarts)) :-",
+              "    ( option(start(Start), ChildOptions) -> true ; throw(error(child_missing_start(Id), wasm_start_child/3)) ),",
+              "    ( wasm_child_start(Start, Id, ChildOptions, Pid) -> true ; throw(error(child_spawn_failed(Id, Start), wasm_start_child/3)) ),",
+              "    ( monitor(Pid, _) -> true ; throw(error(child_monitor_failed(Id, Pid), wasm_start_child/3)) ),",
+              "    append(Children, [child(Id, Pid, child(Id, ChildOptions))], Children1).",
+              "wasm_child_start(server(Pred, ServerOptions), Id, ChildOptions, Pid) :- !, option(initial_state(State), ServerOptions, []), append(ServerOptions, [name(Id)|ChildOptions], Options), server_spawn(Pred, State, Pid, Options).",
+              "wasm_child_start(start_sub_supervisor(Specs, SupOptions), Id, ChildOptions, Pid) :- !, append(SupOptions, [name(Id)|ChildOptions], Options), supervisor_spawn(Specs, Pid, Options).",
+              "wasm_child_start(Goal, Id, ChildOptions, Pid) :- spawn(Goal, Pid, [name(Id)|ChildOptions]).",
+              "",
+              "wasm_supervisor_loop(State0) :- receive({",
+              "    down(_, Pid, Reason) -> wasm_handle_down(Pid, Reason, State0, State1), wasm_supervisor_loop(State1) ;",
+              "    '$sup'(From, Ref, Request) -> wasm_handle_supervisor_call(Request, Reply, State0, State1), send(From, Ref-Reply), wasm_supervisor_loop(State1) ;",
+              "    '$sup_stop'(From) -> wasm_stop_children(State0), send(From, reply(true))",
+              "  }).",
+              "",
+              "wasm_handle_down(Pid, Reason, State0, State) :-",
+              "    State0 = sup(Strategy, Max, Period, Children, Restarts),",
+              "    ( select(child(Id, Pid, Spec), Children, Remaining) ->",
+              "      Spec = child(_, Options), option(restart(Restart), Options, permanent),",
+              "      ( wasm_should_restart(Restart, Reason) -> wasm_note_restart(Max, Period, Restarts, Restarts1), wasm_apply_strategy(Strategy, Id, Spec, Remaining, sup(Strategy, Max, Period, Remaining, Restarts1), State) ; State = sup(Strategy, Max, Period, Remaining, Restarts) )",
+              "    ; State = State0 ).",
+              "wasm_should_restart(permanent, _).",
+              "wasm_should_restart(transient, Reason) :- Reason \== true.",
+              "wasm_note_restart(Max, Period, Restarts0, Restarts) :- get_time(Now), Cutoff is Now-Period, include(wasm_recent(Cutoff), Restarts0, Recent), length(Recent, Count), (Count >= Max -> exit(shutdown) ; Restarts = [Now|Recent]).",
+              "wasm_recent(Cutoff, Time) :- Time > Cutoff.",
+              "",
+              "wasm_apply_strategy(one_for_one, _Id, Spec, Children, sup(Str,Max,Period,_,Restarts), State) :- wasm_start_child(Spec, sup(Str,Max,Period,Children,Restarts), State).",
+              "wasm_apply_strategy(one_for_all, _Id, Spec, Children, sup(Str,Max,Period,_,Restarts), State) :- wasm_stop_child_list(Children), wasm_specs_from_children(Children, Existing), append([Spec], Existing, Specs), wasm_start_specs(Specs, sup(Str,Max,Period,[],Restarts), State).",
+              "wasm_apply_strategy(rest_for_one, _Id, Spec, Children, sup(Str,Max,Period,_,Restarts), State) :- wasm_restart_from(Spec, Children, Specs), wasm_stop_child_list(Children), wasm_start_specs(Specs, sup(Str,Max,Period,[],Restarts), State).",
+              "wasm_specs_from_children([], []).",
+              "wasm_specs_from_children([child(_,_,Spec)|Rest], [Spec|Specs]) :- wasm_specs_from_children(Rest, Specs).",
+              "wasm_restart_from(Spec, Children, Specs) :- wasm_specs_from_children(Children, Existing), append([Spec], Existing, Specs).",
+              "wasm_stop_child_list([]).",
+              "wasm_stop_child_list([child(_,Pid,_)|Rest]) :- catch(exit(Pid, shutdown), _, true), wasm_stop_child_list(Rest).",
+              "wasm_stop_children(sup(_,_,_,Children,_)) :- wasm_stop_child_list(Children).",
+              "",
+              "wasm_handle_supervisor_call(which_children, Children, State, State) :- State = sup(_,_,_,Children,_).",
+              "wasm_handle_supervisor_call(count_children, counts(Total,Active), State, State) :- State = sup(_,_,_,Children,_), length(Children, Total), Active = Total.",
+              "wasm_handle_supervisor_call(start_child(Spec), Reply, State0, State) :- (wasm_start_child(Spec, State0, State) -> Reply=ok ; Reply=error(start_failed), State=State0).",
+              "wasm_handle_supervisor_call(terminate_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,Spec),Children,Rest) -> exit(Pid,shutdown), Reply=ok, State=sup(Str,Max,Period,[child(Id,undefined,Spec)|Rest],R) ; Reply=error(not_found), State=State0).",
+              "wasm_handle_supervisor_call(delete_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,_Spec),Children,Rest) -> catch(exit(Pid,shutdown),_,true), Reply=ok, State=sup(Str,Max,Period,Rest,R) ; Reply=error(not_found), State=State0).",
+              "wasm_handle_supervisor_call(restart_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,Spec),Children,Rest) -> catch(exit(Pid,shutdown),_,true), wasm_start_child(Spec,sup(Str,Max,Period,Rest,R),State), Reply=ok ; Reply=error(not_found),State=State0).",
+              "",
+              "wasm_supervisor_call(Sup, Request, Reply) :- self(Self), make_ref(Ref), send(Sup, '$sup'(Self,Ref,Request)), receive({Ref-Reply -> true}, [timeout(10)]).",
+              "supervisor_spawn_child(Sup, Spec, Reply) :- wasm_supervisor_call(Sup, start_child(Spec), Reply).",
+              "supervisor_terminate_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, terminate_child(Id), Reply).",
+              "supervisor_delete_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, delete_child(Id), Reply).",
+              "supervisor_respawn_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, restart_child(Id), Reply).",
+              "supervisor_which_children(Sup, Children) :- wasm_supervisor_call(Sup, which_children, Children).",
+              "supervisor_count_children(Sup, Counts) :- wasm_supervisor_call(Sup, count_children, Counts).",
+              "supervisor_halt(Sup) :- self(Self), send(Sup, '$sup_stop'(Self)), receive({reply(true) -> true}).",
+              "supervisor_stop(Sup) :- supervisor_halt(Sup)."
+            ].join("\n");
+          },
           swiWasmRpcProlog: function() {
             return [
               "% library(wasm), lists, apply pre-loaded at startup",
@@ -9263,6 +9395,12 @@
               "    output/1, output/2, terminal_output/1, terminal_output/2,",
               "    input/2, input/3, with_io_target/2, flush/0,",
               "    receive/1, receive/2,",
+              "    server_spawn/3, server_spawn/4, server_request/3, server_request/4,",
+              "    server_promise/3, server_promise/4, server_yield/2, server_yield/3, server_yield/4,",
+              "    server_upgrade/2, server_halt/2, server_stop/2,",
+              "    supervisor_spawn/2, supervisor_spawn/3, supervisor_spawn_child/3,",
+              "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
+              "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
               "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
               "]).",
               ":- op(800, xfx, !).",
@@ -9289,7 +9427,8 @@
               "    PidText := swiWasmActorReservePid(),",
               "    term_string(Pid, PidText),",
               "    term_string(Goal, GoalText),",
-              "    SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+              "    ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
+              "    SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
               "    (   SpawnedText = null",
               "    ->  throw(error(resource_error(swi_wasm_worker_actor), spawn/3))",
               "    ;   SpawnedText == PidText",
@@ -9852,7 +9991,7 @@
               "    ;   term_to_atom(Head, HA), term_to_atom(Body, BA),",
               "        atomic_list_concat([HA,' :-\\n    ',BA,'.'], Text)",
               "    )."
-            ].join("\n");
+            ].concat(this.swiWasmBehaviourProlog().split("\n")).join("\n");
           },
           // ---- WASM-port statechart integration -----------------------
           //
@@ -9908,6 +10047,45 @@
                   console.warn("[SWI-WASM] trace dispatch threw:", e);
                 }
               };
+              window.wasmStatechartDelayedEvents = {};
+              window.wasmStatechartSchedule = function(eventText, delaySeconds, idText) {
+                var id = String(idText || "");
+                var delay = Number(delaySeconds);
+                if (!id || !isFinite(delay) || delay < 0) {
+                  return false;
+                }
+                window.wasmStatechartCancel(id);
+                window.wasmStatechartDelayedEvents[id] = window.setTimeout(function() {
+                  delete window.wasmStatechartDelayedEvents[id];
+                  Prolog.forEach(
+                    "term_string(Event, EventText), statechart_wasm:statechart_send(Event)",
+                    { EventText: String(eventText || "timeout") },
+                    function() {}
+                  ).then(function() {
+                    self.drainSwiWasmOutputToTerminal();
+                  }).catch(function(error) {
+                    self.log("error", "statechart delayed event failed: " + String(error), "swi-wasm");
+                  });
+                }, delay * 1000);
+                return true;
+              };
+              window.wasmStatechartCancel = function(idText) {
+                var id = String(idText || "");
+                var timer = window.wasmStatechartDelayedEvents[id];
+                if (timer === undefined) {
+                  return true;
+                }
+                window.clearTimeout(timer);
+                delete window.wasmStatechartDelayedEvents[id];
+                return true;
+              };
+              window.wasmStatechartCancelAll = function() {
+                Object.keys(window.wasmStatechartDelayedEvents).forEach(function(id) {
+                  window.clearTimeout(window.wasmStatechartDelayedEvents[id]);
+                });
+                window.wasmStatechartDelayedEvents = {};
+                return true;
+              };
               // No JS-side sleep wiring needed: library(wasm)
               // exports a sleep/1 that yields via promise_sleep +
               // await when the Prolog engine is in async context.
@@ -9952,9 +10130,8 @@
           },
           // Run a statechart in SWI-WASM mode.  Equivalent in spirit to
           // runStatechart()'s actor-mode `statechart_spawn(Pid, [...])`
-          // but synchronous and PID-less.  Echoes the initial config
-          // and a help banner; the user drives the chart by typing
-          // statechart_send(Event). in the terminal.
+          // but synchronous and PID-less. The Logger records state and
+          // trace detail; the terminal is reserved for chart output.
           runSwiWasmStatechart: function(xml) {
             var self = this;
             var Prolog = self.swiWasmProlog;
@@ -10034,24 +10211,8 @@
                 var reasonQ = Prolog.query("statechart_wasm:statechart_halt_reason(R)").once();
                 var reason = (reasonQ && reasonQ.R) || "unknown";
                 self.swiWasmStatechartActive = (reason === "running");
-                self.echoSwiWasmStatechartConfig();
-                if (term) {
-                  if (reason === "running") {
-                    self.captureBindingsFromRows([{ Pid: "statechart" }]);
-                    term.echo("% Statechart running. Send events with:  statechart_send(Event).");
-                    term.echo("% Actor-style shorthand also works:  $Pid ! Event.");
-                    term.echo("% Inspect state with:  statechart_configuration(C).  or  statechart_in(State).");
-                    term.echo("% Halt with the Stop button or:  statechart_stop.");
-                  } else if (reason === "final") {
-                    term.echo("% Statechart reached a top-level final state.");
-                  } else if (reason === "budget_exhausted") {
-                    term.echo("% Statechart halted: microstep budget exhausted.");
-                    term.echo("% (Unbounded transition loop that never yields, even via sleep/1.)");
-                  } else if (reason === "stopped") {
-                    term.echo("% Statechart halted by user.");
-                  } else {
-                    term.echo("% Statechart halted (" + reason + ").");
-                  }
+                if (reason === "running") {
+                  self.captureBindingsFromRows([{ Pid: "statechart" }]);
                 }
                 var payload = self.exampleSpawnInteractionPayload("statechart", "swi-wasm", "editor");
                 if (payload) {
@@ -10090,17 +10251,6 @@
               this.terminal.echo(buf.replace(/\n$/, ""));
             }
           },
-          echoSwiWasmStatechartConfig: function() {
-            var Prolog = this.swiWasmProlog;
-            var term = this.terminal;
-            if (!Prolog || !term) return;
-            try {
-              var r = Prolog.query("statechart_wasm:statechart_configuration(C)").once();
-              if (r && r.C) {
-                term.echo("% Configuration: " + JSON.stringify(r.C));
-              }
-            } catch(_) {}
-          },
           haltSwiWasmStatechart: function() {
             var Prolog = this.swiWasmProlog;
             if (!Prolog) return;
@@ -10119,9 +10269,6 @@
                 delete this.lastBindings.Pid;
               }
               this.drainSwiWasmOutputToTerminal();
-              if (this.terminal) {
-                this.terminal.echo("% Statechart stopped.");
-              }
               return;
             }
             // The chart is suspended inside an await/2 (e.g. sleep/1
@@ -10262,13 +10409,20 @@
             var loadErr = null;
             var bridgeCode = this.swiWasmRpcProlog();
             var codeToLoad = editorText || "";
+            this.swiWasmUserSourceText = codeToLoad;
             // library(wasm) is already loaded (preloaded at init), so :=/2 and #/1
             // operators are defined before consult runs.
             if (Module && Module.FS) {
               try {
                 Module.FS.writeFile("/swi_wasm_actor_bridge.pl", bridgeCode);
-                Prolog.query("consult('/swi_wasm_actor_bridge.pl')").once();
-                Prolog.query("use_module('/swi_wasm_actor_bridge.pl')").once();
+                var bridgeLoaded = Prolog.query("consult('/swi_wasm_actor_bridge.pl')").once();
+                if (!bridgeLoaded) {
+                  throw new Error("Unable to consult the SWI-WASM actor bridge.");
+                }
+                var bridgeImported = Prolog.query("use_module('/swi_wasm_actor_bridge.pl')").once();
+                if (!bridgeImported) {
+                  throw new Error("Unable to import the SWI-WASM actor bridge.");
+                }
                 Prolog.query("retractall(swi_wasm_actor_bridge:deferred(_))").once();
                 Module.FS.writeFile("/user_code.pl", codeToLoad);
                 self.swiWasmOutputBuffer = "";

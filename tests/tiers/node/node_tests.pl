@@ -3121,6 +3121,9 @@ test(profile_check_goal_rejects_non_exported_actor_actor_parent_predicate,
      [throws(error(profile_violation(_, _), _))]) :-
     profile_check_goal(actor, actors:actor_parent(_Parent)).
 
+test(profile_check_goal_allows_delayed_send_worker_goal) :-
+    profile_check_goal(actor, actor:send_with_delay(self, timeout, 0.1)).
+
 test(profile_check_goal_rejects_dynamic_db_family_disabled_in_runtime,
      [throws(error(profile_violation(_, _), _))]) :-
     with_node_server_options([auth(private), owner("owner")], URI,

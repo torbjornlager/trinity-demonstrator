@@ -14,6 +14,7 @@
   var exitReason = null;
   var abortRequested = false;
   var currentGoalText = "";
+  var inheritedSource = "";
 
   if (typeof self.window === "undefined") {
     self.window = self;
@@ -137,11 +138,12 @@
     return actorRequest("reserve_pid", {});
   }
 
-  function actorSpawnWithPid(targetPidText, goalText, sourceText) {
+  function actorSpawnWithPid(targetPidText, goalText, sourceText, nameText) {
     return actorRequest("spawn", {
       pid: String(targetPidText || ""),
       goal: String(goalText || "true"),
-      source: String(sourceText || "")
+      source: String(sourceText || ""),
+      name: String(nameText || "")
     });
   }
 
@@ -246,6 +248,11 @@
   self.actorTerminalOutput = actorTerminalOutput;
   self.actorSetDoneReason = actorSetDoneReason;
   self.actorInput = actorInput;
+  // A parent passes its complete runtime source to the coordinator when
+  // spawning a child.  Treat that inherited source as the child program;
+  // adding it as both behaviour and user source would duplicate clauses.
+  self.swiWasmBehaviourSource = function() { return ""; };
+  self.swiWasmUserSource = function() { return inheritedSource; };
 
   function consultSource(sourceText) {
     if (!sourceText || !Module || !Module.FS) {
@@ -281,7 +288,8 @@
       "    await(PidPromise, PidText),",
       "    term_string(Pid, PidText),",
       "    term_string(Goal, GoalText),",
-      "    Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+      "    ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
+      "    Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
       "    await(Promise, SpawnedText),",
       "    SpawnedText == PidText,",
       "    install_spawn_monitor(Pid, Options).",
@@ -761,7 +769,8 @@
       Module = module;
       Prolog = module.prolog;
       installActorPredicates();
-      consultSource(message.source || "");
+      inheritedSource = String(message.source || "");
+      consultSource(inheritedSource);
       post("ready", {});
       return runGoal(message.goal || "true");
     }).catch(function(error) {

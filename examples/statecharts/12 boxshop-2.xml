@@ -24,14 +24,14 @@
         </state>
         <state id="Welcome">
             <onentry>
-                write('Welcome to the box shop!'),
+                writeln('Welcome to the box shop!'),
                 assert(welcome)
             </onentry>
             <go to="selectFormItem"/>
         </state>
         <state id="Color">
             <onentry>
-                write('What color do you want?'),
+                writeln('What color do you want?'),
                 self(Self),
                 send(Self, timeout, [delay(15), id(foo)])
             </onentry>
@@ -44,7 +44,7 @@
         </state>
         <state id="Size">
             <onentry>
-                write('What size do you want?'),
+                writeln('What size do you want?'),
                 self(Self),
                 send(Self, timeout, [delay(15), id(bar)])
             </onentry>
@@ -56,10 +56,10 @@
             </onexit>
         </state>
         <go to="selectFormItem" on="says(_)">
-            write('I did not understand.')
+            writeln('I did not understand.')
         </go>
         <go to="selectFormItem" on="timeout">
-            write('I did not hear you.')
+            writeln('I did not hear you.')
         </go>
     </state>
     <final id="Respond">

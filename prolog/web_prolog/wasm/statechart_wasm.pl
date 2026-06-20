@@ -37,6 +37,7 @@ instance; calling `statechart_start/1` twice resets state.
 % and degrades to a trace event).
 :- catch(use_module(library(wasm)), _, true).
 
+:- use_module(library(option)).
 :- use_module(statechart_wasm_model, [
     statechart_wasm_parse_text/1
 ]).
@@ -128,6 +129,7 @@ instance; calling `statechart_start/1` twice resets state.
 
 statechart_start(text(Text)) :-
     !,
+    cancel_delayed_events,
     runtime_clean,
     retractall(last_halt_reason(_)),
     statechart_wasm_parse_text(Text),
@@ -136,6 +138,7 @@ statechart_start(text(Text)) :-
     flush_user_streams.
 statechart_start(stream(Stream)) :-
     !,
+    cancel_delayed_events,
     runtime_clean,
     retractall(last_halt_reason(_)),
     statechart_wasm_model:statechart_wasm_parse_stream(Stream),
@@ -154,6 +157,7 @@ statechart_start(Source) :-
 %   Safe to call when no chart is running.
 
 statechart_stop :-
+    cancel_delayed_events,
     (   running
     ->  retractall(running),
         catch(exit_interpreter, _, true)
@@ -162,6 +166,40 @@ statechart_stop :-
     runtime_clean,
     retractall(last_halt_reason(_)),
     assertz(last_halt_reason(stopped)).
+
+
+% Browser-statechart equivalents of the actor calls used by chart scripts.
+% A delayed event is scheduled by the hosting page and is cancelled by its
+% stable id on state exit.  The host callback re-enters statechart_send/1.
+self(statechart).
+
+send(statechart, Event) :-
+    !,
+    statechart_send(Event).
+send(statechart, Event, Options) :-
+    !,
+    option(delay(Delay), Options, 0),
+    (   Delay =:= 0
+    ->  statechart_send(Event)
+    ;   option(id(Id), Options, delayed_event),
+        term_string(Event, EventText),
+        term_string(Id, IdText),
+        Scheduled := wasmStatechartSchedule(#EventText, #Delay, #IdText),
+        Scheduled == true
+    ).
+send(_, _, _) :-
+    throw(error(domain_error(statechart_target, statechart), send/3)).
+
+cancel(Id) :-
+    term_string(Id, IdText),
+    Cancelled := wasmStatechartCancel(#IdText),
+    Cancelled == true.
+
+cancel_delayed_events :-
+    catch((Cancelled := wasmStatechartCancelAll(),
+           Cancelled == true),
+          _,
+          true).
 
 
 %!  statechart_send(+Event) is det.

@@ -80,9 +80,14 @@ normalize_server_callback(Pred0, Pred) :-
 server_loop(Pred, State0) :-
     receive({
         '$call'(From, Ref, Request) ->
-            call(Pred, Request, State0, Response, State),
-            From ! Ref-Response,
-            server_loop(Pred, State) ;
+            (   call(Pred, Request, State0, Response, State)
+            ->  From ! Ref-Response,
+                server_loop(Pred, State)
+            ;   % A callback with no matching clause is a server crash,
+                % not a quiet receive-loop failure.  exit/1 records the
+                % reason before aborting, so monitors receive down/3.
+                exit(false)
+            ) ;
         '$upgrade'(Pred1) ->
             server_loop(Pred1, State0) ;
         '$stop'(From) ->
