@@ -5,6 +5,16 @@
     node_overlay_shared_db_path/2
 ]).
 
+%  Resolve `n1_overlay(File)` to this Deployment directory, so the shared
+%  DB can `:- use_module(n1_overlay(movie_db))`. The shared DB is loaded as
+%  text (no source-file directory), so a relative import can't resolve on
+%  its own; this global alias gives it a stable anchor.
+:- prolog_load_context(directory, OverlayDir),
+   (   user:file_search_path(n1_overlay, OverlayDir)
+   ->  true
+   ;   asserta(user:file_search_path(n1_overlay, OverlayDir))
+   ).
+
 :- dynamic start_n1_done/0.
 
 :- initialization(start_n1).
