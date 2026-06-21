@@ -27,6 +27,11 @@
     .dh-filter-control { height: 28px; min-height: 28px; }
     .dh-badges { min-height: 2.1rem; max-height: 2.1rem; overflow: hidden; }
     .dh-chip { font-family: var(--tblr-font-monospace); font-size: .75rem; }
+    .dh-predicate {
+      display: inline-block;
+      color: var(--tblr-body-color);
+      white-space: nowrap;
+    }
     .dh-scroll {
       overflow: auto;
       scrollbar-width: thin;
@@ -57,6 +62,16 @@
     }
     .dh-cap-block-services .dh-chip-list { max-height: 3.8rem; }
     .dh-empty-slot { color: #5b6a7d; font-size: .875rem; }
+    #dh-welcome-modal.is-open { display: block; }
+    #dh-welcome-modal {
+      background: rgba(24, 36, 51, .45);
+    }
+    #dh-welcome-modal .modal-content {
+      box-shadow: 0 1.5rem 4rem rgba(24, 36, 51, .28);
+    }
+    .dh-welcome-step {
+      border-left: 3px solid var(--tblr-primary);
+    }
   </style>
 </head>
 <body>
@@ -141,6 +156,44 @@
     </div>
   </div>
 
+  <div id="dh-welcome-modal" class="modal modal-blur fade" tabindex="-1"
+       role="dialog" aria-labelledby="dh-welcome-title" aria-modal="true"
+       aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <div class="text-secondary text-uppercase small fw-bold">Discovery Hub</div>
+            <h2 id="dh-welcome-title" class="modal-title">A recommended first visit</h2>
+          </div>
+          <button id="dh-welcome-close" type="button" class="btn-close" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-secondary mb-4">Follow the tutorials in this order to build up from Prolog fundamentals to distributed and concurrent systems.</p>
+          <div class="dh-welcome-step ps-3 mb-4">
+            <div class="fw-bold mb-1">1. Start with n1</div>
+            <div>Learn the core Prolog interaction model through the Movie Database tutorial. It is the best place to get comfortable with queries, facts, rules, state, and the limits—and benefits—of stateless calls.</div>
+          </div>
+          <div class="dh-welcome-step ps-3 mb-4">
+            <div class="fw-bold mb-1">2. Continue with n2</div>
+            <div>Explore the distributed ISOTOPE examples. They introduce communication between nodes and show why a distributed model is useful once a single query is no longer enough.</div>
+          </div>
+          <div class="dh-welcome-step ps-3">
+            <div class="fw-bold mb-1">3. Finish with n3 or n4</div>
+            <div>Visit either node for the complete actor tutorial: messaging, servers, supervisors, statecharts, and fault handling. They contain the same actor material, so one is sufficient.</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <label class="form-check form-check-inline me-auto mb-0">
+            <input id="dh-welcome-dont-show" class="form-check-input" type="checkbox">
+            <span class="form-check-label">Don’t show this again</span>
+          </label>
+          <button id="dh-welcome-start" type="button" class="btn btn-primary">Start exploring</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     var POLL_MS = 10000;
     var lastFetch = 0;
@@ -156,6 +209,29 @@
       down:        { rank: 4, color: "red",       label: "down" }
     };
     var PROFILE_COLOR = { relation: "azure", isobase: "blue", isotope: "teal", actor: "purple" };
+    var WELCOME_STORAGE_KEY = "web-prolog.discovery-hub.welcome.v2";
+
+    function closeWelcome() {
+      var modal = document.getElementById("dh-welcome-modal");
+      modal.classList.remove("show", "is-open");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.classList.remove("modal-open");
+      try {
+        if (document.getElementById("dh-welcome-dont-show").checked) {
+          window.localStorage.setItem(WELCOME_STORAGE_KEY, "seen");
+        } else {
+          window.localStorage.removeItem(WELCOME_STORAGE_KEY);
+        }
+      } catch (_) {}
+    }
+
+    function showWelcome() {
+      var modal = document.getElementById("dh-welcome-modal");
+      modal.classList.add("show", "is-open");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.classList.add("modal-open");
+      document.getElementById("dh-welcome-start").focus();
+    }
 
     function esc(s) {
       return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -228,7 +304,9 @@
     function chips(items, color) {
       if (!items || !items.length) return '<span class="text-muted small">&mdash;</span>';
       return items.map(function (c) {
-        return '<span class="badge bg-' + color + '-lt dh-chip me-1 mb-1">' + esc(c) + "</span>";
+        return color
+          ? '<span class="badge bg-' + color + '-lt dh-chip me-1 mb-1">' + esc(c) + "</span>"
+          : '<span class="dh-chip dh-predicate me-2 mb-1">' + esc(c) + "</span>";
       }).join("");
     }
 
@@ -279,7 +357,7 @@
               '<div class="dh-badges mb-2">' + badges + "</div>" +
               '<div class="dh-desc-slot dh-scroll text-secondary dh-desc mb-2">' + esc(r.description || "") + "</div>" +
               '<div class="dh-cap-slot mt-auto">' +
-                capBlock(r, "provides", "provides", r.provides || [], "azure") +
+                capBlock(r, "provides", "provides", r.provides || [], null) +
                 capBlock(r, "services", "services", r.services || [], "lime") +
               "</div>" +
             "</div>" +
@@ -410,6 +488,20 @@
       document.querySelector('#dh-profile button[data-v=""]').classList.add("active", "btn-primary");
       render();
     });
+    document.getElementById("dh-welcome-close").addEventListener("click", closeWelcome);
+    document.getElementById("dh-welcome-start").addEventListener("click", closeWelcome);
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && document.getElementById("dh-welcome-modal").classList.contains("is-open")) {
+        closeWelcome();
+      }
+    });
+    try {
+      if (window.localStorage.getItem(WELCOME_STORAGE_KEY) !== "seen") {
+        showWelcome();
+      }
+    } catch (_) {
+      showWelcome();
+    }
 
     setInterval(function () {
       if (lastFetch) document.getElementById("dh-updated").textContent = "updated " + Math.floor((Date.now() - lastFetch) / 1000) + "s ago";

@@ -5283,10 +5283,11 @@
             return this.nodeAnnouncedProfile !== "relation";
           },
           showTutorialExamples: function() {
-            return this.hasWorkspacePane && !this.isSwiWasmMode;
+            return this.hasWorkspacePane;
           },
           showActorTutorialExamples: function() {
-            return this.nodeAnnouncedProfile === "actor" ||
+            return this.isSwiWasmMode ||
+              this.nodeAnnouncedProfile === "actor" ||
               this.nodeAnnouncedProfile === "workbench";
           },
           hasEditorPane: function() {

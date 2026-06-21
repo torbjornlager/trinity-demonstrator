@@ -3687,6 +3687,7 @@ fridge2(_Other,      List, error(unknown_request), List).
     function loadTutorialSections(bridge) {
         if (bridge && typeof bridge.tutorialSections === "function") {
             applyTutorialSections(bridge.tutorialSections());
+            return;
         }
         fetch("/node_info", { headers: { Accept: "application/json" } })
             .then(function(response) {

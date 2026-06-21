@@ -68,4 +68,5 @@ Part 2: Add rules to the database to do the following,
 % carried in this file, so /node_info reports self_contained:false and the
 % discovery hub flags n1 as "dependent". The n1_overlay search-path alias
 % is registered by start_n1.pl (points at this Deployment directory).
+
 :- use_module(n1_overlay(movie_db), [movie/2, director/2, actor/3, actress/3]).

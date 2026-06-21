@@ -33,7 +33,7 @@
             <onentry>
                 writeln('What color do you want?'),
                 self(Self),
-                send(Self, timeout, [delay(15), id(foo)])
+                send(Self, timeout, [delay(8), id(foo)])
             </onentry>
             <go to="selectFormItem" on="says(color(Color))">
                 assert(color(Color))
@@ -46,7 +46,7 @@
             <onentry>
                 writeln('What size do you want?'),
                 self(Self),
-                send(Self, timeout, [delay(15), id(bar)])
+                send(Self, timeout, [delay(8), id(bar)])
             </onentry>
             <go to="selectFormItem" on="says(size(Size))">
                 assert(size(Size))
