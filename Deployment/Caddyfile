@@ -34,7 +34,7 @@ n0.elfenbenstornet.se {
 	handle @options {
 		respond 204
 	}
-	@allowed path / /call /discovery-hub /admin/tabler.min.css /manual /node_info /version /healthz /readyz /img* /vendor* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js
+	@allowed path / /call /discovery-hub /admin/tabler.min.css /manual /node_info /version /healthz /readyz /img* /vendor* /portal /demonstrator /tutorial /swi-wasm-tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js
 	handle @allowed {
 		reverse_proxy n0:3060 {
 			import common_proxy_headers
@@ -52,7 +52,7 @@ n1.elfenbenstornet.se {
 		respond 204
 	}
 
-	@allowed path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js
+	@allowed path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /tutorial /swi-wasm-tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js
 	handle @allowed {
 		reverse_proxy wp_n1:3051 {
 			import common_proxy_headers
@@ -72,7 +72,7 @@ n2.elfenbenstornet.se {
 	}
 
 	@allowed {
-		path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+		path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /tutorial /swi-wasm-tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
 	}
 	handle @allowed {
 		reverse_proxy wp_n2:3052 {
@@ -97,7 +97,7 @@ n3.elfenbenstornet.se {
 		remote_ip private_ranges
 	}
 	@allowed {
-		path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /calculator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+		path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /calculator /tutorial /swi-wasm-tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
 	}
 	handle @trusted_internal_ws {
 		reverse_proxy wp_n3:3053 {
@@ -128,7 +128,7 @@ n4.elfenbenstornet.se {
 		remote_ip private_ranges
 	}
 	@allowed {
-		path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /calculator /tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
+		path / /call /manual /node_info /version /img* /vendor* /portal /demonstrator /calculator /tutorial /swi-wasm-tutorial /editor_frame /examples_index /interaction_log /__viewer* /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /ws /toplevel_spawn /toplevel_call /toplevel_next /toplevel_poll /toplevel_stop /toplevel_abort /toplevel_trace /toplevel_respond
 	}
 	handle @trusted_internal_ws {
 		reverse_proxy wp_n4:3055 {

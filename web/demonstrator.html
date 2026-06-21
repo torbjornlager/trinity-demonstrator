@@ -5075,7 +5075,12 @@
             introVisible: false,
             introSuppressFuture: false,
             portalVersion: "0.2.0",
-            tutorialSrc: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? "/tutorial" + window.location.hash : "/tutorial",
+            tutorialSrc: (function() {
+              var base = (new URLSearchParams(window.location.search)).get("node") === "swi-wasm"
+                ? "/swi-wasm-tutorial"
+                : "/tutorial";
+              return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
+            }()),
             handledTutorialDeepLink: "",
             isSwiWasmMode: (new URLSearchParams(window.location.search)).get("node") === "swi-wasm",
             swiWasmProlog: null,
@@ -6330,7 +6335,7 @@
           tutorialSectionUrl: function(id) {
             var url = new URL(window.location.href);
             url.pathname = "/demonstrator";
-            url.search = "";
+            url.search = this.isSwiWasmMode ? "?node=swi-wasm" : "";
             url.hash = String(id || "").replace(/^#/, "");
             return url.toString();
           },
@@ -11842,7 +11847,7 @@
           },
           openTutorialSection: function(anchor) {
             var hash = anchor ? ("#" + anchor) : "";
-            var target = "/tutorial" + hash;
+            var target = (this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial") + hash;
             this.selectWorkspace("tutorial");
             if (window.history && typeof window.history.replaceState === "function") {
               window.history.replaceState(null, document.title || "", "/demonstrator" + hash);

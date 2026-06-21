@@ -1,0 +1,4078 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+    <title>Web Prolog Tutorial</title>
+    <meta name="description" content="">
+    <meta name="author" content="Torbjörn Lager">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet"
+          href="/vendor/fonts/ibm-plex-mono.css">
+
+    <style>
+        :root {
+            color-scheme: light;
+            --tutorial-bg: #ffffff;
+            --tutorial-ink: #111111;
+            --tutorial-muted: #444444;
+            --tutorial-heading: darkgreen;
+            --tutorial-link: darkgreen;
+            --tutorial-surface: #f8f8f8;
+            --tutorial-border: #d8d8d8;
+            --tutorial-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+            --tutorial-code-bg: rgba(15, 23, 42, 0.05);
+            --tutorial-info-bg: #edf9ef;
+            --tutorial-info-border: #b7dec0;
+            --tutorial-danger-bg: #fdf0f0;
+            --tutorial-danger-border: #e6b8b8;
+            --tutorial-button-bg: #ffffff;
+            --tutorial-button-ink: #1f2937;
+            --tutorial-button-line: #d4d4d4;
+            --tutorial-button-primary-bg: #4b88c7;
+            --tutorial-button-primary-ink: #ffffff;
+            --tutorial-button-primary-line: #3f76ad;
+            --tutorial-button-load-bg: #d8eafa;
+            --tutorial-button-load-ink: #17466f;
+            --tutorial-button-load-line: #a9cceb;
+            --tutorial-diagram-ink: #000000;
+            --tutorial-diagram-line: #555555;
+            --tutorial-diagram-highlight: #e07b00;
+            --tutorial-diagram-active-fill: #fef08a;
+            --mono-font: "IBM Plex Mono", "Menlo", "Consolas", monospace;
+            --mono-size: 13px;
+            --mono-weight: 400;
+            --mono-line-height: 1.45;
+            --tutorial-text-size: 14px;
+            --tutorial-title-size: 25px;
+            --tutorial-h1-size: 21px;
+            --tutorial-h2-size: 17px;
+            --tutorial-h3-size: 13px;
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --tutorial-bg: #0f141a;
+            --tutorial-ink: #e5edf5;
+            --tutorial-muted: #a8b6c5;
+            --tutorial-heading: #8fd782;
+            --tutorial-link: #9cc8ff;
+            --tutorial-surface: #161d24;
+            --tutorial-border: #34414e;
+            --tutorial-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+            --tutorial-code-bg: rgba(255, 255, 255, 0.05);
+            --tutorial-info-bg: #112319;
+            --tutorial-info-border: #2f6d45;
+            --tutorial-danger-bg: #2a1518;
+            --tutorial-danger-border: #7e434d;
+            --tutorial-button-bg: #151c23;
+            --tutorial-button-ink: #e5edf5;
+            --tutorial-button-line: #32404d;
+            --tutorial-button-primary-bg: #4b88c7;
+            --tutorial-button-primary-ink: #ffffff;
+            --tutorial-button-primary-line: #3f76ad;
+            --tutorial-button-load-bg: #254968;
+            --tutorial-button-load-ink: #e5f2ff;
+            --tutorial-button-load-line: #3b6f9c;
+            --tutorial-diagram-ink: #e5edf5;
+            --tutorial-diagram-line: #94a3b8;
+            --tutorial-diagram-highlight: #f3b55b;
+            --tutorial-diagram-active-fill: #4d4312;
+        }
+
+        body {
+            margin: 0;
+            background: var(--tutorial-bg);
+            color: var(--tutorial-ink);
+        }
+
+        #tutorial {
+            margin: 50px;
+            padding: 16px;
+            display: block;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+        }
+
+        h1 { font-size: var(--tutorial-h1-size); color: var(--tutorial-heading); margin: 56px 0 24px 0; }
+        h2 { font-size: var(--tutorial-h2-size); margin-top: 46px; color: var(--tutorial-heading); }
+        h3 { font-size: var(--tutorial-h3-size); margin-top: 30px; color: var(--tutorial-heading); }
+
+        .tutorial-main-title {
+            font-size: var(--tutorial-title-size);
+            margin: 0 0 24px 0;
+        }
+
+        p,
+        li,
+        blockquote p {
+            line-height: 1.18;
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+            font-size: var(--tutorial-text-size);
+        }
+
+        pre,
+        code {
+            font-family: var(--mono-font);
+            font-size: var(--mono-size);
+            font-weight: var(--mono-weight);
+            line-height: var(--mono-line-height);
+        }
+
+        code {
+            background: var(--tutorial-code-bg);
+            border: 0;
+            border-radius: 4px;
+            padding: 0.08em 0.28em;
+        }
+
+        pre {
+            background: var(--tutorial-surface);
+            border: 1px solid var(--tutorial-border);
+            padding: 10px 12px;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: transparent;
+            border: 0;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .alert {
+            margin: 16px 0;
+            padding: 12px 14px;
+            border: 1px solid var(--tutorial-border);
+            box-shadow: var(--tutorial-shadow);
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+            font-size: var(--tutorial-text-size);
+        }
+
+        .alert p:last-child {
+            margin-bottom: 0;
+        }
+
+        .alert-info {
+            background: var(--tutorial-info-bg);
+            border-color: var(--tutorial-info-border);
+        }
+
+        .alert-danger {
+            background: var(--tutorial-danger-bg);
+            border-color: var(--tutorial-danger-border);
+        }
+
+        .tutorial-toc {
+            margin: 22px 0 30px 0;
+            padding: 14px 16px;
+            border: 1px solid var(--tutorial-border);
+            background: var(--tutorial-surface);
+        }
+
+        .tutorial-toc h2 {
+            margin: 0 0 12px 0;
+        }
+
+        .tutorial-toc ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tutorial-toc li {
+            margin: 4px 0;
+        }
+
+        .tutorial-toc li.toc-h2 {
+            padding-left: 14px;
+        }
+
+        .tutorial-toc li.toc-h3 {
+            padding-left: 28px;
+        }
+
+        .tutorial-toc li.toc-h1 a {
+            font-weight: 700;
+        }
+
+        .tutorial-toc a {
+            text-decoration: none;
+        }
+
+        .heading-link {
+            border: 0;
+            background: transparent;
+            color: var(--tutorial-link);
+            cursor: pointer;
+            font: inherit;
+            font-size: 0.78em;
+            margin-left: 8px;
+            opacity: 0.55;
+            padding: 0 2px;
+            vertical-align: baseline;
+        }
+
+        h1:hover .heading-link,
+        h2:hover .heading-link,
+        h3:hover .heading-link,
+        .heading-link:focus {
+            opacity: 1;
+        }
+
+        .heading-link.copied {
+            opacity: 1;
+        }
+
+        ul {
+            margin-top: 8px;
+        }
+
+        a {
+            color: var(--tutorial-link);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        table {
+            color: var(--tutorial-ink);
+        }
+
+        .ask-buttons {
+            margin: 12px 0;
+        }
+
+        .btn {
+            border: 1px solid var(--tutorial-button-line);
+            border-radius: 6px;
+            background: var(--tutorial-button-bg);
+            color: var(--tutorial-button-ink);
+            min-height: 21px;
+            padding: 0 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            line-height: 1;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--tutorial-button-primary-bg);
+            color: var(--tutorial-button-primary-ink);
+            border-color: var(--tutorial-button-primary-line);
+        }
+
+        .btn-load {
+            background: var(--tutorial-button-load-bg);
+            color: var(--tutorial-button-load-ink);
+            border-color: var(--tutorial-button-load-line);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        #sc-pr-diagram {
+            display: block;
+            background: transparent;
+            box-sizing: border-box;
+        }
+
+        .statechart-raster {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: var(--tutorial-surface);
+            box-sizing: border-box;
+        }
+
+        .statechart-raster-narrow {
+            width: 75%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        img.theme-img-dark,
+        :root:not([data-theme="dark"]) img.theme-img-dark {
+            display: none;
+        }
+
+        img.theme-img-light,
+        :root:not([data-theme="dark"]) img.theme-img-light {
+            display: block;
+        }
+
+        :root[data-theme="dark"] img.theme-img-light {
+            display: none;
+        }
+
+        :root[data-theme="dark"] img.theme-img-dark {
+            display: block;
+        }
+
+        em {
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        blockquote {
+            margin-top: 12px;
+        }
+
+        .profile-hierarchy {
+            margin: 20px 0 24px;
+        }
+
+        .profile-hierarchy img {
+            display: block;
+            max-width: min(680px, 100%);
+            height: auto;
+            background: var(--tutorial-bg);
+        }
+    </style>
+</head>
+<body>
+<div id="tutorial">
+
+
+<div>
+    <h1 id="tutorial-top" class="tutorial-main-title">Web Prolog Tutorial</h1>
+</div>
+
+<nav id="tutorial-toc" class="tutorial-toc" aria-label="Table of contents"></nav>
+
+<section id="tutorial-getting-started">
+<h1>Introduction</h1>
+
+<p>
+   Web Prolog is Prolog with two things added: a network and a process model.
+   The simplest nodes just speak HTTP and evaluate logical queries on demand;
+   the richer ones also speak WebSocket and host Erlang-style actors, each
+   with its own mailbox.
+</p>
+
+<p>
+   The same Prolog predicates work whether the other side of the conversation
+   is a function on this node, an actor across the room, or a service on
+   another continent &mdash; remote calls that read like local ones,
+   distribution that disappears into the language.
+</p>
+
+<p>
+   Web Prolog nodes do not all have to do everything. A small hierarchy of
+   profiles &mdash; ISOBASE, ISOTOPE, ACTOR &mdash; lets a node advertise
+   exactly how much of the system it implements, and this tutorial walks up
+   that hierarchy: pure relational queries first, then session state, then
+   actors, then the higher-level patterns (server behaviours, statecharts)
+   that build on actors. You can stop at any level; each one is a coherent way
+   to use the system.
+</p>
+
+</section>
+
+<section id="tutorial-local-isobase-programming" data-tutorial-sections="local_isobase">
+<h1 id="tutorial-introduction">Local ISOBASE programming</h1>
+
+<p>
+    ISOBASE programming starts with ordinary, side-effect-free Prolog queries.
+    These examples use local predicates hosted by the current node and are safe
+    to run through the stateless <code>/call</code> API.
+</p>
+
+<p>
+    If you are reading this inside the portal, use the terminal to the right.
+    Queries must end with a full stop. If a query has more than one answer,
+    press <code>;</code> or the space bar for more, or use the green Next button.
+</p>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> The portal also has a Logger panel to the right of the
+  terminal. If it is hidden, open it with the chevron at the far right. By
+  ticking the <code>API</code> checkbox at the bottom of the Logger, you can
+  watch the HTTP traffic generated by your queries.
+</div>
+
+
+<h2>append/3 in two modes</h2>
+
+<p>
+    Prolog is a relational language. The same predicate can often be used in
+    more than one direction. First, use <code>append/3</code> in the ordinary
+    way to join two lists:
+</p>
+
+<pre id="append1">?- append([a],[b,c],Xs).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#append1&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Now run the same predicate backwards and let Prolog split a list in all
+    possible ways:
+</p>
+
+<pre id="append2">?- append(Xs,Ys,[a,b,c]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#append2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    This second query has several answers. Again, press <code>;</code> or the space bar for more, or use the green Next button.
+</p>
+
+<h2>A small family program</h2>
+
+<p>
+    This node hosts some shared Prolog code. The small family program below is
+    part of that shared database, so you can query it directly.
+</p>
+
+<pre id="a">
+ancestor_descendant(X, Y) :-
+    parent_child(X, Y).
+ancestor_descendant(X, Z) :-
+    parent_child(X, Y),
+    ancestor_descendant(Y, Z).
+
+parent_child(X, Y) :-
+    mother_child(X, Y).
+parent_child(X, Y) :-
+    father_child(X, Y).
+
+mother_child(trude, sally).
+
+father_child(tom, sally).
+father_child(tom, erica).
+father_child(mike, tom).
+</pre>
+
+<p>
+    Ask for Mike's descendants:
+</p>
+
+<pre id="ancestor1">?- ancestor_descendant(mike, Who).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#ancestor1&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Stateless API limitations</h2>
+
+<p>
+    ISOBASE requests are independent: the server returns an answer or reaches
+    its request limit, then forgets the execution context. This deliberately
+    rules out the controls available on persistent ISOTOPE and ACTOR sessions.
+</p>
+
+<p>
+    That trade-off is useful when each query is self-contained: clients can
+    use ordinary HTTP, requests cannot leave session state behind, and the
+    node can enforce a clear time and resource bound for every call.
+</p>
+
+<h3>No abort</h3>
+
+<p>
+    There is no client-side abort operation for a stateless call. This goal
+    runs until n1's request timeout expires (currently two seconds):
+</p>
+
+<pre id="isobase-no-abort">?- repeat, fail.</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#isobase-no-abort&quot;)" class="btn btn-xs btn-primary" type="button">Call (times out)</button>
+</p>
+
+<h3>No I/O</h3>
+
+<p>
+    Output and input need a persistent conversation with the client, so they
+    are not part of the stateless API. The node rejects this call:
+</p>
+
+<pre id="isobase-no-io">?- writeln(hello).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#isobase-no-io&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h3>No dynamic database manipulation</h3>
+
+<p>
+    A change made during one stateless request would have no session in which
+    to persist, so dynamic database updates are unavailable as well:
+</p>
+
+<pre id="isobase-no-dynamic-db">?- assertz(p(1)).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#isobase-no-dynamic-db&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+
+
+</section>
+
+<section id="tutorial-movie-database" data-tutorial-sections="movie_database">
+<h1>Movie database</h1>
+
+<p>
+    Node <code>n1</code> hosts a movie database. Its facts describe films,
+    directors, actors, and actresses, and can be queried directly through the
+    stateless <code>/call</code> API.
+</p>
+
+<h2>Find films by year</h2>
+
+<pre id="movie-by-year">?- movie(Film, 2000).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#movie-by-year&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Find co-stars</h2>
+
+<p>
+    This query finds pairs of performers who appeared in the same film:
+</p>
+
+<pre id="movie-co-stars">?- actor(Film, First, _), actor(Film, Second, _), First @&gt; Second.</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#movie-co-stars&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Find directors who also acted</h2>
+
+<pre id="movie-actor-director">?- actor(_, Person, _), director(_, Person).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#movie-actor-director&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+</section>
+
+<section id="tutorial-dcg" data-tutorial-sections="dcg">
+<h1>Parsing and generating with a DCG</h1>
+
+<p>
+    A Definite Clause Grammar (DCG) is a clean Prolog notation for grammars.
+    Load this small one into your session, and you can use it to parse or
+    generate sentences:
+</p>
+
+<pre id="dcg1">s(s(NP,VP)) --&gt; np(NP, Num), vp(VP, Num).
+
+np(NP, Num) --&gt; pn(NP, Num).
+np(np(Det,N), Num) --&gt; det(Det, Num), n(N, Num).
+np(np(Det,N,PP), Num) --&gt; det(Det, Num), n(N, Num), pp(PP).
+
+vp(vp(V,NP), Num) --&gt; v(V, Num), np(NP, _).
+vp(vp(V,NP,PP), Num) --&gt; v(V, Num), np(NP, _), pp(PP).
+
+pp(pp(P,NP)) --&gt; p(P), np(NP, _).
+
+det(det(a), sg) --&gt; [a].
+det(det(the), _) --&gt; [the].
+
+pn(pn(john), sg) --&gt; [john].
+
+n(n(man), sg) --&gt; [man].
+n(n(men), pl) --&gt; [men].
+n(n(telescope), sg) --&gt; [telescope].
+
+v(v(sees), sg) --&gt; [sees].
+v(v(see), pl) --&gt; [see].
+v(v(saw), _) --&gt; [saw].
+
+p(p(with)) --&gt; [with].
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#dcg1&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>
+    Ask for a parse tree:
+</p>
+
+<pre id="dcg2">?- phrase(s(Tree), [john,saw,a,man,with,a,telescope]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#dcg2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You can also use the same grammar for generation:
+</p>
+
+<pre id="dcg3">?- forall((between(1,8,N), length(S,N), phrase(s(_),S)), writeln(S)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#dcg3&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> This program, like many other programs in this tutorial, can  
+  also be accessed from the list of Web Prolog source code in the Examples drawer. Clicking
+  on a file name will place the code in the editor and allow you to edit and run it.
+</div>
+
+</section>
+
+<section id="tutorial-distributed-isobase-programming" data-tutorial-sections="distributed_isobase">
+<h1>Distributed ISOBASE programming</h1>
+
+<p>
+    ISOBASE nodes can be composed across HTTP. The simplest form is a remote
+    query that behaves like ordinary Prolog backtracking; the promise form lets
+    you start the remote work first and collect the answer later.
+</p>
+
+
+<h2>Remote calls with rpc/2-3</h2>
+
+<p>
+    Web Prolog nodes can talk to each other. The predicate
+    <code>rpc/2-3</code> sends a goal to a remote node identified by a URI,
+    receives the answers over the stateless <code>/call</code> API, and turns
+    them back into ordinary Prolog backtracking.
+</p>
+
+<p>
+    Note that <code>rpc/2-3</code> talks specifically to the remote node's
+    stateless <code>/call</code> route. This remains true even if the target
+    happens to be an ACTOR node. So <code>rpc/2-3</code> can be used for
+    remote logical queries, but not for actor-only goals such as
+    <code>self/1</code>, <code>spawn/1-3</code>, or <code>receive/1-2</code>.
+</p>
+
+<p>
+    In this deployment, <code>n1</code> hosts:
+</p>
+
+<pre>human(plato).
+human(aristotle).
+</pre>
+
+<p>
+    while <code>n2</code> hosts:
+</p>
+
+<pre>mortal(Who) :- human(Who).
+
+human(socrates).
+human(Who) :-
+    rpc('https://n1.elfenbenstornet.se', human(Who)).
+</pre>
+
+<p>
+    From this portal, you can query <code>n2</code> directly:
+</p>
+
+<pre id="rpc1">?- rpc('https://n2.elfenbenstornet.se', mortal(Who)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#rpc1&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You should get
+    <code>socrates</code> from <code>n2</code> itself, followed by
+    <code>plato</code> and <code>aristotle</code> fetched remotely from
+    <code>n1</code>.
+</p>
+
+<h2>Remote calls with promises</h2>
+
+<p>
+    <code>promise/3-4</code> starts an asynchronous remote query and returns a
+    reference. Later, <code>yield/2-3</code> collects the answer produced by
+    that remote call.
+</p>
+
+<pre id="promise1">?- promise('https://n2.elfenbenstornet.se', mortal(Who), Ref).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#promise1&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="promise2">?- yield($Ref, Answer).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#promise2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The answer is returned as the same Prolog term format used by the stateless
+    remote call. The promise is useful when the caller has other work to do
+    before it needs the result.
+</p>
+
+<p>
+    That is essentially all of distributed ISOBASE: synchronous remote calls
+    via <code>rpc/2-3</code>, plus their asynchronous cousins
+    <code>promise/3-4</code> and <code>yield/2-3</code>. Anything more &mdash;
+    session state, side effects, actors that survive between requests &mdash;
+    needs the ISOTOPE or ACTOR profile, which the rest of the tutorial covers.
+</p>
+
+</section>
+
+
+<section id="tutorial-local-isotope-programming" data-tutorial-sections="local_isotope">
+<h1>Local ISOTOPE programming</h1>
+
+<p>
+    ISOTOPE adds persistent toplevel sessions to ISOBASE. That makes it possible
+    to keep session-local state, perform I/O, and change the dynamic database
+    while the session is alive.
+</p>
+
+<h2>Reading and writing</h2>
+
+<pre id="side-effects-io-source">hello_world :-
+    writeln('Hello World!'),
+    sleep(1),
+    hello_world.
+
+read_and_write :-
+    writeln('Type a term or \'stop\''),
+    read(Something),
+    (   Something == stop
+    -&gt;  true
+    ;   writeln(Something),
+        read_and_write
+    ).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#side-effects-io-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+
+<pre id="side-effects-hello-world">?- hello_world.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#side-effects-hello-world&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="side-effects-read-and-write">?- read_and_write.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#side-effects-read-and-write&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Database manipulation</h2>
+
+<pre id="side-effects-db-source">:- dynamic p/1.
+
+assert_and_retract :-
+    forall(between(1, 10, X), assert(p(X))),
+    forall(retract(p(X)), writeln(X)).
+
+assert_many(Count) :-
+    forall(between(1, Count, X), assert(p(X))),
+    retractall(p(_)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#side-effects-db-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+
+<pre id="side-effects-assert-and-retract">?- assert_and_retract.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#side-effects-assert-and-retract&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="side-effects-assert-many">?- time(assert_many(1_000_000)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#side-effects-assert-many&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+</section>
+
+
+<section id="tutorial-distributed-isotope-programming" data-tutorial-sections="distributed_isotope">
+<h1>Distributed ISOTOPE programming</h1>
+
+<h2>Predicate shipping</h2>
+
+<p>
+    The three-argument form of <code>rpc/2-3</code> can also ship temporary
+    source text with the call. Here <code>mortal/1</code> is defined only for
+    the duration of the remote query:
+</p>
+
+<pre id="rpc2">?- rpc('https://n1.elfenbenstornet.se', mortal(Who), [
+       load_text("mortal(Who) :- human(Who).")
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#rpc2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The code passed in <code>load_text/1</code> is not installed permanently;
+    it exists only for that remote call.
+</p>
+
+
+<h2>Distributed proof trees</h2>
+
+<p>
+    A defining advantage of logic-based AI is transparency: every conclusion
+    rests on rules and facts, and an explanation can be constructed as a proof
+    object. On the Prolog Web, explanations can survive distribution. If a
+    subgoal is proved on another node, its justification is folded into the
+    same overall proof structure rather than hidden inside an opaque remote
+    call.
+</p>
+
+<p>
+    A compact meta-interpreter achieves this by treating remote calls as
+    proof-producing sub-derivations. When the interpreter encounters a remote
+    goal it ships <em>itself</em> to the remote node via
+    <code>load_predicates([prove/2])</code>, so the remote node also runs
+    <code>prove/2</code> and returns a proof term. Remote contributions are
+    marked in the result with the <code>@</code> operator.
+</p>
+
+<div class="alert alert-info">
+  <strong>Note.</strong> This example runs on <code>n2</code>, which has
+  the distributed <code>mortal/1</code> and <code>human/1</code> definitions
+  in its shared database.
+</div>
+
+<p>
+    Load the interpreter into your session:
+</p>
+
+<pre id="dpt-prove-source">prove(true, true) :- !.
+prove(rpc(URI, A), Proof) :- !,
+    prove(rpc(URI, A, []), Proof).
+prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
+    rpc(URI, prove(A, Query/Proof), [
+        load_predicates([prove/2])
+      | Options
+    ]).
+prove((A, B), (ProofA, ProofB)) :- !,
+    prove(A, ProofA),
+    prove(B, ProofB).
+prove(A, A/Proof) :-
+    clause(A, B),
+    prove(B, Proof).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#dpt-prove-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>
+    On <code>n2</code>, the shared database contains:
+</p>
+
+<pre>:- dynamic mortal/1, human/1.
+
+mortal(X) :- human(X).
+
+human(socrates).
+human(X) :- rpc('https://n1.elfenbenstornet.se', human(X)).
+</pre>
+
+<p>
+    while <code>n1</code> hosts:
+</p>
+
+<pre>:- dynamic human/1.
+
+human(plato).
+human(aristotle).
+</pre>
+
+<p>
+    Now ask for a proof:
+</p>
+
+<pre id="dpt-prove-run">?- prove(mortal(X), Proof).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#dpt-prove-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You should see something like:
+</p>
+
+<pre>Proof = mortal(socrates)/(human(socrates)/true),
+X = socrates ;
+Proof = mortal(plato)/(human(plato)/(human(plato)@'https://n4.elfenbenstornet.se'/true)),
+X = plato ;
+Proof = mortal(aristotle)/(human(aristotle)/(human(aristotle)@'https://n4.elfenbenstornet.se'/true)),
+X = aristotle.
+</pre>
+
+<p>
+    The first answer is proved entirely on <code>n2</code>. The second and
+    third are proved by delegating to <code>n1</code>, and the annotation
+    <code>@'https://n1.elfenbenstornet.se'</code> documents exactly where each
+    remote step was resolved. The proof term is ordinary Prolog data: it can be
+    inspected, stored, or rendered into a human-readable explanation.
+</p>
+
+<div class="alert alert-info">
+  <strong>Note.</strong> <code>clause/2</code> can only inspect predicates
+  declared <code>dynamic</code>.
+</div>
+
+
+</section>
+
+
+<section id="tutorial-semantic-web" data-tutorial-sections="semantic_web">
+<h1>Programming with the Semantic Web</h1>
+
+<p>
+    The Semantic Web envisions a machine-readable layer over the existing Web,
+    built on shared identifiers (URIs), a triple-based data model (RDF), and a
+    rule layer for inference. Web Prolog overlaps that vision substantially:
+    Prolog is already a rule-based language operating over relational facts.
+    The simplest way to bring the two together is to represent triples as
+    Prolog facts and write the application's public interface as ordinary
+    predicates over them.
+</p>
+
+<h2>RDF triples and rules over them</h2>
+
+<p>
+    An RDF triple has the form &lt;subject, predicate, object&gt;. In Web
+    Prolog we represent each triple as a three-argument fact
+    <code>rdf/3</code>. The fragment below uses two well-known vocabularies
+    &mdash; FOAF for people and knows-relations, and schema.org for typed
+    values &mdash; and adds one Prolog rule,
+    <code>known_with_birthdate/3</code>, that joins two triples to answer
+    "people that someone knows, together with their birthdates":
+</p>
+
+<pre id="sw-source">:- dynamic rdf/3.
+
+rdf('http://example.org/bob#me',
+    'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+    'http://xmlns.com/foaf/0.1/Person').
+
+rdf('http://example.org/bob#me',
+    'http://xmlns.com/foaf/0.1/knows',
+    'http://example.org/alice#me').
+
+rdf('http://example.org/bob#me',
+    'http://xmlns.com/foaf/0.1/knows',
+    'http://example.org/charlie#me').
+
+rdf('http://example.org/alice#me',
+    'http://schema.org/birthDate',
+    literal(type('http://www.w3.org/2001/XMLSchema#date', '1990-07-04'))).
+
+rdf('http://example.org/charlie#me',
+    'http://schema.org/birthDate',
+    literal(type('http://www.w3.org/2001/XMLSchema#date', '1985-12-23'))).
+
+known_with_birthdate(Me, He, Date) :-
+    rdf(Me, 'http://xmlns.com/foaf/0.1/knows', He),
+    rdf(He, 'http://schema.org/birthDate', Date).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#sw-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>
+    The URIs are deliberately long because they are real identifiers, not
+    local names. Two parties using <code>http://xmlns.com/foaf/0.1/knows</code>
+    are talking about the same relation no matter which Prolog system or
+    database the data came from. That is the value the Semantic Web adds:
+    shared meaning through shared identifiers.
+</p>
+
+<p>
+    With the data and rule loaded, first query the raw triples &mdash; who
+    does Bob know?
+</p>
+
+<pre id="sw-rdf-query">?- rdf('http://example.org/bob#me',
+       'http://xmlns.com/foaf/0.1/knows',
+       Who).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sw-rdf-query&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Then query through the rule, which joins two triples in one step:
+</p>
+
+<pre id="sw-rule-query">?- known_with_birthdate(Me, He, Date).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sw-rule-query&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    This is the essence of one Prolog Web cooperation pattern: RDF is the
+    interchange format and the storage substrate, but the application's
+    public interface is named Prolog predicates. Callers do not need to know
+    which triples were consulted; they ask
+    <code>known_with_birthdate/3</code>, and the predicate is free to evolve
+    internally &mdash; more clauses, additional joins, cross-vocabulary
+    mapping &mdash; without changing the contract.
+</p>
+
+<p>
+    The same code can also be hosted by an ISOBASE node and queried from
+    anywhere with <code>rpc/2-3</code>, exactly like the family program
+    earlier in the tutorial. RDF provides interoperable identifiers and
+    shared meaning; Prolog provides an executable, composable, reusable rule
+    layer on top of them. The Semantic Web and the Prolog Web compose
+    naturally.
+</p>
+
+</section>
+
+
+<section id="tutorial-local-actor-programming" data-tutorial-sections="local_actor">
+<h1>Local ACTOR programming</h1>
+
+<p>
+    Web Prolog extends Prolog with Erlang-style message-passing concurrency.
+    An <em>actor</em> is a lightweight isolated process with its own mailbox
+    and its own private Prolog database, identified by a process id called a
+    <em>pid</em>; actors interact only by sending each other messages, never
+    by sharing memory.
+</p>
+
+<p>
+    The terminal session to the right is itself an actor. We will use it to
+    send messages, inspect the mailbox, spawn other actors, and watch what
+    happens when actors terminate. The examples that follow do not just
+    borrow Erlang's vocabulary &mdash; programmed in the Erlang style, actors
+    here behave the way Erlang actors do.
+</p>
+
+<p>
+    The session is persistent, so run the examples in order &mdash; later
+    examples build on bindings and actors created by earlier ones.
+</p>
+
+<h2>The shell's pid</h2>
+
+<p>
+    The terminal to the right is running a Web Prolog shell. The core of a
+    shell is a toplevel actor. Start by asking the shell for its
+    <em>process identifier</em> (pid for short):
+</p>
+
+<pre id="mpc-self">?- self(Self).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    A pid is the address of an actor. If you know a pid, you can send that
+    actor a message.
+</p>
+
+<h2>Sending a message</h2>
+
+<p>
+    The shell understands dollar notation: <code>$Self</code> means "use the
+    most recent value of <code>Self</code>". Send the shell a message:
+</p>
+
+<pre id="mpc-send-self">?- $Self ! hello.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-send-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Now receive the oldest matching message from the mailbox:
+</p>
+
+<pre id="mpc-receive-self">?- receive({Message -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-receive-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You should get <code>Message = hello</code>. If the mailbox is empty,
+    <code>receive/1</code> waits until a matching message arrives.
+</p>
+
+<h2>Inspecting the mailbox</h2>
+
+<p>
+    <code>flush/0</code> is a shell utility: it prints every pending message
+    and never blocks.
+</p>
+
+<pre id="mpc-send-goodbye">?- $Self ! hello, $Self ! goodbye.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-send-goodbye&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    This is usually the quickest way to see what is sitting in your mailbox
+    while you are experimenting.
+</p>
+
+<h2>Spawning an actor</h2>
+
+<p>
+    An actor is capable of spawning other actors and then talking to them.
+    This node hosts a tiny echo actor:
+</p>
+
+<pre id="mpc-echo-source">echo_actor :-
+    receive({
+        echo(From, Msg) -&gt;
+            From ! echo(Msg),
+            echo_actor
+    }).
+</pre>
+
+<p>
+    Spawn it:
+</p>
+
+<pre id="mpc-spawn-echo">?- spawn(echo_actor, Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-spawn-echo&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Then send it a request. The reply comes back asynchronously to your shell
+    mailbox:
+</p>
+
+<pre id="mpc-talk-echo">?- self(Self), $Pid ! echo(Self, hi).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-talk-echo&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-echo-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-echo-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Visible actors</h2>
+
+<p>
+    Web Prolog supports the predicate <code>actors/1</code>, which binds its
+    argument to the list of pids of all actors visible from your current
+    session:
+</p>
+
+<pre id="mpc-link-default-actors">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The first item is the pid of your shell; the echo actor you just spawned
+    should also be in the list.
+</p>
+
+<h2>Linking</h2>
+
+<p>
+    By default, a child is linked to its parent. If the parent exits, linked
+    children are terminated too.
+</p>
+
+<pre id="mpc-link-default">?- spawn(spawn(receive({}))).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Now inspect the actors visible from your current session again:
+</p>
+
+<pre id="mpc-link-default-actors-after">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-default-actors-after&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The inner nonterminating actor does not survive as a new long-lived child
+    because linking ensures that when the outer spawned actor terminates, its
+    child is taken down with it.
+</p>
+
+<p>
+    Linking is one-way. A child that exits does not kill its parent:
+</p>
+
+<pre id="mpc-link-one-way">?- spawn((spawn(exit(kill)), receive({})), Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-link-one-way-check">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way-check&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You should now see one extra live actor: the parent is still there even
+    though its child exited immediately. Clean it up before moving on:
+</p>
+
+<pre id="mpc-link-one-way-cleanup">?- exit($Pid, cleanup).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-link-one-way-cleanup&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Monitors</h2>
+
+<p>
+    If you spawn with <code>monitor(true)</code>, the child sends a
+    <code>down/3</code> notification when it terminates:
+</p>
+
+<pre id="mpc-monitor">?- spawn(2 &gt; 1, Pid, [monitor(true)]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-monitor&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The notification lands in the shell mailbox, so inspect it with
+    <code>flush/0</code>:
+</p>
+
+<pre id="mpc-monitor-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-monitor-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The message has the form <code>down(Ref, Pid, Reason)</code>. Here the
+    actor succeeds normally, so the reason should be <code>true</code>.
+</p>
+
+<h2>Explicit monitors</h2>
+
+<p>
+    <code>monitor(true)</code> is the simple case. You can also install
+    monitors explicitly with <code>monitor/2</code>. Each monitor gets its own
+    reference and therefore its own <code>down/3</code> message.
+</p>
+
+<pre id="mpc-monitor-twice">?- spawn(sleep(1), Pid),
+   monitor(Pid, Ref1),
+   monitor(Pid, Ref2),
+   sleep(1.2),
+   flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-monitor-twice&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    If you remove the monitor before the child terminates, the
+    <code>down/3</code> message never arrives.
+</p>
+
+<pre id="mpc-demonitor">?- spawn(sleep(1), Pid),
+   monitor(Pid, Ref),
+   demonitor(Ref),
+   receive({
+       down(_, Pid, _) -&gt;
+           writeln('Unexpected down message.')
+   }, [
+       timeout(1.2),
+       on_timeout(writeln('No down message arrived.'))
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-demonitor&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> If a child may finish immediately, prefer
+  <code>monitor(true)</code> on <code>spawn/3</code>. It installs the monitor
+  atomically with process creation and avoids the race where the child exits
+  before a later call to <code>monitor/2</code> has been set up.
+</div>
+
+
+<h2>Registered names</h2>
+
+<p>
+    You can register a pid under a name and use the name instead of the pid.
+    The inverse, <code>unregister/1</code>, drops the name when you no longer
+    need it. Here the shell registers itself under the name <code>shell</code>:
+</p>
+
+<pre id="mpc-register-shell">?- self(Self), register(shell, Self).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-register-shell&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-send-name">?- shell ! hello.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-send-name&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-spawn-shell-goodbye">?- spawn(shell ! goodbye).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-spawn-shell-goodbye&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-name-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-name-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Killing an actor</h2>
+
+<p>
+    Some actors do not stop on their own. Here we spawn a monitored echo actor,
+    register it under a name, and then terminate it with <code>exit/2</code>:
+</p>
+
+<pre id="mpc-spawn-monitored-echo">?- spawn(echo_actor, Pid, [monitor(true)]),
+   register(echo_actor, Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-spawn-monitored-echo&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-exit-echo">?- whereis(echo_actor, Pid),
+   exit(Pid, 'We changed our minds!').
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-echo&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Because the actor was monitored, the mailbox now contains a
+    <code>down(...)</code> message with the exit reason. 
+</p>
+
+<pre id="mpc-exit-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Choosing an exit reason</h2>
+
+<p>
+    A monitored actor can stop itself with <code>exit/1</code>. The reason
+    ends up in the <code>down/3</code> message:
+</p>
+
+<pre id="mpc-exit-self">?- spawn(exit(my_reason), Pid, [monitor(true)]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-exit-self-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Sending to a dead pid is just a no-op, so monitors are the usual way to
+    learn that an actor has gone away.
+</p>
+
+
+<h2>Selective receive</h2>
+
+<p>
+    <code>receive/1</code> does not have to take the oldest message. It scans
+    the mailbox for the first message that matches one of its receive clauses 
+    and leaves the others in place. This example insists on handling
+    <code>hello</code> before <code>goodbye</code> even if
+    <code>goodbye</code> arrives first.
+</p>
+
+<pre id="mpc-selective-source">wait_hello :-
+    receive({
+        hello -&gt;
+            writeln('Got hello.'),
+            wait_goodbye
+    }).
+
+wait_goodbye :-
+    receive({
+        goodbye -&gt;
+            writeln('Got goodbye.')
+    }).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#mpc-selective-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<pre id="mpc-selective-run">?- self(Self),
+   Self ! goodbye,
+   Self ! hello,
+   wait_hello.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-selective-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The first <code>receive/1</code> skips <code>goodbye</code>, consumes
+    <code>hello</code>, and the second <code>receive/1</code> then picks up the
+    deferred message. This selective behavior is one of the core ideas in
+    Erlang-style message passing.
+</p>
+
+<h2>Multi-clause receive</h2>
+
+<p>
+    A receive call can have several clauses. The first matching clause wins,
+    and unmatched messages are left in the mailbox for later.
+</p>
+
+<pre id="mpc-receive-clauses">?- self(Self),
+   Self ! goodbye(bob),
+   receive({
+       hello(Name) -&gt;
+           format("Hello, ~w!~n", [Name]) ;
+       goodbye(Name) -&gt;
+           format("Goodbye, ~w!~n", [Name])
+   }).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-receive-clauses&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Guards and timeouts</h2>
+
+<p>
+    Receive clauses can also have guards. Here the same pattern is handled in
+    two different ways depending on the number inside the message.
+</p>
+
+<pre id="mpc-guard">?- self(Self),
+   Self ! number(-2),
+   receive({
+       number(N) if N &gt; 0 -&gt;
+           format("Positive number: ~p~n", [N]) ;
+       number(N) if N =&lt; 0 -&gt;
+           format("Non-positive number: ~p~n", [N])
+   }).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-guard&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    If you do not want to wait forever, add a timeout. This waits one second
+    for a matching message and prints a note if nothing shows up.
+</p>
+
+<pre id="mpc-timeout">?- receive({
+       person(Name) -&gt;
+           format("Hello, ~w!~n", [Name])
+   }, [
+       timeout(1),
+       on_timeout(writeln('No person arrived.'))
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-timeout&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>A small priority queue</h2>
+
+<p>
+    This example, borrowed from Fred Hébert's
+<a target="_blank" href="https://learnyousomeerlang.com/more-on-multiprocessing#selective-receives">Learn You Some Erlang for Great Good!</a>, uses guards plus
+    zero-timeout receives to sort "important" messages before normal ones.
+    First load the predicates into your current session:
+</p>
+
+<pre id="mpc-priority-source">important(Messages) :-
+    receive({
+        Priority-Message if Priority &gt; 10 -&gt;
+            Messages = [Message|MoreMessages],
+            important(MoreMessages)
+    }, [
+        timeout(0),
+        on_timeout(normal(Messages))
+    ]).
+
+normal(Messages) :-
+    receive({
+        _-Message -&gt;
+            Messages = [Message|MoreMessages],
+            normal(MoreMessages)
+    }, [
+        timeout(0),
+        on_timeout(Messages = [])
+    ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#mpc-priority-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>
+    Now send four messages to yourself:
+</p>
+
+<pre id="mpc-priority-send">?- self(S),
+   S ! 15-high,
+   S ! 7-low,
+   S ! 1-low,
+   S ! 17-high.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-priority-send&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Then ask the queue to collect them in priority order:
+</p>
+
+<pre id="mpc-priority-run">?- important(Messages).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-priority-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The result should be <code>Messages = [high,high,low,low]</code>. This
+    works only because unmatched messages are deferred rather than discarded.
+</p>
+<div id="tutorial-erlang-style-programming-examples"></div>
+
+
+
+<h2>A count server</h2>
+
+<p>
+    This actor keeps its state in an argument. Each <code>count(From)</code>
+    message increments the counter and sends the new count back. A
+    <code>stop</code> message terminates the server cleanly.
+</p>
+
+<pre id="epa-count-source">count_actor(Count0) :-
+    receive({
+        count(From) -&gt;
+            Count is Count0 + 1,
+            From ! count(Count),
+            count_actor(Count) ;
+        stop -&gt;
+            true
+    }).
+</pre>
+
+<pre id="epa-count-spawn">?- spawn(count_actor(0), Pid, [
+       monitor(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-count-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-count-self">?- self(Self).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-count-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-count-send-once">?- $Pid ! count($Self).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-count-send-once&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-count-receive">?- receive({Count -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-count-receive&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-count-send-stop">?- $Pid ! count($Self), $Pid ! stop.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-count-send-stop&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-count-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-count-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Because the actor was monitored, the final <code>flush/0</code> should
+    show both the updated count and a <code>down(...)</code> message.
+</p>
+
+<h2>A fridge simulation</h2>
+
+<p>
+    The following example, also adapted from Fred Hébert's
+    <a target="_blank" href="https://learnyousomeerlang.com/more-on-multiprocessing#state-your-state"><em>Learn You Some Erlang for Great Good!</em></a>, simulates a fridge that
+    keeps its state as a list of food items. Messages are used to store food,
+    take food, or terminate the server.
+</p>
+
+<pre id="epa-fridge-source">fridge(FoodList0) :-
+    receive({
+        store(From, Food) -&gt;
+            self(Self),
+            From ! Self-ok,
+            fridge([Food|FoodList0]);
+        take(From, Food) -&gt;
+            self(Self),
+            (   select(Food, FoodList0, FoodList)
+            -&gt;  From ! Self-ok(Food),
+                fridge(FoodList)
+            ;   From ! Self-not_found,
+                fridge(FoodList0)
+            );
+        terminate -&gt;
+            true
+    }).
+</pre>
+
+<pre id="epa-fridge-spawn">?- spawn(fridge([]), Pid, [
+       monitor(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-store">?- self(Me), $Pid ! store(Me, meat), $Pid ! store(Me, cheese).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-store&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-store-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-store-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-take">?- self(Me), $Pid ! take(Me, cheese).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-take&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-take-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-take-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-terminate">?- $Pid ! terminate.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-terminate&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-terminate-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-terminate-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<h2>Hiding the protocol details</h2>
+
+<p>
+    Raw message sending works, but it forces the client to remember the
+    protocol. The usual fix is to wrap the protocol in ordinary predicates.
+</p>
+
+<pre id="epa-fridge-api-source">store(Pid, Food, Response) :-
+    self(Self),
+    Pid ! store(Self, Food),
+    receive({
+        Pid-Response -&gt; true
+    }).
+
+take(Pid, Food, Response) :-
+    self(Self),
+    Pid ! take(Self, Food),
+    receive({
+        Pid-Response -&gt; true
+    }).
+</pre>
+
+<p>
+    These helpers are available on the node, so you can use them directly:
+</p>
+
+<pre id="epa-fridge-api-spawn">?- spawn(fridge([]), Pid, [
+       monitor(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-api-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-api-store">?- store($Pid, cheese, Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-api-store&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-api-take">?- take($Pid, cheese, Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-api-take&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-api-stop">?- $Pid ! terminate.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-api-stop&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="epa-fridge-api-stop-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-fridge-api-stop-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    This style is easier to read and much easier to reuse. The actor still
+    speaks the same message protocol, but clients no longer need to handle it
+    explicitly.
+</p>
+
+
+<h2>Actors playing ping-pong</h2>
+
+<p>
+    This example is adapted from the official
+    <a target="_blank" href="https://www.erlang.org/doc/system/conc_prog.html#message-passing">Erlang message-passing guide</a>.
+    Two actors send messages back and forth three times, then finish.
+</p>
+
+<pre id="epa-pingpong-source">ping(0, Pong_Pid) :-
+    Pong_Pid ! finished,
+    format('Ping finished.~n',[]).
+ping(N, Pong_Pid) :-
+    self(Self),
+    Pong_Pid ! ping(Self),
+    receive({
+        pong -&gt;
+            format('Ping received pong.~n',[])
+    }),
+    N1 is N - 1,
+    ping(N1, Pong_Pid).
+
+pong :-
+    receive({
+        finished -&gt;
+            format('Pong finished.~n',[]) ;
+        ping(Ping_Pid) -&gt;
+            format('Pong received ping.~n',[]),
+            Ping_Pid ! pong,
+            pong
+    }).
+
+ping_pong :-
+    spawn(pong, Pong_Pid),
+    spawn(ping(3, Pong_Pid)).
+</pre>
+
+<pre id="epa-pingpong-run">?- ping_pong.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-pingpong-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The interesting thing here is not just that the code looks close to
+    Erlang, but that the interaction pattern is the same: send, receive,
+    recurse, terminate.
+</p>
+</section>
+
+<section id="tutorial-programming-with-toplevels" data-tutorial-sections="toplevels">
+<h1>Programming with toplevel actors</h1>
+
+<p>
+    A shell is itself a toplevel, but Web Prolog also lets one actor spawn
+    another toplevel actor and talk to it explicitly. A spawned toplevel has its own
+    mailbox, its own private Prolog database, and a built-in protocol for
+    calling goals, paging through answers, producing output, prompting for
+    input, and being stopped or halted.
+</p>
+
+<p>
+    To its toplevel core the shell adds terminal-oriented conveniences such as
+    <code>flush/0</code> and dollar notation. Those are useful here, because
+    the answers produced by a spawned toplevel arrive in the shell mailbox as
+    ordinary messages.
+</p>
+
+<p>
+    Let's create a monitored toplevel and preload it with two facts:
+</p>
+
+<pre id="toplevel-spawn-demo">?- toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       load_list([p(a),p(b)])
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-spawn-demo&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The most recent binding of <code>Pid</code> is the one used below.
+</p>
+
+<h2>Calling a goal</h2>
+
+<p>
+    Use <code>toplevel_call/2-3</code> to make the spawned toplevel run a goal.
+    With default options, the whole answer set is returned in one
+    <code>success(...)</code> term.
+</p>
+
+<pre id="toplevel-call-default">?- toplevel_call($Pid, p(X)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-default&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-call-default-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-default-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The shell should now have a message of the form
+    <code>success(Pid,[p(a),p(b)],false)</code>. The second argument carries the
+    answers, and the third says whether more may exist.
+</p>
+
+<h2>Using the template option</h2>
+
+<p>
+    If you only want the bindings, pass a template:
+</p>
+
+<pre id="toplevel-call-template">?- toplevel_call($Pid, p(X), [
+       template(X)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-template&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-call-template-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-template-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    This time the success term should contain <code>[a,b]</code> rather than
+    <code>[p(a),p(b)]</code>.
+</p>
+
+<h2>Paging with limit, next, and stop</h2>
+
+<p>
+    A toplevel remembers where it is in the search. Setting
+    <code>limit(1)</code> gives a REPL-style one-answer-at-a-time interaction:
+</p>
+
+<pre id="toplevel-call-limit-one">?- toplevel_call($Pid, p(X), [
+       template(X),
+       limit(1)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-limit-one&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-call-limit-one-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-limit-one-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-next-basic">?- toplevel_next($Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-next-basic&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-next-basic-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-next-basic-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    On the first flush, the third argument of the success term should be
+    <code>true</code>, meaning that the toplevel is waiting for
+    <code>next</code> or <code>stop</code>. After <code>toplevel_next/1</code>,
+    the remaining answer should come back.
+</p>
+
+<p>
+    The same mechanism works for larger result sets, including an infinite
+    generator:
+</p>
+
+<pre id="toplevel-call-slice">?- toplevel_call($Pid, between(1,infinite,I), [
+       template(I),
+       offset(100),
+       limit(3)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-slice&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-call-slice-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-slice-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-next-limit-five">?- toplevel_next($Pid, [
+       limit(5)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-next-limit-five&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-next-limit-five-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-next-limit-five-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-stop">?- toplevel_stop($Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-stop&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The second page request changes the page size on the fly. After that,
+    <code>toplevel_stop/1</code> drops the rest of the suspended search and
+    returns the toplevel to idle.
+</p>
+
+<h2>Output, input, and reply</h2>
+
+<p>
+    A toplevel can emit output while it is running a goal:
+</p>
+
+<pre id="toplevel-call-output">?- toplevel_call($Pid, output(hello)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-output&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-call-output-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-output-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The shell should receive an <code>output(Pid,hello)</code> message, followed
+    by the ordinary success term.
+</p>
+
+<p>
+    A toplevel can also prompt for input and wait for a reply. First ask it to
+    call <code>input/2</code>:
+</p>
+
+<pre id="toplevel-call-input">?- toplevel_call($Pid, input('Input', X)),
+   receive({Answer -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-input&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The shell should now receive a prompt term. Reply like this:
+</p>
+
+<pre id="toplevel-respond">?- respond($Pid, hello),
+   receive({Answer -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-respond&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The returned success term should now contain
+    <code>input('Input',hello)</code>.
+</p>
+
+<h2>Aborting and halting</h2>
+
+<p>
+    Because the toplevel is a separate actor, you can give it work that does
+    not terminate, then abort that work without killing the session itself.
+</p>
+
+<pre id="toplevel-assert-loop">?- toplevel_call($Pid, assert((p :- p))),
+   toplevel_call($Pid, p).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-assert-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Nothing useful will appear in the shell, but the spawned toplevel is now
+    spinning on its own. Abort the running goal like this:
+</p>
+
+<pre id="toplevel-abort">?- toplevel_abort($Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-abort&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    When you are done with the toplevel altogether, halt it:
+</p>
+
+<pre id="toplevel-halt">?- toplevel_halt($Pid, Reply).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-halt&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+
+</section>
+
+<section id="tutorial-distributed-actor-programming" data-tutorial-sections="distributed_actor">
+<h1>Distributed ACTOR programming</h1>
+
+<p>
+    Spawning, sending, monitoring, registering, and even
+    <code>toplevel_spawn/2</code> can work across node boundaries. In this
+    deployment the two nodes <code>n3</code> and <code>n4</code> support
+    remote actor operations. The examples below use the other node as the
+    remote target.
+</p>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> These examples only make sense on <code>n3</code> or
+  <code>n4</code>. The remote URI shown below is rewritten automatically so it
+  points at the other node.
+</div>
+
+<h2>Talking to a remote actor</h2>
+
+<p>
+    First spawn an <code>echo_actor/0</code> on the other node, monitor
+    it, and register it locally under a convenient name:
+</p>
+
+<pre id="cpw-remote-echo-spawn">?- spawn(echo_actor, Pid, [
+       node('{{actor_peer_host}}'),
+       monitor(true)
+   ]),
+   register(remote_echo_actor, Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-echo-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The pid is now a compound term of the form <code>Id@'URI'</code>. Send the
+    remote actor a message and let it reply to your local shell:
+</p>
+
+<pre id="cpw-remote-echo-talk">?- self(Self),
+   remote_echo_actor ! echo(Self, hello).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-echo-talk&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="cpw-remote-echo-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-echo-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The actor lives on another node, but the reply still comes back to the
+    shell you are talking to.
+</p>
+
+<p>
+    To finish the conversation, kill the remote actor and then receive the
+    resulting <code>down/3</code> message:
+</p>
+
+<pre id="cpw-remote-echo-exit">?- whereis(remote_echo_actor, Pid),
+   exit(Pid, die).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-echo-exit&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="cpw-remote-echo-down">?- receive({A -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-echo-down&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The <code>down/3</code> message is local, but it refers to the remote pid.
+    That is the basic shape of network-transparent actor interaction.
+</p>
+
+<h2>Ping-pong across nodes</h2>
+
+<p>
+    The same <code>node(...)</code> option can move the ponger to the other
+    node. Load one helper predicate into your current session:
+</p>
+
+<pre id="cpw-remote-pingpong-source">ping_pong_remote :-
+    spawn(pong, Pong_Pid, [
+        node('{{actor_peer_host}}')
+    ]),
+    spawn(ping(3, Pong_Pid)).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#cpw-remote-pingpong-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<pre id="cpw-remote-pingpong-run">?- ping_pong_remote.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-pingpong-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    You should only see the pinger's output rendered immediately in the
+    terminal. That is expected: terminal output is only forwarded directly from
+    actors on the local session lineage, not from actors running on the remote
+    node.
+</p>
+
+<h2>Remote toplevels</h2>
+
+<p>
+    You can also spawn a toplevel on a remote node. The mechanism is the same:
+</p>
+
+<pre id="cpw-remote-toplevel-spawn">?- toplevel_spawn(Pid, [
+       node('{{actor_peer_host}}')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-toplevel-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Both <code>n3</code> and <code>n4</code> host a <code>human/1</code>
+    predicate, so we can ask the remote toplevel for one answer at a time:
+</p>
+
+<pre id="cpw-remote-toplevel-call">?- toplevel_call($Pid, human(Who), [
+       template(Who),
+       limit(1)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-toplevel-call&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The answer comes back as a message to the local shell, so receive it:
+</p>
+
+<pre id="cpw-remote-toplevel-receive1">?- receive({Msg -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-toplevel-receive1&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="cpw-remote-toplevel-next">?- toplevel_next($Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-toplevel-next&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="cpw-remote-toplevel-receive2">?- receive({Msg -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#cpw-remote-toplevel-receive2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The answers are produced on the remote node, but the protocol conversation
+    happens through your local shell exactly as if the toplevel were nearby.
+</p>
+</section>
+
+
+<section id="tutorial-programming-with-behaviours" data-tutorial-sections="behaviours">
+<h1>Programming with behaviours</h1>
+
+<h2>The server behaviour</h2>
+
+<p>
+    The fridge simulation in the earlier section was a perfectly good actor, but it
+    mixed three concerns into one receive loop: the message protocol, the
+    state threading, and the application logic. The <em>server behaviour</em>
+    factors the first two out into a reusable scaffold, leaving only the
+    third for the application programmer. The scaffold also gives us
+    synchronous request/reply, hot code swapping, and &mdash; when combined
+    with a supervisor &mdash; automatic recovery from crashes.
+</p>
+
+<p>
+    A server is described by a single callback predicate of arity four:
+</p>
+
+<pre>Pred(+Request, +OldState, -Response, -NewState)</pre>
+
+<p>
+    The same fridge, written in this style, becomes a small relation:
+</p>
+
+<pre id="srv-fridge-source">fridge(store(Food), List, ok, [Food|List]).
+fridge(take(Food),  List, ok(Food), Rest) :-
+    select(Food, List, Rest), !.
+fridge(take(_Food), List, not_found, List).
+</pre>
+
+<p>
+    Notice that the predicate has no idea it is going to be embedded in a
+    process. It is just an ordinary Prolog relation between an old state and
+    a new one. The same code can be tested on its own, reused outside the
+    actor world, and reasoned about declaratively.
+</p>
+
+<h2>Starting a supervised server</h2>
+
+<p>
+    Spawning a server through a supervisor takes a single call. The
+    <code>restart(permanent)</code> option tells the supervisor to respawn
+    the server (with the empty initial state) if it ever crashes:
+</p>
+
+<pre id="srv-spawn">?- supervisor_spawn([
+       child(fridge, [
+           start(server(fridge, [initial_state([])])),
+           restart(permanent)
+       ])
+   ], Sup).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The server is registered under the name <code>fridge</code>, so clients
+    can address it by name without holding on to its pid.
+</p>
+
+<h2>Synchronous calls</h2>
+
+<p>
+    The client side of the protocol is hidden behind
+    <code>server_request/3</code>. From the caller&rsquo;s point of view it
+    is just a remote procedure call:
+</p>
+
+<pre id="srv-store-1">?- server_request(fridge, store(milk), Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-store-1&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<pre id="srv-take-1">?- server_request(fridge, take(milk), Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-take-1&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Asynchronous calls</h2>
+
+<p>
+    For applications that prefer not to block, the same call splits into a
+    promise and a later yield. Between them the client is free to do other
+    work:
+</p>
+
+<pre id="srv-promise">?- server_promise(fridge, store(meat), Ref).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-promise&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<pre id="srv-yield">?- server_yield($Ref, Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-yield&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Hot code swap</h2>
+
+<p>
+    At this point our server holds the state <code>[meat]</code>. Suppose we
+    realise that <code>fridge/4</code> is too brittle: any request it has no
+    clause for would crash the server. Here is a more defensive callback that
+    returns an error response instead:
+</p>
+
+<pre id="srv-fridge2-source">fridge2(store(Food), List, ok, [Food|List]).
+fridge2(take(Food),  List, ok(Food), Rest) :-
+    select(Food, List, Rest), !.
+fridge2(take(_Food), List, not_found, List).
+fridge2(_Other,      List, error(unknown_request), List).
+</pre>
+
+<p>
+    We can swap the running server&rsquo;s callback in place with
+    <code>server_upgrade/2</code>. The pid does not change, the registered
+    name does not change, and crucially the state does not change either:
+</p>
+
+<pre id="srv-upgrade">?- server_upgrade(fridge, fridge2).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-upgrade&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    A request that <code>fridge/4</code> had no clause for now returns a
+    polite error rather than killing the server:
+</p>
+
+<pre id="srv-bad-call-2">?- server_request(fridge, sore(milk), Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-bad-call-2&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    And valid requests continue to thread through the state we accumulated
+    before the upgrade. Storing butter on top of the meat that was already in
+    the fridge gives us <code>[butter, meat]</code>:
+</p>
+
+<pre id="srv-store-after-upgrade">?- server_request(fridge, store(butter), Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-store-after-upgrade&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<h2>Fail-fast and recovery</h2>
+
+<p>
+    Hot upgrade preserves state, but a hard crash does not. To see what
+    happens when the server actually dies, we kill it from the outside:
+</p>
+
+<pre id="srv-bad-call">?- whereis(fridge, Pid), exit(Pid, kaboom).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-bad-call&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Behind the scenes, the supervisor immediately respawns the server under
+    the same registered name, with its state reset to the initial empty list.
+    The next call goes through to the freshly born server:
+</p>
+
+<pre id="srv-after-recovery">?- server_request(fridge, store(eggs), Response).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-after-recovery&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The response is <code>ok</code>, but notice that the prior contents
+    <code>[butter, meat]</code> are gone &mdash; supervised restart trades
+    in-flight state for a clean slate. Combined with the hot upgrade we just
+    saw, this is the Erlang/OTP bargain: state survives planned changes, and
+    the supervisor handles the unplanned ones.
+</p>
+
+<h2>Tearing down</h2>
+
+<p>
+    A graceful stop sends a final message and waits for the
+    acknowledgement:
+</p>
+
+<pre id="srv-halt">?- supervisor_halt($Sup).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#srv-halt&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    What we have just walked through is a complete Erlang-style behaviour
+    pattern in miniature. The fixed scaffolding &mdash; message protocol,
+    state threading, monitoring, supervision, hot upgrade &mdash; lives in
+    the library; the application logic is a four-argument relation that a
+    Prolog programmer can write, test, and reason about as ordinary
+    declarative code.
+</p>
+</section>
+
+
+<section id="tutorial-programming-with-statecharts" data-tutorial-sections="statecharts">
+<h1>Programming with statecharts</h1>
+
+<p>
+    Statechart actors bring the full power of hierarchical state machines to
+    Web Prolog actors. A statechart is described in a small XML dialect and
+    interpreted at run time: spawning a statechart actor produces an ordinary
+    actor pid, and the statechart reacts to events &mdash; ordinary Web Prolog
+    messages &mdash; by moving between states, running entry and exit actions,
+    and delegating to history states so that a machine can resume exactly where
+    it left off.
+</p>
+
+<h2>Pause and resume</h2>
+
+<p>
+    A classic problem in reactive systems is <em>pause and resume</em>:
+    suspending a running process while preserving its internal state, and
+    later continuing from the same point. The statechart below models a small
+    game with two substates (<code>s1</code> and <code>s2</code>) that can be
+    paused at any moment and resumed from the exact substate in which they were
+    interrupted.
+</p>
+
+<p>
+    The diagram shows the structure. The outer <code>game</code> state has two
+    children: <code>play</code> (the running game, itself containing
+    <code>s1</code> and <code>s2</code>) and <code>interrupted</code>. The
+    history node&nbsp;<strong>H</strong> inside <code>play</code> records which
+    substate was active at the moment of a pause, so that a resume transition
+    can return to it directly.
+</p>
+
+<figure style="margin: 1.5em 0;">
+<svg id="sc-pr-diagram" width="100%" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+    <style>
+      .th { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 500; fill: var(--tutorial-diagram-ink); }
+      .t  { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 400; fill: var(--tutorial-diagram-ink); }
+      .ts { font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 400; fill: var(--tutorial-diagram-ink); }
+    </style>
+    <marker id="sc-arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--tutorial-diagram-line)"/>
+    </marker>
+    <marker id="sc-arr-hi" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--tutorial-diagram-highlight)"/>
+    </marker>
+  </defs>
+
+  <!-- outer state: game -->
+  <rect x="4" y="10" rx="24" ry="24" width="620" height="260" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1"/>
+  <line x1="4" y1="40" x2="624" y2="40" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="314" y="25" text-anchor="middle" dominant-baseline="central">game</text>
+
+  <!-- composite state: play -->
+  <rect x="60" y="56" rx="20" ry="20" width="320" height="200" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="60" y1="86" x2="380" y2="86" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="220" y="71" text-anchor="middle" dominant-baseline="central">play</text>
+
+  <!-- state: interrupted -->
+  <rect id="sc-state-interrupted" x="495" y="56" rx="20" ry="20" width="120" height="200" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="495" y1="86" x2="615" y2="86" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="555" y="71" text-anchor="middle" dominant-baseline="central">interrupted</text>
+
+  <!-- initial marker for game -->
+  <circle cx="26" cy="56" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M33 56 C42 54, 50 55, 62 64" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" marker-end="url(#sc-arr)"/>
+
+  <!-- initial marker for play -->
+  <circle cx="96" cy="136" r="6" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M102 136 C110 134, 116 135, 126 141" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" marker-end="url(#sc-arr)"/>
+
+  <!-- state: s1 -->
+  <rect id="sc-state-s1" x="124" y="136" rx="16" ry="16" width="72" height="96" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="124" y1="164" x2="196" y2="164" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="t" x="160" y="148" text-anchor="middle" dominant-baseline="central">s1</text>
+
+  <!-- state: s2 -->
+  <rect id="sc-state-s2" x="288" y="136" rx="16" ry="16" width="72" height="96" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="288" y1="164" x2="360" y2="164" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="t" x="324" y="148" text-anchor="middle" dominant-baseline="central">s2</text>
+
+  <!-- history marker H -->
+  <circle cx="242" cy="118" r="16" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="242" y="118" text-anchor="middle" dominant-baseline="central">H</text>
+
+  <!-- play transition: s1 → s2 -->
+  <line id="sc-trans-play" x1="196" y1="192" x2="286" y2="192" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="242" y="184" text-anchor="middle">play</text>
+
+  <!-- reset transition: s2 → s1 -->
+  <line id="sc-trans-reset" x1="288" y1="214" x2="198" y2="214" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="242" y="230" text-anchor="middle">reset</text>
+
+  <!-- pause transition: play → interrupted -->
+  <line id="sc-trans-pause" x1="380" y1="210" x2="493" y2="210" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="437" y="228" text-anchor="middle">pause</text>
+
+  <!-- resume transition: interrupted → history -->
+  <path id="sc-trans-resume" d="M495 122 C445 104, 365 96, 260 116" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="420" y="125" text-anchor="middle">resume</text>
+
+  <!-- stop transition: game → final -->
+  <line id="sc-trans-stop" x1="624" y1="140" x2="662" y2="140" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="642" y="130" text-anchor="middle">stop</text>
+
+  <!-- final state (bull's eye) -->
+  <circle id="sc-state-final" cx="678" cy="140" r="14" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <circle cx="678" cy="140" r="7" fill="var(--tutorial-diagram-ink)"/>
+</svg>
+<p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em; ">
+  Statechart for a pausable game. The <strong>H</strong> node is a history
+  state: resuming transitions to the last active substate of
+  <code>play</code> rather than to its declared initial state.
+  The diagram updates live as transitions fire.
+</p>
+</figure>
+
+<p>
+    Spawn the statechart as an actor. <code>load_uri</code> fetches the XML
+    for the interpreter, and <code>trace(true)</code> enables transition
+    tracing so the diagram updates automatically as events fire.
+    <code>Pid</code> is bound to the actor's pid. Spawning also populates
+    the <strong>Examples</strong> menu (the button below the terminal input)
+    with all five event queries:
+</p>
+
+<pre id="sc-pr-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/01%20pause-and-resume.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawn(&quot;#sc-pr-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The machine starts in <code>s1</code>. Use the Examples menu to send
+    events one at a time and watch the diagram respond:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! play</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">advances <code>s1</code> &rarr; <code>s2</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! reset</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">steps back <code>s2</code> &rarr; <code>s1</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! pause</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">saves current substate in <strong>H</strong>, enters <code>interrupted</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! resume</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">restores <strong>H</strong> &mdash; returns to the substate active at pause time</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! stop</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">drives the machine to <code>final</code> and terminates the actor</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> Enable the SXML trace filter in the Logger
+  to watch every state entry, exit, and transition in real time.
+</div>
+
+<p>
+    The XML source is reproduced here for reference: 
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="game"&gt;
+    &lt;state id="game" initial="play"&gt;
+        &lt;state id="play"&gt;
+            &lt;initial&gt;
+                &lt;go to="s1" /&gt;
+            &lt;/initial&gt;
+            &lt;history id="h"&gt;
+                &lt;go to="s1" /&gt;
+            &lt;/history&gt;
+            &lt;state id="s1"&gt;
+                &lt;go to="s2" on="play" /&gt;
+            &lt;/state&gt;
+            &lt;state id="s2"&gt;
+                &lt;go to="s1" on="reset" /&gt;
+            &lt;/state&gt;
+            &lt;go to="interrupted" on="pause" /&gt;
+        &lt;/state&gt;
+        &lt;state id="interrupted"&gt;
+            &lt;go to="h" on="resume" /&gt;
+        &lt;/state&gt;
+        &lt;go to="final" on="stop" /&gt;
+    &lt;/state&gt;
+    &lt;final id="final" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<h2>Reading a spaghetti statechart</h2>
+
+<p>
+    Real statecharts can look tangled at first. The visual trick is to read
+    them from the outside in: identify the active leaf state, then walk outward
+    through its parent states until you find a transition whose event matches
+    the message you send. The first enabled transition determines the next
+    state.
+</p>
+
+<figure style="margin: 1.5em 0;">
+  <img class="statechart-raster theme-img-light" src="/img/spaghetti.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
+  <img class="statechart-raster theme-img-dark" src="/img/spaghetti-dark.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
+  <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
+    Spaghetti statechart.
+  </p>
+</figure>
+
+<p>
+    The machine starts in <code>s0</code>, follows its initial transition into
+    <code>s1</code>, and then follows <code>s1</code>'s initial transition into
+    <code>s11</code>. If you send <code>c</code> while the active leaf is
+    <code>s11</code>, there is no <code>c</code> transition on
+    <code>s11</code>, so the interpreter looks at the parent
+    <code>s1</code> and takes <code>s1</code> &rarr; <code>s2</code>. Entering
+    <code>s2</code> then follows nested initial transitions down to
+    <code>s211</code>.
+</p>
+
+<p>
+    Spawn the chart and keep the Logger open with the SXML trace filter
+    selected. The trace shows the same process as text: the current
+    configuration, the external event, exits, transitions, and entries.
+</p>
+
+<pre id="sc-spaghetti-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/02%20spaghetti.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnSpaghetti(&quot;#sc-spaghetti-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Use the Examples menu to send events one at a time:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! a</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">loops on <code>s1</code> and re-enters its initial leaf <code>s11</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! b</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">targets <code>s11</code> from <code>s1</code>, or <code>s211</code> from <code>s21</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! c</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves between the two large sibling regions <code>s1</code> and <code>s2</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">resets outward to <code>s0</code>, or from <code>s211</code> to <code>s21</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">uses the outer <code>s0</code> transition to enter <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">crosses between <code>s1</code>, <code>s11</code>, and <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! g</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">shows leaf-level precedence from <code>s11</code> or <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! h</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">takes <code>s211</code> to final state <code>f</code> and terminates the actor</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>NPC emotions</h2>
+
+<p>
+    Parallel states let one actor be in several independent states at the same
+    time. This toy non-player character has two emotion dimensions and one
+    behavior mode. At any moment it has one active state in the
+    anger/fear dimension, one in the anticipation/surprise dimension, and one
+    in behavior.
+</p>
+
+<figure style="margin: 1.5em 0;">
+  <img class="statechart-raster statechart-raster-narrow theme-img-light" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+  <img class="statechart-raster statechart-raster-narrow theme-img-dark" src="/img/emotions-dark.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+  <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
+    Orthogonal regions: two emotion dimensions plus one behavior mode.
+  </p>
+</figure>
+
+<p>
+    The point of orthogonality is that related but independent dimensions do
+    not have to be flattened into one large state name. Without parallel
+    regions, combinations such as <code>anger_anticipation_attacking</code> and
+    <code>fear_surprise_fleeing</code> would have to be encoded as separate
+    states, and the number of combinations would grow quickly.
+</p>
+
+<p>
+    Here, event <code>e</code> can be read as an explosion. Because all three
+    regions are active, the same event is observed in each region: anger becomes
+    fear, anticipation becomes surprise, and attacking becomes fleeing in one
+    coordinated step.
+</p>
+
+<pre id="sc-emotions-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/03%20emotions.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnEmotions(&quot;#sc-emotions-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Use the Examples menu to send the three events:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves to <code>fear</code>, <code>surprise</code>, and <code>fleeing</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>fear</code> back to <code>anger</code> and <code>fleeing</code> back to <code>attacking</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>surprise</code> back to <code>anticipation</code></td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+<h2>Computing the GCD</h2>
+
+<p>
+    The time is ripe to introduce Web Prolog as a scripting language inside
+    statecharts. Executable Web Prolog code in transition bodies and guards
+    increases their power significantly: a chart can update data, run
+    relations, produce output, and still keep the surrounding control logic
+    explicit.
+</p>
+
+<p>
+    The statechart below applies Euclid's algorithm to find the greatest common
+    divisor of a list of integers. The machine has two states:
+    <code>init</code> waits for a single <code>input/1</code> event carrying
+    the list, then <code>run</code> iterates &mdash; repeatedly replacing
+    the larger of any two values with their difference &mdash; until only
+    one value remains and the result is printed.
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="init"&gt;
+    &lt;datamodel&gt;
+        :- dynamic int/1.
+    &lt;/datamodel&gt;
+    &lt;state id="init"&gt;
+        &lt;go on="input(List)" to="run"&gt;
+            forall(member(X, List), asserta(int(X)))
+        &lt;/go&gt;
+    &lt;/state&gt;
+    &lt;state id="run"&gt;
+        &lt;go if="int(X), int(Y), X &gt; Y"&gt;
+            Z is X-Y,
+            retract(int(X)),
+            assert(int(Z))
+        &lt;/go&gt;
+        &lt;go to="stop" if="int(X)"&gt;
+            writeln(X)
+        &lt;/go&gt;
+    &lt;/state&gt;
+    &lt;final id="stop" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<p>
+    Spawn the machine. The Examples menu will be loaded with a sample query:
+</p>
+
+<pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/08%20gcd.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnGcd(&quot;#sc-gcd-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Now send the input list: 
+</p>
+
+<pre id="sc-gcd-input">?- $Pid ! input([25, 10, 15, 30]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sc-gcd-input&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The GCD <code>5</code> is computed and written to the terminal, and the
+    machine has moved to its final state.
+</p>
+
+<h2>A dialogue governor</h2>
+
+<p>
+    Statecharts are a good fit for dialogue control: a conversation has
+    turn-taking, confirmations, repair after misunderstandings, and an
+    overall flow that is easier to read as a hierarchy of states than as
+    branching <code>receive/1-2</code> code. This example is a small
+    conversational agent that asks the user for the color and size of a
+    box. Unrecognized input falls back to a history state, which re-enters
+    the most recently active substate and re-asks its question.
+</p>
+
+<pre id="sc-dialog-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/11%20boxshop-1.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnDialog(&quot;#sc-dialog-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    On entering the <code>color</code> state the machine asks "What color do
+    you want?". Use the Examples menu to reply. An adjective alone
+    (<code>[red]</code>, <code>[blue]</code>) or a full noun phrase
+    (<code>[a, red, box]</code>) parses; anything else triggers the repair
+    transition.
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([red]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as color, advances to the <code>size</code> state</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([a, big, box]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as size, reaches the final state</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([hello]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">does not parse; the agent says "I did not understand" and re-asks the current question</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+    Three pieces of statechart machinery do the work. First, the
+    <code>&lt;datamodel&gt;</code> holds a small DCG and two dynamic
+    predicates (<code>color/1</code> and <code>size/1</code>) that act as
+    extracted-fact slots. Second, transitions use
+    <code>if="phrase(np(color(C)), Input)"</code> to call the DCG as a
+    guard: the transition only fires when the input parses as the expected
+    structure, and Prolog variables bound by the parse are in scope in the
+    transition body. Third, the <code>&lt;history&gt;</code> state and the
+    outer fallback <code>&lt;go to="h" on="input(Input)"&gt;</code> together
+    implement local repair: any unparseable input is caught, the agent
+    apologises, and the history state restores whichever question was
+    pending, so the conversation continues from where it broke down instead
+    of restarting.
+</p>
+
+<p>
+    The whole pattern &mdash; explicit states for turn-taking, DCG parsing
+    as a transition guard, and a history-based repair loop &mdash; is a
+    compact illustration of why statecharts are well suited to user-facing
+    agents. The same skeleton scales to richer dialogues by adding more
+    states and richer grammars.
+</p>
+
+<h2>Process invocation and communication</h2>
+
+<p>
+    Statecharts become more useful once they can spawn other processes and
+    communicate with them. In Web Prolog, the invoked processes are simply
+    actors: toplevels, other statechart actors, or services running on local or
+    remote nodes.
+</p>
+
+<p>
+    This final example spawns a child toplevel, submits a query to it, prints
+    each answer as it arrives, and terminates when the last answer has been
+    received. The spawned toplevel is initialized with a small program:
+    <code>q(X) :- p(X)</code> and four facts, <code>p(a)</code> through
+    <code>p(d)</code>.
+</p>
+
+<pre id="sc-spawn-toplevel-spawn">?- statechart_spawn(Pid, [
+       load_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
+       trace(true)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sc-spawn-toplevel-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    When the surrounding state becomes active, the <code>&lt;spawn&gt;</code>
+    element creates the child toplevel. The generated
+    <code>spawned(Pid)</code> event reports the pid of that child actor, and
+    the transition from <code>ask</code> to <code>collect</code> calls
+    <code>toplevel_call/3</code> with <code>limit(1)</code>.
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="spawn-ask-collect"&gt;
+    &lt;state id="spawn-ask-collect" initial="ask"&gt;
+        &lt;spawn type="toplevel" exit="false"&gt;
+            q(X) :- p(X).
+            p(a). p(b). p(c). p(d).
+        &lt;/spawn&gt;
+        &lt;state id="ask"&gt;
+            &lt;go to="collect" on="spawned(Pid)"&gt;
+                toplevel_call(Pid, q(X), [
+                    limit(1)
+                ])
+            &lt;/go&gt;
+        &lt;/state&gt;
+        &lt;state id="collect"&gt;
+            &lt;go to="collect" on="success(Pid, Data, true)"&gt;
+                writeln(Data),
+                toplevel_next(Pid)
+            &lt;/go&gt;
+            &lt;go to="final" on="success(_, Data, false)"&gt;
+                writeln(Data)
+            &lt;/go&gt;
+        &lt;/state&gt;
+    &lt;/state&gt;
+    &lt;final id="final" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<p>
+    Each answer arrives as <code>success(Pid, Data, More)</code>. While
+    <code>More</code> is <code>true</code>, the chart prints the current
+    answer and asks the child toplevel for the next one with
+    <code>toplevel_next/1</code>. When <code>More</code> is
+    <code>false</code>, the last answer has arrived and the machine enters its
+    final state.
+</p>
+
+<p>
+    Variables bound by the <code>on</code> pattern, and by any
+    <code>if</code> guard, are in scope in the executable content of the same
+    <code>&lt;go&gt;</code> element. The intent of <code>&lt;spawn&gt;</code>
+    is also ownership: the helper process belongs to the control state that
+    created it, so leaving that state can clean up the invoked actor without
+    ad hoc shutdown code.
+</p>
+
+
+<p>
+    The examples above are just a starting point. More statecharts are
+    available in the <strong>Examples drawer</strong>; click the arrow to open
+    it and select any file from the <em>Statecharts</em> section. Loading a
+    file opens it in the editor and populates the terminal's Examples menu
+    with its built-in queries, ready to run.
+</p>
+
+
+</section>
+
+<section id="web-apis">
+<h1>The node's web APIs</h1>
+
+<p>
+    Everything so far has used Web Prolog as a programming language &mdash;
+    you wrote code, the portal sent it to a node, and the node replied. This
+    closing section looks at the same node from the outside: not as a place
+    to write Prolog, but as a service that other systems can talk to over
+    HTTP and WebSocket. It is the wire-level reference you would consult to
+    embed a Web Prolog node in a JavaScript app, a Python client, or another
+    service.
+</p>
+
+<p>
+    A Web Prolog node currently exposes three web-facing APIs. The stateless
+    HTTP API uses <code>/call</code> for self-contained query requests. The
+    semi-stateful HTTP API uses the <code>/toplevel_*</code> endpoints to keep
+    a toplevel session alive across several HTTP requests. The stateful
+    WebSocket API uses <code>/ws</code> for fully interactive, message-based
+    browser sessions.
+</p>
+
+
+<h2>The stateless HTTP API</h2>
+
+<p>
+    A Web Prolog node can also be queried directly through the stateless
+    <code>/call</code> endpoint. Because the API is stateless, each request
+    stands on its own. That makes it easy to try from the browser address
+    field.
+</p>
+
+<p>
+    This link runs <code>append([a],[b,c],Xs)</code> and returns JSON:
+</p>
+
+<p>
+    <a target="_blank" href="{{host}}/call?goal=append(%5Ba%5D%2C%5Bb%2Cc%5D%2CXs)&amp;format=json">{{host}}/call?goal=append([a],[b,c],Xs)&amp;format=json</a>
+</p>
+
+<p>
+    These two links page through the answers to <code>human(Who)</code> on
+    <code>n4</code> one slice at a time:
+</p>
+
+<p>
+    <a target="_blank" href="https://n4.elfenbenstornet.se/call?goal=human(Who)&amp;limit=1&amp;offset=0">https://n4.elfenbenstornet.se/call?goal=human(Who)&amp;limit=1&amp;offset=0</a>
+</p>
+
+<p>
+    <a target="_blank" href="https://n4.elfenbenstornet.se/call?goal=human(Who)&amp;limit=1&amp;offset=1">https://n4.elfenbenstornet.se/call?goal=human(Who)&amp;limit=1&amp;offset=1</a>
+</p>
+
+<p>
+    In other words, a Web Prolog node can be used both as an interactive
+    Prolog portal and as a simple web API for Prolog queries.
+</p>
+
+<h2>The semi-stateful HTTP API</h2>
+
+<p>
+    When one request is not enough, the node also exposes the
+    <code>/toplevel_spawn</code>, <code>/toplevel_call</code>, and
+    <code>/toplevel_next</code> endpoints. Together they provide a browser-side
+    session with paging, output, prompts, and explicit follow-up requests.
+</p>
+
+<p>
+    Two runnable pages demonstrate the current HTTP session protocol:
+</p>
+
+<ul>
+  <li>
+    <a target="_blank" href="/examples/APIs/http_example-1.html">HTTP demo 1</a>
+    spawns a toplevel, calls <code>member(X,[a,b,c])</code> with
+    <code>limit=1</code>, and fetches the remaining answers one slice at a
+    time.
+  </li>
+  <li>
+    <a target="_blank" href="/examples/APIs/http-example-2.html">HTTP demo 2</a>
+    loads a session-local program, handles <code>prompt</code> events, replies
+    with <code>toplevel_respond</code>, and continues with
+    <code>toplevel_poll</code>.
+  </li>
+</ul>
+
+<h2>The stateful WebSocket API</h2>
+
+<p>
+    For fully stateful browser-side interaction, use <code>/ws</code>. The
+    commands understood by the current node are
+    <code>toplevel_spawn</code>, <code>toplevel_call</code>,
+    <code>toplevel_next</code>, <code>toplevel_respond</code>,
+    <code>spawn</code>, <code>send</code>, and <code>exit</code>.
+</p>
+
+<p>
+    The following pages are small runnable demonstrations of the current
+    protocol:
+</p>
+
+<ul>
+  <li>
+    <a target="_blank" href="/examples/APIs/ws-example-1.html">WebSocket demo 1</a>
+    queries a toplevel and pages through the answers with
+    <code>toplevel_next</code>.
+  </li>
+  <li>
+    <a target="_blank" href="/examples/APIs/ws-example-2.html">WebSocket demo 2</a>
+    spawns a browser-owned actor and exchanges messages with the
+    node-resident <code>pubsub_service</code>.
+  </li>
+</ul>
+
+</section>
+
+
+</div>
+
+<script>
+    function readThemeCookie(name) {
+        var prefix = name + "=";
+        var parts = String(document.cookie || "").split(/;\s*/);
+        var index;
+        for (index = 0; index < parts.length; index += 1) {
+            if (parts[index].indexOf(prefix) === 0) {
+                return decodeURIComponent(parts[index].slice(prefix.length));
+            }
+        }
+        return "";
+    }
+    function normalizeTutorialTheme(value) {
+        return value === "dark" ? "dark" : "light";
+    }
+    function applyTutorialTheme(theme) {
+        var next = normalizeTutorialTheme(theme);
+        document.documentElement.setAttribute("data-theme", next);
+        document.documentElement.style.colorScheme = next;
+        refreshTutorialThemeSensitiveArtwork();
+    }
+    function tutorialThemeValue(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    function refreshTutorialThemeSensitiveArtwork() {
+        if (typeof _scRefreshDiagramTheme === "function") {
+            _scRefreshDiagramTheme();
+        }
+    }
+    function tutorialAppearanceFromOptions(options) {
+        var fontSize = options && options.fontSize ? parseInt(options.fontSize, 10) : 13;
+        var fontWeight = options && options.fontWeight ? parseInt(options.fontWeight, 10) : 400;
+        var lineHeight = options && options.lineHeight ? String(options.lineHeight) : "1.45";
+        var theme = normalizeTutorialTheme(options && options.theme);
+        var textSize;
+        if (!Number.isFinite(fontSize)) {
+            fontSize = 13;
+        }
+        if ([300, 400, 500, 600].indexOf(fontWeight) < 0) {
+            fontWeight = 400;
+        }
+        textSize = fontSize + 1;
+        return {
+            theme: theme,
+            fontFamily: options && options.fontFamily ? String(options.fontFamily) : "\"IBM Plex Mono\", \"Menlo\", \"Consolas\", monospace",
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            lineHeight: lineHeight,
+            textSize: textSize,
+            titleSize: 25,
+            h1Size: 21,
+            h2Size: 17,
+            h3Size: 13
+        };
+    }
+    function applyTutorialAppearance(options) {
+        var root = document.documentElement;
+        var values = tutorialAppearanceFromOptions(options || {});
+        applyTutorialTheme(values.theme);
+        root.style.setProperty("--mono-font", values.fontFamily);
+        root.style.setProperty("--mono-size", values.fontSize + "px");
+        root.style.setProperty("--mono-weight", String(values.fontWeight));
+        root.style.setProperty("--mono-line-height", values.lineHeight);
+        root.style.setProperty("--tutorial-text-size", values.textSize + "px");
+        root.style.setProperty("--tutorial-title-size", values.titleSize + "px");
+        root.style.setProperty("--tutorial-h1-size", values.h1Size + "px");
+        root.style.setProperty("--tutorial-h2-size", values.h2Size + "px");
+        root.style.setProperty("--tutorial-h3-size", values.h3Size + "px");
+    }
+    function restoreTutorialAppearanceFromStorage() {
+        var family = window.localStorage.getItem("wb.monoFontFamily");
+        var size = parseInt(window.localStorage.getItem("wb.monoFontSize"), 10);
+        var weight = parseInt(window.localStorage.getItem("wb.monoFontWeight"), 10);
+        var cookieTheme = readThemeCookie("wp_theme_mode");
+        var themeValue = (cookieTheme === "dark" || cookieTheme === "light")
+            ? cookieTheme
+            : window.localStorage.getItem("wb.themeMode");
+        if (themeValue === "dark" || themeValue === "light") {
+            window.localStorage.setItem("wb.themeMode", themeValue);
+        }
+        applyTutorialAppearance({
+            theme: themeValue,
+            fontFamily: family || "\"IBM Plex Mono\", \"Menlo\", \"Consolas\", monospace",
+            fontSize: Number.isFinite(size) ? size : 13,
+            fontWeight: [300, 400, 500, 600].indexOf(weight) >= 0 ? weight : 400,
+            lineHeight: "1.45"
+        });
+    }
+    window.tutorialFrameBridge = {
+        applyAppearance: applyTutorialAppearance,
+        applyTheme: applyTutorialTheme
+    };
+    window.addEventListener("message", function(event) {
+        if (event.origin !== window.location.origin || !event.data) {
+            return;
+        }
+        if (event.data.type === "webprolog-theme") {
+            applyTutorialTheme(event.data.theme);
+        } else if (event.data.type === "webprolog-appearance") {
+            applyTutorialAppearance(event.data);
+        }
+    });
+    function tutorialBridge() {
+        try {
+            if (window.parent &&
+                window.parent !== window &&
+                window.parent.webPrologTutorialBridge) {
+                return window.parent.webPrologTutorialBridge;
+            }
+        } catch (e) {
+        }
+        return null;
+    }
+    function tutorialCurrentHost() {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.currentHost === "function") {
+            return bridge.currentHost();
+        }
+        return window.location.origin;
+    }
+    function tutorialCurrentSession() {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.currentSessionPid === "function") {
+            return bridge.currentSessionPid();
+        }
+        return "{{toplevel}}";
+    }
+    function replaceTutorialPlaceholder(value, placeholder, replacement) {
+        if (typeof value !== "string" || value.indexOf(placeholder) < 0) {
+            return value;
+        }
+        return value.split(placeholder).join(replacement);
+    }
+    function recursiveReplacePlaceholder(node, placeholder, replacement) {
+        var i;
+        if (!node) {
+            return;
+        }
+        if (node.nodeType === 3) {
+            node.nodeValue = replaceTutorialPlaceholder(node.nodeValue, placeholder, replacement);
+            return;
+        }
+        if (node.nodeType !== 1) {
+            return;
+        }
+        if (node.attributes) {
+            for (i = 0; i < node.attributes.length; i += 1) {
+                node.attributes[i].value = replaceTutorialPlaceholder(
+                    node.attributes[i].value,
+                    placeholder,
+                    replacement
+                );
+            }
+        }
+        Array.prototype.forEach.call(node.childNodes, function(child) {
+            recursiveReplacePlaceholder(child, placeholder, replacement);
+        });
+    }
+    function recursiveReplaceHost(node, host) {
+        recursiveReplacePlaceholder(node, "{{host}}", host);
+    }
+    function recursiveReplacePengine(node, pid) {
+        recursiveReplacePlaceholder(node, "{{toplevel}}", pid);
+    }
+    function recursiveReplaceActorPeerHost(node, host) {
+        recursiveReplacePlaceholder(node, "{{actor_peer_host}}", host);
+    }
+    function tutorialSlugify(text) {
+        var slug = String(text || "")
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+        return slug || "section";
+    }
+    function tutorialHeadingText(heading) {
+        var clone = heading.cloneNode(true);
+        Array.prototype.forEach.call(clone.querySelectorAll(".heading-link"), function(link) {
+            link.remove();
+        });
+        return clone.textContent.trim();
+    }
+    function tutorialLinkForHeading(id) {
+        var bridge = tutorialBridge();
+        var url;
+        if (bridge && typeof bridge.tutorialSectionUrl === "function") {
+            return bridge.tutorialSectionUrl(id);
+        }
+        url = new URL(window.location.href);
+        url.hash = id;
+        return url.toString();
+    }
+    function copyTutorialHeadingLink(button, heading) {
+        var url = tutorialLinkForHeading(heading.id);
+        function markCopied() {
+            button.classList.add("copied");
+            button.setAttribute("aria-label", "Copied link to " + tutorialHeadingText(heading));
+            window.setTimeout(function() {
+                button.classList.remove("copied");
+                button.setAttribute("aria-label", "Copy link to " + tutorialHeadingText(heading));
+            }, 1200);
+        }
+        function fallbackCopy() {
+            var field = document.createElement("textarea");
+            field.value = url;
+            field.setAttribute("readonly", "");
+            field.style.position = "fixed";
+            field.style.left = "-9999px";
+            document.body.appendChild(field);
+            field.select();
+            try { document.execCommand("copy"); } catch (_error) {}
+            field.remove();
+            markCopied();
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(markCopied).catch(fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    }
+    function installTutorialHeadingLinks(headings) {
+        headings.forEach(function(heading) {
+            var button;
+            if (!heading.id || heading.querySelector(".heading-link")) {
+                return;
+            }
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = "heading-link";
+            button.textContent = "#";
+            button.title = "Copy link";
+            button.setAttribute("aria-label", "Copy link to " + tutorialHeadingText(heading));
+            button.addEventListener("click", function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                copyTutorialHeadingLink(button, heading);
+            });
+            heading.appendChild(button);
+        });
+    }
+    function normalizeTutorialSections(value) {
+        if (!Array.isArray(value) || !value.length) {
+            return ["all"];
+        }
+        return value.map(function(section) { return String(section); });
+    }
+    function tutorialSectionEnabled(section, allowed) {
+        return allowed.indexOf("all") >= 0 || allowed.indexOf(section) >= 0;
+    }
+    function applyTutorialSections(value) {
+        var allowed = normalizeTutorialSections(value);
+        var firstVisible = null;
+        Array.prototype.forEach.call(
+            document.querySelectorAll("[data-tutorial-sections]"),
+            function(section) {
+                var names = String(section.getAttribute("data-tutorial-sections") || "")
+                    .split(/\s+/)
+                    .filter(Boolean);
+                var visible = names.some(function(name) {
+                    return tutorialSectionEnabled(name, allowed);
+                });
+                section.hidden = !visible;
+                section.setAttribute("aria-hidden", visible ? "false" : "true");
+                if (visible && !firstVisible) {
+                    firstVisible = section;
+                }
+            }
+        );
+        if (window.location.hash) {
+            var target = document.getElementById(window.location.hash.slice(1));
+            if (target && target.closest("section[hidden]") && firstVisible) {
+                window.location.hash = firstVisible.id;
+            }
+        }
+    }
+    function loadTutorialSections(bridge) {
+        if (bridge && typeof bridge.tutorialSections === "function") {
+            applyTutorialSections(bridge.tutorialSections());
+            return;
+        }
+        fetch("/node_info", { headers: { Accept: "application/json" } })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error("node_info unavailable");
+                }
+                return response.json();
+            })
+            .then(function(info) {
+                applyTutorialSections(info && info.tutorial_sections);
+                buildTutorialToc();
+            })
+            .catch(function() {});
+    }
+    function buildTutorialToc() {
+        var tutorial = document.getElementById("tutorial");
+        var toc = document.getElementById("tutorial-toc");
+        var headings;
+        var firstTitleSeen = false;
+        var used = Object.create(null);
+        if (!tutorial || !toc) {
+            return;
+        }
+        headings = Array.prototype.slice.call(
+            tutorial.querySelectorAll("h1, h2, h3")
+        ).filter(function(heading) {
+            if (toc.contains(heading)) {
+                return false;
+            }
+            if (heading.closest("section[hidden]")) {
+                return false;
+            }
+            if (!firstTitleSeen && heading.tagName === "H1") {
+                firstTitleSeen = true;
+                return false;
+            }
+            return true;
+        });
+        headings.forEach(function(heading) {
+            var baseId;
+            var uniqueId;
+            var suffix = 2;
+            if (heading.id) {
+                used[heading.id] = true;
+                return;
+            }
+            baseId = tutorialSlugify(tutorialHeadingText(heading));
+            uniqueId = baseId;
+            while (used[uniqueId] ||
+                   (document.getElementById(uniqueId) &&
+                    document.getElementById(uniqueId) !== heading)) {
+                uniqueId = baseId + "-" + suffix;
+                suffix += 1;
+            }
+            heading.id = uniqueId;
+            used[uniqueId] = true;
+        });
+        installTutorialHeadingLinks(headings);
+        toc.innerHTML = "";
+        if (!headings.length) {
+            return;
+        }
+        var title = document.createElement("h2");
+        var list = document.createElement("ul");
+        title.textContent = "Table of Contents";
+        toc.appendChild(title);
+        headings.forEach(function(heading) {
+            var item = document.createElement("li");
+            var link = document.createElement("a");
+            item.className = "toc-" + heading.tagName.toLowerCase();
+            link.href = "#" + heading.id;
+            link.textContent = tutorialHeadingText(heading);
+            item.appendChild(link);
+            list.appendChild(item);
+        });
+        toc.appendChild(list);
+    }
+    function tutorialBootstrapBridge() {
+        var bridge = tutorialBridge();
+        var currentHost = tutorialCurrentHost();
+        try {
+            recursiveReplaceHost(document.body, currentHost);
+            recursiveReplacePengine(document.body, tutorialCurrentSession());
+            recursiveReplaceActorPeerHost(document.body, tutorialActorPeerHost(currentHost));
+            loadTutorialSections(bridge);
+            buildTutorialToc();
+            if (bridge && typeof bridge.appearanceOptions === "function") {
+                applyTutorialAppearance(bridge.appearanceOptions());
+            } else {
+                restoreTutorialAppearanceFromStorage();
+            }
+            if (bridge) {
+                bridge.onStatechartTrace = function(text) { _scHandleTrace(text); };
+            }
+        } catch (e) {
+            console.warn("Tutorial bridge bootstrap failed:", e);
+        }
+    }
+    function withLegacyTerminal(action) {
+        if (typeof gterm === "undefined" || !gterm) {
+            return false;
+        }
+        if (gterm.get_prompt().trim() != "?-") {
+            gterm.exec("");
+        }
+        setTimeout(function() {
+            action(gterm);
+            setTimeout(gterm.enable, 0);
+        }, 5);
+        return true;
+    }
+    function tutorialUnavailable(actionName) {
+        console.warn("Tutorial action unavailable in this context:", actionName);
+    }
+    function tutorialNode(id) {
+        return document.querySelector(id);
+    }
+    function tutorialNodeText(id) {
+        var node = tutorialNode(id);
+        return node ? node.textContent : "";
+    }
+    function tutorialQueryFromExample(id) {
+        return tutorialNodeText(id).replace(/^\s*\?-\s*/, "").trim();
+    }
+    function tutorialActorPeerHost(host) {
+        if (/^https?:\/\/n3\.elfenbenstornet\.se\b/.test(host)) {
+            return "https://n4.elfenbenstornet.se";
+        }
+        if (/^https?:\/\/n4\.elfenbenstornet\.se\b/.test(host)) {
+            return "https://n3.elfenbenstornet.se";
+        }
+        return "https://n4.elfenbenstornet.se";
+    }
+    function consult(id) {
+        var bridge = tutorialBridge();
+        var val = tutorialNodeText(id);
+        if (bridge && typeof bridge.consultSource === "function") {
+            bridge.consultSource(val, id);
+            return;
+        }
+        if (!withLegacyTerminal(function(term) {
+            var program = val.replace(/'/g, "\\'");
+            term.echo("\n?- consult_text('" + id + "').");
+            term.exec("consult_text('" + program + "').", true);
+        })) {
+            tutorialUnavailable("consult");
+        }
+    }
+    function paste(query) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.pasteText === "function") {
+            bridge.pasteText(query);
+            return;
+        }
+        if (!withLegacyTerminal(function(term) {
+            term.insert(query);
+        })) {
+            tutorialUnavailable("paste");
+        }
+    }
+    function pasteExample(id) {
+        var query = tutorialQueryFromExample(id);
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.pasteExample === "function") {
+            bridge.pasteExample(query, id);
+            return;
+        }
+        if (!withLegacyTerminal(function(term) {
+            term.insert(query);
+        })) {
+            tutorialUnavailable("pasteExample");
+        }
+    }
+    function pasteAndAskExample(id) {
+        var query = tutorialQueryFromExample(id);
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.askExample === "function") {
+            bridge.askExample(query, id);
+            return;
+        }
+        if (!withLegacyTerminal(function(term) {
+            term.exec(query);
+        })) {
+            tutorialUnavailable("pasteAndAskExample");
+        }
+    }
+    function load_example(path) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.loadExample === "function") {
+            bridge.loadExample(path);
+            return;
+        }
+        console.warn("Tutorial example path is not wired in this context:", path);
+    }
+    tutorialBootstrapBridge();
+
+    // ── Statechart spawn: populate Examples menu then submit query ───────────
+    function scSpawn(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! play.',   query: '$Pid ! play.'   },
+                { label: '$Pid ! reset.',  query: '$Pid ! reset.'  },
+                { label: '$Pid ! pause.',  query: '$Pid ! pause.'  },
+                { label: '$Pid ! resume.', query: '$Pid ! resume.' },
+                { label: '$Pid ! stop.',   query: '$Pid ! stop.'   }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnGcd(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! input([25, 10, 15, 30]).', query: '$Pid ! input([25, 10, 15, 30]).' },
+                { label: '$Pid ! input([12, 8, 4]).',       query: '$Pid ! input([12, 8, 4]).'       }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnSpaghetti(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! a.', query: '$Pid ! a.' },
+                { label: '$Pid ! b.', query: '$Pid ! b.' },
+                { label: '$Pid ! c.', query: '$Pid ! c.' },
+                { label: '$Pid ! d.', query: '$Pid ! d.' },
+                { label: '$Pid ! e.', query: '$Pid ! e.' },
+                { label: '$Pid ! f.', query: '$Pid ! f.' },
+                { label: '$Pid ! g.', query: '$Pid ! g.' },
+                { label: '$Pid ! h.', query: '$Pid ! h.' }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnEmotions(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! e.', query: '$Pid ! e.' },
+                { label: '$Pid ! d.', query: '$Pid ! d.' },
+                { label: '$Pid ! f.', query: '$Pid ! f.' }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnCalc(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! digit(3).',    query: '$Pid ! digit(3).'    },
+                { label: '$Pid ! oper(plus).',  query: '$Pid ! oper(plus).'  },
+                { label: '$Pid ! digit(4).',    query: '$Pid ! digit(4).'    },
+                { label: '$Pid ! equals.',      query: '$Pid ! equals.'      },
+                { label: '$Pid ! c.',           query: '$Pid ! c.'           },
+                { label: '$Pid ! oper(minus).', query: '$Pid ! oper(minus).' },
+                { label: '$Pid ! oper(star).',  query: '$Pid ! oper(star).'  },
+                { label: '$Pid ! oper(div).',   query: '$Pid ! oper(div).'   },
+                { label: '$Pid ! point.',       query: '$Pid ! point.'       },
+                { label: '$Pid ! ce.',          query: '$Pid ! ce.'          }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnDialog(exampleId) {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! input([red]).',           query: '$Pid ! input([red]).'           },
+                { label: '$Pid ! input([blue]).',          query: '$Pid ! input([blue]).'          },
+                { label: '$Pid ! input([a, red, box]).',   query: '$Pid ! input([a, red, box]).'   },
+                { label: '$Pid ! input([big]).',           query: '$Pid ! input([big]).'           },
+                { label: '$Pid ! input([small]).',         query: '$Pid ! input([small]).'         },
+                { label: '$Pid ! input([a, big, box]).',   query: '$Pid ! input([a, big, box]).'   },
+                { label: '$Pid ! input([a, small, box]).', query: '$Pid ! input([a, small, box]).' },
+                { label: '$Pid ! input([hello]).',         query: '$Pid ! input([hello]).'         }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    // ── Pause-and-resume statechart diagram ──────────────────────────────────
+    // Driven by statechart_trace events forwarded from the demonstrator.
+    // The demonstrator calls bridge.onStatechartTrace(text) whenever a trace
+    // event arrives; tutorialBootstrapBridge registers the callback below.
+
+    var _scLastEvent = null;   // most recent external_event seen
+    var _scCurrentState = null;
+    var _scCurrentTrans = null;
+
+    function _scHandleTrace(text) {
+        var parsed = _scParseTerm(text);
+        if (!parsed) { return; }
+        if (parsed.name === 'external_event' && parsed.args.length >= 1) {
+            _scLastEvent = parsed.args[0].trim();
+            return;
+        }
+        if (parsed.name === 'configuration' && parsed.args.length >= 1) {
+            var states  = _scParseList(parsed.args[0]);
+            var leafs   = ['s1', 's2', 'interrupted', 'final'];
+            var active  = null;
+            for (var i = 0; i < leafs.length; i++) {
+                if (states.indexOf(leafs[i]) >= 0) { active = leafs[i]; break; }
+            }
+            if (active) {
+                var eventToTrans = {
+                    play: 'play', reset: 'reset',
+                    pause: 'pause', resume: 'resume', stop: 'stop'
+                };
+                var trans = _scLastEvent ? (eventToTrans[_scLastEvent] || null) : null;
+                _scRenderDiagram(active, trans);
+            }
+            _scLastEvent = null;
+        }
+    }
+
+    function _scParseTerm(text) {
+        var m = String(text).match(/^([a-z_][A-Za-z0-9_]*)\(([\s\S]*)\)$/);
+        if (!m) { return null; }
+        return { name: m[1], args: _scSplitArgs(m[2]) };
+    }
+
+    function _scSplitArgs(s) {
+        var args = [], depth = 0, start = 0;
+        for (var i = 0; i < s.length; i++) {
+            var c = s[i];
+            if (c === '(' || c === '[') { depth++; }
+            else if (c === ')' || c === ']') { depth--; }
+            else if (c === ',' && depth === 0) {
+                args.push(s.slice(start, i).trim());
+                start = i + 1;
+            }
+        }
+        args.push(s.slice(start).trim());
+        return args;
+    }
+
+    function _scParseList(text) {
+        var m = text.trim().match(/^\[([\s\S]*)\]$/);
+        if (!m) { return []; }
+        var inner = m[1].trim();
+        return inner ? _scSplitArgs(inner) : [];
+    }
+
+    function _scRenderDiagram(state, trans) {
+        var svg = document.getElementById('sc-pr-diagram');
+        if (!svg) { return; }
+        _scCurrentState = state || null;
+        _scCurrentTrans = trans || null;
+        ['s1', 's2', 'interrupted', 'final'].forEach(function(id) {
+            var el = document.getElementById('sc-state-' + id);
+            if (el) { el.setAttribute('fill', 'none'); }
+        });
+        ['play', 'reset', 'pause', 'resume', 'stop'].forEach(function(id) {
+            var el = document.getElementById('sc-trans-' + id);
+            if (el) {
+                el.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-line'));
+                el.setAttribute('stroke-width', '1.5');
+                el.setAttribute('marker-end', 'url(#sc-arr)');
+            }
+        });
+        if (state) {
+            var stateEl = document.getElementById('sc-state-' + state);
+            if (stateEl) { stateEl.setAttribute('fill', tutorialThemeValue('--tutorial-diagram-active-fill')); }
+        }
+        if (trans) {
+            var transEl = document.getElementById('sc-trans-' + trans);
+            if (transEl) {
+                transEl.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-highlight'));
+                transEl.setAttribute('stroke-width', '2');
+                transEl.setAttribute('marker-end', 'url(#sc-arr-hi)');
+            }
+        }
+    }
+    function _scRefreshDiagramTheme() {
+        if (document.getElementById('sc-pr-diagram')) {
+            _scRenderDiagram(_scCurrentState, _scCurrentTrans);
+        }
+    }
+</script>
+</body>
+</html>
