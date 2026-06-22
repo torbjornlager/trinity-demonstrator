@@ -1642,6 +1642,41 @@
         gap: 10px;
       }
 
+      .swi-wasm-input-overlay {
+        position: fixed;
+        z-index: 2200;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: var(--overlay-backdrop);
+      }
+
+      .swi-wasm-input-dialog {
+        display: grid;
+        gap: 12px;
+        width: min(420px, calc(100vw - 32px));
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: var(--modal-shadow);
+      }
+
+      .swi-wasm-input-dialog input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        background: var(--input-bg);
+        color: var(--input-ink);
+        padding: 8px 10px;
+      }
+
+      .swi-wasm-input-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
       .runtime-corner-toggle {
         width: 100%;
         height: 28px;
@@ -5101,10 +5136,13 @@
             swiWasmActorDelayedSends: {},
             swiWasmRemoteActorConnections: {},
             swiWasmRemoteActorKinds: {},
+            swiWasmActorInputQueue: [],
+            swiWasmActorInputActive: null,
             swiWasmStatechartLoaded: false,
             swiWasmStatechartLoadError: "",
             swiWasmStatechartActive: false,
             swiWasmChartPending: false,
+            swiWasmStatechartDelayedQueue: [],
             swiWasmQueryPending: false,
             swiWasmQueryAbortRequested: false,
             swiWasmUserSourceText: ""
@@ -8852,8 +8890,7 @@
               return self.swiWasmBehaviourProlog();
             };
             window.swiWasmActorInput = function(promptText) {
-              var answer = window.prompt(String(promptText || ""));
-              return answer === null ? null : answer;
+              return self.requestSwiWasmActorInput(String(promptText || ""));
             };
           },
           reserveSwiWasmWorkerActorPid: function() {
@@ -9319,7 +9356,7 @@
                 result = this.abortSwiWasmActor(message.pid || pid);
                 break;
               case "input":
-                result = window.prompt(String(message.prompt || ""));
+                result = this.requestSwiWasmActorInput(String(message.prompt || ""));
                 break;
               default:
                 ok = false;
@@ -9352,6 +9389,58 @@
               return;
             }
             reply(ok, result, error);
+          },
+          requestSwiWasmActorInput: function(promptText) {
+            var self = this;
+            return new Promise(function(resolve) {
+              self.swiWasmActorInputQueue.push({ prompt: promptText, resolve: resolve });
+              self.showNextSwiWasmActorInput();
+            });
+          },
+          showNextSwiWasmActorInput: function() {
+            var self = this;
+            if (self.swiWasmActorInputActive || self.swiWasmActorInputQueue.length === 0) {
+              return;
+            }
+            var request = self.swiWasmActorInputQueue.shift();
+            self.swiWasmActorInputActive = request;
+            var overlay = document.createElement("div");
+            var dialog = document.createElement("form");
+            var label = document.createElement("label");
+            var input = document.createElement("input");
+            var actions = document.createElement("div");
+            var cancel = document.createElement("button");
+            var submit = document.createElement("button");
+            overlay.className = "swi-wasm-input-overlay";
+            dialog.className = "swi-wasm-input-dialog";
+            dialog.setAttribute("aria-label", "Prolog input");
+            label.textContent = request.prompt || "Input";
+            input.type = "text";
+            input.autocomplete = "off";
+            cancel.type = "button";
+            cancel.textContent = "Cancel";
+            submit.type = "submit";
+            submit.textContent = "Send";
+            actions.className = "swi-wasm-input-actions";
+            actions.appendChild(cancel);
+            actions.appendChild(submit);
+            dialog.appendChild(label);
+            dialog.appendChild(input);
+            dialog.appendChild(actions);
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            function finish(value) {
+              overlay.remove();
+              self.swiWasmActorInputActive = null;
+              request.resolve(value);
+              self.showNextSwiWasmActorInput();
+            }
+            dialog.addEventListener("submit", function(event) {
+              event.preventDefault();
+              finish(input.value);
+            });
+            cancel.addEventListener("click", function() { finish(null); });
+            input.focus();
           },
           routeSwiWasmActorMessage: function(fromPid, toText, messageText) {
             var to = String(toText || "");
@@ -10238,7 +10327,8 @@
               "    ->  send(Target, prompt(Self, Prompt)),",
               "        receive({'$input'(_, Answer) -> true})",
               "    ;   term_string(Prompt, PromptText),",
-              "        AnswerText := swiWasmActorInput(#PromptText),",
+              "        Promise := swiWasmActorInput(#PromptText),",
+              "        await(Promise, AnswerText),",
               "        AnswerText \\== null,",
               "        term_string(Answer, AnswerText)",
               "    ).",
@@ -10518,15 +10608,7 @@
                 window.wasmStatechartCancel(id);
                 window.wasmStatechartDelayedEvents[id] = window.setTimeout(function() {
                   delete window.wasmStatechartDelayedEvents[id];
-                  Prolog.forEach(
-                    "term_string(Event, EventText), statechart_wasm:statechart_send(Event)",
-                    { EventText: String(eventText || "timeout") },
-                    function() {}
-                  ).then(function() {
-                    self.drainSwiWasmOutputToTerminal();
-                  }).catch(function(error) {
-                    self.log("error", "statechart delayed event failed: " + String(error), "swi-wasm");
-                  });
+                  self.enqueueSwiWasmStatechartEvent(String(eventText || "timeout"));
                 }, delay * 1000);
                 return true;
               };
@@ -10589,6 +10671,42 @@
             }
             this.notifyTutorialStatechartTrace(text);
           },
+          enqueueSwiWasmStatechartEvent: function(eventText) {
+            this.swiWasmStatechartDelayedQueue.push(String(eventText || "timeout"));
+            this.drainSwiWasmStatechartEventQueue();
+          },
+          drainSwiWasmStatechartEventQueue: function() {
+            var self = this;
+            var Prolog = self.swiWasmProlog;
+            if (!Prolog || self.swiWasmChartPending || self.swiWasmQueryPending ||
+                !self.swiWasmStatechartActive ||
+                self.swiWasmStatechartDelayedQueue.length === 0) {
+              return;
+            }
+            var eventText = self.swiWasmStatechartDelayedQueue.shift();
+            self.swiWasmChartPending = true;
+            self.startSwiWasmOutputStreaming();
+            Prolog.forEach(
+              "term_string(Event, EventText), statechart_wasm:statechart_send(Event)",
+              { EventText: eventText },
+              function() {}
+            ).then(function() {
+              self.swiWasmChartPending = false;
+              self.drainSwiWasmOutputToTerminal();
+              if (self.swiWasmStatechartDelayedQueue.length === 0) {
+                self.stopSwiWasmOutputStreaming();
+              }
+              self.drainSwiWasmStatechartEventQueue();
+            }).catch(function(error) {
+              self.swiWasmChartPending = false;
+              self.drainSwiWasmOutputToTerminal();
+              self.log("error", "statechart delayed event failed: " + String(error), "swi-wasm");
+              if (self.swiWasmStatechartDelayedQueue.length === 0) {
+                self.stopSwiWasmOutputStreaming();
+              }
+              self.drainSwiWasmStatechartEventQueue();
+            });
+          },
           // Run a statechart in SWI-WASM mode.  Equivalent in spirit to
           // runStatechart()'s actor-mode `statechart_spawn(Pid, [...])`
           // but synchronous and PID-less. The Logger records state and
@@ -10639,6 +10757,7 @@
             // duration of the previous chart's forEach.
             try { Prolog.query("statechart_wasm:statechart_stop").once(); } catch(_) {}
             self.swiWasmOutputBuffer = "";
+            self.swiWasmStatechartDelayedQueue = [];
             // Mark active eagerly so a fresh Run click can't re-enter
             // while we're still inside the async start.  We'll refine
             // the value once the start resolves.
@@ -10679,6 +10798,7 @@
                 if (payload) {
                   self.reportInteraction(payload);
                 }
+                self.drainSwiWasmStatechartEventQueue();
               })
               .catch(function(err) {
                 self.swiWasmChartPending = false;
@@ -10726,6 +10846,7 @@
                 this.log("warn", "Halt failed: " + String(e), "swi-wasm");
               }
               this.swiWasmStatechartActive = false;
+              this.swiWasmStatechartDelayedQueue = [];
               if (this.lastBindings.Pid === "statechart") {
                 delete this.lastBindings.Pid;
               }
@@ -10748,6 +10869,7 @@
               this.log("warn", "Halt signal failed: " + String(e), "swi-wasm");
             }
             this.swiWasmStatechartActive = false;
+            this.swiWasmStatechartDelayedQueue = [];
             if (this.lastBindings.Pid === "statechart") {
               delete this.lastBindings.Pid;
             }
@@ -10931,6 +11053,7 @@
                 self.swiWasmOutputBuffer = "";
                 self.swiWasmQueryPending = false;
                 self.stopSwiWasmOutputStreaming();
+                self.drainSwiWasmStatechartEventQueue();
                 if (self.swiWasmQueryAbortRequested) {
                   self.swiWasmQueryAbortRequested = false;
                   self.finishError(term, "Computation aborted.");
@@ -10958,6 +11081,7 @@
               self.swiWasmQueryPending = false;
               self.swiWasmOutputBuffer = "";
               self.stopSwiWasmOutputStreaming();
+              self.drainSwiWasmStatechartEventQueue();
               if (errorOutput && self.terminal) {
                 self.terminal.echo(errorOutput.replace(/\n$/, ""));
               }

@@ -766,7 +766,7 @@ ws_rewrite_browser_sender(Dict, Queue, Message0, Message) :-
         ws_read_term(browser_from, BrowserFromAtom, BrowserPid),
         browser_local_pid(BrowserPid),
         ws_browser_virtual_pid(Queue, BrowserPid, VirtualPid),
-        replace_browser_pid(BrowserPid, VirtualPid, Message0, Message)
+        replace_browser_sender_argument(BrowserPid, VirtualPid, Message0, Message)
     ;   Message = Message0
     ).
 
@@ -779,20 +779,20 @@ ws_browser_virtual_pid(Queue, BrowserPid, browser_actor(ConnectionId, BrowserPid
     ws_connection_meta(Queue, ConnectionMeta),
     get_dict(connection_id, ConnectionMeta, ConnectionId).
 
-replace_browser_pid(Needle, Replacement, Term, Replaced) :-
-    Term == Needle,
+%!  replace_browser_sender_argument(+BrowserPid, +VirtualPid,
+%!                                  +Message0, -Message) is det.
+%
+%   `browser_from` identifies a reply recipient, not arbitrary message
+%   data.  Rewrite only a matching first argument, the established actor
+%   reply-pid convention.  A recursive whole-term replacement would turn an
+%   unrelated atom `main` in message data into a virtual pid.
+replace_browser_sender_argument(BrowserPid, VirtualPid, Message0, Message) :-
+    compound(Message0),
+    compound_name_arguments(Message0, Name, [First0|Rest]),
+    First0 == BrowserPid,
     !,
-    Replaced = Replacement.
-replace_browser_pid(_Needle, _Replacement, Term, Term) :-
-    var(Term),
-    !.
-replace_browser_pid(_Needle, _Replacement, Term, Term) :-
-    atomic(Term),
-    !.
-replace_browser_pid(Needle, Replacement, Term, Replaced) :-
-    compound_name_arguments(Term, Name, Args0),
-    maplist(replace_browser_pid(Needle, Replacement), Args0, Args),
-    compound_name_arguments(Replaced, Name, Args).
+    compound_name_arguments(Message, Name, [VirtualPid|Rest]).
+replace_browser_sender_argument(_BrowserPid, _VirtualPid, Message, Message).
 
 actors:hook_send(browser_actor(ConnectionId, BrowserPid), Message) :-
     ws_browser_connection(ConnectionId, Queue),

@@ -14,6 +14,10 @@ const source = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "demonstrator.html"),
   "utf8"
 );
+const workerSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
+  "utf8"
+);
 
 let failures = 0;
 function ok(condition, label) {
@@ -46,6 +50,15 @@ ok(includes("self.terminal.echo(String(text).replace(/\\n$/, \"\"));"),
    "output is streamed to the terminal while a runner is active");
 ok(includes("{ heartbeat: 1 }"),
    "long-running WASM queries yield frequently");
+ok(includes("enqueueSwiWasmStatechartEvent") &&
+   includes("self.swiWasmChartPending || self.swiWasmQueryPending") &&
+   includes("self.drainSwiWasmStatechartEventQueue();"),
+   "delayed statechart events are serialized behind all active engine work");
+ok(!includes("window.prompt(") &&
+   includes("requestSwiWasmActorInput"),
+   "main and worker input use a non-blocking browser dialog");
+ok(workerSource.includes('action === "input" ? null'),
+   "worker input is exempt from the coordinator request timeout");
 
 console.log(failures === 0
   ? "\nswi_wasm_rpc_bridge smoke: PASS"

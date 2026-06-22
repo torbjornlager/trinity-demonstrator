@@ -86,15 +86,18 @@
       // Without a timeout a lost coordinator reply would wedge the actor
       // (the Prolog await/2 never returns); reject so it surfaces as an
       // ordinary error instead.
-      var timer = setTimeout(function() {
+      // User input is intentionally open-ended.  The coordinator presents a
+      // non-blocking dialog, so a person taking more than 30 seconds must not
+      // turn input/2 into a spurious request failure.
+      var timer = action === "input" ? null : setTimeout(function() {
         if (pendingRequests[id]) {
           delete pendingRequests[id];
           reject(new Error("actor request timed out: " + action));
         }
       }, REQUEST_TIMEOUT_MS);
       pendingRequests[id] = {
-        resolve: function(value) { clearTimeout(timer); resolve(value); },
-        reject: function(error) { clearTimeout(timer); reject(error); }
+        resolve: function(value) { if (timer) clearTimeout(timer); resolve(value); },
+        reject: function(error) { if (timer) clearTimeout(timer); reject(error); }
       };
       post("request", Object.assign({ id: id, action: action }, fields || {}));
     });

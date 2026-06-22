@@ -50,4 +50,28 @@ run_tier T3     tests/tiers/t3_behaviours.pl run_tier
 run_tier T4     tests/tiers/t4_node.pl       run_tier
 run_tier T5     tests/tiers/t5_interop.pl    run_tier
 
+run_wasm () {
+    selected WASM || return 0
+
+    echo "=== Tier WASM (statechart port + browser bridge smoke tests) ==="
+    if ! python3 tools/check_statechart_wasm_equivalence.py; then
+        echo "!!! Tier WASM equivalence guard FAILED"
+        FAILED=1
+    fi
+    if ! "$SWIPL" -q -s tests/test_statechart_wasm.pl -g test_statechart_wasm -t halt; then
+        echo "!!! Tier WASM statechart tests FAILED"
+        FAILED=1
+    fi
+    if ! node tests/wasm/swi_wasm_actor_worker_smoke.js; then
+        echo "!!! Tier WASM worker smoke FAILED"
+        FAILED=1
+    fi
+    if ! node tests/wasm/swi_wasm_rpc_bridge_smoke.js; then
+        echo "!!! Tier WASM RPC bridge smoke FAILED"
+        FAILED=1
+    fi
+}
+
+run_wasm
+
 exit $FAILED

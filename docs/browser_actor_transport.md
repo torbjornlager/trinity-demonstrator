@@ -22,6 +22,9 @@ browser_actor(ConnectionId, worker_actor(Id))
 They are never accepted as client-supplied destination pids.  The node
 creates them only by rewriting the sender supplied with a browser `send`
 command, and can therefore route replies solely to the originating socket.
+For version 1, `browser_from` is rewritten only when it is the first argument
+of the sent message—the conventional actor reply-pid position. Other
+occurrences are ordinary message data and are never rewritten.
 
 ## Pids
 
@@ -46,6 +49,8 @@ as Prolog source text in the named term fields.
 | `spawn` | `goal`, optional `options` | `spawned` |
 | `send` | `pid`, `message`, optional `browser_from` | `actor_message` when a virtual browser recipient is addressed |
 | `exit` | `pid`, optional `reason` | actor lifecycle events |
+| `monitor` | `pid`, optional `ref` | installs a browser-owned monitor; the node later emits `down` |
+| `demonitor` | `ref` | removes the browser-owned monitor |
 | `toplevel_spawn` | optional `load_text`, `options` | `spawned` |
 | `toplevel_call` | `pid`, `goal`, optional `template`, `limit`, `offset`, `once` | `success`, `failure`, `error`, `timeout` |
 | `toplevel_next` | `pid`, optional `limit` | `success`, `failure`, `error`, `timeout` |
@@ -80,11 +85,23 @@ success(42@'https://node.example', [plato], true)
 ## Lifecycle and recovery
 
 Version 1 requires an implementation to surface remote errors rather than
-leaving a local `receive/1` blocked.  It must also treat socket closure as a
-transport failure for all pending requests.  Full remote `monitor/2`,
-`demonitor/2`, `down/3`, exit, and reconnect semantics are the remaining
-implementation milestones; connection closure must eventually produce
-deterministic `down/3` messages for browser-installed monitors.
+leaving a local `receive/1` blocked. It must also treat socket closure as a
+transport failure for all pending requests.
+
+`monitor/2`, `demonitor/2`, `down/3`, and remote `exit/2` are implemented
+for browser-owned remote actors and toplevels. A monitor installed as part of
+`spawn/3` uses the remote pid as its reference; an explicit `monitor/2`
+uses the supplied/generated reference. When the target exits, the browser
+receives the normal local mailbox message:
+
+```prolog
+down(Ref, Pid, Reason)
+```
+
+Socket closure rejects pending requests and delivers
+`down(Ref, Pid, connection_lost(URL))` for monitors associated with that
+connection. Automatic reconnect, monitor restoration after reconnect, and
+cross-connection naming/service recovery are not part of version 1.
 
 ## Compatibility
 
