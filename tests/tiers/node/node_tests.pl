@@ -6510,4 +6510,57 @@ test(sandbox_on_http_toplevel_spawn_rejects_oversized_load_uri_source,
         )
     ).
 
+%  Sandbox regression guard for the dangerous-predicate families.  These
+%  DIRECT calls must be rejected in BOTH sandbox modes: whitelist via
+%  safe_goal/1, blacklist via blacklisted_goal_pattern/2.  Before the
+%  denylist was completed, blacklist allowed process/file/network predicates
+%  not explicitly enumerated, which was a sandbox escape (RCE).  (Goals
+%  CONSTRUCTED at runtime and run via call/1 are out of scope for this static
+%  check -- see the note on sandbox_enforce_goal/3 in node_sandbox.pl.)
+test(sandbox_rejects_dangerous_in_both_modes) :-
+    forall(
+        ( member(Mode, [whitelist, blacklist]),
+          member(Goal,
+                 [ process_create(path(echo), [hi], []),
+                   read_file_to_string('/etc/passwd', _, []),
+                   read_file_to_terms('/etc/hosts', _, []),
+                   delete_file('/tmp/sandbox_guard'),
+                   rename_file('/tmp/a', '/tmp/b'),
+                   directory_files('/', _),
+                   http_open('http://example/', _, []),
+                   tcp_connect(_, _),
+                   setenv('X', 'Y'),
+                   use_foreign_library(foo),
+                   shell('id'),
+                   open('/etc/passwd', read, _) ]) ),
+        \+ catch(with_sandbox_mode(Mode,
+                     sandbox_check_goal_in_module(actor, user, Goal)),
+                 _, fail)).
+
+%  (The distribution API working under the floor is guarded end-to-end by
+%  the rpc/* and statechart_spawn/* node-server tests above, which exercise
+%  the real session module + effective profile a client goal runs in.)
+
+%  A statechart spawned by an untrusted client runs its <onentry>/<onexit>/
+%  <go> scripts and conditions under a public execution profile (propagated
+%  into the interpreter actor).  hook_check_chart_goal/1 must then sandbox
+%  those goals: dangerous ones rejected, safe ones allowed.  With NO public
+%  profile (trusted desktop/test charts) the hook is inert -- the semantics
+%  freeze.  Guards the statechart-script RCE fix (node_glue + statechart_*).
+test(statechart_chart_goal_hook_gates_dangerous_under_public_profile) :-
+    forall(member(G, [ process_create(path(echo), [x], []), shell('id'),
+                       open('/etc/passwd', read, _) ]),
+           \+ catch(with_sandbox_mode(blacklist,
+                      node_execution_context:with_public_execution_profile(actor,
+                        statechart_runtime:check_chart_goal(G))), _, fail)),
+    forall(member(G, [ writeln(hi), atom_length(abc, _), (X = 1) ]),
+           catch(with_sandbox_mode(blacklist,
+                    node_execution_context:with_public_execution_profile(actor,
+                      statechart_runtime:check_chart_goal(G))), _, fail)),
+    ignore(X = _),
+    %  No public profile => hook inert => even a dangerous goal passes it
+    %  (trusted charts are unchanged).
+    with_sandbox_mode(blacklist,
+        statechart_runtime:check_chart_goal(process_create(path(echo), [x], []))).
+
 :- end_tests(node).

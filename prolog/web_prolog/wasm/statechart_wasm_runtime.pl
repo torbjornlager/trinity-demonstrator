@@ -32,7 +32,8 @@
     raise/1,
     in/1,
     log/1,
-    script/1
+    script/1,
+    check_chart_goal/1
 ]).
 
 /** <module> Statechart Runtime Helpers (SWI-WASM port)
@@ -255,9 +256,21 @@ in(State) :-
 log(Message) :-
     emit_trace(log(Message)).
 
+%!  check_chart_goal(+Goal) is det.
+%
+%   Mirrors statechart_runtime:check_chart_goal/1 in the desktop engine so
+%   the two stay byte-equivalent.  In the browser (SWI-WASM) no layer
+%   installs hook_check_chart_goal/1, so this is a no-op; the node's
+%   sandbox glue is what makes it gate client chart goals server-side.
+:- multifile hook_check_chart_goal/1.
+
+check_chart_goal(Goal) :-
+    forall(hook_check_chart_goal(Goal), true).
+
 script(Goal) :-
     emit_trace(execution(Goal)),
-    (   catch(once(statechart_wasm:Goal), Error,
+    (   catch(( check_chart_goal(Goal), once(statechart_wasm:Goal) ),
+              Error,
               ( enqueue_internal_event(error(Error)),
                 true
               ))

@@ -258,6 +258,19 @@ public_runtime_support_goal(actor, Goal) :-
 public_runtime_support_goal_pi(remote_actor_proxy/3).
 public_runtime_support_goal_pi(send_with_delay/3).
 
+%  Statechart interpreter entry goals spawned by statechart_spawn/1,2.
+%  They are framework code, not client code; the chart's own embedded
+%  goals are sandbox-checked separately at execution (hook_check_chart_goal/1),
+%  so exempting the entry goal here does not bypass any client-supplied goal.
+public_runtime_support_goal(statechart_actor, Goal) :-
+    callable(Goal),
+    functor(Goal, Name, Arity),
+    statechart_runtime_support_goal_pi(Name/Arity).
+
+statechart_runtime_support_goal_pi(interpret/1).
+statechart_runtime_support_goal_pi(interpret_text/1).
+statechart_runtime_support_goal_pi(with_trace/2).
+
 
 %!  sandbox_check_goal_with_source(+Profile, +GoalModule, +Goal, +SourceText) is det.
 %
@@ -526,6 +539,21 @@ sandbox_enforce_goal(whitelist, Module, Goal) :-
     ->  true
     ;   sandbox:safe_goal(Module:Goal)
     ).
+%  Blacklist mode is a curated DENYLIST, not an allowlist.  reject_forbidden_goal/3
+%  (run before this) walks the goal and throws on any blacklisted_goal_pattern/2 --
+%  process execution, filesystem, network, native-code loading, etc.  It does NOT
+%  run safe_goal, because the isotope/relation/actor profiles intentionally allow
+%  runtime-bound assert/format/call/shared-DB that safe_goal cannot clear
+%  statically (flooring on safe_goal broke those profiles wholesale).
+%
+%  SECURITY BOUNDARY AND ITS LIMIT: the denylist's completeness is the boundary
+%  for DIRECT calls, and the blacklisted_goal_pattern/2 set below is kept current
+%  for the known dangerous families.  It cannot, however, stop a dangerous goal
+%  CONSTRUCTED at runtime and run through call/1 (e.g. `C = process_create(...),
+%  call(C)`), because the offending predicate is not visible at static check
+%  time -- and call/1 of a runtime goal is a deliberate isotope-profile feature.
+%  Closing that residual channel requires whitelist mode (which rejects call/1 of
+%  an unbound goal) or OS-level containment of the node process.
 sandbox_enforce_goal(blacklist, _Module, _Goal).
 sandbox_enforce_goal(off, _Module, _Goal).
 
@@ -734,6 +762,69 @@ blacklisted_goal_pattern(thread_self(_), iso_threads).
 blacklisted_goal_pattern(thread_send_message(_, _), iso_threads).
 blacklisted_goal_pattern(thread_signal(_, _), iso_threads).
 blacklisted_goal_pattern(with_mutex(_, _), iso_threads).
+
+%  --- Sandbox-escape families (close the blacklist-mode RCE/file/network holes) ---
+%  None of these are needed by the public profiles' runtime-bound assert/format/
+%  call/shared-DB operations, so denying them does not regress those features.
+%  (A goal CONSTRUCTED at runtime and run via call/1 still bypasses this static
+%  check -- see the note on sandbox_enforce_goal/3.)
+
+%  Process execution -> arbitrary command execution.
+blacklisted_goal_pattern(process_create(_, _), process_execution).
+blacklisted_goal_pattern(process_create(_, _, _), process_execution).
+blacklisted_goal_pattern(process_kill(_), process_execution).
+blacklisted_goal_pattern(process_kill(_, _), process_execution).
+
+%  Filesystem read/write/enumerate/metadata.
+blacklisted_goal_pattern(read_file_to_string(_, _, _), filesystem).
+blacklisted_goal_pattern(read_file_to_terms(_, _, _), filesystem).
+blacklisted_goal_pattern(read_file_to_codes(_, _, _), filesystem).
+blacklisted_goal_pattern(see(_), filesystem).
+blacklisted_goal_pattern(tell(_), filesystem).
+blacklisted_goal_pattern(delete_file(_), filesystem).
+blacklisted_goal_pattern(rename_file(_, _), filesystem).
+blacklisted_goal_pattern(delete_directory(_), filesystem).
+blacklisted_goal_pattern(make_directory(_), filesystem).
+blacklisted_goal_pattern(make_directory_path(_), filesystem).
+blacklisted_goal_pattern(directory_files(_, _), filesystem).
+blacklisted_goal_pattern(working_directory(_, _), filesystem).
+blacklisted_goal_pattern(tmp_file(_, _), filesystem).
+blacklisted_goal_pattern(tmp_file_stream(_, _, _), filesystem).
+blacklisted_goal_pattern(tmp_file_stream(_, _, _, _), filesystem).
+blacklisted_goal_pattern(exists_file(_), filesystem).
+blacklisted_goal_pattern(exists_directory(_), filesystem).
+blacklisted_goal_pattern(access_file(_, _), filesystem).
+blacklisted_goal_pattern(read_link(_, _, _), filesystem).
+
+%  Environment.
+blacklisted_goal_pattern(setenv(_, _), environment).
+blacklisted_goal_pattern(unsetenv(_), environment).
+blacklisted_goal_pattern(getenv(_, _), environment).
+
+%  Network egress / SSRF.
+blacklisted_goal_pattern(http_open(_, _), network).
+blacklisted_goal_pattern(http_open(_, _, _), network).
+blacklisted_goal_pattern(http_get(_, _, _), network).
+blacklisted_goal_pattern(http_post(_, _, _, _), network).
+blacklisted_goal_pattern(tcp_socket(_), network).
+blacklisted_goal_pattern(tcp_connect(_, _), network).
+blacklisted_goal_pattern(tcp_connect(_, _, _), network).
+blacklisted_goal_pattern(tcp_connect(_, _, _, _), network).
+blacklisted_goal_pattern(tcp_bind(_, _), network).
+blacklisted_goal_pattern(tcp_listen(_, _), network).
+blacklisted_goal_pattern(tcp_accept(_, _, _), network).
+blacklisted_goal_pattern(udp_socket(_), network).
+blacklisted_goal_pattern(unix_domain_socket(_), network).
+
+%  Native code / image loading.
+blacklisted_goal_pattern(load_foreign_library(_), foreign_code).
+blacklisted_goal_pattern(load_foreign_library(_, _), foreign_code).
+blacklisted_goal_pattern(use_foreign_library(_), foreign_code).
+blacklisted_goal_pattern(use_foreign_library(_, _), foreign_code).
+blacklisted_goal_pattern(open_shared_object(_, _), foreign_code).
+blacklisted_goal_pattern(open_shared_object(_, _, _), foreign_code).
+blacklisted_goal_pattern(qsave_program(_), foreign_code).
+blacklisted_goal_pattern(qsave_program(_, _), foreign_code).
 
 precheck_dynamic_clause_term(Profile, Module, Clause) :-
     precheck_source_term(Profile, Module, Clause).
@@ -1003,6 +1094,45 @@ sandbox:safe_primitive(actors:flush).
 sandbox:safe_primitive(isolation:listing_private).
 sandbox:safe_primitive(isolation:listing_private(_)).
 sandbox:safe_primitive(actor_api:node_setting(_, _)).
+
+%  Web Prolog distribution API.  rpc/2,3, promise/3,4, and yield/2,3 marshal
+%  the goal to a REMOTE node, which validates and executes it under its own
+%  sandbox; nothing in the supplied goal runs in this process, so these are
+%  safe primitives at the local floor.  (load_* options only read the
+%  caller's own clause text to ship; any URI fetch is the remote node's
+%  concern under its origin policy.)
+%
+%  NOTE: the remaining behaviour-spawn API -- statechart_spawn/server_spawn/
+%  supervisor_spawn/parallel -- is deliberately NOT declared here.  Those
+%  route through spawn/3 (so the runtime hook re-checks what they spawn) and
+%  several carry a client goal/callback (server_spawn's Pred, server_upgrade,
+%  supervisor child start(Goal)) or a URI loader (statechart interpret/1)
+%  that must stay sandbox-checked.  Declaring them safe requires per-predicate
+%  handling (safe_meta listing the goal args + public_runtime_support_goal
+%  exemptions for the internal loops); see the review notes.
+%  rpc/2,3 are meta-predicates (rpc(+URI, :Goal)); declare them safe_meta
+%  with NO checked goal arg -- the goal is shipped as text and runs only on
+%  the remote node, so it must not be analysed against the LOCAL predicate
+%  set here (it names the remote's predicates, not ours).
+sandbox:safe_meta(rpc:rpc(_, _), []).
+sandbox:safe_meta(rpc:rpc(_, _, _), []).
+sandbox:safe_primitive(rpc:promise(_, _, _)).
+sandbox:safe_primitive(rpc:promise(_, _, _, _)).
+sandbox:safe_primitive(rpc:yield(_, _)).
+sandbox:safe_primitive(rpc:yield(_, _, _)).
+
+%  Statechart behaviour entry points.  statechart_spawn/1,2 routes through
+%  spawn/3, so its chart source options are re-validated by the runtime
+%  spawn hook, and the chart's own scripts/conditions are sandbox-checked
+%  at execution time via statechart_runtime:hook_check_chart_goal/1 (the
+%  glue is in node_glue).  The interpreter entry goals it spawns
+%  (interpret/1, interpret_text/1, with_trace/2) are exempted from spawn
+%  re-validation by public_runtime_support_goal/2 below, so they remain
+%  reachable only THROUGH statechart_spawn, never as a direct client goal.
+sandbox:safe_primitive(statechart_actor:statechart_spawn(_)).
+sandbox:safe_primitive(statechart_actor:statechart_spawn(_, _)).
+sandbox:safe_primitive(statechart_actor:statechart_halt(_, _)).
+sandbox:safe_primitive(statechart_actor:statechart_halt(_, _, _)).
 
 sandbox:safe_meta(call_cleanup(Goal, Cleanup), [Goal, Cleanup]).
 sandbox:safe_meta(setup_call_cleanup(Setup, Goal, Cleanup), [Setup, Goal, Cleanup]).

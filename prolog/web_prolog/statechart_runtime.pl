@@ -32,7 +32,8 @@
     raise/1,
     in/1,
     log/1,
-    script/1
+    script/1,
+    check_chart_goal/1
 ]).
 
 /** <module> Statechart Runtime Helpers
@@ -277,9 +278,25 @@ log(Message) :-
     emit_trace(log(Message)),
     debug(statechart_actor(log), '   Output log: ~p', [Message]).
 
+%!  check_chart_goal(+Goal) is det.
+%
+%   Vet a chart-embedded goal -- an <onentry>/<onexit>/<go> script action
+%   or a transition condition -- before it runs.  A no-op unless a higher
+%   layer installs hook_check_chart_goal/1: the node layer does so to
+%   sandbox the goal under the active public execution profile, so an
+%   untrusted client chart (e.g. spawned via statechart_spawn/2 with
+%   load_text/1) cannot execute arbitrary predicates through its scripts.
+%   Throws (rejecting the goal) if a hook does; trusted desktop/test
+%   execution installs no hook and is therefore unchanged.
+:- multifile hook_check_chart_goal/1.
+
+check_chart_goal(Goal) :-
+    forall(hook_check_chart_goal(Goal), true).
+
 script(Goal) :-
     emit_trace(execution(Goal)),
-    (   catch(once(statechart_actor:Goal), Error,
+    (   catch(( check_chart_goal(Goal), once(statechart_actor:Goal) ),
+              Error,
               ( enqueue_internal_event(error(Error)),
                 true
               ))
