@@ -3800,25 +3800,6 @@ fridge2(_Other,      List, error(unknown_request), List).
         pasteAndAskExample(exampleId);
     }
 
-    function scSpawnCalc(exampleId) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.setTerminalExamples === 'function') {
-            bridge.setTerminalExamples([
-                { label: '$Pid ! digit(3).',    query: '$Pid ! digit(3).'    },
-                { label: '$Pid ! oper(plus).',  query: '$Pid ! oper(plus).'  },
-                { label: '$Pid ! digit(4).',    query: '$Pid ! digit(4).'    },
-                { label: '$Pid ! equals.',      query: '$Pid ! equals.'      },
-                { label: '$Pid ! c.',           query: '$Pid ! c.'           },
-                { label: '$Pid ! oper(minus).', query: '$Pid ! oper(minus).' },
-                { label: '$Pid ! oper(star).',  query: '$Pid ! oper(star).'  },
-                { label: '$Pid ! oper(div).',   query: '$Pid ! oper(div).'   },
-                { label: '$Pid ! point.',       query: '$Pid ! point.'       },
-                { label: '$Pid ! ce.',          query: '$Pid ! ce.'          }
-            ]);
-        }
-        pasteAndAskExample(exampleId);
-    }
-
     function scSpawnDialog(exampleId) {
         var bridge = tutorialBridge();
         if (bridge && typeof bridge.setTerminalExamples === 'function') {

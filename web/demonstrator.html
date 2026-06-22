@@ -934,106 +934,6 @@
         opacity: 0.85;
       }
 
-      .calc-widget {
-        display: inline-block;
-        vertical-align: top;
-        font-family: "Nunito", "Varela Round", "Comic Sans MS", "Trebuchet MS", sans-serif;
-        background: linear-gradient(160deg, #ff6ec7 0%, #ff4fa0 100%);
-        border-radius: 22px;
-        padding: 12px 12px 14px;
-        margin: 4px 0 2px;
-        box-shadow:
-          0 6px 0 #c0257a,
-          0 10px 24px rgba(200, 40, 120, 0.35);
-        user-select: none;
-        border: 3px solid #ff9fd8;
-      }
-
-      .calc-display {
-        background: #d4f5c0;
-        color: #1a5c00;
-        font-family: "IBM Plex Mono", "Menlo", monospace;
-        font-size: 22px;
-        line-height: 1;
-        text-align: right;
-        padding: 8px 14px 9px;
-        border-radius: 12px;
-        margin-bottom: 10px;
-        min-width: 18ch;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        border: 3px solid #8edc60;
-        box-shadow: inset 0 2px 6px rgba(0,80,0,0.15);
-        font-weight: 700;
-        letter-spacing: 0.04em;
-      }
-
-      .calc-keys {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 7px;
-      }
-
-      .calc-key {
-        padding: 9px 16px;
-        min-width: 0;
-        font: inherit;
-        font-size: 16px;
-        font-weight: 800;
-        border: none;
-        border-radius: 14px;
-        cursor: pointer;
-        background: #fff176;
-        color: #5d3a00;
-        border-bottom: 4px solid #c8a800;
-        box-shadow: 0 2px 0 #c8a800;
-        transition: transform 80ms, border-bottom-width 80ms, box-shadow 80ms;
-      }
-
-      .calc-key:disabled { opacity: 0.35; cursor: default; }
-      .calc-key:hover:not(:disabled) { filter: brightness(1.06); }
-      .calc-key:active:not(:disabled) {
-        transform: translateY(3px);
-        border-bottom-width: 1px;
-        box-shadow: 0 0 0 #c8a800;
-      }
-
-      .calc-key.calc-op {
-        background: #64d8ff;
-        color: #003a5c;
-        border-bottom: 4px solid #0090c0;
-        box-shadow: 0 2px 0 #0090c0;
-      }
-      .calc-key.calc-op:active:not(:disabled) {
-        border-bottom-width: 1px;
-        box-shadow: 0 0 0 #0090c0;
-      }
-
-      .calc-key.calc-equals {
-        background: #76e87a;
-        color: #003a0a;
-        border-bottom: 4px solid #2aaa30;
-        box-shadow: 0 2px 0 #2aaa30;
-      }
-      .calc-key.calc-equals:active:not(:disabled) {
-        border-bottom-width: 1px;
-        box-shadow: 0 0 0 #2aaa30;
-      }
-
-      .calc-key.calc-soft {
-        background: #ffb3de;
-        color: #6b003a;
-        border-bottom: 4px solid #d0608a;
-        box-shadow: 0 2px 0 #d0608a;
-      }
-      .calc-key.calc-soft:active:not(:disabled) {
-        border-bottom-width: 1px;
-        box-shadow: 0 0 0 #d0608a;
-      }
-
-      .calc-key.calc-zero { grid-column: span 2; }
-
       .terminal-menubar {
         display: flex;
         align-items: center;
@@ -4856,49 +4756,6 @@
         return text;
       }
 
-      function parseCalcDisplay(data) {
-        var s = String(data);
-        var m = s.match(/^display\(([\s\S]*)\)$/);
-        if (!m) { return null; }
-        var v = m[1].trim();
-        if (v.length >= 2 &&
-            ((v.charAt(0) === "'" && v.charAt(v.length - 1) === "'") ||
-             (v.charAt(0) === '"' && v.charAt(v.length - 1) === '"'))) {
-          return v.slice(1, -1).replace(/\\'/g, "'").replace(/\\\\/g, "\\");
-        }
-        return v;
-      }
-
-      function buildCalcWidget(idx, displayValue) {
-        function btn(cls, msg, label) {
-          return '<button class="calc-key' + (cls ? ' ' + cls : '') + '" ' +
-            'onclick="window.__calcSend(' + idx + ',\'' + msg + '\')">' +
-            label + '</button>';
-        }
-        return '<div id="calc-widget-' + idx + '" class="calc-widget">' +
-          '<div class="calc-display" id="calc-display-' + idx + '">' + displayValue + '</div>' +
-          '<div class="calc-keys">' +
-          btn('calc-soft', 'c', 'C') +
-          btn('calc-soft', 'ce', 'CE') +
-          btn('calc-op', 'oper(div)', '/') +
-          btn('calc-op', 'oper(star)', '&times;') +
-          btn('', 'digit(7)', '7') +
-          btn('', 'digit(8)', '8') +
-          btn('', 'digit(9)', '9') +
-          btn('calc-op', 'oper(minus)', '&minus;') +
-          btn('', 'digit(4)', '4') +
-          btn('', 'digit(5)', '5') +
-          btn('', 'digit(6)', '6') +
-          btn('calc-op', 'oper(plus)', '+') +
-          btn('', 'digit(1)', '1') +
-          btn('', 'digit(2)', '2') +
-          btn('', 'digit(3)', '3') +
-          btn('calc-equals', 'equals', '=') +
-          btn('calc-zero', 'digit(0)', '0') +
-          btn('', 'point', '.') +
-          '</div></div>';
-      }
-
       function parseTraceTerm(text) {
         var match = String(text).match(/^([a-z_][A-Za-z0-9_]*)\((.*)\)$/);
         if (!match) {
@@ -7222,7 +7079,6 @@
           },
           haltStatechart: function() {
             if (this.isSwiWasmMode) {
-              window.__calcRemoveAll();
               this.haltSwiWasmStatechart();
               return;
             }
@@ -7230,7 +7086,6 @@
             if (!goal) {
               return;
             }
-            window.__calcRemoveAll();
             this.submitWorkbenchCommand(goal, goal);
           },
           nextTerminalAction: function() {
@@ -8338,7 +8193,6 @@
             if (!this.terminal || !this.canAbortSession) {
               return;
             }
-            window.__calcRemoveAll();
             if (this.isSwiWasmMode && this.swiWasmQueryPending) {
               this.abortSwiWasmQuery(this.terminal);
               this.focusTerminalIfAppropriate();
@@ -10919,7 +10773,7 @@
             this.actorExamples = examples;
             this.statechartExamples = [
               "bare-transition", "emotions", "gcd", "parallel",
-              "calculator", "clock", "closure", "dcg",
+              "clock", "closure", "dcg",
               "simple-dm", "spaghetti", "pause-and-resume",
               "pingpong", "spawn-actor", "spawn-toplevel",
               "boxshop", "game"
@@ -12180,22 +12034,7 @@
             }
             if (event.type === "output") {
               var wsOutputText = renderOutputData(event.data);
-              var wsCalcDisplay = parseCalcDisplay(event.data);
-              if (wsCalcDisplay !== null) {
-                var wsCalcPid = event.pid || this.wsPid;
-                var wsCalcIdx = window.__calcPidToIdx[wsCalcPid];
-                if (wsCalcIdx === undefined) {
-                  wsCalcIdx = window.__calcNextIdx++;
-                  window.__calcWidgets[wsCalcIdx] = wsCalcPid;
-                  window.__calcPidToIdx[wsCalcPid] = wsCalcIdx;
-                  term.echo(buildCalcWidget(wsCalcIdx, wsCalcDisplay), {raw: true});
-                } else {
-                  var wsCalcEl = document.getElementById("calc-display-" + wsCalcIdx);
-                  if (wsCalcEl) { wsCalcEl.textContent = wsCalcDisplay; }
-                }
-              } else {
-                term.echo(this.formatOutputDisplay(event.data, event.kind));
-              }
+              term.echo(this.formatOutputDisplay(event.data, event.kind));
               var wsOutputLogId = this.log(event.kind === "timing" ? "timing" : "info", wsOutputText, "actor");
               this.recordSessionEvent("output", wsOutputText, "actor", event.pid || this.wsPid, wsOutputLogId);
               term.scroll_to_bottom();
@@ -12220,7 +12059,6 @@
               return;
             }
             if (event.type === "success") {
-              window.__calcRemoveAll();
               var wsSuccessEntry = this.recordSessionEvent(
                 "success",
                 this.reportResultRows(Array.isArray(event.data) ? event.data : []).trim(),
@@ -12236,7 +12074,6 @@
               return;
             }
             if (event.type === "failure") {
-              window.__calcRemoveAll();
               var wsFailureEntry = this.recordSessionEvent("failure", "false.", "actor", event.pid || this.wsPid);
               if (wsFailureEntry) {
                 wsFailureEntry.logId = this.finishFailure(term);
@@ -12247,7 +12084,6 @@
               return;
             }
             if (event.type === "timeout") {
-              window.__calcRemoveAll();
               var wsTimeoutEntry = this.recordSessionEvent("error", "Timeout exceeded", "actor", event.pid || this.wsPid);
               if (wsTimeoutEntry) {
                 wsTimeoutEntry.logId = this.finishError(term, "Timeout exceeded");
@@ -12258,7 +12094,6 @@
               return;
             }
             if (event.type === "abort") {
-              window.__calcRemoveAll();
               var wsAbortEntry = this.recordSessionEvent("error", "Computation aborted.", "actor", event.pid || this.wsPid);
               if (wsAbortEntry) {
                 wsAbortEntry.logId = this.finishError(term, "Computation aborted.");
@@ -12270,8 +12105,6 @@
             }
             if (event.type === "down") {
               this.markPidDead(event.pid);
-              window.__calcRemovePid(event.pid);
-              window.__calcRemoveAll();
               if (event.pid === this.wsPid) {
                 var downText = "Toplevel exited: " + (event.reason || "terminated");
                 var downLogId = this.log("down", downText, "actor");
@@ -12292,7 +12125,6 @@
               return;
             }
             if (event.type === "error") {
-              window.__calcRemoveAll();
               var wsErrorText = describeJsonError(event);
               this.recordSessionEvent("error", wsErrorText, "actor", event.pid || this.wsPid);
               if (this.wsSpawnReject) {
@@ -12345,7 +12177,6 @@
             });
           },
           stopPagingWs: function(term) {
-            window.__calcRemoveAll();
             if (this.wsPid !== null) {
               this.wsSend({
                 command: "toplevel_stop",
@@ -12499,31 +12330,6 @@
       });
 
       var vm = app.mount("#app");
-      window.__calcWidgets = {};
-      window.__calcPidToIdx = {};
-      window.__calcNextIdx = 0;
-      window.__calcSend = function(idx, msg) {
-        var pid = window.__calcWidgets[idx];
-        if (pid && vm) { vm.wsSend({ command: "send", pid: pid, message: msg }); }
-      };
-      window.__calcRemovePid = function(pid) {
-        if (pid === undefined || pid === null) { return; }
-        var idx = window.__calcPidToIdx[pid];
-        if (idx === undefined) { return; }
-        var el = document.getElementById("calc-widget-" + idx);
-        if (el) { el.remove(); }
-        delete window.__calcPidToIdx[pid];
-        delete window.__calcWidgets[idx];
-      };
-      window.__calcRemoveAll = function() {
-        Object.keys(window.__calcWidgets).forEach(function(idx) {
-          var el = document.getElementById("calc-widget-" + idx);
-          if (el) { el.remove(); }
-          var pid = window.__calcWidgets[idx];
-          delete window.__calcPidToIdx[pid];
-          delete window.__calcWidgets[idx];
-        });
-      };
     </script>
   </body>
 </html>

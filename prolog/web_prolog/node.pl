@@ -235,7 +235,6 @@ HTTP endpoint layout:
 :- http_handler(root(portal), node_portal_page, []).
 :- http_handler(root(demonstrator), node_portal_page, []).
 :- http_handler(root('discovery-hub'), node_discovery_hub_page, []).
-:- http_handler(root(calculator), node_calculator_page, []).
 :- http_handler(root(tutorial), node_tutorial_page, []).
 :- http_handler(root('swi-wasm-tutorial'), node_swi_wasm_tutorial_page, []).
 :- http_handler(root(manual), node_manual_page, []).
@@ -1261,13 +1260,6 @@ node_discovery_hub_page(Request) :-
     node_discovery_hub_file(File),
     reply_uncached_file(File, Request).
 
-%!  node_calculator_page(+Request) is det.
-%
-%   Serve the calculator demo backed by a spawned statechart actor.
-node_calculator_page(Request) :-
-    node_calculator_file(File),
-    reply_uncached_file(File, Request).
-
 %!  node_tutorial_page(+Request) is det.
 %
 %   Serve the legacy tutorial document used inside the demonstrator tutorial tab.
@@ -1923,14 +1915,6 @@ node_discovery_hub_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
     directory_file_path(Dir, '../../web/discovery-hub.html', File).
-
-%!  node_calculator_file(-File) is det.
-%
-%   Resolve absolute path to `calculator.html` shipped with this module.
-node_calculator_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/calculator.html', File).
 
 %!  node_tutorial_file(-File) is det.
 %
