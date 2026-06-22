@@ -1,0 +1,62 @@
+# AppArmor profile for the web-prolog node container.
+#
+# WHY: defence-in-depth backstop for the in-process sandbox.  The node never
+# legitimately execs another program, so this profile denies ALL program
+# execution.  That closes the one residual RCE channel a static denylist
+# cannot — a goal CONSTRUCTED at runtime and run via call/1, e.g.
+#   ?- C = process_create(path(sh), ['-c', '...'], []), call(C).
+# (see SECURITY-hardening.md).  Everything SWI-Prolog actually needs —
+# reading its libraries, the writable tmpfs and log volume, and outbound
+# network for rpc/load_uri — is allowed.
+#
+# This profile is NOT baked into the image; it is loaded on the HOST kernel.
+#
+#   1. Copy it where AppArmor looks, or load it directly:
+#        sudo cp Deployment/apparmor/web-prolog-node /etc/apparmor.d/
+#        sudo apparmor_parser -r -W /etc/apparmor.d/web-prolog-node
+#
+#   2. ROLL OUT IN COMPLAIN MODE FIRST and watch for unexpected denials:
+#        sudo aa-complain /etc/apparmor.d/web-prolog-node     # log-only
+#        # run the full tutorial/example suite against the node, then:
+#        sudo journalctl -k | grep -i 'apparmor=.*web-prolog-node'
+#      Only switch to enforce once no legitimate operation is denied:
+#        sudo aa-enforce /etc/apparmor.d/web-prolog-node
+#
+#   3. Reference it from each node service in compose (after it is loaded):
+#        security_opt:
+#          - no-new-privileges:true
+#          - apparmor=web-prolog-node
+#      (Adding the line before the profile is loaded makes `docker compose up`
+#      fail with "apparmor profile not found", so load first.)
+
+#include <tunables/global>
+
+profile web-prolog-node flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # SWI-Prolog needs broad file read/write (its boot files and libraries,
+  # /app, the writable tmpfs at /tmp, and the log volume), memory-mapping of
+  # its shared objects (the `m` permission, distinct from execute), POSIX
+  # capabilities it may probe, signals between its own threads, and outbound
+  # network sockets for rpc/2,3 and load_uri.
+  network,
+  capability,
+  signal,
+  mount,
+  umount,
+  file,
+
+  # ...but it must NEVER execute another program.  `deny ... x` removes only
+  # the execute transition (execve), not `m` (executable mmap of .so files),
+  # so the interpreter and its libraries keep working while process_create,
+  # shell/1, and any other exec of a binary are refused by the kernel — even
+  # when the offending goal is built at runtime and never seen by the static
+  # sandbox.
+  deny /** x,
+
+  # Writable scratch and state (already covered by `file,`; listed for
+  # clarity and so a tighter future revision can drop the blanket `file,`).
+  owner /tmp/** rwkl,
+  owner /var/lib/web-prolog/** rwkl,
+  owner /var/log/webprolog/** rwkl,
+}
