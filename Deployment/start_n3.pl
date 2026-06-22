@@ -44,6 +44,14 @@ start_n3 :-
         max_call_requests_per_window(120),
         max_session_spawns_per_window(30),
         max_ws_commands_per_window(400),
+        ws_allowed_origins([
+            'https://n0.elfenbenstornet.se',
+            'https://n1.elfenbenstornet.se',
+            'https://n2.elfenbenstornet.se',
+            'https://n3.elfenbenstornet.se',
+            'https://n4.elfenbenstornet.se',
+            'https://n5.elfenbenstornet.se'
+        ]),
         tutorial_sections([local_actor, toplevels, distributed_actor,
                            behaviours, statecharts]),
         load_uri_allowed_origins([

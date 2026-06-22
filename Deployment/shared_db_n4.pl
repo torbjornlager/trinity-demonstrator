@@ -3,12 +3,9 @@
 % holds only n4-specific predicates: the deployment marker and the human/1
 % facts that n3's distributed proof tree pulls in over rpc/2-3.
 
-deployment_node(n4).
 
 :- dynamic human/1.
 
 human(plato).
 human(aristotle).
 
-% Owner-curated contract, surfaced via /node_info (harvested by a discovery hub).
-provides(human/1).

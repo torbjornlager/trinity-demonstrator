@@ -5099,6 +5099,8 @@
             swiWasmActorServices: {},
             swiWasmActorMonitors: [],
             swiWasmActorDelayedSends: {},
+            swiWasmRemoteActorConnections: {},
+            swiWasmRemoteActorKinds: {},
             swiWasmStatechartLoaded: false,
             swiWasmStatechartLoadError: "",
             swiWasmStatechartActive: false,
@@ -6410,7 +6412,8 @@
             try {
               win = frame.contentWindow;
               doc = frame.contentDocument || win.document;
-              if (!win.location || win.location.pathname !== "/tutorial" || !doc) {
+              var tutorialPath = this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial";
+              if (!win.location || win.location.pathname !== tutorialPath || !doc) {
                 return false;
               }
               if (anchor) {
@@ -6424,7 +6427,7 @@
                 win.scrollTo(0, 0);
               }
               if (win.history && typeof win.history.replaceState === "function") {
-                win.history.replaceState(null, doc.title || "", "/tutorial" + hash);
+                win.history.replaceState(null, doc.title || "", tutorialPath + hash);
               } else if (anchor) {
                 win.location.hash = hash;
               }
@@ -6701,6 +6704,21 @@
           },
           loadTutorialProgramIntoCurrentSession: function(sourceText) {
             var self = this;
+            if (this.isSwiWasmMode) {
+              if (!this.terminal || !this.prologEditor) {
+                return Promise.resolve(false);
+              }
+              this.prologEditor.setValue(sourceText);
+              this.setCurrentExampleSource({
+                kind: "prolog",
+                name: "<tutorial program>",
+                url: null
+              });
+              this.selectDock("terminal");
+              this.terminal.echo("% Tutorial program loaded into the SWI-WASM editor.");
+              this.focusTerminalSoon(true);
+              return Promise.resolve(true);
+            }
             if (!this.prepareTutorialConsultTransport()) {
               return Promise.resolve(false);
             }
@@ -8312,6 +8330,9 @@
             this.setPendingCompletionMessage("Computation aborted.", "error");
             this.recordSessionEvent("session", "Abort requested.", "swi-wasm", "swi-wasm");
             try {
+              if (typeof window.swiAbortRpc === "function") {
+                window.swiAbortRpc();
+              }
               this.swiWasmProlog.abort();
               this.log("transport", "Abort requested.", "swi-wasm", "request");
             } catch (error) {
@@ -8546,6 +8567,41 @@
               }
               catch(e) { console.error("[SWI-RPC] error", e); return null; }
             };
+            // The RPC predicate awaits this promise between pages.  Do not use
+            // the synchronous helper above: it would block the browser and
+            // make Abort ineffective during an unbounded remote enumeration.
+            window.swiRpcGetAsync = function(url) {
+              var controller = new AbortController();
+              window.swiRpcAbortController = controller;
+              var request = fetch(url, {
+                credentials: "same-origin",
+                signal: controller.signal
+              }).then(function(response) {
+                return response.text();
+              }).then(function(text) {
+                // A task boundary, rather than only a promise microtask,
+                // lets click handlers run between rapid same-origin pages.
+                return new Promise(function(resolve) {
+                  setTimeout(function() { resolve(text); }, 25);
+                });
+              });
+              var cancelled = new Promise(function(_, reject) {
+                controller.signal.addEventListener("abort", function() {
+                  reject(new Error("RPC aborted"));
+                }, { once: true });
+              });
+              return Promise.race([request, cancelled]).finally(function() {
+                if (window.swiRpcAbortController === controller) {
+                  window.swiRpcAbortController = null;
+                }
+              });
+            };
+            window.swiAbortRpc = function() {
+              if (window.swiRpcAbortController) {
+                window.swiRpcAbortController.abort();
+                window.swiRpcAbortController = null;
+              }
+            };
             window._swi_rpc_get = function(url) {
               var xhr = new XMLHttpRequest();
               xhr.open("GET", url, false);
@@ -8611,7 +8667,15 @@
               SWIPL({
                 arguments: ["-q", "--nosignals"],
                 on_output: function(text, stream) {
-                  self.swiWasmOutputBuffer += text;
+                  // Long-running queries and statecharts stream output while
+                  // their runner is active.  Appending it to a buffer first
+                  // lets a fast remote paging loop reach a rate-limit error
+                  // before a timer has a chance to repaint it.
+                  if (self._swiWasmOutputTimer && self.terminal) {
+                    self.terminal.echo(String(text).replace(/\n$/, ""));
+                  } else {
+                    self.swiWasmOutputBuffer += text;
+                  }
                 }
               }).then(function(Module) {
                 var Prolog = Module.prolog;
@@ -8662,6 +8726,11 @@
                 try { Prolog.query("use_module(library(lists))").once(); } catch(e) {}
                 try { Prolog.query("use_module(library(apply))").once(); } catch(e) {}
                 try { Prolog.query("use_module(library(option))").once(); } catch(e) {}
+                // `limit/2` puts a hard ceiling on terminal enumeration.
+                // Without it, a query such as rpc(..., phrase(s(_), S),
+                // [limit(10)]) has infinitely many answers and repeatedly
+                // fetches remote pages until the remote rate limit intervenes.
+                try { Prolog.query("use_module(library(solution_sequences))").once(); } catch(e) {}
                 var _sgmlOk = false;
                 try { _sgmlOk = !!Prolog.query("use_module(library(sgml))").once(); } catch(e) {}
                 console.log("[SWI-INIT] library(sgml) available:", _sgmlOk);
@@ -8717,7 +8786,22 @@
               return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText, nameText);
             };
             window.swiWasmActorSend = function(pidText, messageText) {
-              return self.sendSwiWasmActorMessage(pidText, messageText);
+              return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, "main"));
+            };
+            window.swiWasmActorRemoteSpawn = function(nodeText, goalText, sourceText) {
+              return self.spawnSwiWasmRemoteActor(nodeText, goalText, sourceText);
+            };
+            window.swiWasmLoadUriSource = function(uriText) {
+              return self.loadSwiWasmUriSource(uriText);
+            };
+            window.swiWasmRemoteToplevelSpawn = function(nodeText, sourceText, sessionText) {
+              return self.spawnSwiWasmRemoteToplevel(nodeText, sourceText, sessionText);
+            };
+            window.swiWasmRemoteToplevelCall = function(pidText, goalText, templateText, limit, offset, once) {
+              return self.callSwiWasmRemoteToplevel(pidText, goalText, templateText, limit, offset, once);
+            };
+            window.swiWasmRemoteToplevelNext = function(pidText, limit) {
+              return self.nextSwiWasmRemoteToplevel(pidText, limit);
             };
             window.swiWasmActorSendDelayed = function(pidText, messageText, delaySeconds, idText) {
               return self.sendSwiWasmActorMessageDelayed(pidText, messageText, delaySeconds, idText);
@@ -8744,13 +8828,13 @@
               return self.whereisSwiWasmActorName(kind, nameText);
             };
             window.swiWasmActorMonitor = function(pidText, refText) {
-              return self.monitorSwiWasmActor("main", pidText, refText);
+              return Promise.resolve(self.monitorSwiWasmActor("main", pidText, refText));
             };
             window.swiWasmActorDemonitor = function(refText) {
-              return self.demonitorSwiWasmActor("main", refText);
+              return Promise.resolve(self.demonitorSwiWasmActor("main", refText));
             };
             window.swiWasmActorExit = function(pidText, reasonText) {
-              return self.exitSwiWasmActor(pidText, reasonText);
+              return Promise.resolve(self.exitSwiWasmActor(pidText, reasonText));
             };
             window.swiWasmActorAbort = function(pidText) {
               return self.abortSwiWasmActor(pidText);
@@ -8784,7 +8868,7 @@
             if (this.swiWasmActorWorkers[pid]) {
               throw new Error("worker actor already exists: " + pid);
             }
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260620-server-supervisor-registration";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260621-standard-remote-pids";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -8815,6 +8899,279 @@
             });
             this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
             return pid;
+          },
+          swiWasmRemoteNodeUrl: function(nodeText) {
+            var node = String(nodeText || "");
+            var quoted = /^'([\s\S]*)'$/.exec(node);
+            return quoted ? quoted[1].replace(/''/g, "'") : node;
+          },
+          loadSwiWasmUriSource: function(uriText) {
+            var uri = this.swiWasmRemoteNodeUrl(uriText);
+            var url = new URL(uri, window.location.origin);
+            var allowedOrigins = [
+              "https://n0.elfenbenstornet.se", "https://n1.elfenbenstornet.se",
+              "https://n2.elfenbenstornet.se", "https://n3.elfenbenstornet.se",
+              "https://n4.elfenbenstornet.se", "https://n5.elfenbenstornet.se"
+            ];
+            if (allowedOrigins.indexOf(url.origin) < 0) {
+              return Promise.reject(new Error("load_uri origin is not allowed in SWI-WASM: " + url.origin));
+            }
+            return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
+              if (!response.ok) throw new Error("load_uri failed: HTTP " + response.status);
+              return response.text();
+            });
+          },
+          swiWasmRemoteWsUrl: function(nodeText) {
+            var url = new URL(this.swiWasmRemoteNodeUrl(nodeText));
+            url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+            url.pathname = "/ws";
+            url.search = "";
+            url.hash = "";
+            return url.href;
+          },
+          parseSwiWasmRemoteActorPid: function(pidText) {
+            var match = /^remote_actor\((\d+),\s*'([^']+)'\)$/.exec(String(pidText || ""));
+            if (!match) match = /^(\d+)\s*@\s*'([^']+)'$/.exec(String(pidText || ""));
+            if (!match) return null;
+            return { pid: match[1], node: match[2] };
+          },
+          parseSwiWasmRemoteToplevelPid: function(pidText) {
+            var match = /^(\d+)\s*@\s*'([^']+)'$/.exec(String(pidText || ""));
+            if (!match) {
+              // Accept pids returned by the initial experimental bridge so
+              // existing terminal bindings remain usable after an upgrade.
+              match = /^remote_toplevel\((\d+),\s*'([^']+)'\)$/.exec(String(pidText || ""));
+            }
+            if (!match) return null;
+            return { pid: match[1], node: match[2] };
+          },
+          ensureSwiWasmRemoteActorConnection: function(nodeText) {
+            var self = this;
+            var node = this.swiWasmRemoteNodeUrl(nodeText);
+            var existing = this.swiWasmRemoteActorConnections[node];
+            if (existing && existing.socket && existing.socket.readyState === WebSocket.OPEN) {
+              return Promise.resolve(existing);
+            }
+            if (existing && existing.connecting) {
+              return existing.connecting;
+            }
+            var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelLimits: {} };
+            this.swiWasmRemoteActorConnections[node] = entry;
+            entry.connecting = new Promise(function(resolve, reject) {
+              var socket;
+              try {
+                socket = new WebSocket(self.swiWasmRemoteWsUrl(node));
+              } catch (error) {
+                reject(error);
+                return;
+              }
+              entry.socket = socket;
+              socket.onopen = function() {
+                delete entry.connecting;
+                entry.protocol = null;
+                socket.send(JSON.stringify({
+                  command: "transport_hello",
+                  protocol: "web_prolog_browser_actor",
+                  version: 1
+                }));
+                self.log("transport", "SWI-WASM connected to remote actor node " + node + ".", "swi-wasm");
+                resolve(entry);
+              };
+              socket.onmessage = function(event) {
+                var message;
+                try { message = JSON.parse(event.data); } catch (_) { return; }
+                if (message.type === "transport_welcome") {
+                  if (message.protocol !== "web_prolog_browser_actor" || message.version !== 1) {
+                    self.log("error", "Unsupported browser actor transport from " + node + ".", "swi-wasm");
+                    socket.close();
+                    return;
+                  }
+                  entry.protocol = message.version;
+                  return;
+                }
+                if (message.type === "spawned") {
+                  var waiter = entry.pendingSpawns.shift();
+                  if (waiter) {
+                    var remotePid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
+                    self.swiWasmRemoteActorKinds[remotePid] = waiter.kind;
+                    waiter.resolve(remotePid);
+                  }
+                  return;
+                }
+                if (message.type === "success" || message.type === "failure" || message.type === "timeout") {
+                  var remotePid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
+                  var remoteMessage;
+                  if (message.type === "success") {
+                    var values = (Array.isArray(message.data) ? message.data : []).map(function(value) {
+                      // /ws serializes named template bindings as objects,
+                      // e.g. {Who:"plato"}; receive/1 expects their Prolog
+                      // values, not JavaScript's "[object Object]" string.
+                      if (value && typeof value === "object") {
+                        var template = entry.toplevelTemplates[String(message.pid)];
+                        if (template) {
+                          Object.keys(value).forEach(function(key) {
+                            var escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                            template = template.replace(new RegExp("\\b" + escaped + "\\b", "g"), String(value[key]));
+                          });
+                          return template;
+                        }
+                        var bound = Object.keys(value).map(function(key) { return String(value[key]); });
+                        return bound.length === 1 ? bound[0] : "[" + bound.join(",") + "]";
+                      }
+                      return String(value);
+                    });
+                    remoteMessage = "success(" + remotePid + ",[" + values.join(",") + "]," + (message.more === true ? "true" : "false") + ")";
+                  } else if (message.type === "failure") {
+                    remoteMessage = "failure(" + remotePid + ")";
+                  } else {
+                    remoteMessage = "timeout(" + remotePid + ")";
+                  }
+                  self.deliverSwiWasmMainActorMessage(remoteMessage);
+                  return;
+                }
+                if (message.type === "down") {
+                  var refText = String(message.ref || "");
+                  var reasonText = String(message.reason || "true");
+                  var normalizedRef = refText.replace(/'/g, "");
+                  var monitor = self.swiWasmActorMonitors.filter(function(item) {
+                    var remote = self.parseSwiWasmRemoteToplevelPid(item.pid) || self.parseSwiWasmRemoteActorPid(item.pid);
+                    return item.ref === refText ||
+                      item.ref.replace(/'/g, "") === normalizedRef ||
+                      (remote && String(remote.pid) === String(message.pid));
+                  })[0];
+                  if (monitor) {
+                    self.swiWasmActorMonitors = self.swiWasmActorMonitors.filter(function(item) { return item !== monitor; });
+                    self.deliverSwiWasmActorDown(monitor.watcher, monitor.ref, monitor.pid, reasonText);
+                  }
+                  return;
+                }
+                if (message.type === "actor_message") {
+                  self.sendSwiWasmActorMessage(message.target, message.message, "remote");
+                  return;
+                }
+                if (message.type === "error") {
+                  var pending = entry.pendingSpawns.shift();
+                  if (pending) pending.reject(new Error(String(message.data || "remote actor error")));
+                  if (!pending && message.pid !== undefined) {
+                    var errorPid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
+                    var errorText = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
+                    self.deliverSwiWasmMainActorMessage("error(" + errorPid + ",remote_error('" + errorText + "'))");
+                  } else if (!pending) {
+                    var generalError = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
+                    self.deliverSwiWasmMainActorMessage("error(remote_toplevel,remote_error('" + generalError + "'))");
+                  }
+                  self.log("error", "Remote actor node " + node + ": " + String(message.data || "error"), "swi-wasm");
+                  return;
+                }
+                if (message.type === "output" && message.data && self.terminal) {
+                  self.terminal.echo(String(message.data));
+                }
+              };
+              socket.onclose = function() {
+                var error = new Error("remote actor connection closed: " + node);
+                while (entry.pendingSpawns.length) entry.pendingSpawns.shift().reject(error);
+                var lostReason = "connection_lost('" + node.replace(/'/g, "''") + "')";
+                var lostMonitors = self.swiWasmActorMonitors.filter(function(monitor) {
+                  var remote = self.parseSwiWasmRemoteToplevelPid(monitor.pid) || self.parseSwiWasmRemoteActorPid(monitor.pid);
+                  return remote && remote.node === node;
+                });
+                self.swiWasmActorMonitors = self.swiWasmActorMonitors.filter(function(monitor) {
+                  var remote = self.parseSwiWasmRemoteToplevelPid(monitor.pid) || self.parseSwiWasmRemoteActorPid(monitor.pid);
+                  return !remote || remote.node !== node;
+                });
+                lostMonitors.forEach(function(monitor) {
+                  self.deliverSwiWasmActorDown(monitor.watcher, monitor.ref, monitor.pid, lostReason);
+                });
+                delete self.swiWasmRemoteActorConnections[node];
+              };
+              socket.onerror = function() {
+                if (socket.readyState !== WebSocket.OPEN) {
+                  reject(new Error("unable to connect to remote actor node " + node));
+                }
+              };
+            });
+            return entry.connecting;
+          },
+          spawnSwiWasmRemoteActor: function(nodeText, goalText, sourceText) {
+            var self = this;
+            var node = this.swiWasmRemoteNodeUrl(nodeText);
+            // Remote ACTOR nodes execute their advertised predicates.  Do not
+            // implicitly upload the browser editor: that would both surprise
+            // users and turn an ordinary remote spawn into a source-loading
+            // request subject to the public-node sandbox policy.
+            var source = String(sourceText || "");
+            var options = source
+              ? "[load_text('" + source.replace(/\\/g, "\\\\").replace(/'/g, "''") + "')]"
+              : "[]";
+            return this.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
+              return new Promise(function(resolve, reject) {
+                entry.pendingSpawns.push({ kind: "actor", resolve: resolve, reject: reject });
+                try {
+                  entry.socket.send(JSON.stringify({
+                    command: "spawn",
+                    goal: String(goalText || "true"),
+                    options: options
+                  }));
+                } catch (error) {
+                  entry.pendingSpawns.pop();
+                  reject(error);
+                }
+              });
+            });
+          },
+          spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText) {
+            var node = this.swiWasmRemoteNodeUrl(nodeText);
+            var source = String(sourceText || "");
+            var session = String(sessionText || "false") === "true";
+            return this.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
+              return new Promise(function(resolve, reject) {
+                entry.pendingSpawns.push({ kind: "toplevel", resolve: resolve, reject: reject });
+                try {
+                  entry.socket.send(JSON.stringify({
+                    command: "toplevel_spawn",
+                    load_text: source,
+                    options: session ? "[session(true)]" : "[]"
+                  }));
+                } catch (error) {
+                  entry.pendingSpawns.pop();
+                  reject(error);
+                }
+              });
+            });
+          },
+          callSwiWasmRemoteToplevel: function(pidText, goalText, templateText, limit, offset, once) {
+            var remote = this.parseSwiWasmRemoteToplevelPid(pidText);
+            if (!remote) return Promise.resolve(false);
+            return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+              entry.toplevelTemplates[String(remote.pid)] = String(templateText || goalText || "true");
+              entry.toplevelLimits[String(remote.pid)] = Number(limit || 10000000000);
+              entry.socket.send(JSON.stringify({
+                command: "toplevel_call",
+                pid: remote.pid,
+                goal: String(goalText || "true"),
+                template: String(templateText || goalText || "true"),
+                limit: Number(limit || 10000000000),
+                offset: Number(offset || 0),
+                once: once === true ? "true" : "false"
+              }));
+              return true;
+            });
+          },
+          nextSwiWasmRemoteToplevel: function(pidText, limitText) {
+            var remote = this.parseSwiWasmRemoteToplevelPid(pidText);
+            if (!remote) return Promise.resolve(false);
+            return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+              var requestedLimit = String(limitText || "default");
+              var limit = requestedLimit === "default"
+                ? (entry.toplevelLimits[String(remote.pid)] || 10000000000)
+                : Number(requestedLimit);
+              entry.socket.send(JSON.stringify({
+                command: "toplevel_next",
+                pid: remote.pid,
+                limit: limit
+              }));
+              return true;
+            });
           },
           handleSwiWasmWorkerActorMessage: function(pid, event) {
             var entry = this.swiWasmActorWorkers[pid];
@@ -8929,7 +9286,7 @@
                 result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "", message.name || "");
                 break;
               case "send":
-                result = this.sendSwiWasmActorMessage(message.to, message.message);
+                result = this.sendSwiWasmActorMessage(message.to, message.message, message.from || pid);
                 break;
               case "send_delayed":
                 result = this.sendSwiWasmActorMessageDelayed(message.to, message.message, message.delay, message.id);
@@ -8973,15 +9330,28 @@
               error = requestError && requestError.message ? requestError.message : String(requestError);
               this.log("error", pid + " request " + String(message.action || "") + " failed: " + error, "swi-wasm");
             }
-            if (entry && entry.worker) {
-              entry.worker.postMessage({
-                command: "reply",
-                id: message.id,
-                ok: ok,
-                result: result,
-                error: error
-              });
+            var reply = function(replyOk, replyResult, replyError) {
+              if (entry && entry.worker) {
+                entry.worker.postMessage({
+                  command: "reply",
+                  id: message.id,
+                  ok: replyOk,
+                  result: replyResult,
+                  error: replyError || ""
+                });
+              }
+            };
+            if (ok && result && typeof result.then === "function") {
+              result.then(function(value) {
+                reply(true, value, "");
+              }, function(requestError) {
+                var requestMessage = requestError && requestError.message ? requestError.message : String(requestError);
+                this.log("error", pid + " request " + String(message.action || "") + " failed: " + requestMessage, "swi-wasm");
+                reply(false, null, requestMessage);
+              }.bind(this));
+              return;
             }
+            reply(ok, result, error);
           },
           routeSwiWasmActorMessage: function(fromPid, toText, messageText) {
             var to = String(toText || "");
@@ -9016,8 +9386,20 @@
             }.bind(this));
             return "[" + pids.join(",") + "]";
           },
-          sendSwiWasmActorMessage: function(pidText, messageText) {
+          sendSwiWasmActorMessage: function(pidText, messageText, fromPid) {
             var pid = this.resolveSwiWasmActorTarget(pidText);
+            var remote = this.parseSwiWasmRemoteActorPid(pid);
+            if (remote) {
+              return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+                entry.socket.send(JSON.stringify({
+                  command: "send",
+                  pid: remote.pid,
+                  message: String(messageText || "true"),
+                  browser_from: String(fromPid || "main")
+                }));
+                return true;
+              });
+            }
             var entry = this.swiWasmActorWorkers[pid];
             if (pid === "main") {
               this.deliverSwiWasmMainActorMessage(String(messageText || "true"));
@@ -9108,6 +9490,9 @@
             if (pid === "main") {
               return true;
             }
+            if (this.parseSwiWasmRemoteToplevelPid(pid) || this.parseSwiWasmRemoteActorPid(pid)) {
+              return true;
+            }
             var entry = this.swiWasmActorWorkers[pid];
             return !!(entry && entry.worker && !entry.done);
           },
@@ -9117,6 +9502,14 @@
             var ref = String(refText || "");
             if (!ref || !this.swiWasmActorPidLive(watcher)) {
               return false;
+            }
+            var remote = this.parseSwiWasmRemoteToplevelPid(pid) || this.parseSwiWasmRemoteActorPid(pid);
+            if (remote) {
+              this.swiWasmActorMonitors.push({ watcher: watcher, pid: pid, ref: ref });
+              return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+                entry.socket.send(JSON.stringify({ command: "monitor", pid: remote.pid, ref: ref }));
+                return true;
+              });
             }
             this.swiWasmActorMonitors.push({ watcher: watcher, pid: pid, ref: ref });
             if (!this.swiWasmActorPidLive(pid)) {
@@ -9128,14 +9521,20 @@
             var watcher = this.resolveSwiWasmActorTarget(watcherText);
             var ref = String(refText || "");
             var removed = false;
+            var remoteMonitor = null;
             this.swiWasmActorMonitors = this.swiWasmActorMonitors.filter(function(monitor) {
               var keep = !(monitor.watcher === watcher && monitor.ref === ref);
               if (!keep) {
                 removed = true;
+                remoteMonitor = this.parseSwiWasmRemoteToplevelPid(monitor.pid) || this.parseSwiWasmRemoteActorPid(monitor.pid);
               }
               return keep;
+            }.bind(this));
+            if (!remoteMonitor) return Promise.resolve(removed);
+            return this.ensureSwiWasmRemoteActorConnection(remoteMonitor.node).then(function(entry) {
+              entry.socket.send(JSON.stringify({ command: "demonitor", ref: ref }));
+              return true;
             });
-            return removed;
           },
           notifySwiWasmActorMonitors: function(pidText, reasonText) {
             var pid = String(pidText || "");
@@ -9169,6 +9568,19 @@
             var reason = String(reasonText || "true");
             if (pid === "main") {
               return false;
+            }
+            var remoteToplevel = this.parseSwiWasmRemoteToplevelPid(pid);
+            var remoteActor = this.parseSwiWasmRemoteActorPid(pid);
+            if (remoteToplevel || remoteActor) {
+              var remote = remoteToplevel || remoteActor;
+              return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+                entry.socket.send(JSON.stringify({
+                  command: "exit",
+                  pid: remote.pid,
+                  reason: reason
+                }));
+                return true;
+              });
             }
             var entry = this.swiWasmActorWorkers[pid];
             if (!entry || !entry.worker || entry.done) {
@@ -9251,6 +9663,7 @@
             this.swiWasmActorDelayedSends = {};
             this.swiWasmActorNames = {};
             this.swiWasmActorServices = {};
+            this.swiWasmRemoteActorKinds = {};
             this.swiWasmActorMonitors = [];
             this.swiWasmActorMainWaiters.splice(0).forEach(function(waiter) {
               if (waiter.timer !== null) {
@@ -9382,6 +9795,7 @@
               "% Experimental browser-only worker actor bridge.",
               ":- module(swi_wasm_actor_bridge, [",
               "    op(800, xfx, !),",
+              "    op(200, xfx, @),",
               "    op(1000, xfy, if),",
               "    self/1,",
               "    spawn/1, spawn/2, spawn/3, spawn_worker_actor/2,",
@@ -9410,6 +9824,7 @@
               "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
               "]).",
               ":- op(800, xfx, !).",
+              ":- op(200, xfx, @).",
               ":- op(1000, xfy, if).",
               ":- op(990, xfx, :=).",
               ":- op(100, fx, #).",
@@ -9425,36 +9840,39 @@
               "",
               "spawn(Goal, Pid, Options) :-",
               "    option(node(Node), Options, localhost),",
-              "    (   Node == localhost",
-              "    ->  true",
-              "    ;   throw(error(existence_error(actor_node, Node), spawn/3))",
-              "    ),",
               "    collect_spawn_source(Options, ExtraSource),",
-              "    PidText := swiWasmActorReservePid(),",
-              "    term_string(Pid, PidText),",
               "    term_string(Goal, GoalText),",
-              "    ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
-              "    SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
-              "    (   SpawnedText = null",
-              "    ->  throw(error(resource_error(swi_wasm_worker_actor), spawn/3))",
-              "    ;   SpawnedText == PidText",
+              "    (   Node == localhost",
+              "    ->  PidText := swiWasmActorReservePid(),",
+              "        term_string(Pid, PidText),",
+              "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
+              "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
+              "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), spawn/3)) ; SpawnedText == PidText )",
+              "    ;   term_string(Node, NodeText),",
+              "        Promise := swiWasmActorRemoteSpawn(#NodeText, #GoalText, #ExtraSource),",
+              "        await(Promise, RemotePidText),",
+              "        term_string(Pid, RemotePidText)",
               "    ),",
               "    install_spawn_monitor(Pid, Options).",
               "",
               "spawn_worker_actor(Goal, Pid) :- spawn(Goal, Pid).",
               "",
               "collect_spawn_source(Options, Source) :-",
-              "    findall(Text, spawn_source_option(Options, Text), Texts),",
+              "    spawn_source_texts(Options, Texts),",
               "    atomic_list_concat(Texts, '\\n', Source).",
               "",
-              "spawn_source_option(Options, Text) :-",
-              "    member(load_text(Text), Options).",
-              "spawn_source_option(Options, Text) :-",
-              "    member(load_list(Terms), Options),",
+              "spawn_source_texts([], []).",
+              "spawn_source_texts([Option|Options], Texts) :-",
+              "    spawn_source_option(Option, Text), !,",
+              "    spawn_source_texts(Options, Rest),",
+              "    Texts = [Text|Rest].",
+              "spawn_source_texts([_|Options], Texts) :- spawn_source_texts(Options, Texts).",
+              "",
+              "spawn_source_option(load_text(Text), Text).",
+              "spawn_source_option(load_list(Terms), Text) :-",
               "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
               "    atomic_list_concat(ClauseTexts, '\\n', Text).",
-              "spawn_source_option(Options, Text) :-",
-              "    member(load_predicates(Indicators), Options),",
+              "spawn_source_option(load_predicates(Indicators), Text) :-",
               "    findall(ClauseText,",
               "            ( member(Name/Arity, Indicators),",
               "              functor(Head, Name, Arity),",
@@ -9464,6 +9882,10 @@
               "            ),",
               "            ClauseTexts),",
               "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+              "spawn_source_option(load_uri(URI), Text) :-",
+              "    term_string(URI, URIText),",
+              "    Promise := swiWasmLoadUriSource(#URIText),",
+              "    await(Promise, Text).",
               "",
               "clause_source_text(Clause, Text) :-",
               "    copy_term(Clause, Copy),",
@@ -9475,7 +9897,8 @@
               "    option(monitor(true), Options, false),",
               "    !,",
               "    term_string(Pid, PidText),",
-              "    _ := swiWasmActorMonitor(#PidText, #PidText).",
+              "    Promise := swiWasmActorMonitor(#PidText, #PidText),",
+              "    await(Promise, true).",
               "install_spawn_monitor(_, _).",
               "",
               "actors(Pids) :-",
@@ -9526,7 +9949,8 @@
               "send_worker_actor(Pid, Message) :-",
               "    term_string(Pid, PidText),",
               "    term_string(Message, MessageText),",
-              "    Sent := swiWasmActorSend(#PidText, #MessageText),",
+              "    Promise := swiWasmActorSend(#PidText, #MessageText),",
+              "    await(Promise, Sent),",
               "    (   Sent == true",
               "    ->  true",
               "    ;   throw(error(existence_error(actor, Pid), send/2))",
@@ -9536,14 +9960,16 @@
               "    make_ref(Ref),",
               "    term_string(Pid, PidText),",
               "    term_string(Ref, RefText),",
-              "    Monitored := swiWasmActorMonitor(#PidText, #RefText),",
+              "    Promise := swiWasmActorMonitor(#PidText, #RefText),",
+              "    await(Promise, Monitored),",
               "    Monitored == true.",
               "",
               "demonitor(Ref) :- demonitor(Ref, []).",
               "",
               "demonitor(Ref, Options) :-",
               "    term_string(Ref, RefText),",
-              "    _ := swiWasmActorDemonitor(#RefText),",
+              "    Promise := swiWasmActorDemonitor(#RefText),",
+              "    await(Promise, _),",
               "    (   member(flush, Options)",
               "    ->  flush_down(Ref)",
               "    ;   true",
@@ -9559,7 +9985,8 @@
               "exit(Pid, Reason) :-",
               "    term_string(Pid, PidText),",
               "    term_string(Reason, ReasonText),",
-              "    Exited := swiWasmActorExit(#PidText, #ReasonText),",
+              "    Promise := swiWasmActorExit(#PidText, #ReasonText),",
+              "    await(Promise, Exited),",
               "    Exited == true.",
               "",
               "register(Name, Pid) :- register_name(actor, Name, Pid).",
@@ -9597,17 +10024,23 @@
               "toplevel_spawn(Pid) :- toplevel_spawn(Pid, []).",
               "",
               "toplevel_spawn(Pid, Options) :-",
-              "    self(Self),",
-              "    option(session(Session), Options, false),",
-              "    option(target(Target), Options, Self),",
               "    collect_spawn_source(Options, ExtraSource),",
-              "    PidText := swiWasmActorReservePid(),",
-              "    term_string(Pid, PidText),",
-              "    term_string(ptcp(Pid, Target, Session), GoalText),",
-              "    SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
-              "    (   SpawnedText = null",
-              "    ->  throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2))",
-              "    ;   SpawnedText == PidText",
+              "    option(node(Node), Options, localhost),",
+              "    (   Node == localhost",
+              "    ->  self(Self),",
+              "        option(session(Session), Options, false),",
+              "        option(target(Target), Options, Self),",
+              "        PidText := swiWasmActorReservePid(),",
+              "        term_string(Pid, PidText),",
+              "        term_string(ptcp(Pid, Target, Session), GoalText),",
+              "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+              "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; SpawnedText == PidText )",
+              "    ;   term_string(Node, NodeText),",
+              "        option(session(Session), Options, false),",
+              "        term_string(Session, SessionText),",
+              "        Promise := swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText),",
+              "        await(Promise, RemotePidText),",
+              "        term_string(Pid, RemotePidText)",
               "    ),",
               "    install_spawn_monitor(Pid, Options),",
               "    maybe_register_toplevel_name(Options, Pid).",
@@ -9702,10 +10135,31 @@
               "add_pid(error(Term), Pid, error(Pid, Term)).",
               "",
               "toplevel_call(Pid, Goal) :- toplevel_call(Pid, Goal, []).",
-              "toplevel_call(Pid, Goal, Options) :- send(Pid, '$call'(Goal, Options)).",
+              "toplevel_call(Pid, Goal, Options) :-",
+              "    term_string(Pid, PidText),",
+              "    (   remote_toplevel_pid_text(PidText)",
+              "    ->  term_string(Goal, GoalText),",
+              "        option(template(Template0), Options, Goal),",
+              "        strip_module(Template0, _, Template), term_string(Template, TemplateText),",
+              "        option(limit(Limit), Options, 10000000000), option(offset(Offset), Options, 0), option(once(Once), Options, false),",
+              "        Promise := swiWasmRemoteToplevelCall(#PidText, #GoalText, #TemplateText, #Limit, #Offset, #Once),",
+              "        await(Promise, true)",
+              "    ;   send(Pid, '$call'(Goal, Options))",
+              "    ).",
+              "remote_toplevel_pid_text(Text) :-",
+              "    ( sub_string(Text, 0, _, _, \"remote_toplevel(\")",
+              "    ; sub_string(Text, _, _, _, \"@'\")",
+              "    ).",
               "",
               "toplevel_next(Pid) :- toplevel_next(Pid, []).",
-              "toplevel_next(Pid, Options) :- send(Pid, '$next'(Options)).",
+              "toplevel_next(Pid, Options) :-",
+              "    term_string(Pid, PidText),",
+              "    (   remote_toplevel_pid_text(PidText)",
+              "    ->  ( option(limit(Limit), Options) -> term_string(Limit, LimitText) ; LimitText = \"default\" ),",
+              "        Promise := swiWasmRemoteToplevelNext(#PidText, #LimitText),",
+              "        await(Promise, true)",
+              "    ;   send(Pid, '$next'(Options))",
+              "    ).",
               "",
               "toplevel_halt(Pid, Reply) :-",
               "    self(Self),",
@@ -9885,7 +10339,8 @@
               "",
               "web_rpc_page(Template, Offset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts) :-",
               "    web_rpc_call_url(BaseRPCURL, GoalAtom, TplAtom, Offset, Lim, Parts, FinalURL),",
-              "    Resp := swiRpcGet(#FinalURL),",
+              "    Promise := swiRpcGetAsync(#FinalURL),",
+              "    await(Promise, Resp),",
               "    (Resp = null -> throw(rpc_error(fetch_failed)) ; true),",
               "    (   catch(term_string(Response, Resp), _, catch(term_to_atom(Response, Resp), _, fail))",
               "    ->  true",
@@ -10429,6 +10884,10 @@
                 if (!bridgeImported) {
                   throw new Error("Unable to import the SWI-WASM actor bridge.");
                 }
+                // Operators declared inside the bridge module are not
+                // automatically visible while the terminal renders answers
+                // in user.  Match the node-side distributed-pid notation.
+                Prolog.query("user:op(200, xfx, @)").once();
                 Prolog.query("retractall(swi_wasm_actor_bridge:deferred(_))").once();
                 Module.FS.writeFile("/user_code.pl", codeToLoad);
                 self.swiWasmOutputBuffer = "";
@@ -10441,11 +10900,22 @@
             }
             var loadPromise = loadErr ? Promise.reject(loadErr) : Promise.resolve();
             loadPromise.then(function() {
+              // A query may deliberately produce output while having no final
+              // solutions (e.g., `Goal, writeln(X), fail`).  Stream it while
+              // Prolog is running so it behaves like a node terminal and is
+              // still visible if the user aborts the computation.
+              self.startSwiWasmOutputStreaming();
               var LIMIT = 100;
               var solutions = [];
               var answerCount = 0;
               self.swiWasmOutputBuffer = "";
-              return Prolog.forEach(goal, {}, function(answer) {
+              // The terminal retains at most LIMIT answers plus one sentinel
+              // answer used to report that more exist.  Bound Prolog itself,
+              // not just the JavaScript result array: rpc/3 fetches subsequent
+              // remote pages when Prolog backtracks, so merely discarding later
+              // answers here still causes unbounded HTTP traffic.
+              var boundedGoal = "limit(" + (LIMIT + 1) + ", (" + goal + "))";
+              return Prolog.forEach(boundedGoal, {}, function(answer) {
                 var output = self.swiWasmOutputBuffer;
                 self.swiWasmOutputBuffer = "";
                 if (answerCount < LIMIT) {
@@ -10454,10 +10924,13 @@
                   self.swiWasmHasMore = true;
                 }
                 answerCount += 1;
-              }, { heartbeat: 10000 }).then(function() {
+              // Yield regularly so the browser can repaint streamed output
+              // and process the Stop control during an unbounded search.
+              }, { heartbeat: 1 }).then(function() {
                 var trailingOutput = self.swiWasmOutputBuffer;
                 self.swiWasmOutputBuffer = "";
                 self.swiWasmQueryPending = false;
+                self.stopSwiWasmOutputStreaming();
                 if (self.swiWasmQueryAbortRequested) {
                   self.swiWasmQueryAbortRequested = false;
                   self.finishError(term, "Computation aborted.");
@@ -10477,8 +10950,17 @@
               });
             }).catch(function(err) {
               var message = String(err);
+              // Prolog writes are observable even when the enclosing goal
+              // subsequently throws or fails.  Preserve buffered output
+              // before reporting the error (e.g., rpc(...), writeln(X), fail
+              // may print several values before a remote rate-limit error).
+              var errorOutput = self.swiWasmOutputBuffer;
               self.swiWasmQueryPending = false;
               self.swiWasmOutputBuffer = "";
+              self.stopSwiWasmOutputStreaming();
+              if (errorOutput && self.terminal) {
+                self.terminal.echo(errorOutput.replace(/\n$/, ""));
+              }
               if (self.swiWasmQueryAbortRequested || /Execution Aborted/i.test(message)) {
                 self.swiWasmQueryAbortRequested = false;
                 self.finishError(term, "Computation aborted.");
@@ -10613,6 +11095,12 @@
                 args = args[0];
               }
               args = Array.isArray(args) ? args : [];
+              if (value.functor === "@" && args.length === 2) {
+                return this.formatSwiWasmValue(args[0]) + "@" + this.formatSwiWasmValue(args[1]);
+              }
+              if (value.functor === "/" && args.length === 2) {
+                return this.formatSwiWasmValue(args[0]) + "/" + this.formatSwiWasmValue(args[1]);
+              }
               if (args.length === 0) return this.formatSwiWasmAtom(value.functor);
               return this.formatSwiWasmAtom(value.functor) + "(" + args.map(function(arg) {
                 return this.formatSwiWasmValue(arg);
@@ -11850,7 +12338,8 @@
             var target = (this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial") + hash;
             this.selectWorkspace("tutorial");
             if (window.history && typeof window.history.replaceState === "function") {
-              window.history.replaceState(null, document.title || "", "/demonstrator" + hash);
+              window.history.replaceState(null, document.title || "",
+                "/demonstrator" + (this.isSwiWasmMode ? "?node=swi-wasm" : "") + hash);
             }
             if (this.tutorialFrameLoaded && this.navigateTutorialFrameInPlace(anchor)) {
               return;

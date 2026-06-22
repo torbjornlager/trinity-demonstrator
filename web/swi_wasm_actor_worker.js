@@ -111,7 +111,13 @@
       deliver(message);
       return Promise.resolve(true);
     }
-    return actorRequest("send", { to: to, message: message });
+    return actorRequest("send", {
+      to: to,
+      message: message,
+      // The coordinator turns this local pid into a connection-scoped
+      // virtual recipient when the destination is remote.
+      from: selfPidText
+    });
   }
 
   function actorSendDelayed(toText, messageText, delaySeconds, idText) {
@@ -267,6 +273,7 @@
       ":- use_module(library(wasm)).",
       ":- use_module(library(option)).",
       ":- op(800, xfx, !).",
+      ":- op(200, xfx, @).",
       ":- op(1000, xfy, if).",
       ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0).",
       ":- dynamic deferred/1, io_target/1.",

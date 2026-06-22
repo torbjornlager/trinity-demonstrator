@@ -36,6 +36,8 @@ Architecture per connection:
     spawn/3,
     send/2,
     exit/2,
+    monitor/2,
+    demonitor/1,
     respond/2,
     make_id/1,
     actor_module/2,
@@ -79,6 +81,7 @@ Architecture per connection:
     require_source_options_access/2
 ]).
 :- use_module(rpc, [text_to_string/2]).
+:- use_module(source_utils, [normalize_load_uri_allowed_origins/2]).
 :- use_module(node_profile_policy, [profile_check_route/1, effective_profile_for_route/2]).
 :- use_module(node_limits, [
     reserve_ws_actor_capacity/2,
@@ -134,6 +137,11 @@ Architecture per connection:
 :- dynamic ws_actor_owner/2.
 :- dynamic ws_actor_kind/2.
 :- dynamic ws_connection_meta/2.
+:- dynamic ws_browser_connection/2.
+:- dynamic ws_browser_monitor/3.
+
+:- multifile actors:hook_send/2.
+:- multifile actors:hook_stop/1.
 
 
                 /*******************************
@@ -298,11 +306,14 @@ ws_request_scheme(_, "http").
 normalize_origin_text(Value0, Norm) :-
     text_to_string(Value0, S1),
     normalize_space(string(S2), S1),
-    string_lower(S2, S3),
-    %  Strip a trailing slash so "https://host" == "https://host/".
-    (   string_concat(S4, "/", S3)
-    ->  Norm = S4
-    ;   Norm = S3
+    (   catch(normalize_load_uri_allowed_origins([S2], [Normalized]), _, fail)
+    ->  text_to_string(Normalized, Norm)
+    ;   string_lower(S2, S3),
+        %  Strip a trailing slash so "https://host" == "https://host/".
+        (   string_concat(S4, "/", S3)
+        ->  Norm = S4
+        ;   Norm = S3
+        )
     ).
 
 
@@ -318,6 +329,7 @@ ws_main(NodePort, Principal, ClientMeta, WebSocket) :-
             Namespace = ws_client(NamespaceId),
             put_dict(_{connection_id:NamespaceId}, ClientMeta, ConnectionMeta),
             assertz(ws_connection_meta(Queue, ConnectionMeta)),
+            assertz(ws_browser_connection(NamespaceId, Queue)),
             ignore(catch(start_activity(ws_connection, NamespaceId,
                                         ConnectionMeta), _, true)),
             thread_create(ws_relay_loop(NodePort, WebSocket, Queue), RelayThread, [
@@ -379,6 +391,28 @@ ws_relay_loop_1(NodePort, WebSocket, Queue) :-
 ws_relay_message(WebSocket, Message) :-
     answer_to_json(Message, JSON),
     atom_json_dict(Text, JSON, []),
+    ws_send(WebSocket, text(Text)).
+
+%  A browser-owned actor is a connection-scoped virtual recipient.  It is
+%  deliberately not a normal local pid: only the matching WebSocket relay
+%  can deliver to it, and no browser can name a recipient on another
+%  connection.
+ws_relay_message(WebSocket, browser_message(BrowserPid, Message)) :-
+    term_string(BrowserPid, BrowserPidText),
+    term_string(Message, MessageText),
+    atom_json_dict(Text, json{
+        type:"actor_message",
+        target:BrowserPidText,
+        message:MessageText
+    }, []),
+    ws_send(WebSocket, text(Text)).
+
+ws_relay_message(WebSocket, transport_welcome(Version)) :-
+    atom_json_dict(Text, json{
+        type:"transport_welcome",
+        protocol:"web_prolog_browser_actor",
+        version:Version
+    }, []),
     ws_send(WebSocket, text(Text)).
 
 
@@ -453,6 +487,8 @@ ws_dispatch(Dict, Queue, Principal, ConnectionMeta) :-
 
 ws_action(toplevel_spawn, Dict, Queue, Principal) :-
     ws_action_toplevel_spawn(Dict, Queue, Principal).
+ws_action(transport_hello, Dict, Queue, _Principal) :-
+    ws_action_transport_hello(Dict, Queue).
 ws_action(toplevel_call, Dict, Queue, Principal) :-
     ws_action_toplevel_call(Dict, Queue, Principal).
 ws_action(toplevel_next, Dict, Queue, Principal) :-
@@ -473,6 +509,10 @@ ws_action(spawn, Dict, Queue, Principal) :-
     ws_action_spawn(Dict, Queue, Principal).
 ws_action(send, Dict, Queue, Principal) :-
     ws_action_send(Dict, Queue, Principal).
+ws_action(monitor, Dict, Queue, Principal) :-
+    ws_action_monitor(Dict, Queue, Principal).
+ws_action(demonitor, Dict, Queue, Principal) :-
+    ws_action_demonitor(Dict, Queue, Principal).
 ws_action(exit, Dict, Queue, Principal) :-
     ws_action_exit(Dict, Queue, Principal).
 
@@ -480,6 +520,19 @@ ws_action(exit, Dict, Queue, Principal) :-
                 /*******************************
                 *      TOPLEVEL ACTIONS        *
                 *******************************/
+
+%!  ws_action_transport_hello(+Dict, +Queue) is det.
+%
+%   Additive browser transport version negotiation.  Existing node clients
+%   may omit it; browser runtimes use it before relying on v1-only features.
+ws_action_transport_hello(Dict, Queue) :-
+    ws_get_int_or(Dict, version, 1, Version),
+    (   Version =:= 1
+    ->  thread_send_message(Queue, transport_welcome(1))
+    ;   throw(error(domain_error(browser_actor_transport_version, Version),
+                    context(node_ws:ws_action_transport_hello/2,
+                            'supported browser actor transport version is 1')))
+    ).
 
 %!  ws_action_toplevel_spawn(+Dict, +Queue, +Principal) is det.
 %
@@ -551,14 +604,19 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
     parse_call_context(GoalAtom, TemplateAtom0, Format, Once0, none,
                        Goal, Template, Once, _RequestedTimeout),
     rewrite_isotope_goal(Goal, RewrittenGoal),
+    strip_module(RewrittenGoal, _GoalCaller, PlainGoal),
     text_to_string(LoadText0, LoadText),
     catch(load_text_into_session(Pid, LoadText), LoadError, true),
     (   var(LoadError)
     ->  actor_module(Pid, Module),
-        sandbox_check_goal_in_module(EffectiveProfile, Module, RewrittenGoal),
+        % The session's private actor module imports the node shared DB.
+        % Validate and execute the unqualified goal there; a resolved
+        % user: predicate is an import artefact, not client authority to
+        % invoke arbitrary modules.
+        sandbox_check_goal_in_module(EffectiveProfile, Module, PlainGoal),
         with_isotope_session_public_execution_profile(
             Pid,
-            toplevel_call(Pid, RewrittenGoal, [
+            toplevel_call(Pid, PlainGoal, [
                 template(Template),
                 offset(Offset),
                 limit(Limit),
@@ -653,19 +711,23 @@ ws_action_spawn(Dict, Queue, Principal) :-
     atom_string(GoalAtom, GoalAtom0),
     ws_read_term(goal, GoalAtom, Goal),
     rewrite_isotope_goal(Goal, RewrittenGoal),
+    ws_shared_actor_goal(RewrittenGoal, GoalModule, PlainGoal, SpawnGoal),
     ws_parse_spawn_options(Dict, UserOptions),
     require_source_options_access(Principal, UserOptions),
-    sandbox_prepare_source_options(EffectiveProfile, node_ws,
+    % A bare WebSocket spawn runs in a private actor module.  Import the
+    % node's own shared database as its start-goal module: advertised actor
+    % predicates must not accidentally resolve through node_ws or user.
+    sandbox_prepare_source_options(EffectiveProfile, GoalModule,
                                    UserOptions, PreparedOptions),
-    sandbox_check_goal_with_options(EffectiveProfile, node_ws,
-                                    RewrittenGoal, PreparedOptions),
+    sandbox_check_goal_with_options(EffectiveProfile, GoalModule,
+                                    PlainGoal, PreparedOptions),
     reserve_ws_actor_capacity(Principal, Reservation),
     catch(
         (
             ws_build_bare_options(Queue, PreparedOptions, BareOptions),
             with_public_execution_profile(
                 EffectiveProfile,
-                spawn(RewrittenGoal, Pid, BareOptions)
+                spawn(SpawnGoal, Pid, BareOptions)
             ),
             assertz(ws_actor(Queue, Pid)),
             remember_ws_actor_metadata(Pid, Queue, Principal, actor),
@@ -679,6 +741,11 @@ ws_action_spawn(Dict, Queue, Principal) :-
         )
     ).
 
+ws_shared_actor_goal(Goal0, GoalModule, PlainGoal, SpawnGoal) :-
+    strip_module(Goal0, _Caller, PlainGoal),
+    current_node_value(shared_db_module, GoalModule),
+    SpawnGoal = GoalModule:PlainGoal.
+
 %!  ws_action_send(+Dict, +Queue, +Principal) is det.
 %
 %   Send an arbitrary message to a WebSocket-owned actor by pid or to an
@@ -688,8 +755,77 @@ ws_action_send(Dict, Queue, Principal) :-
     ws_get_pid(Dict, Pid),
     ws_require_send_target(Queue, Principal, Pid),
     ws_get_term_string(Dict, message, MsgString),
-    ws_read_term(message, MsgString, Message),
+    ws_read_term(message, MsgString, Message0),
+    ws_rewrite_browser_sender(Dict, Queue, Message0, Message),
     send(Pid, Message).
+
+ws_rewrite_browser_sender(Dict, Queue, Message0, Message) :-
+    (   get_dict(browser_from, Dict, BrowserFrom0)
+    ->  value_text(BrowserFrom0, BrowserFromText),
+        atom_string(BrowserFromAtom, BrowserFromText),
+        ws_read_term(browser_from, BrowserFromAtom, BrowserPid),
+        browser_local_pid(BrowserPid),
+        ws_browser_virtual_pid(Queue, BrowserPid, VirtualPid),
+        replace_browser_pid(BrowserPid, VirtualPid, Message0, Message)
+    ;   Message = Message0
+    ).
+
+browser_local_pid(main).
+browser_local_pid(worker_actor(Id)) :-
+    integer(Id),
+    Id > 0.
+
+ws_browser_virtual_pid(Queue, BrowserPid, browser_actor(ConnectionId, BrowserPid)) :-
+    ws_connection_meta(Queue, ConnectionMeta),
+    get_dict(connection_id, ConnectionMeta, ConnectionId).
+
+replace_browser_pid(Needle, Replacement, Term, Replaced) :-
+    Term == Needle,
+    !,
+    Replaced = Replacement.
+replace_browser_pid(_Needle, _Replacement, Term, Term) :-
+    var(Term),
+    !.
+replace_browser_pid(_Needle, _Replacement, Term, Term) :-
+    atomic(Term),
+    !.
+replace_browser_pid(Needle, Replacement, Term, Replaced) :-
+    compound_name_arguments(Term, Name, Args0),
+    maplist(replace_browser_pid(Needle, Replacement), Args0, Args),
+    compound_name_arguments(Replaced, Name, Args).
+
+actors:hook_send(browser_actor(ConnectionId, BrowserPid), Message) :-
+    ws_browser_connection(ConnectionId, Queue),
+    thread_send_message(Queue, browser_message(BrowserPid, Message)).
+
+actors:hook_stop(Pid0) :-
+    canonical_pid(Pid0, Pid),
+    forall(retract(ws_browser_monitor(Queue, Pid, Ref)),
+           (   ( actors:exit_reason(Pid0, Reason) -> true ; Reason = true ),
+               thread_send_message(Queue, down(Ref, Pid, Reason))
+           )).
+
+%!  ws_action_monitor(+Dict, +Queue, +Principal) is det.
+%
+%   A browser monitor is represented by the connection queue itself.  The
+%   actor core already sends down/3 to queue watchers on termination, and the
+%   regular relay serializes that event back to this WebSocket.
+ws_action_monitor(Dict, Queue, Principal) :-
+    require_ws_command_access(Principal, monitor),
+    ws_get_pid(Dict, Pid),
+    ws_require_owned_resource(Queue, Principal, Pid, actor,
+                              node_ws:ws_action_monitor/3,
+                              'pid is not owned by this WebSocket connection'),
+    ws_get_term_string(Dict, ref, RefText),
+    ws_read_term(ref, RefText, Ref),
+    canonical_pid(Pid, CanonPid),
+    assertz(ws_browser_monitor(Queue, CanonPid, Ref)).
+
+ws_action_demonitor(Dict, Queue, Principal) :-
+    require_ws_command_access(Principal, demonitor),
+    ws_get_term_string(Dict, ref, RefText),
+    ws_read_term(ref, RefText, Ref),
+    retractall(ws_browser_monitor(Queue, _, Ref)).
 
 %!  ws_action_exit(+Dict, +Queue, +Principal) is det.
 %
@@ -789,6 +925,8 @@ ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
     catch(thread_send_message(Queue, '$ws_close'), _, true),
     catch(thread_join(RelayThread, _), _, true),
     retractall(ws_connection_meta(Queue, _)),
+    retractall(ws_browser_connection(_, Queue)),
+    retractall(ws_browser_monitor(Queue, _, _)),
     (   get_dict(connection_id, ConnectionMeta, ConnectionId)
     ->  ignore(catch(finish_activity(ws_connection, ConnectionId, disconnect),
                      _, true))

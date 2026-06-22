@@ -843,7 +843,8 @@ node(Port, Options0) :-
     extract_resource_ceiling(max_actors, Options2, MaxActors, Options3),
     extract_resource_ceiling(max_interaction_log_bytes, Options3, MaxLogBytes, Options4),
     extract_plain_option(max_interaction_log_backups, 5, Options4, MaxLogBackups, Options),
-    extract_tutorial_sections(Options, TutorialSections, Options5),
+    extract_plain_option(ws_allowed_origins, [], Options, WSAllowedOrigins0, Options5a),
+    extract_tutorial_sections(Options5a, TutorialSections, Options5),
     node_options(Options5, SharedDB, SandboxMode, Profile, AuthMode,
                  DevPrincipal0, DevCapabilities0, PrincipalPolicies0,
                  Timeout0, CacheSize0, MaxInflightCalls0,
@@ -882,6 +883,7 @@ node(Port, Options0) :-
     resolve_node_setting(node_rate_limits:max_ws_commands_per_window, normalize_max_ws_commands_per_window,
                          MaxWSCommandsPerWindow0, MaxWSCommandsPerWindow),
     resolve_load_uri_allowed_origins(LoadURIAllowedOrigins0, LoadURIAllowedOrigins),
+    resolve_ws_allowed_origins(WSAllowedOrigins0, WSAllowedOrigins),
     set_setting(node:sandbox, SandboxMode),
     set_setting(node_auth:auth, AuthMode),
     %  Mirror the interaction-log rotation config into global settings
@@ -923,6 +925,7 @@ node(Port, Options0) :-
         max_call_requests_per_window:MaxCallRequestsPerWindow,
         max_session_spawns_per_window:MaxSessionSpawnsPerWindow,
         max_ws_commands_per_window:MaxWSCommandsPerWindow,
+        ws_allowed_origins:WSAllowedOrigins,
         load_uri_allowed_origins:LoadURIAllowedOrigins,
         builtin_family_policy:BuiltinFamilyPolicy,
         relation_patterns:RelationPatterns,
@@ -1186,6 +1189,9 @@ resolve_load_uri_allowed_origins(default, unrestricted) :-
 resolve_load_uri_allowed_origins(Origins0, Origins) :-
     normalize_load_uri_allowed_origins(Origins0, Origins).
 
+resolve_ws_allowed_origins(Origins0, Origins) :-
+    normalize_load_uri_allowed_origins(Origins0, Origins).
+
 normalize_cache_size(CacheSize0, CacheSize) :-
     must_be(integer, CacheSize0),
     (   CacheSize0 > 0
@@ -1402,6 +1408,7 @@ node_info_page_1(Request) :-
     node_info_provides(Provides),
     node_info_self_contained(SelfContained),
     node_info_tutorial_sections(TutorialSections),
+    ( current_node_value(ws_allowed_origins, WSAllowedOrigins) -> true ; WSAllowedOrigins = [] ),
     reply_json(json{
         self_url:SelfURL,
         profile:Profile,
@@ -1422,6 +1429,7 @@ node_info_page_1(Request) :-
         services:Services,
         provides:Provides,
         self_contained:SelfContained,
+        ws_allowed_origins:WSAllowedOrigins,
         tutorial_sections:TutorialSections
     }).
 
