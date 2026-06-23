@@ -10194,14 +10194,12 @@
               "        term_string(Answer, AnswerText)",
               "    ).",
               "",
-              "%  read/1 and read_term/2 route to the inline terminal prompt (async,",
-              "%  via swiWasmActorInput) instead of the SWI-WASM console default,",
-              "%  which is a blocking browser prompt modal.  Falls back to the",
-              "%  built-in if the system predicate cannot be redefined.",
-              ":- catch(redefine_system_predicate(read(_)), _, true).",
-              ":- catch(redefine_system_predicate(read_term(_, _)), _, true).",
-              "read(Term) :- read_term(Term, []).",
-              "read_term(Term, _Options) :-",
+              "%  Async inline-terminal reader, called by the user-module read/1",
+              "%  shim (consulted with the user program).  Yields for a line via",
+              "%  swiWasmActorInput (the inline terminal prompt), then parses it as",
+              "%  a term.  read/1 itself must be redefined in `user`, not here: the",
+              "%  bridge-module copy cannot override the built-in for user calls.",
+              "swi_wasm_read_term(Term) :-",
               "    PromptText = \"|: \",",
               "    Promise := swiWasmActorInput(#PromptText),",
               "    await(Promise, Line),",
@@ -10889,6 +10887,19 @@
                 // in user.  Match the node-side distributed-pid notation.
                 Prolog.query("user:op(200, xfx, @)").once();
                 Prolog.query("retractall(swi_wasm_actor_bridge:deferred(_))").once();
+                //  read/1 and read_term/2 must be redefined in the USER module
+                //  (where the program runs) to use the inline terminal -- the
+                //  bridge module's copy can't override the built-in for user
+                //  calls.  Consult a small shim into user that delegates to the
+                //  bridge's async reader.  Kept out of the user source (and thus
+                //  out of swiWasmUserSourceText) so spawned workers, which have
+                //  no swiWasmActorInput, don't inherit it.
+                Module.FS.writeFile("/swi_wasm_read_shim.pl",
+                  ":- catch(redefine_system_predicate(read(_)), _, true).\n" +
+                  ":- catch(redefine_system_predicate(read_term(_, _)), _, true).\n" +
+                  "read(T) :- read_term(T, []).\n" +
+                  "read_term(T, _) :- swi_wasm_actor_bridge:swi_wasm_read_term(T).\n");
+                Prolog.query("consult('/swi_wasm_read_shim.pl')").once();
                 Module.FS.writeFile("/user_code.pl", codeToLoad);
                 self.swiWasmOutputBuffer = "";
                 Prolog.query("consult('/user_code.pl')").once();
