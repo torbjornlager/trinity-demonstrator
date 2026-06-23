@@ -55,8 +55,9 @@ ok(includes("enqueueSwiWasmStatechartEvent") &&
    includes("self.drainSwiWasmStatechartEventQueue();"),
    "delayed statechart events are serialized behind all active engine work");
 ok(!includes("window.prompt(") &&
-   includes("requestSwiWasmActorInput"),
-   "main and worker input use a non-blocking browser dialog");
+   includes("requestSwiWasmActorInput") &&
+   includes("if (this.swiWasmActorInputActive)"),
+   "SWI-WASM read/1 and input/2 use the inline terminal prompt, not a modal");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 

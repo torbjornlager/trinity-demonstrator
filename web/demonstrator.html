@@ -4995,6 +4995,7 @@
             swiWasmRemoteActorKinds: {},
             swiWasmActorInputQueue: [],
             swiWasmActorInputActive: null,
+            swiWasmInputSaved: null,
             swiWasmStatechartLoaded: false,
             swiWasmStatechartLoadError: "",
             swiWasmStatechartActive: false,
@@ -8338,6 +8339,23 @@
             this.resetQueryState(term);
           },
           respondToPrompt: function(term, inputText) {
+            if (this.swiWasmActorInputActive) {
+              //  Inline answer to a suspended SWI-WASM read/1 or input/2.
+              var active = this.swiWasmActorInputActive;
+              this.swiWasmActorInputActive = null;
+              //  Restore the terminal to its pre-prompt (running, paused) state;
+              //  resolving lets the suspended goal resume, and the query's own
+              //  completion handler does the final terminal reset.
+              var saved = this.swiWasmInputSaved || { queryState: "query" };
+              this.swiWasmInputSaved = null;
+              this.queryState = saved.queryState;
+              term.set_prompt(this.basePrompt());
+              this.pauseTerm(term);
+              active.resolve(String(inputText));
+              //  Serve any further inline inputs already queued (concurrent actors).
+              this.showNextSwiWasmActorInput();
+              return;
+            }
             if (this.transportMode === "actor") {
               this.respondToPromptWs(term, inputText);
               return;
@@ -9252,49 +9270,31 @@
             });
           },
           showNextSwiWasmActorInput: function() {
-            var self = this;
-            if (self.swiWasmActorInputActive || self.swiWasmActorInputQueue.length === 0) {
+            var term = this.terminal;
+            if (this.swiWasmActorInputActive || this.swiWasmActorInputQueue.length === 0) {
               return;
             }
-            var request = self.swiWasmActorInputQueue.shift();
-            self.swiWasmActorInputActive = request;
-            var overlay = document.createElement("div");
-            var dialog = document.createElement("form");
-            var label = document.createElement("label");
-            var input = document.createElement("input");
-            var actions = document.createElement("div");
-            var cancel = document.createElement("button");
-            var submit = document.createElement("button");
-            overlay.className = "swi-wasm-input-overlay";
-            dialog.className = "swi-wasm-input-dialog";
-            dialog.setAttribute("aria-label", "Prolog input");
-            label.textContent = request.prompt || "Input";
-            input.type = "text";
-            input.autocomplete = "off";
-            cancel.type = "button";
-            cancel.textContent = "Cancel";
-            submit.type = "submit";
-            submit.textContent = "Send";
-            actions.className = "swi-wasm-input-actions";
-            actions.appendChild(cancel);
-            actions.appendChild(submit);
-            dialog.appendChild(label);
-            dialog.appendChild(input);
-            dialog.appendChild(actions);
-            overlay.appendChild(dialog);
-            document.body.appendChild(overlay);
-            function finish(value) {
-              overlay.remove();
-              self.swiWasmActorInputActive = null;
-              request.resolve(value);
-              self.showNextSwiWasmActorInput();
+            if (!term) {
+              //  No terminal to prompt in: treat as EOF/cancel and drain.
+              var orphan = this.swiWasmActorInputQueue.shift();
+              orphan.resolve(null);
+              this.showNextSwiWasmActorInput();
+              return;
             }
-            dialog.addEventListener("submit", function(event) {
-              event.preventDefault();
-              finish(input.value);
-            });
-            cancel.addEventListener("click", function() { finish(null); });
-            input.focus();
+            //  Show the request INLINE in the terminal (no modal): remember the
+            //  terminal's pre-prompt state, resume it so it can capture a line,
+            //  and put it in prompt mode.  respondToPrompt() hands the typed
+            //  line back to the suspended SWI-WASM goal (read/1, input/2).
+            if (this.swiWasmInputSaved === null) {
+              this.swiWasmInputSaved = { queryState: this.queryState };
+            }
+            var request = this.swiWasmActorInputQueue.shift();
+            this.swiWasmActorInputActive = request;
+            this.resumeTerm(term);
+            this.queryState = "prompt";
+            term.set_prompt(this.formatDisplayText(String(request.prompt || "")) + " ");
+            term.scroll_to_bottom();
+            this.focusTerminalSoon();
           },
           routeSwiWasmActorMessage: function(fromPid, toText, messageText) {
             var to = String(toText || "");
@@ -10193,6 +10193,23 @@
               "        AnswerText \\== null,",
               "        term_string(Answer, AnswerText)",
               "    ).",
+              "",
+              "%  read/1 and read_term/2 route to the inline terminal prompt (async,",
+              "%  via swiWasmActorInput) instead of the SWI-WASM console default,",
+              "%  which is a blocking browser prompt modal.  Falls back to the",
+              "%  built-in if the system predicate cannot be redefined.",
+              ":- catch(redefine_system_predicate(read(_)), _, true).",
+              ":- catch(redefine_system_predicate(read_term(_, _)), _, true).",
+              "read(Term) :- read_term(Term, []).",
+              "read_term(Term, _Options) :-",
+              "    PromptText = \"|: \",",
+              "    Promise := swiWasmActorInput(#PromptText),",
+              "    await(Promise, Line),",
+              "    swi_wasm_read_line_term(Line, Term).",
+              "swi_wasm_read_line_term(Line, end_of_file) :- ( Line == null ; Line == \"\" ), !.",
+              "swi_wasm_read_line_term(Line, Term) :-",
+              "    ( string_concat(Body, \".\", Line) -> true ; Body = Line ),",
+              "    term_string(Term, Body).",
               "",
               "with_io_target(Target, Goal) :-",
               "    asserta(io_target(Target), Ref),",
