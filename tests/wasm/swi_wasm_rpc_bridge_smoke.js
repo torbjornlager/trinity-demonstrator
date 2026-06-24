@@ -68,6 +68,11 @@ ok(includes("swi_wasm_actor_bridge:swi_wasm_drive(user:(") &&
    includes("presentSwiWasmSolution") &&
    !includes('"limit(" + (LIMIT + 1)'),
    "solutions page lazily: side effects between answers run only on ';' (no eager forEach buffering)");
+ok(includes('if (to === "statechart")') &&
+   includes("this.enqueueSwiWasmStatechartEvent(message)") &&
+   includes("current_predicate(statechart_wasm:statechart_send/1)") &&
+   includes('Module.FS.writeFile("/swi_wasm_actor_bridge.pl", self.swiWasmRpcProlog())'),
+   "<spawn> in WASM charts: bridge loaded for charts, send(statechart) routes from workers, replies become chart events");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 

@@ -241,10 +241,37 @@ has_descendant_in_set(State, States) :-
     ),
     !.
 
-%   <spawn> is parsed but not executed in the WASM port.  Charts that
-%   rely on spawned child actors will simply not get those children;
-%   no error is raised, no PIDs are recorded.
-invoke(_State) :- true.
+%   Execute deferred <spawn> elements for State.  The desktop engine
+%   spawns inside the node's actor system; the WASM port spawns browser
+%   worker actors / toplevels through swi_wasm_actor_bridge and addresses
+%   the chart itself as the pid `statechart` (so worker replies route back
+%   in as external events -- see send(statechart, _) in the bridge and
+%   routeSwiWasmActorMessage in the coordinator).  spawned(Pid) is
+%   enqueued so the chart can transition on it, mirroring the desktop
+%   contract.  Anything past invoke/1 is excluded from the byte-equivalence
+%   guard, so this divergence from the desktop runtime is intentional.
+%
+%   Guarded by current_predicate/1: when the bridge is absent (the chart
+%   ran without the actor runtime, or on desktop) invoke stays a no-op
+%   and <spawn> is silently skipped, exactly as before.
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, toplevel, Options),
+    current_predicate(swi_wasm_actor_bridge:toplevel_spawn/2),
+    swi_wasm_actor_bridge:toplevel_spawn(Pid, [target(statechart)|Options]),
+    emit_trace(invoked(toplevel, Pid, State)),
+    assertz(statechart_wasm:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, actor, Options),
+    current_predicate(swi_wasm_actor_bridge:spawn/3),
+    memberchk(goal(Goal), Options),
+    swi_wasm_actor_bridge:spawn(Goal, Pid, Options),
+    emit_trace(invoked(actor, Pid, State)),
+    assertz(statechart_wasm:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(_State).
 
 raise(Event) :-
     enqueue_internal_event(Event).

@@ -176,6 +176,12 @@ self(statechart).
 send(statechart, Event) :-
     !,
     statechart_send(Event).
+%  Any other target is a spawned child actor/toplevel: forward to the
+%  actor bridge (loaded in the main engine when a chart that spawns runs;
+%  see preloadSwiWasmStatechart).  Lets chart scripts do `Pid ! Msg` to a
+%  worker, e.g. `ponger ! ping(Self)`.
+send(Pid, Message) :-
+    swi_wasm_actor_bridge:send(Pid, Message).
 send(statechart, Event, Options) :-
     !,
     option(delay(Delay), Options, 0),
@@ -187,8 +193,28 @@ send(statechart, Event, Options) :-
         Scheduled := wasmStatechartSchedule(#EventText, #Delay, #IdText),
         Scheduled == true
     ).
-send(_, _, _) :-
-    throw(error(domain_error(statechart_target, statechart), send/3)).
+send(Pid, Message, Options) :-
+    swi_wasm_actor_bridge:send(Pid, Message, Options).
+
+%  Actor predicates chart scripts use to drive spawned children, delegated
+%  to the bridge.  self/1 stays local (the chart is the pid `statechart`),
+%  so a child told `ping(Self)` replies to `statechart` and the coordinator
+%  routes that reply back in as an external event.
+Pid ! Message :-
+    send(Pid, Message).
+
+register(Name, Pid) :-
+    swi_wasm_actor_bridge:register(Name, Pid).
+whereis(Name, Pid) :-
+    swi_wasm_actor_bridge:whereis(Name, Pid).
+toplevel_call(Pid, Goal) :-
+    swi_wasm_actor_bridge:toplevel_call(Pid, Goal).
+toplevel_call(Pid, Goal, Options) :-
+    swi_wasm_actor_bridge:toplevel_call(Pid, Goal, Options).
+toplevel_next(Pid) :-
+    swi_wasm_actor_bridge:toplevel_next(Pid).
+toplevel_next(Pid, Options) :-
+    swi_wasm_actor_bridge:toplevel_next(Pid, Options).
 
 cancel(Id) :-
     term_string(Id, IdText),

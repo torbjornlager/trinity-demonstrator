@@ -9357,6 +9357,16 @@
               this.log("transport", fromPid + " -> main: " + message, "swi-wasm", "response");
               return true;
             }
+            if (to === "statechart") {
+              //  A spawned child (actor or toplevel) replied to the running
+              //  chart.  Inject it as an external statechart event, serialized
+              //  behind any in-flight engine work -- the same queue delayed
+              //  timer events use (drainSwiWasmStatechartEventQueue runs it via
+              //  statechart_send once the engine is idle).
+              this.log("transport", fromPid + " -> statechart: " + message, "swi-wasm", "response");
+              this.enqueueSwiWasmStatechartEvent(message);
+              return true;
+            }
             return this.sendSwiWasmActorMessage(to, message);
           },
           resolveSwiWasmActorTarget: function(pidText) {
@@ -9916,13 +9926,24 @@
               "",
               "Pid ! Message :- send(Pid, Message).",
               "",
+              "%  The chart is addressed as the pid `statechart`.  In the main",
+              "%  engine the statechart_wasm module is loaded, so deliver the",
+              "%  message straight into the chart's event queue.  Inside a spawned",
+              "%  worker (which has no statechart_wasm module) route it back to the",
+              "%  coordinator, which forwards it to the chart (routeSwiWasmActorMessage).",
               "send(statechart, Message) :-",
-              "    statechart_wasm:statechart_send(Message),",
-              "    !.",
+              "    !,",
+              "    (   current_predicate(statechart_wasm:statechart_send/1)",
+              "    ->  statechart_wasm:statechart_send(Message)",
+              "    ;   send_worker_actor(statechart, Message)",
+              "    ).",
               "",
               "send(statechart, Message, _) :-",
-              "    statechart_wasm:statechart_send(Message),",
-              "    !.",
+              "    !,",
+              "    (   current_predicate(statechart_wasm:statechart_send/1)",
+              "    ->  statechart_wasm:statechart_send(Message)",
+              "    ;   send_worker_actor(statechart, Message)",
+              "    ).",
               "",
               "send(Pid, Message) :- send_worker_actor(Pid, Message).",
               "",
@@ -10543,6 +10564,17 @@
               files.forEach(function(f) {
                 Module.FS.writeFile("/wasm/" + f.name, f.src);
               });
+              //  Load the actor bridge into the main engine so charts can
+              //  spawn worker actors/toplevels through <spawn> (invoke/1) and
+              //  chart scripts can drive them (Pid ! Msg, toplevel_call, ...).
+              //  Harmless if a prior query already consulted it -- consult/1
+              //  just reloads the swi_wasm_actor_bridge module.
+              try {
+                Module.FS.writeFile("/swi_wasm_actor_bridge.pl", self.swiWasmRpcProlog());
+                Prolog.query("consult('/swi_wasm_actor_bridge.pl')").once();
+              } catch(e) {
+                console.warn("[SWI-INIT] statechart actor bridge consult threw:", e);
+              }
               var consultOk = false;
               try {
                 consultOk = !!Prolog.query("use_module('/wasm/statechart_wasm.pl')").once();

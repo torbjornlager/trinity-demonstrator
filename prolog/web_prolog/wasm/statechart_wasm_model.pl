@@ -23,6 +23,19 @@ Differences from the desktop `statechart_model`:
 :- use_module(library(lists)).
 :- use_module(library(sgml)).
 
+%   Web-Prolog operators used inside <spawn> bodies and <go>/<onentry>
+%   scripts (e.g. `Pid ! pong`, `Id@Node`, library(wasm)'s `:=`/`#`).
+%   read_term/3 and atom_to_term/3 below need these visible at parse
+%   time.  A module-local `:- op` is NOT honoured by read_term/3 called
+%   from this module, so declare them in `user` (global), matching how
+%   the operators are globally available in the desktop node where the
+%   actor layer defines them.
+:- op(800,  xfx, user:(!)).
+:- op(200,  xfx, user:(@)).
+:- op(1000, xfy, user:if).
+:- op(990,  xfx, user:(:=)).
+:- op(100,  fx,  user:(#)).
+
 
 %!  statechart_wasm_parse_text(+Text) is det.
 %
