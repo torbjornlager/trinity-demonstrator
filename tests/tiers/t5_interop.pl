@@ -36,6 +36,7 @@
 :- use_module(library(socket)).
 :- use_module(library(process)).
 :- use_module(library(http/http_open)).
+:- use_module(library(http/json)).
 :- use_module(library(pcre)).
 :- use_module(library(filesex), [delete_directory_and_contents/1]).
 
@@ -404,9 +405,16 @@ test(call_json_load_text) :-
     both_nodes_agree('/call?goal=p(X)&template=X&load_text=p(1).%0Ap(2).', _, _).
 
 test(node_info_agrees) :-
-    %  node_info embeds the node URL (different ports) — mask those
-    %  too via the pid masking of the port digits, then compare the
-    %  rest of the payload shape.
+    %  The layered node extends /node_info with additive metadata the
+    %  frozen demonstrator does not emit (provides, services,
+    %  self_contained, tutorial_sections, ws_allowed_origins — see
+    %  DEVIATIONS.md).  The interop invariant is therefore preservation,
+    %  not byte-equality: every field the demonstrator emits must still be
+    %  present and identical (ports masked); the layered node may only add
+    %  fields, never alter or drop one.
+    %
+    %  node_info embeds the node URL (different ports) — mask the port
+    %  digits before comparing.
     node_url(LegacyURL),
     t5_local_url(NewURL),
     fetch_raw(LegacyURL, '/node_info', S1, B1),
@@ -414,10 +422,18 @@ test(node_info_agrees) :-
     S1 == S2,
     re_replace(":[0-9]+"/g, ":PORT", B1, M1),
     re_replace(":[0-9]+"/g, ":PORT", B2, M2),
-    (   M1 == M2
-    ->  true
-    ;   throw(golden_mismatch('/node_info', legacy(M1), new(M2)))
-    ).
+    atom_json_dict(M1, Legacy, []),
+    atom_json_dict(M2, New, []),
+    forall(get_dict(Key, Legacy, LegacyVal),
+           (   get_dict(Key, New, NewVal)
+           ->  (   NewVal == LegacyVal
+               ->  true
+               ;   throw(golden_mismatch('/node_info'-Key,
+                                         legacy(LegacyVal), new(NewVal)))
+               )
+           ;   throw(golden_mismatch('/node_info'-missing(Key),
+                                     legacy(LegacyVal), new(absent)))
+           )).
 
 :- end_tests(t5_golden).
 
