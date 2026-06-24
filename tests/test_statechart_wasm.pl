@@ -1,9 +1,10 @@
 /*  Statechart WASM-port tests
 
     Exercises the step-style statechart interpreter served to SWI-WASM.
-    Loads existing XML examples that do not rely on <spawn> (which is
-    deferred in the WASM port) and asserts configurations after event
-    sequences.
+    Loads existing XML examples and asserts configurations after event
+    sequences.  The statechart_wasm_spawn block drives <spawn> (actor and
+    toplevel) with a mocked actor bridge, since the real bridge needs Web
+    Workers that only exist in the browser.
 */
 
 :- module(test_statechart_wasm,
@@ -19,7 +20,8 @@
 
 
 test_statechart_wasm :-
-    run_tests([statechart_wasm_unit, statechart_wasm_examples]).
+    run_tests([statechart_wasm_unit, statechart_wasm_examples,
+               statechart_wasm_spawn]).
 
 
 example_path(Name, Path) :-
@@ -278,3 +280,137 @@ test(budget_exhausted_emits_trace_event,
     assertion(memberchk(budget_exhausted, Events)).
 
 :- end_tests(statechart_wasm_examples).
+
+
+/*  <spawn> execution.
+
+    invoke/1 spawns browser worker actors/toplevels through
+    swi_wasm_actor_bridge and addresses the chart as the pid `statechart`,
+    so replies route back in as external events.  The real bridge needs
+    Web Workers (browser only); here a mock records the calls invoke/1 and
+    the chart scripts make, binds a deterministic pid, and lets the test
+    inject the replies a real child would send.
+*/
+
+:- dynamic mock_call/1.
+
+%   Record a bridge call.  Asserted clauses run in the swi_wasm_actor_bridge
+%   module, so qualify mock_call back to this test module.
+record_mock_call(Term) :-
+    assertz(test_statechart_wasm:mock_call(Term)).
+
+setup_mock_bridge :-
+    retractall(mock_call(_)),
+    assertz((swi_wasm_actor_bridge:toplevel_spawn(worker_actor(1), Opts) :-
+                test_statechart_wasm:record_mock_call(toplevel_spawn(Opts)))),
+    assertz((swi_wasm_actor_bridge:spawn(Goal, worker_actor(1), _Opts) :-
+                test_statechart_wasm:record_mock_call(spawn(Goal)))),
+    assertz((swi_wasm_actor_bridge:register(Name, Pid) :-
+                test_statechart_wasm:record_mock_call(register(Name, Pid)))),
+    assertz((swi_wasm_actor_bridge:send(To, Msg) :-
+                test_statechart_wasm:record_mock_call(send(To, Msg)))),
+    assertz((swi_wasm_actor_bridge:send(To, Msg, _) :-
+                test_statechart_wasm:record_mock_call(send(To, Msg)))),
+    assertz((swi_wasm_actor_bridge:toplevel_call(Pid, Goal, Opts) :-
+                test_statechart_wasm:record_mock_call(toplevel_call(Pid, Goal, Opts)))),
+    assertz((swi_wasm_actor_bridge:toplevel_next(Pid) :-
+                test_statechart_wasm:record_mock_call(toplevel_next(Pid)))).
+
+teardown_mock_bridge :-
+    catch(abolish(swi_wasm_actor_bridge:toplevel_spawn/2), _, true),
+    catch(abolish(swi_wasm_actor_bridge:spawn/3), _, true),
+    catch(abolish(swi_wasm_actor_bridge:register/2), _, true),
+    catch(abolish(swi_wasm_actor_bridge:send/2), _, true),
+    catch(abolish(swi_wasm_actor_bridge:send/3), _, true),
+    catch(abolish(swi_wasm_actor_bridge:toplevel_call/3), _, true),
+    catch(abolish(swi_wasm_actor_bridge:toplevel_next/1), _, true),
+    retractall(mock_call(_)),
+    statechart_stop.
+
+
+:- begin_tests(statechart_wasm_spawn).
+
+% <spawn type="toplevel"> (cf. examples/statecharts/10 spawn-toplevel.xml):
+% invoke spawns a toplevel addressed to the chart, spawned(Pid) drives a
+% transition that calls toplevel_call, and success(...) replies streamed
+% back as external events drive the chart through to its final state.
+test(toplevel_spawn_drives_chart,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart initial=\"sac\">",
+        "  <state id=\"sac\" initial=\"ask\">",
+        "    <spawn type=\"toplevel\" exit=\"false\">",
+        "      q(X) :- p(X).  p(a). p(b).",
+        "    </spawn>",
+        "    <state id=\"ask\">",
+        "      <go to=\"collect\" on=\"spawned(Pid)\">toplevel_call(Pid, q(X), [limit(1)])</go>",
+        "    </state>",
+        "    <state id=\"collect\">",
+        "      <go to=\"collect\" on=\"success(Pid, _Data, true)\">toplevel_next(Pid)</go>",
+        "      <go to=\"final\" on=\"success(_, _Data, false)\"/>",
+        "    </state>",
+        "  </state>",
+        "  <final id=\"final\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    % invoke/1 spawned a toplevel and addressed it to the chart.
+    assertion(mock_call(toplevel_spawn(Opts))),
+    assertion(memberchk(target(statechart), Opts)),
+    % spawned(worker_actor(1)) fired ask -> collect and ran toplevel_call.
+    assertion(mock_call(toplevel_call(worker_actor(1), q(_), [limit(1)]))),
+    assertion(statechart_in(collect)),
+    % Stream the toplevel's answers back as it would over the bridge.
+    statechart_send(success(worker_actor(1), a, true)),
+    assertion(mock_call(toplevel_next(worker_actor(1)))),
+    assertion(statechart_in(collect)),
+    statechart_send(success(worker_actor(1), b, false)),
+    \+ statechart_running.
+
+% <spawn type="actor" goal="..."> (cf. examples/statecharts/09 spawn-actor.xml):
+% invoke spawns the actor, spawned(Pid) registers it, <onentry> sends it a
+% ping addressed to `statechart` (self/1), and the actor's pong reply --
+% injected here as an external event -- advances the chart.
+test(actor_spawn_register_ping_pong,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart initial=\"p\">",
+        "  <state id=\"p\" initial=\"init\">",
+        "    <spawn type=\"actor\" goal=\"ponger\">ponger :- true.</spawn>",
+        "    <state id=\"init\">",
+        "      <go to=\"pinger\" on=\"spawned(Pid)\">register(ponger, Pid)</go>",
+        "    </state>",
+        "    <state id=\"pinger\">",
+        "      <onentry>self(Self), ponger ! ping(Self)</onentry>",
+        "      <go to=\"done\" on=\"pong\"/>",
+        "    </state>",
+        "  </state>",
+        "  <final id=\"done\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(mock_call(spawn(ponger))),
+    assertion(mock_call(register(ponger, worker_actor(1)))),
+    % self/1 is `statechart`, so the ping is addressed to the chart and the
+    % pong reply will route back as an external event.
+    assertion(mock_call(send(ponger, ping(statechart)))),
+    assertion(statechart_in(pinger)),
+    statechart_send(pong),
+    \+ statechart_running.
+
+% Without the actor bridge loaded, <spawn> degrades to a no-op (invoke/1's
+% current_predicate guard), exactly as before -- no error, chart just lacks
+% the child.  Guards the desktop/no-runtime path.
+test(spawn_without_bridge_is_a_noop, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"s\">",
+        "  <state id=\"s\">",
+        "    <spawn type=\"actor\" goal=\"child\">child :- true.</spawn>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(statechart_in(s)),
+    assertion(statechart_running).
+
+:- end_tests(statechart_wasm_spawn).
