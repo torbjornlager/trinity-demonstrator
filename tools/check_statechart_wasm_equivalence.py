@@ -54,11 +54,16 @@ def normalise(text: str, desktop: bool) -> str:
     # differ; the executable clauses below are the frozen contract.
     text = re.sub(r"(?ms)^%![\s\S]*?(?=^[a-z_][A-Za-z0-9_]*\(|\Z)", "", text)
 
+    # Invoked-actor shutdown on state exit is host-specific: the desktop
+    # exits the child actor (exit(Pid, stop)); the WASM port cancels the
+    # browser worker via the bridge (cancel_invoked_child(Pid)).  Strip the
+    # cancellation forall from both sides so the shared exit algorithm is
+    # compared without it.
+    text = re.sub(r"\n\s*forall\(statechart_actor:invoked\(State, Pid\), [^\n]*\),", "", text)
+
     if desktop:
-        # Desktop-only diagnostics, plus its actor-invocation cleanup.  The
-        # WASM port deliberately has neither a debug stream nor invoke/1.
+        # Desktop-only diagnostics.  The WASM port has no debug stream.
         text = re.sub(r",\n\s*debug\([\s\S]*?\]\)\.", ".", text)
-        text = re.sub(r"\n\s*forall\(statechart_actor:invoked\(State, Pid\), exit\(Pid, stop\)\),", "", text)
 
     lines = [line.rstrip() for line in text.splitlines()]
     return "\n".join(

@@ -29,6 +29,7 @@
     has_parent/2,
     has_descendant_in_set/2,
     invoke/1,
+    cancel_invoked_child/1,
     raise/1,
     in/1,
     log/1,
@@ -97,6 +98,7 @@ exit_interpreter :-
 exit_interpreter([]).
 exit_interpreter([State|States]) :-
     forall(statechart_wasm:onexit(State, Content), execute_content(Content)),
+    forall(statechart_wasm:invoked(State, Pid), cancel_invoked_child(Pid)),
     configuration_delete(State),
     (   is_final(State),
         has_parent(State, Parent),
@@ -272,6 +274,19 @@ invoke(State) :-
     enqueue_internal_event(spawned(Pid)),
     fail.
 invoke(_State).
+
+%   Cancel a child spawned by <spawn> when its owning state exits -- the
+%   SCXML invoke-cancellation contract.  The desktop runtime exits the
+%   child actor (exit(Pid, stop)); the WASM port routes that to the actor
+%   bridge, which terminates the browser worker.  A no-op when the bridge
+%   is absent (desktop / no actor runtime), mirroring invoke/1's guard.
+%   Both the desktop forall and this one are excluded from the
+%   byte-equivalence guard as documented host-specific actor shutdown.
+cancel_invoked_child(Pid) :-
+    (   current_predicate(swi_wasm_actor_bridge:exit/2)
+    ->  catch(swi_wasm_actor_bridge:exit(Pid, stop), _, true)
+    ;   true
+    ).
 
 raise(Event) :-
     enqueue_internal_event(Event).

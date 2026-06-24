@@ -196,25 +196,12 @@ send(statechart, Event, Options) :-
 send(Pid, Message, Options) :-
     swi_wasm_actor_bridge:send(Pid, Message, Options).
 
-%  Actor predicates chart scripts use to drive spawned children, delegated
-%  to the bridge.  self/1 stays local (the chart is the pid `statechart`),
-%  so a child told `ping(Self)` replies to `statechart` and the coordinator
-%  routes that reply back in as an external event.
+%  `Pid ! Message` stays local: send/2 routes the `statechart` target into
+%  the chart's own event queue (and forwards every other target to the
+%  bridge), so a child told `ping(Self)` with self/1 = statechart replies
+%  back into the chart.
 Pid ! Message :-
     send(Pid, Message).
-
-register(Name, Pid) :-
-    swi_wasm_actor_bridge:register(Name, Pid).
-whereis(Name, Pid) :-
-    swi_wasm_actor_bridge:whereis(Name, Pid).
-toplevel_call(Pid, Goal) :-
-    swi_wasm_actor_bridge:toplevel_call(Pid, Goal).
-toplevel_call(Pid, Goal, Options) :-
-    swi_wasm_actor_bridge:toplevel_call(Pid, Goal, Options).
-toplevel_next(Pid) :-
-    swi_wasm_actor_bridge:toplevel_next(Pid).
-toplevel_next(Pid, Options) :-
-    swi_wasm_actor_bridge:toplevel_next(Pid, Options).
 
 cancel(Id) :-
     term_string(Id, IdText),
@@ -226,6 +213,53 @@ cancel_delayed_events :-
            Cancelled == true),
           _,
           true).
+
+
+%  Expose the full actor / toplevel / server / supervisor / rpc API to chart
+%  scripts, delegated to the bridge -- matching the desktop chart actor,
+%  which imports `actors` + `toplevel_actors` wholesale.  Generated as one
+%  passthrough clause per PI rather than written out; anything already
+%  defined locally (self/1, send/2,3, (!)/2, cancel/1) is skipped so its
+%  chart-specific behaviour wins.  Clause bodies resolve
+%  swi_wasm_actor_bridge:Goal at call time, so loading is fine on desktop
+%  where the bridge module is absent (the goal simply errors if reached).
+%
+%  Deliberately NOT delegated: receive/1,2 (the WASM chart is event-driven,
+%  not a threaded actor with a mailbox, so an in-script blocking receive is
+%  meaningless) and with_io_target/2 (a meta-predicate that call/1's its
+%  goal locally — delegating would run it in the wrong module).
+:- forall( member(Name/Arity,
+               [ spawn/1, spawn/2, spawn/3, spawn_worker_actor/2,
+                 actors/1, make_ref/1, canonical_pid/2,
+                 monitor/2, demonitor/1, demonitor/2,
+                 exit/1, exit/2,
+                 register/2, register_service/2,
+                 unregister/1, unregister_service/1,
+                 whereis/2, whereis_service/2, respond/2,
+                 toplevel_spawn/1, toplevel_spawn/2,
+                 toplevel_call/2, toplevel_call/3,
+                 toplevel_next/1, toplevel_next/2,
+                 toplevel_halt/2, toplevel_stop/1, toplevel_abort/1,
+                 statechart_spawn/1, statechart_spawn/2,
+                 output/1, output/2, terminal_output/1, terminal_output/2,
+                 input/2, input/3, flush/0,
+                 server_spawn/3, server_spawn/4,
+                 server_request/3, server_request/4,
+                 server_promise/3, server_promise/4,
+                 server_yield/2, server_yield/3, server_yield/4,
+                 server_upgrade/2, server_halt/2, server_stop/2,
+                 supervisor_spawn/2, supervisor_spawn/3,
+                 supervisor_spawn_child/3, supervisor_terminate_child/3,
+                 supervisor_delete_child/3, supervisor_respawn_child/3,
+                 supervisor_which_children/2, supervisor_count_children/2,
+                 supervisor_halt/1, supervisor_stop/1,
+                 rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3 ]),
+           ( functor(Head, Name, Arity),
+             (   predicate_property(Head, defined)
+             ->  true
+             ;   assertz((Head :- swi_wasm_actor_bridge:Head))
+             )
+           ) ).
 
 
 %!  statechart_send(+Event) is det.

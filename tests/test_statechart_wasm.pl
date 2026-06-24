@@ -314,16 +314,16 @@ setup_mock_bridge :-
     assertz((swi_wasm_actor_bridge:toplevel_call(Pid, Goal, Opts) :-
                 test_statechart_wasm:record_mock_call(toplevel_call(Pid, Goal, Opts)))),
     assertz((swi_wasm_actor_bridge:toplevel_next(Pid) :-
-                test_statechart_wasm:record_mock_call(toplevel_next(Pid)))).
+                test_statechart_wasm:record_mock_call(toplevel_next(Pid)))),
+    assertz((swi_wasm_actor_bridge:exit(Pid, Reason) :-
+                test_statechart_wasm:record_mock_call(exit(Pid, Reason)))),
+    assertz((swi_wasm_actor_bridge:monitor(Pid, _Ref) :-
+                test_statechart_wasm:record_mock_call(monitor(Pid)))).
 
 teardown_mock_bridge :-
-    catch(abolish(swi_wasm_actor_bridge:toplevel_spawn/2), _, true),
-    catch(abolish(swi_wasm_actor_bridge:spawn/3), _, true),
-    catch(abolish(swi_wasm_actor_bridge:register/2), _, true),
-    catch(abolish(swi_wasm_actor_bridge:send/2), _, true),
-    catch(abolish(swi_wasm_actor_bridge:send/3), _, true),
-    catch(abolish(swi_wasm_actor_bridge:toplevel_call/3), _, true),
-    catch(abolish(swi_wasm_actor_bridge:toplevel_next/1), _, true),
+    forall(member(PI, [toplevel_spawn/2, spawn/3, register/2, send/2, send/3,
+                       toplevel_call/3, toplevel_next/1, exit/2, monitor/2]),
+           catch(abolish(swi_wasm_actor_bridge:PI), _, true)),
     retractall(mock_call(_)),
     statechart_stop.
 
@@ -397,6 +397,41 @@ test(actor_spawn_register_ping_pong,
     assertion(statechart_in(pinger)),
     statechart_send(pong),
     \+ statechart_running.
+
+% Cancellation on state exit (SCXML <invoke> contract): when the state
+% owning a <spawn> is exited, its child is terminated.  The desktop runtime
+% does `exit(Pid, stop)`; the WASM port routes that to the bridge.
+test(child_cancelled_on_state_exit,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart initial=\"sup\">",
+        "  <state id=\"sup\" initial=\"run\">",
+        "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
+        "    <state id=\"run\"><go to=\"stopped\" on=\"quit\"/></state>",
+        "  </state>",
+        "  <state id=\"stopped\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(mock_call(spawn(worker))),
+    assertion(statechart_in(run)),
+    statechart_send(quit),
+    assertion(statechart_in(stopped)),
+    %  Leaving `sup` cancels its <spawn> child.
+    assertion(mock_call(exit(worker_actor(1), stop))).
+
+% Chart scripts reach the full actor API, not just the handful 9/10 use:
+% predicates like monitor/2 and exit/2 resolve from the chart's namespace,
+% delegated to the bridge.
+test(chart_script_reaches_full_actor_api,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    assertion(( predicate_property(statechart_wasm:monitor(_, _), defined),
+                predicate_property(statechart_wasm:rpc(_, _, _), defined),
+                predicate_property(statechart_wasm:server_request(_, _, _), defined) )),
+    statechart_wasm:monitor(worker_actor(7), _Ref),
+    assertion(mock_call(monitor(worker_actor(7)))),
+    statechart_wasm:exit(worker_actor(7), kill),
+    assertion(mock_call(exit(worker_actor(7), kill))).
 
 % Without the actor bridge loaded, <spawn> degrades to a no-op (invoke/1's
 % current_predicate guard), exactly as before -- no error, chart just lacks
