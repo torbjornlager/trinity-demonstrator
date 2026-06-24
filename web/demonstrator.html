@@ -9357,16 +9357,6 @@
               this.log("transport", fromPid + " -> main: " + message, "swi-wasm", "response");
               return true;
             }
-            if (to === "statechart") {
-              //  A spawned child (actor or toplevel) replied to the running
-              //  chart.  Inject it as an external statechart event, serialized
-              //  behind any in-flight engine work -- the same queue delayed
-              //  timer events use (drainSwiWasmStatechartEventQueue runs it via
-              //  statechart_send once the engine is idle).
-              this.log("transport", fromPid + " -> statechart: " + message, "swi-wasm", "response");
-              this.enqueueSwiWasmStatechartEvent(message);
-              return true;
-            }
             return this.sendSwiWasmActorMessage(to, message);
           },
           resolveSwiWasmActorTarget: function(pidText) {
@@ -9394,6 +9384,18 @@
           },
           sendSwiWasmActorMessage: function(pidText, messageText, fromPid) {
             var pid = this.resolveSwiWasmActorTarget(pidText);
+            if (pid === "statechart" || String(pidText) === "statechart") {
+              //  A spawned child (worker actor or toplevel) replied to the
+              //  running chart.  Inject it as an external statechart event,
+              //  serialized behind any in-flight engine work -- the same queue
+              //  delayed timer events use (drainSwiWasmStatechartEventQueue runs
+              //  it via statechart_send once the engine is idle).  This is the
+              //  common funnel for both worker request-sends (action "send")
+              //  and main-engine routeSwiWasmActorMessage fall-through.
+              this.log("transport", String(fromPid || "?") + " -> statechart: " + String(messageText || "true"), "swi-wasm", "response");
+              this.enqueueSwiWasmStatechartEvent(String(messageText || "true"));
+              return true;
+            }
             var remote = this.parseSwiWasmRemoteActorPid(pid);
             if (remote) {
               return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
