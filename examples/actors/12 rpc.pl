@@ -26,7 +26,7 @@ path(X, Y) :- edge(X, Z), path(Z, Y).
    ]).
 
 ?- rpc(localhost, ancestor_descendant(X,Y),[
-       load_uri('https://n1.elfenbenstornet.se')
+       load_uri('https://n2.elfenbenstornet.se')
    ]).
 
 

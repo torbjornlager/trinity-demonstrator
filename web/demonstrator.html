@@ -4977,10 +4977,13 @@
             isSwiWasmMode: (new URLSearchParams(window.location.search)).get("node") === "swi-wasm",
             swiWasmProlog: null,
             swiWasmModule: null,
-            swiWasmSolutions: [],
-            swiWasmSolIndex: 0,
-            swiWasmHasMore: false,
             swiWasmOutputBuffer: "",
+            //  Lazy paging state (see swi_wasm_drive/1 and runSwiWasmQuery).
+            swiWasmMorePending: null,
+            swiWasmMoreRequested: false,
+            swiWasmLastDet: "false",
+            swiWasmFinalized: false,
+            swiWasmPagingStopped: false,
             swiWasmActorWorkers: {},
             swiWasmNextWorkerActorId: 1,
             swiWasmNextActorRefId: 1,
@@ -8226,6 +8229,14 @@
               if (typeof window.swiAbortRpc === "function") {
                 window.swiAbortRpc();
               }
+              //  If the driver is parked waiting for ';' (swi_wasm_await_more),
+              //  reject that promise so the engine resumes and unwinds: abort()
+              //  alone cannot interrupt a goal suspended on a JS promise.
+              if (this.swiWasmMorePending) {
+                var morePending = this.swiWasmMorePending;
+                this.swiWasmMorePending = null;
+                morePending.reject("swi_wasm_abort");
+              }
               this.swiWasmProlog.abort();
               this.log("transport", "Abort requested.", "swi-wasm", "request");
             } catch (error) {
@@ -8324,7 +8335,19 @@
               }
             }
             if (this.isSwiWasmMode) {
-              this.swiWasmSolutions = [];
+              if (this.swiWasmMorePending) {
+                //  Stop a nondeterministic search the user chose to end:
+                //  reject swi_wasm_await_more so the parked driver unwinds
+                //  (closing the query, halting any further rpc/3 paging)
+                //  rather than computing more solutions.  The forEach .catch
+                //  finalizes (swiWasmPagingStopped) without echoing 'false.'.
+                var pending = this.swiWasmMorePending;
+                this.swiWasmMorePending = null;
+                this.swiWasmPagingStopped = true;
+                this.queryState = "query";
+                pending.reject("swi_wasm_stop_paging");
+                return;
+              }
               this.resetQueryState(term);
               return;
             }
@@ -8476,6 +8499,13 @@
                 return xhr.responseText;
               }
               catch(e) { console.error("[SWI-RPC] error", e); return null; }
+            };
+            // Keep user-provided source verbatim, but do not add a second full
+            // stop when a multiline load_text/1 string ends with whitespace.
+            // A second standalone `.` is a syntax error on the remote node.
+            window.swiEnsureFinalFullStop = function(text) {
+              var source = String(text);
+              return /\.\s*$/.test(source) ? source : source + ".";
             };
             // The RPC predicate awaits this promise between pages.  Do not use
             // the synchronous helper above: it would block the browser and
@@ -8763,6 +8793,29 @@
             };
             window.swiWasmActorInput = function(promptText) {
               return self.requestSwiWasmActorInput(String(promptText || ""));
+            };
+            //  Lazy solution paging (see swi_wasm_drive/1 in the bridge).
+            //  swiWasmNoteDet records whether the just-found solution left a
+            //  choicepoint, so the forEach callback can print '.' (deterministic
+            //  last) or ' ; ' (more may follow).  swiWasmAwaitMore parks the
+            //  driver between solutions; nextSwiWasmSolution resolves it on ';'
+            //  and stopPaging/abort reject it to unwind the suspended search.
+            window.swiWasmNoteDet = function(detText) {
+              self.swiWasmLastDet = String(detText) === "true" ? "true" : "false";
+              return true;
+            };
+            window.swiWasmAwaitMore = function() {
+              return new Promise(function(resolve, reject) {
+                //  If the user already pressed ';' before the driver parked
+                //  (a sub-heartbeat race), honour it immediately; otherwise
+                //  park until nextSwiWasmSolution / stopPaging / abort acts.
+                if (self.swiWasmMoreRequested) {
+                  self.swiWasmMoreRequested = false;
+                  resolve("more");
+                  return;
+                }
+                self.swiWasmMorePending = { resolve: resolve, reject: reject };
+              });
             };
           },
           reserveSwiWasmWorkerActorPid: function() {
@@ -10187,7 +10240,12 @@
               "    ;   io_target(Target)",
               "    ->  send(Target, prompt(Self, Prompt)),",
               "        receive({'$input'(_, Answer) -> true})",
-              "    ;   term_string(Prompt, PromptText),",
+              "    ;   %  Render the prompt as plain text (no quotes): a prompt",
+              "        %  atom like '|:' must display as |:, matching the node.",
+              "        ( atom(Prompt) -> atom_string(Prompt, PromptText)",
+              "        ; string(Prompt) -> PromptText = Prompt",
+              "        ; term_string(Prompt, PromptText)",
+              "        ),",
               "        Promise := swiWasmActorInput(#PromptText),",
               "        await(Promise, AnswerText),",
               "        AnswerText \\== null,",
@@ -10208,6 +10266,34 @@
               "swi_wasm_read_line_term(Line, Term) :-",
               "    ( string_concat(Body, \".\", Line) -> true ; Body = Line ),",
               "    term_string(Term, Body).",
+              "",
+              "%  Lazy solution driver for the inline terminal.  Prolog.forEach is",
+              "%  the only SWI-WASM query API that lets the goal yield (await) for",
+              "%  input/2, sleep/1 and rpc/3, but it drives backtracking to",
+              "%  exhaustion -- so every solution's side effects (e.g. an",
+              "%  interactive meta-interpreter's input/2 prompts) would run before",
+              "%  the first answer is shown.  swi_wasm_drive/1 makes the goal pause",
+              "%  between solutions on an awaited JS promise (swiWasmAwaitMore),",
+              "%  resumed only when the user asks for the next answer with ';' --",
+              "%  matching the lazy node toplevel.  deterministic/1 is read right",
+              "%  after the goal so the final, choicepoint-free solution prints '.'",
+              "%  instead of ' ; false'.",
+              "swi_wasm_drive(Goal) :-",
+              "    call(Goal),",
+              "    deterministic(Det),",
+              "    swi_wasm_note_det(Det),",
+              "    swi_wasm_more_gate(Det).",
+              "",
+              "swi_wasm_more_gate(true) :- !.",
+              "swi_wasm_more_gate(false).",
+              "swi_wasm_more_gate(false) :- swi_wasm_await_more, fail.",
+              "",
+              "swi_wasm_note_det(true)  :- _ := swiWasmNoteDet(#\"true\").",
+              "swi_wasm_note_det(false) :- _ := swiWasmNoteDet(#\"false\").",
+              "",
+              "swi_wasm_await_more :-",
+              "    Promise := swiWasmAwaitMore(),",
+              "    await(Promise, _).",
               "",
               "with_io_target(Target, Goal) :-",
               "    asserta(io_target(Target), Ref),",
@@ -10393,7 +10479,7 @@
               "rpc_load_part(Opts, Text) :-",
               "    member(load_text(T), Opts),",
               "    (atom(T) -> atom_string(T,S) ; string(T) -> S=T ; term_string(T,S)),",
-              "    (string_concat(_,\".\",S) -> Text=S ; string_concat(S,\".\",Text)).",
+              "    Text := swiEnsureFinalFullStop(#S).",
               "",
               "rpc_load_part(Opts, Text) :-",
               "    member(load_list(Terms), Opts),",
@@ -10858,9 +10944,11 @@
             this.pauseTerm(term);
             this.recordSessionEvent("session", "Query: " + this.clipText(goal, 140), "swi-wasm", "swi-wasm");
             this.log("transport", "?- " + goal + ".", "swi-wasm", "request");
-            this.swiWasmSolutions = [];
-            this.swiWasmSolIndex = 0;
-            this.swiWasmHasMore = false;
+            this.swiWasmMorePending = null;
+            this.swiWasmMoreRequested = false;
+            this.swiWasmLastDet = "false";
+            this.swiWasmFinalized = false;
+            this.swiWasmPagingStopped = false;
             this.swiWasmOutputBuffer = "";
             this.swiWasmQueryPending = true;
             this.swiWasmQueryAbortRequested = false;
@@ -10916,49 +11004,50 @@
               // Prolog is running so it behaves like a node terminal and is
               // still visible if the user aborts the computation.
               self.startSwiWasmOutputStreaming();
-              var LIMIT = 100;
-              var solutions = [];
-              var answerCount = 0;
               self.swiWasmOutputBuffer = "";
-              // The terminal retains at most LIMIT answers plus one sentinel
-              // answer used to report that more exist.  Bound Prolog itself,
-              // not just the JavaScript result array: rpc/3 fetches subsequent
-              // remote pages when Prolog backtracks, so merely discarding later
-              // answers here still causes unbounded HTTP traffic.
-              var boundedGoal = "limit(" + (LIMIT + 1) + ", (" + goal + "))";
-              return Prolog.forEach(boundedGoal, {}, function(answer) {
-                var output = self.swiWasmOutputBuffer;
-                self.swiWasmOutputBuffer = "";
-                if (answerCount < LIMIT) {
-                  solutions.push({ value: answer, output: output });
-                } else {
-                  self.swiWasmHasMore = true;
-                }
-                answerCount += 1;
+              // Drive the goal one solution at a time (see swi_wasm_drive/1).
+              // forEach still backtracks to exhaustion, but swi_wasm_drive
+              // parks the goal between solutions on swiWasmAwaitMore, so each
+              // answer's side effects run only when the user presses ';'.  The
+              // user goal runs in `user` (call(user:Goal)); swi_wasm_drive
+              // lives in the bridge so := and await resolve there.  No limit/1
+              // bound is needed: with lazy paging the user controls how many
+              // answers (and thus how many rpc/3 remote pages) are produced.
+              var drivenGoal =
+                "swi_wasm_actor_bridge:swi_wasm_drive(user:(" + goal + "))";
+              return Prolog.forEach(drivenGoal, {}, function(answer) {
+                self.presentSwiWasmSolution(
+                  term, answer, self.swiWasmLastDet === "true");
               // Yield regularly so the browser can repaint streamed output
               // and process the Stop control during an unbounded search.
               }, { heartbeat: 1 }).then(function() {
+                // forEach resolved == the driven goal is exhausted.
                 var trailingOutput = self.swiWasmOutputBuffer;
                 self.swiWasmOutputBuffer = "";
                 self.swiWasmQueryPending = false;
+                self.swiWasmMorePending = null;
                 self.stopSwiWasmOutputStreaming();
                 self.drainSwiWasmStatechartEventQueue();
+                if (trailingOutput) {
+                  self.terminal.echo(trailingOutput.replace(/\n$/, ""));
+                }
                 if (self.swiWasmQueryAbortRequested) {
                   self.swiWasmQueryAbortRequested = false;
                   self.finishError(term, "Computation aborted.");
                   self.resumeTerm(term);
                   return;
                 }
-                if (trailingOutput) {
-                  if (solutions.length > 0) {
-                    solutions[solutions.length - 1].output =
-                      (solutions[solutions.length - 1].output || "") + trailingOutput;
-                  } else {
-                    self.terminal.echo(trailingOutput.replace(/\n$/, ""));
-                  }
+                // The last shown solution was deterministic:
+                // presentSwiWasmSolution already printed '.' and reset.
+                if (self.swiWasmFinalized) {
+                  return;
                 }
-                self.swiWasmSolutions = solutions;
-                self.nextSwiWasmSolution(term);
+                // Reached the end of a nondeterministic search (the user
+                // pressed ';' past the last answer, or there were none):
+                // report failure like the node toplevel ('false.').
+                self.log("transport", "false.", "swi-wasm", "response");
+                self.finishFailure(term);
+                self.resumeTerm(term);
               });
             }).catch(function(err) {
               var message = String(err);
@@ -10968,11 +11057,21 @@
               // may print several values before a remote rate-limit error).
               var errorOutput = self.swiWasmOutputBuffer;
               self.swiWasmQueryPending = false;
+              self.swiWasmMorePending = null;
               self.swiWasmOutputBuffer = "";
               self.stopSwiWasmOutputStreaming();
               self.drainSwiWasmStatechartEventQueue();
               if (errorOutput && self.terminal) {
                 self.terminal.echo(errorOutput.replace(/\n$/, ""));
+              }
+              if (self.swiWasmPagingStopped) {
+                // Clean stop: the user ended paging, so swi_wasm_await_more
+                // was rejected to unwind the suspended search.  Not an error.
+                self.swiWasmPagingStopped = false;
+                self.resetQueryState(term);
+                self.appendQueryCompletionSpacing(term);
+                self.resumeTerm(term);
+                return;
               }
               if (self.swiWasmQueryAbortRequested || /Execution Aborted/i.test(message)) {
                 self.swiWasmQueryAbortRequested = false;
@@ -10983,32 +11082,22 @@
               self.resumeTerm(term);
             });
           },
-          nextSwiWasmSolution: function(term) {
-            var Prolog = this.swiWasmProlog;
-            var solutions = this.swiWasmSolutions;
-            var idx = this.swiWasmSolIndex;
-            if (idx >= solutions.length) {
-              if (this.swiWasmHasMore) {
-                this.terminal.echo("% Only first 100 solutions shown.");
-                this.resetQueryState(term);
-                this.appendQueryCompletionSpacing(term);
-              } else {
-                this.log("transport", "false.", "swi-wasm", "response");
-                this.finishFailure(term);
-              }
-              this.resumeTerm(term);
-              return;
+          presentSwiWasmSolution: function(term, answer, isDeterministic) {
+            //  Render one solution as it arrives from the lazy driver.  When
+            //  the goal left no choicepoint (isDeterministic) this is the final
+            //  answer: print '.' and reset.  Otherwise offer ' ; ': the driver
+            //  is about to park in swi_wasm_await_more, which nextSwiWasmSolution
+            //  resolves when the user asks for the next answer.
+            var output = this.swiWasmOutputBuffer;
+            this.swiWasmOutputBuffer = "";
+            if (output) {
+              this.terminal.echo(output.replace(/\n$/, ""));
             }
-            this.swiWasmSolIndex++;
-            var sol = solutions[idx];
-            if (sol.output) {
-              this.terminal.echo(sol.output.replace(/\n$/, ""));
-            }
-            this.captureSwiWasmBindings(sol.value);
-            this.syncSwiWasmStatechartStatus(Prolog);
-            var answerStr = this.formatSwiWasmAnswer(sol.value, Prolog);
-            var isLast = (this.swiWasmSolIndex >= solutions.length && !this.swiWasmHasMore);
-            if (isLast) {
+            this.captureSwiWasmBindings(answer);
+            this.syncSwiWasmStatechartStatus(this.swiWasmProlog);
+            var answerStr = this.formatSwiWasmAnswer(answer, this.swiWasmProlog);
+            if (isDeterministic) {
+              this.swiWasmFinalized = true;
               this.log("transport", answerStr + ".", "swi-wasm", "response");
               this.recordSessionEvent("success", answerStr + ".", "swi-wasm", "swi-wasm");
               this.terminal.echo(answerStr + ".");
@@ -11021,6 +11110,30 @@
               this.queryState = "more";
               term.set_prompt(answerStr + " ");
               this.resumeTerm(term);
+            }
+          },
+          nextSwiWasmSolution: function(term) {
+            //  User asked for the next answer (';').  Resume the parked driver
+            //  (swi_wasm_await_more); it backtracks into the user goal for the
+            //  next solution, running that solution's side effects now.  The
+            //  answer itself is rendered by the forEach callback
+            //  (presentSwiWasmSolution) when the goal succeeds again.
+            if (!this.swiWasmQueryPending) {
+              //  No active search (e.g. already finalized): just reset.
+              this.resetQueryState(term);
+              this.resumeTerm(term);
+              return;
+            }
+            this.queryState = "query";
+            this.pauseTerm(term);
+            if (this.swiWasmMorePending) {
+              var pending = this.swiWasmMorePending;
+              this.swiWasmMorePending = null;
+              pending.resolve("more");
+            } else {
+              //  The driver has not parked yet (sub-heartbeat race); record the
+              //  request so swiWasmAwaitMore honours it the moment it parks.
+              this.swiWasmMoreRequested = true;
             }
           },
           formatSwiWasmAnswer: function(bindings, Prolog) {

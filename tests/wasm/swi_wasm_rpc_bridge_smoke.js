@@ -43,6 +43,9 @@ ok(includes('"    Promise := swiRpcGetAsync(#FinalURL),"') &&
    "web_rpc_page awaits each remote page");
 ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
    "web_rpc_page no longer uses synchronous XHR");
+ok(includes("window.swiEnsureFinalFullStop = function(text)") &&
+   includes('"    Text := swiEnsureFinalFullStop(#S)."'),
+   "multiline load_text preserves a terminating full stop before trailing whitespace");
 ok(includes("window.swiAbortRpc();") &&
    includes("this.swiWasmProlog.abort();"),
    "Abort cancels both fetch and Prolog execution");
@@ -58,6 +61,13 @@ ok(!includes("window.prompt(") &&
    includes("requestSwiWasmActorInput") &&
    includes("if (this.swiWasmActorInputActive)"),
    "SWI-WASM read/1 and input/2 use the inline terminal prompt, not a modal");
+ok(includes("swi_wasm_actor_bridge:swi_wasm_drive(user:(") &&
+   includes("swi_wasm_await_more") &&
+   includes("deterministic(Det)") &&
+   includes("window.swiWasmAwaitMore = function()") &&
+   includes("presentSwiWasmSolution") &&
+   !includes('"limit(" + (LIMIT + 1)'),
+   "solutions page lazily: side effects between answers run only on ';' (no eager forEach buffering)");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 

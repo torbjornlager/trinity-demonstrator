@@ -18,8 +18,8 @@ prove(H) :-
 prove(A) :-
     askable(A, Q),
     writeln(Q),
-    input(yes_or_no, Answer),
-    Answer == true.
+    read(Answer),
+    Answer == yes.
 
 good_pet(X) :- bird(X), small(X).
 good_pet(X) :- cuddly(X), yellow(X).
