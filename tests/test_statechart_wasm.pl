@@ -316,13 +316,11 @@ setup_mock_bridge :-
     assertz((swi_wasm_actor_bridge:toplevel_next(Pid) :-
                 test_statechart_wasm:record_mock_call(toplevel_next(Pid)))),
     assertz((swi_wasm_actor_bridge:exit(Pid, Reason) :-
-                test_statechart_wasm:record_mock_call(exit(Pid, Reason)))),
-    assertz((swi_wasm_actor_bridge:monitor(Pid, _Ref) :-
-                test_statechart_wasm:record_mock_call(monitor(Pid)))).
+                test_statechart_wasm:record_mock_call(exit(Pid, Reason)))).
 
 teardown_mock_bridge :-
     forall(member(PI, [toplevel_spawn/2, spawn/3, register/2, send/2, send/3,
-                       toplevel_call/3, toplevel_next/1, exit/2, monitor/2]),
+                       toplevel_call/3, toplevel_next/1, exit/2]),
            catch(abolish(swi_wasm_actor_bridge:PI), _, true)),
     retractall(mock_call(_)),
     statechart_stop.
@@ -421,17 +419,37 @@ test(child_cancelled_on_state_exit,
     assertion(mock_call(exit(worker_actor(1), stop))).
 
 % Chart scripts reach the full actor API, not just the handful 9/10 use:
-% predicates like monitor/2 and exit/2 resolve from the chart's namespace,
-% delegated to the bridge.
+% monitor/2, exit/2, rpc/3, server_request/3, ... all resolve from the
+% chart's namespace (monitor/2 is chart-local; the rest delegate to the
+% bridge).
 test(chart_script_reaches_full_actor_api,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     assertion(( predicate_property(statechart_wasm:monitor(_, _), defined),
+                predicate_property(statechart_wasm:exit(_, _), defined),
                 predicate_property(statechart_wasm:rpc(_, _, _), defined),
-                predicate_property(statechart_wasm:server_request(_, _, _), defined) )),
-    statechart_wasm:monitor(worker_actor(7), _Ref),
-    assertion(mock_call(monitor(worker_actor(7)))),
+                predicate_property(statechart_wasm:server_request(_, _, _), defined),
+                predicate_property(statechart_wasm:supervisor_spawn(_, _), defined) )),
+    %  Executing a delegated one reaches the bridge (mock records it).
     statechart_wasm:exit(worker_actor(7), kill),
     assertion(mock_call(exit(worker_actor(7), kill))).
+
+% Chart reacts to a monitored child's termination.  The monitor
+% registration (watcher = `statechart`) and the worker-death -> down
+% delivery are JS (browser-verified); here we inject the down(...) the
+% coordinator routes to `statechart` and confirm the chart transitions.
+test(chart_reacts_to_child_down, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"waiting\">",
+        "  <state id=\"waiting\">",
+        "    <go to=\"done\" on=\"down(_Ref, _Pid, _Reason)\"/>",
+        "  </state>",
+        "  <final id=\"done\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(statechart_in(waiting)),
+    statechart_send(down(ref(1), worker_actor(1), normal)),
+    \+ statechart_running.
 
 % Without the actor bridge loaded, <spawn> degrades to a no-op (invoke/1's
 % current_predicate guard), exactly as before -- no error, chart just lacks

@@ -73,6 +73,10 @@ ok(includes('String(pidText) === "statechart"') &&
    includes("current_predicate(statechart_wasm:statechart_send/1)") &&
    includes('Module.FS.writeFile("/swi_wasm_actor_bridge.pl", self.swiWasmRpcProlog())'),
    "<spawn> in WASM charts: bridge loaded for charts, send(statechart) routes from workers (via sendSwiWasmActorMessage), replies become chart events");
+ok(includes("window.swiWasmStatechartMonitor = function(pidText, refText)") &&
+   includes('self.monitorSwiWasmActor("statechart"') &&
+   includes('if (pid === "statechart")'),
+   "a chart's monitor/2 watches as `statechart`, so a monitored child's down(...) routes back as a chart event");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 

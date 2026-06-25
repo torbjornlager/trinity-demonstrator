@@ -8738,6 +8738,15 @@
             window.swiWasmActorDemonitor = function(refText) {
               return Promise.resolve(self.demonitorSwiWasmActor("main", refText));
             };
+            //  Chart-watcher variants: a chart's monitor/2 records `statechart`
+            //  as the watcher (not `main`), so a monitored child's down event
+            //  routes back into the running chart (see sendSwiWasmActorMessage).
+            window.swiWasmStatechartMonitor = function(pidText, refText) {
+              return Promise.resolve(self.monitorSwiWasmActor("statechart", pidText, refText));
+            };
+            window.swiWasmStatechartDemonitor = function(refText) {
+              return Promise.resolve(self.demonitorSwiWasmActor("statechart", refText));
+            };
             window.swiWasmActorExit = function(pidText, reasonText) {
               return Promise.resolve(self.exitSwiWasmActor(pidText, reasonText));
             };
@@ -9462,6 +9471,11 @@
             var pid = String(pidText || "");
             if (pid === "main") {
               return true;
+            }
+            if (pid === "statechart") {
+              //  The running chart is a valid monitor watcher: a child's
+              //  down(Ref,Pid,Reason) routes back to it as an external event.
+              return !!this.swiWasmStatechartActive;
             }
             if (this.parseSwiWasmRemoteToplevelPid(pid) || this.parseSwiWasmRemoteActorPid(pid)) {
               return true;

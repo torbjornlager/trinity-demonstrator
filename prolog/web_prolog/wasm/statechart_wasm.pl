@@ -215,6 +215,27 @@ cancel_delayed_events :-
           true).
 
 
+%  monitor/2 and demonitor must record the chart (pid `statechart`) as the
+%  watcher, not `main` (the bridge's default), so a monitored child's
+%  down(Ref, Pid, Reason) routes back into the chart as an external event
+%  (deliverSwiWasmActorDown -> sendSwiWasmActorMessage -> chart event).
+%  Kept local so the delegation directive below skips them.
+monitor(Pid, Ref) :-
+    swi_wasm_actor_bridge:make_ref(Ref),
+    term_string(Pid, PidText),
+    term_string(Ref, RefText),
+    Promise := swiWasmStatechartMonitor(#PidText, #RefText),
+    await(Promise, Monitored),
+    Monitored == true.
+
+demonitor(Ref) :-
+    demonitor(Ref, []).
+demonitor(Ref, _Options) :-
+    term_string(Ref, RefText),
+    Promise := swiWasmStatechartDemonitor(#RefText),
+    await(Promise, _).
+
+
 %  Expose the full actor / toplevel / server / supervisor / rpc API to chart
 %  scripts, delegated to the bridge -- matching the desktop chart actor,
 %  which imports `actors` + `toplevel_actors` wholesale.  Generated as one
