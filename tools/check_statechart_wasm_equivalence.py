@@ -55,11 +55,12 @@ def normalise(text: str, desktop: bool) -> str:
     text = re.sub(r"(?ms)^%![\s\S]*?(?=^[a-z_][A-Za-z0-9_]*\(|\Z)", "", text)
 
     # Invoked-actor shutdown on state exit is host-specific: the desktop
-    # exits the child actor (exit(Pid, stop)); the WASM port cancels the
-    # browser worker via the bridge (cancel_invoked_child(Pid)).  Strip the
-    # cancellation forall from both sides so the shared exit algorithm is
-    # compared without it.
-    text = re.sub(r"\n\s*forall\(statechart_actor:invoked\(State, Pid\), [^\n]*\),", "", text)
+    # exits the child actor (forall(invoked, exit(Pid, stop))); the WASM port
+    # cancels the browser worker via the bridge and consumes the record
+    # (forall(retract(invoked), cancel_invoked_child(Pid))).  Strip the
+    # cancellation forall, in either form, from both sides so the shared exit
+    # algorithm is compared without it.
+    text = re.sub(r"\n\s*forall\((?:retract\()?statechart_actor:invoked\(State, Pid\)[^\n]*\),", "", text)
 
     if desktop:
         # Desktop-only diagnostics.  The WASM port has no debug stream.

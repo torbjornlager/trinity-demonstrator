@@ -14,8 +14,10 @@ Differences from the desktop `statechart_model`:
     expected to pass XML as text or open a stream itself. This avoids
     the need for `source_utils:open_source_uri/2` and HTTP fetch.
   - All asserts target `statechart_wasm` instead of `statechart_actor`.
-  - `<spawn>` elements still produce `to_be_invoked/3` facts, but the
-    runtime's `invoke/1` is a no-op in this port.
+  - `<spawn>` elements produce `to_be_invoked/3` facts which the runtime's
+    invoke/1 executes (spawning a browser worker actor/toplevel).
+  - `<datamodel>` predicates are tracked (datamodel_predicate/1) so clean/0
+    can abolish them and not leak one chart's data/rules into the next.
 */
 
 :- use_module(library(option)).
@@ -256,10 +258,26 @@ read_terms(Stream, Terms) :-
 %   refer to them.  Uses open_string/2 (portable) instead of memfiles.
 
 load_datamodel(Text) :-
+    datamodel_dynamic_snapshot(Before),
     setup_call_cleanup(
         open_string(Text, Stream),
         read_datamodel_terms(Stream),
-        close(Stream)).
+        close(Stream)),
+    %  Track every predicate the datamodel added, including ones created by
+    %  directives (`:- dynamic(p/1)`, `:- assertz(...)`) that assert_local/1
+    %  does not see, by diffing the module's dynamic predicates around the
+    %  load.  clean/0 then abolishes them so nothing leaks into the next chart.
+    datamodel_dynamic_snapshot(After),
+    subtract(After, Before, New),
+    forall(member(PI, New), track_datamodel_predicate(PI)).
+
+%   The predicate indicators currently dynamic in the statechart_wasm module.
+datamodel_dynamic_snapshot(PIs) :-
+    findall(F/N,
+            ( predicate_property(statechart_wasm:Head, dynamic),
+              functor(Head, F, N) ),
+            PIs0),
+    sort(PIs0, PIs).
 
 read_datamodel_terms(Stream) :-
     read_term(Stream, Term, []),

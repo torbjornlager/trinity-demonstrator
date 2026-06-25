@@ -524,6 +524,40 @@ test(datamodel_isolated_across_charts, [cleanup(statechart_stop)]) :-
     findall(X, statechart_wasm:leaked(X), Xs),
     assertion(Xs == [new]).
 
+% A <datamodel> predicate created by a DIRECTIVE (`:- dynamic`, `:- assertz`)
+% -- not just a plain fact -- is also abolished on the next chart.
+test(datamodel_directive_predicates_isolated, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"s\">",
+        "  <datamodel>:- dynamic(leaked/1).\n:- assertz(leaked(old)).\n</datamodel>",
+        "  <state id=\"s\"/>",
+        "</statechart>"
+    ], Chart1),
+    start_text(Chart1),
+    assertion(statechart_wasm:leaked(old)),
+    start_text("<statechart initial=\"s\"><state id=\"s\"/></statechart>"),
+    assertion(\+ current_predicate(statechart_wasm:leaked/1)).
+
+% A spawned child is cancelled exactly once: a transition that exits its
+% state consumes the invoked/2 record (retract), so a later statechart_stop
+% does not cancel it again (which would send a duplicate remote exit).
+test(invoked_child_cancelled_once,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart initial=\"sup\">",
+        "  <state id=\"sup\" initial=\"run\">",
+        "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
+        "    <state id=\"run\"><go to=\"stopped\" on=\"quit\"/></state>",
+        "  </state>",
+        "  <state id=\"stopped\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(quit),
+    statechart_stop,
+    findall(x, mock_call(exit(worker_actor(1), stop)), Es),
+    assertion(length(Es, 1)).
+
 % Without the actor bridge loaded, <spawn> degrades to a no-op (invoke/1's
 % current_predicate guard), exactly as before -- no error, chart just lacks
 % the child.  Guards the desktop/no-runtime path.

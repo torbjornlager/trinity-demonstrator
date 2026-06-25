@@ -21,8 +21,13 @@ event at a time with `statechart_send/1`.
 Unlike the desktop statechart actor:
 
   - There is no actor mailbox, no `receive/1`, no thread.  Each call
-    is synchronous and runs to quiescence before returning.
-  - `<spawn>` elements parse but do not execute (deferred).
+    is synchronous and runs to quiescence before returning.  The chart is
+    addressed as the pid `statechart`: a spawned child's replies route back
+    in as external events rather than being read from a mailbox.
+  - `<spawn>` IS executed: invoke/1 spawns a browser worker actor/toplevel
+    through swi_wasm_actor_bridge (locally or on a remote node) and the chart
+    drives it with the full actor/toplevel API (Pid ! Msg, toplevel_call,
+    monitor, ...).  Children are cancelled when their owning state exits.
   - I/O (write, writeln, format) goes to the default user_output
     stream, which the WASM runtime captures via its on_output callback.
 

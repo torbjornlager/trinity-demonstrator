@@ -47,9 +47,11 @@ Differences from the desktop `statechart_runtime`:
 
   - The internal event queue is a list held in a dynamic fact instead of
     a SWI message queue (no threads in WASM).
-  - `invoke/1` is a no-op; `<spawn>` is parsed but not executed in the
-    WASM port (deferred).
-  - No dependency on `actor` or `toplevel_actor`.
+  - `invoke/1` spawns browser worker actors/toplevels through
+    swi_wasm_actor_bridge (a no-op only when that bridge is absent);
+    cancel_invoked_child/1 terminates them when their owning state exits.
+  - No dependency on `actor` or `toplevel_actor`; the bridge is reached
+    by module-qualified calls so this file still loads without it.
 */
 
 :- use_module(library(lists)).
@@ -57,12 +59,13 @@ Differences from the desktop `statechart_runtime`:
 
 %!  clean is det.
 clean :-
-    %  Terminate any children spawned via <spawn> before discarding the
-    %  invoked/2 records.  exit_interpreter already cancels per-state on
-    %  teardown; this also covers statechart_start replacing a chart that
-    %  was never explicitly stopped, so workers never outlive their chart
-    %  (cf. the desktop runtime, which exits invoked children).
-    forall(statechart_wasm:invoked(_, Pid), cancel_invoked_child(Pid)),
+    %  Terminate any children spawned via <spawn>, consuming each invoked/2
+    %  record (retract, not just iterate) so a child is cancelled exactly
+    %  once across process_states_to_exit, exit_interpreter and here.  Covers
+    %  statechart_start replacing a chart that was never explicitly stopped,
+    %  so workers never outlive their chart (cf. the desktop runtime, which
+    %  exits invoked children).
+    forall(retract(statechart_wasm:invoked(_, Pid)), cancel_invoked_child(Pid)),
     %  Abolish predicates a previous <datamodel> contributed, so its data
     %  and rules do not leak into the next chart.
     forall(retract(statechart_wasm:datamodel_predicate(F/N)),
@@ -108,7 +111,7 @@ exit_interpreter :-
 exit_interpreter([]).
 exit_interpreter([State|States]) :-
     forall(statechart_wasm:onexit(State, Content), execute_content(Content)),
-    forall(statechart_wasm:invoked(State, Pid), cancel_invoked_child(Pid)),
+    forall(retract(statechart_wasm:invoked(State, Pid)), cancel_invoked_child(Pid)),
     configuration_delete(State),
     (   is_final(State),
         has_parent(State, Parent),

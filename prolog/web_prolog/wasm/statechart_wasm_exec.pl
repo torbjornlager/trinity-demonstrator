@@ -336,7 +336,7 @@ exit_states(EnabledTransitions) :-
 process_states_to_exit([]).
 process_states_to_exit([State|States]) :-
     forall(statechart_wasm:onexit(State, Content), execute_content(Content)),
-    forall(statechart_wasm:invoked(State, Pid), cancel_invoked_child(Pid)),
+    forall(retract(statechart_wasm:invoked(State, Pid)), cancel_invoked_child(Pid)),
     configuration_delete(State),
     process_states_to_exit(States).
 
