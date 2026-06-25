@@ -81,6 +81,9 @@ ok(includes('self.swiWasmStatechartActive ? "statechart" : "main"') &&
    includes("deliverSwiWasmRemoteResult: function") &&
    includes("self.deliverSwiWasmRemoteResult(remoteMessage)"),
    "remote <spawn> in WASM charts: a remote node's results/replies route to the running chart, not the unread main mailbox");
+ok(includes('message.type === "output"') &&
+   includes("this.terminal.echo(String(message.output)"),
+   "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 
