@@ -77,6 +77,10 @@ ok(includes("window.swiWasmStatechartMonitor = function(pidText, refText)") &&
    includes('self.monitorSwiWasmActor("statechart"') &&
    includes('if (pid === "statechart")'),
    "a chart's monitor/2 watches as `statechart`, so a monitored child's down(...) routes back as a chart event");
+ok(includes('self.swiWasmStatechartActive ? "statechart" : "main"') &&
+   includes("deliverSwiWasmRemoteResult: function") &&
+   includes("self.deliverSwiWasmRemoteResult(remoteMessage)"),
+   "remote <spawn> in WASM charts: a remote node's results/replies route to the running chart, not the unread main mailbox");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 

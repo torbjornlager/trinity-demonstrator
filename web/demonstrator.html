@@ -8691,7 +8691,13 @@
               return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText, nameText);
             };
             window.swiWasmActorSend = function(pidText, messageText) {
-              return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, "main"));
+              //  While a chart runs it is the only engine activity (it blocks
+              //  regular queries), so a send from the main engine is the
+              //  chart's: tag it `statechart` as the reply address so a remote
+              //  actor's reply (browser_from) routes back into the chart, not
+              //  the unread main mailbox.  Local sends ignore this (cosmetic).
+              var from = self.swiWasmStatechartActive ? "statechart" : "main";
+              return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, from));
             };
             window.swiWasmActorRemoteSpawn = function(nodeText, goalText, sourceText) {
               return self.spawnSwiWasmRemoteActor(nodeText, goalText, sourceText);
@@ -8962,7 +8968,7 @@
                   } else {
                     remoteMessage = "timeout(" + remotePid + ")";
                   }
-                  self.deliverSwiWasmMainActorMessage(remoteMessage);
+                  self.deliverSwiWasmRemoteResult(remoteMessage);
                   return;
                 }
                 if (message.type === "down") {
@@ -8991,10 +8997,10 @@
                   if (!pending && message.pid !== undefined) {
                     var errorPid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
                     var errorText = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
-                    self.deliverSwiWasmMainActorMessage("error(" + errorPid + ",remote_error('" + errorText + "'))");
+                    self.deliverSwiWasmRemoteResult("error(" + errorPid + ",remote_error('" + errorText + "'))");
                   } else if (!pending) {
                     var generalError = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
-                    self.deliverSwiWasmMainActorMessage("error(remote_toplevel,remote_error('" + generalError + "'))");
+                    self.deliverSwiWasmRemoteResult("error(remote_toplevel,remote_error('" + generalError + "'))");
                   }
                   self.log("error", "Remote actor node " + node + ": " + String(message.data || "error"), "swi-wasm");
                   return;
@@ -9604,6 +9610,19 @@
               return;
             }
             this.swiWasmActorMainMailbox.push(text);
+          },
+          //  Result/error from a remote node (toplevel success/failure/timeout,
+          //  or a spawn error) that isn't addressed to a specific pid.  While a
+          //  chart runs it's the chart's (queries are blocked), so route it in
+          //  as an external statechart event; otherwise deliver to the main
+          //  mailbox as before.  (Remote actor_message and down already route
+          //  by target/watcher, which a chart's monitor/send make `statechart`.)
+          deliverSwiWasmRemoteResult: function(messageText) {
+            if (this.swiWasmStatechartActive) {
+              this.enqueueSwiWasmStatechartEvent(String(messageText));
+            } else {
+              this.deliverSwiWasmMainActorMessage(String(messageText));
+            }
           },
           receiveSwiWasmActorMessage: function(timeoutSeconds) {
             var self = this;

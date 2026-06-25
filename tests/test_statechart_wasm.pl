@@ -451,6 +451,25 @@ test(chart_reacts_to_child_down, [cleanup(statechart_stop)]) :-
     statechart_send(down(ref(1), worker_actor(1), normal)),
     \+ statechart_running.
 
+% Remote <spawn node="..."> binds Pid = Id@Node; the chart-side handling of
+% spawned/success/down with such pids is the same as local (events are just
+% terms, and @/2 is a declared operator).  The remote invoke + result
+% routing to the chart is JS (browser-verified); here we confirm the chart
+% matches remote-pid events.
+test(chart_handles_remote_pid_events, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"a\">",
+        "  <state id=\"a\"><go to=\"b\" on=\"success(_@_, _, false)\"/></state>",
+        "  <state id=\"b\"><go to=\"done\" on=\"down(_, _@_, _)\"/></state>",
+        "  <final id=\"done\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(success(t1@n1, [a], false)),
+    assertion(statechart_in(b)),
+    statechart_send(down(ref(1), t1@n1, normal)),
+    \+ statechart_running.
+
 % Without the actor bridge loaded, <spawn> degrades to a no-op (invoke/1's
 % current_predicate guard), exactly as before -- no error, chart just lacks
 % the child.  Guards the desktop/no-runtime path.
