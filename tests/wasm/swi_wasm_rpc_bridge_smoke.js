@@ -49,6 +49,17 @@ ok(includes("window.swiEnsureFinalFullStop = function(text)") &&
 ok(includes("window.swiAbortRpc();") &&
    includes("this.swiWasmProlog.abort();"),
    "Abort cancels both fetch and Prolog execution");
+ok(includes("terminalConvertLinks: true") &&
+   includes("Convert URLs to links") &&
+   includes("settings.convertLinks = this.terminalConvertLinks") &&
+   includes("convertLinks: this.terminalConvertLinks") &&
+   includes("echoCommand: false") &&
+   includes("echoTerminalCommand: function") &&
+   includes("self.echoTerminalCommand(term, command)") &&
+   includes("installTerminalUrlLinkFormatter") &&
+   includes("window.webPrologTerminalConvertLinks === false") &&
+   includes("[[!;;]"),
+   "terminal URLs are converted to links when enabled, including echoed typed/pasted commands");
 ok(includes("self.terminal.echo(String(text).replace(/\\n$/, \"\"));"),
    "output is streamed to the terminal while a runner is active");
 ok(includes("{ heartbeat: 1 }"),

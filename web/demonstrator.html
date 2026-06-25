@@ -1217,10 +1217,14 @@
       }
 
       .terminal a,
-      .terminal a:hover,
-      .terminal a:focus,
       .terminal a:visited {
-        color: inherit !important;
+        color: var(--link-ink) !important;
+        text-decoration: underline;
+      }
+
+      .terminal a:hover,
+      .terminal a:focus {
+        color: var(--link-ink) !important;
         text-decoration: underline;
       }
 
@@ -3203,6 +3207,15 @@
                         <div class="settings-option-note">Insert a blank line after each completed query.</div>
                       </div>
                     </label>
+                    <label class="settings-option settings-check-row">
+                      <input type="checkbox"
+                             v-model="terminalConvertLinks"
+                             @change="handleTerminalLinksChange">
+                      <div class="settings-option-text">
+                        <div class="settings-option-label">Convert URLs to links</div>
+                        <div class="settings-option-note">Make URLs in terminal output and echoed commands clickable.</div>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -3805,6 +3818,30 @@
       var PORTAL_THEME_COOKIE_NAME = "wp_theme_mode";
       var PORTAL_REPOSITORY_URL = "https://github.com/torbjornlager/book-poc";
       var PORTAL_BOOK_MANUSCRIPT_URL = "https://trinity.elfenbenstornet.se/book.html";
+
+      function installTerminalUrlLinkFormatter() {
+        var formatter;
+        if (!window.$ || !$.terminal || !$.terminal.defaults || !Array.isArray($.terminal.defaults.formatters)) {
+          return;
+        }
+        if ($.terminal.__webPrologUrlLinkFormatterInstalled) {
+          return;
+        }
+        formatter = [
+          /\b((?:https?|ftp):\/\/[^\s<>"'\\\]\)]+)/g,
+          function(match) {
+            if (window.webPrologTerminalConvertLinks === false) {
+              return match;
+            }
+            return "[[!;;]" + match + "]";
+          },
+          { echo: true }
+        ];
+        $.terminal.defaults.formatters.unshift(formatter);
+        $.terminal.__webPrologUrlLinkFormatterInstalled = true;
+      }
+
+      installTerminalUrlLinkFormatter();
 
       var ADMIN_CONFIG_HELP_TEXT = Object.freeze({
         self_url: "Canonical node address used to construct global pids such as Pid@Node. Change it only when this node should advertise a different public URL.",
@@ -4844,7 +4881,7 @@
             hideLocalNodeInPid: true,
             showTerminalGreeting: true,
             terminalExtraQueryNewline: false,
-            terminalConvertLinks: false,
+            terminalConvertLinks: true,
             themeMode: "light",
             webPrologCodeColoring: "none",
             sxmlCodeColoring: "none",
@@ -5472,6 +5509,7 @@
             } else if (storedConvertLinks === "1") {
               this.terminalConvertLinks = true;
             }
+            window.webPrologTerminalConvertLinks = this.terminalConvertLinks;
           },
           persistTerminalLinkSettings: function() {
             window.localStorage.setItem("wb.terminalConvertLinks", this.terminalConvertLinks ? "1" : "0");
@@ -5832,6 +5870,7 @@
               return;
             }
             settings.convertLinks = this.terminalConvertLinks;
+            window.webPrologTerminalConvertLinks = this.terminalConvertLinks;
           },
           restoreLoggerFilters: function() {
             var stored = window.localStorage.getItem("wb.visibleLogKinds");
@@ -6973,6 +7012,27 @@
             }
             return String(this.terminal.get_command() || "");
           },
+          echoTerminalCommand: function(term, command, promptText) {
+            var prompt = promptText !== undefined
+              ? String(promptText)
+              : (term && typeof term.get_prompt === "function" ? String(term.get_prompt() || this.basePrompt()) : this.basePrompt());
+            var text = command === undefined || command === null ? "" : String(command);
+            var escaped = window.$ && $.terminal && typeof $.terminal.escape_formatting === "function"
+              ? $.terminal.escape_formatting(text)
+              : text;
+            if (!term || typeof term.echo !== "function") {
+              return;
+            }
+            term.echo(prompt + escaped, {
+              exec: false,
+              convertLinks: this.terminalConvertLinks,
+              finalize: function(node) {
+                if (node && typeof node.addClass === "function") {
+                  node.addClass("terminal-command");
+                }
+              }
+            });
+          },
           submitWorkbenchCommand: function(command, displayText) {
             if (!this.terminal || !this.canSubmitNewQuery) {
               if (this.terminal) {
@@ -6983,7 +7043,7 @@
             }
             this.selectDock("terminal");
             if (displayText !== false) {
-              this.terminal.echo(this.basePrompt() + (typeof displayText === "string" ? displayText : command));
+              this.echoTerminalCommand(this.terminal, typeof displayText === "string" ? displayText : command, this.basePrompt());
             }
             this.handleTerminalCommand(command, this.terminal);
             // Up-arrow history: jquery.terminal only records commands that
@@ -7018,7 +7078,7 @@
             if (typeof this.terminal.set_command === "function") {
               this.terminal.set_command("");
             }
-            this.terminal.echo(promptText + command);
+            this.echoTerminalCommand(this.terminal, command, promptText);
             this.handleTerminalCommand(command, this.terminal);
             this.focusTerminalSoon();
           },
@@ -11620,11 +11680,13 @@
           initTerminal: function() {
             var self = this;
             this.terminal = $(this.$refs.terminalHost).terminal(function(command, term) {
+              self.echoTerminalCommand(term, command);
               self.handleTerminalCommand(command, term);
             }, {
               greetings: this.terminalGreetingText(),
               prompt: this.isSwiWasmMode ? " " : this.basePrompt(),
               convertLinks: this.terminalConvertLinks,
+              echoCommand: false,
               keypress: function(event) {
                 if (self.queryState === "more" && (event.which === 59 || event.which === 32)) {
                   self.nextSolution(self.terminal);
