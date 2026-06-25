@@ -84,6 +84,14 @@ ok(includes('self.swiWasmStatechartActive ? "statechart" : "main"') &&
 ok(includes('message.type === "output"') &&
    includes("this.terminal.echo(String(message.output)"),
    "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
+ok(includes("finalizeSwiWasmWorkerActor: function") &&
+   includes("self.finalizeSwiWasmWorkerActor(pid,") &&
+   includes('"worker_error: "'),
+   "an uncaught worker error finalizes the actor (monitors' down/3 + name clear + reap), not just a log");
+ok(includes("function settleReject(error)") &&
+   includes("remote actor connection timed out:") &&
+   includes("remote actor connection closed before ready:"),
+   "remote connection settles once: rejects on close-before-open and on timeout, so the connect promise never parks");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 

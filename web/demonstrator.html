@@ -8832,6 +8832,10 @@
             worker.onerror = function(error) {
               var message = error && error.message ? error.message : String(error);
               self.log("error", pid + " worker error: " + message, "swi-wasm");
+              //  An uncaught worker error (e.g. importScripts failing before
+              //  the worker's own handler runs) never posts {type:error}, so
+              //  finalize here: notify monitors (down/3), clear names, reap.
+              self.finalizeSwiWasmWorkerActor(pid, "error(" + JSON.stringify("worker_error: " + message) + ")");
             };
             worker.postMessage({
               command: "start",
@@ -8900,16 +8904,37 @@
             var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelLimits: {} };
             this.swiWasmRemoteActorConnections[node] = entry;
             entry.connecting = new Promise(function(resolve, reject) {
+              //  Single-settlement: resolve on open, reject on the first of
+              //  error, close-before-open, or timeout.  Without this a socket
+              //  that closes without the expected error ordering left the
+              //  `connecting` promise pending forever, parking every remote
+              //  spawn/call/monitor awaiting it.
               var socket;
+              var settled = false;
+              var connectTimer = null;
+              function clearConnectTimer() {
+                if (connectTimer) { window.clearTimeout(connectTimer); connectTimer = null; }
+              }
+              function settleResolve(value) {
+                if (settled) return;
+                settled = true; clearConnectTimer(); delete entry.connecting; resolve(value);
+              }
+              function settleReject(error) {
+                if (settled) return;
+                settled = true; clearConnectTimer(); delete entry.connecting; reject(error);
+              }
+              connectTimer = window.setTimeout(function() {
+                settleReject(new Error("remote actor connection timed out: " + node));
+                try { if (socket) socket.close(); } catch (_timeoutClose) {}
+              }, 15000);
               try {
                 socket = new WebSocket(self.swiWasmRemoteWsUrl(node));
               } catch (error) {
-                reject(error);
+                settleReject(error);
                 return;
               }
               entry.socket = socket;
               socket.onopen = function() {
-                delete entry.connecting;
                 entry.protocol = null;
                 socket.send(JSON.stringify({
                   command: "transport_hello",
@@ -8917,7 +8942,7 @@
                   version: 1
                 }));
                 self.log("transport", "SWI-WASM connected to remote actor node " + node + ".", "swi-wasm");
-                resolve(entry);
+                settleResolve(entry);
               };
               socket.onmessage = function(event) {
                 var message;
@@ -9010,6 +9035,9 @@
                 }
               };
               socket.onclose = function() {
+                //  Close before open settles the connect promise (no-op once
+                //  opened); a mid-session close falls through to the cleanup.
+                settleReject(new Error("remote actor connection closed before ready: " + node));
                 var error = new Error("remote actor connection closed: " + node);
                 while (entry.pendingSpawns.length) entry.pendingSpawns.shift().reject(error);
                 var lostReason = "connection_lost('" + node.replace(/'/g, "''") + "')";
@@ -9028,7 +9056,7 @@
               };
               socket.onerror = function() {
                 if (socket.readyState !== WebSocket.OPEN) {
-                  reject(new Error("unable to connect to remote actor node " + node));
+                  settleReject(new Error("unable to connect to remote actor node " + node));
                 }
               };
             });
@@ -9622,6 +9650,25 @@
               this.enqueueSwiWasmStatechartEvent(String(messageText));
             } else {
               this.deliverSwiWasmMainActorMessage(String(messageText));
+            }
+          },
+          //  Finalize a worker actor that died: mark it done, fire its
+          //  monitors' down/3 (notifySwiWasmActorMonitors also clears its
+          //  registered names), and reap the worker.  Idempotent.  Used for
+          //  an uncaught worker error (worker.onerror), which would otherwise
+          //  leave a ghost actor live in actors/1, names, and monitors.
+          finalizeSwiWasmWorkerActor: function(pid, reason) {
+            var entry = this.swiWasmActorWorkers[pid];
+            if (!entry) return;
+            if (!entry.done) {
+              entry.done = true;
+              entry.reason = reason || entry.reason || "true";
+              this.notifySwiWasmActorMonitors(pid, entry.reason);
+            } else if (!entry.reason && reason) {
+              entry.reason = reason;
+            }
+            if (pid !== "main" && entry.worker) {
+              try { entry.worker.terminate(); } catch (_reapError) {}
             }
           },
           receiveSwiWasmActorMessage: function(timeoutSeconds) {

@@ -57,6 +57,16 @@ Differences from the desktop `statechart_runtime`:
 
 %!  clean is det.
 clean :-
+    %  Terminate any children spawned via <spawn> before discarding the
+    %  invoked/2 records.  exit_interpreter already cancels per-state on
+    %  teardown; this also covers statechart_start replacing a chart that
+    %  was never explicitly stopped, so workers never outlive their chart
+    %  (cf. the desktop runtime, which exits invoked children).
+    forall(statechart_wasm:invoked(_, Pid), cancel_invoked_child(Pid)),
+    %  Abolish predicates a previous <datamodel> contributed, so its data
+    %  and rules do not leak into the next chart.
+    forall(retract(statechart_wasm:datamodel_predicate(F/N)),
+           catch(abolish(statechart_wasm:F/N), _, true)),
     retractall(statechart_wasm:state(_, _)),
     retractall(statechart_wasm:to_be_invoked(_, _, _)),
     retractall(statechart_wasm:initial(_)),

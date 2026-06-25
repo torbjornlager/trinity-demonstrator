@@ -279,13 +279,24 @@ expand_and_assert(Term) :-
 assert_local(:-(Head, Body)) :- !,
     functor(Head, F, N),
     dynamic(statechart_wasm:F/N),
+    track_datamodel_predicate(F/N),
     assertz(statechart_wasm:(Head :- Body)).
 assert_local(:-Body) :- !,
     call(statechart_wasm:Body).
 assert_local(Fact) :-
     functor(Fact, F, N),
     dynamic(statechart_wasm:F/N),
+    track_datamodel_predicate(F/N),
     assertz(statechart_wasm:Fact).
+
+%   Record the indicator of a predicate the <datamodel> contributes, so
+%   clean/0 can abolish it on the next chart and the two charts stay
+%   isolated.  Deduplicated.
+track_datamodel_predicate(F/N) :-
+    (   statechart_wasm:datamodel_predicate(F/N)
+    ->  true
+    ;   assertz(statechart_wasm:datamodel_predicate(F/N))
+    ).
 
 
 %!  gennum(-N) is det.

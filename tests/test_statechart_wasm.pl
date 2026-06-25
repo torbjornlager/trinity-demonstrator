@@ -470,6 +470,60 @@ test(chart_handles_remote_pid_events, [cleanup(statechart_stop)]) :-
     statechart_send(down(ref(1), t1@n1, normal)),
     \+ statechart_running.
 
+% Stopping a chart terminates the children it spawned (they must not
+% outlive the chart).
+test(child_terminated_on_stop,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart initial=\"run\">",
+        "  <state id=\"run\">",
+        "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(mock_call(spawn(worker))),
+    statechart_stop,
+    assertion(mock_call(exit(worker_actor(1), stop))).
+
+% Starting a replacement chart (without an explicit stop) terminates the
+% previous chart's children rather than just discarding the invoked/2
+% records (clean/0).
+test(child_terminated_on_replacement_start,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart initial=\"run\">",
+        "  <state id=\"run\">",
+        "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
+        "  </state>",
+        "</statechart>"
+    ], Text1),
+    start_text(Text1),
+    assertion(mock_call(spawn(worker))),
+    start_text("<statechart initial=\"x\"><state id=\"x\"/></statechart>"),
+    assertion(mock_call(exit(worker_actor(1), stop))).
+
+% A <datamodel>'s predicates are abolished on the next chart, so one
+% chart's data/rules do not leak into the next.
+test(datamodel_isolated_across_charts, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"s\">",
+        "  <datamodel>:- dynamic(leaked/1).\nleaked(old).\n</datamodel>",
+        "  <state id=\"s\"/>",
+        "</statechart>"
+    ], Chart1),
+    start_text(Chart1),
+    assertion(statechart_wasm:leaked(old)),
+    join_lines([
+        "<statechart initial=\"s\">",
+        "  <datamodel>:- dynamic(leaked/1).\nleaked(new).\n</datamodel>",
+        "  <state id=\"s\"/>",
+        "</statechart>"
+    ], Chart2),
+    start_text(Chart2),
+    findall(X, statechart_wasm:leaked(X), Xs),
+    assertion(Xs == [new]).
+
 % Without the actor bridge loaded, <spawn> degrades to a no-op (invoke/1's
 % current_predicate guard), exactly as before -- no error, chart just lacks
 % the child.  Guards the desktop/no-runtime path.

@@ -86,7 +86,10 @@ instance; calling `statechart_start/1` twice resets state.
         states_to_invoke/1,
         invoked/2,
         num/1,
-        last_halt_reason/1.
+        last_halt_reason/1,
+        % Indicators of predicates a <datamodel> asserted, so clean/0 can
+        % abolish them and not leak one chart's data/rules into the next.
+        datamodel_predicate/1.
 
 % Trace hook (a callable; called with one argument: the event).
 :- dynamic trace_hook/1.
