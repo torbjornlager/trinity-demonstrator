@@ -15,6 +15,7 @@
         color-scheme: light;
         --editor-bg: #ffffff;
         --editor-ink: #1f2937;
+        --editor-wp-predicate: #006400;
         --editor-gutter-bg: #f7fafc;
         --editor-gutter-ink: #718096;
         --editor-line-highlight: rgba(148, 163, 184, 0.08);
@@ -30,6 +31,7 @@
         color-scheme: dark;
         --editor-bg: #11171d;
         --editor-ink: #e5edf5;
+        --editor-wp-predicate: #8fd782;
         --editor-gutter-bg: #182028;
         --editor-gutter-ink: #8ea1b4;
         --editor-line-highlight: rgba(148, 163, 184, 0.10);
@@ -140,6 +142,12 @@
         color: #b91c1c !important;
       }
 
+      .CodeMirror span.cm-wp-builtin {
+        background: transparent !important;
+        color: var(--editor-wp-predicate) !important;
+        font-weight: 700 !important;
+      }
+
       :root[data-theme="dark"] .CodeMirror-gutters {
         background: var(--editor-gutter-bg);
         border-right-color: rgba(148, 163, 184, 0.22);
@@ -197,6 +205,117 @@
         function normalizeTheme(value) {
           return value === "dark" ? "dark" : "light";
         }
+
+        var WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES = Object.freeze([
+          "self", "spawn", "actors", "monitor", "demonitor", "register",
+          "whereis", "unregister", "exit", "send", "cancel", "output",
+          "input", "respond", "receive",
+          "toplevel_spawn", "toplevel_call", "toplevel_next", "toplevel_stop",
+          "toplevel_abort", "toplevel_halt",
+          "server_spawn", "server_request", "server_promise", "server_yield",
+          "server_upgrade", "server_halt",
+          "statechart_spawn", "statechart_halt", "raise",
+          "supervisor_spawn", "supervisor_spawn_child",
+          "supervisor_terminate_child", "supervisor_delete_child",
+          "supervisor_respawn_child", "supervisor_which_children",
+          "supervisor_count_children", "supervisor_halt",
+          "rpc", "promise", "yield"
+        ]);
+        var WEB_PROLOG_CODEMIRROR_PREDICATE_INDICATORS = Object.freeze([
+          "self/1", "spawn/1-3", "actors/1", "monitor/2", "demonitor/1-2",
+          "register/2", "whereis/2", "unregister/1", "exit/1", "exit/2", "!/2",
+          "send/2-3", "cancel/1", "output/1-2", "input/2-3", "respond/2",
+          "receive/1-2", "flush/0",
+          "toplevel_spawn/1-2", "toplevel_call/2-3", "toplevel_next/1-2",
+          "toplevel_stop/1", "toplevel_abort/1", "toplevel_halt/2",
+          "server_spawn/3-4", "server_request/3-4", "server_promise/3-4",
+          "server_yield/2-4", "server_upgrade/2", "server_halt/2",
+          "statechart_spawn/1-2", "statechart_halt/2-3", "raise/1",
+          "supervisor_spawn/2-3", "supervisor_spawn_child/3",
+          "supervisor_terminate_child/3", "supervisor_delete_child/3",
+          "supervisor_respawn_child/3", "supervisor_which_children/2",
+          "supervisor_count_children/2", "supervisor_halt/1",
+          "rpc/2-3", "promise/3-4", "yield/2-3"
+        ]);
+
+        function escapeRegExp(text) {
+          return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        }
+
+        var WEB_PROLOG_CODEMIRROR_CALL_PATTERN = new RegExp(
+          "^(?:" + WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES
+            .map(function(name) { return escapeRegExp(name); })
+            .join("|") + ")(?=\\()"
+        );
+        var WEB_PROLOG_CODEMIRROR_INDICATOR_PATTERN = new RegExp(
+          "^(?:" + WEB_PROLOG_CODEMIRROR_PREDICATE_INDICATORS
+            .slice()
+            .sort(function(left, right) { return right.length - left.length; })
+            .map(function(indicator) { return escapeRegExp(indicator); })
+            .join("|") + ")(?![\\w/-])"
+        );
+
+        function previousCodePoint(text, pos) {
+          return pos > 0 ? text.charAt(pos - 1) : "";
+        }
+
+        function isWordOrPredicateIndicatorPart(ch) {
+          return /[\w/-]/.test(ch);
+        }
+
+        function isWebPrologCodeMirrorBoundary(text, pos) {
+          return !isWordOrPredicateIndicatorPart(previousCodePoint(text, pos));
+        }
+
+        function hasWebPrologSendOperatorLeftOperand(text, pos) {
+          var index = pos - 1;
+          while (index >= 0 && /\s/.test(text.charAt(index))) {
+            index -= 1;
+          }
+          return index >= 0 && !/[,(;\[]/.test(text.charAt(index));
+        }
+
+        function hasWebPrologSendOperatorRightOperand(text, pos) {
+          return /^\s*[^\s,;.)\]]/.test(text.slice(pos + 1));
+        }
+
+        var webPrologCodeMirrorOverlay = {
+          name: "web-prolog-builtins",
+          token: function(stream) {
+            var line = stream.string;
+            var pos = stream.pos;
+            var rest = line.slice(pos);
+            var match;
+            if (isWebPrologCodeMirrorBoundary(line, pos)) {
+              match = rest.match(WEB_PROLOG_CODEMIRROR_INDICATOR_PATTERN);
+              if (match) {
+                stream.pos += match[0].length;
+                return "wp-builtin";
+              }
+            }
+            if (line.charAt(pos) === "!") {
+              if (line.charAt(pos + 1) === "(" ||
+                  (hasWebPrologSendOperatorLeftOperand(line, pos) &&
+                   hasWebPrologSendOperatorRightOperand(line, pos))) {
+                stream.pos += 1;
+                return "wp-builtin";
+              }
+            }
+            if (isWebPrologCodeMirrorBoundary(line, pos) && /^flush\b(?!\s*(?:\/|\())/.test(rest)) {
+              stream.pos += "flush".length;
+              return "wp-builtin";
+            }
+            if (isWebPrologCodeMirrorBoundary(line, pos)) {
+              match = rest.match(WEB_PROLOG_CODEMIRROR_CALL_PATTERN);
+              if (match) {
+                stream.pos += match[0].length;
+                return "wp-builtin";
+              }
+            }
+            stream.next();
+            return null;
+          }
+        };
 
         function readCookie(name) {
           var prefix = name + "=";
@@ -262,6 +381,7 @@
         }
 
         restoreAppearanceFromStorage();
+        var webPrologOverlayActive = false;
 
         var editor = CodeMirror(document.getElementById("editor"), {
           mode: normalizeMode(mode),
@@ -304,7 +424,16 @@
             applyAppearance(options);
           },
           setMode: function(nextMode) {
-            editor.setOption("mode", normalizeMode(nextMode));
+            var normalized = normalizeMode(nextMode);
+            if (webPrologOverlayActive) {
+              editor.removeOverlay(webPrologCodeMirrorOverlay);
+              webPrologOverlayActive = false;
+            }
+            editor.setOption("mode", normalized === "xml" ? "xml" : null);
+            if (normalized === "prolog") {
+              editor.addOverlay(webPrologCodeMirrorOverlay);
+              webPrologOverlayActive = true;
+            }
             editor.refresh();
           }
         };

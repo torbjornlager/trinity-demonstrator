@@ -1194,6 +1194,19 @@
         line-height: var(--mono-line-height) !important;
       }
 
+      .terminal span[style*="font-weight: bold"],
+      .terminal span[style*="font-weight:bold"],
+      .terminal span[data-text][style*="font-weight: bold"],
+      .terminal span[data-text][style*="font-weight:bold"],
+      .terminal .terminal-output span[data-text][style*="font-weight: bold"],
+      .terminal .terminal-output span[data-text][style*="font-weight:bold"],
+      .terminal .cmd span[data-text][style*="font-weight: bold"],
+      .terminal .cmd span[data-text][style*="font-weight:bold"],
+      .terminal .format[style*="font-weight: bold"],
+      .terminal .format[style*="font-weight:bold"] {
+        font-weight: 700 !important;
+      }
+
       .terminal .cmd .cmd-cursor,
       .terminal .cmd .cmd-cursor.cmd-blink {
         background-color: var(--terminal-cursor-bg);
@@ -1218,14 +1231,34 @@
 
       .terminal a,
       .terminal a:visited {
+        background-color: transparent !important;
         color: var(--link-ink) !important;
         text-decoration: underline;
       }
 
       .terminal a:hover,
       .terminal a:focus {
+        background-color: transparent !important;
         color: var(--link-ink) !important;
         text-decoration: underline;
+      }
+
+      .cmd a[href]:hover,
+      .cmd a[href]:focus,
+      .terminal .terminal-output > :not(.raw) a[href]:hover,
+      .terminal .terminal-output > :not(.raw) a[href]:focus,
+      .terminal.external a[href]:hover,
+      .terminal.external a[href]:focus,
+      .cmd a[href]:hover span,
+      .cmd a[href]:focus span,
+      .terminal .terminal-output > :not(.raw) a[href]:hover span,
+      .terminal .terminal-output > :not(.raw) a[href]:focus span,
+      .terminal.external a[href]:hover span,
+      .terminal.external a[href]:focus span {
+        background: transparent !important;
+        background-color: transparent !important;
+        color: var(--link-ink) !important;
+        text-decoration: underline !important;
       }
 
       @keyframes wb-terminal-cursor-blink {
@@ -3216,6 +3249,15 @@
                         <div class="settings-option-note">Make URLs in terminal output and echoed commands clickable.</div>
                       </div>
                     </label>
+                    <label class="settings-option settings-check-row">
+                      <input type="checkbox"
+                             v-model="terminalHighlightPredicates"
+                             @change="handleTerminalHighlightPredicatesChange">
+                      <div class="settings-option-text">
+                        <div class="settings-option-label">Highlight Web Prolog predicates</div>
+                        <div class="settings-option-note">Show Web Prolog-specific built-in predicate calls and predicate indicators from the manual in bold dark green.</div>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>
@@ -3819,6 +3861,84 @@
       var PORTAL_REPOSITORY_URL = "https://github.com/torbjornlager/book-poc";
       var PORTAL_BOOK_MANUSCRIPT_URL = "https://trinity.elfenbenstornet.se/book.html";
 
+      window.webPrologTerminalConvertLinks = true;
+      window.webPrologTerminalHighlightPredicates = false;
+
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_NAMES = Object.freeze([
+        "self", "spawn", "actors", "monitor", "demonitor", "register",
+        "whereis", "unregister", "exit", "send", "cancel", "output",
+        "input", "respond", "receive",
+        "toplevel_spawn", "toplevel_call", "toplevel_next", "toplevel_stop",
+        "toplevel_abort", "toplevel_halt",
+        "server_spawn", "server_request", "server_promise", "server_yield",
+        "server_upgrade", "server_halt",
+        "statechart_spawn", "statechart_halt", "raise",
+        "supervisor_spawn", "supervisor_spawn_child",
+        "supervisor_terminate_child", "supervisor_delete_child",
+        "supervisor_respawn_child", "supervisor_which_children",
+        "supervisor_count_children", "supervisor_halt",
+        "rpc", "promise", "yield"
+      ]);
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_INDICATORS = Object.freeze([
+        "self/1", "spawn/1-3", "actors/1", "monitor/2", "demonitor/1-2",
+        "register/2", "whereis/2", "unregister/1", "exit/1", "exit/2", "!/2",
+        "send/2-3", "cancel/1", "output/1-2", "input/2-3", "respond/2",
+        "receive/1-2", "flush/0",
+        "toplevel_spawn/1-2", "toplevel_call/2-3", "toplevel_next/1-2",
+        "toplevel_stop/1", "toplevel_abort/1", "toplevel_halt/2",
+        "server_spawn/3-4", "server_request/3-4", "server_promise/3-4",
+        "server_yield/2-4", "server_upgrade/2", "server_halt/2",
+        "statechart_spawn/1-2", "statechart_halt/2-3", "raise/1",
+        "supervisor_spawn/2-3", "supervisor_spawn_child/3",
+        "supervisor_terminate_child/3", "supervisor_delete_child/3",
+        "supervisor_respawn_child/3", "supervisor_which_children/2",
+        "supervisor_count_children/2", "supervisor_halt/1",
+        "rpc/2-3", "promise/3-4", "yield/2-3"
+      ]);
+
+      function escapeRegExp(text) {
+        return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_CALL_PATTERN = new RegExp(
+        "\\b(" + WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_NAMES
+          .map(function(name) {
+            return escapeRegExp(name);
+          })
+          .join("|") + ")(?=\\()",
+        "g"
+      );
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_INDICATOR_PATTERN = new RegExp(
+        "(^|[^\\w/-])(" + WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_INDICATORS
+          .slice()
+          .sort(function(left, right) {
+            return right.length - left.length;
+          })
+          .map(function(indicator) {
+            return escapeRegExp(indicator);
+          })
+          .join("|") + ")(?![\\w/-])",
+        "g"
+      );
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_BARE_PATTERN = /\b(flush)\b(?!\s*(?:\/|\())/g;
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN = /(^|[^\w/-])!(?=\()/g;
+      var WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN = /(^|[^\s])(\s+)!(?=\s*[^\s,;.)\]])/g;
+
+      function webPrologTerminalPredicateHighlightColor() {
+        var theme = document.documentElement.getAttribute("data-theme");
+        return theme === "dark" ? "#8fd782" : "#006400";
+      }
+
+      function highlightWebPrologTerminalPredicates(text) {
+        var markup = "[[b;" + webPrologTerminalPredicateHighlightColor() + ";]";
+        return String(text || "")
+          .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_INDICATOR_PATTERN, "$1" + markup + "$2]")
+          .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN, "$1" + markup + "!]")
+          .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN, "$1$2" + markup + "!]")
+          .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_BARE_PATTERN, markup + "$1]")
+          .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_CALL_PATTERN, markup + "$1]");
+      }
+
       function installTerminalUrlLinkFormatter() {
         var formatter;
         if (!window.$ || !$.terminal || !$.terminal.defaults || !Array.isArray($.terminal.defaults.formatters)) {
@@ -3842,6 +3962,34 @@
       }
 
       installTerminalUrlLinkFormatter();
+
+      function installTerminalPredicateHighlightFormatter() {
+        var formatter;
+        if (!window.$ || !$.terminal || !$.terminal.defaults || !Array.isArray($.terminal.defaults.formatters)) {
+          return;
+        }
+        if ($.terminal.__webPrologPredicateHighlightFormatterInstalled) {
+          return;
+        }
+        formatter = function(text, options) {
+          var position = options && typeof options.position === "number" ? options.position : 0;
+          if (window.webPrologTerminalHighlightPredicates !== true || !text) {
+            return [text, position];
+          }
+          return [$.terminal.format_split(text).map(function(part) {
+            if ($.terminal.is_formatting(part)) {
+              return part;
+            }
+            return highlightWebPrologTerminalPredicates(part);
+          }).join(""), position];
+        };
+        formatter.__meta__ = true;
+        formatter.__no_warn__ = true;
+        $.terminal.defaults.formatters.unshift(formatter);
+        $.terminal.__webPrologPredicateHighlightFormatterInstalled = true;
+      }
+
+      installTerminalPredicateHighlightFormatter();
 
       var ADMIN_CONFIG_HELP_TEXT = Object.freeze({
         self_url: "Canonical node address used to construct global pids such as Pid@Node. Change it only when this node should advertise a different public URL.",
@@ -4882,6 +5030,7 @@
             showTerminalGreeting: true,
             terminalExtraQueryNewline: false,
             terminalConvertLinks: true,
+            terminalHighlightPredicates: false,
             themeMode: "light",
             webPrologCodeColoring: "none",
             sxmlCodeColoring: "none",
@@ -5360,6 +5509,7 @@
           this.restoreTerminalStartupSettings();
           this.restoreTerminalSpacingSettings();
           this.restoreTerminalLinkSettings();
+          this.restoreTerminalPredicateHighlightSettings();
           this.restoreCodeColoringSettings();
           this.fetchPortalVersion();
           if (this.isSwiWasmMode) { this.initSwiWasmSession(); } else { this.fetchNodeInfo(); this.probeAdminAccess(); }
@@ -5513,6 +5663,18 @@
           },
           persistTerminalLinkSettings: function() {
             window.localStorage.setItem("wb.terminalConvertLinks", this.terminalConvertLinks ? "1" : "0");
+          },
+          restoreTerminalPredicateHighlightSettings: function() {
+            var stored = window.localStorage.getItem("wb.terminalHighlightPredicates");
+            if (stored === "1") {
+              this.terminalHighlightPredicates = true;
+            } else if (stored === "0") {
+              this.terminalHighlightPredicates = false;
+            }
+            window.webPrologTerminalHighlightPredicates = this.terminalHighlightPredicates;
+          },
+          persistTerminalPredicateHighlightSettings: function() {
+            window.localStorage.setItem("wb.terminalHighlightPredicates", this.terminalHighlightPredicates ? "1" : "0");
           },
           restoreThemeSettings: function() {
             this.themeMode = storedPortalTheme();
@@ -5871,6 +6033,7 @@
             }
             settings.convertLinks = this.terminalConvertLinks;
             window.webPrologTerminalConvertLinks = this.terminalConvertLinks;
+            window.webPrologTerminalHighlightPredicates = this.terminalHighlightPredicates;
           },
           restoreLoggerFilters: function() {
             var stored = window.localStorage.getItem("wb.visibleLogKinds");
@@ -6432,6 +6595,11 @@
           },
           handleTerminalLinksChange: function() {
             this.persistTerminalLinkSettings();
+            this.applyTerminalRuntimeSettings();
+            this.focusTerminalSoon(true);
+          },
+          handleTerminalHighlightPredicatesChange: function() {
+            this.persistTerminalPredicateHighlightSettings();
             this.applyTerminalRuntimeSettings();
             this.focusTerminalSoon(true);
           },
@@ -7012,20 +7180,31 @@
             }
             return String(this.terminal.get_command() || "");
           },
+          formatTerminalEchoText: function(text) {
+            var value = text === undefined || text === null ? "" : String(text);
+            var escaped = window.$ && $.terminal && typeof $.terminal.escape_formatting === "function"
+              ? $.terminal.escape_formatting(value)
+              : value.replace(/\[/g, "&#91;").replace(/\]/g, "&#93;").replace(/\\/g, "&#92;");
+            if (this.terminalHighlightPredicates) {
+              escaped = highlightWebPrologTerminalPredicates(escaped);
+            }
+            if (this.terminalConvertLinks) {
+              escaped = escaped.replace(/\b((?:https?|ftp):\/\/[^\s<>"'\\\]\)]+)/g, "[[!;;]$1]");
+            }
+            return escaped;
+          },
           echoTerminalCommand: function(term, command, promptText) {
             var prompt = promptText !== undefined
               ? String(promptText)
               : (term && typeof term.get_prompt === "function" ? String(term.get_prompt() || this.basePrompt()) : this.basePrompt());
-            var text = command === undefined || command === null ? "" : String(command);
-            var escaped = window.$ && $.terminal && typeof $.terminal.escape_formatting === "function"
-              ? $.terminal.escape_formatting(text)
-              : text;
+            var formatted = this.formatTerminalEchoText(command);
             if (!term || typeof term.echo !== "function") {
               return;
             }
-            term.echo(prompt + escaped, {
+            term.echo(prompt + formatted, {
               exec: false,
-              convertLinks: this.terminalConvertLinks,
+              convertLinks: false,
+              formatters: false,
               finalize: function(node) {
                 if (node && typeof node.addClass === "function") {
                   node.addClass("terminal-command");

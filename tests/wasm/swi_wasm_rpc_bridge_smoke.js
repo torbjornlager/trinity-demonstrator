@@ -18,6 +18,10 @@ const workerSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
   "utf8"
 );
+const editorFrameSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "editor_frame.html"),
+  "utf8"
+);
 
 let failures = 0;
 function ok(condition, label) {
@@ -31,6 +35,10 @@ function ok(condition, label) {
 
 function includes(text) {
   return source.includes(text);
+}
+
+function editorIncludes(text) {
+  return editorFrameSource.includes(text);
 }
 
 ok(includes("window.swiRpcGetAsync = function(url)"),
@@ -54,12 +62,61 @@ ok(includes("terminalConvertLinks: true") &&
    includes("settings.convertLinks = this.terminalConvertLinks") &&
    includes("convertLinks: this.terminalConvertLinks") &&
    includes("echoCommand: false") &&
+   includes("formatTerminalEchoText: function") &&
    includes("echoTerminalCommand: function") &&
    includes("self.echoTerminalCommand(term, command)") &&
+   includes("formatters: false") &&
    includes("installTerminalUrlLinkFormatter") &&
    includes("window.webPrologTerminalConvertLinks === false") &&
    includes("[[!;;]"),
    "terminal URLs are converted to links when enabled, including echoed typed/pasted commands");
+ok(includes("terminalHighlightPredicates: false") &&
+   includes("Highlight Web Prolog predicates") &&
+   includes("built-in predicate calls and predicate indicators") &&
+   includes("wb.terminalHighlightPredicates") &&
+   includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_NAMES") &&
+   includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_INDICATORS") &&
+   includes('"self/1"') &&
+   includes('"!/2"') &&
+   includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_BARE_PATTERN = /\\b(flush)\\b") &&
+   includes("(?:\\/|\\()") &&
+   includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN") &&
+   includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN") &&
+   includes('"$1$2" + markup + "!]"') &&
+   includes('"server_spawn"') &&
+   includes('"server_spawn/3-4"') &&
+   includes('"supervisor_count_children"') &&
+   includes('"rpc"') &&
+   !includes('"asserta"') &&
+   !includes('"listing"') &&
+   includes("installTerminalPredicateHighlightFormatter") &&
+   includes("formatter.__meta__ = true") &&
+   includes("format_split(text).map") &&
+   includes("highlightWebPrologTerminalPredicates(part)") &&
+   includes("window.webPrologTerminalHighlightPredicates !== true") &&
+   includes("this.terminalHighlightPredicates") &&
+   includes("webPrologTerminalPredicateHighlightColor") &&
+   includes("theme === \"dark\" ? \"#8fd782\" : \"#006400\"") &&
+   includes("[[b;\" + webPrologTerminalPredicateHighlightColor() + \";]") &&
+   includes('span[style*="font-weight: bold"]') &&
+   includes('span[data-text][style*="font-weight: bold"]') &&
+   includes("font-weight: 700 !important") &&
+   !includes("[[b;var(--terminal-predicate-highlight);]"),
+   "terminal can highlight manual-listed Web Prolog predicate calls and indicators in bold dark green");
+ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
+   editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_INDICATORS") &&
+   editorIncludes("cm-wp-builtin") &&
+   editorIncludes("--editor-wp-predicate: #006400") &&
+   editorIncludes("--editor-wp-predicate: #8fd782") &&
+   editorIncludes('"self/1"') &&
+   editorIncludes('"!/2"') &&
+   editorIncludes('"flush/0"') &&
+   editorIncludes("hasWebPrologSendOperatorLeftOperand") &&
+   editorIncludes("hasWebPrologSendOperatorRightOperand") &&
+   editorIncludes("editor.addOverlay(webPrologCodeMirrorOverlay)") &&
+   editorIncludes("editor.removeOverlay(webPrologCodeMirrorOverlay)") &&
+   !editorIncludes('"flush",'),
+   "CodeMirror can apply the same Web Prolog predicate highlighting overlay");
 ok(includes("self.terminal.echo(String(text).replace(/\\n$/, \"\"));"),
    "output is streamed to the terminal while a runner is active");
 ok(includes("{ heartbeat: 1 }"),
