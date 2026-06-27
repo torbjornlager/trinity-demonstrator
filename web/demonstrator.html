@@ -2741,6 +2741,11 @@
                          href="/tutorial#tutorial-top"
                          @click.prevent="openTutorialSection('tutorial-top')">Web Prolog Tutorial</a>
                     </li>
+                    <li v-if="showHistoricalTutorialExample" class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         href="/wp-tutorial"
+                         @click.prevent="openTutorialDocument('/wp-tutorial')">Web Prolog Tutorial (historical)</a>
+                    </li>
                     <li class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-getting-started"
@@ -5119,9 +5124,10 @@
             introSuppressFuture: false,
             portalVersion: "0.2.0",
             tutorialSrc: (function() {
-              var base = (new URLSearchParams(window.location.search)).get("node") === "swi-wasm"
-                ? "/swi-wasm-tutorial"
-                : "/tutorial";
+              var params = new URLSearchParams(window.location.search);
+              var base = params.get("tutorial") === "wp"
+                ? "/wp-tutorial"
+                : (params.get("node") === "swi-wasm" ? "/swi-wasm-tutorial" : "/tutorial");
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
             }()),
             handledTutorialDeepLink: "",
@@ -5341,6 +5347,10 @@
           },
           showTutorialExamples: function() {
             return this.hasWorkspacePane;
+          },
+          showHistoricalTutorialExample: function() {
+            return this.isSwiWasmMode ||
+              nodeLabelForUrl(window.location.origin).toLowerCase() === "n5";
           },
           showActorTutorialExamples: function() {
             return this.isSwiWasmMode ||
@@ -6402,17 +6412,39 @@
           },
           tutorialSectionUrl: function(id) {
             var url = new URL(window.location.href);
+            var tutorialPath = this.currentTutorialPath();
             url.pathname = "/demonstrator";
-            url.search = this.isSwiWasmMode ? "?node=swi-wasm" : "";
+            url.search = this.demonstratorTutorialSearch(tutorialPath);
             url.hash = String(id || "").replace(/^#/, "");
             return url.toString();
+          },
+          defaultTutorialPath: function() {
+            return this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial";
+          },
+          currentTutorialPath: function() {
+            try {
+              return (new URL(this.tutorialSrc, window.location.href)).pathname;
+            } catch (_error) {
+              return this.defaultTutorialPath();
+            }
+          },
+          demonstratorTutorialSearch: function(tutorialPath) {
+            var params = new URLSearchParams();
+            if (this.isSwiWasmMode) {
+              params.set("node", "swi-wasm");
+            }
+            if (tutorialPath === "/wp-tutorial") {
+              params.set("tutorial", "wp");
+            }
+            var text = params.toString();
+            return text ? "?" + text : "";
           },
           runInitialTutorialDeepLink: function() {
             var anchor = this.initialTutorialAnchor();
             if (!anchor || this.handledTutorialDeepLink === anchor) {
               return;
             }
-            this.openTutorialSection(anchor);
+            this.openTutorialSection(anchor, this.currentTutorialPath());
             if (anchor === "distributed-proof-trees") {
               this.queueDistributedProofTreesExample();
             }
@@ -6466,19 +6498,19 @@
               bridge.applyAppearance(this.tutorialAppearanceOptions());
             }
           },
-          navigateTutorialFrameInPlace: function(anchor) {
+          navigateTutorialFrameInPlace: function(anchor, tutorialPath) {
             var frame = this.$refs.tutorialFrame;
             var win;
             var doc;
             var hash = anchor ? ("#" + anchor) : "";
             var targetNode;
+            tutorialPath = tutorialPath || this.defaultTutorialPath();
             if (!frame || !frame.contentWindow) {
               return false;
             }
             try {
               win = frame.contentWindow;
               doc = frame.contentDocument || win.document;
-              var tutorialPath = this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial";
               if (!win.location || win.location.pathname !== tutorialPath || !doc) {
                 return false;
               }
@@ -8430,6 +8462,7 @@
             this.setPendingCompletionMessage("Computation aborted.", "error");
             this.recordSessionEvent("session", "Abort requested.", "swi-wasm", "swi-wasm");
             try {
+              var resumedSuspendedQuery = false;
               if (typeof window.swiAbortRpc === "function") {
                 window.swiAbortRpc();
               }
@@ -8440,8 +8473,18 @@
                 var morePending = this.swiWasmMorePending;
                 this.swiWasmMorePending = null;
                 morePending.reject("swi_wasm_abort");
+                resumedSuspendedQuery = true;
               }
-              this.swiWasmProlog.abort();
+              // receive/1 awaits a mailbox promise, which also prevents the
+              // engine from observing abort() until that promise settles. A
+              // rejected wait is sufficient to unwind the current query;
+              // abort() here would remain pending and kill the next query.
+              if (this.cancelSwiWasmMainActorWaiters("swi_wasm_abort") > 0) {
+                resumedSuspendedQuery = true;
+              }
+              if (!resumedSuspendedQuery) {
+                this.swiWasmProlog.abort();
+              }
               this.log("transport", "Abort requested.", "swi-wasm", "request");
             } catch (error) {
               this.log("warn", "Abort request failed: " + String(error), "swi-wasm");
@@ -8930,12 +8973,7 @@
               return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText, nameText);
             };
             window.swiWasmActorSend = function(pidText, messageText) {
-              //  While a chart runs it is the only engine activity (it blocks
-              //  regular queries), so a send from the main engine is the
-              //  chart's: tag it `statechart` as the reply address so a remote
-              //  actor's reply (browser_from) routes back into the chart, not
-              //  the unread main mailbox.  Local sends ignore this (cosmetic).
-              var from = self.swiWasmStatechartActive ? "statechart" : "main";
+              var from = self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main";
               return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, from));
             };
             window.swiWasmActorRemoteSpawn = function(nodeText, goalText, sourceText) {
@@ -9088,7 +9126,14 @@
           swiWasmRemoteNodeUrl: function(nodeText) {
             var node = String(nodeText || "");
             var quoted = /^'([\s\S]*)'$/.exec(node);
-            return quoted ? quoted[1].replace(/''/g, "'") : node;
+            if (quoted) {
+              node = quoted[1].replace(/''/g, "'");
+            }
+            var markdown = /^\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(node);
+            if (markdown) {
+              return markdown[1];
+            }
+            return node;
           },
           loadSwiWasmUriSource: function(uriText) {
             var uri = this.swiWasmRemoteNodeUrl(uriText);
@@ -9252,7 +9297,7 @@
                   return;
                 }
                 if (message.type === "actor_message") {
-                  self.sendSwiWasmActorMessage(message.target, message.message, "remote");
+                  self.routeSwiWasmActorMessage("remote", message.target, message.message);
                   return;
                 }
                 if (message.type === "error") {
@@ -9606,6 +9651,9 @@
             }
             return this.sendSwiWasmActorMessage(to, message);
           },
+          swiWasmStatechartOwnsActorTraffic: function() {
+            return this.editorKind === "statechart" && !!this.swiWasmStatechartActive;
+          },
           resolveSwiWasmActorTarget: function(pidText) {
             var pid = String(pidText || "");
             if (pid === "self") {
@@ -9630,6 +9678,7 @@
             return "[" + pids.join(",") + "]";
           },
           sendSwiWasmActorMessage: function(pidText, messageText, fromPid) {
+            var self = this;
             var pid = this.resolveSwiWasmActorTarget(pidText);
             if (pid === "statechart" || String(pidText) === "statechart") {
               //  A spawned child (worker actor or toplevel) replied to the
@@ -9885,7 +9934,7 @@
           //  mailbox as before.  (Remote actor_message and down already route
           //  by target/watcher, which a chart's monitor/send make `statechart`.)
           deliverSwiWasmRemoteResult: function(messageText) {
-            if (this.swiWasmStatechartActive) {
+            if (this.swiWasmStatechartOwnsActorTraffic()) {
               this.enqueueSwiWasmStatechartEvent(String(messageText));
             } else {
               this.deliverSwiWasmMainActorMessage(String(messageText));
@@ -9915,8 +9964,8 @@
             if (this.swiWasmActorMainMailbox.length > 0) {
               return Promise.resolve(this.swiWasmActorMainMailbox.shift());
             }
-            return new Promise(function(resolve) {
-              var waiter = { resolve: resolve, timer: null };
+            return new Promise(function(resolve, reject) {
+              var waiter = { resolve: resolve, reject: reject, timer: null };
               var timeout = Number(timeoutSeconds);
               if (isFinite(timeout) && timeout >= 0) {
                 waiter.timer = window.setTimeout(function() {
@@ -9935,6 +9984,16 @@
               };
               self.swiWasmActorMainWaiters.push(waiter);
             });
+          },
+          cancelSwiWasmMainActorWaiters: function(reason) {
+            var waiters = this.swiWasmActorMainWaiters.splice(0);
+            waiters.forEach(function(waiter) {
+              if (waiter.timer !== null) {
+                window.clearTimeout(waiter.timer);
+              }
+              waiter.reject(reason);
+            });
+            return waiters.length;
           },
           resetSwiWasmActorWorkers: function() {
             Object.keys(this.swiWasmActorWorkers || {}).forEach(function(pid) {
@@ -9986,9 +10045,12 @@
               "    receive({",
               "      '$call'(From, Ref, Request) ->",
               "        ( call(Pred, Request, State0, Reply, State) -> send(From, Ref-Reply), wasm_server_loop(Pred, State) ; exit(false) ) ;",
-              "      '$upgrade'(Pred1) -> wasm_server_loop(Pred1, State0) ;",
+              "      '$upgrade'(Pred1, Clauses) -> wasm_install_callback(Pred1, Clauses), wasm_server_loop(Pred1, State0) ;",
               "      '$stop'(From) -> send(From, reply(true))",
               "    }).",
+              "wasm_install_callback(Pred, Clauses) :-",
+              "    strip_module(Pred, Module, PlainPred),",
+              "    ( current_predicate(Module:PlainPred/4) -> true ; forall(member(Clause, Clauses), assertz(Module:Clause)) ).",
               "",
               "server_promise(To, Request, Ref) :- self(Self), make_ref(Ref), send(To, '$call'(Self, Ref, Request)).",
               "server_promise(To, Request, Ref, MonRef) :- monitor(To, MonRef), server_promise(To, Request, Ref).",
@@ -9997,7 +10059,14 @@
               "server_yield(Ref, MonRef, Reply, Options) :- receive({Ref-Reply0 -> demonitor(MonRef), Reply = Reply0 ; down(MonRef, _, Reason) -> throw(server_down(Reason))}, Options).",
               "server_request(To, Request, Reply) :- server_request(To, Request, Reply, []).",
               "server_request(To, Request, Reply, Options) :- server_promise(To, Request, Ref, MonRef), server_yield(Ref, MonRef, Reply, Options).",
-              "server_upgrade(To, Pred) :- send(To, '$upgrade'(Pred)).",
+              "server_upgrade(To, Pred0) :-",
+              "    strip_module(Pred0, Module, PlainPred),",
+              "    wasm_callback_clauses(Module, PlainPred, 4, Clauses),",
+              "    send(To, '$upgrade'(Module:PlainPred, Clauses)).",
+              "wasm_callback_clauses(Module, Pred, Arity, Clauses) :-",
+              "    functor(Head, Pred, Arity),",
+              "    findall(Clause, (clause(Module:Head, Body), (Body == true -> Clause = Head ; Clause = (Head :- Body))), Clauses),",
+              "    ( Clauses == [] -> throw(error(existence_error(procedure, Module:Pred/Arity), server_upgrade/2)) ; true ).",
               "server_halt(To, Reply) :- self(Self), send(To, '$stop'(Self)), receive({reply(Reply) -> true}).",
               "server_stop(To, Reply) :- server_halt(To, Reply).",
               "",
@@ -10132,7 +10201,6 @@
               "",
               "spawn(Goal, Pid, Options) :-",
               "    option(node(Node), Options, localhost),",
-              "    collect_spawn_source(Options, ExtraSource),",
               "    %  Bind Pid BEFORE term_string(Goal, ...): the spawned goal must",
               "    %  carry the real pid (worker_actor(N)), not an unbound variable.",
               "    %  Otherwise a goal like self(S), S ! Pid-Result sends a message",
@@ -10143,10 +10211,12 @@
               "    ->  PidText := swiWasmActorReservePid(),",
               "        term_string(Pid, PidText),",
               "        term_string(Goal, GoalText),",
+              "        collect_spawn_source(Options, ExtraSource),",
               "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
               "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), spawn/3)) ; SpawnedText == PidText )",
-              "    ;   term_string(Goal, GoalText),",
+              "    ;   collect_remote_spawn_source(Goal, Options, ExtraSource),",
+              "        term_string(Goal, GoalText),",
               "        term_string(Node, NodeText),",
               "        Promise := swiWasmActorRemoteSpawn(#NodeText, #GoalText, #ExtraSource),",
               "        await(Promise, RemotePidText),",
@@ -10159,6 +10229,18 @@
               "collect_spawn_source(Options, Source) :-",
               "    spawn_source_texts(Options, Texts),",
               "    atomic_list_concat(Texts, '\\n', Source).",
+              "",
+              "collect_remote_spawn_source(Goal, Options, Source) :-",
+              "    collect_spawn_source(Options, Source0),",
+              "    (   Source0 \\== ''",
+              "    ->  Source = Source0",
+              "    ;   strip_module(Goal, _, PlainGoal),",
+              "        default_remote_spawn_source(PlainGoal, Source)",
+              "    ->  true",
+              "    ;   Source = ''",
+              "    ).",
+              "",
+              "default_remote_spawn_source(echo_actor, \"echo_actor :-\\n    receive({\\n        echo(From, Msg) ->\\n            From ! echo(Msg),\\n            echo_actor\\n    }).\").",
               "",
               "spawn_source_texts([], []).",
               "spawn_source_texts([Option|Options], Texts) :-",
@@ -10346,7 +10428,7 @@
               "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; SpawnedText == PidText )",
               "    ;   term_string(Node, NodeText),",
-              "        option(session(Session), Options, false),",
+              "        option(session(Session), Options, true),",
               "        term_string(Session, SessionText),",
               "        Promise := swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText),",
               "        await(Promise, RemotePidText),",
@@ -12756,15 +12838,28 @@
               this.focusTerminalIfAppropriate();
             }
           },
-          openTutorialSection: function(anchor) {
+          openTutorialSection: function(anchor, tutorialPath) {
             var hash = anchor ? ("#" + anchor) : "";
-            var target = (this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial") + hash;
+            tutorialPath = tutorialPath || this.defaultTutorialPath();
+            var target = tutorialPath + hash;
             this.selectWorkspace("tutorial");
             if (window.history && typeof window.history.replaceState === "function") {
               window.history.replaceState(null, document.title || "",
-                "/demonstrator" + (this.isSwiWasmMode ? "?node=swi-wasm" : "") + hash);
+                "/demonstrator" + this.demonstratorTutorialSearch(tutorialPath) + hash);
             }
-            if (this.tutorialFrameLoaded && this.navigateTutorialFrameInPlace(anchor)) {
+            if (this.tutorialFrameLoaded && this.navigateTutorialFrameInPlace(anchor, tutorialPath)) {
+              return;
+            }
+            this.setTutorialSrc(target);
+          },
+          openTutorialDocument: function(tutorialPath) {
+            var target = tutorialPath || this.defaultTutorialPath();
+            this.selectWorkspace("tutorial");
+            if (window.history && typeof window.history.replaceState === "function") {
+              window.history.replaceState(null, document.title || "",
+                "/demonstrator" + this.demonstratorTutorialSearch(target));
+            }
+            if (this.tutorialFrameLoaded && this.navigateTutorialFrameInPlace("", target)) {
               return;
             }
             this.setTutorialSrc(target);

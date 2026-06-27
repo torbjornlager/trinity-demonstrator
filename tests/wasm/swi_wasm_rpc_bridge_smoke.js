@@ -22,6 +22,10 @@ const editorFrameSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "editor_frame.html"),
   "utf8"
 );
+const swiWasmTutorialSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "swi-wasm-tutorial.html"),
+  "utf8"
+);
 
 let failures = 0;
 function ok(condition, label) {
@@ -41,6 +45,10 @@ function editorIncludes(text) {
   return editorFrameSource.includes(text);
 }
 
+function tutorialIncludes(text) {
+  return swiWasmTutorialSource.includes(text);
+}
+
 ok(includes("window.swiRpcGetAsync = function(url)"),
    "paged RPC has an asynchronous fetch helper");
 ok(includes("signal: controller.signal") &&
@@ -55,8 +63,14 @@ ok(includes("window.swiEnsureFinalFullStop = function(text)") &&
    includes('"    Text := swiEnsureFinalFullStop(#S)."'),
    "multiline load_text preserves a terminating full stop before trailing whitespace");
 ok(includes("window.swiAbortRpc();") &&
+   includes('this.cancelSwiWasmMainActorWaiters("swi_wasm_abort") > 0') &&
+   includes("if (!resumedSuspendedQuery)") &&
    includes("this.swiWasmProlog.abort();"),
-   "Abort cancels both fetch and Prolog execution");
+   "Abort settles suspended waits without leaving a Prolog abort for the next query");
+ok(includes("cancelSwiWasmMainActorWaiters: function(reason)") &&
+   includes("waiter.reject(reason);") &&
+   includes("return waiters.length;"),
+   "blocking receive/1 mailbox promises are rejectable");
 ok(includes("terminalConvertLinks: true") &&
    includes("Convert URLs to links") &&
    includes("settings.convertLinks = this.terminalConvertLinks") &&
@@ -145,13 +159,38 @@ ok(includes("window.swiWasmStatechartMonitor = function(pidText, refText)") &&
    includes('self.monitorSwiWasmActor("statechart"') &&
    includes('if (pid === "statechart")'),
    "a chart's monitor/2 watches as `statechart`, so a monitored child's down(...) routes back as a chart event");
-ok(includes('self.swiWasmStatechartActive ? "statechart" : "main"') &&
+ok(includes('self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main"') &&
+   includes("swiWasmStatechartOwnsActorTraffic: function()") &&
+   includes('return this.editorKind === "statechart" && !!this.swiWasmStatechartActive;') &&
    includes("deliverSwiWasmRemoteResult: function") &&
    includes("self.deliverSwiWasmRemoteResult(remoteMessage)"),
-   "remote <spawn> in WASM charts: a remote node's results/replies route to the running chart, not the unread main mailbox");
+   "remote <spawn> in WASM charts only owns browser actor traffic while the statechart workbench is active");
 ok(includes('message.type === "output"') &&
    includes("this.terminal.echo(String(message.output)"),
    "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
+ok(tutorialIncludes('load_text("echo_actor :-') &&
+   tutorialIncludes("node('{{actor_peer_host}}'),\n       session(true)") &&
+   !tutorialIncludes("node('{{actor_peer_host}}')\n   ])."),
+   "SWI-WASM remote tutorial examples ship remote echo source and keep remote toplevels as sessions");
+ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge-source&quot;)"'),
+   "supervised fridge tutorial source has a Load control");
+ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"'),
+   "supervised fridge upgrade source has a Load control");
+ok(includes("'$upgrade'(Pred1, Clauses) -> wasm_install_callback(Pred1, Clauses)") &&
+   includes("wasm_callback_clauses(Module, PlainPred, 4, Clauses)") &&
+   includes("send(To, '$upgrade'(Module:PlainPred, Clauses))"),
+   "server_upgrade/2 ships newly loaded callback clauses to an existing worker");
+ok(includes("collect_remote_spawn_source(Goal, Options, Source)") &&
+   includes("default_remote_spawn_source(echo_actor") &&
+   includes("option(session(Session), Options, true)") &&
+   includes("swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText)"),
+   "SWI-WASM bridge keeps stale remote echo/toplevel tutorial commands working");
+ok(includes('self.routeSwiWasmActorMessage("remote", message.target, message.message);') &&
+   !includes("self.sendSwiWasmActorMessage(message.target, message.message, \"remote\");"),
+   "SWI-WASM bridge routes inbound remote actor messages through the local delivery funnel");
+ok(includes("var markdown = /^\\[(https?:\\/\\/[^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)$/.exec(node);") &&
+   includes("return markdown[1];"),
+   "SWI-WASM bridge normalizes markdown-link remote node URLs");
 ok(includes("finalizeSwiWasmWorkerActor: function") &&
    includes("self.finalizeSwiWasmWorkerActor(pid,") &&
    includes('"worker_error: "'),

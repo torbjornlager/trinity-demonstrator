@@ -1138,7 +1138,13 @@ X = aristotle.
 
 <pre id="cpw-remote-echo-spawn">?- spawn(echo_actor, Pid, [
        node('{{actor_peer_host}}'),
-       monitor(true)
+       monitor(true),
+       load_text("echo_actor :-
+    receive({
+        echo(From, Msg) -&gt;
+            From ! echo(Msg),
+            echo_actor
+    }).")
    ]),
    register(remote_echo_actor, Pid).
 </pre>
@@ -1258,7 +1264,8 @@ ping_pong_remote :-
 </p>
 
 <pre id="cpw-remote-toplevel-spawn">?- toplevel_spawn(Pid, [
-       node('{{actor_peer_host}}')
+       node('{{actor_peer_host}}'),
+       session(true)
    ]).
 </pre>
 
@@ -1348,6 +1355,10 @@ fridge(take(Food),  List, ok(Food), Rest) :-
     select(Food, List, Rest), !.
 fridge(take(_Food), List, not_found, List).
 </pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#srv-fridge-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
 
 <p>
     Notice that the predicate has no idea it is going to be embedded in a
@@ -1440,6 +1451,10 @@ fridge2(take(Food),  List, ok(Food), Rest) :-
 fridge2(take(_Food), List, not_found, List).
 fridge2(_Other,      List, error(unknown_request), List).
 </pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#srv-fridge2-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
 
 <p>
     We can swap the running server&rsquo;s callback in place with
