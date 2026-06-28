@@ -18,6 +18,10 @@ const workerSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
   "utf8"
 );
+const nodeWsSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "prolog", "web_prolog", "node_ws.pl"),
+  "utf8"
+);
 const editorFrameSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "editor_frame.html"),
   "utf8"
@@ -201,6 +205,15 @@ ok(includes("function settleReject(error)") &&
    "remote connection settles once: rejects on close-before-open and on timeout, so the connect promise never parks");
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
+ok(includes('root.crypto.getRandomValues(values);') &&
+   includes('randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];') &&
+   includes('pid = String(min + (randomValue % span));') &&
+   includes('this.swiWasmReservedWorkerActorPids[pid] = true;') &&
+   includes('this.swiWasmActorWorkers[pid] || this.swiWasmReservedWorkerActorPids[pid]') &&
+   workerSource.includes('/^[1-9][0-9]{9}$/.test(selfPidText)') &&
+   nodeWsSource.includes("Id >= 1000000000") &&
+   nodeWsSource.includes("Id =< 9999999999"),
+   "SWI-WASM local workers use reserved random ten-digit numeric pids");
 
 console.log(failures === 0
   ? "\nswi_wasm_rpc_bridge smoke: PASS"

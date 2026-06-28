@@ -771,6 +771,11 @@ ws_rewrite_browser_sender(Dict, Queue, Message0, Message) :-
     ).
 
 browser_local_pid(main).
+browser_local_pid(Id) :-
+    integer(Id),
+    Id >= 1000000000,
+    Id =< 9999999999.
+% Accept browser tabs running the pre-numeric SWI-WASM bridge during rollout.
 browser_local_pid(worker_actor(Id)) :-
     integer(Id),
     Id > 0.

@@ -2033,8 +2033,8 @@ X = aristotle.
 <h2>Ping-pong across nodes</h2>
 
 <p>
-    The same <code>node(...)</code> option can move the ponger to the other
-    node. Load one helper predicate into your current session:
+    The same <code>node(...)</code> option can create the "ponger" on the other
+    node.
 </p>
 
 <pre id="cpw-remote-pingpong-source">ping(0, Pong_Pid) :-
@@ -2043,14 +2043,20 @@ X = aristotle.
 ping(N, Pong_Pid) :-
     self(Self),
     Pong_Pid ! ping(Self),
-    receive({pong -&gt; format('Ping received pong.~n', [])}),
+    receive({
+        pong -&gt;
+            format('Ping received pong.~n', [])
+    }),
     N1 is N - 1,
     ping(N1, Pong_Pid).
 
 pong :-
     receive({
-        finished -&gt; format('Pong finished.~n', []) ;
-        ping(Ping_Pid) -&gt; Ping_Pid ! pong, pong
+        finished -&gt;
+            format('Pong finished.~n', []) ;
+        ping(Ping_Pid) -&gt;
+            Ping_Pid ! pong,
+            pong
     }).
 
 ping_pong_remote :-

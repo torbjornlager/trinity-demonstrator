@@ -764,7 +764,7 @@
     }
     selfPidText = String(message.pid || "");
     exitReason = null;
-    if (!/^worker_actor\([1-9][0-9]*\)$/.test(selfPidText)) {
+    if (!/^[1-9][0-9]{9}$/.test(selfPidText)) {
       post("error", { error: "invalid worker actor pid" });
       return;
     }

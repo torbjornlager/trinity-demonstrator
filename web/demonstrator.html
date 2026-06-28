@@ -5142,7 +5142,7 @@
             swiWasmFinalized: false,
             swiWasmPagingStopped: false,
             swiWasmActorWorkers: {},
-            swiWasmNextWorkerActorId: 1,
+            swiWasmReservedWorkerActorPids: {},
             swiWasmNextActorRefId: 1,
             swiWasmNextActorDelayId: 1,
             swiWasmActorMainMailbox: [],
@@ -9076,8 +9076,27 @@
             };
           },
           reserveSwiWasmWorkerActorPid: function() {
-            var id = this.swiWasmNextWorkerActorId++;
-            return "worker_actor(" + id + ")";
+            var min = 1000000000;
+            var span = 9000000000;
+            var max53 = 9007199254740992;
+            var unbiasedLimit = max53 - (max53 % span);
+            var root = typeof globalThis !== "undefined" ? globalThis : window;
+            var pid;
+            var randomValue;
+            do {
+              if (root.crypto && typeof root.crypto.getRandomValues === "function") {
+                do {
+                  var values = new Uint32Array(2);
+                  root.crypto.getRandomValues(values);
+                  randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];
+                } while (randomValue >= unbiasedLimit);
+              } else {
+                randomValue = Math.floor(Math.random() * span);
+              }
+              pid = String(min + (randomValue % span));
+            } while (this.swiWasmActorWorkers[pid] || this.swiWasmReservedWorkerActorPids[pid]);
+            this.swiWasmReservedWorkerActorPids[pid] = true;
+            return pid;
           },
           spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText, nameText) {
             var self = this;
@@ -9087,6 +9106,7 @@
             if (this.swiWasmActorWorkers[pid]) {
               throw new Error("worker actor already exists: " + pid);
             }
+            delete this.swiWasmReservedWorkerActorPids[pid];
             var workerUrl = "/swi_wasm_actor_worker.js?v=20260621-standard-remote-pids";
             try {
               worker = new Worker(workerUrl, { name: pid });
@@ -9711,7 +9731,7 @@
               return true;
             }
             if (!entry || !entry.worker || entry.done) {
-              if (/^worker_actor\([1-9][0-9]*\)$/.test(pid)) {
+              if (/^[1-9][0-9]{9}$/.test(pid)) {
                 this.log("transport", "drop message to dead SWI-WASM worker actor " + pid + ".", "swi-wasm");
                 return true;
               }
@@ -10202,7 +10222,7 @@
               "spawn(Goal, Pid, Options) :-",
               "    option(node(Node), Options, localhost),",
               "    %  Bind Pid BEFORE term_string(Goal, ...): the spawned goal must",
-              "    %  carry the real pid (worker_actor(N)), not an unbound variable.",
+              "    %  carry the real numeric pid, not an unbound variable.",
               "    %  Otherwise a goal like self(S), S ! Pid-Result sends a message",
               "    %  whose pid slot is a fresh var, which receive/1's subsumes_term",
               "    %  matching cannot match against a caller that binds Pid (e.g.",
