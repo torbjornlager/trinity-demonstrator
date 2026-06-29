@@ -9,12 +9,16 @@
   var nextRequestId = 1;
   var nextRefId = 1;
   var pendingRequests = {};
+  var pendingRpcPromises = {};
   var Prolog = null;
   var Module = null;
   var exitReason = null;
   var abortRequested = false;
   var currentGoalText = "";
   var inheritedSource = "";
+  var behaviourSource = "";
+  var workerRole = "actor";
+  var statechartTimers = {};
 
   if (typeof self.window === "undefined") {
     self.window = self;
@@ -156,6 +160,79 @@
     });
   }
 
+  function actorRemoteSpawn(nodeText, goalText, sourceText) {
+    return actorRequest("remote_spawn", {
+      node: String(nodeText || ""),
+      goal: String(goalText || "true"),
+      source: String(sourceText || "")
+    });
+  }
+
+  function actorRemoteToplevelSpawn(nodeText, sourceText, sessionText) {
+    return actorRequest("remote_toplevel_spawn", {
+      node: String(nodeText || ""),
+      source: String(sourceText || ""),
+      session: String(sessionText || "false")
+    });
+  }
+
+  function actorRpc(nodeText, goalText, templateText, offset, limit, loadText) {
+    return actorRequest("rpc", {
+      node: String(nodeText || ""),
+      goal: String(goalText || "true"),
+      template: String(templateText || "true"),
+      offset: Number(offset || 0),
+      limit: Number(limit || 10000),
+      loadText: String(loadText || "")
+    });
+  }
+
+  function actorPromiseStart(nodeText, goalText, templateText, offset, limit, loadText) {
+    var ref = nextRefId++;
+    // Attach a rejection handler immediately so an HTTP failure cannot become
+    // an unhandled promise rejection while Prolog is doing other work.
+    pendingRpcPromises[ref] = actorRpc(
+      nodeText, goalText, templateText, offset, limit, loadText
+    ).then(function(value) {
+      return { ok: true, value: value };
+    }, function(error) {
+      return { ok: false, error: error && error.message ? error.message : String(error) };
+    });
+    return ref;
+  }
+
+  function actorPromiseWait(refValue, timeoutSeconds) {
+    var ref = Number(refValue);
+    var pending = pendingRpcPromises[ref];
+    var timeout = Number(timeoutSeconds);
+    if (!pending) return Promise.resolve(null);
+    var timeoutMarker = {};
+    var waited = pending;
+    if (isFinite(timeout) && timeout >= 0) {
+      waited = new Promise(function(resolve) {
+        var timer = setTimeout(function() { resolve(timeoutMarker); }, timeout * 1000);
+        pending.then(function(outcome) {
+          clearTimeout(timer);
+          resolve(outcome);
+        });
+      });
+    }
+    return waited.then(function(outcome) {
+      if (outcome === timeoutMarker) return null;
+      delete pendingRpcPromises[ref];
+      if (!outcome.ok) throw new Error(outcome.error);
+      return outcome.value;
+    });
+  }
+
+  function actorStatechartSpawn(sourceKind, sourceText, traceText) {
+    return actorRequest("statechart_spawn", {
+      sourceKind: String(sourceKind || ""),
+      source: String(sourceText || ""),
+      trace: String(traceText || "false") === "true"
+    });
+  }
+
   function actorActors() {
     return actorRequest("actors", {});
   }
@@ -229,6 +306,18 @@
     return true;
   }
 
+  function actorShellEvent(value, text) {
+    var eventValue = value;
+    try {
+      eventValue = JSON.parse(JSON.stringify(value));
+    } catch (_) {
+    }
+    // Publish a final non-newline fragment before its query answer.
+    flushOutput(true);
+    post("shell_event", { event: eventValue, text: String(text || "") });
+    return true;
+  }
+
   function actorSetDoneReason(reasonText) {
     exitReason = String(reasonText || "true");
     return true;
@@ -246,6 +335,12 @@
   self.actorSpawn = actorSpawn;
   self.actorReservePid = actorReservePid;
   self.actorSpawnWithPid = actorSpawnWithPid;
+  self.actorRemoteSpawn = actorRemoteSpawn;
+  self.actorRemoteToplevelSpawn = actorRemoteToplevelSpawn;
+  self.actorRpc = actorRpc;
+  self.actorPromiseStart = actorPromiseStart;
+  self.actorPromiseWait = actorPromiseWait;
+  self.actorStatechartSpawn = actorStatechartSpawn;
   self.actorActors = actorActors;
   self.actorRegister = actorRegister;
   self.actorUnregister = actorUnregister;
@@ -255,20 +350,55 @@
   self.actorExit = actorExit;
   self.actorAbort = actorAbort;
   self.actorTerminalOutput = actorTerminalOutput;
+  self.actorShellEvent = actorShellEvent;
   self.actorSetDoneReason = actorSetDoneReason;
   self.actorInput = actorInput;
+  self.swiWasmUserSource = function() { return inheritedSource; };
+  self.swiWasmBehaviourSource = function() { return behaviourSource; };
   // A parent passes its complete runtime source to the coordinator when
   // spawning a child.  Treat that inherited source as the child program;
   // adding it as both behaviour and user source would duplicate clauses.
   self.swiWasmBehaviourSource = function() { return ""; };
   self.swiWasmUserSource = function() { return inheritedSource; };
 
-  function consultSource(sourceText) {
+  self.wasmStatechartTrace = function(text) {
+    post("statechart_trace", { trace: String(text || "") });
+    return true;
+  };
+  self.wasmStatechartSchedule = function(eventText, delaySeconds, idText) {
+    var id = String(idText || "");
+    var delay = Number(delaySeconds);
+    if (!id || !isFinite(delay) || delay < 0) return false;
+    self.wasmStatechartCancel(id);
+    statechartTimers[id] = setTimeout(function() {
+      delete statechartTimers[id];
+      deliver(String(eventText || "timeout"));
+    }, delay * 1000);
+    return true;
+  };
+  self.wasmStatechartCancel = function(idText) {
+    var id = String(idText || "");
+    if (statechartTimers[id] !== undefined) {
+      clearTimeout(statechartTimers[id]);
+      delete statechartTimers[id];
+    }
+    return true;
+  };
+  self.wasmStatechartCancelAll = function() {
+    Object.keys(statechartTimers).forEach(function(id) { clearTimeout(statechartTimers[id]); });
+    statechartTimers = {};
+    return true;
+  };
+  self.swiWasmStatechartMonitor = actorMonitor;
+  self.swiWasmStatechartDemonitor = actorDemonitor;
+
+  function consultSource(sourceText, fileName) {
     if (!sourceText || !Module || !Module.FS) {
       return;
     }
-    Module.FS.writeFile("/worker_user_code.pl", String(sourceText));
-    Prolog.query("consult('/worker_user_code.pl')").once();
+    var path = String(fileName || "/worker_user_code.pl");
+    Module.FS.writeFile(path, String(sourceText));
+    Prolog.query("consult(" + JSON.stringify(path) + ")").once();
   }
 
   function installActorPredicates() {
@@ -280,6 +410,7 @@
       ":- op(1000, xfy, if).",
       ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0).",
       ":- dynamic deferred/1, io_target/1.",
+      workerRole === "shell_toplevel" ? "shell_toplevel_role." : "shell_toplevel_role :- fail.",
       "",
       "self(" + selfPidText + ").",
       "",
@@ -290,21 +421,42 @@
       "spawn(Goal, Pid, Options) :-",
       "    option(node(Node), Options, localhost),",
       "    (   Node == localhost",
-      "    ->  true",
-      "    ;   throw(error(existence_error(actor_node, Node), spawn/3))",
+      "    ->  collect_spawn_source(Options, ExtraSource),",
+      "        PidPromise := actorReservePid(),",
+      "        await(PidPromise, PidText),",
+      "        term_string(Pid, PidText),",
+      "        term_string(Goal, GoalText),",
+      "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
+      "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
+      "        await(Promise, SpawnedText),",
+      "        SpawnedText == PidText",
+      "    ;   collect_spawn_source(Options, ExtraSource),",
+      "        term_string(Node, NodeText),",
+      "        term_string(Goal, GoalText),",
+      "        Promise := actorRemoteSpawn(#NodeText, #GoalText, #ExtraSource),",
+      "        await(Promise, PidText),",
+      "        term_string(Pid, PidText)",
       "    ),",
-      "    collect_spawn_source(Options, ExtraSource),",
-      "    PidPromise := actorReservePid(),",
-      "    await(PidPromise, PidText),",
-      "    term_string(Pid, PidText),",
-      "    term_string(Goal, GoalText),",
-      "    ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
-      "    Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
-      "    await(Promise, SpawnedText),",
-      "    SpawnedText == PidText,",
       "    install_spawn_monitor(Pid, Options).",
       "",
       "spawn_worker_actor(Goal, Pid) :- spawn(Goal, Pid).",
+      "",
+      "statechart_spawn(Pid) :- statechart_spawn(Pid, []).",
+      "statechart_spawn(Pid, Options) :-",
+      "    ( member(load_text(Source), Options) -> SourceKind = text",
+      "    ; member(load_uri(Source), Options) -> SourceKind = uri",
+      "    ; throw(error(domain_error(statechart_source_option, load_text_or_load_uri), statechart_spawn/2))",
+      "    ),",
+      "    ( option(trace(true), Options) -> Trace = true ; Trace = false ),",
+      "    Promise := actorStatechartSpawn(#SourceKind, #Source, #Trace),",
+      "    await(Promise, PidText),",
+      "    term_string(Pid, PidText).",
+      "",
+      "statechart_halt(Pid, Reply) :- statechart_halt(Pid, Reply, 5).",
+      "statechart_halt(Pid, Reply, Timeout) :-",
+      "    self(Self),",
+      "    send(Pid, '$statechart_stop'(Self)),",
+      "    receive({reply(Reply) -> true}, [timeout(Timeout), on_timeout(Reply = timeout)]).",
       "",
       "collect_spawn_source(Options, Source) :-",
       "    findall(Text, spawn_source_option(Options, Text), Texts),",
@@ -334,6 +486,88 @@
       "    with_output_to(string(Body), write_term(Copy, [quoted(true), numbervars(true)])),",
       "    string_concat(Body, '.', Text).",
       "",
+      "rpc(Node, Goal) :- rpc(Node, Goal, []).",
+      "",
+      "rpc(Node, Goal, Options) :-",
+      "    term_variables(Goal, Variables),",
+      "    Template =.. [v|Variables],",
+      "    term_string(Node, NodeText),",
+      "    term_to_atom(Goal, GoalText),",
+      "    term_to_atom(Template, TemplateText),",
+      "    option(offset(Offset), Options, 0),",
+      "    option(limit(Limit), Options, 10000),",
+      "    collect_rpc_load_text(Options, LoadText),",
+      "    worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText).",
+      "",
+      "worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText) :-",
+      "    Promise := actorRpc(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText),",
+      "    await(Promise, ResponseText),",
+      "    (   catch(term_string(Response, ResponseText), _, fail)",
+      "    ->  true",
+      "    ;   throw(rpc_error(parse_failed))",
+      "    ),",
+      "    (   Response = success(Slice, true)",
+      "    ->  ( member(Bound, Slice), Template = Bound",
+      "        ; NextOffset is Offset + Limit,",
+      "          worker_rpc_page(NodeText, GoalText, TemplateText, Template, NextOffset, Limit, LoadText)",
+      "        )",
+      "    ;   Response = success(Slice, false)",
+      "    ->  member(Bound, Slice), Template = Bound",
+      "    ;   Response = failure",
+      "    ->  fail",
+      "    ;   Response = error(Error)",
+      "    ->  throw(rpc_error(Error))",
+      "    ;   throw(rpc_error(unexpected_response))",
+      "    ).",
+      "",
+      "promise(Node, Goal, Ref) :- promise(Node, Goal, Ref, []).",
+      "",
+      "promise(Node, Goal, Ref, Options) :-",
+      "    option(template(Template), Options, Goal),",
+      "    term_string(Node, NodeText),",
+      "    term_to_atom(Goal, GoalText),",
+      "    term_to_atom(Template, TemplateText),",
+      "    option(offset(Offset), Options, 0),",
+      "    option(limit(Limit), Options, 10000000000),",
+      "    collect_rpc_load_text(Options, LoadText),",
+      "    Ref := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText).",
+      "",
+      "yield(Ref, Message) :- yield(Ref, Message, []).",
+      "",
+      "yield(Ref, Message, Options) :-",
+      "    option(timeout(Timeout), Options, -1),",
+      "    Promise := actorPromiseWait(#Ref, #Timeout),",
+      "    await(Promise, ResponseText),",
+      "    (   ResponseText = null",
+      "    ->  option(on_timeout(OnTimeout), Options, true),",
+      "        call(OnTimeout)",
+      "    ;   catch(term_string(Message, ResponseText), _, throw(rpc_error(parse_failed)))",
+      "    ).",
+      "",
+      "collect_rpc_load_text(Options, LoadText) :-",
+      "    findall(Text, rpc_load_text(Options, Text), Texts),",
+      "    atomic_list_concat(Texts, '\\n', LoadText).",
+      "",
+      "rpc_load_text(Options, Text) :-",
+      "    member(load_text(Source), Options),",
+      "    ( atom(Source) -> atom_string(Source, Text0) ; string(Source) -> Text0 = Source ; term_string(Source, Text0) ),",
+      "    ( sub_string(Text0, _, _, 0, '.') -> Text = Text0 ; string_concat(Text0, '.', Text) ).",
+      "rpc_load_text(Options, Text) :-",
+      "    member(load_list(Terms), Options),",
+      "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
+      "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "rpc_load_text(Options, Text) :-",
+      "    member(load_predicates(Indicators), Options),",
+      "    findall(ClauseText,",
+      "            ( member(Name/Arity, Indicators),",
+      "              functor(Head, Name, Arity),",
+      "              catch(user:clause(Head, Body), _, fail),",
+      "              (Body == true -> Clause = Head ; Clause = (Head :- Body)),",
+      "              clause_source_text(Clause, ClauseText)",
+      "            ),",
+      "            ClauseTexts),",
+      "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "",
       "install_spawn_monitor(Pid, Options) :-",
       "    option(monitor(true), Options, false),",
       "    !,",
@@ -354,6 +588,16 @@
       "canonical_pid(Pid, Pid).",
       "",
       "Pid ! Message :- send(Pid, Message).",
+      "",
+      "shell_event_text(error(_, Error), Text) :- !, term_string(Error, Text).",
+      "shell_event_text(Message, Text) :- term_string(Message, Text).",
+      "",
+      "send(terminal, Message) :-",
+      "    shell_toplevel_role, !,",
+      "    catch(flush_output(user_output), _, true),",
+      "    catch(flush_output(user_error), _, true),",
+      "    shell_event_text(Message, Text),",
+      "    _ := actorShellEvent(#Message, #Text).",
       "",
       "send(Pid, Message) :-",
       "    term_string(Pid, PidText),",
@@ -465,17 +709,25 @@
       "toplevel_spawn(Pid) :- toplevel_spawn(Pid, []).",
       "",
       "toplevel_spawn(Pid, Options) :-",
-      "    self(Self),",
+      "    option(node(Node), Options, localhost),",
       "    option(session(Session), Options, false),",
-      "    option(target(Target), Options, Self),",
       "    collect_spawn_source(Options, ExtraSource),",
-      "    PidPromise := actorReservePid(),",
-      "    await(PidPromise, PidText),",
-      "    term_string(Pid, PidText),",
-      "    term_string(ptcp(Pid, Target, Session), GoalText),",
-      "    Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
-      "    await(Promise, SpawnedText),",
-      "    SpawnedText == PidText,",
+      "    (   Node == localhost",
+      "    ->  self(Self),",
+      "        option(target(Target), Options, Self),",
+      "        PidPromise := actorReservePid(),",
+      "        await(PidPromise, PidText),",
+      "        term_string(Pid, PidText),",
+      "        term_string(ptcp(Pid, Target, Session), GoalText),",
+      "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+      "        await(Promise, SpawnedText),",
+      "        SpawnedText == PidText",
+      "    ;   term_string(Node, NodeText),",
+      "        term_string(Session, SessionText),",
+      "        Promise := actorRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText),",
+      "        await(Promise, PidText),",
+      "        term_string(Pid, PidText)",
+      "    ),",
       "    install_spawn_monitor(Pid, Options),",
       "    maybe_register_toplevel_name(Options, Pid).",
       "",
@@ -491,7 +743,27 @@
       "state_1(Pid, Target0, Session) :-",
       "    Control = control(continue),",
       "    receive({",
+      "        '$call_text'(GoalText, Limit0, Offset, Once) ->",
+      "            term_string(Goal, GoalText, [variable_names(Bindings)]),",
+      "            dict_create(Template, bindings, Bindings),",
+      "            Options = [template(Template), limit(Limit0), offset(Offset), once(Once)],",
+      "            toplevel_run_call(Goal, Options, Target0, Pid) ;",
       "        '$call'(Goal, Options) ->",
+      "            toplevel_run_call(Goal, Options, Target0, Pid) ;",
+      "        '$reload' ->",
+      "            catch(consult('/worker_user_code.pl'), Error, send(Target0, error(Pid, Error))) ;",
+      "        '$halt'(From) ->",
+      "            send(From, reply(true)),",
+      "            nb_setarg(1, Control, halt)",
+      "        }),",
+      "    (   arg(1, Control, halt)",
+      "    ->  true",
+      "    ;   Session == false",
+      "    ->  true",
+      "    ;   state_1(Pid, Target0, Session)",
+      "    ).",
+      "",
+      "toplevel_run_call(Goal, Options, Target0, Pid) :-",
       "            option(template(Template0), Options, Goal),",
       "            strip_module(Template0, _, Template),",
       "            option(offset(Offset), Options, 0),",
@@ -506,17 +778,7 @@
       "            (   arg(3, Answer, true)",
       "            ->  state_3(Limit, Target)",
       "            ;   true",
-      "            ) ;",
-      "        '$halt'(From) ->",
-      "            send(From, reply(true)),",
-      "            nb_setarg(1, Control, halt)",
-      "        }),",
-      "    (   arg(1, Control, halt)",
-      "    ->  true",
-      "    ;   Session == false",
-      "    ->  true",
-      "    ;   state_1(Pid, Target0, Session)",
-      "    ).",
+      "            ).",
       "",
       "state_2(Goal0, Template, Offset, Limit, Once, TargetBox, Pid, Answer) :-",
       "    strip_module(Goal0, _, PlainGoal),",
@@ -757,12 +1019,62 @@
     });
   }
 
+  function installStatechartRuntime(message) {
+    var names = [
+      "statechart_wasm_runtime.pl",
+      "statechart_wasm_model.pl",
+      "statechart_wasm_exec.pl",
+      "statechart_wasm.pl"
+    ];
+    try { Module.FS.mkdir("/wasm"); } catch (_) {}
+    return Promise.all(names.map(function(name) {
+      return fetch("/wasm/" + name, { cache: "no-store" }).then(function(response) {
+        if (!response.ok) throw new Error("HTTP " + response.status + " for /wasm/" + name);
+        return response.text().then(function(source) {
+          return { name: name, source: source.replace(/swi_wasm_actor_bridge:/g, "user:") };
+        });
+      });
+    })).then(function(files) {
+      files.forEach(function(file) {
+        Module.FS.writeFile("/wasm/" + file.name, file.source);
+      });
+      if (!Prolog.query("use_module('/wasm/statechart_wasm.pl')").once()) {
+        throw new Error("use_module('/wasm/statechart_wasm.pl') failed");
+      }
+      Module.FS.writeFile("/statechart.xml", String(message.statechartXml || ""));
+      consultSource([
+        ":- use_module(library(readutil)).",
+        "statechart_trace_hook(Event) :- term_to_atom(Event, Text), _ := wasmStatechartTrace(#Text).",
+        "statechart_actor_loop :-",
+        "    read_file_to_string('/statechart.xml', XML, []),",
+        "    statechart_wasm:statechart_start(text(XML)),",
+        "    statechart_actor_wait.",
+        "statechart_actor_wait :-",
+        "    ( statechart_wasm:statechart_running ->",
+        "        receive({",
+        "            '$statechart_stop'(From) ->",
+        "                statechart_wasm:statechart_stop,",
+        "                send(From, reply(stopped))",
+        "        ;   Event ->",
+        "                statechart_wasm:statechart_send(Event),",
+        "                statechart_actor_wait",
+        "        })",
+        "    ; true",
+        "    )."
+      ].join("\n"), "/worker_statechart_actor.pl");
+      if (message.statechartTrace === true) {
+        Prolog.query("statechart_wasm:set_trace_hook(user:statechart_trace_hook)").once();
+      }
+    });
+  }
+
   function start(message) {
     if (started) {
       post("error", { error: "worker actor already started" });
       return;
     }
     selfPidText = String(message.pid || "");
+    workerRole = String(message.role || "actor");
     exitReason = null;
     if (!/^[1-9][0-9]{9}$/.test(selfPidText)) {
       post("error", { error: "invalid worker actor pid" });
@@ -780,9 +1092,13 @@
       Prolog = module.prolog;
       installActorPredicates();
       inheritedSource = String(message.source || "");
-      consultSource(inheritedSource);
-      post("ready", {});
-      return runGoal(message.goal || "true");
+      behaviourSource = String(message.behaviourSource || "");
+      consultSource(behaviourSource, "/worker_behaviour.pl");
+      consultSource(inheritedSource, "/worker_user_code.pl");
+      return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then(function() {
+        post("ready", {});
+        return runGoal(message.goal || "true");
+      });
     }).catch(function(error) {
       flushOutput(true);
       post("error", { error: String(error) });
@@ -797,6 +1113,32 @@
     }
     if (message.command === "deliver") {
       deliver(message.message || "true");
+      return;
+    }
+    if (message.command === "shell_load" && workerRole === "shell_toplevel") {
+      inheritedSource = String(message.source || "");
+      if (Module && Module.FS) {
+        Module.FS.writeFile("/worker_user_code.pl", inheritedSource);
+      }
+      deliver("'$reload'");
+      return;
+    }
+    if (message.command === "shell_call" && workerRole === "shell_toplevel") {
+      deliver("'$call_text'(" + JSON.stringify(String(message.goal || "true")) + "," +
+              Number(message.limit || 1) + "," + Number(message.offset || 0) + "," +
+              (message.once === true ? "true" : "false") + ")");
+      return;
+    }
+    if (message.command === "shell_next" && workerRole === "shell_toplevel") {
+      deliver("'$next'([limit(" + Number(message.limit || 1) + ")])");
+      return;
+    }
+    if (message.command === "shell_stop" && workerRole === "shell_toplevel") {
+      deliver("'$stop'");
+      return;
+    }
+    if (message.command === "shell_input" && workerRole === "shell_toplevel") {
+      deliver("'$input'(terminal," + String(message.answer || "true") + ")");
       return;
     }
     if (message.command === "reply") {

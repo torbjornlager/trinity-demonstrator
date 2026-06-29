@@ -97,6 +97,71 @@ async function main() {
   ok(!!spawnReq && spawnReq.pid === "4200000000",
      "spawn request preserves target pid");
 
+  // 8. Remote work is delegated to the JavaScript node controller.  The
+  // worker keeps the same spawn vocabulary without owning a WebSocket.
+  const remoteSpawnP = S.actorRemoteSpawn("'https://n4.example'", "echo_actor", "");
+  const remoteSpawnReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "remote_spawn";
+  }).pop();
+  ok(!!remoteSpawnReq && remoteSpawnReq.node === "'https://n4.example'",
+     "remote spawn is delegated to the node controller");
+  S.onmessage({ data: { command: "reply", id: remoteSpawnReq.id, ok: true, result: "1234567890@'https://n4.example'" } });
+  ok((await remoteSpawnP) === "1234567890@'https://n4.example'",
+     "remote spawn reply preserves the distributed pid");
+
+  // 9. A shell-role worker translates controller commands into the ptcp/3
+  // mailbox protocol.  An invalid pid avoids booting the actual WASM bundle.
+  S.onmessage({ data: { command: "start", pid: "invalid_shell", role: "shell_toplevel" } });
+  S.onmessage({ data: { command: "shell_call", goal: "member(X,[a,b])", limit: 1 } });
+  const shellCall = await S.actorReceive(-1);
+  ok(shellCall.indexOf("'$call_text'") === 0 && shellCall.includes("member(X,[a,b])"),
+     "shell call enters the toplevel actor mailbox");
+
+  // 10. Worker-side rpc/2-3 uses the same controller request channel as
+  // remote actor transport; the Worker does not own browser HTTP policy.
+  const rpcP = S.actorRpc("'https://n1.example'", "path(a,X)", "v(X)", 0, 10, "edge(a,b).");
+  const rpcReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "rpc";
+  }).pop();
+  ok(!!rpcReq && rpcReq.goal === "path(a,X)" && rpcReq.loadText === "edge(a,b).",
+     "RPC is delegated to the node controller");
+  S.onmessage({ data: { command: "reply", id: rpcReq.id, ok: true, result: "success([v(b)],false)" } });
+  ok((await rpcP) === "success([v(b)],false)", "RPC response text returns to Prolog");
+
+  // Promise/yield starts the same RPC request without blocking Prolog, then
+  // consumes its response through a stable numeric reference.
+  const promiseRef = S.actorPromiseStart("'https://n2.example'", "mortal(Who)", "mortal(Who)", 0, 10, "");
+  const promiseReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "rpc";
+  }).pop();
+  ok(Number.isInteger(promiseRef) && promiseReq.goal === "mortal(Who)",
+     "promise starts RPC and returns a numeric reference");
+  const promiseWait = S.actorPromiseWait(promiseRef, -1);
+  S.onmessage({ data: { command: "reply", id: promiseReq.id, ok: true, result: "success([mortal(socrates)],false)" } });
+  ok((await promiseWait) === "success([mortal(socrates)],false)",
+     "yield wait consumes the promised RPC response");
+
+  const retainedRef = S.actorPromiseStart("'https://n2.example'", "slow(X)", "slow(X)", 0, 10, "");
+  const retainedReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "rpc";
+  }).pop();
+  ok((await S.actorPromiseWait(retainedRef, 0)) === null,
+     "timed-out yield leaves the promise pending");
+  S.onmessage({ data: { command: "reply", id: retainedReq.id, ok: true, result: "success([slow(done)],false)" } });
+  ok((await S.actorPromiseWait(retainedRef, -1)) === "success([slow(done)],false)",
+     "a later yield consumes a previously timed-out promise");
+
+  // 11. Statechart creation is coordinated from JS so load_uri and Worker
+  // placement stay node-controller responsibilities.
+  const chartP = S.actorStatechartSpawn("uri", "/examples/chart.xml", "true");
+  const chartReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "statechart_spawn";
+  }).pop();
+  ok(!!chartReq && chartReq.source === "/examples/chart.xml" && chartReq.trace === true,
+     "statechart spawn is delegated to the node controller");
+  S.onmessage({ data: { command: "reply", id: chartReq.id, ok: true, result: "5500000000" } });
+  ok((await chartP) === "5500000000", "statechart spawn returns its Worker pid");
+
   console.log(failures === 0
     ? "\nswi_wasm_actor_worker smoke: PASS"
     : "\nswi_wasm_actor_worker smoke: FAIL (" + failures + ")");

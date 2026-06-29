@@ -285,7 +285,7 @@
         border-left: 1px solid var(--line);
       }
 
-      .wb-header-section-browser {
+      .wb-header-section-node-groups-end {
         border-right: 1px solid var(--line);
         margin-right: auto;
         padding-right: 8px;
@@ -1706,6 +1706,17 @@
         font-size: 13px;
       }
 
+      .settings-option-label-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        width: fit-content;
+      }
+
+      .settings-model-help-button {
+        margin-left: 0;
+      }
+
       .settings-option-note {
         font-size: 12px;
         color: var(--muted);
@@ -1856,6 +1867,10 @@
       .admin-config-help-button:focus-visible {
         outline: 2px solid var(--focus-ring);
         outline-offset: 1px;
+      }
+
+      .admin-config-help-button.settings-model-help-button {
+        margin-left: 0;
       }
 
       .admin-config-help-popover {
@@ -2499,7 +2514,7 @@
           padding: 0 0 18px;
         }
 
-        .wb-header-section-browser {
+        .wb-header-section-node-groups-end {
           border-right: none;
           margin-right: 0;
           padding-right: 0;
@@ -2565,6 +2580,27 @@
         <div class="wb-header-side">
           <section class="wb-header-section">
             <div class="wb-header-section-title-row">
+              <div class="wb-header-section-title">Browser node</div>
+              <span class="wb-header-note-help"
+                    :data-tooltip="'Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.'"
+                    aria-label="Browser help">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M9.5 9.3a2.7 2.7 0 0 1 5.1 1c0 1.8-1.8 2.3-2.4 2.9-.4.4-.6.8-.6 1.5"></path>
+                  <circle cx="12" cy="17.2" r="0.8" fill="currentColor" stroke="none"></circle>
+                </svg>
+              </span>
+            </div>
+            <div class="wb-header-card-row">
+              <a v-for="browser in headerBrowserButtons"
+                 :key="browser.id"
+                 class="wb-header-card wb-header-card-runtime"
+                 :class="{active: browser.active}"
+                 :href="browser.href">{{ browser.label }}</a>
+            </div>
+          </section>
+          <section class="wb-header-section wb-header-section-node-groups-end">
+            <div class="wb-header-section-title-row">
               <div class="wb-header-section-title">Remote nodes</div>
               <span class="wb-header-note-help"
                     :data-tooltip="'Open the live Discovery Hub to inspect available nodes, status, profiles, services, and advertised predicates.'"
@@ -2587,27 +2623,6 @@
                  target="_blank"
                  rel="noopener noreferrer">{{ currentPortalNodeAddress }}</a>
             </p>
-          </section>
-          <section class="wb-header-section wb-header-section-browser">
-            <div class="wb-header-section-title-row">
-              <div class="wb-header-section-title">Browser runtimes</div>
-              <span class="wb-header-note-help"
-                    :data-tooltip="'Select the browser-based Prolog implementation to talk to below:\n\n[SWI-WASM] SWI-Prolog compiled to WASM'"
-                    aria-label="Browser help">
-                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <path d="M9.5 9.3a2.7 2.7 0 0 1 5.1 1c0 1.8-1.8 2.3-2.4 2.9-.4.4-.6.8-.6 1.5"></path>
-                  <circle cx="12" cy="17.2" r="0.8" fill="currentColor" stroke="none"></circle>
-                </svg>
-              </span>
-            </div>
-            <div class="wb-header-card-row">
-              <a v-for="browser in headerBrowserButtons"
-                 :key="browser.id"
-                 class="wb-header-card wb-header-card-runtime"
-                 :class="{active: browser.active}"
-                 :href="browser.href">{{ browser.label }}</a>
-            </div>
           </section>
           <section class="wb-header-section wb-header-section-tools">
             <div class="wb-header-actions">
@@ -2967,7 +2982,7 @@
                       </svg>
                     </button>
                     <div v-if="profileMenuOpen" class="terminal-profile-menu">
-                      <div class="terminal-profile-note">{{ isSwiWasmMode ? 'Runtime' : 'Node' }}: {{ nodeProfileLabel }}</div>
+                      <div class="terminal-profile-note">{{ isBrowserSwiWasmMode ? 'Runtime' : 'Node' }}: {{ nodeProfileLabel }}</div>
                       <div class="terminal-profile-note">Principal: {{ principalSummaryLabel }}</div>
                       <div class="terminal-profile-note">Auth: {{ nodeAuthLabel }}</div>
                       <button class="terminal-profile-item"
@@ -3120,6 +3135,32 @@
                 </div>
               </div>
               <div v-else-if="dockTab === 'settings'" class="settings-panel">
+                <div class="settings-group">
+                  <div class="settings-title">Browser node</div>
+                  <div class="settings-card-grid settings-display-grid">
+                    <div class="settings-option">
+                      <div class="settings-option-text">
+                        <div class="settings-option-label-row">
+                          <label class="settings-option-label"
+                                 for="swiWasmExecutionModel">SWI-WASM execution model</label>
+                          <button class="admin-config-help-button settings-model-help-button"
+                                  type="button"
+                                  data-help="Worker actors (default): the shell runs in a Web Worker, and local actors run in their own Workers. This provides hard Abort and process isolation, but the shell cannot access the DOM directly.&#10;&#10;Main thread + DOM: the shell runs on the browser UI thread and preloads library(dom). Direct DOM predicates work, but a non-yielding shell goal can make the UI unresponsive. Spawned actors still run in Workers."
+                                  aria-label="About SWI-WASM execution models"
+                                  @click.stop>?</button>
+                        </div>
+                        <select id="swiWasmExecutionModel"
+                                class="wb-select"
+                                v-model="browserRuntimeModel"
+                                @change="handleBrowserRuntimeModelChange">
+                          <option v-for="option in browserRuntimeModelOptions"
+                                  :key="option.id"
+                                  :value="option.value">{{ option.label }}</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div class="settings-group">
                   <div class="settings-title">Font</div>
                   <div class="settings-card-grid settings-font-grid">
@@ -3832,7 +3873,7 @@
 
       <div v-if="splitDrag || loggerSplitDrag" class="wb-split-overlay"></div>
 
-      <div id="adminConfigHelpPopover"
+      <div id="clampedHelpPopover"
            class="admin-config-help-popover"
            hidden></div>
 
@@ -4205,11 +4246,27 @@
           }
         }
 
+        // Pointer focus behavior differs across browsers, and touch devices
+        // have no hover. Make activation itself a first-class toggle while
+        // retaining mouseover and focusin for conventional tooltips.
+        function handleClick(event) {
+          var button = eventButtonTarget(event);
+          if (!button) {
+            return;
+          }
+          if (button === activeButton && !popoverNode.hidden) {
+            hidePopover();
+          } else {
+            showPopover(button);
+          }
+        }
+
         document.addEventListener("mouseover", handleMouseOver, true);
         document.addEventListener("mouseout", handleMouseOut, true);
         document.addEventListener("focusin", handleFocusIn, true);
         document.addEventListener("focusout", handleFocusOut, true);
         document.addEventListener("pointerdown", handlePointerDown, true);
+        document.addEventListener("click", handleClick, true);
         window.addEventListener("resize", refreshPopover);
         window.addEventListener("scroll", refreshPopover, true);
 
@@ -4219,6 +4276,7 @@
           document.removeEventListener("focusin", handleFocusIn, true);
           document.removeEventListener("focusout", handleFocusOut, true);
           document.removeEventListener("pointerdown", handlePointerDown, true);
+          document.removeEventListener("click", handleClick, true);
           window.removeEventListener("resize", refreshPopover);
           window.removeEventListener("scroll", refreshPopover, true);
           hidePopover();
@@ -4957,6 +5015,23 @@
         return String(text);
       }
 
+      function storedBrowserRuntimeModel() {
+        // The Worker-resident shell is the primary model. Only an explicit
+        // persisted opt-in selects the main-thread compatibility runtime.
+        return window.localStorage.getItem("wb.swiWasmModel") === "main" ? "main" : "worker";
+      }
+
+      function browserRuntimeRouteState() {
+        var node = (new URLSearchParams(window.location.search)).get("node");
+        var model = storedBrowserRuntimeModel();
+        // `swi-wasm` is the canonical single UI route. Keep the historical
+        // `swi-wasm-2` URL as a Worker-model alias for old links/bookmarks.
+        return {
+          main: node === "swi-wasm" && model === "main",
+          worker: node === "swi-wasm-2" || (node === "swi-wasm" && model !== "main")
+        };
+      }
+
       var app = Vue.createApp({
         data: function() {
           return {
@@ -5036,6 +5111,11 @@
             terminalExtraQueryNewline: false,
             terminalConvertLinks: true,
             terminalHighlightPredicates: false,
+            browserRuntimeModel: storedBrowserRuntimeModel(),
+            browserRuntimeModelOptions: [
+              { id: "swi-worker", label: "Worker actors (default)", value: "worker" },
+              { id: "swi-main", label: "Main thread + DOM", value: "main" }
+            ],
             themeMode: "light",
             webPrologCodeColoring: "none",
             sxmlCodeColoring: "none",
@@ -5081,7 +5161,7 @@
             adminRuntimeActionBusy: false,
             adminConfigLoadedSignature: "",
             adminConfigLoadedSurfaceSignature: "",
-            adminConfigHelpPopoverCleanup: null,
+            helpPopoverCleanup: null,
             adminBuiltinProfileKeys: ["relation", "isobase", "isotope", "actor"],
             adminConfigDraft: {
               self_url: "",
@@ -5127,11 +5207,16 @@
               var params = new URLSearchParams(window.location.search);
               var base = params.get("tutorial") === "wp"
                 ? "/wp-tutorial"
-                : (params.get("node") === "swi-wasm" ? "/swi-wasm-tutorial" : "/tutorial");
+                : (/^swi-wasm(?:-2)?$/.test(params.get("node") || "") ? "/swi-wasm-tutorial" : "/tutorial");
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
             }()),
             handledTutorialDeepLink: "",
-            isSwiWasmMode: (new URLSearchParams(window.location.search)).get("node") === "swi-wasm",
+            isSwiWasmMode: browserRuntimeRouteState().main,
+            isSwiWasm2Mode: browserRuntimeRouteState().worker,
+            swiWasm2ShellPid: "",
+            swiWasm2ShellReady: false,
+            swiWasm2QueryPending: false,
+            swiWasm2LoadedSource: null,
             swiWasmProlog: null,
             swiWasmModule: null,
             swiWasmOutputBuffer: "",
@@ -5167,6 +5252,9 @@
           };
         },
         computed: {
+          isBrowserSwiWasmMode: function() {
+            return this.isSwiWasmMode || this.isSwiWasm2Mode;
+          },
           currentPortalNodeUrl: function() {
             return this.nodeSelfUrl || window.location.origin;
           },
@@ -5181,7 +5269,7 @@
             return String(this.currentPortalNodeUrl || window.location.origin).replace(/\/$/, "");
           },
           showCurrentNodeLink: function() {
-            return !this.isSwiWasmMode;
+            return !this.isBrowserSwiWasmMode;
           },
           discoveryHubUrl: function() {
             return "https://n0.elfenbenstornet.se/discovery-hub";
@@ -5194,6 +5282,7 @@
           },
           currentPortalNodeDisplay: function() {
             if (this.isSwiWasmMode) return "swi-prolog wasm (in-browser)";
+            if (this.isSwiWasm2Mode) return "swi-prolog wasm actor (Web Worker)";
             var normalized = normalizeNodeUrl(this.currentPortalNodeUrl);
             return normalized ? normalized.href : String(this.currentPortalNodeUrl || window.location.origin);
           },
@@ -5204,7 +5293,7 @@
           },
           headerBrowserButtons: function() {
             return [
-              { id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isSwiWasmMode }
+              { id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isBrowserSwiWasmMode }
             ];
           },
           repositoryUrl: function() {
@@ -5314,6 +5403,8 @@
             return "ISOBASE";
           },
           nodeProfileLabel: function() {
+            if (this.isSwiWasm2Mode) return "SWI-WASM / ACTOR (WORKERS)";
+            if (this.isSwiWasmMode) return "SWI-WASM / ACTOR (DOM)";
             if (this.nodeAnnouncedProfile === "workbench") {
               return "WORKBENCH";
             }
@@ -5349,11 +5440,11 @@
             return this.hasWorkspacePane;
           },
           showHistoricalTutorialExample: function() {
-            return this.isSwiWasmMode ||
+            return this.isBrowserSwiWasmMode ||
               nodeLabelForUrl(window.location.origin).toLowerCase() === "n5";
           },
           showActorTutorialExamples: function() {
-            return this.isSwiWasmMode ||
+            return this.isBrowserSwiWasmMode ||
               this.nodeAnnouncedProfile === "actor" ||
               this.nodeAnnouncedProfile === "workbench";
           },
@@ -5368,6 +5459,9 @@
           showStatechartExamples: function() {
             if (this.isSwiWasmMode) {
               return true;
+            }
+            if (this.isSwiWasm2Mode) {
+              return false;
             }
             return this.nodeAnnouncedProfile === "actor" ||
                    this.nodeAnnouncedProfile === "workbench";
@@ -5395,6 +5489,7 @@
           },
           canRunStatechart: function() {
             return this.editorKind === "statechart"
+              && !this.isSwiWasm2Mode
               && this.canSubmitNewQuery
               && !this.swiWasmChartPending
               && (this.transportMode === "actor" || this.isSwiWasmMode);
@@ -5421,6 +5516,13 @@
             return !!this.terminal && this.queryState === "more" && !this.terminalBusy;
           },
           canAbortSession: function() {
+            if (this.isSwiWasm2Mode) {
+              return !!this.terminal &&
+                (this.swiWasm2QueryPending ||
+                 this.queryState === "more" ||
+                 this.queryState === "prompt" ||
+                 this.terminalBusy);
+            }
             if (this.isSwiWasmMode) {
               return !!this.terminal &&
                 (this.swiWasmQueryPending ||
@@ -5522,7 +5624,14 @@
           this.restoreTerminalPredicateHighlightSettings();
           this.restoreCodeColoringSettings();
           this.fetchPortalVersion();
-          if (this.isSwiWasmMode) { this.initSwiWasmSession(); } else { this.fetchNodeInfo(); this.probeAdminAccess(); }
+          if (this.isSwiWasmMode) {
+            this.initSwiWasmSession();
+          } else if (this.isSwiWasm2Mode) {
+            this.initSwiWasm2Session();
+          } else {
+            this.fetchNodeInfo();
+            this.probeAdminAccess();
+          }
           this.fetchExamplesIndex();
           this.applyThemeSettings();
           this.applyTypographySettings();
@@ -5533,9 +5642,11 @@
           this.restorePortalIntroPreference();
           this.log("info", "Demonstrator scaffold loaded.");
           this.log("ui", "Demonstrator frontend loaded.");
-          this.adminConfigHelpPopoverCleanup = installClampedHelpPopover(
-            ".admin-config-help-button[data-help]",
-            document.getElementById("adminConfigHelpPopover")
+          // One delegated popover serves both static admin controls and the
+          // conditionally rendered SWI-WASM model help in Settings.
+          this.helpPopoverCleanup = installClampedHelpPopover(
+            ".admin-config-help-button[data-help], .settings-model-help-button[data-help]",
+            document.getElementById("clampedHelpPopover")
           );
           document.addEventListener("pointerdown", this.handleDocumentPointerDown, true);
           window.addEventListener("pointermove", this.onSplitDrag);
@@ -5548,9 +5659,9 @@
           } catch (_error) {}
         },
         beforeUnmount: function() {
-          if (typeof this.adminConfigHelpPopoverCleanup === "function") {
-            this.adminConfigHelpPopoverCleanup();
-            this.adminConfigHelpPopoverCleanup = null;
+          if (typeof this.helpPopoverCleanup === "function") {
+            this.helpPopoverCleanup();
+            this.helpPopoverCleanup = null;
           }
           this.cleanupTransportSessions();
           this.prologEditor = null;
@@ -5828,7 +5939,7 @@
               var actors = Array.isArray(json && json.actors) ? json.actors : [];
               var statecharts = Array.isArray(json && json.statecharts) ? json.statecharts : [];
               var swiWasm = Array.isArray(json && json.swi_wasm) ? json.swi_wasm : [];
-              if (self.isSwiWasmMode) {
+              if (self.isBrowserSwiWasmMode) {
                 self.actorExamples = (swiWasm.length > 0 ? swiWasm : actors)
                   .map(function(entry) { return self.normalizeExampleEntry(entry, "prolog"); })
                   .filter(Boolean);
@@ -6028,6 +6139,19 @@
 	          },
           persistPidDisplayPreference: function() {
             window.localStorage.setItem("wb.hideLocalNodeInPid", this.hideLocalNodeInPid ? "1" : "0");
+          },
+          handleBrowserRuntimeModelChange: function() {
+            var url;
+            this.browserRuntimeModel = this.browserRuntimeModel === "main" ? "main" : "worker";
+            window.localStorage.setItem("wb.swiWasmModel", this.browserRuntimeModel);
+            if (!this.isBrowserSwiWasmMode) {
+              return;
+            }
+            // Runtime placement cannot be changed in place: navigation tears
+            // down the current WASM VM/Workers before booting the other model.
+            url = new URL(window.location.href);
+            url.searchParams.set("node", "swi-wasm");
+            window.location.assign(url.toString());
           },
           terminalGreetingText: function() {
             return this.showTerminalGreeting ? "Welcome to SWI Web Prolog!\n" : false;
@@ -6419,7 +6543,7 @@
             return url.toString();
           },
           defaultTutorialPath: function() {
-            return this.isSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial";
+            return this.isBrowserSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial";
           },
           currentTutorialPath: function() {
             try {
@@ -6430,7 +6554,7 @@
           },
           demonstratorTutorialSearch: function(tutorialPath) {
             var params = new URLSearchParams();
-            if (this.isSwiWasmMode) {
+            if (this.isBrowserSwiWasmMode) {
               params.set("node", "swi-wasm");
             }
             if (tutorialPath === "/wp-tutorial") {
@@ -6807,7 +6931,7 @@
           },
           loadTutorialProgramIntoCurrentSession: function(sourceText) {
             var self = this;
-            if (this.isSwiWasmMode) {
+            if (this.isBrowserSwiWasmMode) {
               if (!this.terminal || !this.prologEditor) {
                 return Promise.resolve(false);
               }
@@ -7838,13 +7962,19 @@
             if (this.nodeAnnouncedProfile === "stateless" || this.nodeAnnouncedProfile === "relation") {
               return "";
             }
-            if (this.workspaceTab === "tutorial" && !this.isSwiWasmMode) {
+            if (this.workspaceTab === "tutorial" && !this.isBrowserSwiWasmMode) {
               return "";
             }
             if (this.editorKind !== "prolog") {
               return "";
             }
             return this.stripCommentLines(this.currentPrologText());
+          },
+          currentSwiWasm2LoadText: function() {
+            if (this.editorKind !== "prolog") {
+              return "";
+            }
+            return this.stripCommentLines(String(this.prologText || ""));
           },
           spawnLoadSpec: function() {
             if (this.transientLoadText !== "") {
@@ -8433,6 +8563,11 @@
             if (!this.terminal || !this.canAbortSession) {
               return;
             }
+            if (this.isSwiWasm2Mode) {
+              this.abortSwiWasm2Query(this.terminal);
+              this.focusTerminalIfAppropriate();
+              return;
+            }
             if (this.isSwiWasmMode && this.swiWasmQueryPending) {
               this.abortSwiWasmQuery(this.terminal);
               this.focusTerminalIfAppropriate();
@@ -8492,6 +8627,31 @@
             }
             return true;
           },
+          abortSwiWasm2Query: function(term) {
+            var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+            if (!entry || !entry.worker || entry.done) {
+              return false;
+            }
+            // A Worker cannot process an abort message while Prolog is inside
+            // a yield-free goal.  Replacing only the shell Worker provides a
+            // hard pre-emption boundary while leaving child actor Workers and
+            // the JavaScript node controller alive.
+            try { entry.worker.terminate(); } catch (_error) {}
+            delete this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+            this.swiWasm2ShellReady = false;
+            this.swiWasm2QueryPending = false;
+            this.finishError(term, "Computation aborted.");
+            this.pauseTerm(term);
+            this.swiWasm2LoadedSource = this.currentSwiWasm2LoadText();
+            this.spawnSwiWasmWorkerActor(
+              "ptcp(" + this.swiWasm2ShellPid + ",terminal,true)",
+              this.swiWasm2LoadedSource,
+              this.swiWasm2ShellPid,
+              "",
+              "shell_toplevel"
+            );
+            return true;
+          },
           abortBoundActor: function(term, pid) {
             var goal = "exit(" + pid + ", stop)";
             this.setPendingCompletionMessage("Computation aborted.", "error");
@@ -8540,8 +8700,12 @@
             }
             this.activeGoal = this.expandDollarVars(rawGoal);
             this.activeOffset = 0;
-            this.activeLoadText = this.currentLoadText();
-            if (this.isSwiWasmMode) {
+            this.activeLoadText = this.isSwiWasm2Mode
+              ? this.currentSwiWasm2LoadText()
+              : this.currentLoadText();
+            if (this.isSwiWasm2Mode) {
+              this.runSwiWasm2Query(term);
+            } else if (this.isSwiWasmMode) {
               this.runSwiWasmQuery(term);
             } else if (this.transportMode === "actor") {
               this.askCurrentWs(term);
@@ -8553,6 +8717,11 @@
           },
           nextSolution: function(term) {
             if (this.queryState !== "more") {
+              return;
+            }
+            if (this.isSwiWasm2Mode) {
+              term.echo(term.get_prompt() + ";");
+              this.nextSwiWasm2Solution(term);
               return;
             }
             if (this.isSwiWasmMode) {
@@ -8580,6 +8749,16 @@
               } else {
                 term.echo(current + ".");
               }
+            }
+            if (this.isSwiWasm2Mode) {
+              var shell = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+              if (shell && shell.worker && !shell.done) {
+                shell.worker.postMessage({ command: "shell_stop" });
+              }
+              this.swiWasm2QueryPending = false;
+              this.resetQueryState(term);
+              this.resumeTerm(term);
+              return;
             }
             if (this.isSwiWasmMode) {
               if (this.swiWasmMorePending) {
@@ -8730,8 +8909,36 @@
             this.resetActorTransport();
             this.resetSwiWasmActorWorkers();
           },
+          initSwiWasm2Session: function() {
+            var pid;
+            // Primary model: the persistent ptcp/3 shell itself lives in a
+            // Worker, so it has a hard termination boundary and no DOM access.
+            this.swiWasm2ShellReady = false;
+            this.swiWasm2QueryPending = false;
+            this.swiWasm2LoadedSource = this.currentSwiWasm2LoadText();
+            pid = this.reserveSwiWasmWorkerActorPid();
+            this.swiWasm2ShellPid = pid;
+            if (this.terminal) {
+              this.pauseTerm(this.terminal);
+              this.terminal.echo("% Loading SWI-WASM worker toplevel actor...");
+            }
+            try {
+              this.spawnSwiWasmWorkerActor(
+                "ptcp(" + pid + ",terminal,true)",
+                this.swiWasm2LoadedSource,
+                pid,
+                "",
+                "shell_toplevel"
+              );
+            } catch (error) {
+              this.swiWasm2ShellPid = "";
+              this.log("error", "Failed to start the SWI-WASM worker model: " + String(error), "swi-wasm");
+            }
+          },
           initSwiWasmSession: function() {
             var self = this;
+            // Compatibility model: keep the shell engine on the UI thread so
+            // library(dom) can call browser DOM APIs directly.
             if (this.terminal) {
               this.terminal.pause();
               this.terminal.echo("% Loading SWI-Prolog WASM runtime [build-20260418]...");
@@ -8913,6 +9120,15 @@
                 try { Prolog.query("use_module(library(lists))").once(); } catch(e) {}
                 try { Prolog.query("use_module(library(apply))").once(); } catch(e) {}
                 try { Prolog.query("use_module(library(option))").once(); } catch(e) {}
+                // DOM access is the reason this compatibility model exists;
+                // preload the module rather than requiring every program to.
+                var _domOk = false;
+                try { _domOk = !!Prolog.query("use_module(library(dom))").once(); } catch(e) {
+                  console.warn("[SWI-INIT] library(dom) preload threw:", e);
+                }
+                if (!_domOk && self.terminal) {
+                  self.terminal.echo("% Warning: library(dom) could not be loaded.");
+                }
                 // `limit/2` puts a hard ceiling on terminal enumeration.
                 // Without it, a query such as rpc(..., phrase(s(_), S),
                 // [limit(10)]) has infinitely many answers and repeatedly
@@ -9098,7 +9314,7 @@
             this.swiWasmReservedWorkerActorPids[pid] = true;
             return pid;
           },
-          spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText, nameText) {
+          spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText, nameText, roleText, startFields) {
             var self = this;
             var pid = pidText ? String(pidText) : this.reserveSwiWasmWorkerActorPid();
             var worker;
@@ -9107,7 +9323,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260621-standard-remote-pids";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260629-swi-wasm-2-r8";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9119,7 +9335,8 @@
               ready: false,
               done: false,
               reason: null,
-              goal: String(goalText || "")
+              goal: String(goalText || ""),
+              role: String(roleText || "actor")
             };
             this.swiWasmActorWorkers[pid] = entry;
             if (nameText) {
@@ -9134,12 +9351,14 @@
               //  finalize here: notify monitors (down/3), clear names, reap.
               self.finalizeSwiWasmWorkerActor(pid, "error(" + JSON.stringify("worker_error: " + message) + ")");
             };
-            worker.postMessage({
+            worker.postMessage(Object.assign({
               command: "start",
               pid: pid,
               goal: entry.goal,
-              source: String(extraSourceText || this.currentLoadText() || "")
-            });
+              source: String(extraSourceText || this.currentLoadText() || ""),
+              behaviourSource: this.swiWasmBehaviourProlog(),
+              role: entry.role
+            }, startFields || {}));
             this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
             return pid;
           },
@@ -9169,6 +9388,53 @@
             return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
               if (!response.ok) throw new Error("load_uri failed: HTTP " + response.status);
               return response.text();
+            });
+          },
+          loadSwiWasmAssetSource: function(uriText) {
+            var uri = this.swiWasmRemoteNodeUrl(uriText);
+            var url = new URL(uri, window.location.origin);
+            if (url.origin !== window.location.origin) {
+              return Promise.reject(new Error("statechart load_uri must use this browser node: " + url.origin));
+            }
+            return fetch(url.href, { credentials: "same-origin", cache: "no-store" }).then(function(response) {
+              if (!response.ok) throw new Error("statechart load_uri failed: HTTP " + response.status);
+              return response.text();
+            });
+          },
+          spawnSwiWasmStatechartActor: function(sourceKind, sourceText, trace) {
+            var self = this;
+            var sourcePromise = String(sourceKind) === "text"
+              ? Promise.resolve(String(sourceText || ""))
+              : this.loadSwiWasmAssetSource(sourceText);
+            return sourcePromise.then(function(xml) {
+              return self.spawnSwiWasmWorkerActor(
+                "statechart_actor_loop", " ", "", "statechart", "statechart_actor",
+                { statechartXml: xml, statechartTrace: trace === true }
+              );
+            });
+          },
+          requestSwiWasmWorkerRpc: function(message) {
+            var node = this.swiWasmRemoteNodeUrl(message.node || "");
+            var url = new URL(node, window.location.origin);
+            var path = url.pathname.replace(/\/$/, "");
+            url.pathname = path + "/call";
+            url.search = "";
+            url.hash = "";
+            url.searchParams.set("goal", "(" + String(message.goal || "true") + ")");
+            url.searchParams.set("template", String(message.template || "true"));
+            url.searchParams.set("format", "prolog");
+            url.searchParams.set("offset", String(Number(message.offset || 0)));
+            url.searchParams.set("limit", String(Number(message.limit || 10000)));
+            if (message.loadText) {
+              url.searchParams.set("load_text", String(message.loadText));
+            }
+            return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
+              return response.text().then(function(text) {
+                if (!response.ok && !text) {
+                  throw new Error("RPC failed: HTTP " + response.status);
+                }
+                return text;
+              });
             });
           },
           swiWasmRemoteWsUrl: function(nodeText) {
@@ -9205,7 +9471,8 @@
             if (existing && existing.connecting) {
               return existing.connecting;
             }
-            var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelLimits: {} };
+            var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelLimits: {}, toplevelTargets: {} };
+            entry.toplevelTargets = entry.toplevelTargets || {};
             this.swiWasmRemoteActorConnections[node] = entry;
             entry.connecting = new Promise(function(resolve, reject) {
               //  Single-settlement: resolve on open, reject on the first of
@@ -9265,6 +9532,9 @@
                   if (waiter) {
                     var remotePid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
                     self.swiWasmRemoteActorKinds[remotePid] = waiter.kind;
+                    if (waiter.kind === "toplevel" && waiter.target) {
+                      entry.toplevelTargets[String(message.pid)] = waiter.target;
+                    }
                     waiter.resolve(remotePid);
                   }
                   return;
@@ -9297,7 +9567,7 @@
                   } else {
                     remoteMessage = "timeout(" + remotePid + ")";
                   }
-                  self.deliverSwiWasmRemoteResult(remoteMessage);
+                  self.deliverSwiWasmRemoteResult(remoteMessage, entry.toplevelTargets[String(message.pid)]);
                   return;
                 }
                 if (message.type === "down") {
@@ -9326,7 +9596,10 @@
                   if (!pending && message.pid !== undefined) {
                     var errorPid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
                     var errorText = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
-                    self.deliverSwiWasmRemoteResult("error(" + errorPid + ",remote_error('" + errorText + "'))");
+                    self.deliverSwiWasmRemoteResult(
+                      "error(" + errorPid + ",remote_error('" + errorText + "'))",
+                      entry.toplevelTargets[String(message.pid)]
+                    );
                   } else if (!pending) {
                     var generalError = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
                     self.deliverSwiWasmRemoteResult("error(remote_toplevel,remote_error('" + generalError + "'))");
@@ -9393,13 +9666,13 @@
               });
             });
           },
-          spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText) {
+          spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText, targetPid) {
             var node = this.swiWasmRemoteNodeUrl(nodeText);
             var source = String(sourceText || "");
             var session = String(sessionText || "false") === "true";
             return this.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
               return new Promise(function(resolve, reject) {
-                entry.pendingSpawns.push({ kind: "toplevel", resolve: resolve, reject: reject });
+                entry.pendingSpawns.push({ kind: "toplevel", target: String(targetPid || ""), resolve: resolve, reject: reject });
                 try {
                   entry.socket.send(JSON.stringify({
                     command: "toplevel_spawn",
@@ -9447,6 +9720,127 @@
               return true;
             });
           },
+          swiWasmStructuredCompound: function(value) {
+            var functor;
+            var args;
+            if (!value || typeof value !== "object" || value.$t !== "t") {
+              return null;
+            }
+            functor = value.functor || Object.keys(value).find(function(key) {
+              return key !== "$t";
+            });
+            if (!functor) {
+              return null;
+            }
+            args = typeof value.arguments === "function" ? value.arguments() : value[functor];
+            if (Array.isArray(args) && args.length === 1 && Array.isArray(args[0])) {
+              args = args[0];
+            }
+            return { functor: functor, args: Array.isArray(args) ? args : [] };
+          },
+          swiWasmStructuredList: function(value) {
+            if (Array.isArray(value)) {
+              return value;
+            }
+            if (value && typeof value === "object" && value.$t === "l" && Array.isArray(value.v)) {
+              return value.v;
+            }
+            return [];
+          },
+          swiWasmStructuredTruth: function(value) {
+            return value === true || value === "true";
+          },
+          runSwiWasm2Query: function(term) {
+            var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+            var source = this.activeLoadText || "";
+            if (!entry || !entry.worker || entry.done || !entry.ready) {
+              this.finishError(term, "The SWI-WASM worker toplevel actor is not ready.");
+              return;
+            }
+            this.swiWasm2QueryPending = true;
+            this.pauseTerm(term);
+            if (source !== this.swiWasm2LoadedSource) {
+              entry.worker.postMessage({ command: "shell_load", source: source });
+              this.swiWasm2LoadedSource = source;
+            }
+            entry.worker.postMessage({
+              command: "shell_call",
+              goal: this.activeGoal,
+              limit: 1,
+              offset: 0,
+              once: false
+            });
+          },
+          nextSwiWasm2Solution: function(term) {
+            var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+            if (!entry || !entry.worker || entry.done || !this.swiWasm2QueryPending) {
+              this.resetQueryState(term);
+              this.resumeTerm(term);
+              return;
+            }
+            this.queryState = "query";
+            this.pauseTerm(term);
+            entry.worker.postMessage({ command: "shell_next", limit: 1 });
+          },
+          handleSwiWasm2ShellEvent: function(pid, value, eventText) {
+            var term = this.terminal;
+            var compound = this.swiWasmStructuredCompound(value);
+            var args;
+            var rows;
+            var displayRows;
+            var more;
+            if (!term || pid !== this.swiWasm2ShellPid || !compound) {
+              return;
+            }
+            args = compound.args;
+            if (compound.functor === "success") {
+              rows = this.swiWasmStructuredList(args[1]);
+              if (rows.length > 0) {
+                this.captureSwiWasmBindings(rows[0]);
+              }
+              displayRows = rows.map(function(row) {
+                var display = {};
+                if (row && typeof row === "object") {
+                  Object.keys(row).forEach(function(key) {
+                    if (/^[A-Z_]/.test(key) && key !== "_" &&
+                        !this.isSwiWasmUnboundVariable(row[key])) {
+                      display[key] = this.formatSwiWasmValue(row[key]);
+                    }
+                  }.bind(this));
+                }
+                return display;
+              }.bind(this));
+              more = this.swiWasmStructuredTruth(args[2]);
+              this.swiWasm2QueryPending = more;
+              this.finishSuccess(term, displayRows, more);
+              this.resumeTerm(term);
+              return;
+            }
+            if (compound.functor === "failure") {
+              this.swiWasm2QueryPending = false;
+              this.finishFailure(term);
+              this.resumeTerm(term);
+              return;
+            }
+            if (compound.functor === "error") {
+              this.swiWasm2QueryPending = false;
+              this.finishError(term, eventText || this.formatSwiWasmValue(args[1]));
+              this.resumeTerm(term);
+              return;
+            }
+            if (compound.functor === "output" || compound.functor === "terminal_output") {
+              term.echo(typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1]));
+              return;
+            }
+            if (compound.functor === "prompt") {
+              this.requestSwiWasmActorInput(this.formatSwiWasmValue(args[1])).then(function(answer) {
+                var entry = this.swiWasmActorWorkers[pid];
+                if (entry && entry.worker && !entry.done && answer !== null) {
+                  entry.worker.postMessage({ command: "shell_input", answer: String(answer) });
+                }
+              }.bind(this));
+            }
+          },
           handleSwiWasmWorkerActorMessage: function(pid, event) {
             var entry = this.swiWasmActorWorkers[pid];
             var message = event && event.data ? event.data : {};
@@ -9456,6 +9850,15 @@
             if (message.type === "ready") {
               entry.ready = true;
               this.log("transport", pid + " ready.", "swi-wasm", "response");
+              if (entry.role === "shell_toplevel") {
+                this.swiWasm2ShellReady = true;
+                if (this.terminal) {
+                  this.terminal.set_prompt(this.basePrompt());
+                  this.resumeTerm(this.terminal);
+                }
+                this.log("info", "SWI-WASM worker toplevel actor ready.", "swi-wasm");
+                this.fetchExamplesIndex();
+              }
               return;
             }
             if (message.type === "started") {
@@ -9472,6 +9875,14 @@
               if (message.output && this.terminal) {
                 this.terminal.echo(String(message.output).replace(/\n$/, ""));
               }
+              return;
+            }
+            if (message.type === "shell_event") {
+              this.handleSwiWasm2ShellEvent(pid, message.event, message.text);
+              return;
+            }
+            if (message.type === "statechart_trace") {
+              this.handleSwiWasmTrace(message.trace || "");
               return;
             }
             if (message.type === "aborted") {
@@ -9532,6 +9943,14 @@
                 try { entry.worker.terminate(); } catch (_reapError) {}
               }
               this.log("transport", pid + " done.", "swi-wasm", "response");
+              if (entry.role === "shell_toplevel") {
+                this.swiWasm2ShellReady = false;
+                this.swiWasm2QueryPending = false;
+                if (this.terminal) {
+                  this.finishError(this.terminal, "The SWI-WASM worker toplevel actor stopped: " + entry.reason);
+                  this.resumeTerm(this.terminal);
+                }
+              }
               return;
             }
             if (message.type === "error") {
@@ -9543,6 +9962,14 @@
               this.log("error", pid + " failed: " + String(message.error || "unknown error"), "swi-wasm");
               if (message.output && this.terminal) {
                 this.terminal.echo(String(message.output).replace(/\n$/, ""));
+              }
+              if (entry.role === "shell_toplevel") {
+                this.swiWasm2ShellReady = false;
+                this.swiWasm2QueryPending = false;
+                if (this.terminal) {
+                  this.finishError(this.terminal, String(message.error || "SWI-WASM worker failed"));
+                  this.resumeTerm(this.terminal);
+                }
               }
             }
           },
@@ -9558,6 +9985,18 @@
                 break;
               case "spawn":
                 result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "", message.name || "");
+                break;
+              case "statechart_spawn":
+                result = this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, message.trace);
+                break;
+              case "remote_spawn":
+                result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "");
+                break;
+              case "remote_toplevel_spawn":
+                result = this.spawnSwiWasmRemoteToplevel(message.node || "", message.source || "", message.session || "false", pid);
+                break;
+              case "rpc":
+                result = this.requestSwiWasmWorkerRpc(message);
                 break;
               case "send":
                 result = this.sendSwiWasmActorMessage(message.to, message.message, message.from || pid);
@@ -9677,7 +10116,7 @@
           resolveSwiWasmActorTarget: function(pidText) {
             var pid = String(pidText || "");
             if (pid === "self") {
-              return "main";
+              return this.isSwiWasm2Mode ? this.swiWasm2ShellPid : "main";
             }
             if (this.swiWasmActorNames[pid]) {
               return this.swiWasmActorNames[pid];
@@ -9688,7 +10127,7 @@
             return pid;
           },
           swiWasmActorListText: function() {
-            var pids = ["main"];
+            var pids = this.isSwiWasm2Mode ? [] : ["main"];
             Object.keys(this.swiWasmActorWorkers || {}).sort().forEach(function(pid) {
               var entry = this.swiWasmActorWorkers[pid];
               if (entry && !entry.done) {
@@ -9700,7 +10139,8 @@
           sendSwiWasmActorMessage: function(pidText, messageText, fromPid) {
             var self = this;
             var pid = this.resolveSwiWasmActorTarget(pidText);
-            if (pid === "statechart" || String(pidText) === "statechart") {
+            var sender = String(fromPid || (this.isSwiWasm2Mode ? this.swiWasm2ShellPid : "main"));
+            if (!this.isSwiWasm2Mode && (pid === "statechart" || String(pidText) === "statechart")) {
               //  A spawned child (worker actor or toplevel) replied to the
               //  running chart.  Inject it as an external statechart event,
               //  serialized behind any in-flight engine work -- the same queue
@@ -9719,7 +10159,7 @@
                   command: "send",
                   pid: remote.pid,
                   message: String(messageText || "true"),
-                  browser_from: String(fromPid || "main")
+                  browser_from: sender
                 }));
                 return true;
               });
@@ -9727,7 +10167,7 @@
             var entry = this.swiWasmActorWorkers[pid];
             if (pid === "main") {
               this.deliverSwiWasmMainActorMessage(String(messageText || "true"));
-              this.log("transport", "main -> main: " + String(messageText || "true"), "swi-wasm", "request");
+              this.log("transport", sender + " -> main: " + String(messageText || "true"), "swi-wasm", "request");
               return true;
             }
             if (!entry || !entry.worker || entry.done) {
@@ -9742,7 +10182,7 @@
               command: "deliver",
               message: String(messageText || "true")
             });
-            this.log("transport", "main -> " + pid + ": " + String(messageText || "true"), "swi-wasm", "request");
+            this.log("transport", sender + " -> " + pid + ": " + String(messageText || "true"), "swi-wasm", "request");
             return true;
           },
           sendSwiWasmActorMessageDelayed: function(pidText, messageText, delaySeconds, idText) {
@@ -9812,7 +10252,7 @@
           swiWasmActorPidLive: function(pidText) {
             var pid = String(pidText || "");
             if (pid === "main") {
-              return true;
+              return !this.isSwiWasm2Mode;
             }
             if (pid === "statechart") {
               //  The running chart is a valid monitor watcher: a child's
@@ -9953,7 +10393,11 @@
           //  as an external statechart event; otherwise deliver to the main
           //  mailbox as before.  (Remote actor_message and down already route
           //  by target/watcher, which a chart's monitor/send make `statechart`.)
-          deliverSwiWasmRemoteResult: function(messageText) {
+          deliverSwiWasmRemoteResult: function(messageText, targetPid) {
+            if (targetPid && this.swiWasmActorWorkers[String(targetPid)]) {
+              this.sendSwiWasmActorMessage(String(targetPid), String(messageText), "remote");
+              return;
+            }
             if (this.swiWasmStatechartOwnsActorTraffic()) {
               this.enqueueSwiWasmStatechartEvent(String(messageText));
             } else {
@@ -10095,23 +10539,23 @@
               "    strip_module(Specs0, _Caller, Specs),",
               "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
               "    wasm_behaviour_source(Behaviour), wasm_user_source(User),",
-              "    spawn(wasm_supervisor_init(Specs, sup(Strategy, Max, Period, [], [])), Pid, [load_text(Behaviour), load_text(User)|Options]),",
+              "    self(Parent),",
+              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [load_text(Behaviour), load_text(User)|Options]),",
               "    wasm_wait_supervisor_ready(Pid),",
               "    ( option(name(Name), Options) -> register(Name, Pid) ; true ).",
               "",
               "wasm_wait_supervisor_ready(Pid) :-",
-              "    self(Self),",
-              "    ( Self == main -> receive({'$supervisor_ready'(Pid) -> true ; '$supervisor_failed'(Pid, Reason) -> throw(error(supervisor_start_failed(Pid, Reason), supervisor_spawn/3))}, [timeout(10), on_timeout(throw(error(timeout_error(supervisor_start, Pid), supervisor_spawn/3)))]) ; true ).",
+              "    receive({'$supervisor_ready'(Pid) -> true ; '$supervisor_failed'(Pid, Reason) -> throw(error(supervisor_start_failed(Pid, Reason), supervisor_spawn/3))}, [timeout(10), on_timeout(throw(error(timeout_error(supervisor_start, Pid), supervisor_spawn/3)))]).",
               "",
-              "wasm_supervisor_init(Specs, State0) :-",
+              "wasm_supervisor_init(Parent, Specs, State0) :-",
               "    self(Self),",
               "    catch(",
               "      ( wasm_start_specs(Specs, State0, State)",
-              "      -> send(main, '$supervisor_ready'(Self)), wasm_supervisor_loop(State)",
-              "      ;  send(main, '$supervisor_failed'(Self, start_failed)), exit(start_failed)",
+              "      -> send(Parent, '$supervisor_ready'(Self)), wasm_supervisor_loop(State)",
+              "      ;  send(Parent, '$supervisor_failed'(Self, start_failed)), exit(start_failed)",
               "      ),",
               "      Error,",
-              "      ( send(main, '$supervisor_failed'(Self, Error)), exit(exception(Error)) )",
+              "      ( send(Parent, '$supervisor_failed'(Self, Error)), exit(exception(Error)) )",
               "    ).",
               "wasm_start_specs([], State, State).",
               "wasm_start_specs([Spec|Rest], State0, State) :- wasm_start_child(Spec, State0, State1), wasm_start_specs(Rest, State1, State).",
@@ -11635,20 +12079,17 @@
               }
               return "[" + items.join(",") + "]";
             }
-            if (value && value.$t === "t" && value.functor) {
-              var args = typeof value.arguments === "function" ? value.arguments() : value[value.functor];
-              if (Array.isArray(args) && args.length === 1 && Array.isArray(args[0])) {
-                args = args[0];
-              }
-              args = Array.isArray(args) ? args : [];
-              if (value.functor === "@" && args.length === 2) {
+            var compound = this.swiWasmStructuredCompound(value);
+            if (compound) {
+              var args = compound.args;
+              if (compound.functor === "@" && args.length === 2) {
                 return this.formatSwiWasmValue(args[0]) + "@" + this.formatSwiWasmValue(args[1]);
               }
-              if (value.functor === "/" && args.length === 2) {
+              if (compound.functor === "/" && args.length === 2) {
                 return this.formatSwiWasmValue(args[0]) + "/" + this.formatSwiWasmValue(args[1]);
               }
-              if (args.length === 0) return this.formatSwiWasmAtom(value.functor);
-              return this.formatSwiWasmAtom(value.functor) + "(" + args.map(function(arg) {
+              if (args.length === 0) return this.formatSwiWasmAtom(compound.functor);
+              return this.formatSwiWasmAtom(compound.functor) + "(" + args.map(function(arg) {
                 return this.formatSwiWasmValue(arg);
               }, this).join(",") + ")";
             }
@@ -11965,7 +12406,7 @@
               self.handleTerminalCommand(command, term);
             }, {
               greetings: this.terminalGreetingText(),
-              prompt: this.isSwiWasmMode ? " " : this.basePrompt(),
+              prompt: this.isBrowserSwiWasmMode ? " " : this.basePrompt(),
               convertLinks: this.terminalConvertLinks,
               echoCommand: false,
               keypress: function(event) {
@@ -11978,6 +12419,14 @@
                 return command.trim() !== "" && command.trim() !== ";";
               }
             });
+            if (this.isSwiWasm2Mode) {
+              if (this.swiWasm2ShellReady) {
+                this.terminal.set_prompt(this.basePrompt());
+              } else {
+                this.pauseTerm(this.terminal);
+                this.terminal.echo("% Loading SWI-WASM worker toplevel actor...");
+              }
+            }
             this.$nextTick(function() {
               self.focusTerminalIfAppropriate();
               window.setTimeout(function() {

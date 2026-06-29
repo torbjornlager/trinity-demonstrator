@@ -167,7 +167,7 @@ ok(includes('self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main"') 
    includes("swiWasmStatechartOwnsActorTraffic: function()") &&
    includes('return this.editorKind === "statechart" && !!this.swiWasmStatechartActive;') &&
    includes("deliverSwiWasmRemoteResult: function") &&
-   includes("self.deliverSwiWasmRemoteResult(remoteMessage)"),
+   includes("self.deliverSwiWasmRemoteResult(remoteMessage,"),
    "remote <spawn> in WASM charts only owns browser actor traffic while the statechart workbench is active");
 ok(includes('message.type === "output"') &&
    includes("this.terminal.echo(String(message.output)"),
@@ -214,6 +214,67 @@ ok(includes('root.crypto.getRandomValues(values);') &&
    nodeWsSource.includes("Id >= 1000000000") &&
    nodeWsSource.includes("Id =< 9999999999"),
    "SWI-WASM local workers use reserved random ten-digit numeric pids");
+ok(includes('window.localStorage.getItem("wb.swiWasmModel") === "main"') &&
+   includes('node === "swi-wasm-2" || (node === "swi-wasm" && model !== "main")') &&
+   includes('this.initSwiWasmSession();') &&
+   includes('this.initSwiWasm2Session();') &&
+   includes('{ id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isBrowserSwiWasmMode }') &&
+   !includes('{ id: "swi-wasm-2", href: "?node=swi-wasm-2"') &&
+   includes('handleBrowserRuntimeModelChange: function()') &&
+   includes('use_module(library(dom))'),
+   "one SWI-WASM entry defaults to workers and Settings retains the DOM-capable main model");
+ok(includes('aria-label="About SWI-WASM execution models"') &&
+   includes('for="swiWasmExecutionModel"') &&
+   includes('id="swiWasmExecutionModel"') &&
+   includes('Worker actors (default): the shell runs in a Web Worker') &&
+   includes('Main thread + DOM: the shell runs on the browser UI thread') &&
+   includes('Spawned actors still run in Workers.') &&
+   includes('class="admin-config-help-button settings-model-help-button"') &&
+   includes('type="button"') &&
+   includes('.settings-model-help-button[data-help]') &&
+   includes('document.getElementById("clampedHelpPopover")') &&
+   includes('document.addEventListener("click", handleClick, true)'),
+   "SWI-WASM model help is detailed and keyboard accessible");
+ok(includes('"ptcp(" + pid + ",terminal,true)"') &&
+   includes('"shell_toplevel"') &&
+   includes('message.type === "shell_event"') &&
+   workerSource.includes('message.command === "shell_call"') &&
+   workerSource.includes('actorShellEvent(#Message, #Text)') &&
+   workerSource.includes('flush_output(user_output)'),
+   "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
+ok(includes('entry.worker.terminate();') &&
+   includes('Replacing only the shell Worker provides a') &&
+   includes('this.swiWasm2ShellPid,\n              "",\n              "shell_toplevel"'),
+   "SWI-WASM-2 hard abort replaces a blocked shell Worker at the same pid");
+ok(workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")') &&
+   workerSource.includes('consultSource(inheritedSource, "/worker_user_code.pl")') &&
+   includes('currentSwiWasm2LoadText: function()'),
+   "SWI-WASM-2 keeps runtime predicates separate from reloadable editor source");
+ok(workerSource.includes('actorRequest("remote_spawn"') &&
+   workerSource.includes('actorRequest("remote_toplevel_spawn"') &&
+   includes('case "remote_spawn":') &&
+   includes('case "remote_toplevel_spawn":'),
+   "worker actors delegate remote spawning to the JavaScript node controller");
+ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
+   workerSource.includes('Promise := actorRpc(') &&
+   workerSource.includes('member(load_predicates(Indicators), Options)') &&
+   includes('case "rpc":') &&
+   includes('requestSwiWasmWorkerRpc: function(message)'),
+   "SWI-WASM-2 provides rpc/2-3 through the JavaScript node controller");
+ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
+   workerSource.includes('Ref := actorPromiseStart(') &&
+   workerSource.includes('Promise := actorPromiseWait('),
+   "SWI-WASM-2 provides promise/3-4 and yield/2-3 over controller RPC");
+ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
+   workerSource.includes('installStatechartRuntime(message)') &&
+   includes('case "statechart_spawn":') &&
+   includes('"statechart_actor"'),
+   "SWI-WASM-2 runs statecharts in dedicated worker actors");
+ok(includes('typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1])'),
+   "SWI-WASM-2 terminal output renders strings without Prolog quotes");
+ok(includes('!this.isSwiWasmUnboundVariable(row[key])') &&
+   includes('display[key] = this.formatSwiWasmValue(row[key])'),
+   "SWI-WASM-2 omits unbound variables from successful binding rows");
 
 console.log(failures === 0
   ? "\nswi_wasm_rpc_bridge smoke: PASS"

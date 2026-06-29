@@ -15,7 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          # T5 archives the historical demonstrator-peer tag to run its
+          # cross-version interoperability peer.
+          fetch-depth: 0
       - name: Install SWI-Prolog
         run: |
           sudo apt-add-repository -y ppa:swi-prolog/stable
