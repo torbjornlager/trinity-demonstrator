@@ -117,6 +117,19 @@ async function main() {
   ok(shellCall.indexOf("'$call_text'") === 0 && shellCall.includes("member(X,[a,b])"),
      "shell call enters the toplevel actor mailbox");
 
+  // 9b. A read/1 answer carrying a comma + trailing '.' is parenthesised and
+  // the period stripped, so '$input' stays arity 2 (a bare comma would make
+  // it '$input'/3 and the shell's receive would never match).
+  S.onmessage({ data: { command: "shell_input", answer: "a, b." } });
+  const shellInput = await S.actorReceive(-1);
+  ok(shellInput === "'$input'(terminal,(a, b))",
+     "shell input parenthesises the answer and strips the read terminator");
+  // An empty answer maps to end_of_file (not the invalid term '()').
+  S.onmessage({ data: { command: "shell_input", answer: "" } });
+  const shellEof = await S.actorReceive(-1);
+  ok(shellEof === "'$input'(terminal,end_of_file)",
+     "an empty shell input answer is end_of_file");
+
   // 10. Worker-side rpc/2-3 uses the same controller request channel as
   // remote actor transport; the Worker does not own browser HTTP policy.
   const rpcP = S.actorRpc("'https://n1.example'", "path(a,X)", "v(X)", 0, 10, "edge(a,b).");

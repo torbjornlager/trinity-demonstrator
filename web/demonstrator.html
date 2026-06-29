@@ -8636,6 +8636,14 @@
             // a yield-free goal.  Replacing only the shell Worker provides a
             // hard pre-emption boundary while leaving child actor Workers and
             // the JavaScript node controller alive.
+            //
+            // We deliberately do NOT route this through finalizeSwiWasmWorkerActor:
+            // the shell is the user's toplevel, not a monitored child, and Abort
+            // is a hard reset rather than a normal exit -- firing down/3 to
+            // (non-existent) watchers or reaping by reason would misrepresent it.
+            // Any actors the shell spawned are intentionally left running
+            // (Abort stops the shell goal, not the whole node); they simply
+            // outlive the toplevel that started them, exactly as on a node.
             try { entry.worker.terminate(); } catch (_error) {}
             delete this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             this.swiWasm2ShellReady = false;
@@ -10110,6 +10118,13 @@
             }
             return this.sendSwiWasmActorMessage(to, message);
           },
+          //  Main-model only.  In the main (UI-thread) runtime a chart runs in
+          //  the engine addressed by the `statechart` pseudo-pid, so while it is
+          //  active it owns the engine's actor traffic and replies/results route
+          //  in as chart events.  The worker model never satisfies this: there a
+          //  chart is an ordinary statechart_spawn actor with its own pid (and
+          //  swiWasmStatechartActive, a main-model flag, stays false), so its
+          //  traffic routes by pid like any other actor.
           swiWasmStatechartOwnsActorTraffic: function() {
             return this.editorKind === "statechart" && !!this.swiWasmStatechartActive;
           },

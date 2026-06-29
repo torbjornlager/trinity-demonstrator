@@ -1138,7 +1138,16 @@
       return;
     }
     if (message.command === "shell_input" && workerRole === "shell_toplevel") {
-      deliver("'$input'(terminal," + String(message.answer || "true") + ")");
+      // Mirror the main-thread reader: an empty line is end_of_file; otherwise
+      // strip a single trailing '.' (the read/1 terminator) and parenthesise
+      // the answer so the whole line is ONE argument term.  Without the
+      // parentheses a bare comma or operator (e.g. read of `a, b.`) would turn
+      // the message into '$input'/3 and the shell's receive({'$input'(_, A)})
+      // would never match, hanging the prompt.
+      var inputLine = message.answer == null ? "" : String(message.answer);
+      var inputBody = inputLine.replace(/\.[ \t]*$/, "");
+      var inputArg = inputBody.trim() === "" ? "end_of_file" : "(" + inputBody + ")";
+      deliver("'$input'(terminal," + inputArg + ")");
       return;
     }
     if (message.command === "reply") {
