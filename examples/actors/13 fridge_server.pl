@@ -58,7 +58,9 @@ fridge2(_Other,      List, error(unknown_request), List).
            start(server(fridge, [initial_state([])])),
            restart(permanent)
        ])
-   ], Sup).
+   ], Sup, [
+       load_predicates([fridge/4])
+   ]).
 
 
 % --- Scene 2: synchronous client calls. -------------------------------
@@ -101,11 +103,13 @@ fridge2(_Other,      List, error(unknown_request), List).
 %
 % The bug in fridge/4 is its lack of a catch-all clause. fridge2/4
 % adds one that returns error(unknown_request) instead of crashing.
-% server_upgrade/2 swaps the callback in place, preserving the
+% server_upgrade/3 copies and swaps the callback in place, preserving the
 % server's pid, registered name, and current state. The same bad
 % request that previously crashed the server now returns an error.
 
-?- server_upgrade(fridge, fridge2).
+?- server_upgrade(fridge, fridge2, [
+       load_predicates([fridge2/4])
+   ]).
 
 ?- server_request(fridge, sore(milk), Response).
 

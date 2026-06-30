@@ -107,16 +107,23 @@ dining :-
     Clients = 5,
     self(Self),
     register(diningRoom, Self),
-    spawn(doForks(AllForks), ForksPid),
+    spawn(doForks(AllForks), ForksPid, [
+        load_predicates([doForks/1])
+    ]),
     register(forks, ForksPid),
-    spawn(doWaiter([], Clients, 0, false), WaiterPid),
+    spawn(doWaiter([], Clients, 0, false), WaiterPid, [
+        load_predicates([doWaiter/4, processWaitList/2, areAvailable/2])
+    ]),
     register(waiter, WaiterPid),
     Life_span = 20,
-    spawn(philosopher('Aristotle', {5, 1}, Life_span)),
-    spawn(philosopher('Kant', {1, 2}, Life_span)),
-    spawn(philosopher('Spinoza', {2, 3}, Life_span)),
-    spawn(philosopher('Marx', {3, 4}, Life_span)),
-    spawn(philosopher('Russel', {4, 5}, Life_span)),
+    PhilosopherOptions = [
+        load_predicates([philosopher/3, sleep/0])
+    ],
+    spawn(philosopher('Aristotle', {5, 1}, Life_span), _, PhilosopherOptions),
+    spawn(philosopher('Kant', {1, 2}, Life_span), _, PhilosopherOptions),
+    spawn(philosopher('Spinoza', {2, 3}, Life_span), _, PhilosopherOptions),
+    spawn(philosopher('Marx', {3, 4}, Life_span), _, PhilosopherOptions),
+    spawn(philosopher('Russel', {4, 5}, Life_span), _, PhilosopherOptions),
     receive({
         {allgone} ->
             format("Dining room closed.~n")

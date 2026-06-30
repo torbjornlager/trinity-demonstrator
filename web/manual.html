@@ -527,13 +527,15 @@ server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
     <p>The four-argument variant uses <code>MonRef</code> to detect server termination and throws <code>server_down(Reason)</code> if the server dies before replying.</p>
 </article>
 
-<article class="predicate-entry" id="server_upgrade/2">
+<article class="predicate-entry" id="server_upgrade/2-3">
     <div class="predicate-head">
-        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_upgrade/2</span></div>
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">server_upgrade/2-3</span></div>
         <div class="predicate-family">actor</div>
     </div>
-    <pre>server_upgrade(+To, +Pred) is det.</pre>
+    <pre>server_upgrade(+To, +Pred) is det.
+server_upgrade(+To, +Pred, +Options) is det.</pre>
     <p>Replaces the callback predicate of the running server <code>To</code> without disturbing its current state. <code>Pred</code> must be arity 4.</p>
+    <p>The three-argument form explicitly loads callback source into the server using <code>load_text/1</code>, <code>load_list/1</code>, <code>load_predicates/1</code>, or <code>load_uri/1</code>. The two-argument form transfers no code and requires the callback to be loaded already.</p>
 </article>
 
 <article class="predicate-entry" id="server_halt/2">

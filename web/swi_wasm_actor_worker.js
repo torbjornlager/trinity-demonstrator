@@ -353,13 +353,11 @@
   self.actorShellEvent = actorShellEvent;
   self.actorSetDoneReason = actorSetDoneReason;
   self.actorInput = actorInput;
-  self.swiWasmUserSource = function() { return inheritedSource; };
   self.swiWasmBehaviourSource = function() { return behaviourSource; };
   // A parent passes its complete runtime source to the coordinator when
   // spawning a child.  Treat that inherited source as the child program;
   // adding it as both behaviour and user source would duplicate clauses.
   self.swiWasmBehaviourSource = function() { return ""; };
-  self.swiWasmUserSource = function() { return inheritedSource; };
 
   self.wasmStatechartTrace = function(text) {
     post("statechart_trace", { trace: String(text || "") });
@@ -482,7 +480,7 @@
       "",
       "clause_source_text(Clause, Text) :-",
       "    copy_term(Clause, Copy),",
-      "    numbervars(Copy, 0, _),",
+      "    numbervars(Copy, 0, _, [singletons(true)]),",
       "    with_output_to(string(Body), write_term(Copy, [quoted(true), numbervars(true)])),",
       "    string_concat(Body, '.', Text).",
       "",

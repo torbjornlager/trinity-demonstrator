@@ -19,7 +19,9 @@ count_server(Count0) :-
 
 /** <examples>
 
-?- spawn(count_server(0), Pid).
+?- spawn(count_server(0), Pid, [
+       load_predicates([count_server/1])
+   ]).
     
 ?- self(Me), $Pid ! count(Me), 
    receive({count(N) -> true}).

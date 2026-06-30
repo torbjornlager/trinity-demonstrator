@@ -195,9 +195,14 @@ actor_module(Pid, Module) :-
 
 
 %!  prepare_actor_module(+Module, +GoalModule, +Options) is det.
+%
+%   By default the actor imports GoalModule for trusted local spawning.
+%   The node layer supplies the internal inherit_goal_module(false) option
+%   for public actors so live session predicates cross the actor boundary
+%   only through an explicit source option such as load_predicates/1.
 prepare_actor_module(Module, GoalModule, Options) :-
     delete_import_module(Module, user),
-    add_import_module(Module, GoalModule, start),
+    import_goal_module(Module, GoalModule, Options),
     import_actor_api(Module),
     import_shared_db(Module),
     forall(prepare_module(Module, GoalModule, Options), true),
@@ -213,10 +218,22 @@ prepare_actor_module(Module, GoalModule, Options) :-
 
 
 restore_runtime_imports(Module, GoalModule, Options) :-
-    add_import_module(Module, GoalModule, start),
+    import_goal_module(Module, GoalModule, Options),
     import_actor_api(Module),
     import_shared_db(Module),
     forall(prepare_module(Module, GoalModule, Options), true).
+
+
+import_goal_module(Module, GoalModule, Options) :-
+    option(inherit_goal_module(Inherit), Options, true),
+    (   Inherit == true
+    ->  add_import_module(Module, GoalModule, start)
+    ;   Inherit == false
+    ->  true
+    ;   throw(error(domain_error(boolean, Inherit),
+                    context(isolation:prepare_actor_module/3,
+                            'inherit_goal_module must be true or false')))
+    ).
 
 
 %!  restore_shadowed_shared_db_imports(+Module) is det.

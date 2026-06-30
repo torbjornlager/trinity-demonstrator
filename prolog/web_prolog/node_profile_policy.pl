@@ -285,6 +285,9 @@ profile_check_step_(toplevel_halt(Pid, Reply), Profile) :-
     ensure_goal_profile(Profile, toplevel_halt(Pid, Reply)).
 profile_check_step_(toplevel_abort(Pid), Profile) :-
     ensure_goal_profile(Profile, toplevel_abort(Pid)).
+profile_check_step_(server_upgrade(To, Pred, Options), Profile) :-
+    ensure_goal_profile(Profile, server_upgrade(To, Pred, Options)),
+    profile_check_source_options(Profile, actor, Options).
 profile_check_step_(parallel(Goals), Profile) :-
     ensure_goal_profile(Profile, parallel(Goals)),
     profile_check_parallel_goals(Profile, Goals).

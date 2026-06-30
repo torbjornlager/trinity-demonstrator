@@ -60,6 +60,8 @@
 :- use_module('../../../prolog/web_prolog/actor_api.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, op(200, xfx, @)]).
 :- use_module('../../../prolog/web_prolog/pid_utils.pl', [pid_local/2]).
 :- use_module('../../../prolog/web_prolog/statechart_actor.pl', [statechart_spawn/2]).
+:- use_module('../../../prolog/web_prolog/server_actor.pl', []).
+:- use_module('../../../prolog/web_prolog/supervisor_actor.pl', []).
 :- use_module('./node_resident_services.pl', [
     service_directory_file/1,
     start_counter_service/1,
@@ -90,6 +92,8 @@ run_tests :-
 :- meta_predicate with_http_public_url(+, +, +, 0).
 
 :- dynamic walked_goal/1.
+
+node_test_server_callback(get, State, State, State).
 
 with_node_server(URI, Goal) :-
     with_node_server_options([], URI, Goal).
@@ -3871,6 +3875,158 @@ test(ws_actor_toplevel_monitor_notification_visible_to_flush) :-
             ),
             catch(ws_close(WS, 1000, done), _, true)
         )).
+
+test(ws_actor_spawn_does_not_inherit_session_assertions,
+     true((sub_string(Seen, _, _, _, "existence_error(procedure"),
+           sub_string(Seen, _, _, _, ":p/1")))) :-
+    with_node_server_options([profile(actor), auth(dev)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{command:toplevel_spawn,
+                                      options:"[session(true)]"}),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"assert(p(a))",
+                    format:"json"
+                }),
+                ws_receive_json(WS, AssertReply),
+                assertion(AssertReply.type == "success"),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"self(S), spawn((p(X), S ! X), Child, [monitor(true)]), receive({a -> Seen=a; down(_, Child, Reason) -> Seen=down(Reason)}, [timeout(1), on_timeout(Seen=timeout)])",
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"],
+                                                     [CallReply]),
+                CallReply.data = [Row],
+                get_dict('Seen', Row, Seen)
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
+        )).
+
+test(ws_actor_spawn_load_predicates_copies_session_assertions,
+     true((Value == "a", Reason == "true"))) :-
+    with_node_server_options([profile(actor), auth(dev)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{command:toplevel_spawn,
+                                      options:"[session(true)]"}),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"assert(p(a))",
+                    format:"json"
+                }),
+                ws_receive_json(WS, AssertReply),
+                assertion(AssertReply.type == "success"),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"self(S), spawn((p(X), S ! X), Child, [load_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(1), on_timeout(Value=timeout)]), receive({down(_, Child, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)])",
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"],
+                                                     [CallReply]),
+                CallReply.data = [Row],
+                get_dict('Value', Row, Value),
+                get_dict('Reason', Row, Reason)
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
+        )).
+
+test(ws_remote_actor_requires_load_predicates_for_session_code,
+     true((sub_string(Seen, _, _, _, "existence_error(procedure"),
+           sub_string(Seen, _, _, _, ":p/1"),
+           Value == "a",
+           Reason == "true"))) :-
+    with_node_server(URI1,
+        with_node_server(URI2,
+            setup_call_cleanup(
+                ws_open(URI1, WS),
+                (
+                    ws_send_json(WS, json{command:toplevel_spawn,
+                                          options:"[session(true)]"}),
+                    ws_receive_json(WS, Spawned),
+                    get_dict(pid, Spawned, ToplevelPid),
+                    ws_send_json(WS, json{
+                        command:toplevel_call,
+                        pid:ToplevelPid,
+                        goal:"assert(p(a))",
+                        format:"json"
+                    }),
+                    ws_receive_json(WS, AssertReply),
+                    assertion(AssertReply.type == "success"),
+                    format(string(NoLoadGoal),
+                           "self(S), spawn((p(X), S ! X), Child, [node(~q), monitor(true)]), receive({a -> Seen=a; down(_, Child, R) -> Seen=down(R)}, [timeout(2), on_timeout(Seen=timeout)])",
+                           [URI2]),
+                    ws_send_json(WS, json{
+                        command:toplevel_call,
+                        pid:ToplevelPid,
+                        goal:NoLoadGoal,
+                        format:"json"
+                    }),
+                    ws_receive_json_until_expected_types(WS, ["success"],
+                                                         [NoLoadReply]),
+                    NoLoadReply.data = [NoLoadRow],
+                    get_dict('Seen', NoLoadRow, Seen),
+                    format(string(LoadGoal),
+                           "self(S), spawn((p(X), S ! X), Child, [node(~q), load_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(2), on_timeout(Value=timeout)]), receive({down(_, Child, R) -> Reason=R}, [timeout(2), on_timeout(Reason=timeout)])",
+                           [URI2]),
+                    ws_send_json(WS, json{
+                        command:toplevel_call,
+                        pid:ToplevelPid,
+                        goal:LoadGoal,
+                        format:"json"
+                    }),
+                    ws_receive_json_until_expected_types(WS, ["success"],
+                                                         [LoadReply]),
+                    LoadReply.data = [LoadRow],
+                    get_dict('Value', LoadRow, Value),
+                    get_dict('Reason', LoadRow, Reason)
+                ),
+                catch(ws_close(WS, 1000, done), _, true)
+            ))).
+
+test(public_spawn_cannot_override_goal_module_isolation,
+     true(Options == [inherit_goal_module(false)])) :-
+    with_sandbox_mode(off,
+        with_public_execution_profile(actor,
+            once(actors:hook_spawn_options(
+                test_node:true,
+                [inherit_goal_module(true)],
+                Options
+            )))).
+
+test(public_profile_server_framework_start_keeps_module,
+     true(Response == 7)) :-
+    with_node_server_options([profile(actor), sandbox(off)], _URI,
+        with_public_execution_profile(actor,
+            setup_call_cleanup(
+                server_actor:server_spawn(test_node:node_test_server_callback,
+                                          7, Pid,
+                                          [monitor(true), link(false)]),
+                server_actor:server_request(Pid, get, Response),
+                server_actor:server_halt(Pid, _)
+            ))).
+
+test(public_profile_supervisor_framework_start_keeps_module,
+     true(Counts == [specs-0, active-0, supervisors-0, workers-0])) :-
+    with_node_server_options([profile(actor), sandbox(off)], _URI,
+        with_public_execution_profile(actor,
+            setup_call_cleanup(
+                supervisor_actor:supervisor_spawn([], Pid,
+                                                  [monitor(true), link(false)]),
+                supervisor_actor:supervisor_count_children(Pid, Counts),
+                supervisor_actor:supervisor_halt(Pid)
+            ))).
 
 test(node_json_default_success_bindings,
      true((Type == "success", More == true, Data = [Row], get_dict('X', Row, "a")))) :-

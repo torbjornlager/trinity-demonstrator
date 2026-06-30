@@ -18,6 +18,12 @@ const workerSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
   "utf8"
 );
+function actorExample(name) {
+  return fs.readFileSync(
+    path.join(__dirname, "..", "..", "examples", "actors", name),
+    "utf8"
+  );
+}
 const nodeWsSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "prolog", "web_prolog", "node_ws.pl"),
   "utf8"
@@ -180,10 +186,10 @@ ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge-source&quot;)"'),
    "supervised fridge tutorial source has a Load control");
 ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"'),
    "supervised fridge upgrade source has a Load control");
-ok(includes("'$upgrade'(Pred1, Clauses) -> wasm_install_callback(Pred1, Clauses)") &&
-   includes("wasm_callback_clauses(Module, PlainPred, 4, Clauses)") &&
-   includes("send(To, '$upgrade'(Module:PlainPred, Clauses))"),
-   "server_upgrade/2 ships newly loaded callback clauses to an existing worker");
+ok(includes("server_upgrade(To, Pred0, Options) :- collect_spawn_source(Options, Source)") &&
+   includes("'$upgrade'(From, Ref, PlainPred, Source)") &&
+   includes("server_upgrade(To, Pred0) :- server_upgrade_source(To, Pred0, '')"),
+   "server_upgrade/3 transfers explicit source while server_upgrade/2 transfers none");
 ok(includes("collect_remote_spawn_source(Goal, Options, Source)") &&
    includes("default_remote_spawn_source(echo_actor") &&
    includes("option(session(Session), Options, true)") &&
@@ -250,6 +256,25 @@ ok(workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")
    workerSource.includes('consultSource(inheritedSource, "/worker_user_code.pl")') &&
    includes('currentSwiWasm2LoadText: function()'),
    "SWI-WASM-2 keeps runtime predicates separate from reloadable editor source");
+ok(includes('source: String(extraSourceText || "")') &&
+   !includes('extraSourceText || this.currentLoadText()'),
+   "spawned SWI-WASM actors receive only explicit load_* source");
+ok(actorExample("04 count_server.pl").includes("load_predicates([count_server/1])") &&
+   actorExample("05 fridge.pl").includes("load_predicates([fridge/1])") &&
+   actorExample("07 ping-pong.pl").includes("load_predicates([pong/0])") &&
+   actorExample("07 ping-pong.pl").includes("load_predicates([ping/2])") &&
+   actorExample("08 dining_philosophers.pl").includes("load_predicates([doForks/1])") &&
+   actorExample("08 dining_philosophers.pl").includes("doWaiter/4, processWaitList/2, areAvailable/2") &&
+   actorExample("08 dining_philosophers.pl").includes("philosopher/3, sleep/0") &&
+   actorExample("10 simple_toplevel.pl").includes("load_predicates([session/2])"),
+   "actor examples explicitly transfer editor predicates to spawned workers");
+ok(includes("load_predicates([Pred/Arity])") &&
+   !includes("wasm_user_source") &&
+   actorExample("13 fridge_server.pl").includes("load_predicates([fridge/4])"),
+   "WASM behaviours transfer declared callbacks without inheriting the editor");
+ok(includes("numbervars(Copy, 0, _, [singletons(true)])") &&
+   workerSource.includes("numbervars(Copy, 0, _, [singletons(true)])"),
+   "generated WASM source preserves singleton variables as anonymous");
 ok(workerSource.includes('actorRequest("remote_spawn"') &&
    workerSource.includes('actorRequest("remote_toplevel_spawn"') &&
    includes('case "remote_spawn":') &&

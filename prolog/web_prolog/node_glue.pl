@@ -63,8 +63,34 @@ actors:hook_spawn_options(Goal, Options0, Options) :-
     current_public_execution_profile(Profile),
     strip_module(Goal, GoalModule0, PlainGoal),
     glue_goal_module(GoalModule0, PlainGoal, GoalModule),
+    exclude(internal_spawn_option, Options0, PublicOptions),
     node_sandbox:sandbox_prepare_public_spawn(Profile, GoalModule,
-                                              PlainGoal, Options0, Options).
+                                              PlainGoal, PublicOptions,
+                                              PreparedOptions),
+    public_spawn_module_options(GoalModule, PlainGoal, PreparedOptions,
+                                Options).
+
+internal_spawn_option(inherit_goal_module(_)).
+
+public_spawn_module_options(GoalModule, Goal, Options, Options) :-
+    public_framework_start_goal(GoalModule, Goal),
+    !.
+public_spawn_module_options(_, _, Options,
+                            [inherit_goal_module(false)|Options]).
+
+% Framework entry points execute trusted runtime code from their defining
+% module. Their client-supplied callbacks and child goals are checked by the
+% public profile separately.
+public_framework_start_goal(toplevel_actors, Goal) :-
+    goal_has_pi(Goal, ptcp/3).
+public_framework_start_goal(server_actor, Goal) :-
+    goal_has_pi(Goal, server_loop/2).
+public_framework_start_goal(supervisor_actor, Goal) :-
+    goal_has_pi(Goal, sup_init/2).
+
+goal_has_pi(Goal, Name/Arity) :-
+    callable(Goal),
+    functor(Goal, Name, Arity).
 
 glue_goal_module(actors, Plain, user) :-
     \+ ( callable(Plain),

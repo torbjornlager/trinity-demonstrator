@@ -3933,7 +3933,7 @@
         "toplevel_spawn/1-2", "toplevel_call/2-3", "toplevel_next/1-2",
         "toplevel_stop/1", "toplevel_abort/1", "toplevel_halt/2",
         "server_spawn/3-4", "server_request/3-4", "server_promise/3-4",
-        "server_yield/2-4", "server_upgrade/2", "server_halt/2",
+        "server_yield/2-4", "server_upgrade/2-3", "server_halt/2",
         "statechart_spawn/1-2", "statechart_halt/2-3", "raise/1",
         "supervisor_spawn/2-3", "supervisor_spawn_child/3",
         "supervisor_terminate_child/3", "supervisor_delete_child/3",
@@ -4088,7 +4088,9 @@
         "server_spawn/3": true,
         "server_spawn/4": true,
         "server_halt/2": true,
+        "server_upgrade/2-3": true,
         "server_upgrade/2": true,
+        "server_upgrade/3": true,
         "server_yield/2-4": true,
         "server_yield/2": true,
         "server_yield/3": true,
@@ -5247,8 +5249,7 @@
             swiWasmChartPending: false,
             swiWasmStatechartDelayedQueue: [],
             swiWasmQueryPending: false,
-            swiWasmQueryAbortRequested: false,
-            swiWasmUserSourceText: ""
+            swiWasmQueryAbortRequested: false
           };
         },
         computed: {
@@ -9266,9 +9267,6 @@
               }
               return true;
             };
-            window.swiWasmUserSource = function() {
-              return self.swiWasmUserSourceText || "";
-            };
             window.swiWasmBehaviourSource = function() {
               return self.swiWasmBehaviourProlog();
             };
@@ -9331,7 +9329,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260629-swi-wasm-2-r8";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260630-swi-wasm-2-r10";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9363,7 +9361,9 @@
               command: "start",
               pid: pid,
               goal: entry.goal,
-              source: String(extraSourceText || this.currentLoadText() || ""),
+              // Actor code crosses the worker boundary only through explicit
+              // load_* spawn options collected into extraSourceText.
+              source: String(extraSourceText || ""),
               behaviourSource: this.swiWasmBehaviourProlog(),
               role: entry.role
             }, startFields || {}));
@@ -10505,7 +10505,7 @@
           swiWasmBehaviourProlog: function() {
             return [
               "% Browser-worker implementation of generic servers and supervisors.",
-              ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -).",
+              ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), server_upgrade(+, :, +), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -).",
               "server_spawn(Pred, State, Pid) :- server_spawn(Pred, State, Pid, []).",
               "server_spawn(Pred0, State, Pid, Options) :-",
               "    strip_module(Pred0, Module, PlainPred), Pred = Module:PlainPred,",
@@ -10513,23 +10513,32 @@
               "    ( spawn(wasm_server_loop(Pred, State), Pid, SpawnOptions) -> true ; throw(error(server_worker_spawn_failed(PlainPred), server_spawn/4)) ),",
               "    ( option(name(Name), Options) -> ( register(Name, Pid) -> true ; throw(error(server_registration_failed(Name, Pid), server_spawn/4)) ) ; true ).",
               "",
-              "behaviour_spawn_options(_Pred, _Arity, Options, SpawnOptions) :-",
-              "    wasm_behaviour_source(Behaviour), wasm_user_source(User),",
-              "    append([load_text(Behaviour), load_text(User)], Options, SpawnOptions).",
+              "behaviour_spawn_options(Pred, Arity, Options, SpawnOptions) :-",
+              "    wasm_behaviour_source(Behaviour),",
+              "    append([load_text(Behaviour), load_predicates([Pred/Arity])], Options, SpawnOptions).",
               "",
               "wasm_behaviour_source(Source) :- Source := swiWasmBehaviourSource().",
-              "wasm_user_source(Source) :- Source := swiWasmUserSource().",
               "",
               "wasm_server_loop(Pred, State0) :-",
               "    receive({",
               "      '$call'(From, Ref, Request) ->",
               "        ( call(Pred, Request, State0, Reply, State) -> send(From, Ref-Reply), wasm_server_loop(Pred, State) ; exit(false) ) ;",
-              "      '$upgrade'(Pred1, Clauses) -> wasm_install_callback(Pred1, Clauses), wasm_server_loop(Pred1, State0) ;",
+              "      '$upgrade'(From, Ref, PlainPred, Source) ->",
+              "        ( catch(wasm_prepare_upgrade(PlainPred, Source, Pred1), Error, true),",
+              "          ( var(Error) -> send(From, Ref-ok), wasm_server_loop(Pred1, State0)",
+              "          ; send(From, Ref-error(Error)), wasm_server_loop(Pred, State0) ) ) ;",
               "      '$stop'(From) -> send(From, reply(true))",
               "    }).",
-              "wasm_install_callback(Pred, Clauses) :-",
-              "    strip_module(Pred, Module, PlainPred),",
-              "    ( current_predicate(Module:PlainPred/4) -> true ; forall(member(Clause, Clauses), assertz(Module:Clause)) ).",
+              "wasm_prepare_upgrade(PlainPred, Source, user:PlainPred) :-",
+              "    ( Source == '' -> true ; functor(PlainPred, Name, Extra), Arity is Extra+4, abolish(user:Name/Arity), wasm_load_upgrade_source(Source) ),",
+              "    functor(PlainPred, Name, Extra), Arity is Extra+4,",
+              "    ( current_predicate(user:Name/Arity) -> true ; throw(error(existence_error(procedure, user:Name/Arity), server_upgrade/3)) ).",
+              "wasm_load_upgrade_source(Source) :- setup_call_cleanup(open_string(Source, Stream), wasm_read_upgrade_source(Stream), close(Stream)).",
+              "wasm_read_upgrade_source(Stream) :-",
+              "    read_term(Stream, Term, []),",
+              "    ( Term == end_of_file -> true ; wasm_assert_upgrade_term(Term), wasm_read_upgrade_source(Stream) ).",
+              "wasm_assert_upgrade_term((:- Directive)) :- !, call(Directive).",
+              "wasm_assert_upgrade_term(Term) :- assertz(user:Term).",
               "",
               "server_promise(To, Request, Ref) :- self(Self), make_ref(Ref), send(To, '$call'(Self, Ref, Request)).",
               "server_promise(To, Request, Ref, MonRef) :- monitor(To, MonRef), server_promise(To, Request, Ref).",
@@ -10538,14 +10547,12 @@
               "server_yield(Ref, MonRef, Reply, Options) :- receive({Ref-Reply0 -> demonitor(MonRef), Reply = Reply0 ; down(MonRef, _, Reason) -> throw(server_down(Reason))}, Options).",
               "server_request(To, Request, Reply) :- server_request(To, Request, Reply, []).",
               "server_request(To, Request, Reply, Options) :- server_promise(To, Request, Ref, MonRef), server_yield(Ref, MonRef, Reply, Options).",
-              "server_upgrade(To, Pred0) :-",
-              "    strip_module(Pred0, Module, PlainPred),",
-              "    wasm_callback_clauses(Module, PlainPred, 4, Clauses),",
-              "    send(To, '$upgrade'(Module:PlainPred, Clauses)).",
-              "wasm_callback_clauses(Module, Pred, Arity, Clauses) :-",
-              "    functor(Head, Pred, Arity),",
-              "    findall(Clause, (clause(Module:Head, Body), (Body == true -> Clause = Head ; Clause = (Head :- Body))), Clauses),",
-              "    ( Clauses == [] -> throw(error(existence_error(procedure, Module:Pred/Arity), server_upgrade/2)) ; true ).",
+              "server_upgrade(To, Pred0) :- server_upgrade_source(To, Pred0, '').",
+              "server_upgrade(To, Pred0, Options) :- collect_spawn_source(Options, Source), server_upgrade_source(To, Pred0, Source).",
+              "server_upgrade_source(To, Pred0, Source) :-",
+              "    strip_module(Pred0, _Module, PlainPred), self(Self), make_ref(Ref),",
+              "    send(To, '$upgrade'(Self, Ref, PlainPred, Source)),",
+              "    receive({Ref-ok -> true ; Ref-error(Error) -> throw(Error)}).",
               "server_halt(To, Reply) :- self(Self), send(To, '$stop'(Self)), receive({reply(Reply) -> true}).",
               "server_stop(To, Reply) :- server_halt(To, Reply).",
               "",
@@ -10553,9 +10560,9 @@
               "supervisor_spawn(Specs0, Pid, Options) :-",
               "    strip_module(Specs0, _Caller, Specs),",
               "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
-              "    wasm_behaviour_source(Behaviour), wasm_user_source(User),",
+              "    wasm_behaviour_source(Behaviour),",
               "    self(Parent),",
-              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [load_text(Behaviour), load_text(User)|Options]),",
+              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [load_text(Behaviour)|Options]),",
               "    wasm_wait_supervisor_ready(Pid),",
               "    ( option(name(Name), Options) -> register(Name, Pid) ; true ).",
               "",
@@ -10657,7 +10664,7 @@
               "    receive/1, receive/2,",
               "    server_spawn/3, server_spawn/4, server_request/3, server_request/4,",
               "    server_promise/3, server_promise/4, server_yield/2, server_yield/3, server_yield/4,",
-              "    server_upgrade/2, server_halt/2, server_stop/2,",
+              "    server_upgrade/2, server_upgrade/3, server_halt/2, server_stop/2,",
               "    supervisor_spawn/2, supervisor_spawn/3, supervisor_spawn_child/3,",
               "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
               "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
@@ -10749,7 +10756,7 @@
               "",
               "clause_source_text(Clause, Text) :-",
               "    copy_term(Clause, Copy),",
-              "    numbervars(Copy, 0, _),",
+              "    numbervars(Copy, 0, _, [singletons(true)]),",
               "    with_output_to(string(Body), write_term(Copy, [quoted(true), numbervars(true)])),",
               "    string_concat(Body, '.', Text).",
               "",
@@ -11835,7 +11842,6 @@
             var loadErr = null;
             var bridgeCode = this.swiWasmRpcProlog();
             var codeToLoad = editorText || "";
-            this.swiWasmUserSourceText = codeToLoad;
             // library(wasm) is already loaded (preloaded at init), so :=/2 and #/1
             // operators are defined before consult runs.
             if (Module && Module.FS) {
@@ -11858,9 +11864,8 @@
                 //  (where the program runs) to use the inline terminal -- the
                 //  bridge module's copy can't override the built-in for user
                 //  calls.  Consult a small shim into user that delegates to the
-                //  bridge's async reader.  Kept out of the user source (and thus
-                //  out of swiWasmUserSourceText) so spawned workers, which have
-                //  no swiWasmActorInput, don't inherit it.
+                //  bridge's async reader. Spawned workers do not receive this
+                //  shell-only shim through explicit load_* options.
                 Module.FS.writeFile("/swi_wasm_read_shim.pl",
                   ":- catch(redefine_system_predicate(read(_)), _, true).\n" +
                   ":- catch(redefine_system_predicate(read_term(_, _)), _, true).\n" +

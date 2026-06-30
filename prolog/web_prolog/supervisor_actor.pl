@@ -113,7 +113,8 @@ supervisor_spawn(ChildSpecs0, Pid, Options) :-
     option(intensity(MaxR), Options, 1),
     option(period(MaxT), Options, 5),
     maplist(normalise_child_spec(Caller), ChildSpecs, Specs),
-    exclude(is_sup_option, Options, SpawnOpts),
+    exclude(is_sup_option, Options, SpawnOpts0),
+    ensure_source_module(Caller, SpawnOpts0, SpawnOpts),
     State0 = sup(Strategy, MaxR, MaxT, [], []),
     spawn(sup_init(Specs, State0), Pid, SpawnOpts),
     (   option(name(Name), Options)
@@ -125,6 +126,11 @@ is_sup_option(strategy(_)).
 is_sup_option(intensity(_)).
 is_sup_option(period(_)).
 is_sup_option(name(_)).
+
+ensure_source_module(_, Options, Options) :-
+    option(source_module(_), Options),
+    !.
+ensure_source_module(Module, Options, [source_module(Module)|Options]).
 
 
 %% -------------------------------------------------------------------

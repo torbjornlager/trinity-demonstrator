@@ -357,7 +357,7 @@ load_shared_db_source(SourceId, Module, Text) :-
         close(Stream)).
 
 configure_shared_db_module(SharedModule) :-
-    add_import_module(SharedModule, actor, start),
+    add_import_module(SharedModule, actor_api, start),
     SharedModule:op(800, xfx, !),
     SharedModule:op(200, xfx, @),
     SharedModule:op(1000, xfy, if).

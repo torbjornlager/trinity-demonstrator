@@ -81,6 +81,12 @@ The local spawn path is straightforward:
 5. Any user-supplied source is loaded.
 6. The start goal is executed in that module.
 
+Trusted local spawns also import the caller's goal module, preserving normal
+program-level calls such as `spawn(worker, Pid)`. Public node spawns do not
+inherit their session module: session-defined predicates must be copied into
+the actor explicitly with `load_predicates/1` (or supplied through another
+`load_*` option). Node-published shared predicates remain available by name.
+
 ### 2. Isolation
 
 [`isolation.pl`](../prolog/web_prolog/isolation.pl) is freestanding (it depends
@@ -190,7 +196,8 @@ build one shared source text (from `load_shared_db_text/1`,
 when their private modules are prepared. Shared-db clauses are not copied into
 each actor; actors keep private code isolation but all see the same shared
 predicates through module import. Actor-specific source options are handled by
-the isolation layer.
+the isolation layer. The shared runtime module imports `actor_api` directly,
+so published actor predicates do not depend on a spawning session's imports.
 
 ## Pids and Distribution
 

@@ -2200,7 +2200,9 @@ fridge(take(_Food), List, not_found, List).
            start(server(fridge, [initial_state([])])),
            restart(permanent)
        ])
-   ], Sup).
+   ], Sup, [
+       load_predicates([fridge/4])
+   ]).
 </pre>
 
 <p class="ask-buttons">
@@ -2308,11 +2310,13 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <p>
     We can swap the running server&rsquo;s callback in place with
-    <code>server_upgrade/2</code>. The pid does not change, the registered
+    <code>server_upgrade/3</code>. The pid does not change, the registered
     name does not change, and crucially the current state is preserved:
 </p>
 
-<pre id="srv-upgrade">?- server_upgrade(fridge, fridge2).
+<pre id="srv-upgrade">?- server_upgrade(fridge, fridge2, [
+       load_predicates([fridge2/4])
+   ]).
 </pre>
 
 <p class="ask-buttons">

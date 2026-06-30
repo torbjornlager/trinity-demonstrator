@@ -255,9 +255,6 @@ public_runtime_support_goal(actor, Goal) :-
     functor(Goal, Name, Arity),
     public_runtime_support_goal_pi(Name/Arity).
 
-public_runtime_support_goal_pi(remote_actor_proxy/3).
-public_runtime_support_goal_pi(send_with_delay/3).
-
 %  Statechart interpreter entry goals spawned by statechart_spawn/1,2.
 %  They are framework code, not client code; the chart's own embedded
 %  goals are sandbox-checked separately at execution (hook_check_chart_goal/1),
@@ -266,6 +263,9 @@ public_runtime_support_goal(statechart_actor, Goal) :-
     callable(Goal),
     functor(Goal, Name, Arity),
     statechart_runtime_support_goal_pi(Name/Arity).
+
+public_runtime_support_goal_pi(remote_actor_proxy/3).
+public_runtime_support_goal_pi(send_with_delay/3).
 
 statechart_runtime_support_goal_pi(interpret/1).
 statechart_runtime_support_goal_pi(interpret_text/1).

@@ -30,6 +30,12 @@ fridge2(take(Food),  FoodList, taken(Food),  Rest) :-
     select(Food, FoodList, Rest), !.
 fridge2(take(_Food), FoodList, not_found,    FoodList).
 
+original_fridge(store(Food), FoodList, ok, [Food|FoodList]).
+original_fridge(take(Food), FoodList, ok(Food), FoodListRest) :-
+    select(Food, FoodList, FoodListRest),
+    !.
+original_fridge(take(_Food), FoodList, not_found, FoodList).
+
 %% counter/4 — simple integer counter.
 counter(inc,   N, ok,    N1) :- N1 is N + 1.
 counter(dec,   N, ok,    N1) :- N1 is N - 1.
@@ -128,7 +134,7 @@ test(hot_code_swap) :-
     server_spawn(test_fridge, [], Pid),
     server_request(Pid, store(milk), R1),
     R1 == ok,
-    server_upgrade(Pid, fridge2),
+    server_upgrade(Pid, fridge2, [load_predicates([fridge2/4])]),
     server_request(Pid, take(milk), R2),
     R2 == taken(milk),
     server_halt(Pid, _).
@@ -140,7 +146,7 @@ test(upgrade_preserves_state) :-
     server_request(Pid, inc, _),
     server_request(Pid, inc, _),
     server_request(Pid, inc, _),
-    server_upgrade(Pid, echo),
+    server_upgrade(Pid, echo, [load_predicates([echo/4])]),
     %% echo/4 returns the request as the response; state (3) is unchanged.
     server_request(Pid, get, R),
     R == get,
@@ -150,10 +156,26 @@ test(upgrade_preserves_state) :-
 %% 10. Multiple upgrades in sequence.
 test(multiple_upgrades) :-
     server_spawn(test_fridge, [milk], Pid),
-    server_upgrade(Pid, fridge2),
-    server_upgrade(Pid, test_fridge),
+    server_upgrade(Pid, fridge2, [load_predicates([fridge2/4])]),
+    server_upgrade(Pid, original_fridge,
+                   [load_predicates([original_fridge/4])]),
     server_request(Pid, take(milk), R),
     R == ok(milk),
+    server_halt(Pid, _).
+
+
+test(upgrade_without_source_rejects_unloaded_callback) :-
+    server_spawn(test_fridge, [], Pid),
+    catch(server_upgrade(Pid, fridge2), Error, true),
+    assertion(Error = error(existence_error(procedure, _), _)),
+    server_halt(Pid, _).
+
+
+test(upgrade_without_source_accepts_loaded_callback) :-
+    server_spawn(test_fridge, [], Pid, [
+        load_predicates([fridge2/4])
+    ]),
+    server_upgrade(Pid, fridge2),
     server_halt(Pid, _).
 
 

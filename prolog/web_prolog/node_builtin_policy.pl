@@ -248,6 +248,7 @@ builtin_goal_policy(server_yield(_, _), server, actor).
 builtin_goal_policy(server_yield(_, _, _), server, actor).
 builtin_goal_policy(server_yield(_, _, _, _), server, actor).
 builtin_goal_policy(server_upgrade(_, _), server, actor).
+builtin_goal_policy(server_upgrade(_, _, _), server, actor).
 builtin_goal_policy(server_halt(_, _), server, actor).
 
 builtin_goal_policy(supervisor_spawn(_, _), supervisor, actor).
@@ -438,7 +439,7 @@ builtin_family_spec(server,
                     ["server_spawn/3", "server_spawn/4", "server_request/3",
                      "server_request/4", "server_promise/3", "server_promise/4",
                      "server_yield/2", "server_yield/3", "server_yield/4",
-                     "server_upgrade/2", "server_halt/2"],
+                     "server_upgrade/2", "server_upgrade/3", "server_halt/2"],
                     [actor]).
 builtin_family_spec(supervisor,
                     "Supervisors",
