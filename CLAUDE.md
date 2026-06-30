@@ -2,20 +2,23 @@
 
 ## What this project is
 
-A production Web Prolog node for SWI-Prolog, forked from the
-trinity-demonstrator and being restructured into hook-connected layers.
-The plan is `docs/LAYERED_REAL_NODE_PLAN.md` — read it before structural
-work.
+This repo **is** the trinity-demonstrator (`origin` →
+github.com/torbjornlager/trinity-demonstrator): a production Web Prolog
+node for SWI-Prolog, restructured in place from its original `src/`-based
+form into hook-connected layers under `prolog/web_prolog/`. The plan is
+`docs/LAYERED_REAL_NODE_PLAN.md` — read it before structural work.
 
 ## Hard rules
 
 - **Semantics freeze.** Web Prolog syntax and semantics must match the
-  trinity-demonstrator exactly. Any intentional observable deviation goes
-  in `DEVIATIONS.md` (which must stay empty through v1). The demonstrator's
-  test suite is the spec — it now lives relocated across the `T0`–`T5`
-  tiers under `tests/tiers/` (the in-tree `src/` copy and its LEGACY tier
-  were removed once the tiers fully subsumed them; the live demonstrator
-  checkout remains the interop peer for T5).
+  pre-layering demonstrator (the `demonstrator-peer` git tag) exactly.
+  Any intentional observable deviation goes in `DEVIATIONS.md`. The
+  demonstrator's test suite is the spec — it now lives relocated across
+  the `T0`–`T5` tiers under `tests/tiers/` (the in-tree `src/` copy and
+  its LEGACY tier were removed once the tiers fully subsumed them; the
+  original `src/` tree, preserved under the `demonstrator-peer` tag, is
+  materialized into a temp dir as the interop peer for T5 — there is no
+  separate live demonstrator checkout).
 - **No upward imports.** Layer N may only import layers ≤ N
   (actors < isolation < toplevel/behaviours < distribution < node <
   umbrella). Cross-layer connections go through multifile hooks, declared
@@ -38,6 +41,17 @@ work.
 
 ## Relation to other checkouts
 
-- `/Users/lager/trinity-demonstrator` is the upstream reference (git
-  remote `demonstrator` here). Never edit it as part of work in this
-  repo; it is also the interop peer for tier T5.
+- This working directory `/Users/lager/trinity-demonstrator` **is** the
+  trinity-demonstrator (`origin` →
+  github.com/torbjornlager/trinity-demonstrator) — the live node itself,
+  the same code that runs on N3–N5 and ships the SWI-WASM model under
+  `web/`. There is no separate "upstream" checkout to leave untouched and
+  no `demonstrator` git remote; editing here **is** editing the
+  demonstrator.
+- The semantics-freeze reference is the `demonstrator-peer` git **tag**
+  (the original pre-layering `src/` tree), which T5 extracts into a
+  throwaway temp dir as the interop peer.
+- A sibling `/Users/lager/web-prolog` checkout exists but is **superseded**:
+  all work consolidated into this repo. The layered node, the discovery-hub
+  plan, and `LAYERED_REAL_NODE_PLAN.md` / `DISCOVERY_HUB_PLAN.md` all live
+  here under `docs/`. Don't send new work to `web-prolog`.
