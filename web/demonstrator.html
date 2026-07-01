@@ -9329,7 +9329,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260630-swi-wasm-2-r10";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260701-swi-wasm-2-r12";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9758,6 +9758,15 @@
           swiWasmStructuredTruth: function(value) {
             return value === true || value === "true";
           },
+          swiWasmPromptText: function(value) {
+            if (typeof value === "string") {
+              return value;
+            }
+            if (value && value.$t === "s") {
+              return String(value.v);
+            }
+            return this.formatSwiWasmValue(value);
+          },
           runSwiWasm2Query: function(term) {
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             var source = this.activeLoadText || "";
@@ -9841,7 +9850,7 @@
               return;
             }
             if (compound.functor === "prompt") {
-              this.requestSwiWasmActorInput(this.formatSwiWasmValue(args[1])).then(function(answer) {
+              this.requestSwiWasmActorInput(this.swiWasmPromptText(args[1])).then(function(answer) {
                 var entry = this.swiWasmActorWorkers[pid];
                 if (entry && entry.worker && !entry.done && answer !== null) {
                   entry.worker.postMessage({ command: "shell_input", answer: String(answer) });

@@ -246,7 +246,8 @@ ok(includes('"ptcp(" + pid + ",terminal,true)"') &&
    includes('message.type === "shell_event"') &&
    workerSource.includes('message.command === "shell_call"') &&
    workerSource.includes('actorShellEvent(#Message, #Text)') &&
-   workerSource.includes('flush_output(user_output)'),
+   workerSource.includes('flush_output(user_output)') &&
+   includes('this.swiWasmPromptText(args[1])'),
    "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
 ok(includes('entry.worker.terminate();') &&
    includes('Replacing only the shell Worker provides a') &&
@@ -256,6 +257,12 @@ ok(workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")
    workerSource.includes('consultSource(inheritedSource, "/worker_user_code.pl")') &&
    includes('currentSwiWasm2LoadText: function()'),
    "SWI-WASM-2 keeps runtime predicates separate from reloadable editor source");
+ok(workerSource.includes('redefine_system_predicate(read(_))') &&
+   workerSource.includes('redefine_system_predicate(read_term(_, _))') &&
+   workerSource.includes('read(Term) :- input(\\"|:\\", Term).') &&
+   workerSource.includes('read_term(Term, _) :- input(\\"|:\\", Term).') &&
+   workerSource.includes("atom(Prompt) -> atom_string(Prompt, PromptText)"),
+   "the worker shell routes read/1 and read_term/2 through its explicit prompt protocol");
 ok(includes('source: String(extraSourceText || "")') &&
    !includes('extraSourceText || this.currentLoadText()'),
    "spawned SWI-WASM actors receive only explicit load_* source");
