@@ -50,8 +50,17 @@ tidy_up_all(Pids) :-
     maplist(tidy_up, Pids).
 
 tidy_up(Pid) :-
-    demonitor(Pid),
+    %  Replace the creation-time monitor with a private cleanup monitor.
+    %  Waiting for its down/3 establishes a mailbox ordering barrier: every
+    %  result sent by this worker is enqueued before the termination event,
+    %  so the subsequent zero-time drain cannot miss an in-flight message.
+    demonitor(Pid, [flush]),
+    monitor(Pid, CleanupRef),
     exit(Pid, kill),
+    receive({
+        down(CleanupRef, Pid, _) ->
+            true
+    }),
     drain_mailbox(Pid).
 
 drain_mailbox(Pid) :-

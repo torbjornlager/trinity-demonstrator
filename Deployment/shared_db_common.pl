@@ -16,3 +16,10 @@ father_child(tom, sally).
 father_child(tom, erica).
 father_child(mike, tom).
 
+
+list_price(widget, 100).
+list_price(gadget, 250).
+list_price(gizmo, 400).
+
+price(Item, Price) :-
+    list_price(Item, Price).

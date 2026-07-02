@@ -401,6 +401,55 @@ test(next_2, Results == [11,12]) :-
        success(Pid, Results, false) -> true
    }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
+test(exact_multiple_chunk_marks_final_answer) :-
+   toplevel_spawn(Pid, [monitor(true)]),
+   toplevel_call(Pid, between(1,4,N), [
+       limit(2),
+       template(N)
+   ]),
+   receive({
+       success(Pid, [1,2], true) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   toplevel_next(Pid),
+   receive({
+       success(Pid, [3,4], false) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   receive({
+       down(Pid, Pid, true) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
+
+test(next_target_redirect_persists_across_chunks) :-
+   self(Self),
+   spawn(relay_messages(Self, 2), Relay, [monitor(true)]),
+   toplevel_spawn(Pid, [monitor(true)]),
+   toplevel_call(Pid, between(1,6,N), [
+       limit(2),
+       template(N)
+   ]),
+   receive({
+       success(Pid, [1,2], true) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   toplevel_next(Pid, [target(Relay)]),
+   receive({
+       relayed(success(Pid, [3,4], true)) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   toplevel_next(Pid),
+   receive({
+       relayed(success(Pid, [5,6], false)) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   receive({
+       down(Pid, Pid, true) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   receive({
+       down(Relay, Relay, true) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
+
+relay_messages(_, 0) :- !.
+relay_messages(Parent, Count) :-
+   receive({Message -> Parent ! relayed(Message)}),
+   Count1 is Count - 1,
+   relay_messages(Parent, Count1).
+
 test(next_wrong_order, Result == true) :-
    toplevel_spawn(Pid, [
        session(false),

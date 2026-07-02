@@ -4301,6 +4301,10 @@
         if (trimmed.charAt(0) === "'" && trimmed.charAt(trimmed.length - 1) === "'") {
           trimmed = trimmed.slice(1, -1);
         }
+        var markdown = /^\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(trimmed);
+        if (markdown) {
+          trimmed = markdown[2];
+        }
         if (trimmed.charAt(trimmed.length - 1) === "/") {
           trimmed = trimmed.slice(0, -1);
         }
@@ -5734,6 +5738,13 @@
               },
               consultSource: function(source, id) {
                 self.handleTutorialConsult(source, id);
+              },
+              appendSource: function(source, id) {
+                var current = self.prologText || "";
+                var combined = current.trim()
+                  ? current.replace(/\s*$/, "") + "\n\n" + String(source || "")
+                  : String(source || "");
+                self.handleTutorialConsult(combined, id);
               },
               loadExample: function(path) {
                 self.handleTutorialExternalExample(path);
@@ -9129,6 +9140,7 @@
                 try { Prolog.query("use_module(library(lists))").once(); } catch(e) {}
                 try { Prolog.query("use_module(library(apply))").once(); } catch(e) {}
                 try { Prolog.query("use_module(library(option))").once(); } catch(e) {}
+                var sharedDatabaseReady = self.installSwiWasmSharedDatabase(Prolog, Module);
                 // DOM access is the reason this compatibility model exists;
                 // preload the module rather than requiring every program to.
                 var _domOk = false;
@@ -9154,22 +9166,24 @@
                   _wasmOk = !!_opCheck;
                 } catch(e) {}
                 console.log("[SWI-INIT] library(wasm) := available:", _wasmOk);
-                // The SWI-WASM Prolog session is ready for ordinary
-                // queries now — resume the terminal immediately rather
-                // than waiting on the statechart preload below.
-                if (self.terminal) {
-                  self.terminal.set_prompt(self.basePrompt());
-                  self.terminal.resume();
-                }
-                self.log("info", "SWI-Prolog WASM runtime ready.", "swi-wasm");
-                self.fetchExamplesIndex();
-                // Lazy-load the statechart WASM modules in the
-                // background so the editor's Run button can drive
-                // charts via statechart_start/1.  Failure is non-fatal
-                // — the SWI-WASM Prolog session remains usable for
-                // ordinary queries.
-                self.preloadSwiWasmStatechart(Prolog, Module).then(function(ok) {
-                  console.log("[SWI-INIT] statechart_wasm loaded:", ok);
+                return sharedDatabaseReady.then(function() {
+                  // The SWI-WASM Prolog session is ready for ordinary
+                  // queries now — resume the terminal immediately rather
+                  // than waiting on the statechart preload below.
+                  if (self.terminal) {
+                    self.terminal.set_prompt(self.basePrompt());
+                    self.terminal.resume();
+                  }
+                  self.log("info", "SWI-Prolog WASM runtime ready.", "swi-wasm");
+                  self.fetchExamplesIndex();
+                  // Lazy-load the statechart WASM modules in the
+                  // background so the editor's Run button can drive
+                  // charts via statechart_start/1.  Failure is non-fatal
+                  // — the SWI-WASM Prolog session remains usable for
+                  // ordinary queries.
+                  self.preloadSwiWasmStatechart(Prolog, Module).then(function(ok) {
+                    console.log("[SWI-INIT] statechart_wasm loaded:", ok);
+                  });
                 });
               }).catch(function(err) {
                 if (self.terminal) {
@@ -9329,7 +9343,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260701-swi-wasm-2-r12";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260702-swi-wasm-2-r17";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9438,8 +9452,10 @@
             }
             return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
               return response.text().then(function(text) {
-                if (!response.ok && !text) {
-                  throw new Error("RPC failed: HTTP " + response.status);
+                if (!response.ok) {
+                  var detail = String(text || "").replace(/\s+/g, " ").trim();
+                  if (detail.length > 240) detail = detail.slice(0, 240) + "...";
+                  throw new Error("RPC failed: HTTP " + response.status + (detail ? ": " + detail : ""));
                 }
                 return text;
               });
@@ -10511,6 +10527,22 @@
               waiter.resolve(null);
             });
           },
+          installSwiWasmSharedDatabase: function(Prolog, Module) {
+            if (!Prolog || !Module || !Module.FS) {
+              return Promise.reject(new Error("SWI-WASM shared database requires the virtual filesystem"));
+            }
+            return fetch("/wasm/shared_db.pl", { cache: "no-store" }).then(function(response) {
+              if (!response.ok) {
+                throw new Error("HTTP " + response.status + " for /wasm/shared_db.pl");
+              }
+              return response.text();
+            }).then(function(sourceText) {
+              Module.FS.writeFile("/swi_wasm_shared_db.pl", sourceText);
+              Prolog.query("use_module(library(modules))").once();
+              Prolog.query("load_files('/swi_wasm_shared_db.pl',[module(wasm_shared_db),silent(true)])").once();
+              Prolog.query("add_import_module(user,wasm_shared_db,start)").once();
+            });
+          },
           swiWasmBehaviourProlog: function() {
             return [
               "% Browser-worker implementation of generic servers and supervisors.",
@@ -10677,7 +10709,8 @@
               "    supervisor_spawn/2, supervisor_spawn/3, supervisor_spawn_child/3,",
               "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
               "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
-              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
+              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3,",
+              "    load_private_source/1, restore_shared_db_imports/0",
               "]).",
               ":- op(800, xfx, !).",
               ":- op(200, xfx, @).",
@@ -10686,9 +10719,40 @@
               ":- op(100, fx, #).",
               ":- use_module(library(wasm)).",
               ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0).",
-              ":- dynamic deferred/1, io_target/1.",
+              ":- dynamic deferred/1, io_target/1, suppress_shared_override_warnings/0.",
+              ":- multifile user:message_hook/3.",
               "",
               "self(main).",
+              "",
+              "load_private_source(File) :-",
+              "    setup_call_cleanup(",
+              "        asserta(suppress_shared_override_warnings, Ref),",
+              "        user:consult(File),",
+              "        erase(Ref)",
+              "    ),",
+              "    restore_shared_db_imports.",
+              "",
+              "user:message_hook(redefined_procedure(_, _), warning, Lines) :-",
+              "    swi_wasm_actor_bridge:suppress_shared_override_warnings,",
+              "    member(url(File:_), Lines),",
+              "    atom(File),",
+              "    sub_atom(File, _, _, 0, 'swi_wasm_shared_db.pl').",
+              "",
+              "restore_shared_db_imports :-",
+              "    ( current_module(wasm_shared_db)",
+              "    -> forall(shadowing_empty_dynamic(Name, Arity), abolish(user:Name/Arity))",
+              "    ; true",
+              "    ).",
+              "",
+              "shadowing_empty_dynamic(Name, Arity) :-",
+              "    current_predicate(user:Name/Arity),",
+              "    atom(Name),",
+              "    functor(Head, Name, Arity),",
+              "    predicate_property(user:Head, dynamic),",
+              "    \\+ predicate_property(user:Head, imported_from(_)),",
+              "    predicate_property(user:Head, number_of_clauses(0)),",
+              "    predicate_property(wasm_shared_db:Head, number_of_clauses(_)),",
+              "    \\+ predicate_property(wasm_shared_db:Head, imported_from(_)).",
               "",
               "spawn(Goal) :- spawn(Goal, _).",
               "",
@@ -11883,7 +11947,7 @@
                 Prolog.query("consult('/swi_wasm_read_shim.pl')").once();
                 Module.FS.writeFile("/user_code.pl", codeToLoad);
                 self.swiWasmOutputBuffer = "";
-                Prolog.query("consult('/user_code.pl')").once();
+                Prolog.query("swi_wasm_actor_bridge:load_private_source('/user_code.pl')").once();
                 console.log("[SWI-QUERY] consult ok, output:", self.swiWasmOutputBuffer);
                 self.swiWasmOutputBuffer = "";
               } catch(e) { loadErr = e; console.error("[SWI-QUERY] consult threw:", e); }
@@ -12116,6 +12180,9 @@
               }
               if (compound.functor === "/" && args.length === 2) {
                 return this.formatSwiWasmValue(args[0]) + "/" + this.formatSwiWasmValue(args[1]);
+              }
+              if (compound.functor === "-" && args.length === 2) {
+                return this.formatSwiWasmValue(args[0]) + "-" + this.formatSwiWasmValue(args[1]);
               }
               if (args.length === 0) return this.formatSwiWasmAtom(compound.functor);
               return this.formatSwiWasmAtom(compound.functor) + "(" + args.map(function(arg) {

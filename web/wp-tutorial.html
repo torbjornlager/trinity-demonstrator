@@ -1087,6 +1087,154 @@ normal(Messages) :-
 </p>
 </section>
 
+<section id="tutorial-private-and-shared-knowledge">
+<h2>Shadowing</h2>
+
+<p>
+    A predicate defined in an actor's private database takes precedence over a
+    predicate with the same name and arity in the shared database. Thus, for an
+    unqualified call made from the actor's private database, Prolog first looks
+    for a private definition and otherwise continues to the shared database. We
+    say that the private predicate <em>shadows</em> the shared predicate.
+</p>
+
+<p>
+    In this example, the shared database contains the following price list and default
+    pricing rule:
+</p>
+
+<pre>list_price(widget, 100).
+list_price(gadget, 250).
+list_price(gizmo,  400).
+
+price(Item, Price) :-
+    list_price(Item, Price).</pre>
+
+<p>
+    An actor without a private definition of <code>price/2</code> uses the
+    shared rule:
+</p>
+
+<pre id="shadow-shared-price">?- price(widget, Price).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shadow-shared-price&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>The result is <code>Price = 100</code>.</p>
+
+<p>
+    We can give a newly spawned actor a private pricing policy by passing it
+    with the <code>load_text</code> option. The actor uses the private
+    <code>price/2</code>, but its call to <code>list_price/2</code> still
+    resolves to the shared facts:
+</p>
+
+<pre id="shadow-private-price">?- self(Self),
+   spawn(
+       ( price(widget, Price),
+         Self ! discounted_price(Price)
+       ),
+       _,
+       [ load_text("
+             price(Item, Price) :-
+                 list_price(Item, ListPrice),
+                 Price is ListPrice * 0.9.
+         ")
+       ]
+   ),
+   receive({discounted_price(Price) -&gt; true}).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shadow-private-price&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The result includes <code>Price = 90.0</code>. The precise form of the
+    process identifier bound to <code>Self</code> is implementation dependent.
+</p>
+
+<p>
+    The private pricing rule belongs only to the spawned actor. It neither
+    modifies the shared rule nor becomes part of the parent's private
+    database. Consequently, another actor spawned by the parent without that
+    <code>load_text</code> option uses the shared definition:
+</p>
+
+<pre id="shadow-ordinary-price">?- self(Self),
+   spawn(
+       ( price(widget, Price),
+         Self ! ordinary_price(Price)
+       ),
+       _
+   ),
+   receive({ordinary_price(Price) -&gt; true}).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shadow-ordinary-price&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>The result includes <code>Price = 100</code>.</p>
+
+<p>
+    Shadowing applies to a complete predicate, not to individual clauses. The
+    following actor receives a private <code>list_price/2</code> containing
+    only one fact:
+</p>
+
+<pre id="shadow-private-list">?- self(Self),
+   spawn(
+       ( findall(Item-Price,
+                 list_price(Item, Price),
+                 Prices),
+         Self ! private_prices(Prices)
+       ),
+       _,
+       [
+        load_text("list_price(widget, 80).")
+       ]
+   ),
+   receive({private_prices(Prices) -&gt; true}).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shadow-private-list&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>The result includes <code>Prices = [widget-80]</code>.</p>
+
+<p>
+    The private fact does not combine with the shared facts. Once the actor has
+    defined its own <code>list_price/2</code>, all shared clauses of
+    <code>list_price/2</code> are hidden from unqualified calls made from that
+    actor's private database. In particular, the actor does not obtain prices
+    for <code>gadget</code> or <code>gizmo</code>.
+</p>
+
+<p>
+    The shared database itself remains unchanged. The parent still sees the
+    complete shared price list:
+</p>
+
+<pre id="shadow-shared-list">?- findall(Item-Price,
+           list_price(Item, Price),
+           Prices).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shadow-shared-list&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The result is
+    <code>Prices = [widget-100, gadget-250, gizmo-400]</code>.
+</p>
+
+<p>
+    Shadowing is therefore local to an actor: it changes how that actor
+    resolves a predicate without modifying the node-provided knowledge seen
+    by other actors.
+</p>
+</section>
+
 <section id="tutorial-erlang-style-programming-examples">
 <h1>Programming with actors</h1>
 

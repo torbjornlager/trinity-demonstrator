@@ -1881,7 +1881,7 @@ node_statecharts_page(Request) :-
 
 %!  node_wasm_modules_page(+Request) is det.
 %
-%   Serve the allowlisted SWI-WASM statechart modules.
+%   Serve the allowlisted SWI-WASM Prolog sources.
 node_wasm_modules_page(Request) :-
     option(path_info(PathInfo), Request, ''),
     asset_relative_path(PathInfo, RelPath),
@@ -1890,7 +1890,7 @@ node_wasm_modules_page(Request) :-
 
 %!  node_wasm_module_file(+RelPath, -File) is semidet.
 %
-%   Resolve an allowlisted SWI-WASM statechart module.  The node can be
+%   Resolve an allowlisted SWI-WASM source.  The node can be
 %   loaded from prolog/web_prolog/, src/, or an interactive working
 %   directory; try the known repo layouts before giving up.
 node_wasm_module_file(RelPath, File) :-
@@ -1901,8 +1901,9 @@ node_wasm_module_file(RelPath, File) :-
 
 %!  wasm_module_file_name(+RelPath) is semidet.
 %
-%   True iff RelPath names one of the modules the SWI-WASM statechart
-%   port loads from /wasm/.
+%   True iff RelPath names one of the Prolog sources SWI-WASM loads from
+%   /wasm/.
+wasm_module_file_name('shared_db.pl').
 wasm_module_file_name('statechart_wasm.pl').
 wasm_module_file_name('statechart_wasm_model.pl').
 wasm_module_file_name('statechart_wasm_exec.pl').

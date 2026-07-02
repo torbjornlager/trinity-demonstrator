@@ -378,6 +378,124 @@
 </p>
 </section>
 
+<section id="tutorial-private-and-shared-knowledge">
+<h1>Private beliefs and shared knowledge &mdash; shadowing</h1>
+
+<p>
+    Any predicate defined in the private database will take precedence over
+    and <em>shadow</em> corresponding predicates in the shared database,
+    ensuring the child actor can operate with its own customized logic and
+    data. An unqualified call uses a private definition when one exists and
+    otherwise falls through to the shared database.
+</p>
+
+<p>
+    Suppose the shared database contains this price list and default pricing
+    rule:
+</p>
+
+<pre>list_price(widget, 100).
+list_price(gadget, 250).
+list_price(gizmo,  400).
+
+price(Item, Price) :- list_price(Item, Price).</pre>
+
+<p>Before adding any private code, we ask for the node-provided price:</p>
+
+<pre id="shared-price-default">?- price(widget, Price).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shared-price-default&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The answer is <code>Price = 100</code>. Now we load a private pricing policy
+    that gives this actor a ten-percent discount:
+</p>
+
+<pre id="private-price-policy">price(Item, Price) :-
+    list_price(Item, ListPrice),
+    Price is ListPrice * 0.9.</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#private-price-policy&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>The same unqualified query now resolves to the private <code>price/2</code>:</p>
+
+<pre id="private-price-query">?- price(widget, Price).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#private-price-query&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The answer is <code>Price = 90.0</code>. The private rule can still call
+    <code>list_price/2</code>, because that predicate has not been defined
+    privately and therefore resolves to the shared facts.
+</p>
+
+<p>
+    Private code is not inherited implicitly by another actor. The following
+    child has its own copy of the shared database but no private discount rule,
+    so it reports the original price:
+</p>
+
+<pre id="shared-price-child">?- self(Self),
+   spawn((price(widget, Price), Self ! child_price(Price)), _),
+   receive({child_price(Price) -&gt; true}).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#shared-price-child&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>The child reports <code>Price = 100</code>.</p>
+
+<p>
+    Shared and private clauses are not merged. We now load a single private
+    fact for <code>list_price/2</code>:<sup><a href="#shadowing-footnote-1">1</a></sup>
+</p>
+
+<pre id="private-list-price">list_price(widget, 80).</pre>
+
+<p class="ask-buttons">
+  <button onclick="consultAppend(&quot;#private-list-price&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>The private fact is found:</p>
+
+<pre id="private-list-price-widget">?- list_price(widget, Price).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#private-list-price-widget&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    But the shared clauses for <code>gadget</code> and <code>gizmo</code> are
+    hidden as well:
+</p>
+
+<pre id="private-list-price-gadget">?- list_price(gadget, Price).</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#private-list-price-gadget&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    This query fails. Shadowing operates on the complete predicate indicator
+    <code>list_price/2</code>, not on individual facts. The shared copy remains
+    unchanged and is still visible to actors that do not define their own
+    <code>list_price/2</code>.
+</p>
+
+<p id="shadowing-footnote-1">
+    <small><sup>1</sup> This fact is <em>added</em> to the actor's private
+    workspace; the discount rule loaded earlier is still present. Because
+    that rule calls <code>list_price/2</code>, which is now private, the actor
+    can henceforth price only a <code>widget</code>.</small>
+</p>
+</section>
+
 <section id="tutorial-movie-database" data-tutorial-sections="movie_database">
 <h1>Stateless calls to remote nodes</h1>
 
@@ -2576,6 +2694,15 @@ fridge2(_Other,      List, error(unknown_request), List).
         })) {
             tutorialUnavailable("consult");
         }
+    }
+    function consultAppend(id) {
+        var bridge = tutorialBridge();
+        var val = tutorialNodeText(id);
+        if (bridge && typeof bridge.appendSource === "function") {
+            bridge.appendSource(val, id);
+            return;
+        }
+        consult(id);
     }
     function paste(query) {
         var bridge = tutorialBridge();

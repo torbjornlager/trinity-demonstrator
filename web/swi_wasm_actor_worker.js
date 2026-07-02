@@ -176,6 +176,11 @@
     });
   }
 
+  function actorEnsureFinalFullStop(text) {
+    var source = String(text);
+    return /\.\s*$/.test(source) ? source : source + ".";
+  }
+
   function actorRpc(nodeText, goalText, templateText, offset, limit, loadText) {
     return actorRequest("rpc", {
       node: String(nodeText || ""),
@@ -337,6 +342,7 @@
   self.actorSpawnWithPid = actorSpawnWithPid;
   self.actorRemoteSpawn = actorRemoteSpawn;
   self.actorRemoteToplevelSpawn = actorRemoteToplevelSpawn;
+  self.actorEnsureFinalFullStop = actorEnsureFinalFullStop;
   self.actorRpc = actorRpc;
   self.actorPromiseStart = actorPromiseStart;
   self.actorPromiseWait = actorPromiseWait;
@@ -396,7 +402,24 @@
     }
     var path = String(fileName || "/worker_user_code.pl");
     Module.FS.writeFile(path, String(sourceText));
-    Prolog.query("consult(" + JSON.stringify(path) + ")").once();
+    Prolog.query("load_private_source(" + JSON.stringify(path) + ")").once();
+  }
+
+  function installSharedDatabase() {
+    if (!Module || !Module.FS) {
+      return Promise.reject(new Error("SWI-WASM shared database requires the virtual filesystem"));
+    }
+    return fetch("/wasm/shared_db.pl", { cache: "no-store" }).then(function(response) {
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status + " for /wasm/shared_db.pl");
+      }
+      return response.text();
+    }).then(function(sourceText) {
+      Module.FS.writeFile("/worker_shared_db.pl", sourceText);
+      Prolog.query("use_module(library(modules))").once();
+      Prolog.query("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])").once();
+      Prolog.query("add_import_module(user,wasm_shared_db,start)").once();
+    });
   }
 
   function installActorPredicates() {
@@ -408,6 +431,8 @@
       ":- op(1000, xfy, if).",
       ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0).",
       ":- dynamic deferred/1, io_target/1.",
+      ":- dynamic suppress_shared_override_warnings/0.",
+      ":- multifile user:message_hook/3.",
       workerRole === "shell_toplevel" ? ":- catch(redefine_system_predicate(read(_)), _, true)." : "",
       workerRole === "shell_toplevel" ? ":- catch(redefine_system_predicate(read_term(_, _)), _, true)." : "",
       workerRole === "shell_toplevel" ? "shell_toplevel_role." : "shell_toplevel_role :- fail.",
@@ -551,7 +576,7 @@
       "rpc_load_text(Options, Text) :-",
       "    member(load_text(Source), Options),",
       "    ( atom(Source) -> atom_string(Source, Text0) ; string(Source) -> Text0 = Source ; term_string(Source, Text0) ),",
-      "    ( sub_string(Text0, _, _, 0, '.') -> Text = Text0 ; string_concat(Text0, '.', Text) ).",
+      "    Text := actorEnsureFinalFullStop(#Text0).",
       "rpc_load_text(Options, Text) :-",
       "    member(load_list(Terms), Options),",
       "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
@@ -751,7 +776,7 @@
       "        '$call'(Goal, Options) ->",
       "            toplevel_run_call(Goal, Options, Target0, Pid) ;",
       "        '$reload' ->",
-      "            catch(consult('/worker_user_code.pl'), Error, send(Target0, error(Pid, Error))) ;",
+      "            catch(load_private_source('/worker_user_code.pl'), Error, send(Target0, error(Pid, Error))) ;",
       "        '$halt'(From) ->",
       "            send(From, reply(true)),",
       "            nb_setarg(1, Control, halt)",
@@ -900,6 +925,36 @@
       "",
       workerRole === "shell_toplevel" ? "read(Term) :- input(\"|:\", Term)." : "",
       workerRole === "shell_toplevel" ? "read_term(Term, _) :- input(\"|:\", Term)." : "",
+      "",
+      "load_private_source(File) :-",
+      "    setup_call_cleanup(",
+      "        asserta(suppress_shared_override_warnings, Ref),",
+      "        consult(File),",
+      "        erase(Ref)",
+      "    ),",
+      "    restore_shared_db_imports.",
+      "",
+      "user:message_hook(redefined_procedure(_, _), warning, Lines) :-",
+      "    suppress_shared_override_warnings,",
+      "    member(url(File:_), Lines),",
+      "    atom(File),",
+      "    sub_atom(File, _, _, 0, 'worker_shared_db.pl').",
+      "",
+      "restore_shared_db_imports :-",
+      "    ( current_module(wasm_shared_db)",
+      "    -> forall(shadowing_empty_dynamic(Name, Arity), abolish(user:Name/Arity))",
+      "    ; true",
+      "    ).",
+      "",
+      "shadowing_empty_dynamic(Name, Arity) :-",
+      "    current_predicate(user:Name/Arity),",
+      "    atom(Name),",
+      "    functor(Head, Name, Arity),",
+      "    predicate_property(user:Head, dynamic),",
+      "    \\+ predicate_property(user:Head, imported_from(_)),",
+      "    predicate_property(user:Head, number_of_clauses(0)),",
+      "    predicate_property(wasm_shared_db:Head, number_of_clauses(_)),",
+      "    \\+ predicate_property(wasm_shared_db:Head, imported_from(_)).",
       "",
       "with_io_target(Target, Goal) :-",
       "    asserta(io_target(Target), Ref),",
@@ -1099,11 +1154,13 @@
       installActorPredicates();
       inheritedSource = String(message.source || "");
       behaviourSource = String(message.behaviourSource || "");
-      consultSource(behaviourSource, "/worker_behaviour.pl");
-      consultSource(inheritedSource, "/worker_user_code.pl");
-      return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then(function() {
-        post("ready", {});
-        return runGoal(message.goal || "true");
+      return installSharedDatabase().then(function() {
+        consultSource(behaviourSource, "/worker_behaviour.pl");
+        consultSource(inheritedSource, "/worker_user_code.pl");
+        return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then(function() {
+          post("ready", {});
+          return runGoal(message.goal || "true");
+        });
       });
     }).catch(function(error) {
       flushOutput(true);

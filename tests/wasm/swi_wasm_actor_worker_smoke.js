@@ -140,6 +140,9 @@ async function main() {
      "RPC is delegated to the node controller");
   S.onmessage({ data: { command: "reply", id: rpcReq.id, ok: true, result: "success([v(b)],false)" } });
   ok((await rpcP) === "success([v(b)],false)", "RPC response text returns to Prolog");
+  ok(S.actorEnsureFinalFullStop("p(a).\n   ") === "p(a).\n   " &&
+     S.actorEnsureFinalFullStop("p(a)") === "p(a).",
+     "RPC load_text terminator detection ignores trailing whitespace");
 
   // Promise/yield starts the same RPC request without blocking Prolog, then
   // consumes its response through a stable numeric reference.

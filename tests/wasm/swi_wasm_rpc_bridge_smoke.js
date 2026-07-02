@@ -28,12 +28,24 @@ const nodeWsSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "prolog", "web_prolog", "node_ws.pl"),
   "utf8"
 );
+const nodeSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "prolog", "web_prolog", "node.pl"),
+  "utf8"
+);
+const sharedDbSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "shared_db.pl"),
+  "utf8"
+);
 const editorFrameSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "editor_frame.html"),
   "utf8"
 );
 const swiWasmTutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi-wasm-tutorial.html"),
+  "utf8"
+);
+const wpTutorialSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "wp-tutorial.html"),
   "utf8"
 );
 
@@ -72,6 +84,12 @@ ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
 ok(includes("window.swiEnsureFinalFullStop = function(text)") &&
    includes('"    Text := swiEnsureFinalFullStop(#S)."'),
    "multiline load_text preserves a terminating full stop before trailing whitespace");
+ok(workerSource.includes("function actorEnsureFinalFullStop(text)") &&
+   workerSource.includes('"    Text := actorEnsureFinalFullStop(#Text0)."'),
+   "worker RPC preserves a terminating full stop before trailing whitespace");
+ok(includes('if (!response.ok) {') &&
+   includes('throw new Error("RPC failed: HTTP " + response.status'),
+   "worker RPC reports non-success HTTP responses before Prolog parsing");
 ok(includes("window.swiAbortRpc();") &&
    includes('this.cancelSwiWasmMainActorWaiters("swi_wasm_abort") > 0') &&
    includes("if (!resumedSuspendedQuery)") &&
@@ -201,6 +219,10 @@ ok(includes('self.routeSwiWasmActorMessage("remote", message.target, message.mes
 ok(includes("var markdown = /^\\[(https?:\\/\\/[^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)$/.exec(node);") &&
    includes("return markdown[1];"),
    "SWI-WASM bridge normalizes markdown-link remote node URLs");
+ok(includes('var markdown = /^\\[(https?:\\/\\/[^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)$/.exec(trimmed);') &&
+   includes('trimmed = markdown[2];') &&
+   includes('window.swiResolveRpcBase = function(baseUri, loadUri)'),
+   "SWI-WASM RPC accepts pasted Markdown-link node URLs");
 ok(includes("finalizeSwiWasmWorkerActor: function") &&
    includes("self.finalizeSwiWasmWorkerActor(pid,") &&
    includes('"worker_error: "'),
@@ -257,6 +279,42 @@ ok(workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")
    workerSource.includes('consultSource(inheritedSource, "/worker_user_code.pl")') &&
    includes('currentSwiWasm2LoadText: function()'),
    "SWI-WASM-2 keeps runtime predicates separate from reloadable editor source");
+ok(workerSource.includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
+   workerSource.includes('return installSharedDatabase().then(function()') &&
+   workerSource.includes("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])") &&
+   workerSource.includes('add_import_module(user,wasm_shared_db,start)') &&
+   includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
+   nodeSource.includes("wasm_module_file_name('shared_db.pl').") &&
+   sharedDbSource.includes('list_price(widget, 100).'),
+   "every runtime imports an independent copy of the standalone SWI-WASM shared database");
+ok(workerSource.includes('restore_shared_db_imports') &&
+   workerSource.includes('shadowing_empty_dynamic(Name, Arity)') &&
+   workerSource.includes('predicate_property(user:Head, number_of_clauses(0))') &&
+   workerSource.includes('abolish(user:Name/Arity)'),
+   "worker source loading repairs accidental empty dynamic shadows");
+ok(workerSource.includes('load_private_source(') &&
+   workerSource.includes('user:message_hook(redefined_procedure(_, _), warning, Lines)') &&
+   workerSource.includes("sub_atom(File, _, _, 0, 'worker_shared_db.pl')") &&
+   workerSource.includes('suppress_shared_override_warnings') &&
+   includes('swi_wasm_actor_bridge:load_private_source'),
+   "intentional shared-predicate shadows suppress only their loader redefinition warnings");
+ok(includes('installSwiWasmSharedDatabase(Prolog, Module)') &&
+   includes("load_files('/swi_wasm_shared_db.pl',[module(wasm_shared_db),silent(true)])") &&
+   includes('swi_wasm_actor_bridge:load_private_source'),
+   "the optional main-thread model uses the same shared/private module boundary");
+ok(tutorialIncludes('id="tutorial-private-and-shared-knowledge"') &&
+   tutorialIncludes('price(Item, Price) :-') &&
+   tutorialIncludes('list_price(Item, ListPrice)') &&
+   tutorialIncludes('spawn((price(widget, Price), Self ! child_price(Price)), _)') &&
+   tutorialIncludes('consultAppend(&quot;#private-list-price&quot;)') &&
+   tutorialIncludes('Shadowing operates on the complete predicate indicator') &&
+   includes('appendSource: function(source, id)'),
+   "the SWI-WASM tutorial demonstrates private pricing over shared knowledge");
+ok(wpTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
+   wpTutorialSource.includes('id="shadow-private-price"') &&
+   wpTutorialSource.includes('load_text("list_price(widget, 80).")') &&
+   wpTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
+   "the Web Prolog tutorial demonstrates node-side private/shared shadowing");
 ok(workerSource.includes('redefine_system_predicate(read(_))') &&
    workerSource.includes('redefine_system_predicate(read_term(_, _))') &&
    workerSource.includes('read(Term) :- input(\\"|:\\", Term).') &&
@@ -307,6 +365,9 @@ ok(includes('typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(arg
 ok(includes('!this.isSwiWasmUnboundVariable(row[key])') &&
    includes('display[key] = this.formatSwiWasmValue(row[key])'),
    "SWI-WASM-2 omits unbound variables from successful binding rows");
+ok(includes('compound.functor === "-" && args.length === 2') &&
+   includes('this.formatSwiWasmValue(args[0]) + "-" + this.formatSwiWasmValue(args[1])'),
+   "SWI-WASM renders pair terms with infix minus notation");
 
 console.log(failures === 0
   ? "\nswi_wasm_rpc_bridge smoke: PASS"

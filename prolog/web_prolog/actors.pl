@@ -593,12 +593,18 @@ stop(Pid, Parent) :-
     forall(retract(link(GlobalPid, ChildPid)),
            exit(ChildPid, kill)),
     forall(hook_stop(GlobalPid), true),
-    down_reason(Pid, Reason),
-    forall(retract(monitor(Other, GlobalPid, Ref)),
-           Other ! down(Ref, GlobalPid, Reason)),
-    retractall(actor_public_namespace(Pid, _)),
-    retractall(pid_thread(Pid, _)),
-    retractall(thread_pid(_, Pid)).
+    %  Monitor delivery and pid removal form one lifecycle transaction.
+    %  monitor/2 and demonitor/2 use the same mutex, so either a monitor
+    %  is present here and receives exactly one down/3, or demonitor/2
+    %  removes it before delivery and can safely flush the mailbox.
+    with_mutex(actors_monitor_lifecycle,
+        (   down_reason(Pid, Reason),
+            forall(retract(monitor(Other, GlobalPid, Ref)),
+                   Other ! down(Ref, GlobalPid, Reason)),
+            retractall(pid_thread(Pid, _)),
+            retractall(thread_pid(_, Pid))
+        )),
+    retractall(actor_public_namespace(Pid, _)).
 
 
 %!  down_reason(+Pid, -Reason) is det.
@@ -684,22 +690,57 @@ monitor(Pid, Ref) :-
     self(Self),
     canonical_pid(Pid, CanonPid),
     make_ref(Ref),
+    with_mutex(actors_monitor_lifecycle,
+        install_monitor(Self, CanonPid, Ref, Outcome)),
+    deliver_missing_monitor(Outcome, Self, Ref, CanonPid).
+
+%!  install_monitor(+Watcher, +Pid, +Ref, -Outcome) is det.
+%
+%   Atomically install a monitor for a live local actor or for a target
+%   claimed by a distribution hook.  A pid that is already gone is not
+%   recorded: its watcher receives an immediate noproc notification.
+install_monitor(Self, CanonPid, Ref, installed) :-
+    monitor_target_alive(CanonPid),
+    !,
     assertz(monitor(Self, CanonPid, Ref)),
     forall(hook_monitor(Self, CanonPid, Ref), true).
+install_monitor(Self, CanonPid, Ref, installed) :-
+    findall(true, hook_monitor(Self, CanonPid, Ref), HookResults),
+    HookResults \== [],
+    !,
+    assertz(monitor(Self, CanonPid, Ref)).
+install_monitor(_, _, _, missing).
+
+monitor_target_alive(CanonPid) :-
+    pid_local(CanonPid, LocalPid),
+    (   LocalPid == main
+    ->  is_thread(main)
+    ;   pid_thread(LocalPid, ThreadId),
+        is_thread(ThreadId)
+    ).
+
+deliver_missing_monitor(installed, _, _, _).
+deliver_missing_monitor(missing, Self, Ref, CanonPid) :-
+    Self ! down(Ref, CanonPid, noproc).
 
 demonitor(Ref) :-
     demonitor(Ref, []).
 
 demonitor(Ref, Options) :-
-    retractall(monitor(_, _, Ref)),
-    forall(hook_demonitor(Ref), true),
+    with_mutex(actors_monitor_lifecycle,
+        (   retractall(monitor(_, _, Ref)),
+            forall(hook_demonitor(Ref), true)
+        )),
     (   option(flush, Options)
-    ->  receive({
-            down(Ref, _, _) ->
-                true
-        }, [timeout(0)])
+    ->  flush_monitor_down(Ref)
     ;   true
     ).
+
+flush_monitor_down(Ref) :-
+    receive({
+        down(Ref, _, _) ->
+            flush_monitor_down(Ref)
+    }, [timeout(0)]).
 
 %!  register(+Name, +Pid) is det.
 %

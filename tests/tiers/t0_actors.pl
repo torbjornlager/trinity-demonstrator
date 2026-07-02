@@ -366,6 +366,60 @@ test(demonitor_flush_discards_down, Result == clean) :-
        on_timeout(Result = clean)
    ]).
 
+test(monitor_dead_pid_reports_noproc, Reason == noproc) :-
+   spawn(true, Pid, [monitor(true)]),
+   receive({
+       down(Pid, Pid, true) -> true
+   }, [
+       timeout(1),
+       on_timeout(throw(missing_initial_down))
+   ]),
+   monitor(Pid, Ref),
+   receive({
+       down(Ref, Pid, Reason) -> true
+   }, [
+       timeout(1),
+       on_timeout(throw(missing_noproc_down))
+   ]).
+
+test(monitor_termination_race_never_loses_down) :-
+   forall(between(1, 100, _),
+          monitor_one_terminating_actor).
+
+monitor_one_terminating_actor :-
+   spawn(receive({stop -> true}), Pid, []),
+   Pid ! stop,
+   monitor(Pid, Ref),
+   receive({
+       down(Ref, Pid, Reason) ->
+           assertion(memberchk(Reason, [true, noproc]))
+   }, [
+       timeout(1),
+       on_timeout(throw(lost_monitor_down(Pid)))
+   ]).
+
+test(demonitor_flush_race_leaves_no_late_down) :-
+   forall(between(1, 100, _),
+          demonitor_one_terminating_actor),
+   sleep(0.05),
+   receive({
+       down(Ref, Pid, Reason) ->
+           throw(late_down_after_flush(Ref, Pid, Reason))
+   }, [timeout(0)]).
+
+demonitor_one_terminating_actor :-
+   spawn(receive({stop -> true}), Pid, []),
+   monitor(Pid, Ref),
+   Pid ! stop,
+   demonitor(Ref, [flush]).
+
+test(monitor_references_are_unique) :-
+   findall(Ref,
+           (between(1, 1000, _), make_ref(Ref)),
+           Refs),
+   sort(Refs, UniqueRefs),
+   same_length(Refs, UniqueRefs).
+
 test(spawned_child_inherits_io_target, Data == hello_io) :-
    self(Self),
    message_queue_create(Queue),

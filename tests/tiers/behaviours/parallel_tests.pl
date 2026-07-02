@@ -82,4 +82,25 @@ test(compound_goals) :-
     N1 == 5, N2 == 1.
 
 
+%% 12. Repeated fail-fast cleanup leaves neither results nor down events
+%%     behind, including messages racing with worker termination.
+test(fail_fast_cleanup_leaves_mailbox_empty) :-
+    % Other behaviour suites share the T3 process and may leave unrelated
+    % monitor notifications, so establish a clean baseline for this stress
+    % test before exercising parallel/1.
+    flush_parallel_mailbox,
+    sleep(0.05),
+    flush_parallel_mailbox,
+    forall(between(1, 100, _),
+           \+ parallel([fail, sleep(0.001)])),
+    sleep(0.05),
+    receive({
+        down(Ref, Pid, Reason) ->
+            throw(leaked_parallel_down(Ref, Pid, Reason));
+        Pid-Goal ->
+            throw(leaked_parallel_result(Pid, Goal))
+    }, [timeout(0)]),
+    flush_parallel_mailbox.
+
+
 :- end_tests(parallel).

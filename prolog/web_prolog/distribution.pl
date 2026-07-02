@@ -648,15 +648,17 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
     ->  true
     ;   Reason = unknown
     ),
-    node_controller:take_remote_monitors_for_pid(CompoundPid, Entries),
-    retractall(actors:monitor(_, CompoundPid, _)),
-    %  The remote pid is gone, so its target registration and any
-    %  link records that pointed to it are now stale.
-    node_controller:forget_remote_target(CompoundPid),
-    retractall(node_controller:remote_link_(_, CompoundPid)),
-    retractall(actors:link(_, CompoundPid)),
-    forall(member(monitor(Watcher, Ref), Entries),
-           send(Watcher, down(Ref, CompoundPid, Reason))).
+    with_mutex(actors_monitor_lifecycle,
+        (   node_controller:take_remote_monitors_for_pid(CompoundPid, Entries),
+            retractall(actors:monitor(_, CompoundPid, _)),
+            %  The remote pid is gone, so its target registration and any
+            %  link records that pointed to it are now stale.
+            node_controller:forget_remote_target(CompoundPid),
+            retractall(node_controller:remote_link_(_, CompoundPid)),
+            retractall(actors:link(_, CompoundPid)),
+            forall(member(monitor(Watcher, Ref), Entries),
+                   send(Watcher, down(Ref, CompoundPid, Reason)))
+        )).
 
 %!  parse_halted_reply(+Raw, -Term) is semidet.
 parse_halted_reply(Raw, Term) :-
@@ -707,12 +709,14 @@ remote_ws_connection_closed(NodeURL) :-
     %  reason=connection_closed to every watcher; drop target/link
     %  state for the disconnected node.  Also drain the actor
     %  module's monitor/3 table for those pids.
-    node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
-    forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
-           ( retractall(actors:monitor(_, CompoundPid, _)),
-             send(Watcher, down(Ref, CompoundPid, connection_closed))
-           )),
-    node_controller:drop_remote_state_for_node(NodeURL).
+    with_mutex(actors_monitor_lifecycle,
+        (   node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
+            forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
+                   ( retractall(actors:monitor(_, CompoundPid, _)),
+                     send(Watcher, down(Ref, CompoundPid, connection_closed))
+                   )),
+            node_controller:drop_remote_state_for_node(NodeURL)
+        )).
 
 ws_mutex(NodeURL, Prefix, Mutex) :-
     format(atom(Mutex), '~w::~w', [Prefix, NodeURL]).

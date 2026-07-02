@@ -130,7 +130,16 @@ canonical 3-arity term:
 where `Ref` is the monitor's reference (or `Pid` itself when
 `monitor(true)` was used at spawn time, per the convention in
 manual.html:210), `Pid` is the canonical pid that died, and
-`Reason` is a Prolog term describing the exit reason.
+`Reason` is a Prolog term describing the exit reason. The standard reasons
+are `true` (normal success), `false` (goal failure), `exception(Error)`
+(uncaught exception), and `noproc` (the pid was already gone when monitored);
+an explicit `exit/1-2` may supply any other term.
+
+Monitor registration, termination delivery, and `demonitor(Ref, [flush])`
+share one lifecycle transaction across the local and cross-node paths. Thus a
+monitor either receives exactly one `down/3`, or demonitoring removes it before
+delivery; `[flush]` then removes any notification already enqueued for `Ref`.
+Monitoring an already-dead pid produces `down(Ref, Pid, noproc)` immediately.
 
 ---
 

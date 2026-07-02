@@ -235,6 +235,45 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 
 `node/1`, `node/2`.
 
+### Operational Semantics
+
+`receive/1-2` scans mailbox messages in arrival order. For each message it
+tries receive clauses in textual order and commits to the first matching
+clause; a failing guard defers the message rather than consuming it. When a
+`timeout(Seconds)` expires, `receive/2` calls the `on_timeout(Goal)` option.
+The default timeout goal is `true`, so timeout expiry succeeds unless
+`on_timeout(fail)` (or another failing goal) is supplied explicitly.
+
+`monitor(Pid, Ref)` returns a fresh opaque reference. If `Pid` has already
+terminated, the caller immediately receives `down(Ref, Pid, noproc)`.
+Monitor installation, actor termination and `demonitor(Ref, [flush])` are
+serialized: either termination delivers one `down/3`, or demonitoring removes
+the monitor before delivery. The `[flush]` option removes any already-delivered
+`down/3` for `Ref`. Termination reasons use this vocabulary:
+
+- `true` — normal successful completion;
+- `false` — goal failure;
+- `exception(Error)` — uncaught exception;
+- `noproc` — the monitored pid was already gone;
+- any other term — an explicit `exit/1-2` reason.
+
+Toplevel paging is implemented with SWI-Prolog's `findnsols/4`, mutable
+`count(N)` limit cell and `nb_setarg/3`. Exact-multiple chunks are detected as
+final (`success(Pid, Slice, false)`). Both the limit and target cells are
+created before query execution so `$next` updates remain in force across
+backtracking. These are SWI-Prolog implementation techniques, not portable ISO
+Prolog guarantees.
+
+`server_upgrade/2` replaces a generic server's callback while preserving its
+current state term unchanged. An upgrade that changes the state representation
+therefore requires an explicit migration protocol; `server_upgrade/2` alone
+does not perform state conversion.
+
+`toplevel_abort/1` is deliberately host-specific: it maps the actor pid to its
+SWI-Prolog thread and uses `thread_signal/2` to throw the internal abort signal.
+This is an implementation-level escape hatch, not an operation expressible in
+the actor messaging primitives alone.
+
 ---
 
 ## Blacklisted (Not Available)
