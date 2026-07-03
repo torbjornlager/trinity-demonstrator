@@ -1963,6 +1963,36 @@ human(Who) :-
     The code passed in <code>load_text/1</code> is not installed permanently;
     it exists only for that remote call.
 </p>
+
+<p>
+    The same rules demonstrated in the
+    <a href="#tutorial-private-and-shared-knowledge">earlier shadowing
+    examples</a> apply to source shipped with <code>rpc/3</code>. Here the
+    temporary private definition of <code>price/2</code> shadows the remote
+    node's shared definition, while its call to <code>list_price/2</code>
+    still resolves to the shared price list on <code>n1</code>:
+</p>
+
+<pre id="rpc-shadow-price">?- rpc('https://n1.elfenbenstornet.se',
+       price(widget, Price),
+       [load_text("
+           price(Item, Price) :-
+               list_price(Item, ListPrice),
+               Price is ListPrice * 0.9.
+       ")]
+   ).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#rpc-shadow-price&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The result is <code>Price = 90.0</code>. As in the earlier examples, the
+    private rule exists only for this execution context: it neither changes
+    <code>n1</code>'s shared <code>price/2</code> nor affects later calls.
+</p>
 </section>
 
 <section id="tutorial-distributed-proof-trees">
