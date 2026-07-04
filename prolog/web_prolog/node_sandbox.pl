@@ -228,19 +228,20 @@ sandbox_prepare_source_options(Profile, GoalModule, Options0, Options) :-
 %   computed source options have become concrete.
 sandbox_prepare_public_spawn(Profile, GoalModule, Goal, Options0, Options) :-
     must_be(list, Options0),
+    option(source_module(SourceModule), Options0, GoalModule),
     (   public_runtime_support_goal(GoalModule, Goal)
     ->  true
     ;   profile_check_goal(Profile, GoalModule:Goal)
     ),
     profile_check_spawn_options(Profile, Options0),
-    profile_check_source_options(Profile, GoalModule, Options0),
+    profile_check_source_options(Profile, SourceModule, Options0),
     (   \+ sandbox_enabled
     ->  Options = Options0
     ;   in_temporary_module(
             Module,
             sandbox_prepare_module(Module, GoalModule),
             (
-                prepare_source_options(Profile, Module, GoalModule,
+                prepare_source_options(Profile, Module, SourceModule,
                                        Options0, Options),
                 (   public_runtime_support_goal(GoalModule, Goal)
                 ->  true

@@ -204,6 +204,15 @@ ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge-source&quot;)"'),
    "supervised fridge tutorial source has a Load control");
 ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"'),
    "supervised fridge upgrade source has a Load control");
+ok(includes('<div class="project-title">SXML code</div>') &&
+   includes('return this.isBrowserSwiWasmMode ||') &&
+   !includes('if (this.isSwiWasm2Mode) {\n              return false;\n            }'),
+   "the Examples drawer exposes SXML files in both SWI-WASM models");
+ok(includes("return this.loadTutorialSourceIntoWsSession(sourceText)") &&
+   includes("handleWsTutorialLoadEvent: function(event)") &&
+   includes('load_text: sourceText') &&
+   includes('goal: "true"'),
+   "tutorial Load extends the active session instead of replacing supervised actors");
 ok(includes("server_upgrade(To, Pred0, Options) :- collect_spawn_source(Options, Source)") &&
    includes("'$upgrade'(From, Ref, PlainPred, Source)") &&
    includes("server_upgrade(To, Pred0) :- server_upgrade_source(To, Pred0, '')"),
@@ -263,7 +272,7 @@ ok(includes('aria-label="About SWI-WASM execution models"') &&
    includes('document.getElementById("clampedHelpPopover")') &&
    includes('document.addEventListener("click", handleClick, true)'),
    "SWI-WASM model help is detailed and keyboard accessible");
-ok(includes('"ptcp(" + pid + ",terminal,true)"') &&
+ok(includes('"swi_wasm_actor_bridge:ptcp(" + pid + ",terminal,true)"') &&
    includes('"shell_toplevel"') &&
    includes('message.type === "shell_event"') &&
    workerSource.includes('message.command === "shell_call"') &&
@@ -275,10 +284,17 @@ ok(includes('entry.worker.terminate();') &&
    includes('Replacing only the shell Worker provides a') &&
    includes('this.swiWasm2ShellPid,\n              "",\n              "shell_toplevel"'),
    "SWI-WASM-2 hard abort replaces a blocked shell Worker at the same pid");
-ok(workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")') &&
+ok(workerSource.includes(':- module(swi_wasm_actor_bridge, [') &&
+   workerSource.includes('].concat(behaviourSource.split("\\n")).join("\\n")') &&
+   workerSource.includes('Prolog.query("use_module(\'/worker_actor_bridge.pl\')").once()') &&
+   workerSource.includes('Goal = user:PlainGoal') &&
+   workerSource.includes('strip_module(Goal0, GoalModule, PlainGoal)') &&
+   workerSource.includes('Goal = GoalModule:PlainGoal') &&
+   !workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")') &&
    workerSource.includes('consultSource(inheritedSource, "/worker_user_code.pl")') &&
+   workerSource.includes('swi_wasm_actor_bridge:load_private_source(') &&
    includes('currentSwiWasm2LoadText: function()'),
-   "SWI-WASM-2 keeps runtime predicates separate from reloadable editor source");
+   "SWI-WASM-2 keeps module-private runtime predicates separate from reloadable user source");
 ok(workerSource.includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
    workerSource.includes('return installSharedDatabase().then(function()') &&
    workerSource.includes("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])") &&
@@ -315,12 +331,13 @@ ok(wpTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    wpTutorialSource.includes('load_text("list_price(widget, 80).")') &&
    wpTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the Web Prolog tutorial demonstrates node-side private/shared shadowing");
-ok(workerSource.includes('redefine_system_predicate(read(_))') &&
+ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
+   workerSource.includes('redefine_system_predicate(read(_))') &&
    workerSource.includes('redefine_system_predicate(read_term(_, _))') &&
-   workerSource.includes('read(Term) :- input(\\"|:\\", Term).') &&
-   workerSource.includes('read_term(Term, _) :- input(\\"|:\\", Term).') &&
+   workerSource.includes('read(Term) :- swi_wasm_actor_bridge:input(\\"|:\\", Term).') &&
+   workerSource.includes('read_term(Term, _) :- swi_wasm_actor_bridge:input(\\"|:\\", Term).') &&
    workerSource.includes("atom(Prompt) -> atom_string(Prompt, PromptText)"),
-   "the worker shell routes read/1 and read_term/2 through its explicit prompt protocol");
+   "the user-module worker shell routes read/1 and read_term/2 through its explicit prompt protocol");
 ok(includes('source: String(extraSourceText || "")') &&
    !includes('extraSourceText || this.currentLoadText()'),
    "spawned SWI-WASM actors receive only explicit load_* source");
@@ -335,8 +352,9 @@ ok(actorExample("04 count_server.pl").includes("load_predicates([count_server/1]
    "actor examples explicitly transfer editor predicates to spawned workers");
 ok(includes("load_predicates([Pred/Arity])") &&
    !includes("wasm_user_source") &&
-   actorExample("13 fridge_server.pl").includes("load_predicates([fridge/4])"),
-   "WASM behaviours transfer declared callbacks without inheriting the editor");
+   actorExample("13 fridge_server.pl").includes("load_predicates([fridge/4])") &&
+   wpTutorialSource.includes("start(server(fridge, [initial_state([])]))"),
+   "supervised servers transfer callbacks across both actor boundaries");
 ok(includes("numbervars(Copy, 0, _, [singletons(true)])") &&
    workerSource.includes("numbervars(Copy, 0, _, [singletons(true)])"),
    "generated WASM source preserves singleton variables as anonymous");

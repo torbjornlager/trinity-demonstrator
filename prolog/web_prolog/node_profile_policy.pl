@@ -35,6 +35,8 @@ Explicit profile ceilings for node routes and submitted Web Prolog code.
 :- use_module(node_runtime_state, [current_node_value/2]).
 :- use_module(isolation, [source_options/3]).
 
+:- thread_local profile_source_module/1.
+
 :- setting(profile, atom, workbench, 'Node profile: workbench, relation, isobase, isotope, or actor').
 
 
@@ -150,7 +152,12 @@ profile_check_route(RouteId) :-
 profile_check_goal(Profile0, QualifiedGoal) :-
     normalize_profile(Profile0, Profile),
     must_be(callable, QualifiedGoal),
-    profile_check_goal_1(Profile, QualifiedGoal).
+    strip_module(QualifiedGoal, SourceModule, _),
+    setup_call_cleanup(
+        asserta(profile_source_module(SourceModule), Ref),
+        profile_check_goal_1(Profile, QualifiedGoal),
+        erase(Ref)
+    ).
 
 
 %!  profile_check_spawn_options(+Profile, +Options) is det.
@@ -287,7 +294,11 @@ profile_check_step_(toplevel_abort(Pid), Profile) :-
     ensure_goal_profile(Profile, toplevel_abort(Pid)).
 profile_check_step_(server_upgrade(To, Pred, Options), Profile) :-
     ensure_goal_profile(Profile, server_upgrade(To, Pred, Options)),
-    profile_check_source_options(Profile, actor, Options).
+    (   profile_source_module(SourceModule)
+    ->  true
+    ;   SourceModule = actor
+    ),
+    profile_check_source_options(Profile, SourceModule, Options).
 profile_check_step_(parallel(Goals), Profile) :-
     ensure_goal_profile(Profile, parallel(Goals)),
     profile_check_parallel_goals(Profile, Goals).

@@ -51,6 +51,7 @@ comment block below.
 
 :- use_module(actors).
 :- use_module(server_actor).
+:- use_module(isolation, [execution_source_module/2]).
 
 :- meta_predicate
        supervisor_spawn(:, -),
@@ -109,12 +110,13 @@ supervisor_spawn(ChildSpecs, Pid) :-
 
 supervisor_spawn(ChildSpecs0, Pid, Options) :-
     strip_module(ChildSpecs0, Caller, ChildSpecs),
+    execution_source_module(Caller, SourceModule),
     option(strategy(Strategy), Options, one_for_one),
     option(intensity(MaxR), Options, 1),
     option(period(MaxT), Options, 5),
-    maplist(normalise_child_spec(Caller), ChildSpecs, Specs),
+    maplist(normalise_child_spec(SourceModule), ChildSpecs, Specs),
     exclude(is_sup_option, Options, SpawnOpts0),
-    ensure_source_module(Caller, SpawnOpts0, SpawnOpts),
+    ensure_source_module(SourceModule, SpawnOpts0, SpawnOpts),
     State0 = sup(Strategy, MaxR, MaxT, [], []),
     spawn(sup_init(Specs, State0), Pid, SpawnOpts),
     (   option(name(Name), Options)
@@ -264,11 +266,30 @@ do_start_child(spec(Id, Start, Restart, Shutdown, Type),
 do_spawn_child(server(Pred, ServerOpts), Name, Pid) :- !,
     option(initial_state(State), ServerOpts, []),
     exclude(is_server_actor_opt, ServerOpts, ExtraOpts),
-    server_spawn(Pred, State, Pid, [name(Name), link(true) | ExtraOpts]).
+    ensure_callback_load(Pred, ExtraOpts, ChildOpts),
+    server_spawn(Pred, State, Pid,
+                 [name(Name), link(true) | ChildOpts]).
 do_spawn_child(Goal, _Name, Pid) :-
     spawn(Goal, Pid, [link(true)]).
 
 is_server_actor_opt(initial_state(_)).
+
+callback_load_option(Pred, load_predicates([Name/Arity])) :-
+    strip_module(Pred, _, PlainPred),
+    functor(PlainPred, Name, ExtraArity),
+    Arity is ExtraArity + 4.
+
+ensure_callback_load(_, Options, Options) :-
+    member(Option, Options),
+    server_source_option(Option),
+    !.
+ensure_callback_load(Pred, Options, [CallbackLoad|Options]) :-
+    callback_load_option(Pred, CallbackLoad).
+
+server_source_option(load_text(_)).
+server_source_option(load_list(_)).
+server_source_option(load_predicates(_)).
+server_source_option(load_uri(_)).
 
 
 %% -------------------------------------------------------------------

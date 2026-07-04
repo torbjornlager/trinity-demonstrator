@@ -5,12 +5,14 @@
 service(counter, meta(actor, protocol(count_v1))).
 service(pubsub_service, meta(actor, protocol(pubsub_v1))).
 
+
 echo_actor :-
     receive({
         echo(From, Msg) ->
             From ! echo(Msg),
             echo_actor
     }).
+
 
 count_actor(Count0) :-
     receive({
@@ -22,15 +24,7 @@ count_actor(Count0) :-
             true
     }).
 
-alarm :-
-    receive({
-        ring ->
-            writeln('Alarm ringing!'),
-            alarm ;
-        stop ->
-            true
-    }).
-
+/*
 fridge(FoodList0) :-
     receive({
         store(From, Food) ->
@@ -49,16 +43,19 @@ fridge(FoodList0) :-
             true
     }).
 
+
 fridge(store(Food), List, ok, [Food|List]).
 fridge(take(Food),  List, ok(Food), Rest) :-
     select(Food, List, Rest), !.
 fridge(take(_Food), List, not_found, List).
+
 
 fridge2(store(Food), List, ok, [Food|List]).
 fridge2(take(Food),  List, ok(Food), Rest) :-
     select(Food, List, Rest), !.
 fridge2(take(_Food), List, not_found, List).
 fridge2(_Other,      List, error(unknown_request), List).
+
 
 store(Pid, Food, Response) :-
     self(Self),
@@ -73,30 +70,4 @@ take(Pid, Food, Response) :-
     receive({
         Pid-Response -> true
     }).
-
-ping(0, Pong_Pid) :-
-    Pong_Pid ! finished,
-    format('Ping finished.~n', []).
-ping(N, Pong_Pid) :-
-    self(Self),
-    Pong_Pid ! ping(Self),
-    receive({
-        pong ->
-            format('Ping received pong.~n', [])
-    }),
-    N1 is N - 1,
-    ping(N1, Pong_Pid).
-
-pong :-
-    receive({
-        finished ->
-            format('Pong finished.~n', []) ;
-        ping(Ping_Pid) ->
-            format('Pong received ping.~n', []),
-            Ping_Pid ! pong,
-            pong
-    }).
-
-ping_pong :-
-    spawn(pong, Pong_Pid),
-    spawn(ping(3, Pong_Pid)).
+*/

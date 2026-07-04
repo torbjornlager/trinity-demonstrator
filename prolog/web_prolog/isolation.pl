@@ -2,6 +2,7 @@
    [ prepare_actor_module/3,    % +Module, +GoalModule, +Options
      spawn_body/6,              % +Pid, :Goal, +Options, :OnReady, :OnPrepError, :Runner
      actor_module/2,            % +Pid, -Module
+     execution_source_module/2, % +Fallback, -Module
      pid_module/2,              % +LocalPid, -Module
      prepared_goal/3,           % +Module, +Goal0, -Goal
      consult_load_list/1,       % +ListOfTerms
@@ -192,6 +193,22 @@ pid_module(Pid, Module) :-
 actor_module(Pid, Module) :-
     actors:pid_local(Pid, LocalPid),
     pid_module(LocalPid, Module).
+
+
+%!  execution_source_module(+Fallback, -Module) is det.
+%
+%   Resolve load_predicates/1 against the current actor's private module.
+%   Calls made by an ordinary main thread retain their lexical fallback
+%   module, while node toplevel actors use the session module in which their
+%   dynamically loaded editor source actually lives.
+
+execution_source_module(Fallback, Module) :-
+    actors:self(Self),
+    actor_module(Self, ActorModule),
+    (   ActorModule == user
+    ->  Module = Fallback
+    ;   Module = ActorModule
+    ).
 
 
 %!  prepare_actor_module(+Module, +GoalModule, +Options) is det.

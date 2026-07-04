@@ -1552,8 +1552,12 @@ pong :-
     }).
 
 ping_pong :-
-    spawn(pong, Pong_Pid),
-    spawn(ping(3, Pong_Pid)).
+    spawn(pong, Pong_Pid, [
+        load_predicates([pong/0])
+    ]),
+    spawn(ping(3, Pong_Pid), _, [
+        load_predicates([ping/2])
+    ]).
 </pre>
 
 <p class="ask-buttons">
@@ -2223,7 +2227,7 @@ ping(N, Pong_Pid) :-
     Pong_Pid ! ping(Self),
     receive({
         pong -&gt;
-            format('Ping received pong.~n', [])
+            format('Ping received pong.~n')
     }),
     N1 is N - 1,
     ping(N1, Pong_Pid).
@@ -2231,17 +2235,25 @@ ping(N, Pong_Pid) :-
 pong :-
     receive({
         finished -&gt;
-            format('Pong finished.~n', []) ;
+            format('Pong finished.~n') ;
         ping(Ping_Pid) -&gt;
+            format('Pong received ping.~n'),
             Ping_Pid ! pong,
             pong
     }).
 
 ping_pong_remote :-
     spawn(pong, Pong_Pid, [
-        node('{{actor_peer_host}}')
+        node('{{actor_peer_host}}'),
+        load_predicates([pong/0]),
+        monitor(true)
     ]),
-    spawn(ping(3, Pong_Pid)).
+    spawn(ping(3, Pong_Pid), Ping_Pid, [
+        load_predicates([ping/2]),
+        monitor(true)
+    ]),
+    receive({down(_,Pong_Pid, true) -> true}),
+    receive({down(_,Ping_Pid, true) -> true}).
 </pre>
 
 <p class="ask-buttons">
@@ -2370,7 +2382,9 @@ fridge(take(_Food), List, not_found, List).
 <p>
     Spawning a server through a supervisor takes a single call. The
     <code>restart(permanent)</code> option tells the supervisor to respawn
-    the server (with the empty initial state) if it ever crashes:
+    the server (with the empty initial state) if it ever crashes. The outer
+    source option loads <code>fridge/4</code> into the supervisor; the supervisor
+    then transfers its server callback to the child:
 </p>
 
 <pre id="srv-spawn">?- supervisor_spawn([

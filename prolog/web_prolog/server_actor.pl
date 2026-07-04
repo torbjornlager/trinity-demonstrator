@@ -60,8 +60,10 @@ server_spawn(Pred, State, Pid) :-
     server_spawn(Pred, State, Pid, []).
 
 server_spawn(Pred0, State, Pid, Options) :-
-    normalize_server_callback(Pred0, Pred),
-    strip_module(Pred, SourceModule, _),
+    normalize_server_callback(Pred0, Pred1),
+    strip_module(Pred1, CallbackModule, PlainPred),
+    server_callback_source_module(CallbackModule, PlainPred, SourceModule),
+    Pred = SourceModule:PlainPred,
     exclude(is_server_spawn_opt, Options, SpawnOpts0),
     ensure_source_module(SourceModule, SpawnOpts0, SpawnOpts),
     spawn(server_loop(Pred, State), Pid, SpawnOpts),
@@ -95,6 +97,17 @@ callback_head(PlainPred, Head) :-
     Arity is ExtraArity + 4,
     functor(Head, Name, Arity).
 
+server_callback_source_module(_Fallback, PlainPred, Module) :-
+    self(Self),
+    actor_module(Self, ActorModule),
+    callback_head(PlainPred, Head),
+    predicate_property(ActorModule:Head, number_of_clauses(Count)),
+    Count > 0,
+    \+ predicate_property(ActorModule:Head, imported_from(_)),
+    !,
+    Module = ActorModule.
+server_callback_source_module(Fallback, _, Fallback).
+
 
 %!  server_loop(+Pred, +State) is det.
 %
@@ -107,7 +120,7 @@ callback_head(PlainPred, Head) :-
 server_loop(Pred, State0) :-
     receive({
         '$call'(From, Ref, Request) ->
-            (   call(Pred, Request, State0, Response, State)
+            (   call_server_callback(Pred, Request, State0, Response, State)
             ->  From ! Ref-Response,
                 server_loop(Pred, State)
             ;   % A callback with no matching clause is a server crash,
@@ -132,6 +145,18 @@ server_loop(Pred, State0) :-
         '$stop'(From) ->
             From ! reply(true)
     }).
+
+call_server_callback(Pred, Request, State0, Response, State) :-
+    strip_module(Pred, _, PlainPred),
+    self(Self),
+    actor_module(Self, Module),
+    callback_head(PlainPred, Head),
+    (   predicate_property(Module:Head, number_of_clauses(Count)),
+        Count > 0
+    ->  Callback = Module:PlainPred
+    ;   Callback = Pred
+    ),
+    call(Callback, Request, State0, Response, State).
 
 
 %!  server_request(+To, +Request, -Response) is det.
@@ -224,7 +249,8 @@ server_upgrade(To, Pred0) :-
 
 server_upgrade(To, Pred0, Options) :-
     normalize_server_callback(Pred0, Pred),
-    strip_module(Pred, SourceModule, PlainPred),
+    strip_module(Pred, CallbackModule, PlainPred),
+    server_callback_source_module(CallbackModule, PlainPred, SourceModule),
     load_options_text(SourceModule, Options, Source),
     server_upgrade_source(To, PlainPred, Source).
 

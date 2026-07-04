@@ -2750,16 +2750,18 @@
               <div class="projects">
                 <div v-if="showTutorialExamples" class="project-group">
                   <div class="project-title">Tutorials</div>
-                  <ul class="project-list">
+                  <ul v-if="useWebPrologTutorial" class="project-list">
+                    <li class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         href="/wp-tutorial"
+                         @click.prevent="openTutorialDocument('/wp-tutorial')">Web Prolog Tutorial</a>
+                    </li>
+                  </ul>
+                  <ul v-else class="project-list">
                     <li class="project-list-item">
                       <a class="project-link tutorial-project-link"
                          href="/tutorial#tutorial-top"
                          @click.prevent="openTutorialSection('tutorial-top')">Web Prolog Tutorial</a>
-                    </li>
-                    <li v-if="showHistoricalTutorialExample" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/wp-tutorial"
-                         @click.prevent="openTutorialDocument('/wp-tutorial')">Web Prolog Tutorial (historical)</a>
                     </li>
                     <li class="project-list-item">
                       <a class="project-link tutorial-project-link"
@@ -2841,7 +2843,7 @@
                   </ul>
                 </div>
                 <div v-if="showStatechartExamples" class="project-group">
-                  <div class="project-title">Statechart XML (SXML)</div>
+                  <div class="project-title">SXML code</div>
                   <ul class="project-list">
                     <li v-for="example in statechartExamples"
                         :key="'statechart:' + example.url"
@@ -5038,6 +5040,12 @@
         };
       }
 
+      function useWebPrologTutorialForCurrentRuntime() {
+        var runtime = browserRuntimeRouteState();
+        var node = nodeLabelForUrl(window.location.origin).toLowerCase();
+        return runtime.main || runtime.worker || ["n3", "n4", "n5"].indexOf(node) >= 0;
+      }
+
       var app = Vue.createApp({
         data: function() {
           return {
@@ -5103,6 +5111,10 @@
             wsSpawnResolve: null,
             wsSpawnReject: null,
             wsSpawnTimer: null,
+            wsTutorialLoadPid: null,
+            wsTutorialLoadText: "",
+            wsTutorialLoadResolve: null,
+            wsTutorialLoadReject: null,
             logEntries: [],
             nextLogId: 1,
 	            deadPids: {},
@@ -5211,9 +5223,9 @@
             portalVersion: "0.2.0",
             tutorialSrc: (function() {
               var params = new URLSearchParams(window.location.search);
-              var base = params.get("tutorial") === "wp"
+              var base = useWebPrologTutorialForCurrentRuntime() || params.get("tutorial") === "wp"
                 ? "/wp-tutorial"
-                : (/^swi-wasm(?:-2)?$/.test(params.get("node") || "") ? "/swi-wasm-tutorial" : "/tutorial");
+                : "/tutorial";
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
             }()),
             handledTutorialDeepLink: "",
@@ -5341,7 +5353,7 @@
                 title: "N3",
                 profile: "ACTOR",
                 description: "The fully stateful node. It adds `/ws`, direct actor messaging, node-resident services, and the statechart demonstrator.",
-                sharedDb: "Common base plus the actor-common layer (`echo_actor/0`, `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`) and the n3 overlay (`mortal/1`, `human(socrates)` plus a distributed `human/1` clause that calls n4), with registered `counter` / `pubsub_service` services.",
+                sharedDb: "Common base plus the actor-common layer (`echo_actor/0`, `count_actor/1`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`) and the n3 overlay (`mortal/1`, `human(socrates)` plus a distributed `human/1` clause that calls n4), with registered `counter` / `pubsub_service` services.",
                 links: linksFor("N3")
               },
               {
@@ -5444,9 +5456,8 @@
           showTutorialExamples: function() {
             return this.hasWorkspacePane;
           },
-          showHistoricalTutorialExample: function() {
-            return this.isBrowserSwiWasmMode ||
-              nodeLabelForUrl(window.location.origin).toLowerCase() === "n5";
+          useWebPrologTutorial: function() {
+            return useWebPrologTutorialForCurrentRuntime();
           },
           showActorTutorialExamples: function() {
             return this.isBrowserSwiWasmMode ||
@@ -5462,13 +5473,8 @@
             return this.hasEditorPane;
           },
           showStatechartExamples: function() {
-            if (this.isSwiWasmMode) {
-              return true;
-            }
-            if (this.isSwiWasm2Mode) {
-              return false;
-            }
-            return this.nodeAnnouncedProfile === "actor" ||
+            return this.isBrowserSwiWasmMode ||
+                   this.nodeAnnouncedProfile === "actor" ||
                    this.nodeAnnouncedProfile === "workbench";
           },
 	          nodeAuthLabel: function() {
@@ -6555,7 +6561,7 @@
             return url.toString();
           },
           defaultTutorialPath: function() {
-            return this.isBrowserSwiWasmMode ? "/swi-wasm-tutorial" : "/tutorial";
+            return this.useWebPrologTutorial ? "/wp-tutorial" : "/tutorial";
           },
           currentTutorialPath: function() {
             try {
@@ -6968,7 +6974,32 @@
             this.selectDock("terminal");
             if (this.transportMode === "isotope") {
               if (this.isotopePid !== null) {
-                this.resetIsotopeTransport();
+                this.transientLoadText = "";
+                return this.requestJson("/toplevel_call", {
+                  method: "GET",
+                  logScope: "isotope",
+                  params: {
+                    pid: this.isotopePid,
+                    goal: "true",
+                    once: "true",
+                    limit: "1",
+                    format: "json",
+                    load_text: sourceText
+                  }
+                }).then(function(event) {
+                  if (!event || event.type !== "success") {
+                    throw new Error(describeJsonError(event || {}));
+                  }
+                  self.isotopeLoadedText = sourceText;
+                  self.terminal.echo("% Tutorial program loaded into current session.");
+                  self.focusTerminalSoon(true);
+                  return true;
+                }).catch(function(error) {
+                  self.log("error", "Tutorial consult failed: " + error.message, "tutorial");
+                  self.terminal.error(error.message);
+                  self.focusTerminalSoon(true);
+                  return false;
+                });
               }
               return this.ensureIsotopeSession(this.terminal, this.currentIsotopeGeneration()).then(function() {
                 self.terminal.echo("% Tutorial program loaded into current session.");
@@ -6984,7 +7015,17 @@
             }
             if (this.transportMode === "actor") {
               if (this.wsPid !== null) {
-                this.resetActorTransport();
+                this.transientLoadText = "";
+                return this.loadTutorialSourceIntoWsSession(sourceText).then(function() {
+                  self.terminal.echo("% Tutorial program loaded into current session.");
+                  self.focusTerminalSoon(true);
+                  return true;
+                }).catch(function(error) {
+                  self.log("error", "Tutorial consult failed: " + error.message, "tutorial");
+                  self.terminal.error(error.message);
+                  self.focusTerminalSoon(true);
+                  return false;
+                });
               }
               return this.ensureWsSession(this.terminal).then(function() {
                 self.terminal.echo("% Tutorial program loaded into current session.");
@@ -8664,7 +8705,7 @@
             this.pauseTerm(term);
             this.swiWasm2LoadedSource = this.currentSwiWasm2LoadText();
             this.spawnSwiWasmWorkerActor(
-              "ptcp(" + this.swiWasm2ShellPid + ",terminal,true)",
+              "swi_wasm_actor_bridge:ptcp(" + this.swiWasm2ShellPid + ",terminal,true)",
               this.swiWasm2LoadedSource,
               this.swiWasm2ShellPid,
               "",
@@ -8944,7 +8985,7 @@
             }
             try {
               this.spawnSwiWasmWorkerActor(
-                "ptcp(" + pid + ",terminal,true)",
+                "swi_wasm_actor_bridge:ptcp(" + pid + ",terminal,true)",
                 this.swiWasm2LoadedSource,
                 pid,
                 "",
@@ -9343,7 +9384,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260702-swi-wasm-2-r17";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260704-swi-wasm-2-r19";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10556,7 +10597,9 @@
               "",
               "behaviour_spawn_options(Pred, Arity, Options, SpawnOptions) :-",
               "    wasm_behaviour_source(Behaviour),",
-              "    append([load_text(Behaviour), load_predicates([Pred/Arity])], Options, SpawnOptions).",
+              "    ( callback_source_option(Options, Pred/Arity) -> CallbackOptions = [] ; CallbackOptions = [load_predicates([Pred/Arity])] ),",
+              "    append([load_text(Behaviour)|CallbackOptions], Options, SpawnOptions).",
+              "callback_source_option(Options, PI) :- member(load_predicates(PIs), Options), memberchk(PI, PIs).",
               "",
               "wasm_behaviour_source(Source) :- Source := swiWasmBehaviourSource().",
               "",
@@ -10709,8 +10752,7 @@
               "    supervisor_spawn/2, supervisor_spawn/3, supervisor_spawn_child/3,",
               "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
               "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
-              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3,",
-              "    load_private_source/1, restore_shared_db_imports/0",
+              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
               "]).",
               ":- op(800, xfx, !).",
               ":- op(200, xfx, @).",
@@ -10983,7 +11025,7 @@
               "        option(target(Target), Options, Self),",
               "        PidText := swiWasmActorReservePid(),",
               "        term_string(Pid, PidText),",
-              "        term_string(ptcp(Pid, Target, Session), GoalText),",
+              "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
               "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; SpawnedText == PidText )",
               "    ;   term_string(Node, NodeText),",
@@ -11036,12 +11078,13 @@
               "    ).",
               "",
               "state_2(Goal0, Template, Offset, Limit, Once, TargetBox, Pid, Answer) :-",
-              "    strip_module(Goal0, _, PlainGoal),",
+              "    strip_module(Goal0, GoalModule, PlainGoal),",
+              "    Goal = GoalModule:PlainGoal,",
               "    arg(1, TargetBox, Target),",
               "    with_io_target(Target,",
               "        (   Once == true",
-              "        ->  once(answer(PlainGoal, Template, Offset, Limit, Answer0))",
-              "        ;   answer(PlainGoal, Template, Offset, Limit, Answer0)",
+              "        ->  once(answer(Goal, Template, Offset, Limit, Answer0))",
+              "        ;   answer(Goal, Template, Offset, Limit, Answer0)",
               "        )),",
               "    apply_once_answer(Once, Answer0, Answer1),",
               "    add_pid(Answer1, Pid, Answer).",
@@ -12970,6 +13013,7 @@
             }
           },
           closeWs: function() {
+            this.cancelWsTutorialLoad("ACTOR session closed during tutorial load.");
             if (this.wsSpawnTimer) {
               clearTimeout(this.wsSpawnTimer);
               this.wsSpawnTimer = null;
@@ -12991,6 +13035,68 @@
             this.wsSpawnPromise = null;
             this.wsSpawnResolve = null;
             this.wsSpawnReject = null;
+          },
+          cancelWsTutorialLoad: function(message) {
+            if (this.wsTutorialLoadReject) {
+              this.wsTutorialLoadReject(new Error(message));
+            }
+            this.wsTutorialLoadPid = null;
+            this.wsTutorialLoadText = "";
+            this.wsTutorialLoadResolve = null;
+            this.wsTutorialLoadReject = null;
+          },
+          loadTutorialSourceIntoWsSession: function(sourceText) {
+            var self = this;
+            if (this.wsPid === null) {
+              return Promise.reject(new Error("No active ACTOR session."));
+            }
+            if (this.wsTutorialLoadResolve) {
+              return Promise.reject(new Error("A tutorial program is already loading."));
+            }
+            return new Promise(function(resolve, reject) {
+              self.wsTutorialLoadPid = self.wsPid;
+              self.wsTutorialLoadText = sourceText;
+              self.wsTutorialLoadResolve = resolve;
+              self.wsTutorialLoadReject = reject;
+              self.wsSend({
+                command: "toplevel_call",
+                pid: self.wsPid,
+                goal: "true",
+                once: true,
+                limit: 1,
+                load_text: sourceText
+              });
+            });
+          },
+          handleWsTutorialLoadEvent: function(event) {
+            var resolve;
+            var reject;
+            if (!this.wsTutorialLoadResolve || event.pid !== this.wsTutorialLoadPid) {
+              return false;
+            }
+            if (event.type === "success") {
+              resolve = this.wsTutorialLoadResolve;
+              this.wsLoadedText = this.wsTutorialLoadText;
+              this.wsTutorialLoadPid = null;
+              this.wsTutorialLoadText = "";
+              this.wsTutorialLoadResolve = null;
+              this.wsTutorialLoadReject = null;
+              resolve(true);
+              return true;
+            }
+            if (["failure", "timeout", "abort", "error"].indexOf(event.type) >= 0) {
+              reject = this.wsTutorialLoadReject;
+              this.wsTutorialLoadPid = null;
+              this.wsTutorialLoadText = "";
+              this.wsTutorialLoadResolve = null;
+              this.wsTutorialLoadReject = null;
+              reject(new Error(event.type === "error" ? describeJsonError(event) : "Tutorial load " + event.type + "."));
+              return true;
+            }
+            if (event.type === "down") {
+              this.cancelWsTutorialLoad("ACTOR session exited during tutorial load.");
+            }
+            return false;
           },
           ensureWsConnection: function() {
             var self = this;
@@ -13049,6 +13155,7 @@
                 if (generation !== self.wsGeneration) {
                   return;
                 }
+                self.cancelWsTutorialLoad("ACTOR socket closed during tutorial load.");
                 if (self.wsPid) {
                   var closeLogId = self.log("session", "ACTOR socket closed.", "actor");
                   self.recordSessionEvent("session", "Socket closed.", "actor", self.wsPid, closeLogId);
@@ -13114,6 +13221,9 @@
           },
           handleWsEvent: function(term, event, generation) {
             if (generation !== this.wsGeneration) {
+              return;
+            }
+            if (this.handleWsTutorialLoadEvent(event)) {
               return;
             }
             this.captureBindingsFromEvent(event);

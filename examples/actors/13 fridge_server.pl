@@ -51,7 +51,9 @@ fridge2(_Other,      List, error(unknown_request), List).
 % The supervisor runs in this toplevel's session. With restart(permanent)
 % it will respawn the server (with the empty initial_state) if it
 % crashes. The server is registered under the name `fridge`; in this
-% single-node setup that is enough for ordinary sends to find it.
+% single-node setup that is enough for ordinary sends to find it. The
+% supervisor receives the callback source and transfers it to its server
+% child.
 
 ?- supervisor_spawn([
        child(fridge, [

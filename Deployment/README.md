@@ -193,8 +193,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
   `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that calls n4
 - actor-common contents (shared with n4):
   `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
-  `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`,
-  `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`
+  `count_actor/1`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`
 - shared DB file:
   [`shared_db_n3.pl`](Deployment/shared_db_n3.pl)
 - local-only admin surface:

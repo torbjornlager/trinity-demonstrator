@@ -35,6 +35,7 @@
     sandbox_check_goal_with_source/4,
     sandbox_check_source_text/3,
     sandbox_check_source_options/3,
+    sandbox_prepare_public_spawn/5,
     normalize_sandbox_mode/2
 ]).
 :- use_module('../../../prolog/web_prolog/dollar_expansion.pl', [
@@ -781,6 +782,7 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Extra newline after query')),
             assertion(sub_string(PortalBody, _, _, _, 'Code coloring')),
             assertion(sub_string(PortalBody, _, _, _, 'Statechart XML')),
+            assertion(sub_string(PortalBody, _, _, _, '<div class="project-title">SXML code</div>')),
             assertion(sub_string(EditorFrameBody, _, _, _, 'Demonstrator Editor Frame')),
             assertion(sub_string(ActorExampleBody, _, _, _, 'count_server')),
             assertion(sub_string(ServiceExampleBody, _, _, _, 'pubsub_actor')),
@@ -3320,6 +3322,27 @@ test(sandbox_check_source_options_allows_load_predicates,
             isolation:load_option_text(test_node, load_predicates([rp/1]), SourceText)
         )).
 
+test(profile_check_server_upgrade_uses_goal_source_module) :-
+    profile_check_goal(
+        actor,
+        test_node:server_upgrade(fridge, rp,
+                                 [load_predicates([rp/1])])
+    ).
+
+test(sandbox_prepare_public_spawn_honors_source_module,
+     true(sub_string(SourceText, _, _, _, "rp(left)"))) :-
+    with_sandbox_mode(blacklist,
+        (
+            sandbox_prepare_public_spawn(
+                actor,
+                server_actor,
+                server_loop(test_node:rp, []),
+                [source_module(test_node), load_predicates([rp/1])],
+                Prepared
+            ),
+            member(load_text(SourceText), Prepared)
+        )).
+
 test(sandbox_check_source_text_blacklist_allows_spawn_with_load_predicates_defined_in_same_source) :-
     Source = "pong :- receive({finished -> true}).\nping_pong :- spawn(pong, _, [load_predicates([pong/0])]).\n",
     with_sandbox_mode(blacklist,
@@ -3945,6 +3968,92 @@ test(ws_actor_spawn_load_predicates_copies_session_assertions,
                 CallReply.data = [Row],
                 get_dict('Value', Row, Value),
                 get_dict('Reason', Row, Reason)
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
+        )).
+
+test(ws_tutorial_reload_preserves_supervised_server,
+     true((Stored == "ok", Taken == "ok(eggs)", Bad == "error(unknown_request)"))) :-
+    Fridge = "fridge(store(F),L,ok,[F|L]). fridge(take(F),L,ok(F),R):-select(F,L,R),!. fridge(take(_),L,not_found,L). fridge(_,_,_,_):-fail.",
+    Fridge2 = "fridge2(store(F),L,ok,[F|L]). fridge2(take(F),L,ok(F),R):-select(F,L,R),!. fridge2(take(_),L,not_found,L). fridge2(_,L,error(unknown_request),L).",
+    with_node_server_options([profile(actor), auth(dev), sandbox(off)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true)]",
+                    load_text:Fridge
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, Pid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:"true,supervisor_actor:supervisor_spawn([child(fridge,[start(server(fridge,[initial_state([])])),restart(permanent)])],Sup,[load_predicates([fridge/4])]),supervisor_actor:supervisor_which_children(Sup,[info(fridge,FridgePid,_,_)])",
+                    format:"json"
+                }),
+                ws_receive_json(WS, SupervisorReply),
+                assertion(SupervisorReply.type == "success"),
+                SupervisorReply.data = [SupervisorRow],
+                get_dict('Sup', SupervisorRow, SupervisorPid),
+                get_dict('FridgePid', SupervisorRow, FridgePid),
+                format(string(StoreGoal),
+                       "true,server_actor:server_request(~s,store(eggs),Stored)",
+                       [FridgePid]),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:StoreGoal,
+                    format:"json"
+                }),
+                ws_receive_json(WS, StoreReply),
+                assertion(StoreReply.type == "success"),
+                StoreReply.data = [StoreRow],
+                get_dict('Stored', StoreRow, Stored),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:"true",
+                    once:true,
+                    limit:1,
+                    load_text:Fridge2,
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [_]),
+                format(string(UpgradeGoal),
+                       "true,server_actor:server_upgrade(~s,fridge2,[load_predicates([fridge2/4])])",
+                       [FridgePid]),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:UpgradeGoal,
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [_]),
+                format(string(FinalGoal),
+                       "server_actor:server_request(~s,take(eggs),Taken),server_actor:server_request(~s,sore(milk),Bad)",
+                       [FridgePid, FridgePid]),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:FinalGoal,
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [FinalReply]),
+                FinalReply.data = [FinalRow],
+                get_dict('Taken', FinalRow, Taken),
+                get_dict('Bad', FinalRow, Bad),
+                format(string(HaltGoal),
+                       "true,supervisor_actor:supervisor_halt(~s)",
+                       [SupervisorPid]),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:HaltGoal,
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [_])
             ),
             catch(ws_close(WS, 1000, done), _, true)
         )).

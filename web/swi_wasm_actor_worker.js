@@ -359,10 +359,9 @@
   self.actorShellEvent = actorShellEvent;
   self.actorSetDoneReason = actorSetDoneReason;
   self.actorInput = actorInput;
-  self.swiWasmBehaviourSource = function() { return behaviourSource; };
   // A parent passes its complete runtime source to the coordinator when
-  // spawning a child.  Treat that inherited source as the child program;
-  // adding it as both behaviour and user source would duplicate clauses.
+  // spawning a child. The behaviour runtime is already installed in the
+  // bridge module, so it must not also be copied into the user program.
   self.swiWasmBehaviourSource = function() { return ""; };
 
   self.wasmStatechartTrace = function(text) {
@@ -402,7 +401,7 @@
     }
     var path = String(fileName || "/worker_user_code.pl");
     Module.FS.writeFile(path, String(sourceText));
-    Prolog.query("load_private_source(" + JSON.stringify(path) + ")").once();
+    Prolog.query("swi_wasm_actor_bridge:load_private_source(" + JSON.stringify(path) + ")").once();
   }
 
   function installSharedDatabase() {
@@ -424,6 +423,36 @@
 
   function installActorPredicates() {
     var bridgeSource = [
+      ":- module(swi_wasm_actor_bridge, [",
+      "    op(800, xfx, !),",
+      "    op(200, xfx, @),",
+      "    op(1000, xfy, if),",
+      "    self/1,",
+      "    spawn/1, spawn/2, spawn/3, spawn_worker_actor/2,",
+      "    actors/1, make_ref/1, canonical_pid/2,",
+      "    send/2, send/3, (!)/2, cancel/1,",
+      "    monitor/2, demonitor/1, demonitor/2,",
+      "    exit/1, exit/2,",
+      "    register/2, register_service/2,",
+      "    unregister/1, unregister_service/1,",
+      "    whereis/2, whereis_service/2,",
+      "    respond/2,",
+      "    toplevel_spawn/1, toplevel_spawn/2,",
+      "    toplevel_call/2, toplevel_call/3,",
+      "    toplevel_next/1, toplevel_next/2,",
+      "    toplevel_halt/2, toplevel_stop/1, toplevel_abort/1,",
+      "    statechart_spawn/1, statechart_spawn/2, statechart_halt/2, statechart_halt/3,",
+      "    output/1, output/2, terminal_output/1, terminal_output/2,",
+      "    input/2, input/3, with_io_target/2, flush/0,",
+      "    receive/1, receive/2,",
+      "    server_spawn/3, server_spawn/4, server_request/3, server_request/4,",
+      "    server_promise/3, server_promise/4, server_yield/2, server_yield/3, server_yield/4,",
+      "    server_upgrade/2, server_upgrade/3, server_halt/2, server_stop/2,",
+      "    supervisor_spawn/2, supervisor_spawn/3, supervisor_spawn_child/3,",
+      "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
+      "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
+      "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
+      "]).",
       ":- use_module(library(wasm)).",
       ":- use_module(library(option)).",
       ":- op(800, xfx, !).",
@@ -433,8 +462,6 @@
       ":- dynamic deferred/1, io_target/1.",
       ":- dynamic suppress_shared_override_warnings/0.",
       ":- multifile user:message_hook/3.",
-      workerRole === "shell_toplevel" ? ":- catch(redefine_system_predicate(read(_)), _, true)." : "",
-      workerRole === "shell_toplevel" ? ":- catch(redefine_system_predicate(read_term(_, _)), _, true)." : "",
       workerRole === "shell_toplevel" ? "shell_toplevel_role." : "shell_toplevel_role :- fail.",
       "",
       "self(" + selfPidText + ").",
@@ -498,7 +525,7 @@
       "    findall(ClauseText,",
       "            ( member(Name/Arity, Indicators),",
       "              functor(Head, Name, Arity),",
-      "              catch(clause(Head, Body), _, fail),",
+      "              catch(user:clause(Head, Body), _, fail),",
       "              (Body == true -> Clause = Head ; Clause = (Head :- Body)),",
       "              clause_source_text(Clause, ClauseText)",
       "            ),",
@@ -743,7 +770,7 @@
       "        PidPromise := actorReservePid(),",
       "        await(PidPromise, PidText),",
       "        term_string(Pid, PidText),",
-      "        term_string(ptcp(Pid, Target, Session), GoalText),",
+      "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
       "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
       "        await(Promise, SpawnedText),",
       "        SpawnedText == PidText",
@@ -769,7 +796,8 @@
       "    Control = control(continue),",
       "    receive({",
       "        '$call_text'(GoalText, Limit0, Offset, Once) ->",
-      "            term_string(Goal, GoalText, [variable_names(Bindings)]),",
+      "            term_string(PlainGoal, GoalText, [variable_names(Bindings)]),",
+      "            Goal = user:PlainGoal,",
       "            dict_create(Template, bindings, Bindings),",
       "            Options = [template(Template), limit(Limit0), offset(Offset), once(Once)],",
       "            toplevel_run_call(Goal, Options, Target0, Pid) ;",
@@ -806,12 +834,13 @@
       "            ).",
       "",
       "state_2(Goal0, Template, Offset, Limit, Once, TargetBox, Pid, Answer) :-",
-      "    strip_module(Goal0, _, PlainGoal),",
+      "    strip_module(Goal0, GoalModule, PlainGoal),",
+      "    Goal = GoalModule:PlainGoal,",
       "    arg(1, TargetBox, Target),",
       "    with_io_target(Target,",
       "        (   Once == true",
-      "        ->  once(answer(PlainGoal, Template, Offset, Limit, Answer0))",
-      "        ;   answer(PlainGoal, Template, Offset, Limit, Answer0)",
+      "        ->  once(answer(Goal, Template, Offset, Limit, Answer0))",
+      "        ;   answer(Goal, Template, Offset, Limit, Answer0)",
       "        )),",
       "    apply_once_answer(Once, Answer0, Answer1),",
       "    add_pid(Answer1, Pid, Answer).",
@@ -923,13 +952,10 @@
       "        term_string(Answer, AnswerText)",
       "    ).",
       "",
-      workerRole === "shell_toplevel" ? "read(Term) :- input(\"|:\", Term)." : "",
-      workerRole === "shell_toplevel" ? "read_term(Term, _) :- input(\"|:\", Term)." : "",
-      "",
       "load_private_source(File) :-",
       "    setup_call_cleanup(",
       "        asserta(suppress_shared_override_warnings, Ref),",
-      "        consult(File),",
+      "        user:consult(File),",
       "        erase(Ref)",
       "    ),",
       "    restore_shared_db_imports.",
@@ -1036,13 +1062,21 @@
       "    ;   subsumes_term(Head, Message),",
       "        Head = Message",
       "    )."
-    ].join("\n");
+    ].concat(behaviourSource.split("\n")).join("\n");
     Prolog.query("use_module(library(wasm))").once();
     Prolog.query("use_module(library(option))").once();
     try { Prolog.query("use_module(library(lists))").once(); } catch (_) {}
     try { Prolog.query("use_module(library(apply))").once(); } catch (_) {}
     Module.FS.writeFile("/worker_actor_bridge.pl", bridgeSource);
-    Prolog.query("consult('/worker_actor_bridge.pl')").once();
+    Prolog.query("use_module('/worker_actor_bridge.pl')").once();
+    if (workerRole === "shell_toplevel") {
+      Module.FS.writeFile("/worker_read_shim.pl",
+        ":- catch(redefine_system_predicate(read(_)), _, true).\n" +
+        ":- catch(redefine_system_predicate(read_term(_, _)), _, true).\n" +
+        "read(Term) :- swi_wasm_actor_bridge:input(\"|:\", Term).\n" +
+        "read_term(Term, _) :- swi_wasm_actor_bridge:input(\"|:\", Term).\n");
+      Prolog.query("consult('/worker_read_shim.pl')").once();
+    }
   }
 
   function runGoal(goalText) {
@@ -1151,11 +1185,10 @@
     }).then(function(module) {
       Module = module;
       Prolog = module.prolog;
-      installActorPredicates();
       inheritedSource = String(message.source || "");
       behaviourSource = String(message.behaviourSource || "");
+      installActorPredicates();
       return installSharedDatabase().then(function() {
-        consultSource(behaviourSource, "/worker_behaviour.pl");
         consultSource(inheritedSource, "/worker_user_code.pl");
         return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then(function() {
           post("ready", {});
