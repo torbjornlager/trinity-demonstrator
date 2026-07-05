@@ -61,6 +61,11 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! input([a, red, box]).
 
 ?- $Pid ! input([blue]).
@@ -68,5 +73,7 @@
 ?- $Pid ! input([a, big, box]).
 
 ?- $Pid ! input([a, small, box]).
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

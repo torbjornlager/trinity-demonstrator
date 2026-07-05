@@ -73,6 +73,11 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! says(color(red)).
 
 ?- $Pid ! says(color(blue)).
@@ -80,5 +85,7 @@
 ?- $Pid ! says(size(small)).
 
 ?- $Pid ! says(size(big)).
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

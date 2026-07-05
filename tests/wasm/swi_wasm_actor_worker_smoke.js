@@ -86,6 +86,17 @@ async function main() {
   try { await sendP2; } catch (_e) { rejected = true; }
   ok(rejected, "reply (not ok) rejects the request");
 
+  // Browser-node references use the same opaque ten-digit numeric form as
+  // deployed nodes. The coordinator allocates them globally so separate
+  // actor Workers cannot mint colliding local counters.
+  const refP = S.actorMakeRef();
+  const refReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "make_ref";
+  }).pop();
+  ok(!!refReq, "make_ref is delegated to the node controller");
+  S.onmessage({ data: { command: "reply", id: refReq.id, ok: true, result: "7928403267" } });
+  ok((await refP) === "7928403267", "make_ref returns an opaque numeric reference");
+
   // 7. Requests that carry a target pid must not be overwritten by the
   // worker's own pid.  Seed selfPidText via the invalid-start path so the
   // test remains dependency-free and does not import the SWI-WASM bundle.

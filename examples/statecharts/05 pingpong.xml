@@ -30,3 +30,15 @@
         </state>
     </parallel>
 </statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

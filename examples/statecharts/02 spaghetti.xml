@@ -52,6 +52,11 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! a.
 
 ?- $Pid ! b.
@@ -67,5 +72,7 @@
 ?- $Pid ! g.
 
 ?- $Pid ! h.
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

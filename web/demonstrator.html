@@ -653,20 +653,9 @@
         top: 50%;
         transform: translate(-50%, -50%);
         width: min(40vw, 440px);
-        max-width: calc(100% - 220px);
+        max-width: calc(100% - 120px);
         min-width: 0;
         text-align: center;
-      }
-
-      .editor-toolbar-actions {
-        margin-left: auto;
-      }
-
-      .editor-toolbar .terminal-action,
-      .logger-toolbar .terminal-action {
-        height: 22px;
-        padding: 0 1.6mm;
-        font-size: 10px;
       }
 
       .wb-button {
@@ -1321,7 +1310,7 @@
         flex-wrap: wrap;
         min-height: 46px;
         box-sizing: border-box;
-        padding: 10px 12px;
+        padding: 8px 12px;
         border-top: 1px solid var(--line);
         border-color: var(--tinted-area-line);
         background: var(--logger-filter-bg);
@@ -1342,6 +1331,10 @@
       .logger-chip input {
         transform: scale(0.9);
         margin: 0;
+      }
+
+      .logger-filters-clear {
+        margin-left: auto;
       }
 
       .logger-list {
@@ -2865,22 +2858,6 @@
               <div v-if="hasEditorPane && workspaceTab !== 'tutorial'" class="editor-toolbar-source">
                 <span class="editor-source-label" :title="editorPanelTitle">{{ editorPanelTitle }}</span>
               </div>
-              <div class="wb-toolbar-group editor-toolbar-actions"
-                   v-if="hasEditorPane && (editorKind === 'statechart' || (isSwiWasmMode && swiWasmStatechartActive))">
-                <button class="terminal-action call"
-                        v-if="editorKind === 'statechart'"
-                        type="button"
-                        tabindex="-1"
-                        @mousedown.prevent
-                        @click="runStatechart"
-                        :disabled="!canRunStatechart">Run</button>
-                <button class="terminal-action stop"
-                        type="button"
-                        tabindex="-1"
-                        @mousedown.prevent
-                        @click="haltStatechart"
-                        :disabled="!canHaltStatechart">Halt</button>
-              </div>
             </div>
             <div class="wb-workspace-main">
               <div class="wb-content">
@@ -3047,13 +3024,6 @@
                   <div class="wb-toolbar-group">
                     <span class="logger-title">Logger</span>
                   </div>
-                  <div class="wb-toolbar-group">
-                    <button class="terminal-action clear"
-                            type="button"
-                            tabindex="-1"
-                            @mousedown.prevent
-                            @click="clearLogger">Clear</button>
-                  </div>
                 </div>
                 <div ref="loggerList" class="logger-list">
                   <div v-for="entry in filteredLogs"
@@ -3078,6 +3048,11 @@
                     <input type="checkbox" v-model="visibleLogKinds" :value="filter.id" @change="handleLoggerFilterChange(filter.id)">
                     <span>{{ filter.label }}</span>
                   </label>
+                  <button class="terminal-action clear logger-filters-clear"
+                          type="button"
+                          tabindex="-1"
+                          @mousedown.prevent
+                          @click="clearLogger">Clear</button>
                 </div>
               </div>
             </div>
@@ -3908,6 +3883,7 @@
       var PORTAL_THEME_COOKIE_NAME = "wp_theme_mode";
       var PORTAL_REPOSITORY_URL = "https://github.com/torbjornlager/book-poc";
       var PORTAL_BOOK_MANUSCRIPT_URL = "https://trinity.elfenbenstornet.se/book.html";
+      var EXAMPLES_PREFERRED_WIDTH_PX = 260;
 
       window.webPrologTerminalConvertLinks = true;
       window.webPrologTerminalHighlightPredicates = false;
@@ -4963,6 +4939,56 @@
         return out;
       }
 
+      function rewriteEditorLoadTextAware(text, replacement) {
+        var out = "";
+        var i = 0;
+        var next;
+        var ch;
+        var match;
+        var count = 0;
+        var invalidCount = 0;
+        while (i < text.length) {
+          ch = text.charAt(i);
+          if (ch === "'" || ch === "\"" || ch === "`") {
+            next = scanQuotedText(text, i);
+            out += text.slice(i, next);
+            i = next;
+            continue;
+          }
+          if (ch === "%") {
+            next = scanLineCommentText(text, i);
+            out += text.slice(i, next);
+            i = next;
+            continue;
+          }
+          if (ch === "/" && text.charAt(i + 1) === "*") {
+            next = scanBlockCommentText(text, i);
+            out += text.slice(i, next);
+            i = next;
+            continue;
+          }
+          if ((i === 0 || !/[A-Za-z0-9_]/.test(text.charAt(i - 1))) &&
+              text.slice(i, i + 9) === "load_text") {
+            match = /^load_text\s*\(\s*<editor>\s*\)/.exec(text.slice(i));
+            if (match) {
+              out += replacement;
+              i += match[0].length;
+              count += 1;
+              continue;
+            }
+          }
+          if (text.slice(i, i + 8) === "<editor>") {
+            invalidCount += 1;
+            out += "<editor>";
+            i += 8;
+            continue;
+          }
+          out += ch;
+          i += 1;
+        }
+        return { text: out, count: count, invalidCount: invalidCount };
+      }
+
       function renderOutputData(data) {
         var text = String(data);
         if (text.length >= 2 && text.charAt(0) === '"' && text.charAt(text.length - 1) === '"') {
@@ -5070,7 +5096,7 @@
             splitDragTarget: null,
             splitDragPointerId: null,
             examplesVisible: true,
-            examplesWidthPx: 297,
+            examplesWidthPx: EXAMPLES_PREFERRED_WIDTH_PX,
             examplesSplitDrag: false,
             examplesSplitDragTarget: null,
             examplesSplitDragPointerId: null,
@@ -5161,7 +5187,7 @@
             ],
             monoFontWeightOptions: [300, 400, 500, 600],
             monoLineHeight: 1.45,
-            visibleLogKinds: ["trace", "transport"],
+            visibleLogKinds: ["info", "trace", "transport"],
             recentQueries: [],
             profileMenuOpen: false,
             historyMenuOpen: false,
@@ -5246,7 +5272,7 @@
             swiWasmPagingStopped: false,
             swiWasmActorWorkers: {},
             swiWasmReservedWorkerActorPids: {},
-            swiWasmNextActorRefId: 1,
+            swiWasmReservedActorRefs: {},
             swiWasmNextActorDelayId: 1,
             swiWasmActorMainMailbox: [],
             swiWasmActorMainWaiters: [],
@@ -5376,10 +5402,11 @@
           },
           loggerFilters: function() {
             var filters = [
+              { id: "info", label: "Info" },
               { id: "transport", label: "API traffic" }
             ];
             if (this.nodeAnnouncedProfile === "actor" || this.nodeAnnouncedProfile === "workbench") {
-              filters.unshift({ id: "trace", label: "SXML trace" });
+              filters.splice(1, 0, { id: "trace", label: "SXML trace" });
             }
             return filters;
           },
@@ -5407,7 +5434,10 @@
           filteredLogs: function() {
             var self = this;
             return this.logEntries.filter(function(entry) {
-              return self.visibleLogKinds.indexOf(entry.kind) >= 0;
+              var filterKind = entry.kind === "trace" || entry.kind === "transport"
+                ? entry.kind
+                : "info";
+              return self.visibleLogKinds.indexOf(filterKind) >= 0;
             });
           },
           transportModeLabel: function() {
@@ -5497,28 +5527,6 @@
               return false;
             }
             return this.queryState === "query" || this.queryState === "prompt";
-          },
-          canRunStatechart: function() {
-            return this.editorKind === "statechart"
-              && !this.isSwiWasm2Mode
-              && this.canSubmitNewQuery
-              && !this.swiWasmChartPending
-              && (this.transportMode === "actor" || this.isSwiWasmMode);
-          },
-          canHaltStatechart: function() {
-            if (!this.canSubmitNewQuery) {
-              return false;
-            }
-            if (this.isSwiWasmMode) {
-              return this.swiWasmStatechartActive;
-            }
-            if (this.editorKind !== "statechart") {
-              return false;
-            }
-            if (this.transportMode !== "actor") {
-              return false;
-            }
-            return !!this.statechartStopCommand();
           },
           canLoadHistory: function() {
             return !!this.terminal && !this.terminalBusy && this.queryState === "query";
@@ -5664,6 +5672,9 @@
           window.addEventListener("pointerup", this.stopSplitDrag);
           window.addEventListener("resize", this.handleWindowResize);
           window.addEventListener("focus", this.handleWindowFocus);
+          this.$nextTick(function() {
+            this.handleWindowResize();
+          }.bind(this));
           this.runInitialTutorialDeepLink();
           try {
             this.reportInteraction({ event: "portal_view", route: "portal" });
@@ -6189,6 +6200,7 @@
           },
           restoreLoggerFilters: function() {
             var stored = window.localStorage.getItem("wb.visibleLogKinds");
+            var storedVersion = window.localStorage.getItem("wb.visibleLogKindsVersion");
             var knownKinds = this.loggerFilters.map(function(filter) {
               return filter.id;
             });
@@ -6209,8 +6221,12 @@
                 knownKinds.indexOf(kind) >= 0 &&
                 array.indexOf(kind) === index;
             });
+            if (storedVersion !== "2" && parsed.indexOf("info") < 0) {
+              parsed.unshift("info");
+            }
             if (parsed.length) {
               this.visibleLogKinds = parsed;
+              this.persistLoggerFilters();
             }
           },
           isTraceLoggingEnabled: function() {
@@ -6249,6 +6265,7 @@
           },
           persistLoggerFilters: function() {
             window.localStorage.setItem("wb.visibleLogKinds", JSON.stringify(this.visibleLogKinds));
+            window.localStorage.setItem("wb.visibleLogKindsVersion", "2");
           },
           syncTracePreferenceToLiveSessions: function() {
             var enabled = this.isTraceLoggingEnabled();
@@ -7269,17 +7286,6 @@
             }
             return null;
           },
-          statechartStopCommand: function() {
-            var pid;
-            if (!Object.prototype.hasOwnProperty.call(this.lastBindings, "Pid")) {
-              return null;
-            }
-            pid = String(this.lastBindings.Pid);
-            if (!this.isPidLike(pid) || this.deadPids[pid]) {
-              return null;
-            }
-            return "statechart_halt($Pid, Reply, 1).";
-          },
           setPendingCompletionMessage: function(message, kind) {
             this.pendingCompletionMessage = message == null ? null : String(message);
             this.pendingCompletionKind = kind == null ? null : String(kind);
@@ -7421,6 +7427,71 @@
               }
             });
           },
+          prologQuotedText: function(text) {
+            return "'" + String(text == null ? "" : text)
+              .replace(/\\/g, "\\\\")
+              .replace(/'/g, "''") + "'";
+          },
+          reportEditorPlaceholderError: function(term, message) {
+            if (term && typeof term.error === "function") {
+              term.error(message);
+            }
+            this.log("warn", message, "editor");
+          },
+          prepareEditorCommand: function(command, term) {
+            var value = String(command == null ? "" : command);
+            var inspected = rewriteEditorLoadTextAware(value, "load_text(<editor>)");
+            var xml;
+            var rewritten;
+            var label;
+            var notice;
+            if (inspected.invalidCount > 0) {
+              this.reportEditorPlaceholderError(
+                term,
+                "The <editor> placeholder is only valid as load_text(<editor>)."
+              );
+              return null;
+            }
+            if (inspected.count === 0) {
+              return { command: value, snapshotText: null, placeholderCount: 0 };
+            }
+            if (this.editorKind !== "statechart") {
+              this.reportEditorPlaceholderError(
+                term,
+                "load_text(<editor>) requires an active SXML editor."
+              );
+              return null;
+            }
+            xml = this.currentStatechartText();
+            if (!xml || xml.trim() === "") {
+              this.reportEditorPlaceholderError(term, "The active SXML editor is empty.");
+              return null;
+            }
+            rewritten = rewriteEditorLoadTextAware(
+              value,
+              "load_text(" + this.prologQuotedText(xml) + ")"
+            );
+            label = this.currentEditorSourceDirty()
+              ? "<scratch-buffer>"
+              : this.currentEditorSourceLabel();
+            label = String(label || "<scratch-buffer>").replace(/\s+/g, " ").trim();
+            notice = "% <editor> expanded from \"" + label.replace(/\"/g, "\\\"") +
+              "\".";
+            if (term && typeof term.echo === "function") {
+              term.echo(notice, {
+                exec: false,
+                convertLinks: false,
+                formatters: false
+              });
+            }
+            this.log("ui", notice.slice(2), "editor");
+            return {
+              command: rewritten.text,
+              snapshotText: xml,
+              placeholderCount: rewritten.count,
+              notice: notice
+            };
+          },
           submitWorkbenchCommand: function(command, displayText) {
             if (!this.terminal || !this.canSubmitNewQuery) {
               if (this.terminal) {
@@ -7437,10 +7508,9 @@
             // Up-arrow history: jquery.terminal only records commands that
             // come through its own Enter handler, so menu-driven submissions
             // (Examples, editor Run, ...) would otherwise be invisible to
-            // Up-arrow recall.  Push the command here too -- but only when
-            // the displayed text matches the actual command, since callers
-            // like runStatechart pass a redacted display ("[...]") for an
-            // expanded goal that users would not want recalled verbatim.
+            // Up-arrow recall. Commands containing <editor> stay in their
+            // visible, reusable form; prepareEditorCommand snapshots and
+            // expands them only for the current submission.
             if (this.terminal && typeof this.terminal.history === "function"
                 && (displayText === command || displayText === undefined)) {
               try { this.terminal.history().append(command); } catch (_) {}
@@ -7469,41 +7539,6 @@
             this.echoTerminalCommand(this.terminal, command, promptText);
             this.handleTerminalCommand(command, this.terminal);
             this.focusTerminalSoon();
-          },
-          runStatechart: function() {
-            if (!this.canRunStatechart) {
-              return;
-            }
-            var xml = this.currentStatechartText();
-            var payload;
-            if (!xml || xml.trim() === "") {
-              this.log("warn", "Statechart editor is empty.");
-              return;
-            }
-            if (this.isSwiWasmMode) {
-              this.runSwiWasmStatechart(xml);
-              return;
-            }
-            var escaped = xml.replace(/\\/g, "\\\\").replace(/'/g, "''");
-            var opts = ["load_text('" + escaped + "')", "monitor(true)"];
-            var goal = "statechart_spawn(Pid, [" + opts.join(", ") + "]).";
-            if (this.submitWorkbenchCommand(goal, "statechart_spawn(Pid, [...]).")) {
-              payload = this.exampleSpawnInteractionPayload("statechart", this.transportMode, "editor");
-              if (payload) {
-                this.reportInteraction(payload);
-              }
-            }
-          },
-          haltStatechart: function() {
-            if (this.isSwiWasmMode) {
-              this.haltSwiWasmStatechart();
-              return;
-            }
-            var goal = this.statechartStopCommand();
-            if (!goal) {
-              return;
-            }
-            this.submitWorkbenchCommand(goal, goal);
           },
           nextTerminalAction: function() {
             if (!this.terminal || !this.canRequestNext) {
@@ -8749,10 +8784,15 @@
             var combined = this.queryBuffer === ""
               ? commandLine
               : this.queryBuffer + "\n" + commandLine;
+            var prepared;
             var rawGoal;
             var unresolvedDollarVars;
             this.queryBuffer = "";
-            rawGoal = combined.replace(/\s*\.\s*$/, "");
+            prepared = this.prepareEditorCommand(combined, term);
+            if (!prepared) {
+              return;
+            }
+            rawGoal = prepared.command.replace(/\s*\.\s*$/, "");
             this.lastDollarVars = this.extractDollarVars(rawGoal);
             unresolvedDollarVars = this.unresolvedDollarVars();
             if (unresolvedDollarVars.length > 0) {
@@ -9281,7 +9321,7 @@
               return self.receiveSwiWasmActorMessage(timeoutSeconds);
             };
             window.swiWasmActorMakeRef = function() {
-              return "ref(" + self.swiWasmNextActorRefId++ + ")";
+              return self.reserveSwiWasmActorRef();
             };
             window.swiWasmActorActors = function() {
               return self.swiWasmActorListText();
@@ -9371,9 +9411,36 @@
                 randomValue = Math.floor(Math.random() * span);
               }
               pid = String(min + (randomValue % span));
-            } while (this.swiWasmActorWorkers[pid] || this.swiWasmReservedWorkerActorPids[pid]);
+            } while (this.swiWasmActorWorkers[pid] ||
+                     this.swiWasmReservedWorkerActorPids[pid] ||
+                     this.swiWasmReservedActorRefs[pid]);
             this.swiWasmReservedWorkerActorPids[pid] = true;
             return pid;
+          },
+          reserveSwiWasmActorRef: function() {
+            var min = 1000000000;
+            var span = 9000000000;
+            var max53 = 9007199254740992;
+            var unbiasedLimit = max53 - (max53 % span);
+            var root = typeof globalThis !== "undefined" ? globalThis : window;
+            var ref;
+            var randomValue;
+            do {
+              if (root.crypto && typeof root.crypto.getRandomValues === "function") {
+                do {
+                  var values = new Uint32Array(2);
+                  root.crypto.getRandomValues(values);
+                  randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];
+                } while (randomValue >= unbiasedLimit);
+              } else {
+                randomValue = Math.floor(Math.random() * span);
+              }
+              ref = String(min + (randomValue % span));
+            } while (this.swiWasmActorWorkers[ref] ||
+                     this.swiWasmReservedWorkerActorPids[ref] ||
+                     this.swiWasmReservedActorRefs[ref]);
+            this.swiWasmReservedActorRefs[ref] = true;
+            return ref;
           },
           spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText, nameText, roleText, startFields) {
             var self = this;
@@ -9384,7 +9451,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260704-swi-wasm-2-r19";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260705-swi-wasm-2-r21";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10056,6 +10123,9 @@
               switch (String(message.action || "")) {
               case "reserve_pid":
                 result = this.reserveSwiWasmWorkerActorPid();
+                break;
+              case "make_ref":
+                result = this.reserveSwiWasmActorRef();
                 break;
               case "spawn":
                 result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "", message.name || "");
@@ -11671,108 +11741,6 @@
               self.drainSwiWasmStatechartEventQueue();
             });
           },
-          // Run a statechart in SWI-WASM mode.  Equivalent in spirit to
-          // runStatechart()'s actor-mode `statechart_spawn(Pid, [...])`
-          // but synchronous and PID-less. The Logger records state and
-          // trace detail; the terminal is reserved for chart output.
-          runSwiWasmStatechart: function(xml) {
-            var self = this;
-            var Prolog = self.swiWasmProlog;
-            var term = self.terminal;
-            if (!Prolog) {
-              self.log("error", "SWI-Prolog WASM runtime not ready yet.", "swi-wasm");
-              if (term) term.echo("% SWI-Prolog WASM runtime not ready yet.");
-              return;
-            }
-            if (!self.swiWasmStatechartLoaded) {
-              self.selectDock("terminal");
-              term = self.terminal;
-              if (term) term.echo("% Loading statechart WASM modules...");
-              self.preloadSwiWasmStatechart(Prolog, self.swiWasmModule).then(function(ok) {
-                if (ok) {
-                  self.runSwiWasmStatechart(xml);
-                  return;
-                }
-                self.log("error", "Statechart WASM modules not loaded.", "swi-wasm");
-                if (term) {
-                  term.echo("% Statechart WASM modules not available.");
-                  if (self.swiWasmStatechartLoadError) {
-                    term.echo("% " + self.swiWasmStatechartLoadError);
-                  }
-                }
-              });
-              return;
-            }
-            if (!self.canSubmitNewQuery) {
-              self.log("warn", "Finish the current interaction before starting a new chart.", "swi-wasm");
-              if (term) term.echo("% Finish the current interaction before starting a new chart.");
-              return;
-            }
-            self.selectDock("terminal");
-            term = self.terminal;
-            // If a previous chart halted on its own (reached a final
-            // state, exhausted its budget, ...) but its exit actions
-            // were never run, clean up before starting the new one.
-            // statechart_stop is synchronous (no await) and a no-op
-            // when nothing is running, so .once() is safe here.  A
-            // chart that's still genuinely running can't reach this
-            // point: canRunStatechart is gated on
-            // !swiWasmChartPending, which stays true for the entire
-            // duration of the previous chart's forEach.
-            try { Prolog.query("statechart_wasm:statechart_stop").once(); } catch(_) {}
-            self.swiWasmOutputBuffer = "";
-            self.swiWasmStatechartDelayedQueue = [];
-            // Mark active eagerly so a fresh Run click can't re-enter
-            // while we're still inside the async start.  We'll refine
-            // the value once the start resolves.
-            self.swiWasmStatechartActive = true;
-            // Pending for the entire lifetime of the forEach below,
-            // including any time spent suspended in await/2 (sleep).
-            // Gates canRunStatechart and runSwiWasmQuery so nothing
-            // re-enters the engine while it may be mid-step.
-            self.swiWasmChartPending = true;
-
-            // Output streaming.  Time-driven charts call sleep/1 and
-            // therefore stay inside statechart_start for as long as
-            // they're running.  Anything written to user_output during
-            // that time would otherwise only reach the terminal once
-            // the chart halts.  Drain the buffer to the terminal on a
-            // short timer and clean up when the chart resolves.
-            self.startSwiWasmOutputStreaming();
-            if (term) {
-              term.echo("% Starting chart...");
-            }
-
-            // statechart_start/1 may yield through await/2 if the
-            // chart calls sleep/1.  Use forEach (returns a Promise)
-            // instead of .once() so the engine can suspend and resume
-            // across JS event-loop turns.
-            Prolog.forEach("statechart_wasm:statechart_start(text(XML))", { XML: xml }, function() {})
-              .then(function() {
-                self.swiWasmChartPending = false;
-                self.stopSwiWasmOutputStreaming();
-                self.drainSwiWasmOutputToTerminal();
-                var reasonQ = Prolog.query("statechart_wasm:statechart_halt_reason(R)").once();
-                var reason = (reasonQ && reasonQ.R) || "unknown";
-                self.swiWasmStatechartActive = (reason === "running");
-                if (reason === "running") {
-                  self.captureBindingsFromRows([{ Pid: "statechart" }]);
-                }
-                var payload = self.exampleSpawnInteractionPayload("statechart", "swi-wasm", "editor");
-                if (payload) {
-                  self.reportInteraction(payload);
-                }
-                self.drainSwiWasmStatechartEventQueue();
-              })
-              .catch(function(err) {
-                self.swiWasmChartPending = false;
-                self.stopSwiWasmOutputStreaming();
-                self.drainSwiWasmOutputToTerminal();
-                self.swiWasmStatechartActive = false;
-                self.log("error", "statechart_start failed: " + String(err), "swi-wasm");
-                if (term) term.echo("% Statechart start failed: " + String(err));
-              });
-          },
           startSwiWasmOutputStreaming: function() {
             var self = this;
             if (self._swiWasmOutputTimer) return;
@@ -11795,51 +11763,6 @@
             if (this.terminal) {
               this.terminal.echo(buf.replace(/\n$/, ""));
             }
-          },
-          haltSwiWasmStatechart: function() {
-            var Prolog = this.swiWasmProlog;
-            if (!Prolog) return;
-            if (!this.swiWasmChartPending) {
-              // No forEach is in flight, so the engine is idle and it's
-              // safe to call statechart_stop synchronously: it runs the
-              // current configuration's onexit actions and records
-              // last_halt_reason(stopped).
-              try {
-                Prolog.query("statechart_wasm:statechart_stop").once();
-              } catch(e) {
-                this.log("warn", "Halt failed: " + String(e), "swi-wasm");
-              }
-              this.swiWasmStatechartActive = false;
-              this.swiWasmStatechartDelayedQueue = [];
-              if (this.lastBindings.Pid === "statechart") {
-                delete this.lastBindings.Pid;
-              }
-              this.drainSwiWasmOutputToTerminal();
-              return;
-            }
-            // The chart is suspended inside an await/2 (e.g. sleep/1
-            // mid-tick).  We can't issue a full statechart_stop
-            // synchronously without re-entering Prolog while the engine
-            // is mid-step.  Instead, just retract running/0 and record
-            // the halt reason; when the pending await resolves, the
-            // next iteration of run_to_quiescence will see \+ running
-            // and exit cleanly (without running onexit actions — the
-            // chart is being torn down, not exited normally).  The
-            // forEach Promise's .then() clears swiWasmChartPending.
-            try {
-              Prolog.query("retractall(statechart_wasm:running)").once();
-              Prolog.query("retractall(statechart_wasm:last_halt_reason(_)), assertz(statechart_wasm:last_halt_reason(stopped))").once();
-            } catch(e) {
-              this.log("warn", "Halt signal failed: " + String(e), "swi-wasm");
-            }
-            this.swiWasmStatechartActive = false;
-            this.swiWasmStatechartDelayedQueue = [];
-            if (this.lastBindings.Pid === "statechart") {
-              delete this.lastBindings.Pid;
-            }
-            // Don't echo immediately; the running forEach's .then will
-            // print "% Statechart halted by user." when the chart
-            // actually wakes up and observes the retracted running.
           },
           loadSwiWasmExamples: function() {
             var examples = [
@@ -12311,30 +12234,15 @@
             this.splitLeftPx = parsed;
           },
           restoreExamplesLayout: function() {
-            var storedWidth = window.localStorage.getItem("wb.examplesWidthPx");
             var storedVisible = window.localStorage.getItem("wb.examplesVisible");
-            var storedVersion = window.localStorage.getItem("wb.examplesWidthVersion");
-            var parsedWidth;
             if (storedVisible === "0") {
               this.examplesVisible = false;
             } else if (storedVisible === "1") {
               this.examplesVisible = true;
             }
-            if (!storedWidth) {
-              return;
-            }
-            parsedWidth = parseInt(storedWidth, 10);
-            if (!Number.isFinite(parsedWidth)) {
-              return;
-            }
-            if (storedVersion !== "5") {
-              parsedWidth = 297;
-              window.localStorage.setItem("wb.examplesWidthPx", "297");
-            }
-            if (storedVersion !== "5") {
-              window.localStorage.setItem("wb.examplesWidthVersion", "5");
-            }
-            this.examplesWidthPx = Math.max(220, parsedWidth);
+            this.examplesWidthPx = EXAMPLES_PREFERRED_WIDTH_PX;
+            window.localStorage.removeItem("wb.examplesWidthPx");
+            window.localStorage.removeItem("wb.examplesWidthVersion");
           },
           restoreLoggerLayout: function() {
             var storedWidth = window.localStorage.getItem("wb.loggerWidthPx");
@@ -12356,8 +12264,6 @@
           },
           persistExamplesLayout: function() {
             window.localStorage.setItem("wb.examplesVisible", this.examplesVisible ? "1" : "0");
-            window.localStorage.setItem("wb.examplesWidthPx", String(this.examplesWidthPx));
-            window.localStorage.setItem("wb.examplesWidthVersion", "5");
           },
           persistLoggerLayout: function() {
             window.localStorage.setItem("wb.loggerVisible", this.loggerVisible ? "1" : "0");
@@ -12365,9 +12271,6 @@
           },
           toggleExamples: function() {
             this.examplesVisible = !this.examplesVisible;
-            if (this.examplesVisible && this.examplesWidthPx < 220) {
-              this.examplesWidthPx = 297;
-            }
             this.persistExamplesLayout();
             this.$nextTick(function() {
               this.handleWindowResize();
@@ -12394,21 +12297,6 @@
               var maxLeft = rect.width - runtimeMin - 12;
               if (Number.isFinite(maxLeft) && maxLeft > 360 && this.splitLeftPx > maxLeft) {
                 this.splitLeftPx = maxLeft;
-              }
-            }
-            if (this.$refs.workspaceShell) {
-              var workspaceRect = this.$refs.workspaceShell.getBoundingClientRect();
-              var minEditor = 320;
-              var minExamples = 220;
-              var maxExamples = workspaceRect.width - 36 - minEditor;
-              if (Number.isFinite(maxExamples)) {
-                if (maxExamples > minExamples && this.examplesWidthPx > maxExamples) {
-                  this.examplesWidthPx = maxExamples;
-                } else if (maxExamples <= minExamples) {
-                  this.examplesWidthPx = Math.max(0, maxExamples);
-                } else if (this.examplesWidthPx < minExamples) {
-                  this.examplesWidthPx = minExamples;
-                }
               }
             }
             if (this.$refs.runtimePanel) {
@@ -12599,7 +12487,13 @@
               return;
             }
             if (trimmed === ":help") {
-              term.echo(":help\n:clear\n<goal>.\n;\n");
+              term.echo(
+                ":help\n" +
+                ":clear\n" +
+                "<goal>.\n" +
+                ";\n" +
+                "load_text(<editor>)  snapshot the active SXML editor\n"
+              );
               this.log("ui", "Terminal help requested.");
               return;
             }

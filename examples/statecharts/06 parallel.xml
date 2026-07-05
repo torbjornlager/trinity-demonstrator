@@ -48,6 +48,13 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! e.
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

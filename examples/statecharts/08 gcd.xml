@@ -35,6 +35,13 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! input([25, 10, 15, 30]).
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

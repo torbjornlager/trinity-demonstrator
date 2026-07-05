@@ -42,10 +42,17 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! e.
 
 ?- $Pid ! d.
 
 ?- $Pid ! f.
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

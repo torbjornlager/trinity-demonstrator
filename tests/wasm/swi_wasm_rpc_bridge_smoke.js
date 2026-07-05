@@ -24,6 +24,12 @@ function actorExample(name) {
     "utf8"
   );
 }
+function statechartExample(name) {
+  return fs.readFileSync(
+    path.join(__dirname, "..", "..", "examples", "statecharts", name),
+    "utf8"
+  );
+}
 const nodeWsSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "prolog", "web_prolog", "node_ws.pl"),
   "utf8"
@@ -70,6 +76,14 @@ function editorIncludes(text) {
 function tutorialIncludes(text) {
   return swiWasmTutorialSource.includes(text);
 }
+
+const editorRewriteSource = source.slice(
+  source.indexOf("function scanQuotedText"),
+  source.indexOf("function renderOutputData")
+);
+const rewriteEditorLoadTextAware = Function(
+  editorRewriteSource + "\nreturn rewriteEditorLoadTextAware;"
+)();
 
 ok(includes("window.swiRpcGetAsync = function(url)"),
    "paged RPC has an asynchronous fetch helper");
@@ -208,6 +222,77 @@ ok(includes('<div class="project-title">SXML code</div>') &&
    includes('return this.isBrowserSwiWasmMode ||') &&
    !includes('if (this.isSwiWasm2Mode) {\n              return false;\n            }'),
    "the Examples drawer exposes SXML files in both SWI-WASM models");
+ok(includes("var EXAMPLES_PREFERRED_WIDTH_PX = 260;") &&
+   includes("examplesWidthPx: EXAMPLES_PREFERRED_WIDTH_PX") &&
+   includes("this.examplesWidthPx = EXAMPLES_PREFERRED_WIDTH_PX") &&
+   !includes("fitExamplesWidth: function(workspaceWidth)") &&
+   includes('window.localStorage.removeItem("wb.examplesWidthPx")') &&
+   !includes('window.localStorage.setItem("wb.examplesWidthPx"') &&
+   !includes('window.localStorage.setItem("wb.examplesWidthVersion"'),
+   "the Examples drawer has one fixed width instead of per-node persisted or clamped widths");
+ok(includes('return this.nodeAnnouncedProfile === "isotope" ||') &&
+   includes('this.nodeAnnouncedProfile === "actor" ||') &&
+   includes('this.nodeAnnouncedProfile === "workbench";') &&
+   includes('if (this.examplesVisible) {\n              return {\n                gridTemplateColumns:\n                  "36px " +\n                  this.examplesWidthPx + "px "') &&
+   !includes('this.nodeAnnouncedProfile + "-examples"'),
+   "N2-N5 and SWI-WASM share the same Examples drawer width path; N1 has no editor drawer");
+const expandedEditorCommand = rewriteEditorLoadTextAware(
+  "statechart_spawn(Pid, [load_text(<editor>), trace(true)]).",
+  "load_text('<statechart/>')"
+);
+ok(expandedEditorCommand.count === 1 &&
+   expandedEditorCommand.invalidCount === 0 &&
+   expandedEditorCommand.text ===
+     "statechart_spawn(Pid, [load_text('<statechart/>'), trace(true)]).",
+   "load_text(<editor>) expands as one explicit UI placeholder");
+const ignoredEditorText = rewriteEditorLoadTextAware(
+  "writeln('load_text(<editor>)'), % load_text(<editor>)\n/* <editor> */ true.",
+  "load_text('wrong')"
+);
+ok(ignoredEditorText.count === 0 && ignoredEditorText.invalidCount === 0,
+   "quoted and commented <editor> text is not expanded");
+const invalidEditorText = rewriteEditorLoadTextAware(
+  "statechart_spawn(Pid, [load_uri(<editor>)]).",
+  "load_text('wrong')"
+);
+ok(invalidEditorText.count === 0 && invalidEditorText.invalidCount === 1,
+   "<editor> outside load_text/1 is rejected instead of sent to Prolog");
+ok(includes("prepareEditorCommand: function(command, term)") &&
+   includes("prepared = this.prepareEditorCommand(combined, term);") &&
+   includes('notice = "% <editor> expanded from') &&
+   !includes('snapshot at submission') &&
+   includes('load_text(<editor>)  snapshot the active SXML editor') &&
+   !includes('statechart_spawn(Pid, [...]).'),
+   "terminal and Examples share visible submission-time editor expansion");
+ok(!includes('@click="runStatechart"') &&
+   !includes('@click="haltStatechart"') &&
+   !includes("runStatechart: function") &&
+   !includes("haltStatechart: function") &&
+   !includes("runSwiWasmStatechart: function") &&
+   !includes("haltSwiWasmStatechart: function"),
+   "the editor toolbar has no separate Run or Halt execution path");
+ok(includes('class="terminal-action clear logger-filters-clear"') &&
+   includes(".logger-filters-clear {\n        margin-left: auto;") &&
+   includes(".logger-filters {\n        display: flex;") &&
+   includes("min-height: 46px;\n        box-sizing: border-box;\n        padding: 8px 12px;") &&
+   !includes(".logger-toolbar .terminal-action"),
+   "Logger Clear sits at the right of the bottom panel at standard Clear size");
+ok(includes('visibleLogKinds: ["info", "trace", "transport"]') &&
+   includes('{ id: "info", label: "Info" }') &&
+   includes('var filterKind = entry.kind === "trace" || entry.kind === "transport"') &&
+   includes('window.localStorage.setItem("wb.visibleLogKindsVersion", "2")'),
+   "Logger groups lifecycle, warning, error, timing, and UI events under Info");
+ok([
+  "01 pause-and-resume.xml", "02 spaghetti.xml", "03 emotions.xml",
+  "04 clock.xml", "05 pingpong.xml", "06 parallel.xml",
+  "07 closure.xml", "08 gcd.xml", "09 spawn-actor.xml",
+  "10 spawn-toplevel.xml", "11 boxshop-1.xml", "12 boxshop-2.xml"
+].every(function(name) {
+  const text = statechartExample(name);
+  return text.includes(
+    "statechart_spawn(Pid, [\n       load_text(<editor>),\n       trace(true)\n   ])."
+  ) && /\?- statechart_halt\(\$Pid, Reply, 1\)\.\n\n-->\s*$/.test(text);
+}), "every numbered SXML file exposes launch and final halt queries");
 ok(includes("return this.loadTutorialSourceIntoWsSession(sourceText)") &&
    includes("handleWsTutorialLoadEvent: function(event)") &&
    includes('load_text: sourceText') &&
@@ -246,11 +331,20 @@ ok(includes('root.crypto.getRandomValues(values);') &&
    includes('randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];') &&
    includes('pid = String(min + (randomValue % span));') &&
    includes('this.swiWasmReservedWorkerActorPids[pid] = true;') &&
-   includes('this.swiWasmActorWorkers[pid] || this.swiWasmReservedWorkerActorPids[pid]') &&
+   includes('this.swiWasmActorWorkers[pid] ||') &&
+   includes('this.swiWasmReservedWorkerActorPids[pid] ||') &&
    workerSource.includes('/^[1-9][0-9]{9}$/.test(selfPidText)') &&
    nodeWsSource.includes("Id >= 1000000000") &&
    nodeWsSource.includes("Id =< 9999999999"),
    "SWI-WASM local workers use reserved random ten-digit numeric pids");
+ok(includes("reserveSwiWasmActorRef: function()") &&
+   includes("this.swiWasmReservedActorRefs[ref] = true;") &&
+   includes("this.swiWasmReservedActorRefs[pid]") &&
+   workerSource.includes('return actorRequest("make_ref", {});') &&
+   workerSource.includes('"    await(Promise, RefText),"') &&
+   !workerSource.includes('return "ref(" + selfPidText') &&
+   !includes('return "ref(" + self.swiWasmNextActorRefId'),
+   "SWI-WASM references are coordinator-reserved ten-digit numeric tokens");
 ok(includes('window.localStorage.getItem("wb.swiWasmModel") === "main"') &&
    includes('node === "swi-wasm-2" || (node === "swi-wasm" && model !== "main")') &&
    includes('this.initSwiWasmSession();') &&
@@ -378,6 +472,10 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
+ok(workerSource.includes('"    monitor(Pid, Ref),"') &&
+   workerSource.includes('"            exit(Pid, kill),"') &&
+   workerSource.includes('"            receive({down(Ref, Pid, _) -> Reply = killed})"'),
+   "statechart_halt/3 force-stops a busy SWI-WASM chart after its timeout");
 ok(includes('typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1])'),
    "SWI-WASM-2 terminal output renders strings without Prolog quotes");
 ok(includes('!this.isSwiWasmUnboundVariable(row[key])') &&

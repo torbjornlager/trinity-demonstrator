@@ -36,6 +36,11 @@
 
 <!-- <examples>
 
+?- statechart_spawn(Pid, [
+       load_text(<editor>),
+       trace(true)
+   ]).
+
 ?- $Pid ! play.
 
 ?- $Pid ! reset.
@@ -45,5 +50,7 @@
 ?- $Pid ! resume.
 
 ?- $Pid ! stop.
+
+?- statechart_halt($Pid, Reply, 1).
 
 -->

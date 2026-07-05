@@ -108,7 +108,7 @@
   }
 
   function actorMakeRef() {
-    return "ref(" + selfPidText + "," + (nextRefId++) + ")";
+    return actorRequest("make_ref", {});
   }
 
   function actorSend(toText, messageText) {
@@ -507,8 +507,17 @@
       "statechart_halt(Pid, Reply) :- statechart_halt(Pid, Reply, 5).",
       "statechart_halt(Pid, Reply, Timeout) :-",
       "    self(Self),",
+      "    monitor(Pid, Ref),",
       "    send(Pid, '$statechart_stop'(Self)),",
-      "    receive({reply(Reply) -> true}, [timeout(Timeout), on_timeout(Reply = timeout)]).",
+      "    receive({",
+      "        reply(Reply) ->",
+      "            demonitor(Ref) ;",
+      "        down(Ref, Pid, _Reason) ->",
+      "            Reply = killed",
+      "    }, [timeout(Timeout), on_timeout((",
+      "            exit(Pid, kill),",
+      "            receive({down(Ref, Pid, _) -> Reply = killed})",
+      "        ))]).",
       "",
       "collect_spawn_source(Options, Source) :-",
       "    findall(Text, spawn_source_option(Options, Text), Texts),",
@@ -634,7 +643,8 @@
       "    term_string(Pids, PidsText).",
       "",
       "make_ref(Ref) :-",
-      "    RefText := actorMakeRef(),",
+      "    Promise := actorMakeRef(),",
+      "    await(Promise, RefText),",
       "    term_string(Ref, RefText).",
       "",
       "canonical_pid(Pid, Pid).",
