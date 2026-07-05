@@ -57,6 +57,7 @@
         --terminal-surface: rgba(255, 255, 255, 0.92);
         --terminal-illustration: url("/img/spider-prolog-1024.png");
         --terminal-overlay: rgba(255, 255, 255, 0.56);
+        --terminal-info-ink: rgba(107, 114, 128, 0.96);
         --terminal-cursor-bg: rgba(24, 21, 19, 0.98);
         --terminal-cursor-fg: rgba(255, 255, 255, 0.98);
         --terminal-cursor-idle: rgba(24, 21, 19, 0.98);
@@ -152,6 +153,7 @@
         --terminal-surface: rgba(11, 15, 19, 0.94);
         --terminal-illustration: url("/img/spider-prolog-1024-dark-transparent.png");
         --terminal-overlay: transparent;
+        --terminal-info-ink: rgba(158, 175, 193, 0.96);
         --terminal-cursor-bg: rgba(236, 243, 249, 0.98);
         --terminal-cursor-fg: rgba(11, 15, 19, 0.98);
         --terminal-cursor-idle: rgba(236, 243, 249, 0.98);
@@ -1143,6 +1145,11 @@
         font-family: var(--mono-font) !important;
         font-size: var(--mono-size) !important;
         line-height: var(--mono-line-height) !important;
+      }
+
+      .terminal .terminal-output .terminal-system-info,
+      .terminal .terminal-output .terminal-system-info span {
+        color: var(--terminal-info-ink) !important;
       }
 
       .terminal::before {
@@ -3221,7 +3228,7 @@
                     </label>
                     <label class="settings-option">
                       <div class="settings-option-text">
-                        <div class="settings-option-label">Statechart XML</div>
+                        <div class="settings-option-label">SXML code</div>
                         <select class="wb-select"
                                 v-model="sxmlCodeColoring"
                                 @change="handleCodeColoringChange">
@@ -3252,6 +3259,15 @@
                       <div class="settings-option-text">
                         <div class="settings-option-label">Show welcome message</div>
                         <div class="settings-option-note">Controls whether the terminal greets the user when it is initialized.</div>
+                      </div>
+                    </label>
+                    <label class="settings-option settings-check-row">
+                      <input type="checkbox"
+                             v-model="showTerminalSystemInfo"
+                             @change="persistTerminalSystemInfoSettings">
+                      <div class="settings-option-text">
+                        <div class="settings-option-label">Show system information</div>
+                        <div class="settings-option-note">Show muted terminal notices about runtime loading, source loading, profile changes, and session replacement.</div>
                       </div>
                     </label>
                     <label class="settings-option settings-check-row">
@@ -5152,6 +5168,7 @@
             nodeAnnouncedAuthMode: "open",
             hideLocalNodeInPid: true,
             showTerminalGreeting: true,
+            showTerminalSystemInfo: true,
             terminalExtraQueryNewline: false,
             terminalConvertLinks: true,
             terminalHighlightPredicates: false,
@@ -5638,6 +5655,7 @@
           this.restoreTypographySettings();
           this.restoreThemeSettings();
           this.restoreTerminalStartupSettings();
+          this.restoreTerminalSystemInfoSettings();
           this.restoreTerminalSpacingSettings();
           this.restoreTerminalLinkSettings();
           this.restoreTerminalPredicateHighlightSettings();
@@ -5790,6 +5808,17 @@
           },
           persistTerminalStartupSettings: function() {
             window.localStorage.setItem("wb.showTerminalGreeting", this.showTerminalGreeting ? "1" : "0");
+          },
+          restoreTerminalSystemInfoSettings: function() {
+            var stored = window.localStorage.getItem("wb.showTerminalSystemInfo");
+            if (stored === "0") {
+              this.showTerminalSystemInfo = false;
+            } else if (stored === "1") {
+              this.showTerminalSystemInfo = true;
+            }
+          },
+          persistTerminalSystemInfoSettings: function() {
+            window.localStorage.setItem("wb.showTerminalSystemInfo", this.showTerminalSystemInfo ? "1" : "0");
           },
           restoreTerminalSpacingSettings: function() {
             var stored = window.localStorage.getItem("wb.terminalExtraQueryNewline");
@@ -6184,6 +6213,24 @@
           },
           terminalGreetingText: function() {
             return this.showTerminalGreeting ? "Welcome to SWI Web Prolog!\n" : false;
+          },
+          echoTerminalSystemInfo: function(term, message, options) {
+            var echoOptions;
+            var originalFinalize = options && options.finalize;
+            if (!this.showTerminalSystemInfo || !term || typeof term.echo !== "function") {
+              return false;
+            }
+            echoOptions = Object.assign({
+              exec: false
+            }, options || {});
+            echoOptions.finalize = function(output) {
+              output.addClass("terminal-system-info");
+              if (typeof originalFinalize === "function") {
+                originalFinalize(output);
+              }
+            };
+            term.echo(String(message), echoOptions);
+            return true;
           },
           applyTerminalRuntimeSettings: function() {
             var settings;
@@ -6977,7 +7024,7 @@
                 url: null
               });
               this.selectDock("terminal");
-              this.terminal.echo("% Tutorial program loaded into the SWI-WASM editor.");
+              this.echoTerminalSystemInfo(this.terminal, "% Tutorial program loaded into the SWI-WASM editor.");
               this.focusTerminalSoon(true);
               return Promise.resolve(true);
             }
@@ -7008,7 +7055,7 @@
                     throw new Error(describeJsonError(event || {}));
                   }
                   self.isotopeLoadedText = sourceText;
-                  self.terminal.echo("% Tutorial program loaded into current session.");
+                  self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
                   self.focusTerminalSoon(true);
                   return true;
                 }).catch(function(error) {
@@ -7019,7 +7066,7 @@
                 });
               }
               return this.ensureIsotopeSession(this.terminal, this.currentIsotopeGeneration()).then(function() {
-                self.terminal.echo("% Tutorial program loaded into current session.");
+                self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
                 self.focusTerminalSoon(true);
                 return true;
               }).catch(function(error) {
@@ -7034,7 +7081,7 @@
               if (this.wsPid !== null) {
                 this.transientLoadText = "";
                 return this.loadTutorialSourceIntoWsSession(sourceText).then(function() {
-                  self.terminal.echo("% Tutorial program loaded into current session.");
+                  self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
                   self.focusTerminalSoon(true);
                   return true;
                 }).catch(function(error) {
@@ -7045,7 +7092,7 @@
                 });
               }
               return this.ensureWsSession(this.terminal).then(function() {
-                self.terminal.echo("% Tutorial program loaded into current session.");
+                self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
                 self.focusTerminalSoon(true);
                 return true;
               }).catch(function(error) {
@@ -7477,8 +7524,8 @@
             label = String(label || "<scratch-buffer>").replace(/\s+/g, " ").trim();
             notice = "% <editor> expanded from \"" + label.replace(/\"/g, "\\\"") +
               "\".";
-            if (term && typeof term.echo === "function") {
-              term.echo(notice, {
+            if (term) {
+              this.echoTerminalSystemInfo(term, notice, {
                 exec: false,
                 convertLinks: false,
                 formatters: false
@@ -7577,6 +7624,7 @@
           },
           reportInteraction: function(payload) {
             var body;
+            var self = this;
             if (!payload || typeof payload !== "object") {
               return;
             }
@@ -7588,7 +7636,8 @@
             } catch (_error) {
               return;
             }
-            fetch("/interaction_log", {
+            this.log("info", "POST /interaction_log (durable usage log): " + body, "interaction");
+            return fetch("/interaction_log", {
               method: "POST",
               headers: {
                 Accept: "application/json",
@@ -7596,7 +7645,13 @@
               },
               body: body,
               keepalive: true
-            }).catch(function() {});
+            }).then(function(response) {
+              if (!response.ok) {
+                throw new Error(response.status + " " + response.statusText);
+              }
+            }).catch(function(error) {
+              self.log("warn", "Interaction log request failed: " + error.message, "interaction");
+            });
           },
           currentRunnableExampleSource: function(kind) {
             var source = this.currentExampleSource;
@@ -8717,6 +8772,8 @@
           },
           abortSwiWasm2Query: function(term) {
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+            var survivingPids;
+            var abortMessage;
             if (!entry || !entry.worker || entry.done) {
               return false;
             }
@@ -8732,11 +8789,21 @@
             // Any actors the shell spawned are intentionally left running
             // (Abort stops the shell goal, not the whole node); they simply
             // outlive the toplevel that started them, exactly as on a node.
+            survivingPids = Object.keys(this.swiWasmActorWorkers || {}).filter(function(pid) {
+              var actor = this.swiWasmActorWorkers[pid];
+              return pid !== String(this.swiWasm2ShellPid) && actor && actor.worker && !actor.done;
+            }.bind(this)).sort();
             try { entry.worker.terminate(); } catch (_error) {}
             delete this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             this.swiWasm2ShellReady = false;
             this.swiWasm2QueryPending = false;
-            this.finishError(term, "Computation aborted.");
+            abortMessage = "Computation aborted.";
+            if (survivingPids.length > 0) {
+              abortMessage += " " + survivingPids.length + " SWI-WASM actor" +
+                (survivingPids.length === 1 ? " remains" : "s remain") +
+                " running: " + survivingPids.join(", ") + ".";
+            }
+            this.finishError(term, abortMessage);
             this.pauseTerm(term);
             this.swiWasm2LoadedSource = this.currentSwiWasm2LoadText();
             this.spawnSwiWasmWorkerActor(
@@ -9021,7 +9088,7 @@
             this.swiWasm2ShellPid = pid;
             if (this.terminal) {
               this.pauseTerm(this.terminal);
-              this.terminal.echo("% Loading SWI-WASM worker toplevel actor...");
+              this.echoTerminalSystemInfo(this.terminal, "% Loading SWI-WASM worker toplevel actor...");
             }
             try {
               this.spawnSwiWasmWorkerActor(
@@ -9042,7 +9109,7 @@
             // library(dom) can call browser DOM APIs directly.
             if (this.terminal) {
               this.terminal.pause();
-              this.terminal.echo("% Loading SWI-Prolog WASM runtime [build-20260418]...");
+              this.echoTerminalSystemInfo(this.terminal, "% Loading SWI-Prolog WASM runtime [build-20260418]...");
             }
             window.swiRpcGet = function(url) {
               console.log("[SWI-RPC] GET", url);
@@ -11855,7 +11922,7 @@
             var editorText = this.currentLoadText();
             if (this.swiWasmGoalNeedsStatechart(goal) && !this.swiWasmStatechartLoaded) {
               this.pauseTerm(term);
-              if (term) term.echo("% Loading statechart WASM modules...");
+              this.echoTerminalSystemInfo(term, "% Loading statechart WASM modules...");
               this.preloadSwiWasmStatechart(Prolog, this.swiWasmModule).then(function(ok) {
                 self.resumeTerm(term);
                 if (ok) {
@@ -11898,7 +11965,8 @@
                 // automatically visible while the terminal renders answers
                 // in user.  Match the node-side distributed-pid notation.
                 Prolog.query("user:op(200, xfx, @)").once();
-                Prolog.query("retractall(swi_wasm_actor_bridge:deferred(_))").once();
+                // Deferred unmatched messages are actor mailbox state. Preserve
+                // them across toplevel queries just like a persistent node does.
                 //  read/1 and read_term/2 must be redefined in the USER module
                 //  (where the program runs) to use the inline terminal -- the
                 //  bridge module's copy can't override the built-in for user
@@ -12451,7 +12519,7 @@
                 this.terminal.set_prompt(this.basePrompt());
               } else {
                 this.pauseTerm(this.terminal);
-                this.terminal.echo("% Loading SWI-WASM worker toplevel actor...");
+                this.echoTerminalSystemInfo(this.terminal, "% Loading SWI-WASM worker toplevel actor...");
               }
             }
             this.$nextTick(function() {
@@ -12638,6 +12706,9 @@
             var self = this;
             if ((((this.editorDirty && this.editorAutoloadAppliesToActiveWorkspace())) || this.transientLoadText !== "") &&
                 this.isotopePid !== null) {
+              this.echoTerminalSystemInfo(term, "% " + (this.transientLoadText !== "" ? "Loading new source" : "Editor source changed") +
+                "; replacing ISOTOPE session " + this.isotopePid +
+                ". Its private database will be recreated.");
               this.resetIsotopeTransport();
             }
             var generation = this.nextIsotopeGeneration();
@@ -13264,6 +13335,9 @@
             var self = this;
             if ((((this.wsEditorDirty && this.editorAutoloadAppliesToActiveWorkspace())) || this.transientLoadText !== "") &&
                 this.wsPid !== null) {
+              this.echoTerminalSystemInfo(term, "% " + (this.transientLoadText !== "" ? "Loading new source" : "Editor source changed") +
+                "; replacing ACTOR session " + this.wsPid +
+                ". Its private database will be recreated.");
               this.resetActorTransport();
             }
             this.pauseTerm(term);
@@ -13336,7 +13410,7 @@
             this.log("ui", "Profile set to " + this.transportModeLabel + ".");
             if (this.terminal) {
               if (this.nodeAnnouncedProfile === "workbench") {
-                this.terminal.echo("% Profile: " + this.transportModeLabel);
+                this.echoTerminalSystemInfo(this.terminal, "% Profile: " + this.transportModeLabel);
               }
               this.resetQueryState(this.terminal);
             }

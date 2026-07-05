@@ -126,6 +126,14 @@ ok(includes("terminalConvertLinks: true") &&
    includes("window.webPrologTerminalConvertLinks === false") &&
    includes("[[!;;]"),
    "terminal URLs are converted to links when enabled, including echoed typed/pasted commands");
+ok(includes("showTerminalSystemInfo: true") &&
+   includes("Show system information") &&
+   includes("wb.showTerminalSystemInfo") &&
+   includes("echoTerminalSystemInfo: function") &&
+   includes('output.addClass("terminal-system-info")') &&
+   includes("--terminal-info-ink:") &&
+   includes(".terminal .terminal-output .terminal-system-info"),
+   "terminal system information is muted and can be disabled in Settings");
 ok(includes("terminalHighlightPredicates: false") &&
    includes("Highlight Web Prolog predicates") &&
    includes("built-in predicate calls and predicate indicators") &&
@@ -222,6 +230,9 @@ ok(includes('<div class="project-title">SXML code</div>') &&
    includes('return this.isBrowserSwiWasmMode ||') &&
    !includes('if (this.isSwiWasm2Mode) {\n              return false;\n            }'),
    "the Examples drawer exposes SXML files in both SWI-WASM models");
+ok(includes('<div class="settings-option-label">SXML code</div>') &&
+   !includes('<div class="settings-option-label">Statechart XML</div>'),
+   "Settings calls Statechart XML coloring SXML code");
 ok(includes("var EXAMPLES_PREFERRED_WIDTH_PX = 260;") &&
    includes("examplesWidthPx: EXAMPLES_PREFERRED_WIDTH_PX") &&
    includes("this.examplesWidthPx = EXAMPLES_PREFERRED_WIDTH_PX") &&
@@ -282,6 +293,18 @@ ok(includes('visibleLogKinds: ["info", "trace", "transport"]') &&
    includes('var filterKind = entry.kind === "trace" || entry.kind === "transport"') &&
    includes('window.localStorage.setItem("wb.visibleLogKindsVersion", "2")'),
    "Logger groups lifecycle, warning, error, timing, and UI events under Info");
+ok(includes('POST /interaction_log (durable usage log): ') &&
+   includes('Interaction log request failed: '),
+   "interaction logging is visible, including failed recording attempts");
+ok(includes('replacing ISOTOPE session ') &&
+   includes('replacing ACTOR session ') &&
+   includes('Its private database will be recreated.'),
+   "implicit source reloads announce persistent-session replacement");
+ok(includes('SWI-WASM actor" +') &&
+   includes('" running: " + survivingPids.join(", ")'),
+   "SWI-WASM hard Abort reports surviving actor pids");
+ok(!includes('retractall(swi_wasm_actor_bridge:deferred(_))'),
+   "the main-thread SWI-WASM model preserves deferred mailbox messages across queries");
 ok([
   "01 pause-and-resume.xml", "02 spaghetti.xml", "03 emotions.xml",
   "04 clock.xml", "05 pingpong.xml", "06 parallel.xml",
