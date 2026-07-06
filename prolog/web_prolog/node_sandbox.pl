@@ -893,13 +893,6 @@ reject_forbidden_qualified_goal(Profile, node, Goal) :-
     ).
 reject_forbidden_qualified_goal(_, _, _).
 
-reject_spawn_goal_options(Profile, Options) :-
-    is_list(Options),
-    !,
-    forall(member(Option, Options),
-           reject_spawn_goal_option(Profile, Option)).
-reject_spawn_goal_options(_, _).
-
 reject_nested_spawn_goal(Profile, GoalModule, Goal, Options) :-
     (   has_deferred_nested_source_option(Options)
     ->  reject_deferred_nested_spawn_options(Profile, Options),
@@ -948,13 +941,6 @@ reject_deferred_nested_spawn_option(_Profile, Option) :-
 reject_deferred_nested_spawn_option(Profile, Option) :-
     reject_forbidden_spawn_option(Profile, Option).
 
-reject_spawn_goal_option(Profile, Option) :-
-    source_option_like(Option),
-    !,
-    sandbox_check_source_options(Profile, actor, [Option]).
-reject_spawn_goal_option(Profile, Option) :-
-    reject_forbidden_spawn_option(Profile, Option).
-
 source_option_like(load_text(_)).
 source_option_like(load_list(_)).
 source_option_like(load_predicates(_)).
@@ -980,27 +966,6 @@ reject_toplevel_call_option(Profile, load_predicates(PIs)) :-
     !,
     sandbox_check_source_options(Profile, actor, [load_predicates(PIs)]).
 reject_toplevel_call_option(_, _).
-
-reject_toplevel_next_options(Profile, Options) :-
-    is_list(Options),
-    !,
-    forall(member(Option, Options),
-           reject_toplevel_next_option(Profile, Option)).
-reject_toplevel_next_options(_, _).
-
-reject_toplevel_next_option(Profile, load_text(SourceText)) :-
-    !,
-    sandbox_check_source_text(Profile, actor, SourceText).
-reject_toplevel_next_option(Profile, load_list(Terms)) :-
-    !,
-    sandbox_check_source_options(Profile, actor, [load_list(Terms)]).
-reject_toplevel_next_option(Profile, load_uri(URI)) :-
-    !,
-    sandbox_check_source_options(Profile, actor, [load_uri(URI)]).
-reject_toplevel_next_option(Profile, load_predicates(PIs)) :-
-    !,
-    sandbox_check_source_options(Profile, actor, [load_predicates(PIs)]).
-reject_toplevel_next_option(_, _).
 
 reject_receive_options(Profile, Module, Options) :-
     is_list(Options),

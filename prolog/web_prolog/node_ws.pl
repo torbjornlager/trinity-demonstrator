@@ -1294,11 +1294,6 @@ ws_actor_kind_or_default(Pid, Kind) :-
     ).
 
 
-ws_known_actor(Pid0) :-
-    ws_actor(_Queue, OwnedPid),
-    same_ws_pid(Pid0, OwnedPid),
-    !.
-
 ws_actor_queues(Pid0, Queues) :-
     findall(
         Queue,
@@ -1459,10 +1454,6 @@ ws_get_atom_or(Dict, Key, Default, Value) :-
     ->  atom_string(Value, Value0)
     ;   Value = Default
     ).
-
-ws_get_trace_enabled(Dict, Key, Enabled) :-
-    ws_get_atom_or(Dict, Key, false, Enabled0),
-    ws_parse_enabled_atom(Enabled0, Enabled).
 
 %!  ws_get_spawn_trace_enabled(+Dict, -Enabled) is det.
 %
