@@ -781,7 +781,7 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Hide local node in pid')),
             assertion(sub_string(PortalBody, _, _, _, 'Extra newline after query')),
             assertion(sub_string(PortalBody, _, _, _, 'Code coloring')),
-            assertion(sub_string(PortalBody, _, _, _, 'Statechart XML')),
+            assertion(sub_string(PortalBody, _, _, _, 'SXML code')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="project-title">SXML code</div>')),
             assertion(sub_string(EditorFrameBody, _, _, _, 'Demonstrator Editor Frame')),
             assertion(sub_string(ActorExampleBody, _, _, _, 'count_server')),
@@ -2671,6 +2671,34 @@ test(ws_toplevel_spawn_session_true_keeps_toplevel_alive,
                 }),
                 ws_receive_json(WS, SecondReply),
                 SecondType = SecondReply.type
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
+
+test(ws_toplevel_call_reloads_source_before_spawn_load_predicates,
+     true((Type == "success", ReplyPid == ToplevelPid))) :-
+    with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true)]",
+                    load_text:"worker(From) :- From ! old."
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"self(Me), spawn(worker(Me), _Child, [load_predicates([worker/1])]), receive({edited -> true}, [timeout(1), on_timeout(fail)])",
+                    template:"true",
+                    load_text:"worker(From) :- From ! edited."
+                }),
+                ws_receive_json_first_of(WS, ["success", "failure", "error"], Reply),
+                Type = Reply.type,
+                ReplyPid = Reply.pid
             ),
             catch(ws_close(WS, 1000, "done"), _, true)
         )).

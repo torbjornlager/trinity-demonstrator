@@ -5146,6 +5146,7 @@
             wsSpawnLoadText: "",
             wsSpawnLoadOrigin: "none",
             wsPendingExampleSpawn: null,
+            wsPendingCallLoad: null,
             wsEditorDirty: true,
             wsGeneration: 0,
             wsConnectPromise: null,
@@ -9065,6 +9066,7 @@
             this.wsSpawnLoadText = "";
             this.wsSpawnLoadOrigin = "none";
             this.wsPendingExampleSpawn = null;
+            this.wsPendingCallLoad = null;
             this.wsEditorDirty = true;
             if (this.transportMode === "actor") {
               this.pendingPromptPid = null;
@@ -12704,18 +12706,21 @@
           },
           askCurrentIsotope: function(term) {
             var self = this;
+            var reloadSpec = null;
             if ((((this.editorDirty && this.editorAutoloadAppliesToActiveWorkspace())) || this.transientLoadText !== "") &&
                 this.isotopePid !== null) {
-              this.echoTerminalSystemInfo(term, "% " + (this.transientLoadText !== "" ? "Loading new source" : "Editor source changed") +
-                "; replacing ISOTOPE session " + this.isotopePid +
-                ". Its private database will be recreated.");
-              this.resetIsotopeTransport();
+              reloadSpec = this.spawnLoadSpec();
+              this.echoTerminalSystemInfo(term, "% " + (reloadSpec.origin === "transient" ? "Loading new source" : "Editor source changed") +
+                "; updating private code in ISOTOPE session " + this.isotopePid + ".");
             }
             var generation = this.nextIsotopeGeneration();
             this.pauseTerm(term);
             this.ensureIsotopeSession(term, generation).then(function(pid) {
-              self.runIsotopeCall(term, pid, generation);
+              self.runIsotopeCall(term, pid, generation, reloadSpec);
             }).catch(function(error) {
+              if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
+                self.transientLoadText = reloadSpec.text;
+              }
               if (self.isStaleIsotopeGeneration(generation)) {
                 return;
               }
@@ -12723,7 +12728,7 @@
               self.resumeTerm(term);
             });
           },
-          runIsotopeCall: function(term, pid, generation) {
+          runIsotopeCall: function(term, pid, generation, reloadSpec) {
             var self = this;
             var params = {
               pid: pid,
@@ -12731,6 +12736,9 @@
               limit: String(this.solutionLimit),
               format: "json"
             };
+            if (reloadSpec && reloadSpec.text !== "") {
+              params.load_text = reloadSpec.text;
+            }
             this.recordSessionEvent("session", "Query: " + this.clipText(this.activeGoal, 140), "isotope", pid);
             this.requestJson("/toplevel_call", {
               method: "GET",
@@ -12740,8 +12748,19 @@
               if (self.isStaleIsotopeGeneration(generation)) {
                 return;
               }
+              if (reloadSpec && event.type !== "error") {
+                self.isotopeLoadedText = reloadSpec.text;
+                if (reloadSpec.origin === "editor") {
+                  self.editorDirty = false;
+                }
+              } else if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
+                self.transientLoadText = reloadSpec.text;
+              }
               self.handleIsotopeEvent(term, event, generation);
             }).catch(function(error) {
+              if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
+                self.transientLoadText = reloadSpec.text;
+              }
               if (self.isStaleIsotopeGeneration(generation)) {
                 return;
               }
@@ -12995,6 +13014,10 @@
             this.wsSpawnLoadText = "";
             this.wsSpawnLoadOrigin = "none";
             this.wsPendingExampleSpawn = null;
+            if (this.wsPendingCallLoad && this.wsPendingCallLoad.origin === "transient" && this.transientLoadText === "") {
+              this.transientLoadText = this.wsPendingCallLoad.text;
+            }
+            this.wsPendingCallLoad = null;
             this.wsEditorDirty = true;
             this.wsConnectPromise = null;
             this.wsSpawnPromise = null;
@@ -13192,6 +13215,19 @@
               return;
             }
             this.captureBindingsFromEvent(event);
+            if (this.wsPendingCallLoad && event.pid === this.wsPid && event.type !== "statechart_trace") {
+              if (event.type === "error" || event.type === "down") {
+                if (this.wsPendingCallLoad.origin === "transient" && this.transientLoadText === "") {
+                  this.transientLoadText = this.wsPendingCallLoad.text;
+                }
+              } else {
+                this.wsLoadedText = this.wsPendingCallLoad.text;
+                if (this.wsPendingCallLoad.origin === "editor") {
+                  this.wsEditorDirty = false;
+                }
+              }
+              this.wsPendingCallLoad = null;
+            }
             if (event.type === "spawned") {
               var pendingExampleSpawn = this.wsPendingExampleSpawn;
               this.wsPid = event.pid;
@@ -13333,12 +13369,12 @@
           },
           askCurrentWs: function(term) {
             var self = this;
+            var reloadSpec = null;
             if ((((this.wsEditorDirty && this.editorAutoloadAppliesToActiveWorkspace())) || this.transientLoadText !== "") &&
                 this.wsPid !== null) {
-              this.echoTerminalSystemInfo(term, "% " + (this.transientLoadText !== "" ? "Loading new source" : "Editor source changed") +
-                "; replacing ACTOR session " + this.wsPid +
-                ". Its private database will be recreated.");
-              this.resetActorTransport();
+              reloadSpec = this.spawnLoadSpec();
+              this.echoTerminalSystemInfo(term, "% " + (reloadSpec.origin === "transient" ? "Loading new source" : "Editor source changed") +
+                "; updating private code in ACTOR session " + this.wsPid + ".");
             }
             this.pauseTerm(term);
             this.ensureWsSession(term).then(function(pid) {
@@ -13348,9 +13384,16 @@
                 goal: self.activeGoal,
                 limit: self.solutionLimit
               };
+              if (reloadSpec && reloadSpec.text !== "") {
+                command.load_text = reloadSpec.text;
+                self.wsPendingCallLoad = reloadSpec;
+              }
               self.recordSessionEvent("session", "Query: " + self.clipText(self.activeGoal, 140), "actor", pid);
               self.wsSend(command);
             }).catch(function(error) {
+              if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
+                self.transientLoadText = reloadSpec.text;
+              }
               self.finishError(term, error.message);
               self.resumeTerm(term);
             });

@@ -296,10 +296,12 @@ ok(includes('visibleLogKinds: ["info", "trace", "transport"]') &&
 ok(includes('POST /interaction_log (durable usage log): ') &&
    includes('Interaction log request failed: '),
    "interaction logging is visible, including failed recording attempts");
-ok(includes('replacing ISOTOPE session ') &&
-   includes('replacing ACTOR session ') &&
-   includes('Its private database will be recreated.'),
-   "implicit source reloads announce persistent-session replacement");
+ok(includes('updating private code in ISOTOPE session ') &&
+   includes('updating private code in ACTOR session ') &&
+   includes('params.load_text = reloadSpec.text') &&
+   includes('command.load_text = reloadSpec.text') &&
+   includes('wsPendingCallLoad: null'),
+   "edited source reloads in place without replacing persistent sessions");
 ok(includes('SWI-WASM actor" +') &&
    includes('" running: " + survivingPids.join(", ")'),
    "SWI-WASM hard Abort reports surviving actor pids");

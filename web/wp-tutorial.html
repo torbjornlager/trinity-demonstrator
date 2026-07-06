@@ -1275,6 +1275,7 @@ price(Item, Price) :-
 </p>
 
 <pre id="epa-count-spawn">?- spawn(count_actor(0), Pid, [
+       load_predicates([count_actor/1]),
        monitor(true)
    ]).
 </pre>
@@ -1362,6 +1363,7 @@ price(Item, Price) :-
 </p>
 
 <pre id="epa-fridge-spawn">?- spawn(fridge([]), Pid, [
+       load_predicates([fridge/1]),
        monitor(true)
    ]).
 </pre>
@@ -1472,6 +1474,7 @@ take(Pid, Food, Response) :-
 </p>
 
 <pre id="epa-fridge-api-spawn">?- spawn(fridge([]), Pid, [
+       load_predicates([fridge/1, store/3, take/3]),
        monitor(true)
    ]).
 </pre>
