@@ -2453,6 +2453,15 @@
         font-size: 12px;
       }
 
+      .wb-statusbar-attribution {
+        margin-right: auto;
+        text-align: left;
+      }
+
+      .wb-statusbar-attribution a {
+        color: #006400;
+      }
+
       @media (max-width: 1100px) {
         .wb-main {
           grid-template-columns: 1fr;
@@ -2573,7 +2582,7 @@
             <img class="wb-logo" src="/img/swi-logo.png" alt="Web Prolog logo">
           </a>
           <div class="wb-brand-copy">
-            <h1 class="wb-title">Trinity shell</h1>
+            <h1 class="wb-title">Trinity demonstrator</h1>
             <p class="wb-subtitle">&nbsp;Your portal to the Prolog Web</p>
           </div>
         </div>
@@ -3871,9 +3880,13 @@
            hidden></div>
 
       <footer class="wb-statusbar">
+        <div class="wb-statusbar-attribution">Inspired by <a target="_blank" href="http://www.erlang.org/">Erlang</a>, powered by <a target="_blank" href="http://www.swi-prolog.org/">SWI-Prolog</a>.</div>
         <div>Profile:&nbsp;{{ nodeProfileLabel }}&nbsp;&nbsp;|&nbsp;&nbsp;Principal:&nbsp;{{ principalSummaryLabel }}&nbsp;&nbsp;|&nbsp;&nbsp;Auth:&nbsp;{{ nodeAuthLabel }}</div>
       </footer>
     </div>
+    
+    
+    
 
     <script src="/vendor/jquery.min.js"
             crossorigin="anonymous"></script>
