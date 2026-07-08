@@ -2780,9 +2780,484 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <figure style="margin: 1.5em 0;">
-  <img class="statechart-raster" src="/img/spaghetti.png" alt="Spaghetti statechart with nested states s0, s1, s11, s2, s21, and s211">
+<svg id="sc-sp-diagram" width="100%" viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg">
+  <style>
+      #sc-sp-diagram .th { font-size: 17px; }
+      #sc-sp-diagram .ts { font-size: 16px; font-weight: 500;
+        paint-order: stroke; stroke: var(--tutorial-bg);
+        stroke-width: 3.5px; stroke-linejoin: round; }
+    </style>
+  <defs
+     id="defs2">
+    <marker
+       id="sp-arr"
+       markerWidth="9"
+       markerHeight="9"
+       refX="8.4"
+       refY="4.5"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L9,4.5 L0,9 Z"
+         fill="var(--tutorial-diagram-line)"
+         id="path1" />
+    </marker>
+    <marker
+       id="sp-arr-hi"
+       markerWidth="9"
+       markerHeight="9"
+       refX="8.4"
+       refY="4.5"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L9,4.5 L0,9 Z"
+         fill="var(--tutorial-diagram-highlight)"
+         id="path2" />
+    </marker>
+  </defs>
+  <!-- outer state: s0 -->
+  <rect
+     x="10.002732"
+     y="55.002731"
+     rx="24.263376"
+     ry="23.999687"
+     width="727.90125"
+     height="419.99454"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1"
+     id="rect2" />
+  <line
+     x1="10"
+     y1="85"
+     x2="730"
+     y2="85"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line2" />
+  <text
+     class="th"
+     x="370"
+     y="72"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text2">s0</text>
+  <!-- top entry into s0 -->
+  <circle
+     cx="30"
+     cy="35"
+     r="7"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle2" />
+  <!-- s0 initial → s1 -->
+  <!-- composite state: s1 -->
+  <rect
+     x="55.45126"
+     y="119.99671"
+     rx="17.529602"
+     ry="18.000473"
+     width="277.55203"
+     height="250.00658"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="rect4" />
+  <line
+     x1="55.454544"
+     y1="150"
+     x2="333"
+     y2="150"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line4" />
+  <text
+     class="th"
+     x="190"
+     y="137"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text4">s1</text>
+  <!-- s1 initial → s11 -->
+  <circle
+     cx="130"
+     cy="168"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle4" />
+  <path
+     d="m 130,170 c 9,8 14,16 19,29"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path5" />
+  <!-- leaf state: s11 -->
+  <rect
+     id="sp-state-s11"
+     x="105"
+     y="200"
+     rx="14"
+     ry="14"
+     width="150"
+     height="110"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5" />
+  <line
+     x1="105"
+     y1="230"
+     x2="255"
+     y2="230"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line5" />
+  <text
+     class="th"
+     x="180"
+     y="215"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text5">s11</text>
+  <!-- composite state: s2 -->
+  <rect
+     x="400"
+     y="100"
+     rx="18"
+     ry="18"
+     width="320"
+     height="350"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="rect5" />
+  <line
+     x1="400"
+     y1="130"
+     x2="720"
+     y2="130"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line6" />
+  <text
+     class="th"
+     x="560"
+     y="117"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text6">s2</text>
+  <!-- s2 initial → s21 -->
+  <circle
+     cx="455"
+     cy="150"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle6" />
+  <circle
+     cx="45.106983"
+     cy="102.52763"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle6-1" />
+  <path
+     d="M461 152 C468 158, 472 162, 475 167"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path6" />
+  <path
+     d="m 49.861132,106.20502 c 7,6 11,10 14,15"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path6-3" />
+  <path
+     d="m 34.899144,40.315524 c 7,6 11,10 14,15"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path6-3-2" />
+  <!-- composite state: s21 -->
+  <rect
+     x="440"
+     y="168"
+     rx="16"
+     ry="16"
+     width="250"
+     height="250"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="rect6" />
+  <line
+     x1="440"
+     y1="198"
+     x2="690"
+     y2="198"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line7" />
+  <text
+     class="th"
+     x="565"
+     y="185"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text7">s21</text>
+  <!-- s21 initial → s211 -->
+  <circle
+     cx="505"
+     cy="218"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle7" />
+  <path
+     d="M511 220 C516 228, 518 236, 519 244"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path7" />
+  <!-- leaf state: s211 -->
+  <rect
+     id="sp-state-s211"
+     x="500"
+     y="245"
+     rx="14"
+     ry="14"
+     width="165"
+     height="120"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5" />
+  <line
+     x1="500"
+     y1="275"
+     x2="665"
+     y2="275"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line8" />
+  <text
+     class="th"
+     x="582"
+     y="262"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text8">s211</text>
+  <!-- final state f (bull's eye) -->
+  <circle
+     id="sp-state-f"
+     cx="785"
+     cy="280"
+     r="14"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5" />
+  <circle
+     cx="785"
+     cy="280"
+     r="7"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle8" />
+  <!-- transitions -->
+  <path
+     id="sp-trans-a"
+     d="M 55.059102,326.04898 C 13.8126,320.56879 14.455951,360.07871 55.47728,351.73043"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="37.682213"
+     y="343"
+     text-anchor="middle"
+     id="text9">a</text>
+  <line
+     id="sp-trans-b1"
+     x1="150"
+     y1="369"
+     x2="150"
+     y2="311"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="138"
+     y="345"
+     text-anchor="middle"
+     id="text10">b</text>
+  <path
+     id="sp-trans-c1"
+     d="M333 172 C362 150, 378 149, 400 160"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="367"
+     y="145"
+     text-anchor="middle"
+     id="text11">c</text>
+  <path
+     id="sp-trans-c2"
+     d="M400 190 C378 211, 362 212, 335 200"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="367"
+     y="200"
+     text-anchor="middle"
+     id="text12">c</text>
+  <line
+     id="sp-trans-d1"
+     x1="54.544109"
+     y1="245"
+     x2="11.567878"
+     y2="245"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="39.565636"
+     y="236.97668"
+     text-anchor="middle"
+     id="text13">d</text>
+  <line
+     id="sp-trans-g1"
+     x1="332.7496"
+     y1="263.63559"
+     x2="439.35205"
+     y2="263.63559"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="382"
+     y="252"
+     text-anchor="middle"
+     id="text14">g</text>
+  <line
+     id="sp-trans-f1"
+     x1="333"
+     y1="296"
+     x2="500"
+     y2="297"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="418"
+     y="289"
+     text-anchor="middle"
+     id="text15">f</text>
+  <path
+     id="sp-trans-f2"
+     d="M 400,318 C 340,313 298,308 255,302"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="322"
+     y="335"
+     text-anchor="middle"
+     id="text16"
+     style="white-space:pre;inline-size:13.5975"
+     xml:space="preserve"><tspan
+       x="322"
+       y="335"
+       id="tspan1">f</tspan></text>
+  <line
+     id="sp-trans-b2"
+     x1="600"
+     y1="417.97668"
+     x2="600"
+     y2="366.03952"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="587.30304"
+     y="397.95337"
+     text-anchor="middle"
+     id="text17">b</text>
+  <line
+     id="sp-trans-d2"
+     x1="548"
+     y1="364.68219"
+     x2="548"
+     y2="416.84137"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="535"
+     y="392"
+     text-anchor="middle"
+     id="text18">d</text>
+  <line
+     id="sp-trans-h"
+     x1="665"
+     y1="281"
+     x2="770"
+     y2="280"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="706.77545"
+     y="271.97668"
+     text-anchor="middle"
+     id="text19">h</text>
+  <path
+     id="sp-trans-e"
+     d="m 737.02102,401.90074 c -29.72482,-14.44143 -52.0184,-28.88287 -73.07349,-43.3243"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="705.36444"
+     y="376.03802"
+     text-anchor="middle"
+     id="text20">e</text>
+  <text
+     class="ts"
+     x="699.94318"
+     y="329.87991"
+     text-anchor="middle"
+     id="text21">g</text>
+  <!-- g: s211 -> s0 (re-added; adjust route to taste) -->
+  <path id="sp-trans-g2" d="M665 320 C695 316, 715 312, 736.8 304.7" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#sp-arr)"/>
+</svg>
   <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
-    Spaghetti statechart.
+    Spaghetti statechart. The diagram highlights the active leaf state and the
+    transition that fired as you send events.
   </p>
 </figure>
 
@@ -2865,9 +3340,107 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <figure style="margin: 1.5em 0;">
-  <img class="statechart-raster statechart-raster-narrow" src="/img/emotions.png" alt="NPC emotion statechart with parallel emotion and behavior regions">
+<svg id="sc-em-diagram" width="100%" viewBox="0 0 720 565" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <defs>
+    <style>
+      #sc-em-diagram .th { font-size: 15px; }
+      #sc-em-diagram .ts { font-size: 14px; font-weight: 500;
+        paint-order: stroke; stroke: var(--tutorial-bg);
+        stroke-width: 3.5px; stroke-linejoin: round; }
+    </style>
+    <marker id="em-arr" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="var(--tutorial-diagram-line)"/>
+    </marker>
+    <marker id="em-arr-hi" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="var(--tutorial-diagram-highlight)"/>
+    </marker>
+  </defs>
+  <!-- outer parallel region: agent -->
+  <rect x="10" y="18" rx="22" ry="22" width="700" height="525" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1"/>
+  <line x1="10" y1="46" x2="710" y2="46" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="360" y="32" text-anchor="middle" dominant-baseline="central">agent</text>
+
+  <!-- parallel split between emotions and behavior -->
+  <line x1="20" y1="370" x2="700" y2="370" stroke="var(--tutorial-diagram-line)" stroke-width="1" stroke-dasharray="7 5"/>
+
+  <!-- parallel region: emotions -->
+  <rect x="30" y="62" rx="18" ry="18" width="660" height="295" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="30" y1="90" x2="690" y2="90" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="360" y="76" text-anchor="middle" dominant-baseline="central">emotions</text>
+
+  <!-- parallel split between the two emotion dimensions -->
+  <line x1="360" y1="108" x2="360" y2="343" stroke="var(--tutorial-diagram-line)" stroke-width="1" stroke-dasharray="7 5"/>
+
+  <!-- region: AF-dimension -->
+  <rect x="45" y="105" rx="16" ry="16" width="300" height="240" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="45" y1="133" x2="345" y2="133" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="195" y="119" text-anchor="middle" dominant-baseline="central">AF-dimension</text>
+
+  <!-- AF initial → anger -->
+  <circle cx="67" cy="150" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M73 152 C80 153, 88 154.5, 94 158" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#em-arr)"/>
+
+  <rect id="em-state-anger" x="95" y="150" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="95" y1="180" x2="295" y2="180" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="195" y="165" text-anchor="middle" dominant-baseline="central">anger</text>
+
+  <rect id="em-state-fear" x="95" y="265" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="95" y1="295" x2="295" y2="295" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="195" y="280" text-anchor="middle" dominant-baseline="central">fear</text>
+
+  <line id="em-trans-af-e" x1="165" y1="210" x2="165" y2="263" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="152" y="240" text-anchor="middle">e</text>
+  <line id="em-trans-af-d" x1="225" y1="265" x2="225" y2="212" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="238" y="240" text-anchor="middle">d</text>
+
+  <!-- region: AS-dimension -->
+  <rect x="375" y="105" rx="16" ry="16" width="300" height="240" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="375" y1="133" x2="675" y2="133" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="525" y="119" text-anchor="middle" dominant-baseline="central">AS-dimension</text>
+
+  <!-- AS initial → anticipation -->
+  <circle cx="397" cy="150" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M403 152 C410 153, 418 154.5, 424 158" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#em-arr)"/>
+
+  <rect id="em-state-anticipation" x="425" y="150" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="425" y1="180" x2="625" y2="180" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="525" y="165" text-anchor="middle" dominant-baseline="central">anticipation</text>
+
+  <rect id="em-state-surprise" x="425" y="265" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="425" y1="295" x2="625" y2="295" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="525" y="280" text-anchor="middle" dominant-baseline="central">surprise</text>
+
+  <line id="em-trans-as-e" x1="495" y1="210" x2="495" y2="263" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="482" y="240" text-anchor="middle">e</text>
+  <line id="em-trans-as-f" x1="555" y1="265" x2="555" y2="212" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="568" y="240" text-anchor="middle">f</text>
+
+  <!-- region: behavior -->
+  <rect x="30" y="382" rx="18" ry="18" width="660" height="150" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="30" y1="410" x2="690" y2="410" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="360" y="396" text-anchor="middle" dominant-baseline="central">behavior</text>
+
+  <!-- behavior initial → attacking -->
+  <circle cx="79" cy="432" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M85 434 C95 435, 103 436.5, 109 440" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#em-arr)"/>
+
+  <rect id="em-state-attacking" x="110" y="430" rx="14" ry="14" width="180" height="65" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="110" y1="460" x2="290" y2="460" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="200" y="445" text-anchor="middle" dominant-baseline="central">attacking</text>
+
+  <rect id="em-state-fleeing" x="430" y="430" rx="14" ry="14" width="180" height="65" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="430" y1="460" x2="610" y2="460" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="520" y="445" text-anchor="middle" dominant-baseline="central">fleeing</text>
+
+  <line id="em-trans-beh-e" x1="290" y1="452" x2="428" y2="452" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="360" y="444" text-anchor="middle">e</text>
+  <line id="em-trans-beh-d" x1="430" y1="475" x2="292" y2="475" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="360" y="490" text-anchor="middle">d</text>
+</svg>
   <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
-    Orthogonal regions: two emotion dimensions plus one behavior mode.
+    Orthogonal regions: two emotion dimensions plus one behavior mode. The
+    diagram highlights every active leaf; a shared event lights up its
+    transition in each region at once.
   </p>
 </figure>
 
@@ -3457,6 +4030,8 @@ fridge2(_Other,      List, error(unknown_request), List).
                 { label: '$Pid ! stop.',   query: '$Pid ! stop.'   }
             ]);
         }
+        _scCurrentChart = 'pr';
+        _scLastEvent = null;
         pasteAndAskExample(exampleId);
     }
 
@@ -3468,6 +4043,8 @@ fridge2(_Other,      List, error(unknown_request), List).
                 { label: '$Pid ! input([12, 8, 4]).',       query: '$Pid ! input([12, 8, 4]).'       }
             ]);
         }
+        _scCurrentChart = null;   // gcd has no diagram
+        _scLastEvent = null;
         pasteAndAskExample(exampleId);
     }
 
@@ -3485,6 +4062,9 @@ fridge2(_Other,      List, error(unknown_request), List).
                 { label: '$Pid ! h.', query: '$Pid ! h.' }
             ]);
         }
+        _scCurrentChart = 'spaghetti';
+        _scLastEvent = null;
+        SC_CHARTS.spaghetti.prev = null;
         pasteAndAskExample(exampleId);
     }
 
@@ -3497,15 +4077,104 @@ fridge2(_Other,      List, error(unknown_request), List).
                 { label: '$Pid ! f.', query: '$Pid ! f.' }
             ]);
         }
+        _scCurrentChart = 'emotions';
+        _scLastEvent = null;
         pasteAndAskExample(exampleId);
     }
 
-    // Pause-and-resume statechart diagram ---------------------------------
+    // Statechart diagram animation ----------------------------------------
     // Trace events arrive as Prolog terms serialized to text. The renderer
     // remembers an external_event until the following configuration event so
-    // it can highlight both the active state and the transition that led to it.
+    // it can highlight both the active leaf state(s) and the transition(s)
+    // that led there. A per-chart registry lets one trace handler drive
+    // whichever diagram was most recently spawned.
 
-    var _scLastEvent = null;   // most recent external_event seen
+    var _scLastEvent = null;      // most recent external_event seen
+    var _scCurrentChart = 'pr';   // key into SC_CHARTS, or null when no diagram
+
+    /**
+     * Per-chart wiring. `states`/`trans` are the id suffixes reset each step;
+     * `resolve(config)` maps a configuration (flat list of active state atoms)
+     * plus `_scLastEvent` to the leaf state(s) and transition(s) to highlight.
+     * Element ids are `<statePrefix><id>` and `<transPrefix><id>`.
+     */
+    var SC_CHARTS = {
+        pr: {
+            svg: 'sc-pr-diagram',
+            statePrefix: 'sc-state-', transPrefix: 'sc-trans-',
+            arr: 'sc-arr', arrHi: 'sc-arr-hi',
+            baseWidth: '1.5', hiWidth: '2',
+            states: ['s1', 's2', 'interrupted', 'final'],
+            trans: ['play', 'reset', 'pause', 'resume', 'stop'],
+            resolve: function(config) {
+                var leafs = ['s1', 's2', 'interrupted', 'final'];
+                var active = null, i;
+                for (i = 0; i < leafs.length; i++) {
+                    if (config.indexOf(leafs[i]) >= 0) { active = leafs[i]; break; }
+                }
+                var map = { play: 'play', reset: 'reset',
+                            pause: 'pause', resume: 'resume', stop: 'stop' };
+                var t = _scLastEvent ? (map[_scLastEvent] || null) : null;
+                return { active: active ? [active] : [], trans: t ? [t] : [] };
+            }
+        },
+        spaghetti: {
+            svg: 'sc-sp-diagram',
+            statePrefix: 'sp-state-', transPrefix: 'sp-trans-',
+            arr: 'sp-arr', arrHi: 'sp-arr-hi',
+            baseWidth: '1.7', hiWidth: '2.4',
+            states: ['s11', 's211', 'f'],
+            trans: ['a', 'b1', 'b2', 'c1', 'c2', 'd1', 'd2',
+                    'e', 'f1', 'f2', 'g1', 'g2', 'h'],
+            prev: null,   // active leaf before the pending event
+            resolve: function(config) {
+                var leafs = ['s11', 's211', 'f'];
+                var active = null, i;
+                for (i = 0; i < leafs.length; i++) {
+                    if (config.indexOf(leafs[i]) >= 0) { active = leafs[i]; break; }
+                }
+                // Events b, c, d, f and g each label two different
+                // transitions; the source leaf disambiguates which fired.
+                var region = this.prev === 's11' ? 'L'
+                           : this.prev === 's211' ? 'R' : null;
+                var map = {
+                    'a@L': 'a',
+                    'b@L': 'b1', 'b@R': 'b2',
+                    'c@L': 'c1', 'c@R': 'c2',
+                    'd@L': 'd1', 'd@R': 'd2',
+                    'e@L': 'e',  'e@R': 'e',
+                    'f@L': 'f1', 'f@R': 'f2',
+                    'g@L': 'g1', 'g@R': 'g2',
+                    'h@R': 'h'
+                };
+                var t = _scLastEvent
+                    ? (map[_scLastEvent + '@' + region] || null) : null;
+                this.prev = active;
+                return { active: active ? [active] : [], trans: t ? [t] : [] };
+            }
+        },
+        emotions: {
+            svg: 'sc-em-diagram',
+            statePrefix: 'em-state-', transPrefix: 'em-trans-',
+            arr: 'em-arr', arrHi: 'em-arr-hi',
+            baseWidth: '1.7', hiWidth: '2.4',
+            states: ['anger', 'fear', 'anticipation', 'surprise',
+                     'attacking', 'fleeing'],
+            trans: ['af-e', 'af-d', 'as-e', 'as-f', 'beh-e', 'beh-d'],
+            resolve: function(config) {
+                // Parallel regions: highlight every active leaf, and light the
+                // shared event in each region that reacts to it.
+                var active = this.states.filter(function(s) {
+                    return config.indexOf(s) >= 0;
+                });
+                var map = { e: ['af-e', 'as-e', 'beh-e'],
+                            d: ['af-d', 'beh-d'],
+                            f: ['as-f'] };
+                var t = _scLastEvent ? (map[_scLastEvent] || []) : [];
+                return { active: active, trans: t };
+            }
+        }
+    };
 
     /** Consume one serialized statechart trace event. */
     function _scHandleTrace(text) {
@@ -3516,19 +4185,11 @@ fridge2(_Other,      List, error(unknown_request), List).
             return;
         }
         if (parsed.name === 'configuration' && parsed.args.length >= 1) {
-            var states  = _scParseList(parsed.args[0]);
-            var leafs   = ['s1', 's2', 'interrupted', 'final'];
-            var active  = null;
-            for (var i = 0; i < leafs.length; i++) {
-                if (states.indexOf(leafs[i]) >= 0) { active = leafs[i]; break; }
-            }
-            if (active) {
-                var eventToTrans = {
-                    play: 'play', reset: 'reset',
-                    pause: 'pause', resume: 'resume', stop: 'stop'
-                };
-                var trans = _scLastEvent ? (eventToTrans[_scLastEvent] || null) : null;
-                _scRenderDiagram(active, trans);
+            var chart = _scCurrentChart ? SC_CHARTS[_scCurrentChart] : null;
+            if (chart) {
+                var config = _scParseList(parsed.args[0]);
+                var r = chart.resolve(config);
+                _scRender(chart, r.active, r.trans);
             }
             _scLastEvent = null;
         }
@@ -3569,34 +4230,35 @@ fridge2(_Other,      List, error(unknown_request), List).
         return inner ? _scSplitArgs(inner) : [];
     }
 
-    /** Reset the SVG and apply the current active-state/transition highlight. */
-    function _scRenderDiagram(state, trans) {
-        var svg = document.getElementById('sc-pr-diagram');
+    /** Reset a chart's SVG, then apply the active-state/transition highlight. */
+    function _scRender(chart, activeStates, transIds) {
+        var svg = document.getElementById(chart.svg);
         if (!svg) { return; }
-        ['s1', 's2', 'interrupted', 'final'].forEach(function(id) {
-            var el = document.getElementById('sc-state-' + id);
+        var line = tutorialThemeValue('--tutorial-diagram-line');
+        chart.states.forEach(function(id) {
+            var el = document.getElementById(chart.statePrefix + id);
             if (el) { el.setAttribute('fill', 'none'); }
         });
-        ['play', 'reset', 'pause', 'resume', 'stop'].forEach(function(id) {
-            var el = document.getElementById('sc-trans-' + id);
+        chart.trans.forEach(function(id) {
+            var el = document.getElementById(chart.transPrefix + id);
             if (el) {
-                el.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-line'));
-                el.setAttribute('stroke-width', '1.5');
-                el.setAttribute('marker-end', 'url(#sc-arr)');
+                el.setAttribute('stroke', line);
+                el.setAttribute('stroke-width', chart.baseWidth);
+                el.setAttribute('marker-end', 'url(#' + chart.arr + ')');
             }
         });
-        if (state) {
-            var stateEl = document.getElementById('sc-state-' + state);
-            if (stateEl) { stateEl.setAttribute('fill', tutorialThemeValue('--tutorial-diagram-active-fill')); }
-        }
-        if (trans) {
-            var transEl = document.getElementById('sc-trans-' + trans);
-            if (transEl) {
-                transEl.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-highlight'));
-                transEl.setAttribute('stroke-width', '2');
-                transEl.setAttribute('marker-end', 'url(#sc-arr-hi)');
+        activeStates.forEach(function(id) {
+            var el = document.getElementById(chart.statePrefix + id);
+            if (el) { el.setAttribute('fill', tutorialThemeValue('--tutorial-diagram-active-fill')); }
+        });
+        transIds.forEach(function(id) {
+            var el = document.getElementById(chart.transPrefix + id);
+            if (el) {
+                el.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-highlight'));
+                el.setAttribute('stroke-width', chart.hiWidth);
+                el.setAttribute('marker-end', 'url(#' + chart.arrHi + ')');
             }
-        }
+        });
     }
 </script>
 </body>
