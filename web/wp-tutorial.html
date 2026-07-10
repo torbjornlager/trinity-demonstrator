@@ -3764,6 +3764,20 @@ fridge2(_Other,      List, error(unknown_request), List).
             lineHeight: "1.45"
         });
     }
+    window.tutorialFrameBridge = {
+        applyAppearance: applyTutorialAppearance,
+        applyTheme: applyTutorialTheme
+    };
+    window.addEventListener("message", function(event) {
+        if (event.origin !== window.location.origin || !event.data) {
+            return;
+        }
+        if (event.data.type === "webprolog-theme") {
+            applyTutorialTheme(event.data.theme);
+        } else if (event.data.type === "webprolog-appearance") {
+            applyTutorialAppearance(event.data);
+        }
+    });
 
     // Parent bridge and document bootstrap --------------------------------
 

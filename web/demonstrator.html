@@ -6713,9 +6713,20 @@
             });
           },
           syncTutorialAppearance: function() {
+            var frame = this.$refs.tutorialFrame;
             var bridge = this.tutorialFrameBridge();
+            var options = this.tutorialAppearanceOptions();
             if (bridge && typeof bridge.applyAppearance === "function") {
-              bridge.applyAppearance(this.tutorialAppearanceOptions());
+              bridge.applyAppearance(options);
+            }
+            if (!frame || !frame.contentWindow) {
+              return;
+            }
+            try {
+              frame.contentWindow.postMessage(Object.assign({
+                type: "webprolog-appearance"
+              }, options), window.location.origin);
+            } catch (error) {
             }
           },
           navigateTutorialFrameInPlace: function(anchor, tutorialPath) {
