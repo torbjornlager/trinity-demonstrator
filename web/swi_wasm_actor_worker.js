@@ -1136,7 +1136,11 @@
       return fetch("/wasm/" + name, { cache: "no-store" }).then(function(response) {
         if (!response.ok) throw new Error("HTTP " + response.status + " for /wasm/" + name);
         return response.text().then(function(source) {
-          return { name: name, source: source.replace(/swi_wasm_actor_bridge:/g, "user:") };
+          var adapted = source.replace(/swi_wasm_actor_bridge:/g, "user:");
+          adapted = adapted.replace(/self\(statechart\)\./g, "self(" + selfPidText + ").");
+          adapted = adapted.replace(/\[target\(statechart\)\|Options\]/g,
+                                    "[target(" + selfPidText + ")|Options]");
+          return { name: name, source: adapted };
         });
       });
     })).then(function(files) {

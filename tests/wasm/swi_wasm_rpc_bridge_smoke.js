@@ -497,6 +497,15 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
+ok(includes("spawnSwiWasmWorkerActorReady") &&
+   includes('result = this.spawnSwiWasmWorkerActorReady(message.goal') &&
+   includes("await(SpawnPromise, SpawnedText)"),
+   "SWI-WASM worker spawns resolve only after the child worker is ready");
+ok(workerSource.includes('adapted.replace(/self\\(statechart\\)\\./g') &&
+   workerSource.includes('"[target(" + selfPidText + ")|Options]"') &&
+   includes('"statechart_actor",') &&
+   !includes('"statechart", "statechart_actor"'),
+   "SWI-WASM-2 statechart workers route child replies to their concrete chart pid");
 ok(workerSource.includes('"    monitor(Pid, Ref),"') &&
    workerSource.includes('"            exit(Pid, kill),"') &&
    workerSource.includes('"            receive({down(Ref, Pid, _) -> Reply = killed})"'),

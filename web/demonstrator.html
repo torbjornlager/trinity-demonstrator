@@ -9377,13 +9377,13 @@
           installSwiWasmActorBridge: function() {
             var self = this;
             window.swiWasmActorSpawn = function(goalText, extraSourceText) {
-              return self.spawnSwiWasmWorkerActor(goalText, extraSourceText);
+              return self.spawnSwiWasmWorkerActorReady(goalText, extraSourceText);
             };
             window.swiWasmActorReservePid = function() {
               return self.reserveSwiWasmWorkerActorPid();
             };
             window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText, nameText) {
-              return self.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText, nameText);
+              return self.spawnSwiWasmWorkerActorReady(goalText, extraSourceText, pidText, nameText);
             };
             window.swiWasmActorSend = function(pidText, messageText) {
               var from = self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main";
@@ -9544,7 +9544,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260705-swi-wasm-2-r21";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260705-swi-wasm-2-r22";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9557,8 +9557,16 @@
               done: false,
               reason: null,
               goal: String(goalText || ""),
-              role: String(roleText || "actor")
+              role: String(roleText || "actor"),
+              readyPromise: null,
+              resolveReady: null,
+              rejectReady: null
             };
+            entry.readyPromise = new Promise(function(resolve, reject) {
+              entry.resolveReady = resolve;
+              entry.rejectReady = reject;
+            });
+            entry.readyPromise.catch(function() {});
             this.swiWasmActorWorkers[pid] = entry;
             if (nameText) {
               this.registerSwiWasmActorName("actor", nameText, pid);
@@ -9570,6 +9578,11 @@
               //  An uncaught worker error (e.g. importScripts failing before
               //  the worker's own handler runs) never posts {type:error}, so
               //  finalize here: notify monitors (down/3), clear names, reap.
+              if (entry.rejectReady) {
+                entry.rejectReady(new Error("worker_error: " + message));
+                entry.resolveReady = null;
+                entry.rejectReady = null;
+              }
               self.finalizeSwiWasmWorkerActor(pid, "error(" + JSON.stringify("worker_error: " + message) + ")");
             };
             worker.postMessage(Object.assign({
@@ -9584,6 +9597,19 @@
             }, startFields || {}));
             this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
             return pid;
+          },
+          spawnSwiWasmWorkerActorReady: function(goalText, extraSourceText, pidText, nameText, roleText, startFields) {
+            var pid = this.spawnSwiWasmWorkerActor(goalText, extraSourceText, pidText, nameText, roleText, startFields);
+            var entry = this.swiWasmActorWorkers[pid];
+            if (!entry) {
+              return Promise.resolve(pid);
+            }
+            if (entry.ready) {
+              return Promise.resolve(pid);
+            }
+            return entry.readyPromise.then(function() {
+              return pid;
+            });
           },
           swiWasmRemoteNodeUrl: function(nodeText) {
             var node = String(nodeText || "");
@@ -9630,8 +9656,8 @@
               ? Promise.resolve(String(sourceText || ""))
               : this.loadSwiWasmAssetSource(sourceText);
             return sourcePromise.then(function(xml) {
-              return self.spawnSwiWasmWorkerActor(
-                "statechart_actor_loop", " ", "", "statechart", "statechart_actor",
+              return self.spawnSwiWasmWorkerActorReady(
+                "statechart_actor_loop", " ", "", "", "statechart_actor",
                 { statechartXml: xml, statechartTrace: trace === true }
               );
             });
@@ -10083,6 +10109,11 @@
             }
             if (message.type === "ready") {
               entry.ready = true;
+              if (entry.resolveReady) {
+                entry.resolveReady(pid);
+                entry.resolveReady = null;
+                entry.rejectReady = null;
+              }
               this.log("transport", pid + " ready.", "swi-wasm", "response");
               if (entry.role === "shell_toplevel") {
                 this.swiWasm2ShellReady = true;
@@ -10163,6 +10194,11 @@
               if (!entry.done) {
                 entry.done = true;
                 entry.reason = message.reason || "true";
+                if (entry.rejectReady) {
+                  entry.rejectReady(new Error("worker exited before ready: " + entry.reason));
+                  entry.resolveReady = null;
+                  entry.rejectReady = null;
+                }
                 this.notifySwiWasmActorMonitors(pid, entry.reason);
               } else if (!entry.reason && message.reason) {
                 entry.reason = message.reason;
@@ -10191,6 +10227,11 @@
               if (!entry.done) {
                 entry.done = true;
                 entry.reason = "error(" + JSON.stringify(String(message.error || "unknown_error")) + ")";
+                if (entry.rejectReady) {
+                  entry.rejectReady(new Error(String(message.error || "unknown_error")));
+                  entry.resolveReady = null;
+                  entry.rejectReady = null;
+                }
                 this.notifySwiWasmActorMonitors(pid, entry.reason);
               }
               this.log("error", pid + " failed: " + String(message.error || "unknown error"), "swi-wasm");
@@ -10221,7 +10262,7 @@
                 result = this.reserveSwiWasmActorRef();
                 break;
               case "spawn":
-                result = this.spawnSwiWasmWorkerActor(message.goal || "true", message.source || "", message.pid || "", message.name || "");
+                result = this.spawnSwiWasmWorkerActorReady(message.goal || "true", message.source || "", message.pid || "", message.name || "");
                 break;
               case "statechart_spawn":
                 result = this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, message.trace);
@@ -10977,7 +11018,8 @@
               "        term_string(Goal, GoalText),",
               "        collect_spawn_source(Options, ExtraSource),",
               "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
-              "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
+              "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
+              "        await(SpawnPromise, SpawnedText),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), spawn/3)) ; SpawnedText == PidText )",
               "    ;   collect_remote_spawn_source(Goal, Options, ExtraSource),",
               "        term_string(Goal, GoalText),",
@@ -11189,7 +11231,8 @@
               "        PidText := swiWasmActorReservePid(),",
               "        term_string(Pid, PidText),",
               "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
-              "        SpawnedText := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+              "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
+              "        await(SpawnPromise, SpawnedText),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; SpawnedText == PidText )",
               "    ;   term_string(Node, NodeText),",
               "        option(session(Session), Options, true),",
