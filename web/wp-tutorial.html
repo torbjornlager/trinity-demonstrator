@@ -1361,6 +1361,7 @@ price(Item, Price) :-
     <a href="https://n0.elfenbenstornet.se/discovery-hub" target="_blank" rel="noopener noreferrer">Discovery Hub</a>.
 </p>
 
+<h2>A fridge simulation</h2>
 
 <p>
     The following example, also adapted from Fred Hébert's 
@@ -1942,6 +1943,8 @@ ping_pong :-
     <code>self/1</code>, <code>spawn/1-3</code>, or <code>receive/1-2</code>.
 </p>
 
+<h2>Humans are mortal</h2>
+
 <p>
     In this deployment, <code>n1</code> hosts:
 </p>
@@ -1980,14 +1983,16 @@ human(Who) :-
     <code>n1</code>.
 </p>
 
+<h2>Source code shipping with rpc/3</h2>
+
 <p>
     The three-argument form of <code>rpc/2-3</code> can also ship temporary
-    source text with the call. Here <code>mortal/1</code> is defined only for
+    source text with the call. Here, three clauses are defined only for
     the duration of the remote query:
 </p>
 
-<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', mortal(Who), [
-       load_text("mortal(Who) :- human(Who).")
+<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', p(X), [
+       load_list([(q(X) :- p(X)), p(a), p(b)])
    ]).
 </pre>
 
