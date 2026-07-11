@@ -104,7 +104,9 @@ current_rpc_server_port(Port) :-
     once(http_current_server(node:http_dispatch, PortSpec)),
     local_server_port(PortSpec, Port).
 current_rpc_server_port(Port) :-
-    once(http_current_server(http_dispatch, PortSpec)),
+    once(( http_current_server(user:Dispatcher, PortSpec),
+           Dispatcher == http_dispatch
+         )),
     local_server_port(PortSpec, Port).
 
 local_server_port(_Host:Port, Port) :-

@@ -41,13 +41,13 @@ inspection without exposing `/admin` publicly:
 - `wp_admin` -> `127.0.0.1:3054`
 - `wp_n4` -> `127.0.0.1:3055`
 
-By default, the node containers use the examples copied into the image at build time. If you edit files under [`examples/`](examples), rebuild the node containers to make those changes visible in the Examples drawer:
+By default, the node containers use the examples copied into the image at build time. If you edit files under [`examples/`](../examples), rebuild the node containers to make those changes visible in the Examples drawer:
 
 ```bash
 docker compose up --build -d wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
 ```
 
-An optional override file, [`compose.examples-live.yaml`](Deployment/compose.examples-live.yaml), bind-mounts `examples/` read-only from the host so example edits show up without rebuilding. Use it only if Docker Desktop file sharing for the repo root is working:
+An optional override file, [`compose.examples-live.yaml`](compose.examples-live.yaml), bind-mounts `examples/` read-only from the host so example edits show up without rebuilding. Use it only if Docker Desktop file sharing for the repo root is working:
 
 ```bash
 docker compose -f compose.yaml -f compose.examples-live.yaml up -d wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
@@ -163,7 +163,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 - overlay contents:
   `deployment_node(n1).`
 - shared DB file:
-  [`shared_db_n1.pl`](Deployment/shared_db_n1.pl)
+  [`shared_db_n1.pl`](shared_db_n1.pl)
 - local-only admin surface:
   `http://127.0.0.1:3051/admin`
 
@@ -179,7 +179,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
   `deployment_node(n2).`, `mortal/1`, `ancestor/2`, `descendant/2`,
   `family_member/1`
 - shared DB file:
-  [`shared_db_n2.pl`](Deployment/shared_db_n2.pl)
+  [`shared_db_n2.pl`](shared_db_n2.pl)
 - local-only admin surface:
   `http://127.0.0.1:3052/admin`
 
@@ -195,7 +195,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
   `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
   `count_actor/1`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`
 - shared DB file:
-  [`shared_db_n3.pl`](Deployment/shared_db_n3.pl)
+  [`shared_db_n3.pl`](shared_db_n3.pl)
 - local-only admin surface:
   `http://127.0.0.1:3053/admin`
 
@@ -212,7 +212,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
   `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`,
   `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`
 - shared DB file:
-  [`shared_db_n4.pl`](Deployment/shared_db_n4.pl)
+  [`shared_db_n4.pl`](shared_db_n4.pl)
 - local-only admin surface:
   `http://127.0.0.1:3055/admin`
 
@@ -226,7 +226,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 - overlay contents:
   `deployment_node(admin).`, `deployment_public_node/1`
 - shared DB file:
-  [`shared_db_admin.pl`](Deployment/shared_db_admin.pl)
+  [`shared_db_admin.pl`](shared_db_admin.pl)
 
 If you want the canonical hostname locally, add this to your local
 `/etc/hosts`:
@@ -374,14 +374,14 @@ When this allowlist is active, public `load_uri` rejects:
 Each deployment node now loads:
 
 - the common base
-  [`shared_db_common.pl`](Deployment/shared_db_common.pl)
+  [`shared_db_common.pl`](shared_db_common.pl)
 - plus its own overlay file:
 
-- `n1` -> [`shared_db_n1.pl`](Deployment/shared_db_n1.pl)
-- `n2` -> [`shared_db_n2.pl`](Deployment/shared_db_n2.pl)
-- `n3` -> [`shared_db_n3.pl`](Deployment/shared_db_n3.pl)
-- `n4` -> [`shared_db_n4.pl`](Deployment/shared_db_n4.pl)
-- `admin` -> [`shared_db_admin.pl`](Deployment/shared_db_admin.pl)
+- `n1` -> [`shared_db_n1.pl`](shared_db_n1.pl)
+- `n2` -> [`shared_db_n2.pl`](shared_db_n2.pl)
+- `n3` -> [`shared_db_n3.pl`](shared_db_n3.pl)
+- `n4` -> [`shared_db_n4.pl`](shared_db_n4.pl)
+- `admin` -> [`shared_db_admin.pl`](shared_db_admin.pl)
 
 The current deployment split is:
 
@@ -394,7 +394,7 @@ The current deployment split is:
 - `shared_db_admin.pl`: local deployment facts for admin use
 
 This keeps the repo-level
-[`shared_db.pl`](shared_db.pl)
+[`shared_db.pl`](../prolog/web_prolog/shared_db.pl)
 unchanged for non-deployment defaults.
 
 After editing any of the shared DB files, rebuild the node containers:
@@ -405,7 +405,7 @@ docker compose up --build -d wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
 
 `n3` and `n4` additionally start the node-resident `counter` and `pubsub_service`
 actors at startup through
-[`examples/services/node_resident_services.pl`](examples/services/node_resident_services.pl).
+[`examples/services/node_resident_services.pl`](../examples/services/node_resident_services.pl).
 
 ## macOS Notes
 

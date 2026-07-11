@@ -61,22 +61,19 @@ Then try:
 The node **executes untrusted code from clients** — that is the product —
 so it is **secure by default**: `auth=private`, and it *refuses to start
 world-open* (`auth=open`) unless you set `WP_ACK_PUBLIC=yes`. The
-[`Deployment/`](Deployment/) directory is a turn-key bundle with three
-paths; the fastest is Docker + Caddy with automatic Let's Encrypt TLS:
+[`Deployment/`](Deployment/) directory contains the Docker + Caddy stack
+used for the repository's `elfenbenstornet.se` nodes:
 
 ```bash
-cp Deployment/.env.example Deployment/.env
-$EDITOR Deployment/.env          # set SITE_ADDRESS, ACME_EMAIL, WP_AUTH, …
-docker compose -f Deployment/compose.yaml --env-file Deployment/.env up -d
-curl https://your-node.example.com/healthz      # {"status":"ok"}
+cp Deployment/.env.n5-sso.example Deployment/.env
+$EDITOR Deployment/.env          # set OAuth credentials and registration policy
+docker compose -f Deployment/compose.yaml --env-file Deployment/.env up -d --build
+curl https://n5.elfenbenstornet.se/healthz      # {"status":"ok"}
 ```
 
-The full guide — systemd and bare-`swipl` paths, the config-file vs.
-environment-variable surfaces (env > file > built-in), operational
-endpoints (`/healthz` `/readyz` `/version` `/metrics`, `/admin`), graceful
-drain, and the **secure-config checklist** — is in
-[Deployment/README.md](Deployment/README.md). SSO-gated deployments are
-covered in [Deployment/SSO.md](Deployment/SSO.md).
+The full topology, environment setup, operational commands, and SSO-gated
+`n5` configuration are documented in
+[Deployment/README.md](Deployment/README.md).
 
 Validate a configuration without starting the server:
 

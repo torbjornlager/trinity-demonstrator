@@ -314,6 +314,12 @@ ok(includes("prepareEditorCommand: function(command, term)") &&
    includes('load_text(<editor>)  snapshot the active SXML editor') &&
    !includes('statechart_spawn(Pid, [...]).'),
    "terminal and Examples share visible submission-time editor expansion");
+ok(includes("escapeNestedPrologNegation: function(text)") &&
+   includes("normalizeMarkdownUrlLiterals: function(text)") &&
+   includes("this.normalizeMarkdownUrlLiterals(") &&
+   includes("rawGoal = this.escapeNestedPrologNegation(") &&
+   workerSource.includes("function escapeNestedPrologNegation(text)"),
+   "all terminal transports protect negation inside nested Prolog source before parsing it");
 ok(!includes('@click="runStatechart"') &&
    !includes('@click="haltStatechart"') &&
    !includes("runStatechart: function") &&

@@ -245,14 +245,6 @@ pid_local(Pid0, LocalPid) :-
     ;   LocalPid = Pid0
     ).
 
-%!  is_local_pid(@Term) is semidet.
-%
-%   True if Term has the shape of a layer-0 local pid.
-is_local_pid(actor(N)) :-
-    integer(N).
-is_local_pid(main).
-
-
                 /*******************************
                 *             SPAWN            *
                 *******************************/
@@ -683,8 +675,10 @@ self_local(Self) :-
 
 %!  monitor(+Pid, -Ref) is det.
 %!  demonitor(+Ref) is det.
+%!  demonitor(+Ref, +Options:list) is det.
 %
-%   Monitoring/demonitoring of processes.
+%   Monitoring/demonitoring of processes. The `flush` option removes any
+%   pending `down(Ref, _, _)` messages for Ref from the caller's mailbox.
 
 :- dynamic monitor/3.
 

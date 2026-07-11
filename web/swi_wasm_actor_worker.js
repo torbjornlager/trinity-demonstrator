@@ -56,6 +56,56 @@
     mailbox.push(text);
   }
 
+  // A shell goal is parsed once more in the worker's private Prolog engine.
+  // Thus source passed to load_text/1 is nested inside a quoted literal in
+  // that goal.  A natural `\\+` in the source would otherwise be treated as
+  // SWI's undefined `\\+` character escape before load_text/1 sees it.
+  // Protect only an unescaped backslash before `+` inside a quoted literal;
+  // an already escaped `\\\\+` and an ordinary `\\+` goal operator remain
+  // unchanged.
+  function escapeNestedPrologNegation(text) {
+    var source = String(text || "");
+    var output = "";
+    var quote = "";
+    var index = 0;
+
+    while (index < source.length) {
+      var character = source.charAt(index);
+      if (!quote) {
+        if (character === "'" || character === '"') {
+          quote = character;
+        }
+        output += character;
+        index += 1;
+        continue;
+      }
+      if (character !== "\\") {
+        output += character;
+        if (character === quote) {
+          quote = "";
+        }
+        index += 1;
+        continue;
+      }
+
+      var start = index;
+      while (index < source.length && source.charAt(index) === "\\") {
+        index += 1;
+      }
+      var slashCount = index - start;
+      output += source.slice(start, index);
+      if (source.charAt(index) === "+" && slashCount % 2 === 1) {
+        output += "\\";
+      }
+      // An odd run escapes a matching quote, so it cannot close the literal.
+      if (source.charAt(index) === quote && slashCount % 2 === 1) {
+        output += source.charAt(index);
+        index += 1;
+      }
+    }
+    return output;
+  }
+
   function actorReceive(timeoutSeconds) {
     if (mailbox.length > 0) {
       return Promise.resolve(mailbox.shift());
@@ -1245,7 +1295,7 @@
       return;
     }
     if (message.command === "shell_call" && workerRole === "shell_toplevel") {
-      deliver("'$call_text'(" + JSON.stringify(String(message.goal || "true")) + "," +
+      deliver("'$call_text'(" + JSON.stringify(escapeNestedPrologNegation(message.goal || "true")) + "," +
               Number(message.limit || 1) + "," + Number(message.offset || 0) + "," +
               (message.once === true ? "true" : "false") + ")");
       return;

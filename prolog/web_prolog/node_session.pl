@@ -85,8 +85,13 @@ rewrite_isotope_goal(Term, Term).
 
 %!  register_isotope_session(+Pid) is det.
 %!  register_isotope_session(+Pid, +InitialLoadText) is det.
+%!  register_isotope_session(+Pid, +InitialLoadText, +Profile) is det.
+%!  register_isotope_session(+Pid, +InitialLoadText, +Profile, +OwnerId) is det.
 %
-%   Create/replace queue bookkeeping for an ISOTOPE session.
+%   Create or replace queue bookkeeping for an ISOTOPE session. Profile is
+%   the public execution ceiling remembered for subsequent calls, and OwnerId
+%   identifies the principal allowed to operate on the session. The shorter
+%   forms default Profile to `isotope` and OwnerId to `anonymous`.
 register_isotope_session(Pid) :-
     register_isotope_session(Pid, '').
 

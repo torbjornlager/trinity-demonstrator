@@ -707,6 +707,18 @@ rp(right).
 
 :- begin_tests(node).
 
+test(rpc_localhost_finds_user_dispatcher_port) :-
+    pick_free_port(Port),
+    setup_call_cleanup(
+        http_server(user:http_dispatch, [port(Port)]),
+        (
+            rpc:local_rpc_base_uri(URI),
+            format(atom(Expected), 'http://localhost:~w', [Port]),
+            assertion(URI == Expected)
+        ),
+        http_stop_server(Port, [])
+    ).
+
 test(node_1_starts_http_endpoint, true(Answer == success([true], false))) :-
     with_node_server(URI,
         (

@@ -128,6 +128,17 @@ async function main() {
   ok(shellCall.indexOf("'$call_text'") === 0 && shellCall.includes("member(X,[a,b])"),
      "shell call enters the toplevel actor mailbox");
 
+  S.onmessage({ data: {
+    command: "shell_call",
+    goal: 'rpc(node, immortal(Who), [load_text("immortal(Who) :- \\+ mortal(Who).")])',
+    limit: 1
+  } });
+  const nestedNegation = await S.actorReceive(-1);
+  const nestedGoalLiteral = nestedNegation.match(/^'\$call_text'\(("(?:[^"\\]|\\.)*"),/);
+  const nestedGoal = nestedGoalLiteral && JSON.parse(nestedGoalLiteral[1]);
+  ok(nestedGoal && nestedGoal.includes(String.fromCharCode(92, 92) + "+ mortal(Who)"),
+     "shell call escapes negation inside nested Prolog source before reparsing it");
+
   // 9b. A read/1 answer carrying a comma + trailing '.' is parenthesised and
   // the period stripped, so '$input' stays arity 2 (a bare comma would make
   // it '$input'/3 and the shell's receive would never match).

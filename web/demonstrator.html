@@ -7969,6 +7969,53 @@
               return original;
             });
           },
+          escapeNestedPrologNegation: function(text) {
+            var source = String(text || "");
+            var output = "";
+            var quote = "";
+            var index = 0;
+            while (index < source.length) {
+              var character = source.charAt(index);
+              if (!quote) {
+                if (character === "'" || character === '"') {
+                  quote = character;
+                }
+                output += character;
+                index += 1;
+                continue;
+              }
+              if (character !== "\\") {
+                output += character;
+                if (character === quote) {
+                  quote = "";
+                }
+                index += 1;
+                continue;
+              }
+              var start = index;
+              while (index < source.length && source.charAt(index) === "\\") {
+                index += 1;
+              }
+              var slashCount = index - start;
+              output += source.slice(start, index);
+              if (source.charAt(index) === "+" && slashCount % 2 === 1) {
+                output += "\\";
+              }
+              if (source.charAt(index) === quote && slashCount % 2 === 1) {
+                output += source.charAt(index);
+                index += 1;
+              }
+            }
+            return output;
+          },
+          normalizeMarkdownUrlLiterals: function(text) {
+            return String(text || "").replace(
+              /(['"])\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)\1/g,
+              function(_match, quote, _label, target) {
+                return quote + target + quote;
+              }
+            );
+          },
           reportResultRows: function(rows) {
             if (!Array.isArray(rows) || rows.length === 0) {
               return "true ";
@@ -8919,7 +8966,11 @@
             if (!prepared) {
               return;
             }
-            rawGoal = prepared.command.replace(/\s*\.\s*$/, "");
+            rawGoal = this.escapeNestedPrologNegation(
+              this.normalizeMarkdownUrlLiterals(
+                prepared.command.replace(/\s*\.\s*$/, "")
+              )
+            );
             this.lastDollarVars = this.extractDollarVars(rawGoal);
             unresolvedDollarVars = this.unresolvedDollarVars();
             if (unresolvedDollarVars.length > 0) {
@@ -9582,7 +9633,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260710-swi-wasm-2-r23";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260711-swi-wasm-2-r25";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
