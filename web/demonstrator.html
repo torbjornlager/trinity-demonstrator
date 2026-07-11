@@ -9633,7 +9633,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260711-swi-wasm-2-r25";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260711-swi-wasm-2-r26";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -11305,7 +11305,6 @@
               "whereis_name(Kind, Name, Pid) :-",
               "    term_string(Name, NameText),",
               "    PidText := swiWasmActorWhereis(#Kind, #NameText),",
-              "    PidText \\== \"undefined\",",
               "    term_string(Pid, PidText).",
               "",
               "respond(Pid, Answer) :-",
@@ -12380,6 +12379,13 @@
               }
               if (compound.functor === "-" && args.length === 2) {
                 return this.formatSwiWasmValue(args[0]) + "-" + this.formatSwiWasmValue(args[1]);
+              }
+              if (compound.functor === "=" && args.length === 2) {
+                return this.formatSwiWasmValue(args[0]) + "=" + this.formatSwiWasmValue(args[1]);
+              }
+              if (compound.functor === "," && args.length === 2) {
+                return "(" + this.formatSwiWasmValue(args[0]) + "," +
+                  this.formatSwiWasmValue(args[1]) + ")";
               }
               if (args.length === 0) return this.formatSwiWasmAtom(compound.functor);
               return this.formatSwiWasmAtom(compound.functor) + "(" + args.map(function(arg) {

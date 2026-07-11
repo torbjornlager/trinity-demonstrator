@@ -787,6 +787,10 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(WPTutorialBody, _, _, _, 'id="epa-published-counter"')),
             assertion(sub_string(WPTutorialBody, _, _, _, "counter@'https://n3.elfenbenstornet.se'")),
             assertion(sub_string(WPTutorialBody, _, _, _, '<a href="https://n0.elfenbenstornet.se/discovery-hub" target="_blank" rel="noopener noreferrer">Discovery Hub</a>')),
+            assertion(sub_string(WPTutorialBody, _, _, _, '<h2>Remote calls with promise/3-4 and yield/2-3</h2>')),
+            assertion(sub_string(WPTutorialBody, _, _, _, 'id="rpc-promise-timeout"')),
+            assertion(sub_string(WPTutorialBody, _, _, _, 'id="rpc-promise-poll"')),
+            assertion(sub_string(WPTutorialBody, _, _, _, 'on_timeout(Answer = timeout)')),
             assertion(OldWorkbenchStatus == 404),
             assertion(sub_string(PortalBody, _, _, _, 'https://trinity.elfenbenstornet.se/book.html')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Font</div>')),
@@ -6078,6 +6082,53 @@ test(promise_4_options, true(Answer == success([2], true))) :-
                     [template(X), offset(1), limit(1)]),
             yield(Ref, Answer)
         )).
+
+test(promise_4_load_text,
+     true(Answer == success([p(a), p(b)], false))) :-
+    with_node_server(URI,
+        (
+            promise(URI, p(X), Ref,
+                    [template(p(X)), load_text('p(a). p(b).')]),
+            yield(Ref, Answer)
+        )).
+
+test(promise_4_load_list,
+     true(Answer == success([p(a), p(b)], false))) :-
+    with_node_server(URI,
+        (
+            promise(URI, p(X), Ref,
+                    [template(p(X)), load_list([p(a), p(b)])]),
+            yield(Ref, Answer)
+        )).
+
+test(promise_4_load_predicates,
+     true(Answer == success([left, right], false))) :-
+    with_node_server(URI,
+        (
+            promise(URI, test_node:rp(X), Ref,
+                    [template(X), load_predicates([rp/1])]),
+            yield(Ref, Answer)
+        )).
+
+test(promise_4_load_uri,
+     true(Answer == success([u(a), u(b)], false))) :-
+    setup_call_cleanup(
+        tmp_file_stream(text, File, Stream),
+        (
+            format(Stream, 'u(a).~nu(b).~n', []),
+            close(Stream),
+            with_node_server(URI,
+                (
+                    promise(URI, u(X), Ref,
+                            [template(u(X)), load_uri(File)]),
+                    yield(Ref, Answer)
+                ))
+        ),
+        (
+            catch(close(Stream), _, true),
+            catch(delete_file(File), _, true)
+        )
+    ).
 
 test(yield_3_timeout_default_succeeds_with_unbound, true(var(Message))) :-
     yield(4242424242, Message, [timeout(0.01)]).

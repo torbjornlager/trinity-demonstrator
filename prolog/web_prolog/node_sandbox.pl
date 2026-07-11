@@ -1076,14 +1076,15 @@ sandbox:safe_primitive(actor_api:node_setting(_, _)).
 %  that must stay sandbox-checked.  Declaring them safe requires per-predicate
 %  handling (safe_meta listing the goal args + public_runtime_support_goal
 %  exemptions for the internal loops); see the review notes.
-%  rpc/2,3 are meta-predicates (rpc(+URI, :Goal)); declare them safe_meta
+%  rpc/2,3 and promise/3,4 are meta-predicates whose goals are shipped;
+%  declare them safe_meta
 %  with NO checked goal arg -- the goal is shipped as text and runs only on
 %  the remote node, so it must not be analysed against the LOCAL predicate
 %  set here (it names the remote's predicates, not ours).
 sandbox:safe_meta(rpc:rpc(_, _), []).
 sandbox:safe_meta(rpc:rpc(_, _, _), []).
-sandbox:safe_primitive(rpc:promise(_, _, _)).
-sandbox:safe_primitive(rpc:promise(_, _, _, _)).
+sandbox:safe_meta(rpc:promise(_, _, _), []).
+sandbox:safe_meta(rpc:promise(_, _, _, _), []).
 sandbox:safe_primitive(rpc:yield(_, _)).
 sandbox:safe_primitive(rpc:yield(_, _, _)).
 

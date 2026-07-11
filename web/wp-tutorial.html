@@ -1983,7 +1983,7 @@ human(Who) :-
     <code>n1</code>.
 </p>
 
-<h2>Source code shipping with rpc/3</h2>
+<h2>Shipping source code with rpc/3</h2>
 
 <p>
     The three-argument form of <code>rpc/2-3</code> can also ship temporary
@@ -1991,7 +1991,7 @@ human(Who) :-
     the duration of the remote query:
 </p>
 
-<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', p(X), [
+<pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', q(X), [
        load_list([(q(X) :- p(X)), p(a), p(b)])
    ]).
 </pre>
@@ -2035,6 +2035,81 @@ human(Who) :-
     private rule exists only for this execution context: it neither changes
     <code>n1</code>'s shared <code>price/2</code> nor affects later calls.
 </p>
+
+
+<h1>Remote calls with promise/3-4 and yield/2-3</h1>
+
+<p>
+    The <code>promise/3-4</code> and <code>yield/2-3</code> predicates split a
+    remote call into two phases. <code>promise/3-4</code> starts the call and
+    immediately returns a reference; <code>yield/2-3</code> uses that reference
+    to collect the answer later. The four-argument form accepts the same
+    <code>load_text/1</code>, <code>load_list/1</code>, <code>load_uri/1</code>,
+    and <code>load_predicates/1</code> source-loading options as
+    <code>rpc/3</code>. 
+</p>
+
+
+<h2>Bounding the wait</h2>
+
+<p>
+    A client can bound the wait and give timeout an explicit result:
+</p>
+
+<pre id="rpc-promise-timeout">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref),
+   yield(Ref, Answer, [
+       timeout(0.3),
+       on_timeout(Answer = timeout)
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#rpc-promise-timeout&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Because the remote goal sleeps for one second, the first wait normally
+    produces <code>Answer = timeout</code>. Timing out does not cancel or
+    consume the promise: another call to <code>yield/2-3</code> with the same
+    reference can still collect its answer.
+</p>
+
+<h2>Polling for results</h2>
+
+<p>
+    This makes bounded polling possible. The following self-contained query
+    waits briefly on each iteration and does other work between attempts:
+</p>
+
+<pre id="rpc-promise-poll">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref),
+   repeat,
+     yield(Ref, Answer, [
+         timeout(0.3),
+         on_timeout(Answer = timeout)
+     ]),
+     (   Answer == timeout
+     -&gt;  writeln('Still waiting...'),
+         writeln('working...'),
+         sleep(0.1),
+         fail
+     ;   !
+     ).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#rpc-promise-poll&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Each timeout binding is undone when the loop backtracks, while the promise
+    remains pending. Once the answer arrives, the cut ends the loop. After a
+    few progress messages, the final bindings have the form
+    <code>Ref = 1, Answer = success([(sleep(1),a=a)],false)</code>; the reference
+    value and number of polling iterations depend on the runtime and timing.
+</p>
+
 </section>
 
 <section id="tutorial-distributed-proof-trees">

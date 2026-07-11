@@ -743,11 +743,15 @@ rpc(+URI, +Goal, +Options) is nondet.</pre>
     </div>
     <pre>promise(+URI, +Goal, -Ref) is det.
 promise(+URI, +Goal, -Ref, +Options) is det.</pre>
-    <p>Makes an asynchronous RPC call to node <code>URI</code> with <code>Goal</code>. As with <code>rpc/2-3</code>, the <code>URI</code> argument selects the execution node, and <code>localhost</code> means the node on which <code>promise/3-4</code> is running. Source-loading options, in runtimes that support them for <code>promise/4</code>, only materialize private source text for the remote call; they do not retarget the call. The current portable implementation supports the following options:</p>
+    <p>Makes an asynchronous RPC call to node <code>URI</code> with <code>Goal</code>. As with <code>rpc/2-3</code>, the <code>URI</code> argument selects the execution node, and <code>localhost</code> means the node on which <code>promise/3-4</code> is running. Source-loading options materialize private source text for the promised call; they do not retarget it. The following options are supported consistently across the native and SWI-WASM runtimes:</p>
     <ul>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
         <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
         <li><code>limit(+Integer)</code><br>Restrict the number of returned solutions to <code>Integer</code>.</li>
+        <li><code>load_text(+AtomOrString)</code><br>Load source text into the promised call's temporary private database.</li>
+        <li><code>load_list(+ListOfClauses)</code><br>Convert the clauses to source and load them into the promised call's temporary private database.</li>
+        <li><code>load_uri(+URI)</code><br>Fetch source from <code>URI</code> and load it into the promised call's temporary private database.</li>
+        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Copy the caller's indicated predicates into the promised call's temporary private database.</li>
     </ul>
     <p>The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the answer.</p>
 </article>
@@ -762,8 +766,9 @@ yield(+Ref, ?Answer, +Options) is det.</pre>
     <p>Returns the promised answer from a previous call to <code>promise/3-4</code>. This predicate must be called by the same process from which the previous call to <code>promise/3-4</code> was made. Valid options:</p>
     <ul>
         <li><code>timeout(+Number)</code><br>If nothing appears in the current mailbox within <code>Number</code> seconds, the goal supplied in the <code>on_timeout</code> option is called. Default is no timeout.</li>
-        <li><code>on_timeout(+Goal)</code><br>If the timeout occurs, <code>Goal</code> is called.</li>
+        <li><code>on_timeout(+Goal)</code><br>If the timeout occurs, <code>Goal</code> is called. Default is <code>true</code>.</li>
     </ul>
+    <p>A timeout does not cancel or consume the promise. The caller may call <code>yield/2-3</code> again with the same reference to collect an answer that arrives later.</p>
 </article>
 
 <h2 id="sec:iso-predicates">ISO predicates and related constructs</h2>

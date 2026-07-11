@@ -26,8 +26,9 @@ WebSocket; loadable on its own next to bare actors.pl.
 
 Note on Promise cleanup: Each call to `promise/3-4` creates an internal
 message queue stored in a dynamic predicate. Cleanup is guaranteed to happen
-whenever `yield/2-3` is called, even if it fails or times out. The only case
-where manual `promise_cleanup/1` is needed is if `yield` is never called at all.
+when `yield/2-3` collects an answer. A timed-out yield deliberately retains
+the queue so a later yield can collect the pending answer. Manual
+`promise_cleanup/1` is available when the caller abandons a promise.
 */
 
 :- use_module(pid_utils, [localhost_node/1]).
@@ -46,7 +47,9 @@ where manual `promise_cleanup/1` is needed is if `yield` is never called at all.
 
 :- meta_predicate
     rpc(+, :),
-    rpc(+, :, +).
+    rpc(+, :, +),
+    promise(+, :, -),
+    promise(+, :, -, +).
 
 %!  rpc(+URI, :Goal) is nondet.
 %!  rpc(+URI, :Goal, +Options) is nondet.
@@ -168,6 +171,8 @@ rpc_http_options(Options0, HTTPOptions) :-
     append(HTTPPrefix, HTTPFiltered, HTTPOptions).
 
 rpc_internal_option(limit(_)).
+rpc_internal_option(template(_)).
+rpc_internal_option(offset(_)).
 rpc_internal_option(timeout(_)).
 rpc_internal_option(http_timeout(_)).
 rpc_internal_option(load_text(_)).
@@ -218,37 +223,45 @@ promise_cleanup(Reference) :-
 promise(URI, Goal, Reference) :-
     promise(URI, Goal, Reference, []).
 
-promise(URI, Goal, Reference, Options) :-
+promise(URI, Goal0, Reference, Options) :-
+    resolve_rpc_uri(URI, RPCURI),
+    strip_module(Goal0, GoalModule, Goal),
+    option(template(Template), Options, Goal),
+    option(offset(Offset), Options, 0),
+    option(limit(Limit), Options, 10000000000),
+    option(once(Once0), Options, false),
+    normalize_once(Once0, Once),
+    option(timeout(RemoteTimeout0), Options, none),
+    normalize_requested_timeout(RemoteTimeout0, RemoteTimeout),
+    load_options_text(GoalModule, Options, LoadTextString),
+    atom_string(LoadText, LoadTextString),
+    rpc_http_options(Options, HTTPOptions),
     make_reference(Reference),
     message_queue_create(Queue),
     promise_queue_key(Reference, QueueKey),
     assertz(promise_queue_store(QueueKey, Queue)),
     % Schedule automatic cleanup after 5 minutes (300 seconds) if not consumed
     thread_create(promise_auto_cleanup_thread(QueueKey, 300), _, [detached(true)]),
-    option(template(Template), Options, Goal),
-    option(offset(Offset), Options, 0),
-    option(limit(Limit), Options, 10000000000),
-    thread_create(promise(URI, Goal, Template, Offset, Limit, Reference, Queue),
+    thread_create(promise(RPCURI, Goal, Template, Offset, Limit,
+                          HTTPOptions, LoadText, RemoteTimeout, Once, Queue),
                   _,
                   [detached(true)]).
 
-promise(URI, Goal, Template, Offset, Limit, _Reference, Queue) :-
+promise(URI, Goal, Template, Offset, Limit,
+        HTTPOptions, LoadText, RemoteTimeout, Once, Queue) :-
     format(atom(GoalTemplateAtom), "(~p)$@$(~p)", [Goal, Template]),
     atomic_list_concat([GoalAtom, TemplateAtom], $@$, GoalTemplateAtom),
     parse_url(URI, Parts),
+    rpc_search_params(GoalAtom, TemplateAtom, Offset, Limit,
+                      LoadText, RemoteTimeout, Once, Search),
     parse_url(ExpandedURI, [
         path('/call'),
-        search([ goal=GoalAtom,
-                 template=TemplateAtom,
-                 offset=Offset,
-                 limit=Limit,
-                 format=prolog
-               ])
+        search(Search)
       | Parts
     ]),
     catch((
         setup_call_cleanup(
-            http_open(ExpandedURI, Stream, []),
+            http_open(ExpandedURI, Stream, HTTPOptions),
             read(Stream, Message),
             close(Stream)),
         catch(thread_send_message(Queue, Message), SendError,

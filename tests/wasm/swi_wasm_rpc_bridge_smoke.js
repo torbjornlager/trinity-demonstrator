@@ -77,6 +77,15 @@ function tutorialIncludes(text) {
   return swiWasmTutorialSource.includes(text);
 }
 
+function embeddedWorkbenchMethod(name, nextName) {
+  const marker = name + ": function";
+  const start = source.indexOf(marker);
+  const functionStart = source.indexOf("function", start);
+  const end = source.indexOf("\n          " + nextName + ": function", functionStart);
+  const expression = source.slice(functionStart, end).trim().replace(/,$/, "");
+  return Function("return (" + expression + ");")();
+}
+
 const editorRewriteSource = source.slice(
   source.indexOf("function scanQuotedText"),
   source.indexOf("function renderOutputData")
@@ -100,6 +109,17 @@ const parseSwiWasmQualifiedServiceAddress = Function(
   qualifiedServiceParserSource +
   "\nreturn parseSwiWasmQualifiedServiceAddress;"
 )();
+const swiWasmValueRenderer = {
+  swiWasmStructuredCompound: embeddedWorkbenchMethod(
+    "swiWasmStructuredCompound", "swiWasmStructuredList"
+  ),
+  formatSwiWasmValue: embeddedWorkbenchMethod(
+    "formatSwiWasmValue", "formatSwiWasmAtom"
+  ),
+  formatSwiWasmAtom: embeddedWorkbenchMethod(
+    "formatSwiWasmAtom", "reconnectActiveTransport"
+  )
+};
 
 ok(includes("window.swiRpcGetAsync = function(url)"),
    "paged RPC has an asynchronous fetch helper");
@@ -460,6 +480,9 @@ ok(includes('"swi_wasm_actor_bridge:ptcp(" + pid + ",terminal,true)"') &&
    workerSource.includes('flush_output(user_output)') &&
    includes('this.swiWasmPromptText(args[1])'),
    "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
+ok(workerSource.includes('"    await(Promise, PidText),",\n      "    term_string(Pid, PidText).') &&
+   includes('"    PidText := swiWasmActorWhereis(#Kind, #NameText),",\n              "    term_string(Pid, PidText).'),
+   "whereis/2 binds an absent local name to undefined like a remote node");
 ok(includes('entry.worker.terminate();') &&
    includes('Replacing only the shell Worker provides a') &&
    includes('this.swiWasm2ShellPid,\n              "",\n              "shell_toplevel"'),
@@ -579,6 +602,29 @@ ok(includes('!this.isSwiWasmUnboundVariable(row[key])') &&
 ok(includes('compound.functor === "-" && args.length === 2') &&
    includes('this.formatSwiWasmValue(args[0]) + "-" + this.formatSwiWasmValue(args[1])'),
    "SWI-WASM renders pair terms with infix minus notation");
+ok(includes('compound.functor === "=" && args.length === 2') &&
+   includes('this.formatSwiWasmValue(args[0]) + "=" + this.formatSwiWasmValue(args[1])') &&
+   includes('compound.functor === "," && args.length === 2') &&
+   includes('return "(" + this.formatSwiWasmValue(args[0]) + "," +') &&
+   swiWasmValueRenderer.formatSwiWasmValue({
+     $t: "t",
+     functor: "success",
+     success: [
+       {
+         $t: "l",
+         v: [{
+           $t: "t",
+           functor: ",",
+           ",": [
+             {$t: "t", functor: "sleep", sleep: [1]},
+             {$t: "t", functor: "=", "=": ["a", "a"]}
+           ]
+         }]
+       },
+       false
+     ]
+   }) === "success([(sleep(1),a=a)],false)",
+   "SWI-WASM renders unification and conjunction in operator notation inside RPC answers");
 
 console.log(failures === 0
   ? "\nswi_wasm_rpc_bridge smoke: PASS"

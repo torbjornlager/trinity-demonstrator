@@ -822,7 +822,6 @@
       "    term_string(Name, NameText),",
       "    Promise := actorWhereis(#Kind, #NameText),",
       "    await(Promise, PidText),",
-      "    PidText \\== \"undefined\",",
       "    term_string(Pid, PidText).",
       "",
       "respond(Pid, Answer) :-",
