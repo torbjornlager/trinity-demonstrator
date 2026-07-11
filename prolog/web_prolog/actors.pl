@@ -587,8 +587,6 @@ stop(Pid, Parent) :-
     ;   true
     ),
     retractall(link(Parent, GlobalPid)),
-    retractall(registered(_Namespace, _Name, GlobalPid)),
-    retractall(registered_service(_ServiceName, GlobalPid)),
     retractall(delayed_send(_ID, GlobalPid)),
     forall(retract(link(GlobalPid, ChildPid)),
            exit(ChildPid, kill)),
@@ -597,12 +595,20 @@ stop(Pid, Parent) :-
     %  monitor/2 and demonitor/2 use the same mutex, so either a monitor
     %  is present here and receives exactly one down/3, or demonitor/2
     %  removes it before delivery and can safely flush the mailbox.
-    with_mutex(actors_monitor_lifecycle,
-        (   down_reason(Pid, Reason),
-            forall(retract(monitor(Other, GlobalPid, Ref)),
-                   Other ! down(Ref, GlobalPid, Reason)),
-            retractall(pid_thread(Pid, _)),
-            retractall(thread_pid(_, Pid))
+    %  Registration and pid retirement share the registry mutex.  A
+    %  concurrent register_service/2 therefore either publishes before this
+    %  transaction (and is removed here), or observes the retired pid and
+    %  fails; it cannot install a stale service mapping after cleanup.
+    with_mutex(actors_registry,
+        (   retractall(registered(_Namespace, _Name, GlobalPid)),
+            retractall(registered_service(_ServiceName, GlobalPid)),
+            with_mutex(actors_monitor_lifecycle,
+                (   down_reason(Pid, Reason),
+                    forall(retract(monitor(Other, GlobalPid, Ref)),
+                           Other ! down(Ref, GlobalPid, Reason)),
+                    retractall(pid_thread(Pid, _)),
+                    retractall(thread_pid(_, Pid))
+                ))
         )),
     retractall(actor_public_namespace(Pid, _)).
 
@@ -766,17 +772,17 @@ register(Name, Pid) :-
 %
 %   Publish Pid under Name in the node-wide *service* registry, visible
 %   across all namespaces (unlike register/2, which is namespace-local).
-%   Throws `process_already_has_a_name(Pid)` if Pid is already
-%   registered, or `name_is_in_use(Name)` if Name is taken.  The node
-%   layer restricts access for public callers through
-%   hook_namespace/1-scoped policy; stand-alone use is unrestricted.
+%   The ordinary and public service registries are independent namespaces.
+%   The node layer restricts mutation to owner-side code; stand-alone use is
+%   unrestricted.
 
 register_service(Name, Pid) :-
     require_service_registry_access(register_service(Name, Pid)),
     must_be(atom, Name),
     canonical_pid(Pid, CanonPid),
     with_mutex(actors_registry,
-        (   ensure_service_registration_available(Name, Pid, CanonPid),
+        (   ensure_publishable_service_pid(Pid, CanonPid),
+            ensure_service_registration_available(Name),
             asserta(registered_service(Name, CanonPid))
         )).
 
@@ -795,7 +801,8 @@ unregister(Name) :-
 unregister_service(Name) :-
     require_service_registry_access(unregister_service(Name)),
     must_be(atom, Name),
-    retractall(registered_service(Name, _)).
+    with_mutex(actors_registry,
+               retractall(registered_service(Name, _))).
 
 %!  whereis(?Name, -Pid) is det.
 
@@ -813,7 +820,7 @@ whereis(_Name, undefined).
 whereis_service(Name, Pid) :-
     require_service_registry_access(whereis_service(Name, Pid)),
     must_be(atom, Name),
-    registered_service(Name, Pid),
+    published_service_target(Name, Pid),
     !.
 whereis_service(Name, undefined) :-
     require_service_registry_access(whereis_service(Name, undefined)).
@@ -826,38 +833,52 @@ whereis_service(Name, undefined) :-
 %   unrestricted.  The error is the demonstrator's exact term.
 require_service_registry_access(Goal) :-
     (   hook_service_registry_denied
-    ->  throw(error(permission_error(access, actor_service_registry, Goal),
-                    context(actor:require_service_registry_access/1,
-                            'service registration is reserved for node-owned runtime code')))
+    ->  service_registry_access_error(Goal)
     ;   true
     ).
+
+service_registry_access_error(register_service(Name, _Pid)) :-
+    throw(error(permission_error(register, service, Name),
+                context(actors:register_service/2,
+                        'service publication is reserved for node-owned runtime code'))).
+service_registry_access_error(unregister_service(Name)) :-
+    throw(error(permission_error(unregister, service, Name),
+                context(actors:unregister_service/1,
+                        'service withdrawal is reserved for node-owned runtime code'))).
+service_registry_access_error(Goal) :-
+    throw(error(permission_error(access, actor_service_registry, Goal),
+                context(actors:require_service_registry_access/1,
+                        'service registry inspection is reserved for node-owned runtime code'))).
 
 ensure_name_registration_available(Namespace, Name, Pid, CanonPid) :-
     (   ordinary_registered_pid(Namespace, CanonPid)
     ->  throw(process_already_has_a_name(Pid))
-    ;   service_registered_pid(CanonPid)
-    ->  throw(process_already_has_a_name(Pid))
     ;   ordinary_registered_name(Namespace, Name)
     ->  throw(name_is_in_use(Name))
-    ;   published_service_name(Name)
-    ->  throw(name_is_in_use(Name))
     ;   true
     ).
 
-ensure_service_registration_available(Name, Pid, CanonPid) :-
-    (   service_registered_pid(CanonPid)
-    ->  throw(process_already_has_a_name(Pid))
-    ;   ordinary_registered_pid(_, CanonPid)
-    ->  throw(process_already_has_a_name(Pid))
-    ;   published_service_name(Name)
-    ->  throw(name_is_in_use(Name))
-    ;   ordinary_registered_name(_, Name)
-    ->  throw(name_is_in_use(Name))
+ensure_service_registration_available(Name) :-
+    (   published_service_name(Name)
+    ->  throw(error(permission_error(register, service, Name),
+                    context(actors:register_service/2,
+                            'service name is already published')))
     ;   true
     ).
 
-service_registered_pid(CanonPid) :-
-    registered_service(_, CanonPid).
+ensure_publishable_service_pid(Pid, CanonPid) :-
+    (   compound(CanonPid),
+        compound_name_arity(CanonPid, '@', 2),
+        \+ hook_local_pid(CanonPid, _)
+    ->  throw(error(permission_error(register, service, Pid),
+                    context(actors:register_service/2,
+                            'only actors on the publishing node may be published')))
+    ;   resolve_thread(CanonPid, _)
+    ->  true
+    ;   throw(error(existence_error(process, Pid),
+                    context(actors:register_service/2,
+                            'service pid does not identify a live actor')))
+    ).
 
 ordinary_registered_pid(Namespace, CanonPid) :-
     nonvar(Namespace),
@@ -891,6 +912,30 @@ registered_target(Name, Pid) :-
     !.
 registered_target(Name, Pid) :-
     registered_service(Name, Pid).
+
+%!  published_service_target(+Name, -Pid) is semidet.
+%!  published_service_names(-Names) is det.
+%!  send_service(+Name, +Message) is det.
+%
+%   Owner/runtime helpers used by the node and distribution layers.  They are
+%   deliberately not exported as client predicates.  send_service/2 is
+%   non-revealing: an absent service is treated like a dead pid.
+published_service_target(Name, Pid) :-
+    atom(Name),
+    with_mutex(actors_registry,
+               once(registered_service(Name, Pid))).
+
+published_service_names(Names) :-
+    with_mutex(actors_registry,
+        (   findall(Name, registered_service(Name, _), Names0),
+            sort(Names0, Names)
+        )).
+
+send_service(Name, Message) :-
+    (   published_service_target(Name, Pid)
+    ->  send(Pid, Message)
+    ;   true
+    ).
 
 
                 /*******************************

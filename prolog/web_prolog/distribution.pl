@@ -226,7 +226,25 @@ local_only_spawn_option(source_module(_)).
 %  not the local node, the message goes over the wire.  The
 %  controller-table check comes first so the in-process integration
 %  harness still routes correctly when self_node_url makes a "remote"
-%  Node look local.
+%  Node look local.  Atom@Node is a published service address, while
+%  integer@Node is a globally qualified pid.  Keeping the two paths distinct
+%  prevents an ordinary local registration with the same atom from capturing
+%  a qualified service send.
+actors:hook_send(Name@Node, Message) :-
+    atom(Name),
+    \+ local_node_url(Node),
+    !,
+    term_to_wire_atom(Message, MsgAtom),
+    best_effort(remote_send_command(Node, json{
+        command: send,
+        pid: Name,
+        message: MsgAtom
+    })).
+actors:hook_send(Name@Node, Message) :-
+    atom(Name),
+    local_node_url(Node),
+    !,
+    actors:send_service(Name, Message).
 actors:hook_send(Id@Node, Message) :-
     (   node_controller:current_remote_target(Id@Node, _)
     ;   \+ local_node_url(Node)

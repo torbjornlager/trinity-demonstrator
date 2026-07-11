@@ -813,6 +813,8 @@ test(node_admin_page_served,
 test(node_manual_page_served,
      true((sub_string(ManualBody, _, _, _, '<title>Web Prolog Manual</title>'),
            sub_string(ManualBody, _, _, _, 'id="spawn/1-3"'),
+           sub_string(ManualBody, _, _, _, 'id="register_service/2"'),
+           sub_string(ManualBody, _, _, _, 'id="unregister_service/1"'),
            sub_string(ManualBody, _, _, _, 'id="rpc/2-3"')))) :-
     with_node_server(URI,
         (
@@ -5488,6 +5490,7 @@ test(node_resident_counter_service_exposes_shared_state,
         setup_call_cleanup(
             start_counter_service(_CounterPid),
             (
+                assertion(node_ws:ws_published_service_name(counter)),
                 self(Self),
                 send(counter@URI, count(Self)),
                 receive({
@@ -5514,6 +5517,80 @@ test(node_resident_counter_service_exposes_shared_state,
             stop_example_services
         )
     ).
+
+test(published_service_need_not_be_advertised,
+     true(Count == 1)) :-
+    with_node_server_options(
+        [profile(actor), sandbox(off)],
+        URI,
+        setup_call_cleanup(
+            start_counter_service(_CounterPid),
+            (
+                assertion(node_ws:ws_published_service_name(counter)),
+                self(Self),
+                send(counter@URI, count(Self)),
+                receive({count(Count) -> true}, [timeout(1), on_timeout(fail)])
+            ),
+            stop_example_services
+        )
+    ).
+
+test(node_info_services_follow_live_registry) :-
+    with_node_server_options(
+        [profile(actor), sandbox(off)],
+        URI,
+        setup_call_cleanup(
+            start_counter_service(_CounterPid),
+            (
+                format(atom(NodeInfoURL), '~w/node_info', [URI]),
+                read_json_answer(NodeInfoURL, LiveInfo),
+                assertion(memberchk("counter", LiveInfo.services)),
+                stop_example_services,
+                read_json_answer(NodeInfoURL, StoppedInfo),
+                assertion(\+ memberchk("counter", StoppedInfo.services))
+            ),
+            stop_example_services
+        )
+    ).
+
+test(advertisement_does_not_create_a_live_service) :-
+    service_directory_file(File),
+    with_node_server_options(
+        [profile(actor), sandbox(off), load_shared_db_file(File)],
+        URI,
+        (
+            assertion(\+ node_ws:ws_published_service_name(counter)),
+            self(Self),
+            send(counter@URI, count(Self)),
+            receive({count(_) -> fail}, [timeout(0.1), on_timeout(true)])
+        )
+    ).
+
+test(qualified_service_address_ignores_ordinary_name_collision,
+     [ cleanup((catch(unregister(counter), _, true),
+                catch(exit(OrdinaryPid, kill), _, true))),
+       true(Count == 1)
+     ]) :-
+    with_node_server_options(
+        [profile(actor), sandbox(off)],
+        URI,
+        setup_call_cleanup(
+            start_counter_service(_CounterPid),
+            (
+                spawn(receive({}), OrdinaryPid, [link(false)]),
+                register(counter, OrdinaryPid),
+                self(Self),
+                send(counter@URI, count(Self)),
+                receive({count(Count) -> true}, [timeout(1), on_timeout(fail)])
+            ),
+            stop_example_services
+        )
+    ).
+
+test(register_service_rejects_remote_pid,
+     [throws(error(permission_error(register, service, 1234567890@'https://remote.example'), _))]) :-
+    actors:register_service(remote_service,
+                            1234567890@'https://remote.example').
 
 test(node_resident_pubsub_service_coordinates_clients,
      true(MessagesSorted == [hello, hello])) :-
@@ -5639,9 +5716,9 @@ test(public_actor_client_cannot_access_service_registry_predicates) :-
             catch(ws_close(WS, 1000, done), _, true)
         )
     ),
-    once(sub_string(WhereisError, _, _, _, "service registration is reserved")),
-    once(sub_string(UnregisterError, _, _, _, "service registration is reserved")),
-    once(sub_string(RegisterError, _, _, _, "service registration is reserved")).
+    once(sub_string(WhereisError, _, _, _, "service registry inspection is reserved")),
+    once(sub_string(UnregisterError, _, _, _, "No permission to unregister service counter")),
+    once(sub_string(RegisterError, _, _, _, "No permission to register service counter")).
 
 test(public_ws_clients_have_isolated_registered_name_namespaces,
      true((Self1 == Pid1,

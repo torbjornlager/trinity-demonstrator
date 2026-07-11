@@ -1450,11 +1450,8 @@ node_info_tutorial_sections(Sections) :-
 %   register_service/2 (e.g. counter, pubsub_service) — the node's
 %   advertised, name-reachable services. Sorted, de-duplicated.
 node_info_services(Services) :-
-    findall(S,
-            ( actors:registered_service(Name, _Pid),
-              atom_string(Name, S) ),
-            Services0),
-    sort(Services0, Services).
+    actors:published_service_names(Names),
+    maplist(atom_string, Names, Services).
 
 %!  node_info_provides(-Provides:list(string)) is det.
 %

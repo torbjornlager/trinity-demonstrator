@@ -92,6 +92,14 @@ const rpcUriHelpers = Function(
   rpcUriHelpersSource +
   "\nreturn { resolveBrowserRpcBaseUri, resolveBrowserRpcLoadUri };"
 )();
+const qualifiedServiceParserSource = source.slice(
+  source.indexOf("function parseSwiWasmQualifiedServiceAddress"),
+  source.indexOf("function currentNodeReferenceUrls")
+);
+const parseSwiWasmQualifiedServiceAddress = Function(
+  qualifiedServiceParserSource +
+  "\nreturn parseSwiWasmQualifiedServiceAddress;"
+)();
 
 ok(includes("window.swiRpcGetAsync = function(url)"),
    "paged RPC has an asynchronous fetch helper");
@@ -366,6 +374,22 @@ ok(includes("collect_remote_spawn_source(Goal, Options, Source)") &&
 ok(includes('self.routeSwiWasmActorMessage("remote", message.target, message.message);') &&
    !includes("self.sendSwiWasmActorMessage(message.target, message.message, \"remote\");"),
    "SWI-WASM bridge routes inbound remote actor messages through the local delivery funnel");
+{
+  const service = parseSwiWasmQualifiedServiceAddress(
+    "counter@'https://n3.elfenbenstornet.se'"
+  );
+  const quotedService = parseSwiWasmQualifiedServiceAddress(
+    "'publication-service'@'https://n3.elfenbenstornet.se'"
+  );
+  ok(service && service.pid === "counter" &&
+     service.node === "https://n3.elfenbenstornet.se" &&
+     quotedService && quotedService.pid === "publication-service" &&
+     parseSwiWasmQualifiedServiceAddress(
+       "1234567890@'https://n3.elfenbenstornet.se'"
+     ) === null &&
+     includes("var remote = parseSwiWasmQualifiedServiceAddress(pid) ||"),
+     "SWI-WASM send routes qualified published-service addresses through the remote actor transport");
+}
 ok(includes("var markdown = /^\\[(https?:\\/\\/[^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)$/.exec(node);") &&
    includes("return markdown[2];"),
    "SWI-WASM bridge normalizes markdown-link remote node URLs");

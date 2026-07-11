@@ -414,11 +414,13 @@ It is tempting to say the custodian stays "dumb about identity" and let
 authority be enforced **at the HTTP boundary in front** — the node only
 injects a `register` message if the request cleared the `private` boundary.
 That is necessary but **not sufficient**, because the bridge is not the only
-possible sender.  A registered service is reachable by name: in `actor`
-profile a public user goal can do
+possible sender. Registry inspection is owner-only -- a public goal cannot
+call `whereis_service/2` -- but a published service is intentionally reachable
+by its qualified name. On an `actor`-profile node a caller authorised to use
+that service could send directly:
 
 ```prolog
-?- whereis_service(registry, P), P ! register(FakeRecord, self).
+?- registry@'https://n0.example' ! register(FakeRecord, Self).
 ```
 
 bypassing the `private` boundary entirely.  The "dumb actor" framing only
@@ -429,7 +431,7 @@ is not.  Two mitigations, applied together:
    query/read interface (`nodes/1`) may be a registered service; the
    *mutating* interface (`register` / `deregister`) goes to a separate pid
    known only to the HTTP handler, never published via `register_service/2`
-   and so not discoverable with `whereis_service/2`.
+   and therefore not addressable as a published service.
 2. **Carry an unforgeable capability.**  `register` includes a token the
    HTTP `private` boundary mints; the custodian verifies it before applying
    the change.  This is a small, correct concession to non-dumbness — the
@@ -581,8 +583,8 @@ Resolved:
   decision, not just a preference, because it directly bounds the §5
   spoofing surface: if the registry pid is only reachable by code running
   *inside* n0 and n0 exposes no public actor surface, the
-  `whereis_service/2`-then-send attack requires a foothold n0 does not hand
-  out.  The remaining open part is mechanical (how to run `actor` internally
+  direct named-send attack requires a foothold n0 does not hand out. The
+  remaining open part is mechanical (how to run `actor` internally
   while advertising a narrower public profile), tracked below.
 
 Still open:

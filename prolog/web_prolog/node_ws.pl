@@ -757,6 +757,14 @@ ws_action_send(Dict, Queue, Principal) :-
     ws_get_term_string(Dict, message, MsgString),
     ws_read_term(message, MsgString, Message0),
     ws_rewrite_browser_sender(Dict, Queue, Message0, Message),
+    ws_send_message(Pid, Message).
+
+ws_send_message(Name, Message) :-
+    atom(Name),
+    actors:published_service_target(Name, _),
+    !,
+    actors:send_service(Name, Message).
+ws_send_message(Pid, Message) :-
     send(Pid, Message).
 
 ws_rewrite_browser_sender(Dict, Queue, Message0, Message) :-
@@ -982,9 +990,7 @@ ws_owned_resource_term(actor, Pid, actor(Pid)).
 
 ws_published_service_name(Name) :-
     atom(Name),
-    current_node_value(shared_db_module, SharedModule),
-    current_predicate(SharedModule:service/2),
-    call(SharedModule:service(Name, _)).
+    actors:published_service_target(Name, _).
 
 ws_owned_actor(Queue, Pid) :-
     ws_actor(Queue, OwnedPid0),

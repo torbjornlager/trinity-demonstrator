@@ -179,9 +179,17 @@ such in this runtime:
 
 `register/2`, `whereis/2`, `unregister/1`.
 
-### Service Registry
+### Owner Service Publication
 
-`register_service/2`, `whereis_service/2`, `unregister_service/1`.
+An ACTOR implementation provides the owner-only administrative predicates
+`register_service/2` and `unregister_service/1`. They are not part of the
+ordinary client goal surface. The runtime also retains `whereis_service/2` as
+an internal owner/bootstrap helper; it is not a standard client predicate.
+
+Clients address a published service as `Name@Node`. Publication and
+advertisement are distinct: `register_service/2` makes the address live, while
+an owner-maintained relation such as `service/2` may advertise all published
+services or only a selected subset.
 
 ### Private Database Loading
 

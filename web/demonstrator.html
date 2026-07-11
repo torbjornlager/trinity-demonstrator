@@ -4364,6 +4364,28 @@
         }
       }
 
+      // term_string/2 renders a qualified service address as
+      // Name@'https://node'.  Numeric distributed pids have their own parser;
+      // this one deliberately accepts only atom-valued left operands so that
+      // send/2 can route a published service without widening monitor/exit to
+      // non-pid targets.
+      function parseSwiWasmQualifiedServiceAddress(pidText) {
+        var text = String(pidText || "").trim();
+        var match = /^([a-z][A-Za-z0-9_]*|'(?:\\.|[^'])*')\s*@\s*'((?:\\.|[^'])*)'$/.exec(text);
+        var name;
+        if (!match) {
+          return null;
+        }
+        name = match[1];
+        if (name.charAt(0) === "'") {
+          name = name.slice(1, -1).replace(/\\(.)/g, "$1");
+        }
+        return {
+          pid: name,
+          node: match[2].replace(/\\(.)/g, "$1")
+        };
+      }
+
       function currentNodeReferenceUrls() {
         var refs = [];
         var current = normalizeNodeUrl(window.location.origin);
@@ -10456,7 +10478,8 @@
               this.enqueueSwiWasmStatechartEvent(String(messageText || "true"));
               return true;
             }
-            var remote = this.parseSwiWasmRemoteActorPid(pid);
+            var remote = parseSwiWasmQualifiedServiceAddress(pid) ||
+              this.parseSwiWasmRemoteActorPid(pid);
             if (remote) {
               return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
                 entry.socket.send(JSON.stringify({

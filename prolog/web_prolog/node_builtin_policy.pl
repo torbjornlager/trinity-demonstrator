@@ -397,8 +397,8 @@ builtin_family_spec(actor_naming,
                     ["register/2", "whereis/2", "unregister/1"],
                     [actor]).
 builtin_family_spec(service_registry,
-                    "Service registry",
-                    "Publish and resolve owner-managed node services.",
+                    "Owner service publication",
+                    "Owner-only publication and internal resolution of node services.",
                     ["register_service/2", "whereis_service/2", "unregister_service/1"],
                     [actor]).
 builtin_family_spec(private_db,

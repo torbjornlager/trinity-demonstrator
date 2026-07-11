@@ -69,6 +69,13 @@ Adds to `isotope`:
   `whereis/2`, `cancel/1`, `exit/1-2`
 - `statechart_spawn/1-2`
 
+An ACTOR implementation additionally provides the owner-only administrative
+operations `register_service/2` and `unregister_service/1`. These operations
+publish and withdraw stable names in the node's public service namespace; they
+are conformance requirements for the implementation, not capabilities granted
+to ordinary ACTOR clients. The internal `whereis_service/2` helper is used by
+owner bootstrap code but is not part of the public profile.
+
 
 ## Source-Loading Matrix
 

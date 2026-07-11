@@ -276,6 +276,49 @@ test(service_registry_is_separate,
    catch(send(test_service, hello2), Error, true),
    nonvar(Error).
 
+test(service_and_ordinary_namespaces_allow_same_atom,
+     [ cleanup((catch(unregister(shared_name), _, true),
+                catch(unregister_service(shared_name), _, true),
+                catch(exit(OrdinaryPid, kill), _, true))),
+       true((OrdinaryVisible == OrdinaryPid, ServiceVisible == Self))
+     ]) :-
+   self(Self),
+   spawn(receive({}), OrdinaryPid, [link(false)]),
+   register(shared_name, OrdinaryPid),
+   register_service(shared_name, Self),
+   whereis(shared_name, OrdinaryVisible),
+   whereis_service(shared_name, ServiceVisible).
+
+test(duplicate_service_name_uses_normative_error,
+     [ cleanup(catch(unregister_service(duplicate_service), _, true)),
+       throws(error(permission_error(register, service, duplicate_service), _))
+     ]) :-
+   self(Self),
+   register_service(duplicate_service, Self),
+   register_service(duplicate_service, Self).
+
+test(register_service_rejects_nonexistent_pid,
+     [throws(error(existence_error(process, actor(999999999)), _))]) :-
+   register_service(missing_service, actor(999999999)).
+
+test(unregister_service_does_not_terminate_actor,
+     [ cleanup(catch(exit(Pid, kill), _, true)),
+       true((Missing == undefined, StillAlive == true))
+     ]) :-
+   spawn(receive({}), Pid, [link(false)]),
+   register_service(temporary_service, Pid),
+   unregister_service(temporary_service),
+   whereis_service(temporary_service, Missing),
+   (actors:resolve_thread(Pid, _) -> StillAlive = true ; StillAlive = false).
+
+test(service_registration_cleared_on_exit,
+     [ true(Missing == undefined) ]) :-
+   spawn(receive({}), Pid, [link(false), monitor(true)]),
+   register_service(short_service, Pid),
+   exit(Pid, normal),
+   receive({down(_, Pid, normal) -> true}),
+   whereis_service(short_service, Missing).
+
 test(link_kills_children, Result == true) :-
    self(Self),
    spawn(( spawn(( send(Self, child_up),

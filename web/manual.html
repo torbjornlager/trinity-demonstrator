@@ -272,6 +272,27 @@ demonitor(+Ref, +Options) is det.</pre>
     <p>Remove the association between the name and the process.</p>
 </article>
 
+<article class="predicate-entry" id="register_service/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">register_service/2</span></div>
+        <div class="predicate-family">actor, owner only</div>
+    </div>
+    <pre>register_service(+Name, +Pid) is det.</pre>
+    <p>Publishes the live local actor identified by <code>Pid</code> under <code>Name</code> in the node's public service namespace. <code>Name</code> must be an atom and there may be at most one published service with a given name on a node. A qualified address <code>Name@Node</code> is resolved against this namespace; <code>whereis/2</code> consults only the ordinary registration namespace and does not reveal the service pid.</p>
+    <p>Publication neither changes the actor's links nor places it under supervision. When the actor terminates, the node removes the mapping automatically. A supervisor that starts a replacement actor must publish the replacement again under the stable name.</p>
+    <p>Only code executing with node-owner authority may call this predicate; other callers receive <code>permission_error(register,service,Name)</code>. Duplicate names raise the same formal error. A non-atom name raises <code>type_error(atom,Name)</code>; a nonexistent actor raises <code>existence_error(process,Pid)</code>; and a pid belonging to another node raises <code>permission_error(register,service,Pid)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="unregister_service/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">unregister_service/1</span></div>
+        <div class="predicate-family">actor, owner only</div>
+    </div>
+    <pre>unregister_service(+Name) is det.</pre>
+    <p>Withdraws <code>Name</code> from the node's public service namespace. This removes only the name: it neither terminates nor otherwise changes the actor that the name denoted. The operation is idempotent and succeeds without effect when no such service is published.</p>
+    <p>Only code executing with node-owner authority may call this predicate; other callers receive <code>permission_error(unregister,service,Name)</code>. A non-atom name raises <code>type_error(atom,Name)</code>.</p>
+</article>
+
 <a id="exit/1-2"></a>
 <article class="predicate-entry" id="exit/1">
     <div class="predicate-head">
@@ -300,7 +321,7 @@ demonitor(+Ref, +Options) is det.</pre>
     <pre>+PidOrName ! +Message is det.
 send(+PidOrName, +Message) is det.
 send(+PidOrName, +Message, +Options) is det.</pre>
-    <p>Sends <code>Message</code> to the mailbox of the process identified as <code>PidOrName</code>. <code>PidOrName</code> may be a local pid, a local registered name, or a global pid of the form <code>Id@Node</code>. Valid options for <code>send/3</code> are:</p>
+    <p>Sends <code>Message</code> to the mailbox of the process identified as <code>PidOrName</code>. <code>PidOrName</code> may be a local pid, a local registered name, a global pid of the form <code>Id@Node</code>, or a published service address of the form <code>Name@Node</code>. Qualified service addresses are resolved only through the destination node's live service registry. If such a service is absent or the sender is not authorised to use it, the send succeeds without delivery and does not reveal which condition applied. Valid options for <code>send/3</code> are:</p>
     <ul>
         <li><code>delay(+Number)</code><br>Delays the sending by a specified number of seconds. Default is <code>0</code>.</li>
         <li><code>id(+ID)</code><br><code>ID</code> is a user-supplied identifier that can be used by <code>cancel/1</code> to stop the sending from taking place.</li>
