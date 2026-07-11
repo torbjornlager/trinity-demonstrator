@@ -700,7 +700,8 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>rpc(+URI, +Goal) is nondet.
 rpc(+URI, +Goal, +Options) is nondet.</pre>
-    <p>Semantically, <code>rpc/2-3</code> executes a copy of <code>Goal</code> on the remote node identified by <code>URI</code> and then unifies the local goal with the remote copy on backtracking. The current implementation uses the stateless <code>/call</code> endpoint. This matters: even if the remote node happens to be deployed as an ACTOR node, a call made through <code>rpc/2-3</code> still runs against the node's stateless <code>/call</code> surface rather than its actor-facing APIs. Actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are therefore not available through <code>rpc/2-3</code>. The following options are valid:</p>
+    <p>Semantically, <code>rpc/2-3</code> executes a copy of <code>Goal</code> on the remote node identified by <code>URI</code> and then unifies the local goal with the remote copy on backtracking. The current implementation uses the stateless <code>/call</code> endpoint. This matters: even if the remote node happens to be deployed as an ACTOR node, a call made through <code>rpc/2-3</code> still runs against the node's stateless <code>/call</code> surface rather than its actor-facing APIs. Actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are therefore not available through <code>rpc/2-3</code>.</p>
+    <p>The <code>URI</code> argument alone selects the node where <code>Goal</code> is executed. In particular, <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options such as <code>load_uri/1</code> only supply private source text for the temporary call actor; they do not change the target selected by <code>URI</code>. Thus <code>rpc(localhost, ancestor_descendant(X,Y), [load_uri('https://n2.elfenbenstornet.se')])</code> executes on the current node using source fetched from <code>n2</code>. In this local-target case, the name <code>rpc</code> is somewhat of a misnomer: no remote node is selected for execution, although the same RPC-style <code>/call</code> machinery is used. Source and execution target may also intentionally differ, for example <code>rpc('https://n2.elfenbenstornet.se', Goal, [load_uri('https://n3.elfenbenstornet.se')])</code> executes on <code>n2</code> using source fetched from <code>n3</code>. The following options are valid:</p>
     <ul>
         <li><code>limit(+Integer)</code><br>Restricts the number of solutions retrieved per roundtrip.</li>
         <li><code>once(+Boolean)</code><br>When <code>true</code>, the returned slice may not be the only solutions that <code>Goal</code> has, but the answer term may still indicate that it is.</li>
@@ -708,7 +709,7 @@ rpc(+URI, +Goal, +Options) is nondet.</pre>
         <li><code>http_timeout(+Number)</code><br>Sets the client-side HTTP transport timeout in seconds for each request.</li>
         <li><code>load_text(+AtomOrString)</code><br>Loads source text into the underlying actor's private database before calling <code>Goal</code>.</li>
         <li><code>load_list(+ListOfClauses)</code><br>Loads a list of clauses into the underlying actor's private database before calling <code>Goal</code>.</li>
-        <li><code>load_uri(+URI)</code><br>Loads source text from <code>URI</code> into the underlying actor's private database before calling <code>Goal</code>.</li>
+        <li><code>load_uri(+URI)</code><br>Loads source text from <code>URI</code> into the underlying actor's private database before calling <code>Goal</code>. This URI is a source location only; it does not affect the node selected by the first argument of <code>rpc/2-3</code>.</li>
         <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by the supplied predicate indicators into the underlying actor's private database before calling <code>Goal</code>.</li>
     </ul>
     <p><code>http_timeout/1</code> controls only the client-side HTTP transport timeout. It does not change the remote execution timeout.</p>
@@ -721,7 +722,7 @@ rpc(+URI, +Goal, +Options) is nondet.</pre>
     </div>
     <pre>promise(+URI, +Goal, -Ref) is det.
 promise(+URI, +Goal, -Ref, +Options) is det.</pre>
-    <p>Makes an asynchronous RPC call to node <code>URI</code> with <code>Goal</code>. The current implementation supports the following options:</p>
+    <p>Makes an asynchronous RPC call to node <code>URI</code> with <code>Goal</code>. As with <code>rpc/2-3</code>, the <code>URI</code> argument selects the execution node, and <code>localhost</code> means the node on which <code>promise/3-4</code> is running. Source-loading options, in runtimes that support them for <code>promise/4</code>, only materialize private source text for the remote call; they do not retarget the call. The current portable implementation supports the following options:</p>
     <ul>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
         <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>

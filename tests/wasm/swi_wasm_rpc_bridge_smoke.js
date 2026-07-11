@@ -84,6 +84,14 @@ const editorRewriteSource = source.slice(
 const rewriteEditorLoadTextAware = Function(
   editorRewriteSource + "\nreturn rewriteEditorLoadTextAware;"
 )();
+const rpcUriHelpersSource = source.slice(
+  source.indexOf("function normalizeNodeUrl"),
+  source.indexOf("function currentNodeReferenceUrls")
+);
+const rpcUriHelpers = Function(
+  rpcUriHelpersSource +
+  "\nreturn { resolveBrowserRpcBaseUri, resolveBrowserRpcLoadUri };"
+)();
 
 ok(includes("window.swiRpcGetAsync = function(url)"),
    "paged RPC has an asynchronous fetch helper");
@@ -98,6 +106,29 @@ ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
 ok(includes("window.swiEnsureFinalFullStop = function(text)") &&
    includes('"    Text := swiEnsureFinalFullStop(#S)."'),
    "multiline load_text preserves a terminating full stop before trailing whitespace");
+ok(includes("window.swiResolveRpcLoadUri = function(uri)") &&
+   includes('"    ResolvedURI := swiResolveRpcLoadUri(#URIText),"'),
+   "rpc load_uri resolves its source before the browser fetches it");
+{
+  const savedWindow = global.window;
+  global.window = { location: { origin: "https://n1.elfenbenstornet.se" } };
+  const markdownSource =
+    "'[https://n2.elfenbenstornet.se](https://n2.elfenbenstornet.se/)'";
+  ok(rpcUriHelpers.resolveBrowserRpcLoadUri(markdownSource) ===
+       "https://n2.elfenbenstornet.se/" &&
+     rpcUriHelpers.resolveBrowserRpcBaseUri("localhost") ===
+       "https://n1.elfenbenstornet.se",
+     "localhost RPC keeps the browser node as target while Markdown load_uri resolves as source");
+  global.window = savedWindow;
+}
+ok(workerSource.includes('function actorLoadUri(uriText)') &&
+   workerSource.includes('Promise := actorLoadUri(#URIText)') &&
+   !workerSource.includes('rpc_load_uri(Options, LoadURI)') &&
+   !workerSource.includes('loadUri: String(loadUri || "")') &&
+   includes('case "load_uri":') &&
+   includes('result = this.loadSwiWasmUriSource(message.uri || "");') &&
+   includes('resolveBrowserRpcBaseUri(message.node || "")'),
+   "worker RPC fetches load_uri source without using it to choose the call target");
 ok(workerSource.includes("function actorEnsureFinalFullStop(text)") &&
    workerSource.includes('"    Text := actorEnsureFinalFullStop(#Text0)."'),
    "worker RPC preserves a terminating full stop before trailing whitespace");
@@ -336,11 +367,11 @@ ok(includes('self.routeSwiWasmActorMessage("remote", message.target, message.mes
    !includes("self.sendSwiWasmActorMessage(message.target, message.message, \"remote\");"),
    "SWI-WASM bridge routes inbound remote actor messages through the local delivery funnel");
 ok(includes("var markdown = /^\\[(https?:\\/\\/[^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)$/.exec(node);") &&
-   includes("return markdown[1];"),
+   includes("return markdown[2];"),
    "SWI-WASM bridge normalizes markdown-link remote node URLs");
 ok(includes('var markdown = /^\\[(https?:\\/\\/[^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)$/.exec(trimmed);') &&
    includes('trimmed = markdown[2];') &&
-   includes('window.swiResolveRpcBase = function(baseUri, loadUri)'),
+   includes('window.swiResolveRpcBase = function(baseUri)'),
    "SWI-WASM RPC accepts pasted Markdown-link node URLs");
 ok(includes("finalizeSwiWasmWorkerActor: function") &&
    includes("self.finalizeSwiWasmWorkerActor(pid,") &&

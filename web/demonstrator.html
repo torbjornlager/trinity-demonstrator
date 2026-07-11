@@ -4326,9 +4326,8 @@
         return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
       }
 
-      function resolveBrowserRpcBaseUri(baseUri, loadUri) {
+      function resolveBrowserRpcBaseUri(baseUri) {
         var base = String(baseUri || "").replace(/^'|'$/g, "").trim();
-        var loaded = normalizeNodeUrl(String(loadUri || ""));
         var current;
         var normalized;
         function withoutTrailingSlash(url) {
@@ -4339,9 +4338,6 @@
           return withoutTrailingSlash(normalized.href);
         }
         if (base === "localhost" || isLoopbackHost(base)) {
-          if (loaded) {
-            return withoutTrailingSlash(loaded.origin);
-          }
           current = normalizeNodeUrl(window.location.origin);
           if (current && current.protocol !== "file:") {
             return withoutTrailingSlash(current.origin);
@@ -4349,6 +4345,23 @@
           return "http://localhost";
         }
         return base;
+      }
+
+      // Resolve source supplied to rpc/3's load_uri/1 before the browser
+      // fetches it.  The terminal can paste a Markdown link such as
+      // '[https://n2...](https://n2.../)', while the HTTP client needs the
+      // actual link target.  Keep relative URI support for node-local source.
+      function resolveBrowserRpcLoadUri(uri) {
+        var source = String(uri || "");
+        var normalized = normalizeNodeUrl(source);
+        if (normalized) {
+          return normalized.href;
+        }
+        try {
+          return new URL(source, window.location.origin).href;
+        } catch (error) {
+          return source;
+        }
       }
 
       function currentNodeReferenceUrls() {
@@ -9196,8 +9209,11 @@
               try { xhr.send(); return xhr.responseText; }
               catch(e) { return null; }
             };
-            window.swiResolveRpcBase = function(baseUri, loadUri) {
-              return resolveBrowserRpcBaseUri(baseUri, loadUri);
+            window.swiResolveRpcBase = function(baseUri) {
+              return resolveBrowserRpcBaseUri(baseUri);
+            };
+            window.swiResolveRpcLoadUri = function(uri) {
+              return resolveBrowserRpcLoadUri(uri);
             };
             window.swiResolveAssetUrl = function(uri) {
               return new URL(String(uri || ""), window.location.origin).href;
@@ -9544,7 +9560,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260705-swi-wasm-2-r22";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260710-swi-wasm-2-r23";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9619,12 +9635,12 @@
             }
             var markdown = /^\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)$/.exec(node);
             if (markdown) {
-              return markdown[1];
+              return markdown[2];
             }
             return node;
           },
           loadSwiWasmUriSource: function(uriText) {
-            var uri = this.swiWasmRemoteNodeUrl(uriText);
+            var uri = resolveBrowserRpcLoadUri(uriText);
             var url = new URL(uri, window.location.origin);
             var allowedOrigins = [
               "https://n0.elfenbenstornet.se", "https://n1.elfenbenstornet.se",
@@ -9663,7 +9679,7 @@
             });
           },
           requestSwiWasmWorkerRpc: function(message) {
-            var node = this.swiWasmRemoteNodeUrl(message.node || "");
+            var node = resolveBrowserRpcBaseUri(message.node || "");
             var url = new URL(node, window.location.origin);
             var path = url.pathname.replace(/\/$/, "");
             url.pathname = path + "/call";
@@ -10275,6 +10291,9 @@
                 break;
               case "rpc":
                 result = this.requestSwiWasmWorkerRpc(message);
+                break;
+              case "load_uri":
+                result = this.loadSwiWasmUriSource(message.uri || "");
                 break;
               case "send":
                 result = this.sendSwiWasmActorMessage(message.to, message.message, message.from || pid);
@@ -11661,8 +11680,7 @@
               "    ).",
               "",
               "web_rpc_base_url(URL, Opts, BaseRPCURL) :-",
-              "    (member(load_uri(LoadURI), Opts) -> true ; LoadURI = ''),",
-              "    BaseRPCURL := swiResolveRpcBase(#URL, #LoadURI).",
+              "    BaseRPCURL := swiResolveRpcBase(#URL).",
               "",
               "web_parse_rpc_response(Resp, Message) :-",
               "    (   catch(term_string(Message, Resp), _, catch(term_to_atom(Message, Resp), _, fail))",
@@ -11685,7 +11703,9 @@
               "",
               "rpc_load_part(Opts, Text) :-",
               "    member(load_uri(URI), Opts),",
-              "    Text := swiRpcGet(#URI),",
+              "    term_string(URI, URIText),",
+              "    ResolvedURI := swiResolveRpcLoadUri(#URIText),",
+              "    Text := swiRpcGet(#ResolvedURI),",
               "    (Text = null -> throw(rpc_error(fetch_failed)) ; true).",
               "",
               "rpc_load_part(Opts, Text) :-",
@@ -11936,7 +11956,7 @@
                 name: "RPC",
                 kind: "prolog",
                 url: null,
-                text: "% Local predicates -- sent to a remote node via load_predicates.\n\nedge(a, b).\nedge(b, c).\nedge(c, d).\nedge(a, d).\n\npath(X, Y) :- edge(X, Y).\npath(X, Y) :- edge(X, Z), path(Z, Y).\n\n\n/** <examples>\n\n?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).\n\n?- rpc('https://n1.elfenbenstornet.se', between(1, 5, X)).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_list([p(a),p(b),p(c)])\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_text('p(a). p(b). p(c).')\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', path(a, X), [\n       load_predicates([edge/2, path/2])\n   ]).\n\n*/"
+                text: "% Local predicates -- sent to a remote node via load_predicates.\n\nedge(a, b).\nedge(b, c).\nedge(c, d).\nedge(a, d).\n\npath(X, Y) :- edge(X, Y).\npath(X, Y) :- edge(X, Z), path(Z, Y).\n\n\n/** <examples>\n\n?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).\n\n?- rpc('https://n1.elfenbenstornet.se', between(1, 5, X)).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_list([p(a),p(b),p(c)])\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_text('p(a). p(b). p(c).')\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', path(a, X), [\n       load_predicates([edge/2, path/2])\n   ]).\n\n?- rpc(localhost, ancestor_descendant(X,Y), [\n       load_uri('https://n2.elfenbenstornet.se')\n   ]).\n\n?- rpc('https://n2.elfenbenstornet.se', ancestor_descendant(X,Y), [\n       load_uri('https://n3.elfenbenstornet.se')\n   ]).\n\n*/"
               }
             ];
             this.actorExamples = examples;

@@ -147,13 +147,23 @@ async function main() {
   const rpcReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "rpc";
   }).pop();
-  ok(!!rpcReq && rpcReq.goal === "path(a,X)" && rpcReq.loadText === "edge(a,b).",
+  ok(!!rpcReq && rpcReq.goal === "path(a,X)" && rpcReq.loadText === "edge(a,b)." &&
+     !Object.prototype.hasOwnProperty.call(rpcReq, "loadUri"),
      "RPC is delegated to the node controller");
   S.onmessage({ data: { command: "reply", id: rpcReq.id, ok: true, result: "success([v(b)],false)" } });
   ok((await rpcP) === "success([v(b)],false)", "RPC response text returns to Prolog");
   ok(S.actorEnsureFinalFullStop("p(a).\n   ") === "p(a).\n   " &&
      S.actorEnsureFinalFullStop("p(a)") === "p(a).",
      "RPC load_text terminator detection ignores trailing whitespace");
+
+  const loadUriP = S.actorLoadUri("'https://n2.example'");
+  const loadUriReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "load_uri";
+  }).pop();
+  ok(!!loadUriReq && loadUriReq.uri === "'https://n2.example'",
+     "RPC load_uri source is delegated to the node controller");
+  S.onmessage({ data: { command: "reply", id: loadUriReq.id, ok: true, result: "p(a)." } });
+  ok((await loadUriP) === "p(a).", "RPC load_uri source returns to the worker");
 
   // Promise/yield starts the same RPC request without blocking Prolog, then
   // consumes its response through a stable numeric reference.

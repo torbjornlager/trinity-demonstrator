@@ -25,9 +25,12 @@ path(X, Y) :- edge(X, Z), path(Z, Y).
        load_predicates([edge/2, path/2])
    ]).
 
-?- rpc(localhost, ancestor_descendant(X,Y),[
+?- rpc('https://n3.elfenbenstornet.se', ancestor_descendant(X,Y), [
        load_uri('https://n2.elfenbenstornet.se')
    ]).
 
+?- rpc(localhost, ancestor_descendant(X,Y),
+       [load_uri('https://n2.elfenbenstornet.se')
+   ]).
 
 */

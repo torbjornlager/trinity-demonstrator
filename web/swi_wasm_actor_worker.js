@@ -206,6 +206,10 @@
     return ref;
   }
 
+  function actorLoadUri(uriText) {
+    return actorRequest("load_uri", { uri: String(uriText || "") });
+  }
+
   function actorPromiseWait(refValue, timeoutSeconds) {
     var ref = Number(refValue);
     var pending = pendingRpcPromises[ref];
@@ -345,6 +349,7 @@
   self.actorEnsureFinalFullStop = actorEnsureFinalFullStop;
   self.actorRpc = actorRpc;
   self.actorPromiseStart = actorPromiseStart;
+  self.actorLoadUri = actorLoadUri;
   self.actorPromiseWait = actorPromiseWait;
   self.actorStatechartSpawn = actorStatechartSpawn;
   self.actorActors = actorActors;
@@ -628,6 +633,12 @@
       "            ),",
       "            ClauseTexts),",
       "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "rpc_load_text(Options, Text) :-",
+      "    member(load_uri(URI), Options),",
+      "    term_string(URI, URIText),",
+      "    Promise := actorLoadUri(#URIText),",
+      "    await(Promise, Text),",
+      "    (Text = null -> throw(rpc_error(fetch_failed)) ; true).",
       "",
       "install_spawn_monitor(Pid, Options) :-",
       "    option(monitor(true), Options, false),",
