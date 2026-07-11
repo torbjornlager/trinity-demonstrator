@@ -1330,7 +1330,37 @@ price(Item, Price) :-
     show both the updated count and a <code>down(...)</code> message.
 </p>
 
-<h2>A fridge simulation</h2>
+<h2>Using a published service</h2>
+
+<p>
+    A node can publish an actor under a stable service name. Clients do not
+    need the actor's pid: they send to a qualified address of the form
+    <code>Name@Node</code>, where <code>Node</code> is the node's canonical URL,
+    including its scheme. The following query uses the published
+    <code>counter</code> service at N3 and waits for its reply:
+</p>
+
+<pre id="epa-published-counter">?- self(Self),
+   counter@'https://n3.elfenbenstornet.se' ! count(Self),
+   receive({
+       count(Count) -&gt; true
+   }, [
+       timeout(5),
+       on_timeout(writeln('Service not available.~n'))
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#epa-published-counter&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The result binds <code>Count</code> to the service's next counter value.
+    To find published services and the nodes that provide them, open the
+    <a href="https://n0.elfenbenstornet.se/discovery-hub" target="_blank" rel="noopener noreferrer">Discovery Hub</a>.
+</p>
+
 
 <p>
     The following example, also adapted from Fred Hébert's 
@@ -3273,7 +3303,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    Spawn the chart and keep the Logger open with the Statechart Trace filter
+    Spawn the chart and keep the Logger open with the SXML Trace filter
     selected. The trace shows the same process as text: the current
     configuration, the external event, exits, transitions, and entries.
 </p>
