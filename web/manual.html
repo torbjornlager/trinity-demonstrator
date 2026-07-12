@@ -571,13 +571,12 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
 
 <h2 id="sec:statechart-api">Predicates for programming with statechart actors</h2>
 
-<article class="predicate-entry" id="statechart_spawn/1-2">
+<article class="predicate-entry" id="statechart_spawn/2">
     <div class="predicate-head">
-        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">statechart_spawn/1-2</span></div>
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">statechart_spawn/2</span></div>
         <div class="predicate-family">actor</div>
     </div>
-    <pre>statechart_spawn(-Pid) is det.
-statechart_spawn(-Pid, +Options) is det.</pre>
+    <pre>statechart_spawn(-Pid, +Options) is det.</pre>
     <p>Spawns a statechart actor and binds <code>Pid</code> to its pid.</p>
     <p><code>statechart_spawn/2</code> requires exactly one source option:</p>
     <ul>

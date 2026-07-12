@@ -59,6 +59,10 @@ test_statechart_profile_runtime :-
 
 :- begin_tests(statechart_profile).
 
+test(api_exposes_only_source_aware_spawn) :-
+    predicate_property(statechart_actor:statechart_spawn(_, _), exported),
+    \+ current_predicate(statechart_actor:statechart_spawn/1).
+
 test(parse_simple_root, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     parse_statechart_fixture('test_statecharts/statechart-simple.statechart'),
     statechart_actor:state(statechart_actor, null),

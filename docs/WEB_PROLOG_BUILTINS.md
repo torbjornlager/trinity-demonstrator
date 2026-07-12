@@ -232,7 +232,7 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 
 ### Statechart Actors
 
-`statechart_spawn/1`, `statechart_spawn/2`,
+`statechart_spawn/2`,
 `statechart_halt/2`, `statechart_halt/3`, `raise/1`.
 
 ### Parallel Goals

@@ -605,6 +605,10 @@ ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
    includes('first_solution_(Solution, QualifiedGoals, Options) :-'),
    "both SWI-WASM models provide the actor-based predicate generics");
 ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
+   !workerSource.includes('statechart_spawn(Pid) :-') &&
+   !workerSource.includes('statechart_spawn/1,') &&
+   !includes('statechart_spawn(Pid) :-') &&
+   !includes('statechart_spawn/1,') &&
    workerSource.includes('installStatechartRuntime(message)') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),

@@ -1,5 +1,4 @@
 :- module(statechart_actor, [
-    statechart_spawn/1,
     statechart_spawn/2,
     statechart_halt/2,
     statechart_halt/3,
@@ -105,7 +104,6 @@ inject_statechart_io_prelude :-
 :- initialization(inject_statechart_io_prelude, now).
 
 
-%!  statechart_spawn(-Pid) is det.
 %!  statechart_spawn(-Pid, +Options) is det.
 %
 %   Spawn a statechart interpreter actor.
@@ -114,9 +112,6 @@ inject_statechart_io_prelude :-
 %
 %     - `load_uri(URI)`  or
 %     - `load_text(Text)`
-statechart_spawn(Pid) :-
-    statechart_spawn(Pid, []).
-
 statechart_spawn(Pid, Options0) :-
     exclude(is_statechart_spawn_local_option, Options0, Options1),
     statechart_spawn_source(Options1, SourceGoal, SpawnOptions),

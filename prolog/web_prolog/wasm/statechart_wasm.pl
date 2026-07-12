@@ -269,7 +269,7 @@ demonitor(Ref, _Options) :-
                  toplevel_call/2, toplevel_call/3,
                  toplevel_next/1, toplevel_next/2,
                  toplevel_halt/2, toplevel_stop/1, toplevel_abort/1,
-                 statechart_spawn/1, statechart_spawn/2,
+                 statechart_spawn/2,
                  output/1, output/2, terminal_output/1, terminal_output/2,
                  input/2, input/3, flush/0,
                  server_spawn/3, server_spawn/4,

@@ -67,7 +67,7 @@ Adds to `isotope`:
 - actor primitives such as `spawn/1-3`, `receive/1-2`, `send/2-3`, `!/2`,
   `self/1`, `monitor/2`, `demonitor/1-2`, `register/2`, `unregister/1`,
   `whereis/2`, `cancel/1`, `exit/1-2`
-- `statechart_spawn/1-2`
+- `statechart_spawn/2`
 
 An ACTOR implementation additionally provides the owner-only administrative
 operations `register_service/2` and `unregister_service/1`. These operations

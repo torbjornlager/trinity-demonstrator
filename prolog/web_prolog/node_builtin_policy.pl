@@ -261,7 +261,6 @@ builtin_goal_policy(supervisor_which_children(_, _), supervisor, actor).
 builtin_goal_policy(supervisor_count_children(_, _), supervisor, actor).
 builtin_goal_policy(supervisor_halt(_), supervisor, actor).
 
-builtin_goal_policy(statechart_spawn(_), statechart, actor).
 builtin_goal_policy(statechart_halt(_, _), statechart, actor).
 builtin_goal_policy(statechart_halt(_, _, _), statechart, actor).
 builtin_goal_policy(statechart_spawn(_, _), statechart, actor).
@@ -458,7 +457,7 @@ builtin_family_spec(supervisor,
 builtin_family_spec(statechart,
                     "Statechart actors",
                     "Spawn, halt, and drive statechart-based actors.",
-                    ["statechart_spawn/1", "statechart_spawn/2",
+                    ["statechart_spawn/2",
                      "statechart_halt/2-3",
                      "raise/1"],
                     [actor]).
