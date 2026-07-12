@@ -61,6 +61,8 @@ test_statechart_profile_runtime :-
 
 test(api_exposes_only_source_aware_spawn) :-
     predicate_property(statechart_actor:statechart_spawn(_, _), exported),
+    predicate_property(statechart_actor:raise(_), exported),
+    predicate_property(statechart_actor:in(_), exported),
     \+ current_predicate(statechart_actor:statechart_spawn/1).
 
 test(parse_simple_root, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
@@ -89,12 +91,17 @@ test(runtime_simple) :-
     statechart_actor:configuration(Config0),
     memberchk(s1, Config0),
     \+ memberchk(s2, Config0),
+    statechart_actor:in(s1),
+    \+ statechart_actor:in(s2),
     step_event(play),
     statechart_actor:configuration(Config1),
     memberchk(s2, Config1),
+    statechart_actor:in(s2),
+    \+ statechart_actor:in(s1),
     step_event(reset),
     statechart_actor:configuration(Config2),
-    memberchk(s1, Config2).
+    memberchk(s1, Config2),
+    statechart_actor:in(s1).
 
 test(runtime_history) :-
     init_interpreter('test_statecharts/statechart-history.statechart'),

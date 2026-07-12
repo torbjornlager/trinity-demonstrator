@@ -1108,6 +1108,8 @@ sandbox:safe_primitive(rpc:yield(_, _, _)).
 sandbox:safe_primitive(statechart_actor:statechart_spawn(_, _)).
 sandbox:safe_primitive(statechart_actor:statechart_halt(_, _)).
 sandbox:safe_primitive(statechart_actor:statechart_halt(_, _, _)).
+sandbox:safe_primitive(statechart_runtime:raise(_)).
+sandbox:safe_primitive(statechart_runtime:in(_)).
 
 %  Actor-based predicate generics execute every listed goal locally.  Expose
 %  those goals to library(sandbox), preserving the caller module supplied by

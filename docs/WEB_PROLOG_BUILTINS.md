@@ -33,7 +33,7 @@ Primary basis:
   client-submitted code is actually accepted on a given route.
 - Some predicates are context-specific as well as profile-specific. For
   example, conversational I/O requires an actor or session context, and
-  `raise/1` is meaningful only inside statechart execution.
+  `raise/1` and `in/1` are meaningful only inside statechart execution.
 - Ambient stream and file I/O are blacklisted. Web Prolog instead supplies
   actor-local output predicates such as `write/1`, `writeln/1`, and `format/2`
   through the actor runtime prelude.
@@ -233,7 +233,7 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 ### Statechart Actors
 
 `statechart_spawn/2`,
-`statechart_halt/2`, `statechart_halt/3`, `raise/1`.
+`statechart_halt/2`, `statechart_halt/3`, `raise/1`, `in/1`.
 
 ### Parallel Goals
 

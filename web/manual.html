@@ -612,6 +612,16 @@ statechart_halt(+Pid, -Reply, +Timeout) is det.</pre>
     <p><span class="note-label">Important:</span> <code>raise/1</code> is only meaningful inside executable statechart content such as <code>&lt;datamodel&gt;</code>, <code>&lt;onentry&gt;</code>, <code>&lt;onexit&gt;</code>, and <code>&lt;go&gt;</code>.</p>
 </article>
 
+<article class="predicate-entry" id="in/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">in/1</span></div>
+        <div class="predicate-family">statechart builtin</div>
+    </div>
+    <pre>in(+Id) is semidet.</pre>
+    <p>Succeeds if the state identified by <code>Id</code> belongs to the current active configuration of the statechart interpreter.</p>
+    <p><span class="note-label">Important:</span> <code>in/1</code> is only meaningful inside statechart guards or executable statechart content such as <code>&lt;onentry&gt;</code>, <code>&lt;onexit&gt;</code>, and <code>&lt;go&gt;</code>.</p>
+</article>
+
 <h2 id="sec:supervisor-api">Predicates for programming with supervisor actors</h2>
 
 <article class="predicate-entry" id="supervisor_spawn/2-3">

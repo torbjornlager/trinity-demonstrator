@@ -265,6 +265,7 @@ builtin_goal_policy(statechart_halt(_, _), statechart, actor).
 builtin_goal_policy(statechart_halt(_, _, _), statechart, actor).
 builtin_goal_policy(statechart_spawn(_, _), statechart, actor).
 builtin_goal_policy(raise(_), statechart, actor).
+builtin_goal_policy(in(_), statechart, actor).
 
 builtin_goal_policy(parallel(_), parallel, actor).
 builtin_goal_policy(first_solution(_, _), parallel, actor).
@@ -459,7 +460,7 @@ builtin_family_spec(statechart,
                     "Spawn, halt, and drive statechart-based actors.",
                     ["statechart_spawn/2",
                      "statechart_halt/2-3",
-                     "raise/1"],
+                     "raise/1", "in/1"],
                     [actor]).
 builtin_family_spec(parallel,
                     "Parallel goals",

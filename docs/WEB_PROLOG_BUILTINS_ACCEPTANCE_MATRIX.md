@@ -67,7 +67,7 @@ Primary basis:
 | `register_service/2`, `whereis_service/2`, `unregister_service/1` | no | no | no | Service publication and withdrawal are owner-only. `whereis_service/2` is retained as an internal owner/bootstrap helper and is not a standard client predicate. |
 | `toplevel_spawn/1-2`, `toplevel_call/2-3`, `toplevel_next/1-2`, `toplevel_stop/1`, `toplevel_abort/1`, `toplevel_halt/2` | no | no | yes | These are accepted as client goals only in the `actor` profile. The HTTP `/toplevel_*` endpoints are separate host-side routes. |
 | `statechart_spawn/2`, `statechart_halt/2-3` | no | no | yes | Imported into public temporary client modules through `statechart_actor`. |
-| `raise/1` | no | no | yes | Imported through `statechart_actor`; meaningful only inside statechart execution. |
+| `raise/1`, `in/1` | no | no | yes | Imported through `statechart_actor`; meaningful only inside statechart execution. |
 | `rpc/2-3`, `promise/3-4`, `yield/2-3` | yes (node:) | yes (node:) | yes (node:) | Profile policy allows them broadly enough, but public temporary client modules do not import `node`, so the currently supported path is `node:rpc(...)`, `node:promise(...)`, `node:yield(...)`. |
 | `node/1-2` | no | no | yes (node:) | `node_control` is `actor`-profile only and currently reachable through top-level `node:node(...)`, not as an unqualified client goal. |
 | `server_spawn/3-4`, `server_request/3-4`, `server_promise/3-4`, `server_yield/2-4`, `server_upgrade/2`, `server_halt/2` | no | no | no | Catalogued in family policy, but not currently imported into public temporary client modules. Top-level `server_actor:...` qualification is also blocked by blacklist-mode qualified-goal rules. |

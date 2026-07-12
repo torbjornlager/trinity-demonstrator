@@ -2,6 +2,8 @@
     statechart_spawn/2,
     statechart_halt/2,
     statechart_halt/3,
+    raise/1,
+    in/1,
     interpret/1,
     interpret_text/1,
     interpret_example/1
