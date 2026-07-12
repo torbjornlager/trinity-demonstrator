@@ -50,6 +50,10 @@ const swiWasmTutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi-wasm-tutorial.html"),
   "utf8"
 );
+const tutorialSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "tutorial.html"),
+  "utf8"
+);
 const wpTutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "wp-tutorial.html"),
   "utf8"
@@ -534,6 +538,21 @@ ok(wpTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    wpTutorialSource.includes('load_text("list_price(widget, 80).")') &&
    wpTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the Web Prolog tutorial demonstrates node-side private/shared shadowing");
+ok(sharedDbSource.includes('echo_actor :-') &&
+   sharedDbSource.includes('receive({') &&
+   sharedDbSource.includes('From ! echo(Msg)') &&
+   !sharedDbSource.includes('swi_wasm_actor_bridge:'),
+   "the standalone SWI-WASM shared database accepts ordinary actor source");
+ok(workerSource.includes('\":- use_module(\'/worker_actor_bridge.pl\').\\n\" + sourceText') &&
+   includes('\":- use_module(\'/swi_wasm_actor_bridge.pl\').\\n\" + sourceText') &&
+   includes('Unable to install the SWI-WASM actor bridge for the shared database'),
+   "both SWI-WASM models import the actor API before compiling shared node code");
+ok(tutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
+   wpTutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
+   tutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
+   wpTutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
+   !wpTutorialSource.includes('consult(&quot;#mpc-echo-source&quot;)'),
+   "the echo tutorials identify the shared definition and need neither source transfer nor Load");
 ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
    workerSource.includes('redefine_system_predicate(read(_))') &&
    workerSource.includes('redefine_system_predicate(read_term(_, _))') &&

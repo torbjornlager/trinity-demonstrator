@@ -808,6 +808,7 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(StatechartBody, _, _, _, '<statechart')),
             assertion(sub_string(SwiWasmWorkerBody, _, _, _, 'actorSpawnWithPid')),
             assertion(sub_string(WasmSharedDBBody, _, _, _, 'list_price(widget, 100).')),
+            assertion(sub_string(WasmSharedDBBody, _, _, _, 'echo_actor :-')),
             assertion(sub_string(WasmRuntimeBody, _, _, _, ':- module(statechart_wasm_runtime')),
             assertion(sub_string(WasmModelBody, _, _, _, ':- module(statechart_wasm_model')),
             assertion(sub_string(WasmExecBody, _, _, _, ':- module(statechart_wasm_exec')),

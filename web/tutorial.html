@@ -1198,7 +1198,12 @@ known_with_birthdate(Me, He, Date) :-
 
 <p>
     An actor is capable of spawning other actors and then talking to them.
-    This node hosts a tiny echo actor:
+    This node hosts a tiny echo actor. Its definition is shared node code,
+    shown here for reference rather than code to load into the shell. In the
+    SWI-WASM browser node it lives in
+    <code>prolog/web_prolog/wasm/shared_db.pl</code>; N3 and N4 provide it from
+    <code>Deployment/shared_db_actor_common.pl</code>, and N5 provides it from
+    <code>prolog/web_prolog/shared_db.pl</code>.
 </p>
 
 <pre id="mpc-echo-source">echo_actor :-
@@ -1210,7 +1215,8 @@ known_with_birthdate(Me, He, Date) :-
 </pre>
 
 <p>
-    Spawn it:
+    Because every actor on the node can call predicates in that node's shared
+    database, no source-transfer option is needed:
 </p>
 
 <pre id="mpc-spawn-echo">?- spawn(echo_actor, Pid).

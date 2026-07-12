@@ -469,7 +469,11 @@
       }
       return response.text();
     }).then(function(sourceText) {
-      Module.FS.writeFile("/worker_shared_db.pl", sourceText);
+      // Shared node code gets the same actor API and operators as ordinary
+      // Web Prolog actor modules.  Keep this loader concern out of the shared
+      // source so users can write receive/1 and Pid ! Message naturally.
+      Module.FS.writeFile("/worker_shared_db.pl",
+        ":- use_module('/worker_actor_bridge.pl').\n" + sourceText);
       Prolog.query("use_module(library(modules))").once();
       Prolog.query("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])").once();
       Prolog.query("add_import_module(user,wasm_shared_db,start)").once();
