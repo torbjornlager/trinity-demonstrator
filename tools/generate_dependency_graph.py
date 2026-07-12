@@ -228,6 +228,8 @@ def section_groups(all_edges: list[tuple[str, str]]) -> list[tuple[str, list[tup
             "prolog/web_prolog/pid_utils.pl",
             "prolog/web_prolog/dollar_expansion.pl",
             "prolog/web_prolog/statechart_actor.pl",
+            "prolog/web_prolog/parallel.pl",
+            "prolog/web_prolog/first_solution.pl",
         }
     }
     statechart_sources = {
@@ -286,6 +288,7 @@ LAYERS = {
     _WP + "source_utils.pl": 1,
     _WP + "actor_io_support.pl": 1,
     _WP + "isolation.pl": 1,
+    _WP + "worker_cleanup.pl": 1,
     # layer 2 — toplevels and behaviours
     _WP + "toplevel_actors.pl": 2,
     _WP + "dollar_expansion.pl": 2,
@@ -293,6 +296,7 @@ LAYERS = {
     _WP + "server_actor.pl": 2,
     _WP + "supervisor_actor.pl": 2,
     _WP + "parallel.pl": 2,
+    _WP + "first_solution.pl": 2,
     _WP + "statechart_model.pl": 2,
     _WP + "statechart_runtime.pl": 2,
     _WP + "statechart_exec.pl": 2,

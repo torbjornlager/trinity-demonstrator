@@ -33,6 +33,7 @@ run_tier :-
     run_tests([ server_actor,
                 supervisor,
                 parallel,
+                first_solution,
                 statechart_profile,
                 statechart_profile_runtime,
                 statechart_profile_semantics

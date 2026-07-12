@@ -11,7 +11,7 @@ with syntax and semantics exactly as in the trinity-demonstrator:
     load_uri/1, load_predicates/1, consult_load_list, listing_private,
   - toplevel query actors (the pengine protocol),
   - behaviours: generic servers, supervisors, statechart actors,
-    parallel/1,
+    parallel/1, first_solution/2-3,
   - distribution: Id@Node pids, remote spawn/send/monitor/link,
     rpc/2-3, promise/3-4, yield/2-3,
   - the node server: ?- node(Port). serves ISOBASE /call, ISOTOPE
@@ -37,5 +37,6 @@ spawn) is loaded here via web_prolog/composition.
 :- reexport(web_prolog/supervisor_actor).
 :- reexport(web_prolog/statechart_actor).
 :- reexport(web_prolog/parallel).
+:- reexport(web_prolog/first_solution).
 :- reexport(web_prolog/node).
 :- use_module(web_prolog/composition, []).

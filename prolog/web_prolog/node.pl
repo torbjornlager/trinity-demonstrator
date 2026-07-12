@@ -41,6 +41,8 @@ Design notes:
 :- use_module(actor_io_support, [actor_io_prelude_text/1]).
 :- use_module(toplevel_actors).
 :- use_module(statechart_actor, []).
+:- use_module(parallel, []).
+:- use_module(first_solution, []).
 :- use_module(library(modules)).
 :- use_module(rpc, [
     rpc/2,

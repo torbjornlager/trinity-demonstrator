@@ -265,6 +265,15 @@ public_runtime_support_goal(statechart_actor, Goal) :-
     functor(Goal, Name, Arity),
     statechart_runtime_support_goal_pi(Name/Arity).
 
+%  The predicate-generic worker wrappers are framework code.  Their enclosed
+%  client goals have already been exposed to library(sandbox) by safe_meta.
+public_runtime_support_goal(parallel, Goal) :-
+    callable(Goal),
+    functor(Goal, par_worker, 3).
+public_runtime_support_goal(first_solution, Goal) :-
+    callable(Goal),
+    functor(Goal, first_worker, 4).
+
 public_runtime_support_goal_pi(remote_actor_proxy/3).
 public_runtime_support_goal_pi(send_with_delay/3).
 
@@ -1069,7 +1078,7 @@ sandbox:safe_primitive(actor_api:node_setting(_, _)).
 %  concern under its origin policy.)
 %
 %  NOTE: the remaining behaviour-spawn API -- statechart_spawn/server_spawn/
-%  supervisor_spawn/parallel -- is deliberately NOT declared here.  Those
+%  supervisor_spawn -- is deliberately NOT declared here.  Those
 %  route through spawn/3 (so the runtime hook re-checks what they spawn) and
 %  several carry a client goal/callback (server_spawn's Pred, server_upgrade,
 %  supervisor child start(Goal)) or a URI loader (statechart interpret/1)
@@ -1100,6 +1109,25 @@ sandbox:safe_primitive(statechart_actor:statechart_spawn(_)).
 sandbox:safe_primitive(statechart_actor:statechart_spawn(_, _)).
 sandbox:safe_primitive(statechart_actor:statechart_halt(_, _)).
 sandbox:safe_primitive(statechart_actor:statechart_halt(_, _, _)).
+
+%  Actor-based predicate generics execute every listed goal locally.  Expose
+%  those goals to library(sandbox), preserving the caller module supplied by
+%  meta-predicate qualification.
+sandbox:safe_meta(parallel:parallel(QualifiedGoals), Calls) :-
+    sandbox_goal_list_calls(QualifiedGoals, Calls).
+sandbox:safe_meta(first_solution:first_solution(_, QualifiedGoals), Calls) :-
+    sandbox_goal_list_calls(QualifiedGoals, Calls).
+sandbox:safe_meta(first_solution:first_solution(_, QualifiedGoals, _), Calls) :-
+    sandbox_goal_list_calls(QualifiedGoals, Calls).
+
+sandbox_goal_list_calls(QualifiedGoals, Calls) :-
+    strip_module(QualifiedGoals, Module, Goals),
+    (   is_list(Goals)
+    ->  maplist(qualify_sandbox_goal(Module), Goals, Calls)
+    ;   Calls = []
+    ).
+
+qualify_sandbox_goal(Module, Goal, Module:Goal).
 
 sandbox:safe_meta(call_cleanup(Goal, Cleanup), [Goal, Cleanup]).
 sandbox:safe_meta(setup_call_cleanup(Setup, Goal, Cleanup), [Setup, Goal, Cleanup]).

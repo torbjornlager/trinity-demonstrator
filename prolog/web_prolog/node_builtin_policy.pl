@@ -268,6 +268,8 @@ builtin_goal_policy(statechart_spawn(_, _), statechart, actor).
 builtin_goal_policy(raise(_), statechart, actor).
 
 builtin_goal_policy(parallel(_), parallel, actor).
+builtin_goal_policy(first_solution(_, _), parallel, actor).
+builtin_goal_policy(first_solution(_, _, _), parallel, actor).
 
 builtin_goal_policy(node(_), node_control, actor).
 builtin_goal_policy(node(_, _), node_control, actor).
@@ -462,8 +464,9 @@ builtin_family_spec(statechart,
                     [actor]).
 builtin_family_spec(parallel,
                     "Parallel goals",
-                    "Run independent goals concurrently via worker actors.",
-                    ["parallel/1"],
+                    "Run independent or alternative goals concurrently via worker actors.",
+                    ["parallel/1", "first_solution/2",
+                     "first_solution/3"],
                     [actor]).
 builtin_family_spec(node_control,
                     "Node control",

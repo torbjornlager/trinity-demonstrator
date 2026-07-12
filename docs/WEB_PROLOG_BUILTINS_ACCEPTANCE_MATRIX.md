@@ -72,7 +72,7 @@ Primary basis:
 | `node/1-2` | no | no | yes (node:) | `node_control` is `actor`-profile only and currently reachable through top-level `node:node(...)`, not as an unqualified client goal. |
 | `server_spawn/3-4`, `server_request/3-4`, `server_promise/3-4`, `server_yield/2-4`, `server_upgrade/2`, `server_halt/2` | no | no | no | Catalogued in family policy, but not currently imported into public temporary client modules. Top-level `server_actor:...` qualification is also blocked by blacklist-mode qualified-goal rules. |
 | `supervisor_spawn/2-3`, `supervisor_spawn_child/3`, `supervisor_terminate_child/3`, `supervisor_delete_child/3`, `supervisor_respawn_child/3`, `supervisor_which_children/2`, `supervisor_count_children/2`, `supervisor_halt/1` | no | no | no | Same issue as the server family: catalogued, but not currently reachable from public client code under the current blacklist path. |
-| `parallel/1` | no | no | no | Catalogued in family policy, but not currently imported into public temporary client modules, and top-level `parallel:parallel(...)` is blocked in blacklist mode. |
+| `parallel/1`, `first_solution/2-3` | no | no | yes | ACTOR-only predicate generics imported into prepared actor modules. Nested goals are profile-checked before execution and revalidated by the runtime spawn path. |
 
 ## Source-Only Acceptance
 
@@ -100,7 +100,7 @@ Primary basis:
 
 - `rpc/2-3`, `promise/3-4`, `yield/2-3`, and `node/1-2` are currently
   reachable through `node:...`, not as unqualified client goals.
-- `server_*`, `supervisor_*`, and `parallel/1` are still better understood as
+- `server_*` and `supervisor_*` are still better understood as
   family-policy/catalog entries than as publicly reachable built-ins under the
   present blacklist implementation.
 - `load_text/1`, `load_list/1`, `load_predicates/1`, and `load_uri/1` are

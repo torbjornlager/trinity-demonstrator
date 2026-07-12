@@ -172,6 +172,7 @@
         <li><a href="#sec:server-api">Predicates for programming with server actors</a></li>
         <li><a href="#sec:statechart-api">Predicates for programming with statechart actors</a></li>
         <li><a href="#sec:supervisor-api">Predicates for programming with supervisor actors</a></li>
+        <li><a href="#sec:actor-predicate-generics">Actor-based predicate generics</a></li>
         <li><a href="#sec:synchronous-predicate-api">Predicates for remote Prolog-style calls</a></li>
         <li><a href="#sec:iso-predicates">ISO predicates and related constructs</a></li>
     </ul>
@@ -711,6 +712,37 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <li><code>supervisor_down(Reason)</code></li>
     <li><code>supervisor_call_timeout(Sup, Request)</code></li>
 </ul>
+
+<h2 id="sec:actor-predicate-generics">Actor-based predicate generics</h2>
+
+<article class="predicate-entry" id="parallel/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">parallel/1</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>parallel(+Goals) is semidet.</pre>
+    <p>Runs the proper list of independent goals <code>Goals</code> concurrently, using one monitored worker actor per goal. The call succeeds when every goal has produced its first solution and returns the resulting variable bindings. <code>parallel([])</code> succeeds immediately. Further solutions are not enumerated on backtracking.</p>
+    <p>If any goal fails, the remaining workers are terminated and the call fails. If any goal throws an exception, the remaining workers are terminated and the exception is rethrown. Result and monitor messages belonging to the workers are removed before the predicate returns, fails, or throws.</p>
+    <p>The goals must not depend on bindings or side effects produced by sibling goals. Actor creation and message copying add overhead, and the one-worker-per-goal model gives large goal lists a correspondingly large resource footprint.</p>
+    <p>A non-list <code>Goals</code> raises <code>type_error(list, Goals)</code>. An element that is not callable raises the corresponding callable type error from its worker, which is propagated to the caller.</p>
+</article>
+
+<article class="predicate-entry" id="first_solution/2-3">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">first_solution/2-3</span></div>
+        <div class="predicate-family">actor</div>
+    </div>
+    <pre>first_solution(?Solution, +Goals) is semidet.
+first_solution(?Solution, +Goals, +Options) is semidet.</pre>
+    <p>Runs the proper list of alternative goals <code>Goals</code> concurrently in monitored worker actors and unifies <code>Solution</code> with the result produced by the first solver to succeed. Once a winner has been selected, all remaining workers are terminated and their result and monitor messages are removed. The predicate does not enumerate later solutions on backtracking, and an empty goal list fails.</p>
+    <p>The two-argument form continues after an individual solver fails and stops on the first exception. The three-argument form accepts:</p>
+    <ul>
+        <li><code>on_fail(stop|continue)</code><br><code>continue</code> removes the failed solver and keeps waiting while alternatives remain; <code>stop</code> terminates all workers and fails immediately. Default is <code>continue</code>.</li>
+        <li><code>on_error(stop|continue)</code><br><code>continue</code> removes the solver that raised an exception and keeps waiting while alternatives remain; <code>stop</code> terminates all workers and rethrows the exception. Default is <code>stop</code>.</li>
+    </ul>
+    <p>If all alternatives are removed under a <code>continue</code> policy, the predicate fails. Goals should not depend on side effects produced by sibling solvers.</p>
+    <p>A non-list <code>Goals</code> or <code>Options</code> raises <code>type_error(list, Term)</code>. An action other than <code>stop</code> or <code>continue</code> raises <code>type_error(oneof([stop,continue]), Action)</code>. An unknown option raises <code>domain_error(first_solution_option, Option)</code>.</p>
+</article>
 
 <h2 id="sec:synchronous-predicate-api">Built-in predicates for RPC</h2>
 

@@ -54,41 +54,30 @@ with_public_execution_namespace(Namespace, Goal) :-
 
 %!  without_public_execution_context(:Goal) is det.
 without_public_execution_context(Goal) :-
-    findall(Profile,
-            current_public_execution_profile_local(Profile),
-            Profiles0),
-    findall(Namespace,
-            current_public_execution_namespace_local(Namespace),
-            Namespaces0),
-    retractall(current_public_execution_profile_local(_)),
-    retractall(current_public_execution_namespace_local(_)),
     setup_call_cleanup(
-        true,
+        (   asserta(current_public_execution_profile_local('$suppressed'),
+                    ProfileRef),
+            asserta(current_public_execution_namespace_local('$suppressed'),
+                    NamespaceRef)
+        ),
         Goal,
-        (
-            restore_public_execution_profiles(Profiles0),
-            restore_public_execution_namespaces(Namespaces0)
+        (   erase(NamespaceRef),
+            erase(ProfileRef)
         )
     ).
-
-restore_public_execution_profiles(Profiles0) :-
-    reverse(Profiles0, Profiles),
-    forall(member(Profile, Profiles),
-           asserta(current_public_execution_profile_local(Profile), _)).
-
-restore_public_execution_namespaces(Namespaces0) :-
-    reverse(Namespaces0, Namespaces),
-    forall(member(Namespace, Namespaces),
-           asserta(current_public_execution_namespace_local(Namespace), _)).
 
 
 %!  current_public_execution_profile(-Profile) is semidet.
 current_public_execution_profile(Profile) :-
-    current_public_execution_profile_local(Profile),
-    !.
+    current_public_execution_profile_local(Value),
+    !,
+    Value \== '$suppressed',
+    Profile = Value.
 
 
 %!  current_public_execution_namespace(-Namespace) is semidet.
 current_public_execution_namespace(Namespace) :-
-    current_public_execution_namespace_local(Namespace),
-    !.
+    current_public_execution_namespace_local(Value),
+    !,
+    Value \== '$suppressed',
+    Namespace = Value.

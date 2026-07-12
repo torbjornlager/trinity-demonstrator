@@ -9,6 +9,7 @@
                                auth/profile/relation/sandbox policies,
                                responses, startup options
       - goal_walker_tests.pl
+      - generic_actor_tests.pl
       - actor_remote_exit_failure.plt
       - down_wire_format_tests.plt
       - statechart_trace_options_tests.plt
@@ -37,6 +38,7 @@ http_status(URL, Status) :-
         _, Status = error).
 
 :- user:load_files('node/goal_walker_tests.pl', []).
+:- user:load_files('node/generic_actor_tests.pl', []).
 :- use_module('node/node_tests.pl', []).
 :- user:load_files('node/actor_remote_exit_failure.plt', []).
 :- user:load_files('node/down_wire_format_tests.plt', []).
@@ -48,6 +50,7 @@ run_tier :-
     layer_honesty,
     run_tests([ node,
                 goal_walker,
+                generic_actor_api,
                 actor_remote_exit_failure,
                 down_wire_format,
                 statechart_trace_options,

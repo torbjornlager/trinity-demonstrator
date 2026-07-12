@@ -237,7 +237,7 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 
 ### Parallel Goals
 
-`parallel/1`.
+`parallel/1`, `first_solution/2`, `first_solution/3`.
 
 ### Node Control
 

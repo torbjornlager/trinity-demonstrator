@@ -16,15 +16,15 @@ python3 tools/generate_dependency_graph.py
 
 ## Summary
 
-- Prolog files scanned: `116`
-- Local dependency edges found: `296`
+- Prolog files scanned: `121`
+- Local dependency edges found: `314`
 - Source basis: static `use_module/1-2` directives only
 - Renderer: Graphviz `dot` -> SVG
 
 ## All Local Module Dependencies
 
-- Nodes: `86`
-- Edges: `296`
+- Nodes: `89`
+- Edges: `314`
 
 ![All Local Module Dependencies](generated/dependency_graph/all-local-module-dependencies.svg)
 
@@ -32,8 +32,8 @@ python3 tools/generate_dependency_graph.py
 
 ## Root Modules
 
-- Nodes: `61`
-- Edges: `231`
+- Nodes: `63`
+- Edges: `240`
 
 ![Root Modules](generated/dependency_graph/root-modules.svg)
 
@@ -41,8 +41,8 @@ python3 tools/generate_dependency_graph.py
 
 ## Node Runtime And Session Modules
 
-- Nodes: `53`
-- Edges: `200`
+- Nodes: `56`
+- Edges: `207`
 
 ![Node Runtime And Session Modules](generated/dependency_graph/node-runtime-and-session-modules.svg)
 
@@ -59,8 +59,8 @@ python3 tools/generate_dependency_graph.py
 
 ## Tests
 
-- Nodes: `45`
-- Edges: `57`
+- Nodes: `47`
+- Edges: `66`
 
 ![Tests](generated/dependency_graph/tests.svg)
 
@@ -72,6 +72,7 @@ python3 tools/generate_dependency_graph.py
 | --- | --- |
 | `Deployment/discovery-seed.coexist.pl` | - |
 | `Deployment/discovery-seed.elfenbenstornet.pl` | - |
+| `Deployment/movie_db.pl` | - |
 | `Deployment/shared_db_actor_common.pl` | - |
 | `Deployment/shared_db_admin.pl` | - |
 | `Deployment/shared_db_common.pl` | - |
@@ -113,9 +114,10 @@ python3 tools/generate_dependency_graph.py
 | `prolog/web_prolog/debug.pl` | - |
 | `prolog/web_prolog/distribution.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl`, `prolog/web_prolog/node_controller.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/remote_protocol.pl`, `prolog/web_prolog/toplevel_actors.pl` |
 | `prolog/web_prolog/dollar_expansion.pl` | `prolog/web_prolog/term_display.pl` |
+| `prolog/web_prolog/first_solution.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/worker_cleanup.pl` |
 | `prolog/web_prolog/goal_walker.pl` | - |
 | `prolog/web_prolog/isolation.pl` | `prolog/web_prolog/actor_io_support.pl`, `prolog/web_prolog/actors.pl`, `prolog/web_prolog/source_utils.pl` |
-| `prolog/web_prolog/node.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/actor_io_support.pl`, `prolog/web_prolog/dollar_expansion.pl`, `prolog/web_prolog/node_admin.pl`, `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_builtin_policy.pl`, `prolog/web_prolog/node_call_context.pl`, `prolog/web_prolog/node_engine.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_glue.pl`, `prolog/web_prolog/node_input_limits.pl`, `prolog/web_prolog/node_interaction_log.pl`, `prolog/web_prolog/node_ip_policy.pl`, `prolog/web_prolog/node_isotope_controller.pl`, `prolog/web_prolog/node_limits.pl`, `prolog/web_prolog/node_log.pl`, `prolog/web_prolog/node_log_viewer.pl`, `prolog/web_prolog/node_metrics.pl`, `prolog/web_prolog/node_metrics_counters.pl`, `prolog/web_prolog/node_principal_policy.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_rate_limits.pl`, `prolog/web_prolog/node_relation_policy.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/node_startup_options.pl`, `prolog/web_prolog/node_version.pl`, `prolog/web_prolog/node_ws.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/rpc.pl`, `prolog/web_prolog/source_utils.pl`, `prolog/web_prolog/statechart_actor.pl`, `prolog/web_prolog/toplevel_actors.pl` |
+| `prolog/web_prolog/node.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/actor_io_support.pl`, `prolog/web_prolog/dollar_expansion.pl`, `prolog/web_prolog/first_solution.pl`, `prolog/web_prolog/node_admin.pl`, `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_builtin_policy.pl`, `prolog/web_prolog/node_call_context.pl`, `prolog/web_prolog/node_engine.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_glue.pl`, `prolog/web_prolog/node_input_limits.pl`, `prolog/web_prolog/node_interaction_log.pl`, `prolog/web_prolog/node_ip_policy.pl`, `prolog/web_prolog/node_isotope_controller.pl`, `prolog/web_prolog/node_limits.pl`, `prolog/web_prolog/node_log.pl`, `prolog/web_prolog/node_log_viewer.pl`, `prolog/web_prolog/node_metrics.pl`, `prolog/web_prolog/node_metrics_counters.pl`, `prolog/web_prolog/node_principal_policy.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_rate_limits.pl`, `prolog/web_prolog/node_relation_policy.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/node_startup_options.pl`, `prolog/web_prolog/node_version.pl`, `prolog/web_prolog/node_ws.pl`, `prolog/web_prolog/parallel.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/rpc.pl`, `prolog/web_prolog/source_utils.pl`, `prolog/web_prolog/statechart_actor.pl`, `prolog/web_prolog/toplevel_actors.pl` |
 | `prolog/web_prolog/node_admin.pl` | `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_builtin_policy.pl`, `prolog/web_prolog/node_doctor.pl`, `prolog/web_prolog/node_input_limits.pl`, `prolog/web_prolog/node_interaction_log.pl`, `prolog/web_prolog/node_ip_policy.pl`, `prolog/web_prolog/node_limits.pl`, `prolog/web_prolog/node_log.pl`, `prolog/web_prolog/node_principal_policy.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_rate_limits.pl`, `prolog/web_prolog/node_relation_policy.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/node_tokens.pl`, `prolog/web_prolog/node_ws.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/rpc.pl` |
 | `prolog/web_prolog/node_auth.pl` | `prolog/web_prolog/node_capabilities.pl`, `prolog/web_prolog/node_principal_policy.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_tokens.pl`, `prolog/web_prolog/rpc.pl` |
 | `prolog/web_prolog/node_builtin_policy.pl` | `prolog/web_prolog/node_runtime_state.pl` |
@@ -149,37 +151,40 @@ python3 tools/generate_dependency_graph.py
 | `prolog/web_prolog/node_startup_options.pl` | `prolog/web_prolog/rpc.pl`, `prolog/web_prolog/source_utils.pl` |
 | `prolog/web_prolog/node_tokens.pl` | `prolog/web_prolog/node_capabilities.pl`, `prolog/web_prolog/node_owner_tag.pl` |
 | `prolog/web_prolog/node_version.pl` | `prolog/web_prolog/remote_protocol.pl` |
-| `prolog/web_prolog/node_ws.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/dollar_expansion.pl`, `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_call_context.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_input_limits.pl`, `prolog/web_prolog/node_ip_policy.pl`, `prolog/web_prolog/node_limits.pl`, `prolog/web_prolog/node_log.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_rate_limits.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/rpc.pl`, `prolog/web_prolog/toplevel_actors.pl` |
-| `prolog/web_prolog/parallel.pl` | `prolog/web_prolog/actors.pl` |
+| `prolog/web_prolog/node_ws.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/dollar_expansion.pl`, `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_call_context.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_input_limits.pl`, `prolog/web_prolog/node_ip_policy.pl`, `prolog/web_prolog/node_limits.pl`, `prolog/web_prolog/node_log.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_rate_limits.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/rpc.pl`, `prolog/web_prolog/source_utils.pl`, `prolog/web_prolog/toplevel_actors.pl` |
+| `prolog/web_prolog/parallel.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/worker_cleanup.pl` |
 | `prolog/web_prolog/pid_utils.pl` | - |
 | `prolog/web_prolog/public_goal_guard.pl` | `prolog/web_prolog/node_execution_context.pl` |
 | `prolog/web_prolog/remote_protocol.pl` | - |
 | `prolog/web_prolog/rpc.pl` | `prolog/web_prolog/isolation.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/source_utils.pl` |
-| `prolog/web_prolog/server_actor.pl` | `prolog/web_prolog/actors.pl` |
+| `prolog/web_prolog/server_actor.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl` |
 | `prolog/web_prolog/shared_db.pl` | - |
 | `prolog/web_prolog/source_utils.pl` | - |
 | `prolog/web_prolog/statechart_actor.pl` | `prolog/web_prolog/actor_io_support.pl`, `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl`, `prolog/web_prolog/statechart_exec.pl`, `prolog/web_prolog/statechart_model.pl`, `prolog/web_prolog/statechart_runtime.pl`, `prolog/web_prolog/toplevel_actors.pl` |
 | `prolog/web_prolog/statechart_exec.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/statechart_model.pl`, `prolog/web_prolog/statechart_runtime.pl` |
 | `prolog/web_prolog/statechart_model.pl` | `prolog/web_prolog/source_utils.pl` |
 | `prolog/web_prolog/statechart_runtime.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/toplevel_actors.pl` |
-| `prolog/web_prolog/supervisor_actor.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/server_actor.pl` |
+| `prolog/web_prolog/supervisor_actor.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl`, `prolog/web_prolog/server_actor.pl` |
 | `prolog/web_prolog/term_display.pl` | - |
 | `prolog/web_prolog/toplevel_actors.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl` |
+| `prolog/web_prolog/wasm/shared_db.pl` | - |
 | `prolog/web_prolog/wasm/statechart_wasm.pl` | `prolog/web_prolog/wasm/statechart_wasm_exec.pl`, `prolog/web_prolog/wasm/statechart_wasm_model.pl`, `prolog/web_prolog/wasm/statechart_wasm_runtime.pl` |
 | `prolog/web_prolog/wasm/statechart_wasm_exec.pl` | `prolog/web_prolog/wasm/statechart_wasm_runtime.pl` |
 | `prolog/web_prolog/wasm/statechart_wasm_model.pl` | - |
 | `prolog/web_prolog/wasm/statechart_wasm_runtime.pl` | - |
+| `prolog/web_prolog/worker_cleanup.pl` | `prolog/web_prolog/actors.pl` |
 | `run.pl` | - |
 | `tests/discovery_hub_tests.pl` | `examples/services/discovery_hub.pl` |
 | `tests/test_statechart_wasm.pl` | `prolog/web_prolog/wasm/statechart_wasm.pl` |
-| `tests/tiers/behaviours/parallel_tests.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/parallel.pl` |
+| `tests/tiers/behaviours/parallel_tests.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/first_solution.pl`, `prolog/web_prolog/parallel.pl` |
 | `tests/tiers/behaviours/server_actor_tests.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/server_actor.pl` |
 | `tests/tiers/behaviours/statechart_actor_tests.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/statechart_actor.pl`, `prolog/web_prolog/toplevel_actors.pl` |
 | `tests/tiers/behaviours/supervisor_actor_tests.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/server_actor.pl`, `prolog/web_prolog/supervisor_actor.pl` |
+| `tests/tiers/node/generic_actor_tests.pl` | `prolog/web_prolog/first_solution.pl`, `prolog/web_prolog/isolation.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/parallel.pl` |
 | `tests/tiers/node/goal_walker_tests.pl` | `prolog/web_prolog/goal_walker.pl` |
 | `tests/tiers/node/multi_node_harness.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/node.pl` |
 | `tests/tiers/node/node_resident_services.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/node.pl` |
-| `tests/tiers/node/node_tests.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/dollar_expansion.pl`, `prolog/web_prolog/goal_walker.pl`, `prolog/web_prolog/node.pl`, `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_call_context.pl`, `prolog/web_prolog/node_capabilities.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_principal_policy.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_relation_policy.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/node_startup_options.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/public_goal_guard.pl`, `prolog/web_prolog/statechart_actor.pl`, `prolog/web_prolog/toplevel_actors.pl`, `tests/tiers/node/node_resident_services.pl` |
+| `tests/tiers/node/node_tests.pl` | `prolog/web_prolog/actor_api.pl`, `prolog/web_prolog/dollar_expansion.pl`, `prolog/web_prolog/goal_walker.pl`, `prolog/web_prolog/node.pl`, `prolog/web_prolog/node_auth.pl`, `prolog/web_prolog/node_call_context.pl`, `prolog/web_prolog/node_capabilities.pl`, `prolog/web_prolog/node_execution_context.pl`, `prolog/web_prolog/node_principal_policy.pl`, `prolog/web_prolog/node_profile_policy.pl`, `prolog/web_prolog/node_relation_policy.pl`, `prolog/web_prolog/node_response.pl`, `prolog/web_prolog/node_runtime_state.pl`, `prolog/web_prolog/node_sandbox.pl`, `prolog/web_prolog/node_session.pl`, `prolog/web_prolog/node_startup_options.pl`, `prolog/web_prolog/pid_utils.pl`, `prolog/web_prolog/public_goal_guard.pl`, `prolog/web_prolog/server_actor.pl`, `prolog/web_prolog/statechart_actor.pl`, `prolog/web_prolog/supervisor_actor.pl`, `prolog/web_prolog/toplevel_actors.pl`, `tests/tiers/node/node_resident_services.pl` |
 | `tests/tiers/t0_actors.pl` | `prolog/web_prolog/actors.pl` |
 | `tests/tiers/t1_isolation.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl` |
 | `tests/tiers/t2_toplevel.pl` | `prolog/web_prolog/actors.pl`, `prolog/web_prolog/isolation.pl`, `prolog/web_prolog/toplevel_actors.pl` |

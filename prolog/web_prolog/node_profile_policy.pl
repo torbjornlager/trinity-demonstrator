@@ -302,6 +302,12 @@ profile_check_step_(server_upgrade(To, Pred, Options), Profile) :-
 profile_check_step_(parallel(Goals), Profile) :-
     ensure_goal_profile(Profile, parallel(Goals)),
     profile_check_parallel_goals(Profile, Goals).
+profile_check_step_(first_solution(Solution, Goals), Profile) :-
+    ensure_goal_profile(Profile, first_solution(Solution, Goals)),
+    profile_check_parallel_goals(Profile, Goals).
+profile_check_step_(first_solution(Solution, Goals, Options), Profile) :-
+    ensure_goal_profile(Profile, first_solution(Solution, Goals, Options)),
+    profile_check_parallel_goals(Profile, Goals).
 profile_check_step_(supervisor_spawn(ChildSpecs, Pid), Profile) :-
     ensure_goal_profile(Profile, supervisor_spawn(ChildSpecs, Pid)),
     profile_check_supervisor_child_specs(Profile, ChildSpecs).
@@ -417,6 +423,9 @@ profile_check_qualified_goal(Profile, supervisor_actor, Goal) :-
     !,
     ensure_goal_profile(Profile, Goal).
 profile_check_qualified_goal(Profile, parallel, Goal) :-
+    !,
+    ensure_goal_profile(Profile, Goal).
+profile_check_qualified_goal(Profile, first_solution, Goal) :-
     !,
     ensure_goal_profile(Profile, Goal).
 profile_check_qualified_goal(_, _, _).

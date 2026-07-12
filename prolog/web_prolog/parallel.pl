@@ -2,6 +2,8 @@
        parallel/1
    ]).
 
+:- op(1000, xfy, if).
+
 /** <module> Parallel Conjunction Behaviour (layer 2)
 
 Runs a list of goals concurrently — one monitored actor per goal — and
@@ -13,21 +15,50 @@ Built directly on the layer-0 actor primitives.
      the other reusable actor behaviours.
 */
 
-:- use_module(actors).
+:- use_module(library(apply)).
+:- use_module(library(error)).
+:- use_module(library(lists), [memberchk/2]).
+:- use_module(actors, [
+    spawn/3,
+    self/1,
+    send/2,
+    receive/1
+]).
+:- use_module(worker_cleanup, [tidy_up_all/1]).
 
-:- meta_predicate parallel(+).
+:- multifile isolation:prepare_module/3.
+
+:- meta_predicate parallel(:).
 
 
-parallel(Goals) :-
+%  Make the adopted ACTOR generic visible in every prepared actor module.
+isolation:prepare_module(Module, _GoalModule, _Options) :-
+    add_import_module(Module, parallel, start).
+
+
+parallel(QualifiedGoals) :-
+    strip_module(QualifiedGoals, Module, Goals0),
+    must_be(list, Goals0),
+    maplist(qualify_goal(Module), Goals0, Goals),
     maplist(par_solve, Goals, Pids),
     maplist(par_yield(Pids), Pids, Goals).
 
 
+qualify_goal(Module, Goal, Module:Goal).
+
+
 par_solve(Goal, Pid) :-
     self(Self),
-    spawn((call(Goal), Self ! Pid-Goal), Pid, [
+    spawn(par_worker(Self, Pid, Goal), Pid, [
         monitor(true)
     ]).
+
+
+%  Private framework entry point.  The public node sandbox validates Goal
+%  through parallel/1's safe_meta declaration before this worker is spawned.
+par_worker(Self, Pid, Goal) :-
+    call(Goal),
+    send(Self, Pid-Goal).
 
 par_yield(Pids, Pid, Goal) :-
     receive({
@@ -36,37 +67,12 @@ par_yield(Pids, Pid, Goal) :-
                 down(_, Pid, true) ->
                     true
             }) ;
-        down(_, _, false) ->
+        down(_, FailedPid, false)
+                if memberchk(FailedPid, Pids) ->
             tidy_up_all(Pids),
             !, fail ;
-        down(_, _, exception(E)) ->
+        down(_, FailedPid, exception(E))
+                if memberchk(FailedPid, Pids) ->
             tidy_up_all(Pids),
             throw(E)
     }).
-
-
-
-tidy_up_all(Pids) :-
-    maplist(tidy_up, Pids).
-
-tidy_up(Pid) :-
-    %  Replace the creation-time monitor with a private cleanup monitor.
-    %  Waiting for its down/3 establishes a mailbox ordering barrier: every
-    %  result sent by this worker is enqueued before the termination event,
-    %  so the subsequent zero-time drain cannot miss an in-flight message.
-    demonitor(Pid, [flush]),
-    monitor(Pid, CleanupRef),
-    exit(Pid, kill),
-    receive({
-        down(CleanupRef, Pid, _) ->
-            true
-    }),
-    drain_mailbox(Pid).
-
-drain_mailbox(Pid) :-
-    receive({
-        Pid-_ ->
-            drain_mailbox(Pid) ;
-        down(_, Pid, _) ->
-            drain_mailbox(Pid)
-    }, [timeout(0)]).

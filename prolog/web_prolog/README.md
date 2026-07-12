@@ -41,6 +41,7 @@ Per-actor private modules and controlled source loading.
 | [isolation.pl](isolation.pl) | Per-actor temporary module isolation; `load_text/1`, `load_list/1`, `load_uri/1`, `load_predicates/1`. |
 | [source_utils.pl](source_utils.pl) | Source-text and URI helpers shared by the isolation paths. |
 | [actor_io_support.pl](actor_io_support.pl) | Actor I/O prelude support. |
+| [worker_cleanup.pl](worker_cleanup.pl) | Race-free monitored-worker teardown and mailbox cleanup. |
 
 ## Layer 2 — toplevels and behaviours
 
@@ -55,6 +56,7 @@ behaviours.
 | [server_actor.pl](server_actor.pl) | Generic server (`gen_server`-style) behaviour: synchronous request/reply, hot code swap, fail-fast monitoring. |
 | [supervisor_actor.pl](supervisor_actor.pl) | OTP-style supervisor: start/monitor/restart child actors by spec and strategy. |
 | [parallel.pl](parallel.pl) | Parallel conjunction: run goals concurrently, fail fast. |
+| [first_solution.pl](first_solution.pl) | Race alternative goals and return the first successful solution. |
 | [statechart_model.pl](statechart_model.pl) | Statechart model parsing. |
 | [statechart_runtime.pl](statechart_runtime.pl) | Statechart runtime helpers. |
 | [statechart_exec.pl](statechart_exec.pl) | Statechart execution core. |

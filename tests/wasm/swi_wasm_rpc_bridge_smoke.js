@@ -595,6 +595,15 @@ ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
    workerSource.includes('Ref := actorPromiseStart(') &&
    workerSource.includes('Promise := actorPromiseWait('),
    "SWI-WASM-2 provides promise/3-4 and yield/2-3 over controller RPC");
+ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
+   workerSource.includes('parallel(QualifiedGoals) :-') &&
+   workerSource.includes('first_solution_(Solution, QualifiedGoals, Options) :-') &&
+   workerSource.includes('option(on_fail(OnFail), Options, continue)') &&
+   workerSource.includes('option(on_error(OnError), Options, stop)') &&
+   includes('parallel/1, first_solution/2, first_solution/3') &&
+   includes('parallel(QualifiedGoals) :-') &&
+   includes('first_solution_(Solution, QualifiedGoals, Options) :-'),
+   "both SWI-WASM models provide the actor-based predicate generics");
 ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    workerSource.includes('installStatechartRuntime(message)') &&
    includes('case "statechart_spawn":') &&
