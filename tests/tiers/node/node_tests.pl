@@ -650,8 +650,12 @@ with_node_cache_size(Size, Goal) :-
     ).
 
 clear_node_cache :-
-    forall(retract(node:cache(_, _, Pid)),
-           clear_cached_pid(Pid)).
+    forall(retract(node:cache(Gid, Offset, Pid)),
+           (
+               forall(retract(node_engine:cache_alarm(Gid, Offset, Pid, AlarmId)),
+                      catch(remove_alarm(AlarmId), _, true)),
+               clear_cached_pid(Pid)
+           )).
 
 clear_cached_pid(Pid) :-
     % Cache cleanup in the suite should be best-effort and local-only. In a
@@ -5977,6 +5981,24 @@ test(call_cache_eviction_stops_evicted_actor,
                 ),
                 clear_node_cache
             ))).
+
+test(rpc_cut_reclaims_cached_continuation_after_ttl,
+     true(X == a)) :-
+    with_node_server_options([cache_ttl(0.05)], URI,
+        setup_call_cleanup(
+            clear_node_cache,
+            (
+                once(rpc(URI, member(X, [a,b]), [limit(1)])),
+                once(node:cache(_, _, CachedPid)),
+                wait_until(
+                    (   \+ node:cache(_, _, CachedPid),
+                        pid_stopped(CachedPid)
+                    ),
+                    200
+                )
+            ),
+            clear_node_cache
+        )).
 
 test(call_cache_is_isolated_per_node,
      true((A1 == success([a], true),

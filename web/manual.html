@@ -379,19 +379,22 @@ input(+Prompt, -Data, +Options) is det.</pre>
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">receive/1-2</span></div>
         <div class="predicate-family">actor</div>
     </div>
-    <pre>receive(+Clauses) is semidet.
-receive(+Clauses, +Options) is semidet.</pre>
-    <p><code>Clauses</code> is a sequence of receive clauses delimited by a semicolon:</p>
+    <pre>receive(+Clauses) is nondet.
+receive(+Clauses, +Options) is nondet.</pre>
+    <p>Waits for, selects, and consumes one message from the calling process's mailbox. A call is <em>single-message</em>, but not necessarily single-solution. During one invocation it selects and consumes at most one message. Messages are considered in arrival order, and each message is tested against the receive clauses in textual order. The first message accepted by a clause is removed from the mailbox. This selection is committed: backtracking through the invocation never selects another message or another clause.</p>
+    <p>The selected clause body is ordinary Prolog code. The call as a whole therefore has the determinism of the fired body: a body may fail, succeed once, throw an exception, or yield several solutions. Choice points left by the body remain available, but they enumerate solutions of that same body; they do not inspect the mailbox again. The selected message remains consumed if the body fails or throws, and is not restored on backtracking. Thus the <code>nondet</code> declaration concerns the possible number of logical solutions, not the number of messages consumed by one invocation. For example, after one <code>foo</code> message has arrived, <code>receive({foo -&gt; member(X, [a,b])})</code> consumes that message once but can yield both <code>X = a</code> and <code>X = b</code>.</p>
+    <p><code>Clauses</code> has the following form:</p>
     <pre>{  Pattern1 [if Guard1] -&gt;
          Body1 ;
    ...
    PatternN [if GuardN] -&gt;
          BodyN
 }</pre>
-    <p>Each pattern in turn is matched against the first message in the mailbox. If a pattern matches and the corresponding guard succeeds, the matching message is removed from the mailbox and the body of the receive clause is called. If no message is accepted, the process waits for new messages, checking them one at a time in arrival order. Messages that are not accepted are <em>deferred</em>, i.e. left in the mailbox without any change in their contents or order. Valid options:</p>
+    <p>A clause accepts a message if the message unifies with its pattern and its optional guard succeeds. A guard is evaluated for its first solution only, as if by <code>once/1</code>, and should be free of side effects. Bindings from the pattern and guard are in scope in the body. If a guard fails or raises an exception, that clause does not accept the message.</p>
+    <p>Messages accepted by no clause are <em>deferred</em>: they remain in the mailbox, without any change in their contents or relative order, and are available to later receive calls. <code>receive({})</code> accepts no message and waits, subject to <code>Options</code>. Valid options:</p>
     <ul>
-        <li><code>timeout(+Number)</code><br>If nothing appears in the current mailbox within <code>Number</code> seconds, the predicate succeeds anyway. Default is no timeout.</li>
-        <li><code>on_timeout(+Goal)</code><br>If the timeout occurs, <code>Goal</code> is called.</li>
+        <li><code>timeout(+Number)</code><br>Bounds the wait for an accepted message, in seconds. The value <code>0</code> inspects messages already in the mailbox without waiting for another. Default is no timeout.</li>
+        <li><code>on_timeout(+Goal)</code><br>Called if the timeout expires with no message accepted. Its success, failure, exception, and any choice points determine the outcome of the receive on the timeout path. Default is <code>true</code>. This option is only meaningful when <code>timeout/1</code> is present.</li>
     </ul>
 </article>
 

@@ -496,6 +496,14 @@ p(p(with)) --&gt; [with].
 </button>
 </p>
 
+<div class="alert alert-info">
+  <strong>Tip!</strong> We are now moving on to non-standard concurrency
+  features. If you would like more exercises involving standard Prolog, we
+  recommend <a href="https://swish.swi-prolog.org/" target="_blank" rel="noopener noreferrer">SWISH</a>,
+  which contains many more examples, including examples of other Prolog
+  extensions, and lets you trace queries.
+</div>
+
 </section>
 
 <section id="tutorial-message-passing-concurrency">
@@ -2039,7 +2047,7 @@ human(Who) :-
 </p>
 
 
-<h2>Remote calls with promise/3-4 and yield/2-3</h2>
+<h1>Remote calls with promise/3-4 and yield/2-3</h1>
 
 <p>
     The <code>promise/3-4</code> and <code>yield/2-3</code> predicates split a
@@ -2052,7 +2060,7 @@ human(Who) :-
 </p>
 
 
-<h3>Bounding the wait</h3>
+<h2>Bounding the wait</h2>
 
 <p>
     A client can bound the wait and give timeout an explicit result:
@@ -2077,7 +2085,7 @@ human(Who) :-
     reference can still collect its answer.
 </p>
 
-<h3>Polling for results</h3>
+<h2>Polling for results</h2>
 
 <p>
     This makes bounded polling possible. The following self-contained query

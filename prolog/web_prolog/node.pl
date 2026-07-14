@@ -201,6 +201,7 @@ Design notes:
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_host), []).
 :- setting(cache_size, integer, 100, 'Max number of cache entries').
+:- setting(cache_ttl,  number,  300, 'Maximum lifetime of an unused cached continuation in seconds').
 :- setting(timeout,    number,  1,   'Timeout in seconds').
 :- setting(sandbox,   atom,    blacklist, 'Sandbox policy: off, whitelist, or blacklist (on/demo/strict accepted as aliases for whitelist)').
 
@@ -805,6 +806,7 @@ isobase_event(Principal, GoalAtom, TemplateAtom0, Offset, Limit, Format, LoadTex
 %     - principal(+PrincipalId, +Capabilities, +Profile)  % rejected
 %     - timeout(+Seconds)
 %     - cache_size(+Entries)
+%     - cache_ttl(+Seconds)
 %     - max_inflight_calls(+Count)
 %     - max_sessions_per_principal(+Count)
 %     - max_ws_actors_per_principal(+Count)
@@ -844,7 +846,8 @@ node(Port, Options0) :-
     extract_resource_ceiling(max_call_inferences, Options1, MaxCallInferences, Options2),
     extract_resource_ceiling(max_actors, Options2, MaxActors, Options3),
     extract_resource_ceiling(max_interaction_log_bytes, Options3, MaxLogBytes, Options4),
-    extract_plain_option(max_interaction_log_backups, 5, Options4, MaxLogBackups, Options),
+    extract_plain_option(cache_ttl, default, Options4, CacheTTL0, Options4a),
+    extract_plain_option(max_interaction_log_backups, 5, Options4a, MaxLogBackups, Options),
     extract_plain_option(ws_allowed_origins, [], Options, WSAllowedOrigins0, Options5a),
     extract_tutorial_sections(Options5a, TutorialSections, Options5),
     node_options(Options5, SharedDB, SandboxMode, Profile, AuthMode,
@@ -862,6 +865,8 @@ node(Port, Options0) :-
                          Timeout0, Timeout),
     resolve_node_setting(cache_size, normalize_cache_size,
                          CacheSize0, CacheSize),
+    resolve_node_setting(cache_ttl, normalize_cache_ttl,
+                         CacheTTL0, CacheTTL),
     resolve_node_setting(node_limits:max_inflight_calls, normalize_max_inflight_calls,
                          MaxInflightCalls0, MaxInflightCalls),
     resolve_node_setting(node_limits:max_sessions_per_principal, normalize_max_sessions_per_principal,
@@ -916,6 +921,7 @@ node(Port, Options0) :-
         auth:AuthMode,
         timeout:Timeout,
         cache_size:CacheSize,
+        cache_ttl:CacheTTL,
         max_inflight_calls:MaxInflightCalls,
         max_sessions_per_principal:MaxSessionsPerPrincipal,
         max_ws_actors_per_principal:MaxWSActorsPerPrincipal,
@@ -1201,6 +1207,15 @@ normalize_cache_size(CacheSize0, CacheSize) :-
     ;   throw(error(domain_error(node_cache_size, CacheSize0),
                     context(node:normalize_cache_size/2,
                             'cache_size must be a positive integer')))
+    ).
+
+normalize_cache_ttl(CacheTTL0, CacheTTL) :-
+    must_be(number, CacheTTL0),
+    (   CacheTTL0 > 0
+    ->  CacheTTL = CacheTTL0
+    ;   throw(error(domain_error(node_cache_ttl, CacheTTL0),
+                    context(node:normalize_cache_ttl/2,
+                            'cache_ttl must be a positive number of seconds')))
     ).
 
 shared_db_runtime_module(Port, SharedDBModule) :-
@@ -2180,4 +2195,11 @@ effective_cache_size(CacheSize) :-
     (   current_node_value(cache_size, CacheSize0)
     ->  CacheSize = CacheSize0
     ;   setting(cache_size, CacheSize)
+    ).
+
+%!  effective_cache_ttl(-CacheTTL) is det.
+effective_cache_ttl(CacheTTL) :-
+    (   current_node_value(cache_ttl, CacheTTL0)
+    ->  CacheTTL = CacheTTL0
+    ;   setting(cache_ttl, CacheTTL)
     ).

@@ -17,12 +17,16 @@ Core `/call` answer computation and continuation cache management.
 :- use_module(node_runtime_state, [current_node_port/1]).
 
 :- use_module(library(settings)).
+:- use_module(library(time), [alarm/4, remove_alarm/1]).
 
 :- dynamic cache/3.
+:- dynamic cache_alarm/4.
 
 %!  cache(?Gid, ?Offset, ?Pid) is nondet.
 %
-%   Dynamic continuation cache for stateless `/call` paging.
+%   Dynamic continuation cache for stateless `/call` paging. Every entry has
+%   a matching `cache_alarm/4`; an unused entry is removed and its actor is
+%   stopped after the node's `cache_ttl`.
 %   `Gid` is a goal/template/load-text hash, `Offset` is the next slice offset,
 %   and `Pid` is the toplevel actor that still owns remaining solutions.
 
@@ -144,21 +148,42 @@ node_cache_key(NodeKey) :-
 %
 %   Retract one cache entry (oldest first under current insertion order).
 cache_retract(Gid, N, Pid) :-
-    once(retract(cache(Gid, N, Pid))).
+    with_mutex(node_engine_cache,
+               cache_take(Gid, N, Pid, AlarmId)),
+    cancel_cache_alarm(AlarmId).
+
+
+cache_take(Gid, N, Pid, AlarmId) :-
+    once(retract(cache(Gid, N, Pid))),
+    (   retract(cache_alarm(Gid, N, Pid, AlarmId0))
+    ->  AlarmId = AlarmId0
+    ;   AlarmId = none
+    ).
 
 
 %!  cache_update(+Gid, +N, +Pid) is det.
 %
-%   Insert cache entry and evict oldest when `cache_size` is exceeded.
-%   Eviction also stops the associated toplevel actor to avoid resource leaks.
+%   Insert a cache entry with a bounded idle lifetime and evict the oldest
+%   entry when `cache_size` is exceeded. Expiry and eviction both stop the
+%   associated toplevel actor.
 cache_update(Gid, N, Pid) :-
-    assertz(cache(Gid, N, Pid)),
-    cache_node_key(Gid, NodeKey),
+    node:effective_cache_ttl(CacheTTL),
     node:effective_cache_size(Size),
+    with_mutex(node_engine_cache,
+               cache_insert(Gid, N, Pid, CacheTTL, Size, Evicted)),
+    dispose_cache_entry(Evicted).
+
+
+cache_insert(Gid, N, Pid, CacheTTL, Size, Evicted) :-
+    alarm(CacheTTL, cache_expire(Gid, N, Pid), AlarmId, [remove(true)]),
+    assertz(cache(Gid, N, Pid)),
+    assertz(cache_alarm(Gid, N, Pid, AlarmId)),
+    cache_node_key(Gid, NodeKey),
     aggregate_all(count, cache(node_cache(NodeKey, _), _, _), NC),
     (   NC > Size
-    ->  cache_evict_oldest(NodeKey)
-    ;   true
+    ->  cache_take(node_cache(NodeKey, _), _, EvictedPid, EvictedAlarm),
+        Evicted = cache_entry(EvictedPid, EvictedAlarm)
+    ;   Evicted = none
     ).
 
 
@@ -166,11 +191,36 @@ cache_node_key(node_cache(NodeKey, _), NodeKey).
 cache_node_key(_, global).
 
 
-%!  cache_evict_oldest(+NodeKey) is det.
+%!  cache_expire(+Gid, +N, +Pid) is det.
 %
-%   Evict one oldest cache entry and stop its actor process.
-cache_evict_oldest(NodeKey) :-
-    (   cache_retract(node_cache(NodeKey, _), _, EvictedPid)
-    ->  catch(toplevel_stop(EvictedPid), _, true)
+%   Alarm callback for an idle continuation. Taking the alarm metadata under
+%   the cache mutex makes expiry race safely with a client requesting the next
+%   slice: exactly one side acquires and owns the actor.
+cache_expire(Gid, N, Pid) :-
+    with_mutex(node_engine_cache,
+               (   retract(cache_alarm(Gid, N, Pid, _))
+               ->  retractall(cache(Gid, N, Pid)),
+                   Expired = true
+               ;   Expired = false
+               )),
+    (   Expired == true
+    ->  stop_cached_toplevel(Pid)
     ;   true
     ).
+
+
+dispose_cache_entry(none) :-
+    !.
+dispose_cache_entry(cache_entry(Pid, AlarmId)) :-
+    cancel_cache_alarm(AlarmId),
+    stop_cached_toplevel(Pid).
+
+
+cancel_cache_alarm(none) :-
+    !.
+cancel_cache_alarm(AlarmId) :-
+    catch(remove_alarm(AlarmId), _, true).
+
+
+stop_cached_toplevel(Pid) :-
+    catch(toplevel_stop(Pid), _, true).

@@ -504,6 +504,7 @@ current_admin_config(json{
     sandbox:Sandbox,
     timeout:Timeout,
     cache_size:CacheSize,
+    cache_ttl:CacheTTL,
     max_inflight_calls:MaxInflightCalls,
     max_sessions_per_principal:MaxSessionsPerPrincipal,
     max_ws_actors_per_principal:MaxWSActorsPerPrincipal,
@@ -528,6 +529,7 @@ current_admin_config(json{
     sandbox_mode(Sandbox),
     current_runtime_timeout(Timeout),
     current_runtime_cache_size(CacheSize),
+    current_runtime_cache_ttl(CacheTTL),
     current_max_inflight_calls(MaxInflightCalls),
     current_max_sessions_per_principal(MaxSessionsPerPrincipal),
     current_max_ws_actors_per_principal(MaxWSActorsPerPrincipal),
@@ -654,6 +656,9 @@ admin_config_update_pair(Dict, timeout, Timeout) :-
 admin_config_update_pair(Dict, cache_size, CacheSize) :-
     get_dict(cache_size, Dict, CacheSize0),
     normalize_cache_size_value(CacheSize0, CacheSize).
+admin_config_update_pair(Dict, cache_ttl, CacheTTL) :-
+    get_dict(cache_ttl, Dict, CacheTTL0),
+    normalize_cache_ttl_value(CacheTTL0, CacheTTL).
 admin_config_update_pair(Dict, max_inflight_calls, MaxInflightCalls) :-
     get_dict(max_inflight_calls, Dict, MaxInflightCalls0),
     normalize_max_inflight_calls_value(MaxInflightCalls0, MaxInflightCalls).
@@ -738,6 +743,17 @@ normalize_cache_size_value(CacheSize0, CacheSize) :-
     ;   throw(error(domain_error(node_cache_size, CacheSizeNumber),
                     context(node_admin:node_admin_config_page/1,
                             'cache_size must be a positive integer')))
+    ).
+
+
+normalize_cache_ttl_value(CacheTTL0, CacheTTL) :-
+    text_to_number(CacheTTL0, CacheTTLNumber),
+    must_be(number, CacheTTLNumber),
+    (   CacheTTLNumber > 0
+    ->  CacheTTL = CacheTTLNumber
+    ;   throw(error(domain_error(node_cache_ttl, CacheTTLNumber),
+                    context(node_admin:node_admin_config_page/1,
+                            'cache_ttl must be a positive number of seconds')))
     ).
 
 
@@ -984,6 +1000,13 @@ current_runtime_cache_size(CacheSize) :-
     (   current_node_value(cache_size, CacheSize0)
     ->  CacheSize = CacheSize0
     ;   setting(node:cache_size, CacheSize)
+    ).
+
+
+current_runtime_cache_ttl(CacheTTL) :-
+    (   current_node_value(cache_ttl, CacheTTL0)
+    ->  CacheTTL = CacheTTL0
+    ;   setting(node:cache_ttl, CacheTTL)
     ).
 
 

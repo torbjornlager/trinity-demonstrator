@@ -1126,10 +1126,13 @@ default_io_target(Fallback, Fallback).
                 *            RECEIVE           *
                 *******************************/
 
-%!  receive(+ReceiveClauses) is semidet.
-%!  receive(+ReceiveClauses, +Options) is semidet.
+%!  receive(+ReceiveClauses) is nondet.
+%!  receive(+ReceiveClauses, +Options) is nondet.
 %
-%   Erlang-style receive.
+%   Erlang-style committed message selection. One invocation consumes at most
+%   one message, but its ordinary Prolog clause body may yield several logical
+%   solutions. Backtracking through that body never selects another message or
+%   clause.
 
 :- thread_local deferred/1.
 

@@ -1032,6 +1032,13 @@
             <input id="config-cache-size" type="number" min="1" step="1">
           </div>
           <div class="field">
+            <label for="config-cache-ttl" class="field-label-row">
+              <span>Cache TTL</span>
+              <button class="config-help-button" type="button" data-help-id="cache_ttl" aria-label="Help for Cache TTL">?</button>
+            </label>
+            <input id="config-cache-ttl" type="number" min="0.001" step="0.001">
+          </div>
+          <div class="field">
             <label for="config-max-inflight-calls" class="field-label-row">
               <span>Max /call</span>
               <button class="config-help-button" type="button" data-help-id="max_inflight_calls" aria-label="Help for Max /call">?</button>
@@ -1218,6 +1225,7 @@
           sandbox: "Chooses the language sandbox policy. NO SANDBOX disables checks, WHITELIST keeps the current SWI-Prolog safe-goal policy, and BLACKLIST applies an initial deny-list over risky runtime and ISO predicates.",
           timeout: "Hard upper bound, in seconds, for one goal execution. If a client requests a lower timeout, the effective timeout is the smaller of the two.",
           cache_size: "Maximum number of cached /call result slices for identical stateless requests. Larger values reduce recomputation; smaller values reduce memory use.",
+          cache_ttl: "Maximum idle lifetime, in seconds, of a cached /call continuation. Expiry stops the suspended toplevel so an abandoned enumeration cannot retain it indefinitely.",
           max_inflight_calls: "Maximum number of simultaneous /call requests on this node. Use it to cap parallel stateless load.",
           max_sessions_per_principal: "Maximum number of ISOTOPE toplevel sessions owned by one principal. When the limit is reached, toplevel_spawn is rejected until capacity is freed.",
           max_ws_actors_per_principal: "Maximum number of WebSocket actors or toplevel connections owned by one principal. Each connection consumes memory and runtime resources.",
@@ -1650,6 +1658,7 @@
               : "blacklist",
             timeout: json && typeof json.timeout === "number" ? json.timeout : 2,
             cache_size: json && typeof json.cache_size === "number" ? json.cache_size : 100,
+            cache_ttl: json && typeof json.cache_ttl === "number" ? json.cache_ttl : 300,
             max_inflight_calls: json && typeof json.max_inflight_calls === "number" ? json.max_inflight_calls : 4,
             max_sessions_per_principal: json && typeof json.max_sessions_per_principal === "number"
               ? json.max_sessions_per_principal
@@ -1706,6 +1715,7 @@
           setFieldValue("config-sandbox", configState.sandbox || "blacklist");
           setFieldValue("config-timeout", configState.timeout);
           setFieldValue("config-cache-size", configState.cache_size);
+          setFieldValue("config-cache-ttl", configState.cache_ttl);
           setFieldValue("config-max-inflight-calls", configState.max_inflight_calls);
           setFieldValue("config-max-sessions", configState.max_sessions_per_principal);
           setFieldValue("config-max-ws-actors", configState.max_ws_actors_per_principal);
@@ -1798,6 +1808,7 @@
             sandbox: document.getElementById("config-sandbox").value,
             timeout: Number(document.getElementById("config-timeout").value),
             cache_size: Number(document.getElementById("config-cache-size").value),
+            cache_ttl: Number(document.getElementById("config-cache-ttl").value),
             max_inflight_calls: Number(document.getElementById("config-max-inflight-calls").value),
             max_sessions_per_principal: Number(document.getElementById("config-max-sessions").value),
             max_ws_actors_per_principal: Number(document.getElementById("config-max-ws-actors").value),
@@ -1821,6 +1832,7 @@
             sandbox: source.sandbox || "blacklist",
             timeout: Number(source.timeout),
             cache_size: Number(source.cache_size),
+            cache_ttl: Number(source.cache_ttl),
             max_inflight_calls: Number(source.max_inflight_calls),
             max_sessions_per_principal: Number(source.max_sessions_per_principal),
             max_ws_actors_per_principal: Number(source.max_ws_actors_per_principal),

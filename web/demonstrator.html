@@ -3442,6 +3442,21 @@
                       </label>
                       <label class="admin-field">
                         <span class="admin-field-label-row">
+                          <span class="admin-field-label">Cache TTL</span>
+                          <button class="admin-config-help-button"
+                                  type="button"
+                                  :data-help="adminConfigHelpText('cache_ttl')"
+                                  aria-label="Help for Cache TTL"
+                                  @click.stop>?</button>
+                        </span>
+                        <input class="wb-input"
+                               type="number"
+                               min="0.001"
+                               step="0.001"
+                               v-model.number="adminConfigDraft.cache_ttl">
+                      </label>
+                      <label class="admin-field">
+                        <span class="admin-field-label-row">
                           <span class="admin-field-label">Max /call</span>
                           <button class="admin-config-help-button"
                                   type="button"
@@ -4051,6 +4066,7 @@
         sandbox: "Chooses the language sandbox policy. NO SANDBOX disables checks, WHITELIST keeps the current SWI-Prolog safe-goal policy, and BLACKLIST applies an initial deny-list over risky runtime and ISO predicates.",
         timeout: "Hard upper bound, in seconds, for one goal execution. If a client requests a lower timeout, the effective timeout is the smaller of the two.",
         cache_size: "Maximum number of cached /call result slices for identical stateless requests. Larger values reduce recomputation; smaller values reduce memory use.",
+        cache_ttl: "Maximum idle lifetime, in seconds, of a cached /call continuation. Expiry stops the suspended toplevel so an abandoned enumeration cannot retain it indefinitely.",
         max_inflight_calls: "Maximum number of simultaneous /call requests on this node. Use it to cap parallel stateless load.",
         max_sessions_per_principal: "Maximum number of ISOTOPE toplevel sessions owned by one principal. When the limit is reached, toplevel_spawn is rejected until capacity is freed.",
         max_ws_actors_per_principal: "Maximum number of WebSocket actors or toplevel connections owned by one principal. Each connection consumes memory and runtime resources.",
@@ -5281,6 +5297,7 @@
               sandbox: "blacklist",
               timeout: 2,
               cache_size: 100,
+              cache_ttl: 300,
               max_inflight_calls: 4,
               max_sessions_per_principal: 8,
               max_ws_actors_per_principal: 16,
@@ -8387,6 +8404,7 @@
               sandbox: source.sandbox,
               timeout: source.timeout,
               cache_size: source.cache_size,
+              cache_ttl: source.cache_ttl,
               max_inflight_calls: source.max_inflight_calls,
               max_sessions_per_principal: source.max_sessions_per_principal,
               max_ws_actors_per_principal: source.max_ws_actors_per_principal,
@@ -8430,6 +8448,7 @@
                 : "blacklist",
               timeout: json && typeof json.timeout === "number" ? json.timeout : 2,
               cache_size: json && typeof json.cache_size === "number" ? json.cache_size : 100,
+              cache_ttl: json && typeof json.cache_ttl === "number" ? json.cache_ttl : 300,
               max_inflight_calls: json && typeof json.max_inflight_calls === "number"
                 ? json.max_inflight_calls
                 : 4,
