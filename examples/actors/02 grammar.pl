@@ -37,7 +37,6 @@ p(p(with)) --> [with].
 
 ?- phrase(s(Tree), [john,sees,a,man,with,a,telescope]).
 
-?- forall((between(1,8,N), length(S,N), phrase(s(_),S)), 
-   writeln(S)).
+?- phrase(s(_),Sentence).
 
 */

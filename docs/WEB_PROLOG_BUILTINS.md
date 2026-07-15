@@ -111,7 +111,9 @@ output through the actor messaging layer via `actor:terminal_output/1-2`:
 
 These are local predicates in the actor's temporary module and shadow the
 system-level definitions. They do not provide stream-level access. The local
-`time/1` emits a timing output event instead of printing to the host shell.
+`time/1` emits a timing output event instead of printing to the host shell and
+is available from the ISOBASE profile onward; its nested goal is checked
+independently against the active profile and sandbox policy.
 
 ## 8.15 Logic and Control
 
@@ -302,7 +304,8 @@ For reference, the following ISO predicates are denied by the blacklist. See
   `current_char_conversion/2`.
 - **Runtime/parser mutation (8.14, 8.17):** `set_prolog_flag/2`,
   `char_conversion/2`, `op/3`, `halt/0-1`.
-- **Runtime timing:** raw `time/1`.
+- **Runtime timing:** explicitly module-qualified access to raw timing
+  implementations; use the checked local `time/1` wrapper instead.
 - **Stateful term storage (SWI):** `nb_setval/2`, `b_setval/2`,
   `nb_getval/2`, `b_getval/2`.
 - **Shell commands (SWI):** `shell/0-2`, `cd/0-1`, `pushd/0-1`, `popd/0`,

@@ -58,7 +58,8 @@ Primary basis:
 | `member/2`, `append/3`, `length/2`, `between/3`, `select/3`, `succ/2`, `nth0/3-4`, `nth1/3-4`, `call_nth/2` | yes | yes | yes | Prologue predicates currently visible in the runtime. |
 | `maplist/2-5`, `foldl/4-7` | yes | yes | yes | Accepted as higher-order predicates. Runtime guard rewriting still applies to the goals they eventually call. |
 | `crypto_data_hash/3` | yes | yes | yes | Local extension currently visible via autoload. |
-| `nl/0`, `write/1`, `writeq/1`, `write_term/2`, `writeln/1`, `write_canonical/1`, `print/1`, `display/1`, `format/1-2`, `time/1` | no | yes | yes | These are actor-local prelude overrides, not ambient stream I/O. Profile policy still treats them as side effects and rejects them on `/call`. `time/1` emits a timing-tagged output event rather than printing to the host shell. Stream-target arities such as `nl/1`, `writeln/2`, `print/2`, and `format/3` remain blacklisted. |
+| `nl/0`, `write/1`, `writeq/1`, `write_term/2`, `writeln/1`, `write_canonical/1`, `print/1`, `display/1`, `format/1-2` | no | yes | yes | These are actor-local prelude overrides, not ambient stream I/O. Profile policy treats them as side effects and rejects them on `/call`. Stream-target arities such as `nl/1`, `writeln/2`, `print/2`, and `format/3` remain blacklisted. |
+| `time/1` | yes | yes | yes | The local prelude implementation emits a timing-tagged output event and recursively validates the timed goal against profile and sandbox policy. |
 | `listing/0` | no | yes | yes | Exposed through the local actor I/O prelude as private-module listing, not the ambient system `listing/0`. |
 | `output/1-2`, `input/2-3`, `respond/2` | no | yes | yes | Actor/session I/O requires at least `isotope`. |
 | `self/1`, `spawn/1-3`, `actors/1`, `exit/1-2`, `cancel/1` | no | no | yes | Actor lifecycle is `actor`-profile only. |
@@ -68,7 +69,7 @@ Primary basis:
 | `toplevel_spawn/1-2`, `toplevel_call/2-3`, `toplevel_next/1-2`, `toplevel_stop/1`, `toplevel_abort/1`, `toplevel_halt/2` | no | no | yes | These are accepted as client goals only in the `actor` profile. The HTTP `/toplevel_*` endpoints are separate host-side routes. |
 | `statechart_spawn/2`, `statechart_halt/2-3` | no | no | yes | Imported into public temporary client modules through `statechart_actor`. |
 | `raise/1`, `in/1` | no | no | yes | Imported through `statechart_actor`; meaningful only inside statechart execution. |
-| `rpc/2-3`, `promise/3-4`, `yield/2-3` | yes (node:) | yes (node:) | yes (node:) | Profile policy allows them broadly enough, but public temporary client modules do not import `node`, so the currently supported path is `node:rpc(...)`, `node:promise(...)`, `node:yield(...)`. |
+| `rpc/2-3`, `promise/3-4`, `yield/2-3` | yes | yes | yes | Public temporary client modules import these predicates through `actor_api`, so both terminal goals and loaded example predicates can call them unqualified. |
 | `node/1-2` | no | no | yes (node:) | `node_control` is `actor`-profile only and currently reachable through top-level `node:node(...)`, not as an unqualified client goal. |
 | `server_spawn/3-4`, `server_request/3-4`, `server_promise/3-4`, `server_yield/2-4`, `server_upgrade/2`, `server_halt/2` | no | no | no | Catalogued in family policy, but not currently imported into public temporary client modules. Top-level `server_actor:...` qualification is also blocked by blacklist-mode qualified-goal rules. |
 | `supervisor_spawn/2-3`, `supervisor_spawn_child/3`, `supervisor_terminate_child/3`, `supervisor_delete_child/3`, `supervisor_respawn_child/3`, `supervisor_which_children/2`, `supervisor_count_children/2`, `supervisor_halt/1` | no | no | no | Same issue as the server family: catalogued, but not currently reachable from public client code under the current blacklist path. |
@@ -98,8 +99,8 @@ Primary basis:
 
 ## Main Verified Mismatches vs the Catalog
 
-- `rpc/2-3`, `promise/3-4`, `yield/2-3`, and `node/1-2` are currently
-  reachable through `node:...`, not as unqualified client goals.
+- `rpc/2-3`, `promise/3-4`, and `yield/2-3` are available as unqualified
+  client goals; `node/1-2` remains an owner-side controller entry point.
 - `server_*` and `supervisor_*` are still better understood as
   family-policy/catalog entries than as publicly reachable built-ins under the
   present blacklist implementation.

@@ -732,6 +732,43 @@ test(node_1_starts_http_endpoint, true(Answer == success([true], false))) :-
             read_answer(URL, Answer)
         )).
 
+test(isobase_call_allows_time_in_blacklist_sandbox,
+     true((Type == "success", Value == "a"))) :-
+    with_node_server_options([profile(isobase), sandbox(blacklist)], URI,
+        (
+            json_call_url(URI, 'time((X=a,sleep(0.01)))', 0, 1, URL),
+            read_json_answer(URL, JSON),
+            Type = JSON.get(type),
+            [Row] = JSON.get(data),
+            Value = Row.get('X')
+        )).
+
+test(isobase_call_preserves_promise_between_stateless_requests,
+     true(Answer == success([success([a], false)], false))) :-
+    with_node_server_options([profile(isobase), sandbox(blacklist)], URI,
+        (
+            format(atom(PromiseGoal),
+                   'promise(~q, (X=a,sleep(0.01)), Ref, [template(X)])',
+                   [URI]),
+            call_url(URI, PromiseGoal, 'Ref', 0, 1, '', none, PromiseURL),
+            read_answer(PromiseURL, success([Ref], false)),
+            format(atom(YieldGoal), 'yield(~w, Answer)', [Ref]),
+            call_url(URI, YieldGoal, 'Answer', 0, 1, '', none, YieldURL),
+            read_answer(YieldURL, Answer)
+        )).
+
+test(isobase_call_runs_loaded_promise_and_yield_example,
+     true(Answer == success([success([a], false)], false))) :-
+    with_node_server_options([profile(isobase), sandbox(blacklist)], URI,
+        (
+            format(string(Source),
+                   'asynch_test_1(Answer) :-~n  promise(~q, (X=a,sleep(0.01)), Ref, [template(X)]),~n  yield(Ref, Answer).~n',
+                   [URI]),
+            call_url(URI, 'asynch_test_1(Answer)', 'Answer', 0, 1,
+                     Source, none, URL),
+            read_answer(URL, Answer)
+        )).
+
 test(node_tutorial_and_image_routes_served,
      true((sub_string(TutorialBody, _, _, _, '<title>Web Prolog Tutorial</title>'),
            sub_string(TutorialBody, _, _, _, 'id="tutorial-local-actor-programming"'),
@@ -754,8 +791,12 @@ test(node_portal_and_example_routes_served) :-
             read_text(PortalURL, PortalBody),
             format(atom(DemonstratorURL), '~w/demonstrator', [URI]),
             read_text(DemonstratorURL, DemonstratorBody),
-            format(atom(WPTutorialURL), '~w/wp-tutorial', [URI]),
-            read_text(WPTutorialURL, WPTutorialBody),
+            format(atom(ActorTutorialURL), '~w/actor-profile-tutorial', [URI]),
+            read_text(ActorTutorialURL, ActorTutorialBody),
+            format(atom(IsobaseTutorialURL), '~w/isobase-profile-tutorial', [URI]),
+            read_text(IsobaseTutorialURL, IsobaseTutorialBody),
+            format(atom(IsotopeTutorialURL), '~w/isotope-profile-tutorial', [URI]),
+            read_text(IsotopeTutorialURL, IsotopeTutorialBody),
             format(atom(OldWorkbenchURL), '~w/workbench', [URI]),
             read_text_status(OldWorkbenchURL, OldWorkbenchStatus, _OldWorkbenchBody),
             format(atom(EditorFrameURL), '~w/editor_frame?id=editor&mode=prolog', [URI]),
@@ -785,16 +826,21 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Your portal to the Prolog Web')),
             assertion(sub_string(PortalBody, _, _, _, 'Don''t show this again.')),
             assertion(sub_string(PortalBody, _, _, _, 'Book manuscript')),
+            assertion(sub_string(PortalBody, _, _, _, 'The ISOBASE profile')),
+            assertion(sub_string(PortalBody, _, _, _, 'The ISOTOPE profile')),
+            assertion(sub_string(PortalBody, _, _, _, 'The ACTOR profile')),
             assertion(sub_string(DemonstratorBody, _, _, _, 'Book manuscript')),
-            assertion(sub_string(WPTutorialBody, _, _, _, 'id="tutorial-private-and-shared-knowledge"')),
-            assertion(sub_string(WPTutorialBody, _, _, _, 'discounted_price(Price)')),
-            assertion(sub_string(WPTutorialBody, _, _, _, 'id="epa-published-counter"')),
-            assertion(sub_string(WPTutorialBody, _, _, _, "counter@'https://n3.elfenbenstornet.se'")),
-            assertion(sub_string(WPTutorialBody, _, _, _, '<a href="https://n0.elfenbenstornet.se/discovery-hub" target="_blank" rel="noopener noreferrer">Discovery Hub</a>')),
-            assertion(sub_string(WPTutorialBody, _, _, _, '<h2>Remote calls with promise/3-4 and yield/2-3</h2>')),
-            assertion(sub_string(WPTutorialBody, _, _, _, 'id="rpc-promise-timeout"')),
-            assertion(sub_string(WPTutorialBody, _, _, _, 'id="rpc-promise-poll"')),
-            assertion(sub_string(WPTutorialBody, _, _, _, 'on_timeout(Answer = timeout)')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="tutorial-private-and-shared-knowledge"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'discounted_price(Price)')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="epa-published-counter"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, "counter@'https://n3.elfenbenstornet.se'")),
+            assertion(sub_string(ActorTutorialBody, _, _, _, '<a href="https://n0.elfenbenstornet.se/discovery-hub" target="_blank" rel="noopener noreferrer">Discovery Hub</a>')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, '<h2>Remote calls with promise/3-4 and yield/2-3</h2>')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="rpc-promise-timeout"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="rpc-promise-poll"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'on_timeout(Answer = timeout)')),
+            assertion(IsobaseTutorialBody == TutorialBody),
+            assertion(IsotopeTutorialBody == TutorialBody),
             assertion(OldWorkbenchStatus == 404),
             assertion(sub_string(PortalBody, _, _, _, 'https://trinity.elfenbenstornet.se/book.html')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Font</div>')),
@@ -2432,6 +2478,12 @@ test(internal_transport_does_not_imply_execute) :-
 %  WebSocket to the node and drive its full actor surface from a
 %  victim's browser (no CORS protection on WS handshakes).
 
+test(ws_browser_local_pid_accepts_localhost_qualification) :-
+    node_ws:browser_local_pid(2159438818@localhost).
+
+test(ws_browser_local_pid_rejects_nonlocal_qualification) :-
+    \+ node_ws:browser_local_pid(2159438818@'https://n3.example.com').
+
 test(ws_origin_no_header_allowed) :-
     %  Native (non-browser) clients -- including the cross-node
     %  WebSocket reader in actor.pl -- do not set Origin and must
@@ -3086,6 +3138,13 @@ test(profile_check_source_text_rejects_spawn_in_loaded_source,
      [throws(error(profile_violation(_, _), _))]) :-
     profile_check_source_text(isobase, user, "p :- spawn(true, _Pid).\n").
 
+test(profile_check_goal_allows_time_in_isobase) :-
+    profile_check_goal(isobase, time(member(a, [a]))).
+
+test(profile_check_goal_rejects_actor_goal_inside_time_in_isobase,
+     [throws(error(profile_violation(_, _), _))]) :-
+    profile_check_goal(isobase, time(spawn(true, _Pid))).
+
 test(relation_check_call_is_noop_for_non_relation_profiles) :-
     relation_check_call(isobase, member(a, [a]), "q(a).\n").
 
@@ -3458,11 +3517,18 @@ test(sandbox_check_goal_blacklist_rejects_halt_one,
             message_to_string(Error, ErrorString)
         )).
 
-test(sandbox_check_goal_blacklist_rejects_time_one,
+test(sandbox_check_goal_blacklist_allows_time_one) :-
+    with_sandbox_mode(blacklist,
+        sandbox_check_goal_in_module(isobase, time_blacklist_probe, time(true))).
+
+test(sandbox_check_goal_blacklist_rejects_forbidden_goal_inside_time,
      true(sub_string(ErrorString, _, _, _, "sandboxed"))) :-
     with_sandbox_mode(blacklist,
         (
-            catch(sandbox_check_goal_in_module(actor, time_blacklist_probe, time(true)),
+            catch(sandbox_check_goal_in_module(
+                      isobase,
+                      time_blacklist_probe,
+                      time(open('/tmp/nope', read, _Stream))),
                   Error, true),
             nonvar(Error),
             message_to_string(Error, ErrorString)
@@ -4822,10 +4888,30 @@ test(isotope_call_helper_bindings_hidden_behind_anon_assignment_are_not_reported
             kill_isotope_session(Pid)
         )).
 
+test(isotope_call_listing_hides_injected_io_prelude,
+     true(Type == "success")) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=listing&format=json',
+                       [URI, Pid]),
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type
+            ),
+            kill_isotope_session(Pid)
+        )).
+
 test(isotope_call_listing_lists_private_db_only,
      true((Type == "output",
            PID == Pid,
            sub_string(Data, _, _, _, "hello(a)."),
+           \+ sub_string(Data, _, _, _, "read("),
            \+ sub_string(Data, _, _, _, "human(")))) :-
     with_node_server(URI,
         setup_call_cleanup(

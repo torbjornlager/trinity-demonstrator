@@ -4,26 +4,25 @@
 
 
 asynch_test_1(Answer) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(1)), Ref, [
+	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref, [
         template(X)
-    ]), 
-    writeln('You\'re free to do other things here if you want...'),
+    ]),
     yield(Ref, Answer).
 
 
 asynch_test_2(Answer) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(2)), Ref),
+	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref),
     yield(Ref, Answer, [
-        timeout(1),
+        timeout(0.1),
         on_timeout(fail)
     ]).
     
     
 asynch_test_3(Answer1, Answer2) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(1)), Ref1, [
+	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref1, [
         template(X)
     ]),
-    promise('https://n4.elfenbenstornet.se', (Y=b,sleep(1)), Ref2, [
+	promise('https://n4.elfenbenstornet.se', (Y=b,sleep(0.5)), Ref2, [
         template(Y)
     ]),
     yield(Ref1, Answer1),
@@ -37,6 +36,6 @@ asynch_test_3(Answer1, Answer2) :-
     
 ?- asynch_test_2(Answer).
     
-?- time(asynch_test_3(Answer1, Answer2)).
+?- asynch_test_3(Answer1, Answer2).
 
 */

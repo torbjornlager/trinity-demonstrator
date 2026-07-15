@@ -161,8 +161,19 @@
     return actorRequest("make_ref", {});
   }
 
+  function qualifyLocalPid(pidText) {
+    var text = String(pidText || "").trim();
+    return /^[1-9][0-9]{9}$/.test(text) ? text + "@localhost" : text;
+  }
+
+  function localizePid(pidText) {
+    var text = String(pidText || "").trim();
+    var match = /^([1-9][0-9]{9})\s*@\s*'?localhost'?$/.exec(text);
+    return match ? match[1] : text;
+  }
+
   function actorSend(toText, messageText) {
-    var to = String(toText);
+    var to = localizePid(toText);
     var message = String(messageText);
     if (to === selfPidText || to === "self") {
       deliver(message);
@@ -173,7 +184,7 @@
       message: message,
       // The coordinator turns this local pid into a connection-scoped
       // virtual recipient when the destination is remote.
-      from: selfPidText
+      from: qualifyLocalPid(selfPidText)
     });
   }
 
@@ -330,7 +341,7 @@
   }
 
   function actorExit(targetText, reasonText) {
-    var target = String(targetText || selfPidText);
+    var target = localizePid(targetText || selfPidText);
     var reason = String(reasonText || "true");
     if (target === selfPidText || target === "self") {
       exitReason = reason;
@@ -344,7 +355,7 @@
   }
 
   function actorAbort(targetText) {
-    var target = String(targetText || selfPidText);
+    var target = localizePid(targetText || selfPidText);
     if (target === selfPidText || target === "self") {
       return Promise.resolve(abortCurrentGoal());
     }
@@ -527,7 +538,7 @@
       ":- multifile user:message_hook/3.",
       workerRole === "shell_toplevel" ? "shell_toplevel_role." : "shell_toplevel_role :- fail.",
       "",
-      "self(" + selfPidText + ").",
+      "self(" + qualifyLocalPid(selfPidText) + ").",
       "",
       "spawn(Goal) :- spawn(Goal, _).",
       "",
@@ -539,7 +550,8 @@
       "    ->  collect_spawn_source(Options, ExtraSource),",
       "        PidPromise := actorReservePid(),",
       "        await(PidPromise, PidText),",
-      "        term_string(Pid, PidText),",
+      "        term_string(LocalPid, PidText),",
+      "        Pid = LocalPid@localhost,",
       "        term_string(Goal, GoalText),",
       "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
       "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
@@ -792,6 +804,8 @@
       "    await(Promise, RefText),",
       "    term_string(Ref, RefText).",
       "",
+      "canonical_pid(Pid@localhost, Pid@localhost) :- integer(Pid), !.",
+      "canonical_pid(Pid, Pid@localhost) :- integer(Pid), !.",
       "canonical_pid(Pid, Pid).",
       "",
       "Pid ! Message :- send(Pid, Message).",
@@ -923,7 +937,8 @@
       "        option(target(Target), Options, Self),",
       "        PidPromise := actorReservePid(),",
       "        await(PidPromise, PidText),",
-      "        term_string(Pid, PidText),",
+      "        term_string(LocalPid, PidText),",
+      "        Pid = LocalPid@localhost,",
       "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
       "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
       "        await(Promise, SpawnedText),",
@@ -1281,9 +1296,9 @@
         if (!response.ok) throw new Error("HTTP " + response.status + " for /wasm/" + name);
         return response.text().then(function(source) {
           var adapted = source.replace(/swi_wasm_actor_bridge:/g, "user:");
-          adapted = adapted.replace(/self\(statechart\)\./g, "self(" + selfPidText + ").");
+          adapted = adapted.replace(/self\(statechart\)\./g, "self(" + qualifyLocalPid(selfPidText) + ").");
           adapted = adapted.replace(/\[target\(statechart\)\|Options\]/g,
-                                    "[target(" + selfPidText + ")|Options]");
+                                    "[target(" + qualifyLocalPid(selfPidText) + ")|Options]");
           return { name: name, source: adapted };
         });
       });

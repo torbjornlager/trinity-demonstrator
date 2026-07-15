@@ -269,6 +269,9 @@ profile_check_step_(spawn(Goal, Pid, Options), Profile) :-
     ensure_goal_profile(Profile, spawn(Goal, Pid, Options)),
     profile_check_goal_1(Profile, Goal),
     profile_check_nested_spawn_source_options(Profile, actor, Options).
+profile_check_step_(time(Goal), Profile) :-
+    ensure_goal_profile(Profile, time(Goal)),
+    profile_check_goal_1(Profile, Goal).
 profile_check_step_(toplevel_spawn(Pid), Profile) :-
     ensure_goal_profile(Profile, toplevel_spawn(Pid)).
 profile_check_step_(toplevel_spawn(Pid, Options), Profile) :-
@@ -494,7 +497,7 @@ goal_required_profile(print(_), isotope).
 goal_required_profile(print(_, _), isotope).
 goal_required_profile(nl, isotope).
 goal_required_profile(nl(_), isotope).
-goal_required_profile(time(_), isotope).
+goal_required_profile(time(_), isobase).
 goal_required_profile(put_char(_), isotope).
 goal_required_profile(put_char(_, _), isotope).
 goal_required_profile(format(_), isotope).

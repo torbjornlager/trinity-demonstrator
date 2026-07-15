@@ -158,7 +158,7 @@ hooks. The composition spine and node-layer glue also live here.
 | module | summary |
 |---|---|
 | [shared_db.pl](shared_db.pl) | Default public shared knowledge base (demonstration content; replaceable). |
-| [actor_api.pl](actor_api.pl) | Legacy `actor.pl` API facade. |
+| [actor_api.pl](actor_api.pl) | Legacy `actor.pl` API facade, including the unqualified RPC/promise/yield client surface. |
 | [debug.pl](debug.pl) | Debug helpers. |
 
 ## Layer 5 — the umbrella

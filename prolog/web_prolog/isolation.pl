@@ -567,6 +567,7 @@ private_listing_hidden(listing/0).
 private_listing_hidden(listing/1).
 private_listing_hidden(nl/0).
 private_listing_hidden(print/1).
+private_listing_hidden(read/1).
 private_listing_hidden(time/1).
 private_listing_hidden(write/1).
 private_listing_hidden(write_canonical/1).

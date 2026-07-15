@@ -159,8 +159,26 @@
 <h1>Web Prolog manual</h1>
 
 <p>
-    This document reproduces the predicate reference material from Appendix A
-    in HTML form. Each predicate entry carries an HTML anchor using its
+    This manual describes the Web Prolog language and APIs implemented by the
+    current demonstrator. It should be read as a snapshot of a design in
+    progress, not as a final language specification: terminology, predicate
+    interfaces, and behaviour are still tentative and may change as the
+    implementation evolves.
+</p>
+
+<p>
+    The classification shown beside each entry identifies the relevant node
+    profile or execution context. ISOBASE provides general stateless Prolog
+    calls, ISOTOPE adds persistent toplevel sessions, and ACTOR adds the full
+    stateful actor-messaging model. The profiles are cumulative, so richer
+    profiles retain the APIs below them. Entries marked <span class="predicate-family">owner only</span>
+    are reserved for code running with node-owner authority and are not
+    available to ordinary client code.
+</p>
+
+<p>
+    This document reproduces the book's manual appendix in HTML form. Each
+    predicate entry carries an HTML anchor using its
     predicate indicator so that entries can be linked directly.
 </p>
 
@@ -187,7 +205,7 @@
     </div>
     <pre>self(-Pid) is det.</pre>
     <p>Binds <code>Pid</code> to the process identifier of the calling process.</p>
-    <p><span class="note-label">Note:</span> The runtime uses a global pid model. Conceptually, pids are of the form <code>Id@Node</code>, although some compatibility-oriented surfaces, especially certain JSON responses, may still expose local pids as plain integers.</p>
+    <p><span class="note-label">Note:</span> The runtime uses globally qualified pids of the form <code>Id@Node</code>. Worker-based browser actors use the reserved local-node designator <code>localhost</code>, for example <code>2159438818@localhost</code>. The optional main-thread SWI-WASM compatibility model represents its single engine actor by the special pid <code>main</code>; worker actors spawned from it still use <code>Id@localhost</code>. A shell presentation setting may omit <code>@Node</code> for a pid on the shell's own node; this affects only printing, and the pid remains qualified in actor messages and protocol representations.</p>
 </article>
 
 <article class="predicate-entry" id="spawn/1-3">
@@ -241,7 +259,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
 demonitor(+Ref, +Options) is det.</pre>
     <p>Stops monitoring identified by <code>Ref</code>. This is idempotent. There is only one valid option:</p>
     <ul>
-        <li><code>flush</code><br>Non-blocking removal of one pending <code>down(Ref,_,_)</code> message from the mailbox.</li>
+        <li><code>flush</code><br>Non-blocking removal of all pending <code>down(Ref,_,_)</code> messages from the mailbox.</li>
     </ul>
     <p>Using <code>monitor(true)</code> in <code>spawn/3</code> is the safest variant for short-lived children, since monitoring is established during spawn. Installing monitoring later with <code>monitor/2</code> is a separate step and may miss a child that exits immediately.</p>
 </article>
@@ -252,7 +270,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>register(+Name, +Pid) is det.</pre>
-    <p>Register a local process under a name, where <code>Name</code> is an atom and <code>Pid</code> identifies the actor process. The association between the name and the pid is removed when the process terminates.</p>
+    <p>Registers a local process under a name, where <code>Name</code> is an atom and <code>Pid</code> identifies the actor process. The association between the name and the pid is removed when the process terminates.</p>
 </article>
 
 <article class="predicate-entry" id="whereis/2">
@@ -260,8 +278,8 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">whereis/2</span></div>
         <div class="predicate-family">actor</div>
     </div>
-    <pre>whereis(+Name, ?Pid) is det.</pre>
-    <p>Determine the identity of the actor process associated with the name. Binds <code>Pid</code> to <code>undefined</code> if the process does not exist.</p>
+    <pre>whereis(+Name, -Pid) is det.</pre>
+    <p>Binds <code>Pid</code> to the actor process associated with <code>Name</code>, or to <code>undefined</code> if no such registration exists.</p>
 </article>
 
 <article class="predicate-entry" id="unregister/1">
@@ -270,7 +288,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>unregister(+Name) is det.</pre>
-    <p>Remove the association between the name and the process.</p>
+    <p>Removes the association between the name and the process. The actor itself is not terminated. The operation is idempotent and succeeds without effect if <code>Name</code> is not registered.</p>
 </article>
 
 <article class="predicate-entry" id="register_service/2">
@@ -279,9 +297,20 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor, owner only</div>
     </div>
     <pre>register_service(+Name, +Pid) is det.</pre>
-    <p>Publishes the live local actor identified by <code>Pid</code> under <code>Name</code> in the node's public service namespace. <code>Name</code> must be an atom and there may be at most one published service with a given name on a node. A qualified address <code>Name@Node</code> is resolved against this namespace; <code>whereis/2</code> consults only the ordinary registration namespace and does not reveal the service pid.</p>
-    <p>Publication neither changes the actor's links nor places it under supervision. When the actor terminates, the node removes the mapping automatically. A supervisor that starts a replacement actor must publish the replacement again under the stable name.</p>
-    <p>Only code executing with node-owner authority may call this predicate; other callers receive <code>permission_error(register,service,Name)</code>. Duplicate names raise the same formal error. A non-atom name raises <code>type_error(atom,Name)</code>; a nonexistent actor raises <code>existence_error(process,Pid)</code>; and a pid belonging to another node raises <code>permission_error(register,service,Pid)</code>.</p>
+    <p>Publishes the live local actor identified by <code>Pid</code> under <code>Name</code> in the node's public service namespace. <code>Name</code> must be an atom, <code>Pid</code> must identify an actor on the publishing node, and there may be at most one published service with a given name on a node. If the name is already published, <code>register_service/2</code> raises <code>permission_error(register,service,Name)</code>, even when the existing entry denotes the same actor. Replacement is therefore explicit: the owner must first withdraw the old mapping.</p>
+    <p>The public service namespace is distinct from the ordinary registration namespace used by <code>register/2</code>; the same atom may occur in both without a collision. A qualified address <code>Name@Node</code> is resolved against the public service namespace of <code>Node</code>. <code>whereis/2</code> consults only the ordinary namespace; owner-side code may inspect the service namespace with <code>whereis_service/2</code>.</p>
+    <p>Publication neither changes the actor's links nor places it under supervision. In particular, <code>register_service/2</code> does not detach the actor from its parent. When the actor terminates, the node controller removes the service mapping atomically, so a published name never remains bound to a dead pid. A supervisor that starts a replacement actor must publish that actor again under the stable name.</p>
+    <p>Only code executing with node-owner authority may call this predicate. A call by any other principal raises <code>permission_error(register,service,Name)</code>. A non-atom <code>Name</code> raises <code>type_error(atom,Name)</code>; a <code>Pid</code> that does not identify a live actor raises <code>existence_error(process,Pid)</code>; and an attempt to publish an actor on another node raises <code>permission_error(register,service,Pid)</code>.</p>
+</article>
+
+<article class="predicate-entry" id="whereis_service/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">whereis_service/2</span></div>
+        <div class="predicate-family">actor, owner only</div>
+    </div>
+    <pre>whereis_service(+Name, -Pid) is det.</pre>
+    <p>Binds <code>Pid</code> to the live local actor published as <code>Name</code>, or to <code>undefined</code> if no such service is published. This predicate inspects only the public service namespace.</p>
+    <p>Only code executing with node-owner authority may call it; other callers receive <code>permission_error(access,actor_service_registry,whereis_service(Name,Pid))</code>. A non-atom <code>Name</code> raises <code>type_error(atom,Name)</code>.</p>
 </article>
 
 <article class="predicate-entry" id="unregister_service/1">
@@ -301,7 +330,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>exit(+Reason) is det.</pre>
-    <p>Exit the calling process with <code>Reason</code>.</p>
+    <p>Terminates the calling process with <code>Reason</code>.</p>
 </article>
 
 <article class="predicate-entry" id="exit/2">
@@ -310,7 +339,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>exit(+Pid, +Reason) is det.</pre>
-    <p>Exit the process identified by <code>Pid</code> with <code>Reason</code>. For remote actors, the runtime routes this request through the remote node.</p>
+    <p>Terminates the process identified by <code>Pid</code> with <code>Reason</code>. For remote actors, the runtime routes this request through the remote node.</p>
 </article>
 
 <a id="!/2"></a>
@@ -322,7 +351,7 @@ demonitor(+Ref, +Options) is det.</pre>
     <pre>+PidOrName ! +Message is det.
 send(+PidOrName, +Message) is det.
 send(+PidOrName, +Message, +Options) is det.</pre>
-    <p>Sends <code>Message</code> to the mailbox of the process identified as <code>PidOrName</code>. <code>PidOrName</code> may be a local pid, a local registered name, a global pid of the form <code>Id@Node</code>, or a published service address of the form <code>Name@Node</code>. Qualified service addresses are resolved only through the destination node's live service registry. If such a service is absent or the sender is not authorised to use it, the send succeeds without delivery and does not reveal which condition applied. Valid options for <code>send/3</code> are:</p>
+    <p>Sends <code>Message</code> to the mailbox of the process identified as <code>PidOrName</code>. <code>PidOrName</code> may be a local pid, a local registered name, a global pid of the form <code>Id@Node</code>, or a published service address of the form <code>Name@Node</code>. Qualified service addresses are resolved only through the destination node's live service registry. If such a service is absent or the sender is not authorised to use it, the send succeeds without delivery and does not reveal which condition applied. By contrast, an unknown local registered name raises <code>existence_error(actor_name,Name)</code>; a send to an unknown pid succeeds without delivery. Valid options for <code>send/3</code> are:</p>
     <ul>
         <li><code>delay(+Number)</code><br>Delays the sending by a specified number of seconds. Default is <code>0</code>.</li>
         <li><code>id(+ID)</code><br><code>ID</code> is a user-supplied identifier that can be used by <code>cancel/1</code> to stop the sending from taking place.</li>
@@ -341,7 +370,7 @@ send(+PidOrName, +Message, +Options) is det.</pre>
 <article class="predicate-entry" id="output/1-2">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">output/1-2</span></div>
-        <div class="predicate-family">actor</div>
+        <div class="predicate-family">isotope, actor</div>
     </div>
     <pre>output(+Data) is det.
 output(+Data, +Options) is det.</pre>
@@ -355,23 +384,23 @@ output(+Data, +Options) is det.</pre>
 <article class="predicate-entry" id="input/2-3">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">input/2-3</span></div>
-        <div class="predicate-family">actor</div>
+        <div class="predicate-family">isotope, actor</div>
     </div>
     <pre>input(+Prompt, -Data) is det.
 input(+Prompt, -Data, +Options) is det.</pre>
-    <p>Sends a message <code>prompt(Pid,Prompt)</code> to the target process and waits for its input. <code>Prompt</code> may be any non-variable term. <code>Pid</code> is the pid of the current process. <code>Data</code> will be bound to the term that the target process sends using <code>respond/2</code>. Valid option:</p>
+    <p>Sends a message <code>prompt(Pid,Prompt)</code> to the target process and waits for its input. <code>Prompt</code> may be any Prolog term. <code>Pid</code> is the pid of the current process. <code>Data</code> will be bound to the term that the target process sends using <code>respond/2</code>. Valid option:</p>
     <ul>
-        <li><code>target(+Pid)</code><br>Send the <code>prompt</code> message to <code>Pid</code>. Default is the parent process.</li>
+        <li><code>target(+Pid)</code><br>Send the <code>prompt</code> message to <code>Pid</code>. Default is the current I/O target when one has been installed, or otherwise the parent process.</li>
     </ul>
 </article>
 
 <article class="predicate-entry" id="respond/2">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">respond/2</span></div>
-        <div class="predicate-family">actor</div>
+        <div class="predicate-family">isotope, actor</div>
     </div>
     <pre>respond(+Pid, +Input) is det.</pre>
-    <p>Sends a response in the form of the term <code>Input</code> to a process that has prompted its parent process for input.</p>
+    <p>Sends <code>Input</code> to the process identified by <code>Pid</code> as a response to a <code>prompt(Pid,Prompt)</code> message.</p>
 </article>
 
 <article class="predicate-entry" id="receive/1-2">
@@ -416,7 +445,7 @@ receive(+Clauses, +Options) is nondet.</pre>
     <pre>listing is det.
 listing(+Pid) is det.</pre>
     <p><code>listing/0</code> lists the content of the private database of the current actor process through the terminal-output path. Imported predicates and the injected I/O wrapper predicates are omitted.</p>
-    <p><code>listing/1</code> lists the content of the private database of the local actor identified by <code>Pid</code>. In public execution contexts this is namespace-scoped, so a client may only inspect actors that belong to its own session namespace.</p>
+    <p><code>listing/1</code> lists the content of the private database of the local actor identified by <code>Pid</code>. In public execution contexts this is namespace-scoped, so a client may inspect only actors that belong to its own session namespace. A remote, unknown, or expired pid raises an existence error; a local pid outside the current public namespace raises a permission error.</p>
 </article>
 
 <h2 id="sec:toplevel-api">Predicates for programming with toplevel actors</h2>
@@ -432,7 +461,7 @@ toplevel_spawn(-Pid, +Options) is det.</pre>
     <ul>
         <li><code>session(+Boolean)</code><br>If set to <code>false</code>, the toplevel actor terminates after having run a goal to completion. If <code>true</code>, further interaction is expected. Default is <code>false</code> in the actor API.</li>
         <li><code>target(+Pid)</code><br>Send all answer terms to <code>Pid</code>. Default is the pid of the parent.</li>
-        <li><code>name(+Name)</code><br>Register the toplevel under <code>Name</code>.</li>
+        <li><code>name(+Name)</code><br>Register the toplevel actor under <code>Name</code> in the local ordinary-name namespace.</li>
     </ul>
 </article>
 
@@ -448,7 +477,7 @@ toplevel_call(+Pid, +Goal, +Options) is det.</pre>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with <code>Goal</code>. By default, the template is identical to the goal.</li>
         <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
         <li><code>limit(+Integer)</code><br>Restrict the length of the returned list of solutions to <code>Integer</code>.</li>
-        <li><code>once(+Boolean)</code><br>When <code>true</code>, the list of solutions in a <code>success</code> answer term may not be the only solutions that <code>Goal</code> has, but the answer term may still indicate that it is. Default is <code>false</code>. Makes sense only in combination with the <code>limit</code> option.</li>
+        <li><code>once(+Boolean)</code><br>When <code>true</code>, commits to the first returned slice and reports <code>More = false</code>, even if <code>Goal</code> has further solutions. Default is <code>false</code>. This option is useful primarily with <code>limit/1</code>.</li>
         <li><code>target(+Pid)</code><br>Send the answer term to <code>Pid</code>. Default is the value of <code>target</code> when passed as an option to <code>toplevel_spawn/2</code>.</li>
     </ul>
     <p>Variables in <code>Goal</code> are not bound directly in the caller. Instead, solutions and other kinds of output are returned in the form of answer messages delivered to the mailbox of the target process.</p>
@@ -489,7 +518,7 @@ toplevel_next(+Pid, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>toplevel_abort(+Pid) is det.</pre>
-    <p>Tells toplevel <code>Pid</code> to abort the execution of the currently running goal.</p>
+    <p>Tells the local toplevel <code>Pid</code> to abort the execution of the currently running goal. An unknown or non-local pid has no effect.</p>
 </article>
 
 <article class="predicate-entry" id="toplevel_halt/2">
@@ -525,7 +554,7 @@ server_spawn(+Pred, +State, -Pid, +Options) is det.</pre>
     </div>
     <pre>server_request(+To, +Request, -Response) is det.
 server_request(+To, +Request, -Response, +Options) is det.</pre>
-    <p>Makes a synchronous request-response call to the server <code>To</code>. <code>server_request/4</code> accepts the options of <code>receive/2</code>, for example <code>timeout(+Seconds)</code>.</p>
+    <p>Makes a synchronous request-response call to the server <code>To</code>, where <code>To</code> may be a pid or a registered local name. <code>server_request/4</code> accepts the options of <code>receive/2</code>, for example <code>timeout(+Seconds)</code>.</p>
     <p>Monitoring is installed automatically so the call fails fast if the server terminates before replying.</p>
 </article>
 
@@ -549,7 +578,7 @@ server_promise(+To, +Request, -Ref, -MonRef) is det.</pre>
 server_yield(+Ref, -Response, +Options) is det.
 server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
     <p>Waits for the response matching <code>Ref</code>. The three-argument variant accepts the options of <code>receive/2</code>.</p>
-    <p>The four-argument variant uses <code>MonRef</code> to detect server termination and throws <code>server_down(Reason)</code> if the server dies before replying.</p>
+    <p>The four-argument variant uses <code>MonRef</code> to detect server termination, removes that monitor after a normal reply, and throws <code>server_down(Reason)</code> if the server dies before replying.</p>
 </article>
 
 <article class="predicate-entry" id="server_upgrade/2-3">
@@ -559,8 +588,9 @@ server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
     </div>
     <pre>server_upgrade(+To, +Pred) is det.
 server_upgrade(+To, +Pred, +Options) is det.</pre>
-    <p>Replaces the callback predicate of the running server <code>To</code> without disturbing its current state. <code>Pred</code> must be arity 4.</p>
-    <p>The three-argument form explicitly loads callback source into the server using <code>load_text/1</code>, <code>load_list/1</code>, <code>load_predicates/1</code>, or <code>load_uri/1</code>. The two-argument form transfers no code and requires the callback to be loaded already.</p>
+    <p>Replaces the callback predicate of the running server <code>To</code> without disturbing its current state. <code>Pred</code> must denote a callback predicate of arity four.</p>
+    <p>The two-argument form transfers no code and requires the callback to be present already in the server's private database. The three-argument form loads callback source using <code>load_text/1</code>, <code>load_list/1</code>, <code>load_predicates/1</code>, or <code>load_uri/1</code>.</p>
+    <p>The operation replies only after the callback has been loaded and validated. It preserves the current state value and performs no state migration. If installation fails, <code>server_upgrade/2-3</code> rethrows the reported error and the state is unchanged. Source changes made in the server's private database before the error are not rolled back.</p>
 </article>
 
 <article class="predicate-entry" id="server_halt/2">
@@ -588,7 +618,8 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     </ul>
     <p>In addition, <code>statechart_spawn/2</code> accepts:</p>
     <ul>
-        <li><code>name(+Name)</code><br>Register the statechart actor under <code>Name</code>.</li>
+        <li><code>name(+Name)</code><br>Register the statechart actor under <code>Name</code> in the local ordinary-name namespace.</li>
+        <li><code>trace(+Mode)</code><br>Set the per-actor trace mode to <code>true</code>, <code>logger</code>, or <code>false</code>. The values <code>true</code> and <code>logger</code> enable trace events on the terminal-output path; <code>false</code> adds no per-actor trace. At most one <code>trace/1</code> option is accepted. Default is <code>false</code>.</li>
     </ul>
     <p>All remaining options are passed through to <code>spawn/3</code>.</p>
     <p><code>load_list/1</code> and <code>load_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
@@ -601,7 +632,7 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     </div>
     <pre>statechart_halt(+Pid, -Reply) is det.
 statechart_halt(+Pid, -Reply, +Timeout) is det.</pre>
-    <p>Asks the statechart actor <code>Pid</code> to halt gracefully and waits for an acknowledgement in <code>Reply</code>.</p>
+    <p>Asks the statechart actor <code>Pid</code> to halt gracefully, running the exit actions of its active states, and waits for an acknowledgement in <code>Reply</code>. The two-argument form waits indefinitely.</p>
     <p>The three-argument form waits at most <code>Timeout</code> seconds. If the actor does not reply in time, it is killed and <code>Reply</code> becomes <code>killed</code>.</p>
 </article>
 
@@ -637,16 +668,16 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <p>Spawns a supervisor actor and starts its children. Supported options are:</p>
     <ul>
         <li><code>strategy(+Strategy)</code><br>One of <code>one_for_one</code> (default), <code>one_for_all</code>, or <code>rest_for_one</code>.</li>
-        <li><code>intensity(+Integer)</code><br>Max restarts in period. Default <code>1</code>.</li>
-        <li><code>period(+Integer)</code><br>Window size for restart intensity. Default <code>5</code>.</li>
+        <li><code>intensity(+Integer)</code><br>Maximum number of restarts permitted within one period. Default is <code>1</code>.</li>
+        <li><code>period(+Integer)</code><br>Restart-intensity window in seconds. Default is <code>5</code>.</li>
         <li><code>name(+Name)</code><br>Register the supervisor under <code>Name</code>.</li>
     </ul>
     <p>Other options are passed through to <code>spawn/3</code>.</p>
     <p>Child specifications take the form <code>child(Id, ChildOptions)</code>. Child options are:</p>
     <ul>
-        <li><code>start(+Goal)</code><br>Required. Start goal for the child.</li>
+        <li><code>start(+Goal)</code><br>Required. Start goal for the child. The special form <code>server(Pred,ServerOptions)</code> starts a generic server child. The default initial state is <code>[]</code>. It may be replaced with <code>initial_state(+State)</code>. All remaining <code>ServerOptions</code> are passed to <code>server_spawn/4</code>.</li>
         <li><code>restart(+Policy)</code><br>One of <code>permanent</code> (default), <code>transient</code>, or <code>temporary</code>.</li>
-        <li><code>shutdown(+Shutdown)</code><br>One of <code>brutal_kill</code>, <code>infinity</code>, or a timeout number.</li>
+        <li><code>shutdown(+Shutdown)</code><br>One of <code>brutal_kill</code>, <code>infinity</code>, or a timeout in seconds. The default is <code>5</code> for workers and <code>infinity</code> for supervisor children.</li>
         <li><code>type(+Type)</code><br><code>worker</code> (default) or <code>supervisor</code>.</li>
     </ul>
 </article>
@@ -657,7 +688,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>supervisor_spawn_child(+Pid, +ChildSpec, -Reply) is det.</pre>
-    <p>Dynamically adds and starts one child. <code>Reply</code> is one of <code>ok</code>, <code>error(already_present)</code>, or <code>error(start_failed)</code>.</p>
+    <p>Dynamically adds and starts one child. On success, <code>Reply</code> is <code>ok</code>. If a child with the same <code>Id</code> is already present, it is <code>error(already_present)</code>. If startup fails, it is <code>error(start_failed)</code>.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_terminate_child/3">
@@ -756,7 +787,7 @@ first_solution(?Solution, +Goals, +Options) is semidet.</pre>
     <p>A non-list <code>Goals</code> or <code>Options</code> raises <code>type_error(list, Term)</code>. An action other than <code>stop</code> or <code>continue</code> raises <code>type_error(oneof([stop,continue]), Action)</code>. An unknown option raises <code>domain_error(first_solution_option, Option)</code>.</p>
 </article>
 
-<h2 id="sec:synchronous-predicate-api">Built-in predicates for RPC</h2>
+<h2 id="sec:synchronous-predicate-api">Predicates for remote Prolog-style calls</h2>
 
 <article class="predicate-entry" id="rpc/2-3">
     <div class="predicate-head">
@@ -765,19 +796,22 @@ first_solution(?Solution, +Goals, +Options) is semidet.</pre>
     </div>
     <pre>rpc(+URI, +Goal) is nondet.
 rpc(+URI, +Goal, +Options) is nondet.</pre>
-    <p>Semantically, <code>rpc/2-3</code> executes a copy of <code>Goal</code> on the remote node identified by <code>URI</code> and then unifies the local goal with the remote copy on backtracking. The current implementation uses the stateless <code>/call</code> endpoint. This matters: even if the remote node happens to be deployed as an ACTOR node, a call made through <code>rpc/2-3</code> still runs against the node's stateless <code>/call</code> surface rather than its actor-facing APIs. Actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are therefore not available through <code>rpc/2-3</code>.</p>
-    <p>The <code>URI</code> argument alone selects the node where <code>Goal</code> is executed. In particular, <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options such as <code>load_uri/1</code> only supply private source text for the temporary call actor; they do not change the target selected by <code>URI</code>. Thus <code>rpc(localhost, ancestor_descendant(X,Y), [load_uri('https://n2.elfenbenstornet.se')])</code> executes on the current node using source fetched from <code>n2</code>. In this local-target case, the name <code>rpc</code> is somewhat of a misnomer: no remote node is selected for execution, although the same RPC-style <code>/call</code> machinery is used. Source and execution target may also intentionally differ, for example <code>rpc('https://n2.elfenbenstornet.se', Goal, [load_uri('https://n3.elfenbenstornet.se')])</code> executes on <code>n2</code> using source fetched from <code>n3</code>. The following options are valid:</p>
+    <p>Executes a copy of <code>Goal</code> through the stateless <code>/call</code> endpoint of the node identified by <code>URI</code>, then unifies the local goal with each returned solution on backtracking. This remains a stateless call even when the destination is an ACTOR node: actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are not available through <code>rpc/2-3</code>.</p>
+    <p>The first argument alone selects the execution node. <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options supply source for the call's temporary private database and do not change that target. For example, <code>rpc('https://n2.example',Goal,[load_uri('https://n3.example')])</code> executes <code>Goal</code> on <code>n2.example</code> using source fetched from <code>n3.example</code>. The following options are portable across the native and SWI-WASM runtimes:</p>
     <ul>
         <li><code>limit(+Integer)</code><br>Restricts the number of solutions retrieved per roundtrip.</li>
-        <li><code>once(+Boolean)</code><br>When <code>true</code>, the returned slice may not be the only solutions that <code>Goal</code> has, but the answer term may still indicate that it is.</li>
-        <li><code>timeout(+Number)</code><br>Requests a timeout in seconds for goal execution on the remote node. The effective timeout is the minimum of the requested value and the timeout configured by the node owner.</li>
-        <li><code>http_timeout(+Number)</code><br>Sets the client-side HTTP transport timeout in seconds for each request.</li>
-        <li><code>load_text(+AtomOrString)</code><br>Loads source text into the underlying actor's private database before calling <code>Goal</code>.</li>
-        <li><code>load_list(+ListOfClauses)</code><br>Loads a list of clauses into the underlying actor's private database before calling <code>Goal</code>.</li>
-        <li><code>load_uri(+URI)</code><br>Loads source text from <code>URI</code> into the underlying actor's private database before calling <code>Goal</code>. This URI is a source location only; it does not affect the node selected by the first argument of <code>rpc/2-3</code>.</li>
-        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by the supplied predicate indicators into the underlying actor's private database before calling <code>Goal</code>.</li>
+        <li><code>load_text(+AtomOrString)</code><br>Loads source text into the temporary private database before calling <code>Goal</code>.</li>
+        <li><code>load_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the temporary private database.</li>
+        <li><code>load_uri(+URI)</code><br>Fetches source from <code>URI</code> and loads it into the temporary private database. This URI is a source location only.</li>
+        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Copies the caller's indicated predicates into the temporary private database.</li>
     </ul>
-    <p><code>http_timeout/1</code> controls only the client-side HTTP transport timeout. It does not change the remote execution timeout.</p>
+    <p>The native runtime additionally accepts:</p>
+    <ul>
+        <li><code>once(+Boolean)</code><br>When <code>true</code>, retrieves only the first slice and does not request later slices. Default is <code>false</code>.</li>
+        <li><code>timeout(+Number)</code><br>Requests a timeout in seconds for goal execution on the destination node. The effective timeout is the minimum of this value and the node owner's configured timeout.</li>
+        <li><code>http_timeout(+Number)</code><br>Sets the client-side HTTP transport timeout in seconds for each request. It does not change the destination node's execution timeout.</li>
+    </ul>
+    <p>The SWI-WASM runtimes additionally accept <code>offset(+Integer)</code> to select the starting offset of the first slice.</p>
 </article>
 
 <article class="predicate-entry" id="promise/3-4">
@@ -787,17 +821,17 @@ rpc(+URI, +Goal, +Options) is nondet.</pre>
     </div>
     <pre>promise(+URI, +Goal, -Ref) is det.
 promise(+URI, +Goal, -Ref, +Options) is det.</pre>
-    <p>Makes an asynchronous RPC call to node <code>URI</code> with <code>Goal</code>. As with <code>rpc/2-3</code>, the <code>URI</code> argument selects the execution node, and <code>localhost</code> means the node on which <code>promise/3-4</code> is running. Source-loading options materialize private source text for the promised call; they do not retarget it. The following options are supported consistently across the native and SWI-WASM runtimes:</p>
+    <p>Starts one asynchronous stateless call to node <code>URI</code> with <code>Goal</code> and returns a local promise reference in <code>Ref</code>. As with <code>rpc/2-3</code>, the first argument selects the execution node and <code>localhost</code> denotes the current node. Source-loading options populate the promised call's temporary private database; they do not change its execution node. The following options are portable across the native and SWI-WASM runtimes:</p>
     <ul>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
         <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
         <li><code>limit(+Integer)</code><br>Restrict the number of returned solutions to <code>Integer</code>.</li>
         <li><code>load_text(+AtomOrString)</code><br>Load source text into the promised call's temporary private database.</li>
         <li><code>load_list(+ListOfClauses)</code><br>Convert the clauses to source and load them into the promised call's temporary private database.</li>
-        <li><code>load_uri(+URI)</code><br>Fetch source from <code>URI</code> and load it into the promised call's temporary private database.</li>
+        <li><code>load_uri(+URI)</code><br>Fetch source from <code>URI</code> and load it into the promised call's temporary private database. This URI is a source location only.</li>
         <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Copy the caller's indicated predicates into the promised call's temporary private database.</li>
     </ul>
-    <p>The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the answer.</p>
+    <p>The native runtime additionally accepts <code>once(+Boolean)</code>, <code>timeout(+Number)</code>, and <code>http_timeout(+Number)</code>, with the same meanings as for native <code>rpc/3</code>. The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the single answer term.</p>
 </article>
 
 <article class="predicate-entry" id="yield/2-3">
@@ -807,12 +841,12 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
     </div>
     <pre>yield(+Ref, ?Answer) is det.
 yield(+Ref, ?Answer, +Options) is det.</pre>
-    <p>Returns the promised answer from a previous call to <code>promise/3-4</code>. This predicate must be called by the same process from which the previous call to <code>promise/3-4</code> was made. Valid options:</p>
+    <p>Waits for the answer term from a previous call to <code>promise/3-4</code>. The reference is local to the runtime that created it. The answer is one of <code>success(Data,More)</code>, <code>failure</code>, or <code>error(Error)</code>, as returned by the stateless call endpoint. Valid options are:</p>
     <ul>
-        <li><code>timeout(+Number)</code><br>If nothing appears in the current mailbox within <code>Number</code> seconds, the goal supplied in the <code>on_timeout</code> option is called. Default is no timeout.</li>
-        <li><code>on_timeout(+Goal)</code><br>If the timeout occurs, <code>Goal</code> is called. Default is <code>true</code>.</li>
+        <li><code>timeout(+Number)</code><br>Waits at most <code>Number</code> seconds for the promised answer. Default is no timeout.</li>
+        <li><code>on_timeout(+Goal)</code><br>Calls <code>Goal</code> if the timeout expires before the answer is available.</li>
     </ul>
-    <p>A timeout does not cancel or consume the promise. The caller may call <code>yield/2-3</code> again with the same reference to collect an answer that arrives later.</p>
+    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds in the native and worker-actor SWI-WASM runtimes. In the optional main-thread SWI-WASM compatibility model, that path fails.</p>
 </article>
 
 <h2 id="sec:iso-predicates">ISO predicates and related constructs</h2>

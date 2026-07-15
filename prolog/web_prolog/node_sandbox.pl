@@ -611,7 +611,7 @@ sandbox_check_unqualified_(blacklist, assertz(Clause), Profile, Module) :-
 sandbox_check_unqualified_(blacklist, assertz(Clause, _Ref), Profile, Module) :-
     precheck_dynamic_clause_term(Profile, Module, Clause).
 sandbox_check_unqualified_(blacklist, time(Goal), Profile, Module) :-
-    allow_local_time_goal(Profile, Module, Goal).
+    allow_time_goal(Profile, Module, Goal).
 sandbox_check_unqualified_(_, receive(Clauses), Profile, Module) :-
     reject_receive_clauses(Profile, Module, Clauses).
 sandbox_check_unqualified_(_, receive(Clauses, Options), Profile, Module) :-
@@ -721,7 +721,6 @@ blacklisted_goal_pattern(write_canonical(_, _), iso_stream_io).
 blacklisted_goal_pattern(write_term(_, _), iso_stream_io).
 blacklisted_goal_pattern(write_term(_, _, _), iso_stream_io).
 blacklisted_goal_pattern(format(_, _, _), iso_stream_io).
-blacklisted_goal_pattern(time(_), runtime_timing).
 blacklisted_goal_pattern(current_predicate(_), runtime_reflection).
 blacklisted_goal_pattern(predicate_property(_, _), runtime_reflection).
 blacklisted_goal_pattern(current_prolog_flag(_, _), runtime_reflection).
@@ -839,11 +838,8 @@ blacklisted_goal_pattern(qsave_program(_, _), foreign_code).
 precheck_dynamic_clause_term(Profile, Module, Clause) :-
     precheck_source_term(Profile, Module, Clause).
 
-allow_local_time_goal(Profile, Module, Goal) :-
-    (   goal_shadowed_by_local_predicate(Module, time(Goal))
-    ->  reject_forbidden_goal(Profile, Module, Goal)
-    ;   throw_forbidden_goal(time(Goal), runtime_timing)
-    ).
+allow_time_goal(Profile, Module, Goal) :-
+    sandbox_check_goal_in_module(Profile, Module, Goal).
 
 format_memory_sink(atom(_)).
 format_memory_sink(string(_)).

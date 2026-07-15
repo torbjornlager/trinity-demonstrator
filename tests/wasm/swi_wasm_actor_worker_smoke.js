@@ -72,7 +72,7 @@ async function main() {
   ok((await S.actorReceive(-1)) === "to-self", "send to self delivers locally");
 
   // 5. send to another pid -> posts a request, reply resolves it
-  const sendP = S.actorSend("9900000000", "msg");
+  const sendP = S.actorSend("9900000000@localhost", "msg");
   const req = S._posted.find(function(m) { return m.type === "request" && m.action === "send"; });
   ok(!!req && req.to === "9900000000" && req.message === "msg", "send posts a request");
   S.onmessage({ data: { command: "reply", id: req.id, ok: true, result: true } });

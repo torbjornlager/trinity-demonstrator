@@ -40,6 +40,14 @@ facade re-publishes it for legacy-surface consumers.
     register_node_self/1,
     self_node_url/1
 ]).
+:- reexport(rpc, [
+    rpc/2,
+    rpc/3,
+    promise/3,
+    promise/4,
+    yield/2,
+    yield/3
+]).
 
 :- use_module(node_runtime_state, [
     current_node_value/2

@@ -240,7 +240,9 @@ HTTP endpoint layout:
 :- http_handler(root('discovery-hub'), node_discovery_hub_page, []).
 :- http_handler(root(tutorial), node_tutorial_page, []).
 :- http_handler(root('swi-wasm-tutorial'), node_swi_wasm_tutorial_page, []).
-:- http_handler(root('wp-tutorial'), node_wp_tutorial_page, []).
+:- http_handler(root('isobase-profile-tutorial'), node_isobase_profile_tutorial_page, []).
+:- http_handler(root('isotope-profile-tutorial'), node_isotope_profile_tutorial_page, []).
+:- http_handler(root('actor-profile-tutorial'), node_actor_profile_tutorial_page, []).
 :- http_handler(root(manual), node_manual_page, []).
 :- http_handler(root(editor_frame), node_editor_frame_page, []).
 :- http_handler(root('swi_wasm_actor_worker.js'), node_swi_wasm_actor_worker_page, []).
@@ -1293,12 +1295,16 @@ node_swi_wasm_tutorial_page(Request) :-
     node_swi_wasm_tutorial_file(File),
     reply_uncached_file(File, Request).
 
-%!  node_wp_tutorial_page(+Request) is det.
-%
-%   Serve the historical Web Prolog tutorial document for comparison in
-%   SWI-WASM mode.
-node_wp_tutorial_page(Request) :-
-    node_wp_tutorial_file(File),
+node_isobase_profile_tutorial_page(Request) :-
+    node_isobase_profile_tutorial_file(File),
+    reply_uncached_file(File, Request).
+
+node_isotope_profile_tutorial_page(Request) :-
+    node_isotope_profile_tutorial_file(File),
+    reply_uncached_file(File, Request).
+
+node_actor_profile_tutorial_page(Request) :-
+    node_actor_profile_tutorial_file(File),
     reply_uncached_file(File, Request).
 
 %!  node_manual_page(+Request) is det.
@@ -1953,10 +1959,20 @@ node_swi_wasm_tutorial_file(File) :-
     file_directory_name(ThisFile, Dir),
     directory_file_path(Dir, '../../web/swi-wasm-tutorial.html', File).
 
-node_wp_tutorial_file(File) :-
+node_isobase_profile_tutorial_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/wp-tutorial.html', File).
+    directory_file_path(Dir, '../../web/isobase-profile-tutorial.html', File).
+
+node_isotope_profile_tutorial_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, '../../web/isotope-profile-tutorial.html', File).
+
+node_actor_profile_tutorial_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, '../../web/actor-profile-tutorial.html', File).
 
 %!  node_manual_file(-File) is det.
 %

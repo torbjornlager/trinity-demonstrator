@@ -783,6 +783,10 @@ browser_local_pid(Id) :-
     integer(Id),
     Id >= 1000000000,
     Id =< 9999999999.
+browser_local_pid(Id@localhost) :-
+    integer(Id),
+    Id >= 1000000000,
+    Id =< 9999999999.
 % Accept browser tabs running the pre-numeric SWI-WASM bridge during rollout.
 browser_local_pid(worker_actor(Id)) :-
     integer(Id),

@@ -77,8 +77,8 @@ Current editor-facing concerns include:
 
 ### Tutorial Integration
 
-The tutorial is not a passive document. The demonstrator installs a bridge object
-used by `tutorial.html` so the tutorial can:
+The profile tutorials are not passive documents. The demonstrator installs a
+bridge object used by the tutorial iframes so they can:
 
 - paste queries into the terminal
 - ask queries directly

@@ -3,7 +3,7 @@
   <head>
     <script>(function(){function c(n){var p=n+"=",a=String(document.cookie||"").split(/;\s*/),i;for(i=0;i<a.length;i+=1){if(a[i].indexOf(p)===0){return decodeURIComponent(a[i].slice(p.length));}}return"";}var tc=c("wp_theme_mode"),tl=localStorage.getItem("wb.themeMode"),t=(tc==="dark"||tc==="light")?tc:tl;if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);document.documentElement.style.colorScheme=t;localStorage.setItem("wb.themeMode",t);}var f=localStorage.getItem("wb.fontSizeMode");if(f)document.documentElement.setAttribute("data-fontsize",f);})();</script>
     <meta charset="utf-8">
-    <title>The Prolog Trinity portal</title>
+    <title>The Prolog Trinity demonstrator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="stylesheet"
@@ -2216,6 +2216,12 @@
         text-decoration: underline;
       }
 
+      .project-link.is-profile-incompatible,
+      .project-link.is-profile-incompatible:hover,
+      .project-link.is-profile-incompatible:focus {
+        text-decoration: line-through;
+      }
+
       .tutorial-project-link {
         font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
         font-size: 14px;
@@ -2607,12 +2613,17 @@
                  :class="{active: browser.active}"
                  :href="browser.href">{{ browser.label }}</a>
             </div>
+            <p class="wb-header-section-note">
+              <a href="/wasm/shared_db.pl"
+                 target="_blank"
+                 rel="noopener noreferrer">Shared DB</a>
+            </p>
           </section>
           <section class="wb-header-section wb-header-section-node-groups-end">
             <div class="wb-header-section-title-row">
               <div class="wb-header-section-title">Remote nodes</div>
               <span class="wb-header-note-help"
-                    :data-tooltip="'Open the live Discovery Hub to inspect available nodes, status, profiles, services, and advertised predicates.'"
+                    :data-tooltip="'Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.'"
                     aria-label="Node help">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
@@ -2626,11 +2637,19 @@
                  class="wb-header-card wb-header-card-node"
                  target="_blank"
                  rel="noopener noreferrer">Discovery Hub</a>
+              <a v-for="node in headerRemoteNodeButtons"
+                 :key="node.id"
+                 :href="node.href"
+                 class="wb-header-card wb-header-card-node"
+                 :class="{active: node.active}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
             </div>
             <p v-if="showCurrentNodeLink" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
                  target="_blank"
-                 rel="noopener noreferrer">{{ currentPortalNodeAddress }}</a>
+                 rel="noopener noreferrer">Shared DB</a>
             </p>
           </section>
           <section class="wb-header-section wb-header-section-tools">
@@ -2759,83 +2778,11 @@
               <div class="projects">
                 <div v-if="showTutorialExamples" class="project-group">
                   <div class="project-title">Tutorials</div>
-                  <ul v-if="useWebPrologTutorial" class="project-list">
+                  <ul class="project-list">
                     <li class="project-list-item">
                       <a class="project-link tutorial-project-link"
-                         href="/wp-tutorial"
-                         @click.prevent="openTutorialDocument('/wp-tutorial')">Web Prolog Tutorial</a>
-                    </li>
-                  </ul>
-                  <ul v-else class="project-list">
-                    <li class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-top"
-                         @click.prevent="openTutorialSection('tutorial-top')">Web Prolog Tutorial</a>
-                    </li>
-                    <li class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-getting-started"
-                         @click.prevent="openTutorialSection('tutorial-getting-started')">Prolog nodes and their profiles</a>
-                    </li>
-                    <li v-if="tutorialSectionEnabled('local_isobase')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-local-isobase-programming"
-                         @click.prevent="openTutorialSection('tutorial-local-isobase-programming')">Local ISOBASE programming</a>
-                    </li>
-                    <li v-if="tutorialSectionEnabled('movie_database')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-movie-database"
-                         @click.prevent="openTutorialSection('tutorial-movie-database')">Movie database</a>
-                    </li>
-                    <li v-if="tutorialSectionEnabled('dcg')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-dcg"
-                         @click.prevent="openTutorialSection('tutorial-dcg')">Parsing and generating with a DCG</a>
-                    </li>
-                    <li v-if="tutorialSectionEnabled('distributed_isobase')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-distributed-isobase-programming"
-                         @click.prevent="openTutorialSection('tutorial-distributed-isobase-programming')">Distributed ISOBASE programming</a>
-                    </li>
-                    <li v-if="tutorialSectionEnabled('local_isotope')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-local-isotope-programming"
-                         @click.prevent="openTutorialSection('tutorial-local-isotope-programming')">Local ISOTOPE programming</a>
-                    </li>
-                    <li v-if="tutorialSectionEnabled('distributed_isotope')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-distributed-isotope-programming"
-                         @click.prevent="openTutorialSection('tutorial-distributed-isotope-programming')">Distributed ISOTOPE programming</a>
-                    </li>
-                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('local_actor')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-local-actor-programming"
-                         @click.prevent="openTutorialSection('tutorial-local-actor-programming')">Local ACTOR programming</a>
-                    </li>
-                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('toplevels')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-programming-with-toplevels"
-                         @click.prevent="openTutorialSection('tutorial-programming-with-toplevels')">Programming with toplevel actors</a>
-                    </li>
-                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('distributed_actor')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-distributed-actor-programming"
-                         @click.prevent="openTutorialSection('tutorial-distributed-actor-programming')">Distributed ACTOR programming</a>
-                    </li>
-                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('behaviours')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-programming-with-behaviours"
-                         @click.prevent="openTutorialSection('tutorial-programming-with-behaviours')">Programming with behaviours</a>
-                    </li>
-                    <li v-if="showActorTutorialExamples && tutorialSectionEnabled('statecharts')" class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#tutorial-programming-with-statecharts"
-                         @click.prevent="openTutorialSection('tutorial-programming-with-statecharts')">Programming with statecharts</a>
-                    </li>
-                    <li class="project-list-item">
-                      <a class="project-link tutorial-project-link"
-                         href="/tutorial#web-apis"
-                         @click.prevent="openTutorialSection('web-apis')">Exercising the web APIs</a>
+                         :href="profileTutorial.path"
+                         @click.prevent="openTutorialDocument(profileTutorial.path)">{{ profileTutorial.label }}</a>
                     </li>
                   </ul>
                 </div>
@@ -2846,7 +2793,9 @@
                         :key="'actor:' + example.url"
                         class="project-list-item">
                       <a class="project-link"
+                         :class="{ 'is-profile-incompatible': isExampleUnavailable(example) }"
                          :href="example.url"
+                         :title="exampleUnavailableTitle(example)"
                          @click.prevent="loadExampleEntry(example)">{{ example.name }}</a>
                     </li>
                   </ul>
@@ -2858,7 +2807,9 @@
                         :key="'statechart:' + example.url"
                         class="project-list-item">
                       <a class="project-link"
+                         :class="{ 'is-profile-incompatible': isExampleUnavailable(example) }"
                          :href="example.url"
+                         :title="exampleUnavailableTitle(example)"
                          @click.prevent="loadExampleEntry(example)">{{ example.name }}</a>
                     </li>
                   </ul>
@@ -2890,7 +2841,7 @@
                       <iframe ref="tutorialFrame"
                               :class="['tutorial-frame', { 'is-ready': tutorialFrameLoaded }]"
                               :src="tutorialSrc"
-                              title="Web Prolog Tutorial"
+                              :title="profileTutorial.label"
                               @load="handleTutorialLoad"></iframe>
                     </div>
                   </div>
@@ -3928,6 +3879,21 @@
       var PORTAL_REPOSITORY_URL = "https://github.com/torbjornlager/book-poc";
       var PORTAL_BOOK_MANUSCRIPT_URL = "https://trinity.elfenbenstornet.se/book.html";
       var EXAMPLES_PREFERRED_WIDTH_PX = 260;
+      var WEB_PROLOG_EXAMPLE_REQUIRED_PROFILES = Object.freeze({
+        "01 queens.pl": "stateless",
+        "02 grammar.pl": "stateless",
+        "03 expert-system.pl": "isotope",
+        "04 count_server.pl": "actor",
+        "05 fridge.pl": "actor",
+        "06 priority_queue.pl": "actor",
+        "07 ping-pong.pl": "actor",
+        "08 dining_philosophers.pl": "actor",
+        "09 parallel.pl": "actor",
+        "10 simple_toplevel.pl": "actor",
+        "11 promise-and-yield.pl": "stateless",
+        "12 rpc.pl": "stateless",
+        "13 fridge_server.pl": "actor"
+      });
 
       window.webPrologTerminalConvertLinks = true;
       window.webPrologTerminalHighlightPredicates = false;
@@ -4403,6 +4369,21 @@
         };
       }
 
+      // Browser actors are exposed to Prolog as Id@localhost, while the
+      // JavaScript node controller keeps using the raw ten-digit Id as its
+      // worker-map key.  Keep the conversion at this boundary so localhost
+      // remains a local-node designator rather than a network destination.
+      function qualifySwiWasmLocalPid(pidText) {
+        var text = String(pidText || "").trim();
+        return /^[1-9][0-9]{9}$/.test(text) ? text + "@localhost" : text;
+      }
+
+      function localizeSwiWasmPid(pidText) {
+        var text = String(pidText || "").trim();
+        var match = /^([1-9][0-9]{9})\s*@\s*'?localhost'?$/.exec(text);
+        return match ? match[1] : text;
+      }
+
       function currentNodeReferenceUrls() {
         var refs = [];
         var current = normalizeNodeUrl(window.location.origin);
@@ -4662,6 +4643,10 @@
         if (!enabled) {
           return String(text);
         }
+        m = String(text).match(/^([0-9]+)\s*@\s*'?localhost'?$/);
+        if (m) {
+          return m[1];
+        }
         m = String(text).match(/^([0-9]+)@'?(https?:\/\/[^'\s]+)'?$/);
         if (!m) {
           return String(text);
@@ -4676,12 +4661,14 @@
         if (!enabled) {
           return String(text);
         }
-        return String(text).replace(/([0-9]+)@'?(https?:\/\/[^'"\s,\]\)\}]+)'?/g, function(match, id, node) {
-          if (isLocalNode(node)) {
-            return id;
-          }
-          return match;
-        });
+        return String(text)
+          .replace(/([0-9]+)\s*@\s*'?localhost'?(?=$|[\s,;\.\]\)\}])/g, "$1")
+          .replace(/([0-9]+)@'?(https?:\/\/[^'"\s,\]\)\}]+)'?/g, function(match, id, node) {
+            if (isLocalNode(node)) {
+              return id;
+            }
+            return match;
+          });
       }
 
       function formatBindingsRow(row) {
@@ -5147,10 +5134,30 @@
         };
       }
 
-      function useWebPrologTutorialForCurrentRuntime() {
+      function profileTutorialForCurrentRuntime(announcedProfile) {
         var runtime = browserRuntimeRouteState();
         var node = nodeLabelForUrl(window.location.origin).toLowerCase();
-        return runtime.main || runtime.worker || ["n3", "n4", "n5"].indexOf(node) >= 0;
+        var profile;
+        if (runtime.main || runtime.worker || ["n3", "n4", "n5"].indexOf(node) >= 0) {
+          profile = "actor";
+        } else if (node === "n1") {
+          profile = "isobase";
+        } else if (node === "n2") {
+          profile = "isotope";
+        } else if (announcedProfile === "isobase" || announcedProfile === "stateless") {
+          profile = "isobase";
+        } else if (announcedProfile === "isotope") {
+          profile = "isotope";
+        } else {
+          profile = "actor";
+        }
+        if (profile === "isobase") {
+          return { profile: profile, path: "/isobase-profile-tutorial", label: "The ISOBASE profile" };
+        }
+        if (profile === "isotope") {
+          return { profile: profile, path: "/isotope-profile-tutorial", label: "The ISOTOPE profile" };
+        }
+        return { profile: profile, path: "/actor-profile-tutorial", label: "The ACTOR profile" };
       }
 
       var app = Vue.createApp({
@@ -5332,10 +5339,7 @@
             introSuppressFuture: false,
             portalVersion: "0.2.0",
             tutorialSrc: (function() {
-              var params = new URLSearchParams(window.location.search);
-              var base = useWebPrologTutorialForCurrentRuntime() || params.get("tutorial") === "wp"
-                ? "/wp-tutorial"
-                : "/tutorial";
+              var base = profileTutorialForCurrentRuntime().path;
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
             }()),
             handledTutorialDeepLink: "",
@@ -5422,6 +5426,26 @@
             return [
               { id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isBrowserSwiWasmMode }
             ];
+          },
+          headerRemoteNodeButtons: function() {
+            var nodesByLabel = {};
+            var currentLabel = this.isBrowserSwiWasmMode ? "" : nodeLabelForUrl(this.currentPortalNodeUrl);
+            this.portalNodes.forEach(function(node) {
+              if (/^N[1-5]$/.test(node.label)) {
+                nodesByLabel[node.label] = node;
+              }
+            });
+            return ["n1", "n2", "n3", "n4", "n5"].map(function(id) {
+              var label = id.toUpperCase();
+              return {
+                id: id,
+                href: nodesByLabel[label]
+                  ? nodesByLabel[label].href
+                  : portalHrefForNodeUrl("https://" + id + ".elfenbenstornet.se"),
+                label: label,
+                active: currentLabel === label
+              };
+            });
           },
           repositoryUrl: function() {
             return PORTAL_REPOSITORY_URL;
@@ -5570,26 +5594,17 @@
           showTutorialExamples: function() {
             return this.hasWorkspacePane;
           },
-          useWebPrologTutorial: function() {
-            return useWebPrologTutorialForCurrentRuntime();
-          },
-          showActorTutorialExamples: function() {
-            return this.isBrowserSwiWasmMode ||
-              this.nodeAnnouncedProfile === "actor" ||
-              this.nodeAnnouncedProfile === "workbench";
+          profileTutorial: function() {
+            return profileTutorialForCurrentRuntime(this.nodeAnnouncedProfile);
           },
           hasEditorPane: function() {
-            return this.nodeAnnouncedProfile === "isotope" ||
-              this.nodeAnnouncedProfile === "actor" ||
-              this.nodeAnnouncedProfile === "workbench";
+            return this.hasWorkspacePane;
           },
           showPrologExamples: function() {
-            return this.hasEditorPane;
+            return this.hasWorkspacePane;
           },
           showStatechartExamples: function() {
-            return this.isBrowserSwiWasmMode ||
-                   this.nodeAnnouncedProfile === "actor" ||
-                   this.nodeAnnouncedProfile === "workbench";
+            return this.hasWorkspacePane;
           },
 	          nodeAuthLabel: function() {
 	            if (this.nodeAnnouncedAuthMode === "private") {
@@ -6050,6 +6065,24 @@
               kind: kind
             };
           },
+          exampleRequiredProfile: function(example) {
+            if (example.kind === "statechart") {
+              return "actor";
+            }
+            return WEB_PROLOG_EXAMPLE_REQUIRED_PROFILES[example.name] || "actor";
+          },
+          isExampleUnavailable: function(example) {
+            return this.transportModeRank(this.exampleRequiredProfile(example)) >
+              this.transportModeRank(this.effectiveTransportProfile);
+          },
+          exampleUnavailableTitle: function(example) {
+            var required;
+            if (!this.isExampleUnavailable(example)) {
+              return null;
+            }
+            required = this.exampleRequiredProfile(example);
+            return "Requires an " + (required === "isotope" ? "ISOTOPE" : "ACTOR") + " node";
+          },
           fetchExamplesIndex: function() {
             var self = this;
             return fetch("/examples_index", {
@@ -6197,11 +6230,22 @@
             }
             return "stateless";
           },
-	          applyAnnouncedNodeProfile: function(profile) {
-	            var normalized = this.normalizeAnnouncedNodeProfile(profile);
-	            var previous = this.nodeAnnouncedProfile;
+          applyAnnouncedNodeProfile: function(profile) {
+            var normalized = this.normalizeAnnouncedNodeProfile(profile);
+            var previous = this.nodeAnnouncedProfile;
+            var previousTutorialPath = this.defaultTutorialPath();
+            var tutorialPathBeforeProfile = this.currentTutorialPath();
+            var tutorialHash = "";
+            try {
+              tutorialHash = (new URL(this.tutorialSrc, window.location.href)).hash;
+            } catch (_error) {
+            }
             this.nodeAnnouncedProfile = normalized;
-            if ((normalized === "isobase" || normalized === "relation") && this.workspaceTab === "prolog") {
+            if (tutorialPathBeforeProfile === previousTutorialPath &&
+                previousTutorialPath !== this.defaultTutorialPath()) {
+              this.setTutorialSrc(this.defaultTutorialPath() + tutorialHash);
+            }
+            if (normalized === "relation" && this.workspaceTab === "prolog") {
               this.workspaceTab = "tutorial";
             }
             if (previous !== normalized && normalized === "workbench") {
@@ -6212,7 +6256,7 @@
               this.handleTransportModeChange();
 	              this.log("ui", "Demonstrator clamped to " + this.transportModeLabel + " to match the " + this.transportClampContextLabel() + ".", "transport");
 	            }
-	          },
+          },
 	          applyAnnouncedPrincipalInfo: function(principalId, principalExecution) {
 	            var normalizedId = principalId ? String(principalId) : "anonymous";
 	            var executionAuthorized = !!principalExecution;
@@ -6692,7 +6736,7 @@
             return url.toString();
           },
           defaultTutorialPath: function() {
-            return this.useWebPrologTutorial ? "/wp-tutorial" : "/tutorial";
+            return this.profileTutorial.path;
           },
           currentTutorialPath: function() {
             try {
@@ -6705,9 +6749,6 @@
             var params = new URLSearchParams();
             if (this.isBrowserSwiWasmMode) {
               params.set("node", "swi-wasm");
-            }
-            if (tutorialPath === "/wp-tutorial") {
-              params.set("tutorial", "wp");
             }
             var text = params.toString();
             return text ? "?" + text : "";
@@ -7102,7 +7143,7 @@
                 url: null
               });
               this.selectDock("terminal");
-              this.echoTerminalSystemInfo(this.terminal, "% Tutorial program loaded into the SWI-WASM editor.");
+              this.echoTerminalSystemInfo(this.terminal, "% Loaded tutorial program.");
               this.focusTerminalSoon(true);
               return Promise.resolve(true);
             }
@@ -7133,7 +7174,7 @@
                     throw new Error(describeJsonError(event || {}));
                   }
                   self.isotopeLoadedText = sourceText;
-                  self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
+                  self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
                   self.focusTerminalSoon(true);
                   return true;
                 }).catch(function(error) {
@@ -7144,7 +7185,7 @@
                 });
               }
               return this.ensureIsotopeSession(this.terminal, this.currentIsotopeGeneration()).then(function() {
-                self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
+                self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
                 self.focusTerminalSoon(true);
                 return true;
               }).catch(function(error) {
@@ -7159,7 +7200,7 @@
               if (this.wsPid !== null) {
                 this.transientLoadText = "";
                 return this.loadTutorialSourceIntoWsSession(sourceText).then(function() {
-                  self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
+                  self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
                   self.focusTerminalSoon(true);
                   return true;
                 }).catch(function(error) {
@@ -7170,7 +7211,7 @@
                 });
               }
               return this.ensureWsSession(this.terminal).then(function() {
-                self.echoTerminalSystemInfo(self.terminal, "% Tutorial program loaded into current session.");
+                self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
                 self.focusTerminalSoon(true);
                 return true;
               }).catch(function(error) {
@@ -8227,7 +8268,7 @@
               .trim();
           },
           currentLoadText: function() {
-            if (this.nodeAnnouncedProfile === "stateless" || this.nodeAnnouncedProfile === "relation") {
+            if (this.nodeAnnouncedProfile === "relation") {
               return "";
             }
             if (this.workspaceTab === "tutorial" && !this.isBrowserSwiWasmMode) {
@@ -9224,7 +9265,7 @@
             }
             try {
               this.spawnSwiWasmWorkerActor(
-                "swi_wasm_actor_bridge:ptcp(" + pid + ",terminal,true)",
+                "swi_wasm_actor_bridge:ptcp(" + qualifySwiWasmLocalPid(pid) + ",terminal,true)",
                 this.swiWasm2LoadedSource,
                 pid,
                 "",
@@ -9653,7 +9694,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260712-swi-wasm-2-r27";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260715-browser-local-pids";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10521,14 +10562,14 @@
             if (this.swiWasmActorServices[pid]) {
               return this.swiWasmActorServices[pid];
             }
-            return pid;
+            return localizeSwiWasmPid(pid);
           },
           swiWasmActorListText: function() {
             var pids = this.isSwiWasm2Mode ? [] : ["main"];
             Object.keys(this.swiWasmActorWorkers || {}).sort().forEach(function(pid) {
               var entry = this.swiWasmActorWorkers[pid];
               if (entry && !entry.done) {
-                pids.push(pid);
+                pids.push(qualifySwiWasmLocalPid(pid));
               }
             }.bind(this));
             return "[" + pids.join(",") + "]";
@@ -10645,7 +10686,7 @@
           whereisSwiWasmActorName: function(kind, nameText) {
             var registry = String(kind || "actor") === "service" ? this.swiWasmActorServices : this.swiWasmActorNames;
             var name = String(nameText || "");
-            return registry[name] || "undefined";
+            return registry[name] ? qualifySwiWasmLocalPid(registry[name]) : "undefined";
           },
           swiWasmActorPidLive: function(pidText) {
             var pid = String(pidText || "");
@@ -10717,7 +10758,7 @@
             this.clearSwiWasmActorNamesForPid(pid);
           },
           deliverSwiWasmActorDown: function(watcherText, refText, pidText, reasonText) {
-            var message = "down(" + refText + "," + pidText + "," + String(reasonText || "true") + ")";
+            var message = "down(" + refText + "," + qualifySwiWasmLocalPid(pidText) + "," + String(reasonText || "true") + ")";
             this.sendSwiWasmActorMessage(watcherText, message);
           },
           clearSwiWasmActorNamesForPid: function(pidText) {
@@ -11134,14 +11175,15 @@
               "spawn(Goal, Pid, Options) :-",
               "    option(node(Node), Options, localhost),",
               "    %  Bind Pid BEFORE term_string(Goal, ...): the spawned goal must",
-              "    %  carry the real numeric pid, not an unbound variable.",
+              "    %  carry the qualified local pid, not an unbound variable.",
               "    %  Otherwise a goal like self(S), S ! Pid-Result sends a message",
               "    %  whose pid slot is a fresh var, which receive/1's subsumes_term",
               "    %  matching cannot match against a caller that binds Pid (e.g.",
               "    %  parallel/1's par_yield) -- the receive defers it and hangs.",
               "    (   Node == localhost",
               "    ->  PidText := swiWasmActorReservePid(),",
-              "        term_string(Pid, PidText),",
+              "        term_string(LocalPid, PidText),",
+              "        Pid = LocalPid@localhost,",
               "        term_string(Goal, GoalText),",
               "        collect_spawn_source(Options, ExtraSource),",
               "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
@@ -11300,6 +11342,8 @@
               "    RefText := swiWasmActorMakeRef(),",
               "    term_string(Ref, RefText).",
               "",
+              "canonical_pid(Pid@localhost, Pid@localhost) :- integer(Pid), !.",
+              "canonical_pid(Pid, Pid@localhost) :- integer(Pid), !.",
               "canonical_pid(Pid, Pid).",
               "",
               "Pid ! Message :- send(Pid, Message).",
@@ -11432,7 +11476,8 @@
               "        option(session(Session), Options, false),",
               "        option(target(Target), Options, Self),",
               "        PidText := swiWasmActorReservePid(),",
-              "        term_string(Pid, PidText),",
+              "        term_string(LocalPid, PidText),",
+              "        Pid = LocalPid@localhost,",
               "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
               "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
               "        await(SpawnPromise, SpawnedText),",

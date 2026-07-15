@@ -36,9 +36,6 @@ The current blacklist mode denies these families by default:
 - Runtime and parser mutation:
   `set_prolog_flag/2`, `char_conversion/2`, `op/3`, `halt/0-1`.
 
-- Runtime timing output:
-  raw `time/1`.
-
 - Stateful term storage:
   `nb_setval/2`, `b_setval/2`, `nb_getval/2`, `b_getval/2`.
 
@@ -87,7 +84,9 @@ than the blacklist itself:
 - Local actor I/O overrides supplied by the runtime prelude, such as
   `write/1`, `writeq/1`, `write_term/2`, `nl/0`, and `time/1`.
   The local `time/1` reports through a tagged timing output event instead of
-  printing directly to the host Prolog shell.
+  printing directly to the host Prolog shell. Unlike the other output
+  overrides, `time/1` is available from ISOBASE onward and recursively checks
+  the timed goal against profile and sandbox policy.
 
 - Stream-target forms that are not shadowed by that prelude, such as
   `nl/1`, `writeln/2`, `print/2`, and `format/3`.
@@ -119,9 +118,9 @@ structural forms before checking leaves and special cases. Today that includes:
 - `aggregate/3-4` and `aggregate_all/3-4`
 
 `time/1` is not part of the generic walker list above. Blacklist mode handles
-it as a separate local-override special case so the raw system
-`prolog_statistics:time/1` remains blocked while the actor-local prelude
-variant can still recurse into its inner goal.
+it as a separate local-override special case and recursively validates its
+inner goal. Explicit module-qualified access to a raw system implementation
+remains blocked.
 
 ## Runtime Guard Rewriting
 

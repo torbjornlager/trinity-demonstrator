@@ -14,7 +14,9 @@ that you should edit.
 
 Do not edit files inside running containers such as:
 
-- `/app/tutorial.html`
+- `/app/web/isobase-profile-tutorial.html`
+- `/app/web/isotope-profile-tutorial.html`
+- `/app/web/actor-profile-tutorial.html`
 - `/app/Deployment/shared_db_common.pl`
 - `/app/Deployment/shared_db_n1.pl`
 - `/app/Deployment/shared_db_n2.pl`
@@ -27,13 +29,15 @@ containers are rebuilt.
 
 ## Tutorial Workflow
 
-Canonical source file:
+Profile tutorial source files:
 
-- [`tutorial.html`](../web/tutorial.html)
+- [`isobase-profile-tutorial.html`](../web/isobase-profile-tutorial.html) for N1
+- [`isotope-profile-tutorial.html`](../web/isotope-profile-tutorial.html) for N2
+- [`actor-profile-tutorial.html`](../web/actor-profile-tutorial.html) for N3, N4, N5, and SWI-WASM
 
 Recommended pattern:
 
-1. Edit [`tutorial.html`](../web/tutorial.html).
+1. Edit the profile tutorial file you want to change.
 2. Save it.
 3. Rebuild the nodes that should serve the new tutorial.
 
@@ -51,8 +55,10 @@ docker compose -f Deployment/compose.yaml up --build -d
 
 Verification URLs:
 
-- [n3 tutorial](https://n3.elfenbenstornet.se/tutorial)
-- [n4 tutorial](https://n4.elfenbenstornet.se/tutorial)
+- [n1 tutorial](https://n1.elfenbenstornet.se/isobase-profile-tutorial)
+- [n2 tutorial](https://n2.elfenbenstornet.se/isotope-profile-tutorial)
+- [n3 tutorial](https://n3.elfenbenstornet.se/actor-profile-tutorial)
+- [n4 tutorial](https://n4.elfenbenstornet.se/actor-profile-tutorial)
 
 ## Shared Database Workflow
 
@@ -114,8 +120,8 @@ docker compose -f Deployment/compose.yaml up --build -d
 
 For tutorial-only edits, use this pattern:
 
-1. Edit [`tutorial.html`](../web/tutorial.html).
-2. Tell Codex: `Deploy tutorial.html`.
+1. Edit the relevant profile tutorial file under `web/`.
+2. Tell Codex which tutorial file to deploy.
 
 For shared database edits, use this pattern:
 
@@ -127,8 +133,8 @@ For shared database edits, use this pattern:
 
 For mixed changes, be explicit:
 
-- `Deploy tutorial.html and shared_db_n3.pl`
-- `Deploy tutorial.html, shared_db_n3.pl, and shared_db_n4.pl`
+- `Deploy actor-profile-tutorial.html and shared_db_n3.pl`
+- `Deploy actor-profile-tutorial.html, shared_db_n3.pl, and shared_db_n4.pl`
 
 ## Why This Pattern Is Safe
 

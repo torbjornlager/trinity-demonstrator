@@ -18,6 +18,10 @@ const workerSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
   "utf8"
 );
+const manualSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "manual.html"),
+  "utf8"
+);
 function actorExample(name) {
   return fs.readFileSync(
     path.join(__dirname, "..", "..", "examples", "actors", name),
@@ -54,8 +58,8 @@ const tutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "tutorial.html"),
   "utf8"
 );
-const wpTutorialSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "web", "wp-tutorial.html"),
+const actorTutorialSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "actor-profile-tutorial.html"),
   "utf8"
 );
 
@@ -112,6 +116,18 @@ const qualifiedServiceParserSource = source.slice(
 const parseSwiWasmQualifiedServiceAddress = Function(
   qualifiedServiceParserSource +
   "\nreturn parseSwiWasmQualifiedServiceAddress;"
+)();
+const swiWasmLocalPidHelpers = Function(
+  qualifiedServiceParserSource +
+  "\nreturn { qualify: qualifySwiWasmLocalPid, localize: localizeSwiWasmPid };"
+)();
+const pidDisplayHelpersSource = source.slice(
+  source.indexOf("function shortenPidToken"),
+  source.indexOf("function formatBindingsRow")
+);
+const pidDisplayHelpers = Function(
+  pidDisplayHelpersSource +
+  "\nreturn { token: shortenPidToken, text: shortenLocalPidsInText };"
 )();
 const swiWasmValueRenderer = {
   swiWasmStructuredCompound: embeddedWorkbenchMethod(
@@ -289,10 +305,45 @@ ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge-source&quot;)"'),
    "supervised fridge tutorial source has a Load control");
 ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"'),
    "supervised fridge upgrade source has a Load control");
-ok(includes('<div class="project-title">SXML code</div>') &&
-   includes('return this.isBrowserSwiWasmMode ||') &&
-   !includes('if (this.isSwiWasm2Mode) {\n              return false;\n            }'),
-   "the Examples drawer exposes SXML files in both SWI-WASM models");
+ok(includes('<div class="project-title">Web Prolog code</div>') &&
+   includes('<div class="project-title">SXML code</div>') &&
+   includes('showPrologExamples: function() {\n            return this.hasWorkspacePane;') &&
+   includes('showStatechartExamples: function() {\n            return this.hasWorkspacePane;') &&
+   includes('if (example.kind === "statechart") {\n              return "actor";') &&
+   includes(':class="{ \'is-profile-incompatible\': isExampleUnavailable(example) }"'),
+   "the Examples drawer exposes both full code menus and marks profile-incompatible entries");
+ok(includes('"02 grammar.pl": "stateless"') &&
+   includes('"11 promise-and-yield.pl": "stateless"') &&
+   !actorExample("11 promise-and-yield.pl").includes("writeln(") &&
+   actorExample("11 promise-and-yield.pl").includes("sleep(0.5)") &&
+   actorExample("11 promise-and-yield.pl").includes("timeout(0.1)") &&
+   !actorExample("11 promise-and-yield.pl").includes("sleep(1)") &&
+   !actorExample("11 promise-and-yield.pl").includes("sleep(2)"),
+   "grammar and promise/yield examples are available on ISOBASE nodes");
+{
+  const currentLoadText = embeddedWorkbenchMethod(
+    "currentLoadText", "currentSwiWasm2LoadText"
+  );
+  const context = {
+    nodeAnnouncedProfile: "stateless",
+    workspaceTab: "prolog",
+    isBrowserSwiWasmMode: false,
+    editorKind: "prolog",
+    currentPrologText: () => "asynch_test_1(ok).",
+    stripCommentLines: text => text
+  };
+  ok(currentLoadText.call(context) === "asynch_test_1(ok)." &&
+     currentLoadText.call({ ...context, nodeAnnouncedProfile: "relation" }) === "",
+     "ISOBASE calls include active editor source while RELATION calls remain source-free");
+}
+ok(includes(':href="profileTutorial.path"') &&
+   includes('{{ profileTutorial.label }}') &&
+   includes('path: "/isobase-profile-tutorial", label: "The ISOBASE profile"') &&
+   includes('path: "/isotope-profile-tutorial", label: "The ISOTOPE profile"') &&
+   includes('path: "/actor-profile-tutorial", label: "The ACTOR profile"') &&
+   !includes('href="/wp-tutorial"') &&
+   !includes('>Web Prolog Tutorial</a>'),
+   "the Tutorials drawer exposes one profile-specific tutorial link");
 ok(includes('<div class="settings-option-label">SXML code</div>') &&
    !includes('<div class="settings-option-label">Statechart XML</div>'),
    "Settings calls Statechart XML coloring SXML code");
@@ -304,12 +355,16 @@ ok(includes("var EXAMPLES_PREFERRED_WIDTH_PX = 260;") &&
    !includes('window.localStorage.setItem("wb.examplesWidthPx"') &&
    !includes('window.localStorage.setItem("wb.examplesWidthVersion"'),
    "the Examples drawer has one fixed width instead of per-node persisted or clamped widths");
-ok(includes('return this.nodeAnnouncedProfile === "isotope" ||') &&
-   includes('this.nodeAnnouncedProfile === "actor" ||') &&
-   includes('this.nodeAnnouncedProfile === "workbench";') &&
+ok(includes('workspaceTab: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? "tutorial" : "prolog",') &&
+   includes('hasEditorPane: function() {\n            return this.hasWorkspacePane;') &&
+   includes('if (normalized === "relation" && this.workspaceTab === "prolog") {') &&
    includes('if (this.examplesVisible) {\n              return {\n                gridTemplateColumns:\n                  "36px " +\n                  this.examplesWidthPx + "px "') &&
    !includes('this.nodeAnnouncedProfile + "-examples"'),
-   "N2-N5 and SWI-WASM share the same Examples drawer width path; N1 has no editor drawer");
+   "N1-N5 and SWI-WASM share the Editor and Examples drawer layout");
+ok(includes('<a href="/wasm/shared_db.pl"') &&
+   includes('rel="noopener noreferrer">Shared DB</a>') &&
+   !includes('rel="noopener noreferrer">{{ currentPortalNodeAddress }}</a>'),
+   "remote and SWI-WASM shared database links use the Shared DB label");
 const expandedEditorCommand = rewriteEditorLoadTextAware(
   "statechart_spawn(Pid, [load_text(<editor>), trace(true)]).",
   "load_text('<statechart/>')"
@@ -447,6 +502,25 @@ ok(includes('root.crypto.getRandomValues(values);') &&
    nodeWsSource.includes("Id >= 1000000000") &&
    nodeWsSource.includes("Id =< 9999999999"),
    "SWI-WASM local workers use reserved random ten-digit numeric pids");
+ok(swiWasmLocalPidHelpers.qualify("2159438818") === "2159438818@localhost" &&
+   swiWasmLocalPidHelpers.localize("2159438818@localhost") === "2159438818" &&
+   includes('Pid = LocalPid@localhost') &&
+   workerSource.includes('"self(" + qualifyLocalPid(selfPidText) + ")."') &&
+   includes('pids.push(qualifySwiWasmLocalPid(pid));') &&
+   includes('qualifySwiWasmLocalPid(registry[name])') &&
+   includes('qualifySwiWasmLocalPid(pidText)') &&
+   nodeWsSource.includes('browser_local_pid(Id@localhost)') &&
+   includes("'?localhost'?") &&
+   manualSource.includes('reserved local-node designator <code>localhost</code>'),
+   "browser actors expose Id@localhost while coordinator keys remain numeric");
+ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
+     "2159438818@localhost" &&
+   pidDisplayHelpers.token("2159438818@localhost", true) === "2159438818" &&
+   pidDisplayHelpers.text("S = 2159438818@localhost.", false) ===
+     "S = 2159438818@localhost." &&
+   pidDisplayHelpers.text("S = 2159438818@localhost.", true) ===
+     "S = 2159438818.",
+   "Hide local node in pid only removes @localhost from terminal display");
 ok(includes("reserveSwiWasmActorRef: function()") &&
    includes("this.swiWasmReservedActorRefs[ref] = true;") &&
    includes("this.swiWasmReservedActorRefs[pid]") &&
@@ -476,7 +550,7 @@ ok(includes('aria-label="About SWI-WASM execution models"') &&
    includes('document.getElementById("clampedHelpPopover")') &&
    includes('document.addEventListener("click", handleClick, true)'),
    "SWI-WASM model help is detailed and keyboard accessible");
-ok(includes('"swi_wasm_actor_bridge:ptcp(" + pid + ",terminal,true)"') &&
+ok(includes('"swi_wasm_actor_bridge:ptcp(" + qualifySwiWasmLocalPid(pid) + ",terminal,true)"') &&
    includes('"shell_toplevel"') &&
    includes('message.type === "shell_event"') &&
    workerSource.includes('message.command === "shell_call"') &&
@@ -533,11 +607,11 @@ ok(tutorialIncludes('id="tutorial-private-and-shared-knowledge"') &&
    tutorialIncludes('Shadowing operates on the complete predicate indicator') &&
    includes('appendSource: function(source, id)'),
    "the SWI-WASM tutorial demonstrates private pricing over shared knowledge");
-ok(wpTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
-   wpTutorialSource.includes('id="shadow-private-price"') &&
-   wpTutorialSource.includes('load_text("list_price(widget, 80).")') &&
-   wpTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
-   "the Web Prolog tutorial demonstrates node-side private/shared shadowing");
+ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
+   actorTutorialSource.includes('id="shadow-private-price"') &&
+   actorTutorialSource.includes('load_text("list_price(widget, 80).")') &&
+   actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
+   "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
 ok(sharedDbSource.includes('echo_actor :-') &&
    sharedDbSource.includes('receive({') &&
    sharedDbSource.includes('From ! echo(Msg)') &&
@@ -548,10 +622,10 @@ ok(workerSource.includes('\":- use_module(\'/worker_actor_bridge.pl\').\\n\" + s
    includes('Unable to install the SWI-WASM actor bridge for the shared database'),
    "both SWI-WASM models import the actor API before compiling shared node code");
 ok(tutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
-   wpTutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
+   actorTutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
    tutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
-   wpTutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
-   !wpTutorialSource.includes('consult(&quot;#mpc-echo-source&quot;)'),
+   actorTutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
+   !actorTutorialSource.includes('consult(&quot;#mpc-echo-source&quot;)'),
    "the echo tutorials identify the shared definition and need neither source transfer nor Load");
 ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
    workerSource.includes('redefine_system_predicate(read(_))') &&
@@ -575,7 +649,7 @@ ok(actorExample("04 count_server.pl").includes("load_predicates([count_server/1]
 ok(includes("load_predicates([Pred/Arity])") &&
    !includes("wasm_user_source") &&
    actorExample("13 fridge_server.pl").includes("load_predicates([fridge/4])") &&
-   wpTutorialSource.includes("start(server(fridge, [initial_state([])]))"),
+   actorTutorialSource.includes("start(server(fridge, [initial_state([])]))"),
    "supervised servers transfer callbacks across both actor boundaries");
 ok(includes("numbervars(Copy, 0, _, [singletons(true)])") &&
    workerSource.includes("numbervars(Copy, 0, _, [singletons(true)])"),
@@ -618,7 +692,7 @@ ok(includes("spawnSwiWasmWorkerActorReady") &&
    includes("await(SpawnPromise, SpawnedText)"),
    "SWI-WASM worker spawns resolve only after the child worker is ready");
 ok(workerSource.includes('adapted.replace(/self\\(statechart\\)\\./g') &&
-   workerSource.includes('"[target(" + selfPidText + ")|Options]"') &&
+   workerSource.includes('"[target(" + qualifyLocalPid(selfPidText) + ")|Options]"') &&
    includes('"statechart_actor",') &&
    !includes('"statechart", "statechart_actor"'),
    "SWI-WASM-2 statechart workers route child replies to their concrete chart pid");
