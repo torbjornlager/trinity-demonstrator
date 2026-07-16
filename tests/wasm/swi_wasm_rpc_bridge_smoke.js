@@ -260,7 +260,7 @@ ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
    editorIncludes("editor.removeOverlay(webPrologCodeMirrorOverlay)") &&
    !editorIncludes('"flush",'),
    "CodeMirror can apply the same Web Prolog predicate highlighting overlay");
-ok(includes("self.terminal.echo(String(text).replace(/\\n$/, \"\"));"),
+ok(includes("self.terminal.echo(self.formatDisplayText(String(text).replace(/\\n$/, \"\")));"),
    "output is streamed to the terminal while a runner is active");
 ok(includes("{ heartbeat: 1 }"),
    "long-running WASM queries yield frequently");
@@ -524,7 +524,14 @@ ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
    pidDisplayHelpers.text("S = 2159438818@localhost.", false) ===
      "S = 2159438818@localhost." &&
    pidDisplayHelpers.text("S = 2159438818@localhost.", true) ===
-     "S = 2159438818.",
+     "S = 2159438818." &&
+   pidDisplayHelpers.text(
+     "Shell got down(5074010345@localhost,2356029108,true)", true
+   ) === "Shell got down(5074010345,2356029108,true)" &&
+   includes("self.terminal.echo(self.formatDisplayText(String(text)))") &&
+   includes("term.echo(this.formatDisplayText(") &&
+   includes("this.terminal.echo(this.formatDisplayText(buf.replace") &&
+   includes("this.terminal.echo(this.formatDisplayText(output.replace"),
    "Hide local node in pid only removes @localhost from terminal display");
 ok(includes("reserveSwiWasmActorRef: function()") &&
    includes("this.swiWasmReservedActorRefs[ref] = true;") &&

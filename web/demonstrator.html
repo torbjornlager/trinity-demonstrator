@@ -9414,7 +9414,7 @@
                   // lets a fast remote paging loop reach a rate-limit error
                   // before a timer has a chance to repaint it.
                   if (self._swiWasmOutputTimer && self.terminal) {
-                    self.terminal.echo(String(text).replace(/\n$/, ""));
+                    self.terminal.echo(self.formatDisplayText(String(text).replace(/\n$/, "")));
                   } else {
                     self.swiWasmOutputBuffer += text;
                   }
@@ -9605,7 +9605,7 @@
             };
             window.swiWasmActorTerminalOutput = function(text) {
               if (self.terminal) {
-                self.terminal.echo(String(text));
+                self.terminal.echo(self.formatDisplayText(String(text)));
               }
               return true;
             };
@@ -10243,7 +10243,9 @@
               return;
             }
             if (compound.functor === "output" || compound.functor === "terminal_output") {
-              term.echo(typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1]));
+              term.echo(this.formatDisplayText(
+                typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1])
+              ));
               return;
             }
             if (compound.functor === "prompt") {
@@ -12152,7 +12154,7 @@
             // jQuery-terminal's echo expects a complete line.  Strip
             // the trailing newline that on_output adds.
             if (this.terminal) {
-              this.terminal.echo(buf.replace(/\n$/, ""));
+              this.terminal.echo(this.formatDisplayText(buf.replace(/\n$/, "")));
             }
           },
           loadSwiWasmExamples: function() {
@@ -12406,7 +12408,7 @@
             var output = this.swiWasmOutputBuffer;
             this.swiWasmOutputBuffer = "";
             if (output) {
-              this.terminal.echo(output.replace(/\n$/, ""));
+              this.terminal.echo(this.formatDisplayText(output.replace(/\n$/, "")));
             }
             this.captureSwiWasmBindings(answer);
             this.syncSwiWasmStatechartStatus(this.swiWasmProlog);
