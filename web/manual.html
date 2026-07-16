@@ -167,13 +167,17 @@
 </p>
 
 <p>
-    The classification shown beside each entry identifies the relevant node
-    profile or execution context. ISOBASE provides general stateless Prolog
-    calls, ISOTOPE adds persistent toplevel sessions, and ACTOR adds the full
-    stateful actor-messaging model. The profiles are cumulative, so richer
-    profiles retain the APIs below them. Entries marked <span class="predicate-family">owner only</span>
-    are reserved for code running with node-owner authority and are not
-    available to ordinary client code.
+    The classification shown beside each entry identifies the minimum public
+    node profile in which the predicate is available, or another relevant
+    execution context. ISOBASE provides general stateless Prolog calls,
+    ISOTOPE adds persistent toplevel sessions, and ACTOR adds the full stateful
+    actor-messaging model. The profiles are cumulative, so an entry marked
+    <span class="predicate-family">isotope</span> is also available in ACTOR.
+    The classification concerns the client language, not predicates used
+    internally to implement a profile. Entries additionally marked
+    <span class="predicate-family">owner only</span> are reserved for code
+    running with node-owner authority and are not available to ordinary client
+    code.
 </p>
 
 <p>
@@ -370,7 +374,7 @@ send(+PidOrName, +Message, +Options) is det.</pre>
 <article class="predicate-entry" id="output/1-2">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">output/1-2</span></div>
-        <div class="predicate-family">isotope, actor</div>
+        <div class="predicate-family">actor</div>
     </div>
     <pre>output(+Data) is det.
 output(+Data, +Options) is det.</pre>
@@ -384,7 +388,7 @@ output(+Data, +Options) is det.</pre>
 <article class="predicate-entry" id="input/2-3">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">input/2-3</span></div>
-        <div class="predicate-family">isotope, actor</div>
+        <div class="predicate-family">actor</div>
     </div>
     <pre>input(+Prompt, -Data) is det.
 input(+Prompt, -Data, +Options) is det.</pre>
@@ -397,10 +401,11 @@ input(+Prompt, -Data, +Options) is det.</pre>
 <article class="predicate-entry" id="respond/2">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">respond/2</span></div>
-        <div class="predicate-family">isotope, actor</div>
+        <div class="predicate-family">actor</div>
     </div>
     <pre>respond(+Pid, +Input) is det.</pre>
     <p>Sends <code>Input</code> to the process identified by <code>Pid</code> as a response to a <code>prompt(Pid,Prompt)</code> message.</p>
+    <p><span class="note-label">Note:</span> These predicates expose the actor I/O protocol and are therefore part of the ACTOR client language. An ISOTOPE implementation may use the same protocol internally, but ISOTOPE clients perform textual I/O using the ordinary Prolog predicates such as <code>write/1</code>, <code>writeln/1</code>, <code>format/1-2</code>, and <code>read/1</code>.</p>
 </article>
 
 <article class="predicate-entry" id="receive/1-2">
@@ -440,12 +445,12 @@ receive(+Clauses, +Options) is nondet.</pre>
 <article class="predicate-entry" id="listing/0-1">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">listing/0-1</span></div>
-        <div class="predicate-family">isotope, actor</div>
+        <div class="predicate-family">isotope</div>
     </div>
     <pre>listing is det.
-listing(+Pid) is det.</pre>
+listing(+What) is det.</pre>
     <p><code>listing/0</code> lists the content of the private database of the current actor process through the terminal-output path. Imported predicates and the injected I/O wrapper predicates are omitted.</p>
-    <p><code>listing/1</code> lists the content of the private database of the local actor identified by <code>Pid</code>. In public execution contexts this is namespace-scoped, so a client may inspect only actors that belong to its own session namespace. A remote, unknown, or expired pid raises an existence error; a local pid outside the current public namespace raises a permission error.</p>
+    <p><code>listing/1</code> lists the predicates or clauses in the current process's private database selected by <code>What</code>, following the conventional Prolog meaning of <code>listing/1</code>. <code>What</code> may be a predicate indicator (<code>Name/Arity</code> or <code>Name//Arity</code>), a callable head pattern, a clause reference, or a list of such specifications. It does not provide access to another actor's private database.</p>
 </article>
 
 <h2 id="sec:toplevel-api">Predicates for programming with toplevel actors</h2>

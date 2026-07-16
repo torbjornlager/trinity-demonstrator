@@ -23,9 +23,7 @@ facade re-publishes it for legacy-surface consumers.
 :- reexport(isolation, [
     actor_module/2,
     consult_load_list/1,
-    consult_load_list/2,
-    listing_private/0,
-    listing_private/1
+    consult_load_list/2
 ]).
 :- reexport(distribution, [
     make_id/1,

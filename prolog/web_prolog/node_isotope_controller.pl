@@ -122,7 +122,6 @@ isotope_call_event(Pid, EffectiveProfile, GoalAtom0, TemplateAtom0, Offset, Limi
     parse_call_context(GoalAtom, TemplateAtom0, Format, Once0,
                        RequestedTimeout0, Goal, Template, Once,
                        RequestedTimeout),
-    rewrite_isotope_goal(Goal, RewrittenGoal),
     isotope_session_queue(Pid, Queue),
     node:effective_timeout(none, StartupTimeout),
     ensure_isotope_ready(Pid, Queue, StartupTimeout),
@@ -130,7 +129,11 @@ isotope_call_event(Pid, EffectiveProfile, GoalAtom0, TemplateAtom0, Offset, Limi
     catch(load_text_into_session(Pid, LoadText), LoadError, true),
     (   var(LoadError)
     ->  actor_module(Pid, Module),
-        sandbox_check_goal_in_module(EffectiveProfile, Module, RewrittenGoal),
+        % Check the public goal before translating standard read/1 into the
+        % actor prompt protocol.  This keeps input/2-3 unavailable to
+        % ISOTOPE clients without disabling read/1 itself.
+        sandbox_check_goal_in_module(EffectiveProfile, Module, Goal),
+        rewrite_isotope_goal(Goal, RewrittenGoal),
         with_isotope_session_public_execution_profile(
             Pid,
             toplevel_call(Pid, RewrittenGoal, [

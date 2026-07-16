@@ -361,10 +361,15 @@ ok(includes('workspaceTab: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash 
    includes('if (this.examplesVisible) {\n              return {\n                gridTemplateColumns:\n                  "36px " +\n                  this.examplesWidthPx + "px "') &&
    !includes('this.nodeAnnouncedProfile + "-examples"'),
    "N1-N5 and SWI-WASM share the Editor and Examples drawer layout");
-ok(includes('<a href="/wasm/shared_db.pl"') &&
+ok(includes('<p v-if="isBrowserSwiWasmMode" class="wb-header-section-note">\n              <a href="/wasm/shared_db.pl"') &&
    includes('rel="noopener noreferrer">Shared DB</a>') &&
    !includes('rel="noopener noreferrer">{{ currentPortalNodeAddress }}</a>'),
    "remote and SWI-WASM shared database links use the Shared DB label");
+ok(includes('.editor-source-label {') &&
+   includes('font-size: calc(var(--mono-size) + 1px);') &&
+   includes('color: #000000;') &&
+   includes(':root[data-theme="dark"] .editor-source-label {\n        color: #ffffff;'),
+   "editor scratch-buffer and filename labels are larger and theme-aware");
 const expandedEditorCommand = rewriteEditorLoadTextAware(
   "statechart_spawn(Pid, [load_text(<editor>), trace(true)]).",
   "load_text('<statechart/>')"

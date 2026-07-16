@@ -215,11 +215,11 @@ builtin_goal_policy(retractall(_), dynamic_db, isotope).
 builtin_goal_policy(abolish(_), dynamic_db, isotope).
 builtin_goal_policy(abolish(_, _), dynamic_db, isotope).
 
-builtin_goal_policy(output(_), actor_io, isotope).
-builtin_goal_policy(output(_, _), actor_io, isotope).
-builtin_goal_policy(input(_, _), actor_io, isotope).
-builtin_goal_policy(input(_, _, _), actor_io, isotope).
-builtin_goal_policy(respond(_, _), actor_io, isotope).
+builtin_goal_policy(output(_), actor_io, actor).
+builtin_goal_policy(output(_, _), actor_io, actor).
+builtin_goal_policy(input(_, _), actor_io, actor).
+builtin_goal_policy(input(_, _, _), actor_io, actor).
+builtin_goal_policy(respond(_, _), actor_io, actor).
 
 builtin_goal_policy(toplevel_spawn(_), toplevel, actor).
 builtin_goal_policy(toplevel_spawn(_, _), toplevel, actor).
@@ -418,10 +418,10 @@ builtin_family_spec(dynamic_db,
                     [isotope, actor]).
 builtin_family_spec(actor_io,
                     "Actor I/O",
-                    "Route conversational output and prompts through the surrounding session.",
+                    "Expose actor-level conversational output and prompt messages.",
                     ["output/1", "output/2", "input/2", "input/3",
                      "respond/2"],
-                    [isotope, actor]).
+                    [actor]).
 builtin_family_spec(toplevel,
                     "Toplevel sessions",
                     "Manage explicit toplevel actors and paged solution streams.",

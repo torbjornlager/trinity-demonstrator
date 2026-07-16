@@ -8,7 +8,8 @@
      consult_load_list/1,       % +ListOfTerms
      consult_load_list/2,       % +ListOfTerms, +Module
      listing_private/0,         %
-     listing_private/1,         % +Pid
+     listing_private/1,         % +What
+     listing_actor_private/1,   % +Pid (internal)
 
      source_options/3,          % +Options, +GoalModule, -SourceOptions
      rewrite_source_options/3,  % +Options, +GoalModule, -Options
@@ -470,18 +471,27 @@ consult_load_list(List, Module) :-
     load_source_text(Source, Module, load_list).
 
 %!  listing_private is det.
-%!  listing_private(+Pid) is det.
+%!  listing_private(+What) is det.
+%!  listing_actor_private(+Pid) is det.
 %
-%   Emit a textual listing of predicates defined in the relevant actor's
-%   private module. Imported predicates and the injected actor I/O wrapper
-%   predicates are excluded. In public execution contexts, `listing_private/1`
-%   is namespace-scoped so clients can only inspect their own actors.
+%   Emit a textual listing of predicates defined in the current actor's
+%   private module. listing_private/1 follows the conventional listing/1
+%   interpretation of What as a predicate or clause specification. Imported
+%   predicates and the injected actor I/O wrapper predicates are excluded.
+%   listing_actor_private/1 is internal diagnostic infrastructure for trusted
+%   code; it is deliberately not imported into actor modules or admitted by
+%   the public sandbox.
 listing_private :-
     self(Pid),
     actor_module(Pid, Module),
     emit_private_listing(Module).
 
-listing_private(Pid) :-
+listing_private(What) :-
+    self(Pid),
+    actor_module(Pid, Module),
+    emit_private_listing(Module, What).
+
+listing_actor_private(Pid) :-
     listing_target_module(Pid, Module),
     emit_private_listing(Module).
 
@@ -489,13 +499,13 @@ listing_target_module(Pid0, Module) :-
     (   actors:pid_local(Pid0, LocalPid)
     ->  true
     ;   throw(error(existence_error(actor, Pid0),
-                    context(actor:listing_private/1,
+                    context(isolation:listing_actor_private/1,
                             'actor pid is not local to this node')))
     ),
     (   actors:resolve_thread(LocalPid, _)
     ->  true
     ;   throw(error(existence_error(actor, Pid0),
-                    context(actor:listing_private/1,
+                    context(isolation:listing_actor_private/1,
                             'unknown or expired actor pid')))
     ),
     require_listing_visibility(LocalPid, Pid0),
@@ -505,7 +515,7 @@ require_listing_visibility(LocalPid, Pid0) :-
     (   actors:actor_in_current_namespace(LocalPid)
     ->  true
     ;   throw(error(permission_error(access, actor_private_database, Pid0),
-                    context(actor:listing_private/1,
+                    context(isolation:listing_actor_private/1,
                             'actor pid is not visible in current public namespace')))
     ).
 
@@ -522,10 +532,107 @@ emit_private_listing(Module) :-
     ),
     memory_file_to_string(MemoryFile, Text),
     free_memory_file(MemoryFile),
-    (   Text == ""
-    ->  true
-    ;   terminal_output(Text)
+    emit_private_listing_text(Text).
+
+emit_private_listing(Module, What) :-
+    (   var(What)
+    ->  emit_private_listing(Module)
+    ;   private_listing_spec_groups(Module, What, Groups0),
+        exclude(=([]), Groups0, Groups),
+        new_memory_file(MemoryFile),
+        setup_call_cleanup(
+            open_memory_file(MemoryFile, write, Stream),
+            portray_private_listing_groups(Stream, Groups),
+            close(Stream)
+        ),
+        memory_file_to_string(MemoryFile, Text),
+        free_memory_file(MemoryFile),
+        emit_private_listing_text(Text)
     ).
+
+emit_private_listing_text("") :-
+    !.
+emit_private_listing_text(Text) :-
+    terminal_output(Text).
+
+private_listing_spec_groups(Module, Specs, Groups) :-
+    is_list(Specs),
+    !,
+    maplist(private_listing_spec_groups(Module), Specs, NestedGroups),
+    append(NestedGroups, Groups).
+private_listing_spec_groups(Module, QualifiedModule:Spec, Groups) :-
+    !,
+    (   QualifiedModule == Module
+    ->  private_listing_spec_groups(Module, Spec, Groups)
+    ;   throw(error(permission_error(access, actor_private_database,
+                                     QualifiedModule:Spec),
+                    context(isolation:listing_private/1,
+                            'listing/1 is restricted to the current actor private database')))
+    ).
+private_listing_spec_groups(Module, Name/Arity, [Clauses]) :-
+    !,
+    must_be(atom, Name),
+    must_be(nonneg, Arity),
+    ensure_private_listing_predicate(Module, Name, Arity, Name/Arity),
+    private_listing_predicate_clauses(Module, Name, Arity, Clauses).
+private_listing_spec_groups(Module, Name//DCGArity, [Clauses]) :-
+    !,
+    must_be(atom, Name),
+    must_be(nonneg, DCGArity),
+    Arity is DCGArity + 2,
+    ensure_private_listing_predicate(Module, Name, Arity, Name//DCGArity),
+    private_listing_predicate_clauses(Module, Name, Arity, Clauses).
+private_listing_spec_groups(Module, ClauseRef, [[Head-Body]]) :-
+    catch(clause_property(ClauseRef, predicate(RefModule:Name/Arity)), _, fail),
+    !,
+    (   RefModule == Module
+    ->  ensure_private_listing_predicate(Module, Name, Arity, ClauseRef),
+        clause(Module:Head, Body, ClauseRef)
+    ;   throw(error(permission_error(access, actor_private_database, ClauseRef),
+                    context(isolation:listing_private/1,
+                            'clause reference does not belong to the current actor private database')))
+    ).
+private_listing_spec_groups(Module, HeadPattern, [Clauses]) :-
+    must_be(callable, HeadPattern),
+    functor(HeadPattern, Name, Arity),
+    ensure_private_listing_predicate(Module, Name, Arity, HeadPattern),
+    findall(Head-Body,
+            ( copy_term(HeadPattern, Head),
+              clause(Module:Head, Body)
+            ),
+            Clauses).
+
+private_listing_predicate_clauses(Module, Name, Arity, Clauses) :-
+    functor(Head, Name, Arity),
+    findall(Head-Body, clause(Module:Head, Body), Clauses).
+
+ensure_private_listing_predicate(Module, Name, Arity, _Spec) :-
+    private_listing_predicate(Module, Name, Arity),
+    !.
+ensure_private_listing_predicate(_Module, _Name, _Arity, Spec) :-
+    throw(error(existence_error(procedure, Spec),
+                context(isolation:listing_private/1,
+                        'predicate is not defined in the current actor private database'))).
+
+portray_private_listing_groups(_Stream, []) :-
+    !.
+portray_private_listing_groups(Stream, Groups) :-
+    nl(Stream),
+    portray_private_listing_group_items(Stream, Groups).
+
+portray_private_listing_group_items(Stream, [Clauses]) :-
+    !,
+    portray_private_listing_clauses(Stream, Clauses).
+portray_private_listing_group_items(Stream, [Clauses|Groups]) :-
+    portray_private_listing_clauses(Stream, Clauses),
+    nl(Stream),
+    portray_private_listing_group_items(Stream, Groups).
+
+portray_private_listing_clauses(_Stream, []) :-
+    !.
+portray_private_listing_clauses(Stream, [Head-Body|Clauses]) :-
+    portray_private_clause(Stream, Head, Body),
+    portray_private_listing_clauses(Stream, Clauses).
 
 private_listing_predicate(Module, Name, Arity) :-
     current_predicate(Module:Name/Arity),

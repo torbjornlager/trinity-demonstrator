@@ -827,13 +827,17 @@
 
       .editor-source-label {
         font-family: var(--mono-font);
-        font-size: var(--mono-size);
+        font-size: calc(var(--mono-size) + 1px);
         font-weight: var(--mono-weight);
-        color: var(--muted);
+        color: #000000;
         display: block;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      :root[data-theme="dark"] .editor-source-label {
+        color: #ffffff;
       }
 
       .wb-runtime {
@@ -2613,10 +2617,10 @@
                  :class="{active: browser.active}"
                  :href="browser.href">{{ browser.label }}</a>
             </div>
-            <p class="wb-header-section-note">
+            <p v-if="isBrowserSwiWasmMode" class="wb-header-section-note">
               <a href="/wasm/shared_db.pl"
                  target="_blank"
-                 rel="noopener noreferrer">Shared DB</a>
+                 rel="noopener noreferrer">&nbsp;Shared DB</a>
             </p>
           </section>
           <section class="wb-header-section wb-header-section-node-groups-end">
@@ -2649,7 +2653,7 @@
             <p v-if="showCurrentNodeLink" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
                  target="_blank"
-                 rel="noopener noreferrer">Shared DB</a>
+                 rel="noopener noreferrer">&nbsp;Shared DB</a>
             </p>
           </section>
           <section class="wb-header-section wb-header-section-tools">

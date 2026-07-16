@@ -1061,7 +1061,8 @@ sandbox:safe_primitive(actors:input(_, _)).
 sandbox:safe_primitive(actors:input(_, _, _)).
 sandbox:safe_primitive(actors:respond(_, _)).
 sandbox:safe_primitive(actors:flush).
-%  listing_private and node_setting moved homes in the layered fork.
+%  listing_private is the current actor's public listing/0-1 backend.
+%  The cross-actor listing_actor_private/1 helper is intentionally not safe.
 sandbox:safe_primitive(isolation:listing_private).
 sandbox:safe_primitive(isolation:listing_private(_)).
 sandbox:safe_primitive(actor_api:node_setting(_, _)).

@@ -90,8 +90,8 @@ actor_io_prelude_text(Text) :-
         "    system:format(string(String), '% ~D inferences in ~3f seconds', [Inferences, Wall]).\n",
         "listing :-\n",
         "    isolation:listing_private.\n",
-        "listing(Pid) :-\n",
-        "    isolation:listing_private(Pid).\n"
+        "listing(What) :-\n",
+        "    isolation:listing_private(What).\n"
     ], "", Text).
 
 actor_public_guard_prelude_text(Text) :-

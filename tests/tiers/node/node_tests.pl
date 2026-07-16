@@ -3236,8 +3236,27 @@ test(profile_check_goal_rejects_private_db_family_disabled_in_runtime,
             )
         )).
 
-test(profile_check_goal_allows_listing_1_in_actor_profile) :-
-    profile_check_goal(actor, listing(123)).
+test(profile_check_goal_allows_listing_1_in_isotope_profile) :-
+    profile_check_goal(isotope, listing(hello/1)).
+
+test(profile_check_goal_rejects_output_in_isotope_profile,
+     [throws(error(profile_violation(_, _), _))]) :-
+    profile_check_goal(isotope, output(hello)).
+
+test(profile_check_goal_rejects_input_in_isotope_profile,
+     [throws(error(profile_violation(_, _), _))]) :-
+    profile_check_goal(isotope, input(prompt, _Answer)).
+
+test(profile_check_goal_rejects_respond_in_isotope_profile,
+     [throws(error(profile_violation(_, _), _))]) :-
+    profile_check_goal(isotope, respond(123, answer)).
+
+test(profile_check_goal_allows_actor_io_in_actor_profile) :-
+    profile_check_goal(actor,
+                       ( output(hello),
+                         input(prompt, _Answer),
+                         respond(123, answer)
+                       )).
 
 test(profile_check_goal_rejects_non_exported_actor_parent_predicate,
      [throws(error(profile_violation(_, _), _))]) :-
@@ -4932,10 +4951,11 @@ test(isotope_call_listing_lists_private_db_only,
             kill_isotope_session(Pid)
         )).
 
-test(isotope_call_listing_1_lists_private_db_for_explicit_pid,
+test(isotope_call_listing_1_selects_private_predicate,
      true((Type == "output",
            PID == Pid,
            sub_string(Data, _, _, _, "hello(a)."),
+           \+ sub_string(Data, _, _, _, "goodbye(b)."),
            \+ sub_string(Data, _, _, _, "human(")))) :-
     with_node_server(URI,
         setup_call_cleanup(
@@ -4946,11 +4966,80 @@ test(isotope_call_listing_1_lists_private_db_for_explicit_pid,
             ),
             (
                 format(atom(CallURL),
-                       '~w/toplevel_call?pid=~w&goal=(assertz(hello(a)),listing(~w),true)&format=json',
-                       [URI, Pid, Pid]),
+                       '~w/toplevel_call?pid=~w&goal=(assertz(hello(a)),assertz(goodbye(b)),listing(hello/1),true)&format=json',
+                       [URI, Pid]),
                 read_json_answer(CallURL, JSON),
                 Type = JSON.type,
                 PID = JSON.pid,
+                Data = JSON.data
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_call_listing_1_selects_matching_clause_head,
+     true((Type == "output",
+           PID == Pid,
+           sub_string(Data, _, _, _, "hello(a)."),
+           \+ sub_string(Data, _, _, _, "hello(b).")))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=(assertz(hello(a)),assertz(hello(b)),listing(hello(a)),true)&format=json',
+                       [URI, Pid]),
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type,
+                PID = JSON.pid,
+                Data = JSON.data
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_call_listing_1_accepts_spec_list_and_clause_reference,
+     true((Type == "output",
+           PID == Pid,
+           sub_string(Data, _, _, _, "hello(a)."),
+           sub_string(Data, _, _, _, "goodbye(b).")))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=(assertz(hello(a),Ref),assertz(goodbye(b)),listing([Ref,goodbye/1]),true)&format=json',
+                       [URI, Pid]),
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type,
+                PID = JSON.pid,
+                Data = JSON.data
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_call_listing_1_does_not_interpret_pid,
+     true((Type == "error",
+           sub_string(Data, _, _, _, "callable expected")))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=listing(~w)&format=json',
+                       [URI, Pid, Pid]),
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type,
                 Data = JSON.data
             ),
             kill_isotope_session(Pid)
@@ -5153,11 +5242,9 @@ test(isotope_call_write_canonical_emits_output_event,
             kill_isotope_session(Pid)
         )).
 
-test(isotope_prompt_respond_then_pull_success,
-     true((PromptType == "prompt", PromptPID == Pid, PromptData == "hello",
-           RespondType == "responded",
-           PollType == "success", PollPID == Pid, PollMore == false,
-           PollData = [Row], get_dict('X', Row, "ok")))) :-
+test(isotope_call_input_is_not_available_to_clients,
+     true((Type == "error",
+           sub_string(Data, _, _, _, "Unknown procedure: input/2")))) :-
     with_node_server(URI,
         setup_call_cleanup(
             (
@@ -5169,23 +5256,51 @@ test(isotope_prompt_respond_then_pull_success,
                 format(atom(CallURL),
                        '~w/toplevel_call?pid=~w&goal=(actors:input(hello,X),X=ok)&format=json',
                        [URI, Pid]),
-                read_json_answer(CallURL, PromptJSON),
-                PromptType = PromptJSON.type,
-                PromptPID = PromptJSON.pid,
-                PromptData = PromptJSON.data,
-                format(atom(RespondURL),
-                       '~w/toplevel_respond?pid=~w&input=ok&format=json',
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type,
+                Data = JSON.data
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_call_output_is_not_available_to_clients,
+     true((Type == "error",
+           sub_string(Data, _, _, _, "Unknown procedure: output/1")))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=output(hello)&format=json',
                        [URI, Pid]),
-                read_json_answer(RespondURL, RespondJSON),
-                RespondType = RespondJSON.type,
-                format(atom(PollURL),
-                       '~w/toplevel_poll?pid=~w&format=json',
-                       [URI, Pid]),
-                read_json_answer(PollURL, PollJSON),
-                PollType = PollJSON.type,
-                PollPID = PollJSON.pid,
-                PollData = PollJSON.data,
-                PollMore = PollJSON.more
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type,
+                Data = JSON.data
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_call_respond_is_not_available_to_clients,
+     true((Type == "error",
+           sub_string(Data, _, _, _, "Unknown procedure: respond/2")))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=respond(~w,hello)&format=json',
+                       [URI, Pid, Pid]),
+                read_json_answer(CallURL, JSON),
+                Type = JSON.type,
+                Data = JSON.data
             ),
             kill_isotope_session(Pid)
         )).
@@ -5952,70 +6067,59 @@ test(public_actor_client_actors_list_is_namespace_scoped,
         )
     ).
 
-test(public_actor_client_listing_by_pid_is_namespace_scoped,
-     true((sub_string(OwnOutput, _, _, _, "hello(a)."),
-           OwnFinalType == "success",
-           OtherType == "error",
-           sub_string(OtherError, _, _, _, "current public namespace")))) :-
+test(public_actor_client_listing_does_not_accept_an_actor_pid,
+     true((ListingType == "error",
+           sub_string(ListingError, _, _, _, "Unknown procedure"),
+           ChildStillAlive == ChildPid))) :-
     with_node_server_options(
         [profile(actor), sandbox(off)],
         URI,
         setup_call_cleanup(
-            (ws_open(URI, WS1), ws_open(URI, WS2)),
+            ws_open(URI, WS),
             (
-                ws_send_json(WS1, json{command:toplevel_spawn, options:"[session(true)]"}),
-                ws_receive_json(WS1, Spawned1),
-                get_dict(pid, Spawned1, ToplevelPid1),
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
 
-                ws_send_json(WS2, json{command:toplevel_spawn, options:"[session(true)]"}),
-                ws_receive_json(WS2, Spawned2),
-                get_dict(pid, Spawned2, ToplevelPid2),
-
-                ws_send_json(WS1, json{
+                ws_send_json(WS, json{
                     command:toplevel_call,
-                    pid:ToplevelPid1,
+                    pid:ToplevelPid,
                     goal:"spawn(receive({stop -> true}), Child, [load_text(\"hello(a).\"), link(false)]), Child=Child",
                     template:"Child"
                 }),
-                ws_receive_json(WS1, SpawnChildReply),
+                ws_receive_json(WS, SpawnChildReply),
                 get_dict(type, SpawnChildReply, "success"),
                 get_dict(data, SpawnChildReply, [SpawnChildRow]),
                 get_dict('Child', SpawnChildRow, ChildPid0),
                 pid_value(ChildPid0, ChildPid),
 
-                format(string(OwnListingGoal), "listing(~q)", [ChildPid]),
-                ws_send_json(WS1, json{
+                format(string(ListingGoal), "listing(~q)", [ChildPid]),
+                ws_send_json(WS, json{
                     command:toplevel_call,
-                    pid:ToplevelPid1,
-                    goal:OwnListingGoal,
+                    pid:ToplevelPid,
+                    goal:ListingGoal,
                     template:"true"
                 }),
-                ws_receive_json_until_expected_types(WS1, ["output", "success"], [], 20, OwnReplies),
-                once((
-                    member(OwnOutputReply, OwnReplies),
-                    get_dict(type, OwnOutputReply, "output"),
-                    get_dict(data, OwnOutputReply, OwnOutput)
-                )),
-                once((
-                    member(OwnFinalReply, OwnReplies),
-                    get_dict(type, OwnFinalReply, OwnFinalType),
-                    OwnFinalType \== "output"
-                )),
+                ws_receive_json(WS, ListingReply),
+                get_dict(type, ListingReply, ListingType),
+                get_dict(data, ListingReply, ListingError),
 
-                format(string(OtherListingGoal), "listing(~q)", [ChildPid]),
-                ws_send_json(WS2, json{
+                ws_send_json(WS, json{
                     command:toplevel_call,
-                    pid:ToplevelPid2,
-                    goal:OtherListingGoal,
-                    template:"true"
+                    pid:ToplevelPid,
+                    goal:"actors(Pids)",
+                    template:"Pids"
                 }),
-                ws_receive_json(WS2, OtherReply),
-                get_dict(type, OtherReply, OtherType),
-                get_dict(data, OtherReply, OtherError)
+                ws_receive_json(WS, ActorsReply),
+                get_dict(type, ActorsReply, "success"),
+                get_dict(data, ActorsReply, [ActorsRow]),
+                get_dict('Pids', ActorsRow, VisiblePids0),
+                pid_list_value(VisiblePids0, VisiblePids),
+                member(ChildStillAlive, VisiblePids),
+                ChildStillAlive == ChildPid
             ),
             (
-                catch(ws_close(WS1, 1000, done), _, true),
-                catch(ws_close(WS2, 1000, done), _, true),
+                catch(ws_close(WS, 1000, done), _, true),
                 (   nonvar(ChildPid)
                 ->  catch(exit(ChildPid, kill), _, true)
                 ;   true

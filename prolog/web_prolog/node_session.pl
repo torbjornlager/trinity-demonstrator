@@ -342,10 +342,13 @@ load_text_into_session(Pid, LoadText0) :-
     ->  true
     ;   isotope_loaded_text(SessionPid, LoadText)
     ->  true
-    ;   rewrite_isotope_source_text(LoadText, RewrittenLoadText),
-        actor_module(SessionPid, Module),
+    ;   actor_module(SessionPid, Module),
         isotope_session_profile_or_default(SessionPid, Profile),
-        sandbox_check_source_text(Profile, Module, RewrittenLoadText),
+        % Validate exactly what the client supplied.  read/1 is public in
+        % ISOTOPE; the input/2 goal to which it is rewritten below is trusted
+        % runtime plumbing and is intentionally ACTOR-only for client code.
+        sandbox_check_source_text(Profile, Module, LoadText),
+        rewrite_isotope_source_text(LoadText, RewrittenLoadText),
         (   current_predicate(node_sandbox:sandbox_mode/1),
             node_sandbox:sandbox_mode(SandboxMode),
             SandboxMode == blacklist

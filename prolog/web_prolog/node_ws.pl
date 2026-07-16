@@ -603,8 +603,7 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
     ws_get_atom_or(Dict, format, json, Format),
     parse_call_context(GoalAtom, TemplateAtom0, Format, Once0, none,
                        Goal, Template, Once, _RequestedTimeout),
-    rewrite_isotope_goal(Goal, RewrittenGoal),
-    strip_module(RewrittenGoal, _GoalCaller, PlainGoal),
+    strip_module(Goal, _GoalCaller, PlainClientGoal),
     text_to_string(LoadText0, LoadText),
     catch(load_text_into_session(Pid, LoadText), LoadError, true),
     (   var(LoadError)
@@ -613,7 +612,8 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
         % Validate and execute the unqualified goal there; a resolved
         % user: predicate is an import artefact, not client authority to
         % invoke arbitrary modules.
-        sandbox_check_goal_in_module(EffectiveProfile, Module, PlainGoal),
+        sandbox_check_goal_in_module(EffectiveProfile, Module, PlainClientGoal),
+        rewrite_isotope_goal(PlainClientGoal, PlainGoal),
         with_isotope_session_public_execution_profile(
             Pid,
             toplevel_call(Pid, PlainGoal, [

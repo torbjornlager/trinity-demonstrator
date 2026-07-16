@@ -634,7 +634,7 @@ test(isolation_load_list, Sorted == [a,b]) :-
    sort(Values, Sorted),
    wait_for_downs([PidA, PidB]).
 
-test(listing_private_by_pid_targets_selected_actor_db) :-
+test(listing_actor_private_by_pid_targets_selected_actor_db) :-
    setup_call_cleanup(
        (
            spawn(receive({stop -> true}), Pid1, [
@@ -649,7 +649,7 @@ test(listing_private_by_pid_targets_selected_actor_db) :-
            ])
        ),
        (
-           with_output_to(string(Output), listing_private(Pid2)),
+           with_output_to(string(Output), listing_actor_private(Pid2)),
            sub_string(Output, _, _, _, "goodbye(b)."),
            \+ sub_string(Output, _, _, _, "hello(a).")
        ),
