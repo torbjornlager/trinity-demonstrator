@@ -7,8 +7,8 @@ with syntax and semantics exactly as in the trinity-demonstrator:
 
   - Erlang-style actors (spawn/send/receive, links, monitors,
     registration, actor I/O),
-  - per-actor isolated modules with load_text/1, load_list/1,
-    load_uri/1, load_predicates/1, consult_load_list, listing_private,
+  - per-actor isolated modules with src_text/1, src_list/1,
+    src_uri/1, src_predicates/1, consult_load_list, listing_private,
   - toplevel query actors (the pengine protocol),
   - behaviours: generic servers, supervisors, statechart actors,
     parallel/1, first_solution/2-3,

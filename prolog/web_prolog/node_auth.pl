@@ -500,18 +500,30 @@ reject_unknown_principal(Principal, Context) :-
     ).
 
 
-require_source_option_access(Principal, load_text(SourceText)) :-
+require_source_option_access(Principal, src_text(SourceText)) :-
     !,
     require_source_text_access(Principal, SourceText).
-require_source_option_access(Principal, load_list(_Terms)) :-
+require_source_option_access(Principal, src_list(_Terms)) :-
     !,
     require_execution_access(Principal).
-require_source_option_access(Principal, load_predicates(_PIs)) :-
+require_source_option_access(Principal, src_predicates(_PIs)) :-
     !,
     require_execution_access(Principal).
-require_source_option_access(Principal, load_uri(_URI)) :-
+require_source_option_access(Principal, src_uri(_URI)) :-
     !,
     require_execution_access(Principal).
+require_source_option_access(Principal, load_text(SourceText)) :-
+    !,
+    require_source_option_access(Principal, src_text(SourceText)).
+require_source_option_access(Principal, load_list(Terms)) :-
+    !,
+    require_source_option_access(Principal, src_list(Terms)).
+require_source_option_access(Principal, load_predicates(PIs)) :-
+    !,
+    require_source_option_access(Principal, src_predicates(PIs)).
+require_source_option_access(Principal, load_uri(URI)) :-
+    !,
+    require_source_option_access(Principal, src_uri(URI)).
 require_source_option_access(_, _).
 
 

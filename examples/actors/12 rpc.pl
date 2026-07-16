@@ -1,4 +1,4 @@
-% Local predicates -- sent to a remote node via load_predicates.
+% Local predicates -- sent to a remote node via src_predicates.
 
 edge(a, b).
 edge(b, c).
@@ -14,23 +14,23 @@ path(X, Y) :- edge(X, Z), path(Z, Y).
 ?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).
 
 ?- rpc('https://n1.elfenbenstornet.se', p(X), [
-       load_list([p(a),p(b),p(c)])
+       src_list([p(a),p(b),p(c)])
    ]).
 
 ?- rpc('https://n1.elfenbenstornet.se', p(X), [
-       load_text('p(a). p(b). p(c).')
+       src_text('p(a). p(b). p(c).')
    ]).
 
 ?- rpc('https://n1.elfenbenstornet.se', path(a, X), [
-       load_predicates([edge/2, path/2])
+       src_predicates([edge/2, path/2])
    ]).
 
 ?- rpc('https://n3.elfenbenstornet.se', ancestor_descendant(X,Y), [
-       load_uri('https://n2.elfenbenstornet.se')
+       src_uri('https://n2.elfenbenstornet.se')
    ]).
 
 ?- rpc(localhost, ancestor_descendant(X,Y),
-       [load_uri('https://n2.elfenbenstornet.se')
+       [src_uri('https://n2.elfenbenstornet.se')
    ]).
 
 */

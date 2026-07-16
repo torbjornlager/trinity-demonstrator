@@ -133,7 +133,7 @@ model_generate_node(spawn, Attrs, Children, Parent, _ID) :-
     maplist(attr_to_option, Attrs1, Options),
     (   children_text(Children, Src)
     ->  load_text_terms(Src, Terms),
-        Options1 = [load_list(Terms)|Options]
+        Options1 = [src_list(Terms)|Options]
     ;   Options1 = Options
     ),
     model_assert(to_be_invoked(Parent, Type, Options1)).

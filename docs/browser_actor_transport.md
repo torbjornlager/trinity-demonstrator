@@ -51,7 +51,7 @@ as Prolog source text in the named term fields.
 | `exit` | `pid`, optional `reason` | actor lifecycle events |
 | `monitor` | `pid`, optional `ref` | installs a browser-owned monitor; the node later emits `down` |
 | `demonitor` | `ref` | removes the browser-owned monitor |
-| `toplevel_spawn` | optional `load_text`, `options` | `spawned` |
+| `toplevel_spawn` | optional `src_text`, `options` | `spawned` |
 | `toplevel_call` | `pid`, `goal`, optional `template`, `limit`, `offset`, `once` | `success`, `failure`, `error`, `timeout` |
 | `toplevel_next` | `pid`, optional `limit` | `success`, `failure`, `error`, `timeout` |
 | `toplevel_stop` / `toplevel_abort` / `toplevel_halt` | `pid` | `stop` / `abort` / `halted` |

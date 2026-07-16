@@ -115,12 +115,12 @@ compute_answer_message(_Unexpected, Queue, Timeout, Pid, Offset, Limit, Gid,
 %!  toplevel_spawn_options(+LoadText0, -SpawnOptions) is det.
 %
 %   Shared DB is accessed through the module import chain, so only
-%   client-provided load_text needs to be passed as a spawn option.
+%   client-provided src_text needs to be passed as a spawn option.
 toplevel_spawn_options(LoadText0, SpawnOptions) :-
     text_to_string(LoadText0, LoadText),
     (   LoadText == ""
     ->  SpawnOptions = []
-    ;   SpawnOptions = [load_text(LoadText)]
+    ;   SpawnOptions = [src_text(LoadText)]
     ).
 
 

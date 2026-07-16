@@ -320,8 +320,8 @@ test(expand_dollar_vars_expands_top_level_code,
     expand_dollar_vars("$Pid ! hello", ['Pid'-123], Text).
 
 test(expand_dollar_vars_leaves_quoted_xml_comment_text_unchanged,
-     true(Text == "statechart_spawn(Pid, [load_text(\"<!-- $Pid -->\\n<statechart/>\")])")) :-
-    expand_dollar_vars("statechart_spawn(Pid, [load_text(\"<!-- $Pid -->\n<statechart/>\")])",
+     true(Text == "statechart_spawn(Pid, [src_text(\"<!-- $Pid -->\\n<statechart/>\")])")) :-
+    expand_dollar_vars("statechart_spawn(Pid, [src_text(\"<!-- $Pid -->\n<statechart/>\")])",
                        ['Pid'-123],
                        Text).
 
@@ -538,7 +538,7 @@ isotope_call_url(BaseURI, Pid, GoalAtom, LoadText, URL) :-
     Search0 = [pid=Pid, goal=GoalAtom, format=json],
     (   LoadText == ''
     ->  Search = Search0
-    ;   append(Search0, [load_text=LoadText], Search)
+    ;   append(Search0, [src_text=LoadText], Search)
     ),
     parse_url(URL, [
         path('/toplevel_call'),
@@ -556,7 +556,7 @@ call_url(BaseURI, GoalAtom, TemplateAtom, Offset, Limit, LoadText, Timeout, Once
                offset=Offset, limit=Limit, format=prolog],
     (   LoadText == ''
     ->  Search = Search0
-    ;   append(Search0, [load_text=LoadText], Search)
+    ;   append(Search0, [src_text=LoadText], Search)
     ),
     (   Timeout == none
     ->  Search2 = Search
@@ -572,7 +572,7 @@ json_call_url_with_load_text(BaseURI, GoalAtom, LoadText, URL) :-
     parse_url(BaseURI, Parts),
     parse_url(URL, [
         path('/call'),
-        search([goal=GoalAtom, offset=0, limit=1, load_text=LoadText])
+        search([goal=GoalAtom, offset=0, limit=1, src_text=LoadText])
       | Parts
     ]).
 
@@ -1957,7 +1957,7 @@ test(call_rejects_oversized_goal_text,
 
 test(call_rejects_oversized_load_text,
      true((Type == "error",
-           sub_string(Data, _, _, _, "Request field too large: load_text")))) :-
+           sub_string(Data, _, _, _, "Request field too large: src_text")))) :-
     with_node_server_options([max_load_text_bytes(16)], URI,
         (
             repeated_string(0'a, 40, LoadText),
@@ -1970,7 +1970,7 @@ test(call_rejects_oversized_load_text,
                     offset=0,
                     limit=1,
                     format=json,
-                    load_text=LoadText
+                    src_text=LoadText
                 ])
                 | Parts
             ]),
@@ -2075,7 +2075,7 @@ test(private_toplevel_spawn_allows_load_uri_for_execution_principal,
             with_node_server_options([auth(private), AlicePolicy], URI,
                 (
                     atom_concat(URI, '/toplevel_spawn', SpawnURL),
-                    format(string(OptionsText), "[load_uri(~q)]", [File]),
+                    format(string(OptionsText), "[src_uri(~q)]", [File]),
                     principal_headers("alice", Headers),
                     read_json_post_headers(SpawnURL, Headers,
                                            _{options:OptionsText}, SpawnJSON),
@@ -2461,7 +2461,7 @@ test(internal_transport_does_not_imply_execute) :-
     %  change ever made internal_transport imply execute (e.g. by
     %  adding a clause to capability_granted/2 in
     %  node_capabilities.pl), the per-option capability gates
-    %  for load_text / load_list / load_predicates / load_uri would
+    %  for src_text / src_list / src_predicates / src_uri would
     %  weaken silently for internal_transport peers.
     assertion(\+ capability_granted([internal_transport], execute)),
     %  admin still implies everything (intentional).
@@ -2762,7 +2762,7 @@ test(ws_toplevel_call_reloads_source_before_spawn_load_predicates,
                 ws_send_json(WS, json{
                     command:toplevel_spawn,
                     options:"[session(true)]",
-                    load_text:"worker(From) :- From ! old."
+                    src_text:"worker(From) :- From ! old."
                 }),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
@@ -2770,9 +2770,9 @@ test(ws_toplevel_call_reloads_source_before_spawn_load_predicates,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"self(Me), spawn(worker(Me), _Child, [load_predicates([worker/1])]), receive({edited -> true}, [timeout(1), on_timeout(fail)])",
+                    goal:"self(Me), spawn(worker(Me), _Child, [src_predicates([worker/1])]), receive({edited -> true}, [timeout(1), on_timeout(fail)])",
                     template:"true",
-                    load_text:"worker(From) :- From ! edited."
+                    src_text:"worker(From) :- From ! edited."
                 }),
                 ws_receive_json_first_of(WS, ["success", "failure", "error"], Reply),
                 Type = Reply.type,
@@ -3204,7 +3204,7 @@ test(profile_check_source_options_rejects_private_db_family_disabled_in_runtime,
                 node_profile_policy:profile_check_source_options(
                     isobase,
                     actor,
-                    [load_text("p(a).\n")]
+                    [src_text("p(a).\n")]
                 )
             )
         )).
@@ -3450,15 +3450,15 @@ test(sandbox_check_source_options_allows_load_predicates,
      true(sub_string(SourceText, _, _, _, "rp(left)"))) :-
     with_sandbox_mode(on,
         (
-            sandbox_check_source_options(actor, test_node, [load_predicates([rp/1])]),
-            isolation:load_option_text(test_node, load_predicates([rp/1]), SourceText)
+            sandbox_check_source_options(actor, test_node, [src_predicates([rp/1])]),
+            isolation:load_option_text(test_node, src_predicates([rp/1]), SourceText)
         )).
 
 test(profile_check_server_upgrade_uses_goal_source_module) :-
     profile_check_goal(
         actor,
         test_node:server_upgrade(fridge, rp,
-                                 [load_predicates([rp/1])])
+                                 [src_predicates([rp/1])])
     ).
 
 test(sandbox_prepare_public_spawn_honors_source_module,
@@ -3469,14 +3469,14 @@ test(sandbox_prepare_public_spawn_honors_source_module,
                 actor,
                 server_actor,
                 server_loop(test_node:rp, []),
-                [source_module(test_node), load_predicates([rp/1])],
+                [source_module(test_node), src_predicates([rp/1])],
                 Prepared
             ),
-            member(load_text(SourceText), Prepared)
+            member(src_text(SourceText), Prepared)
         )).
 
 test(sandbox_check_source_text_blacklist_allows_spawn_with_load_predicates_defined_in_same_source) :-
-    Source = "pong :- receive({finished -> true}).\nping_pong :- spawn(pong, _, [load_predicates([pong/0])]).\n",
+    Source = "pong :- receive({finished -> true}).\nping_pong :- spawn(pong, _, [src_predicates([pong/0])]).\n",
     with_sandbox_mode(blacklist,
         sandbox_check_source_text(actor, test_node, Source)).
 
@@ -3488,7 +3488,7 @@ test(sandbox_check_goal_allows_nested_spawn_load_uri_option) :-
             close(Stream),
             with_sandbox_mode(on,
                 sandbox_check_goal(actor,
-                                   actors:spawn(true, _Pid, [load_uri(File)])))
+                                   actors:spawn(true, _Pid, [src_uri(File)])))
         ),
         (
             catch(close(Stream), _, true),
@@ -3866,7 +3866,7 @@ test(statechart_spawn_load_uri_node_relative) :-
         (
             statechart_spawn(Pid, [
                 monitor(true),
-                load_uri('statecharts/game.xml')
+                src_uri('statecharts/game.xml')
             ]),
             await_actor_output(Pid, 'IDLE', 1.0),
             send(Pid, play),
@@ -3891,7 +3891,7 @@ test(ws_toplevel_spawn_honors_initial_trace_flag,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"statechart_spawn(Pid, [load_uri('statecharts/game.xml'), monitor(true)])",
+                    goal:"statechart_spawn(Pid, [src_uri('statecharts/game.xml'), monitor(true)])",
                     template:"Pid"
                 }),
                 ws_receive_json_until_expected_types(
@@ -3928,7 +3928,7 @@ test(ws_toplevel_next_preserves_member_solutions,
                     limit:1,
                     once:false,
                     format:"json",
-                    load_text:""
+                    src_text:""
                 }),
                 ws_receive_json(WS, Reply1),
                 [Row1] = Reply1.data,
@@ -4099,7 +4099,7 @@ test(ws_actor_spawn_load_predicates_copies_session_assertions,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"self(S), spawn((p(X), S ! X), Child, [load_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(1), on_timeout(Value=timeout)]), receive({down(_, Child, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)])",
+                    goal:"self(S), spawn((p(X), S ! X), Child, [src_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(1), on_timeout(Value=timeout)]), receive({down(_, Child, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)])",
                     format:"json"
                 }),
                 ws_receive_json_until_expected_types(WS, ["success"],
@@ -4122,14 +4122,14 @@ test(ws_tutorial_reload_preserves_supervised_server,
                 ws_send_json(WS, json{
                     command:toplevel_spawn,
                     options:"[session(true)]",
-                    load_text:Fridge
+                    src_text:Fridge
                 }),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,
-                    goal:"true,supervisor_actor:supervisor_spawn([child(fridge,[start(server(fridge,[initial_state([])])),restart(permanent)])],Sup,[load_predicates([fridge/4])]),supervisor_actor:supervisor_which_children(Sup,[info(fridge,FridgePid,_,_)])",
+                    goal:"true,supervisor_actor:supervisor_spawn([child(fridge,[start(server(fridge,[initial_state([])])),restart(permanent)])],Sup,[src_predicates([fridge/4])]),supervisor_actor:supervisor_which_children(Sup,[info(fridge,FridgePid,_,_)])",
                     format:"json"
                 }),
                 ws_receive_json(WS, SupervisorReply),
@@ -4156,12 +4156,12 @@ test(ws_tutorial_reload_preserves_supervised_server,
                     goal:"true",
                     once:true,
                     limit:1,
-                    load_text:Fridge2,
+                    src_text:Fridge2,
                     format:"json"
                 }),
                 ws_receive_json_until_expected_types(WS, ["success"], [_]),
                 format(string(UpgradeGoal),
-                       "true,server_actor:server_upgrade(~s,fridge2,[load_predicates([fridge2/4])])",
+                       "true,server_actor:server_upgrade(~s,fridge2,[src_predicates([fridge2/4])])",
                        [FridgePid]),
                 ws_send_json(WS, json{
                     command:toplevel_call,
@@ -4233,7 +4233,7 @@ test(ws_remote_actor_requires_load_predicates_for_session_code,
                     NoLoadReply.data = [NoLoadRow],
                     get_dict('Seen', NoLoadRow, Seen),
                     format(string(LoadGoal),
-                           "self(S), spawn((p(X), S ! X), Child, [node(~q), load_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(2), on_timeout(Value=timeout)]), receive({down(_, Child, R) -> Reason=R}, [timeout(2), on_timeout(Reason=timeout)])",
+                           "self(S), spawn((p(X), S ! X), Child, [node(~q), src_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(2), on_timeout(Value=timeout)]), receive({down(_, Child, R) -> Reason=R}, [timeout(2), on_timeout(Reason=timeout)])",
                            [URI2]),
                     ws_send_json(WS, json{
                         command:toplevel_call,
@@ -4467,7 +4467,7 @@ test(isotope_call_uses_session_load_text,
             (
                 format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
                 read_json_post(SpawnURL,
-                               _{options:"[load_text('q(X):-p(X). p(a).')]"},
+                               _{options:"[src_text('q(X):-p(X). p(a).')]"},
                                SpawnJSON),
                 Pid = SpawnJSON.pid
             ),
@@ -4564,7 +4564,7 @@ test(isotope_call_unchanged_load_text_twice,
             (
                 format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
                 read_json_post(SpawnURL,
-                               _{options:"[]", load_text:"q(X):-p(X). p(a)."},
+                               _{options:"[]", src_text:"q(X):-p(X). p(a)."},
                                SpawnJSON),
                 Pid = SpawnJSON.pid
             ),
@@ -5471,15 +5471,15 @@ test(rpc_3_error, [throws(test_error)]) :-
 
 test(rpc_3_load_text, set(X == [a, b])) :-
     with_node_server(URI,
-        rpc(URI, p(X), [load_text('p(a). p(b).')])).
+        rpc(URI, p(X), [src_text('p(a). p(b).')])).
 
 test(rpc_3_load_list, set(X == [a, b])) :-
     with_node_server(URI,
-        rpc(URI, p(X), [load_list([p(a), p(b)])])).
+        rpc(URI, p(X), [src_list([p(a), p(b)])])).
 
 test(rpc_3_load_predicates, set(X == [left, right])) :-
     with_node_server(URI,
-        rpc(URI, test_node:rp(X), [load_predicates([rp/1])])).
+        rpc(URI, test_node:rp(X), [src_predicates([rp/1])])).
 
 test(rpc_3_load_uri, set(X == [a, b])) :-
     setup_call_cleanup(
@@ -5488,7 +5488,7 @@ test(rpc_3_load_uri, set(X == [a, b])) :-
             format(Stream, 'u(a).~nu(b).~n', []),
             close(Stream),
             with_node_server(URI,
-                rpc(URI, u(X), [load_uri(File)]))
+                rpc(URI, u(X), [src_uri(File)]))
         ),
         (
             catch(close(Stream), _, true),
@@ -5503,7 +5503,7 @@ test(rpc_3_localhost_with_load_uri, set(X == [a, b])) :-
             format(Stream, 'v(a).~nv(b).~n', []),
             close(Stream),
             with_node_server(_URI,
-                rpc(localhost, v(X), [load_uri(File)]))
+                rpc(localhost, v(X), [src_uri(File)]))
         ),
         (
             catch(close(Stream), _, true),
@@ -5570,7 +5570,7 @@ test(rpc_3_load_uri_from_node_root_shared_db, set(X == [a, b])) :-
     with_node_server_options(
         [load_shared_db_text("root_u(a).\nroot_u(b).\n")],
         URI,
-        rpc(URI, root_u(X), [load_uri(URI)])
+        rpc(URI, root_u(X), [src_uri(URI)])
     ).
 
 test(rpc_3_load_uri_from_node_root_shared_db_when_origin_allowlisted,
@@ -5584,7 +5584,7 @@ test(rpc_3_load_uri_from_node_root_shared_db_when_origin_allowlisted,
     setup_call_cleanup(
         true,
         with_node_port_context(Port,
-                               rpc(URI, root_allowed(X), [load_uri(URI)])),
+                               rpc(URI, root_allowed(X), [src_uri(URI)])),
         stop_node_server(Port)
     ).
 
@@ -5602,7 +5602,7 @@ test(rpc_3_load_uri_rejects_local_file_when_origin_allowlist_active,
                     parse_url(URI, Parts),
                     memberchk(port(Port), Parts),
                     with_node_port_context(Port,
-                                           rpc(URI, u(_X), [load_uri(File)]))
+                                           rpc(URI, u(_X), [src_uri(File)]))
                 )
             )
         ),
@@ -5622,7 +5622,7 @@ test(rpc_3_load_uri_rejects_external_origin_when_origin_allowlist_active,
             memberchk(port(Port), Parts),
             with_node_port_context(
                 Port,
-                rpc(URI, demo(_X), [load_uri('https://example.com/demo.pl')])
+                rpc(URI, demo(_X), [src_uri('https://example.com/demo.pl')])
             )
         )
     ).
@@ -6084,7 +6084,7 @@ test(public_actor_client_listing_does_not_accept_an_actor_pid,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"spawn(receive({stop -> true}), Child, [load_text(\"hello(a).\"), link(false)]), Child=Child",
+                    goal:"spawn(receive({stop -> true}), Child, [src_text(\"hello(a).\"), link(false)]), Child=Child",
                     template:"Child"
                 }),
                 ws_receive_json(WS, SpawnChildReply),
@@ -6134,10 +6134,10 @@ test(rpc_3_shared_db_and_load_text_boundary, true((P == [a, b], W == [aristotle-
         URI,
         (
             findall(X,
-                    rpc(URI, p(X), [load_text("wife(socrates, xantippa). wife(aristotle, pythias).")]),
+                    rpc(URI, p(X), [src_text("wife(socrates, xantippa). wife(aristotle, pythias).")]),
                     P),
             findall(A-B,
-                    rpc(URI, wife(A, B), [load_text("wife(socrates, xantippa). wife(aristotle, pythias).")]),
+                    rpc(URI, wife(A, B), [src_text("wife(socrates, xantippa). wife(aristotle, pythias).")]),
                     W0),
             sort(W0, W)
         )
@@ -6301,7 +6301,7 @@ test(promise_4_load_text,
     with_node_server(URI,
         (
             promise(URI, p(X), Ref,
-                    [template(p(X)), load_text('p(a). p(b).')]),
+                    [template(p(X)), src_text('p(a). p(b).')]),
             yield(Ref, Answer)
         )).
 
@@ -6310,7 +6310,7 @@ test(promise_4_load_list,
     with_node_server(URI,
         (
             promise(URI, p(X), Ref,
-                    [template(p(X)), load_list([p(a), p(b)])]),
+                    [template(p(X)), src_list([p(a), p(b)])]),
             yield(Ref, Answer)
         )).
 
@@ -6319,7 +6319,7 @@ test(promise_4_load_predicates,
     with_node_server(URI,
         (
             promise(URI, test_node:rp(X), Ref,
-                    [template(X), load_predicates([rp/1])]),
+                    [template(X), src_predicates([rp/1])]),
             yield(Ref, Answer)
         )).
 
@@ -6333,7 +6333,7 @@ test(promise_4_load_uri,
             with_node_server(URI,
                 (
                     promise(URI, u(X), Ref,
-                            [template(u(X)), load_uri(File)]),
+                            [template(u(X)), src_uri(File)]),
                     yield(Ref, Answer)
                 ))
         ),
@@ -6493,7 +6493,7 @@ test(isotope_call_rejects_statechart_spawn_on_http_isotope_session,
                 "</statechart>\n"
             ], StatechartText),
             format(atom(GoalAtom),
-                   "statechart_spawn(StatechartPid, [load_text(~q), monitor(true)])",
+                   "statechart_spawn(StatechartPid, [src_text(~q), monitor(true)])",
                    [StatechartText]),
             isotope_call_url(URI, SessionPid, GoalAtom, '', CallURL),
             read_json_answer(CallURL, CallJSON),
@@ -6569,7 +6569,7 @@ test(ws_remote_echo_actor_roundtrip_between_nodes,
                 catch(ws_close(WS, 1000, done), _, true)
             ))).
 
-%% Test: WS remote toplevel_spawn forwards load_text option to remote actor
+%% Test: WS remote toplevel_spawn forwards src_text option to remote actor
 test(ws_remote_spawn_load_text_option,
      true(Data == [a])) :-
     with_node_server(
@@ -6579,7 +6579,7 @@ test(ws_remote_spawn_load_text_option,
                 session(true),
                 monitor(true),
                 node(URI),
-                load_text("hello(a). hello(b).")
+                src_text("hello(a). hello(b).")
             ]),
             toplevel_call(Pid, hello(X), [template(X), limit(1)]),
             receive({
@@ -6597,7 +6597,7 @@ test(ws_remote_actor_io_output_suppressed) :-
         (
             spawn(run, Pid, [
                 node(URI),
-                load_text("run :- writeln(hello).")
+                src_text("run :- writeln(hello).")
             ]),
             refute_actor_output(Pid, 0.5)
         )).
@@ -6698,7 +6698,7 @@ test(sandbox_public_paths) :-
                                 search([goal='q(X)', template='X',
                                        offset=0, limit=1,
                                        format=json,
-                                       load_text=':- use_module(library(lists)). q(X) :- X = a.'])
+                                       src_text=':- use_module(library(lists)). q(X) :- X = a.'])
                               | Parts]),
                     read_json_answer(RejectedURL, RejectedJSON),
                     get_dict(type, RejectedJSON, "error"),
@@ -6800,7 +6800,7 @@ test(sandbox_on_http_toplevel_spawn_accepts_load_uri,
                 URI,
                 (
                     atom_concat(URI, '/toplevel_spawn', SpawnURL),
-                    format(string(OptionsText), "[load_uri(~q)]", [File]),
+                    format(string(OptionsText), "[src_uri(~q)]", [File]),
                     read_json_post(SpawnURL, _{options:OptionsText}, SpawnJSON),
                     get_dict(pid, SpawnJSON, Pid),
                     isotope_call_url(URI, Pid, 'u(X)', '', CallURL),
@@ -6839,7 +6839,7 @@ test(sandbox_on_http_toplevel_spawn_rejects_load_uri_outside_allowlist,
                 URI,
                 (
                     atom_concat(URI, '/toplevel_spawn', SpawnURL),
-                    format(string(OptionsText), "[load_uri(~q)]", [File]),
+                    format(string(OptionsText), "[src_uri(~q)]", [File]),
                     read_json_post(SpawnURL, _{options:OptionsText}, JSON),
                     Type = JSON.type,
                     Data = JSON.data
@@ -6865,7 +6865,7 @@ test(sandbox_on_ws_toplevel_spawn_accepts_load_uri,
                 setup_call_cleanup(
                     ws_open(URI, WS),
                     (
-                        format(string(OptionsText), "[load_uri(~q)]", [File]),
+                        format(string(OptionsText), "[src_uri(~q)]", [File]),
                         ws_send_json(WS, json{
                             command:toplevel_spawn,
                             options:OptionsText
@@ -6916,7 +6916,7 @@ test(sandbox_on_ws_toplevel_call_allows_nested_spawn_load_uri,
                         ws_receive_json(WS, Spawned),
                         get_dict(pid, Spawned, Pid),
                         format(string(GoalText),
-                               "self(Self), spawn(child(Self), _Pid, [load_uri(~q), link(false)]), receive({loaded -> true})",
+                               "self(Self), spawn(child(Self), _Pid, [src_uri(~q), link(false)]), receive({loaded -> true})",
                                [File]),
                         ws_send_json(WS, json{
                             command:toplevel_call,
@@ -6948,7 +6948,7 @@ test(sandbox_on_ws_toplevel_call_allows_computed_nested_spawn_load_list,
                 ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
-                GoalText = "findall(s(N), between(1,3,N), Ns), spawn(true, _Pid, [load_list(Ns), link(false)])",
+                GoalText = "findall(s(N), between(1,3,N), Ns), spawn(true, _Pid, [src_list(Ns), link(false)])",
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,
@@ -6964,7 +6964,7 @@ test(sandbox_on_ws_toplevel_call_allows_computed_nested_spawn_load_list,
 
 test(sandbox_on_ws_toplevel_call_reports_size_error_for_computed_nested_spawn_load_list,
      true((Type == "error",
-           sub_string(Data, _, _, _, "load_list"),
+           sub_string(Data, _, _, _, "src_list"),
            sub_string(Data, _, _, _, "limit 1024 bytes")))) :-
     with_node_server_options(
         [sandbox(on), auth(dev), dev_capabilities([execute]), max_load_text_bytes(1024)],
@@ -6975,7 +6975,7 @@ test(sandbox_on_ws_toplevel_call_reports_size_error_for_computed_nested_spawn_lo
                 ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
-                GoalText = "findall(s(N), between(1,2000,N), Ns), spawn(receive({}), _Pid, [load_list(Ns), link(false)])",
+                GoalText = "findall(s(N), between(1,2000,N), Ns), spawn(receive({}), _Pid, [src_list(Ns), link(false)])",
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,
@@ -6992,10 +6992,10 @@ test(sandbox_on_ws_toplevel_call_reports_size_error_for_computed_nested_spawn_lo
 
 test(sandbox_on_ws_toplevel_call_repeats_size_error_for_computed_nested_spawn_load_list,
      true((Type1 == "error",
-           sub_string(Data1, _, _, _, "load_list"),
+           sub_string(Data1, _, _, _, "src_list"),
            sub_string(Data1, _, _, _, "limit 100 bytes"),
            Type2 == "error",
-           sub_string(Data2, _, _, _, "load_list"),
+           sub_string(Data2, _, _, _, "src_list"),
            sub_string(Data2, _, _, _, "limit 100 bytes")))) :-
     with_node_server_options(
         [sandbox(on), auth(dev), max_load_text_bytes(100)],
@@ -7006,7 +7006,7 @@ test(sandbox_on_ws_toplevel_call_repeats_size_error_for_computed_nested_spawn_lo
                 ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
-                GoalText = "findall(s(N), between(1,250,N), Ns), spawn(receive({}), _Pid, [load_list(Ns), link(false)])",
+                GoalText = "findall(s(N), between(1,250,N), Ns), spawn(receive({}), _Pid, [src_list(Ns), link(false)])",
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,
@@ -7062,7 +7062,7 @@ test(ws_toplevel_spawn_allows_commented_dynamic_db_examples_when_dynamic_db_disa
                 (
                     ws_send_json(WS, json{
                         command:toplevel_spawn,
-                        load_text:LoadText
+                        src_text:LoadText
                     }),
                     ws_receive_json(WS, Spawned),
                     SpawnType = Spawned.type,
@@ -7140,7 +7140,7 @@ test(admin_config_builtin_family_update_recycles_ws_toplevel_session,
 
 test(sandbox_on_http_toplevel_spawn_rejects_oversized_load_uri_source,
      true((Type == "error",
-           sub_string(Data, _, _, _, "load_uri"),
+           sub_string(Data, _, _, _, "src_uri"),
            sub_string(Data, _, _, _, "limit 8 bytes")))) :-
     repeated_string(0'a, 32, SourceText),
     setup_call_cleanup(
@@ -7153,7 +7153,7 @@ test(sandbox_on_http_toplevel_spawn_rejects_oversized_load_uri_source,
                 URI,
                 (
                     atom_concat(URI, '/toplevel_spawn', SpawnURL),
-                    format(string(OptionsText), "[load_uri(~q)]", [File]),
+                    format(string(OptionsText), "[src_uri(~q)]", [File]),
                     read_json_post(SpawnURL, _{options:OptionsText}, JSON),
                     Type = JSON.type,
                     Data = JSON.data

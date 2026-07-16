@@ -98,7 +98,7 @@ normalize_load_uri_allowed_origin(Origin0, Origin) :-
 normalize_load_uri_allowed_origin(Origin, _) :-
     throw(error(domain_error(load_uri_origin, Origin),
                 context(source_utils:normalize_load_uri_allowed_origins/2,
-                        'load_uri allowed origins must be absolute HTTP(S) origins'))).
+                        'src_uri allowed origins must be absolute HTTP(S) origins'))).
 
 %!  open_source_uri(+URI, -Stream:stream) is det.
 %
@@ -227,7 +227,7 @@ read_source_stream_limited(Stream, ByteLimit, Size0, Acc0, Source) :-
         (   Size =< ByteLimit
         ->  string_concat(Acc0, Chunk, Acc),
             read_source_stream_limited(Stream, ByteLimit, Size, Acc, Source)
-        ;   throw(error(request_size_exceeded(load_uri, Size, ByteLimit),
+        ;   throw(error(request_size_exceeded(src_uri, Size, ByteLimit),
                         context(source_utils:uri_to_source_limited/3,
                                 'fetched source exceeded the configured size limit')))
         )
@@ -255,12 +255,12 @@ enforce_source_uri_policy(URI0, URI) :-
     ->  true
     ;   throw(error(permission_error(load, source_uri, URI0),
                     context(source_utils:open_source_uri/2,
-                            'load_uri target origin is not on the configured allowlist')))
+                            'src_uri target origin is not on the configured allowlist')))
     ).
 enforce_source_uri_policy(URI0, _URI) :-
     throw(error(permission_error(load, source_uri, URI0),
                 context(source_utils:open_source_uri/2,
-                        'load_uri target must resolve to an allowlisted HTTP(S) origin'))).
+                        'src_uri target must resolve to an allowlisted HTTP(S) origin'))).
 
 open_http_source_uri(URI, Stream) :-
     (   current_load_uri_allowed_origins(AllowedOrigins)
@@ -288,7 +288,7 @@ open_http_source_uri_allowed(URI, AllowedOrigins, RedirectDepth, Stream) :-
                                              NextDepth, Stream)
             ;   throw(error(permission_error(redirect, source_uri, RedirectedURI),
                             context(source_utils:open_source_uri/2,
-                                    'load_uri redirect chain exceeded the maximum depth')))
+                                    'src_uri redirect chain exceeded the maximum depth')))
             )
         )
     ;   StatusCode >= 200,
@@ -297,7 +297,7 @@ open_http_source_uri_allowed(URI, AllowedOrigins, RedirectDepth, Stream) :-
     ;   close(Stream0),
         throw(error(existence_error(source_uri, URI),
                     context(source_utils:open_source_uri/2,
-                            'load_uri fetch failed')))
+                            'src_uri fetch failed')))
     ).
 
 redirect_status_code(301).
@@ -313,7 +313,7 @@ ensure_redirect_allowed(_URI, RedirectedURI, AllowedOrigins) :-
 ensure_redirect_allowed(_URI, RedirectedURI, _AllowedOrigins) :-
     throw(error(permission_error(redirect, source_uri, RedirectedURI),
                 context(source_utils:open_source_uri/2,
-                        'load_uri redirect target origin is not on the configured allowlist'))).
+                        'src_uri redirect target origin is not on the configured allowlist'))).
 
 source_uri_origin(URI0, Origin) :-
     uri_atom(URI0, URI1),

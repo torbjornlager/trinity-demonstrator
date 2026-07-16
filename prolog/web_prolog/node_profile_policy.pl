@@ -193,26 +193,26 @@ profile_check_source_options(Profile0, GoalModule, Options) :-
     maplist(profile_check_source_option(Profile, GoalModule), SourceOptions).
 
 
-profile_check_source_option(Profile, GoalModule, load_text(SourceText)) :-
+profile_check_source_option(Profile, GoalModule, src_text(SourceText)) :-
     !,
-    ensure_source_option_family(Profile, load_text(SourceText)),
+    ensure_source_option_family(Profile, src_text(SourceText)),
     profile_check_source_text(Profile, GoalModule, SourceText).
-profile_check_source_option(relation, _GoalModule, load_uri(URI)) :-
+profile_check_source_option(relation, _GoalModule, src_uri(URI)) :-
     !,
-    throw(error(profile_violation(relation, option(load_uri(URI))),
+    throw(error(profile_violation(relation, option(src_uri(URI))),
                 context(node_profile_policy:profile_check_source_options/3,
-                        'load_uri/1 is not available in the RELATION profile'))).
-profile_check_source_option(Profile, _GoalModule, load_uri(URI)) :-
+                        'src_uri/1 is not available in the RELATION profile'))).
+profile_check_source_option(Profile, _GoalModule, src_uri(URI)) :-
     normalize_profile(Profile, NormalizedProfile),
     NormalizedProfile \== relation,
-    ensure_source_option_family(Profile, load_uri(URI)),
+    ensure_source_option_family(Profile, src_uri(URI)),
     !.
-profile_check_source_option(Profile, _GoalModule, load_list(Terms)) :-
+profile_check_source_option(Profile, _GoalModule, src_list(Terms)) :-
     !,
-    ensure_source_option_family(Profile, load_list(Terms)).
-profile_check_source_option(Profile, _GoalModule, load_predicates(PIs)) :-
+    ensure_source_option_family(Profile, src_list(Terms)).
+profile_check_source_option(Profile, _GoalModule, src_predicates(PIs)) :-
     !,
-    ensure_source_option_family(Profile, load_predicates(PIs)).
+    ensure_source_option_family(Profile, src_predicates(PIs)).
 profile_check_source_option(_, _, _).
 
 
@@ -369,19 +369,19 @@ has_deferred_nested_source_option(Options) :-
 %!  deferred_nested_source_option(+Option) is semidet.
 %
 %   True when a nested spawn option must not be materialized during
-%   profile source checking.  load_predicates/1 is always deferred
+%   profile source checking.  src_predicates/1 is always deferred
 %   because the predicates it references may not yet exist in the
 %   GoalModule at check time (chicken-and-egg).  Other source-like
 %   options are deferred only when non-ground (content not yet known).
-deferred_nested_source_option(load_predicates(_)) :- !.
+deferred_nested_source_option(src_predicates(_)) :- !.
 deferred_nested_source_option(Option) :-
     source_option_like(Option),
     \+ ground(Option).
 
-source_option_like(load_text(_)).
-source_option_like(load_list(_)).
-source_option_like(load_predicates(_)).
-source_option_like(load_uri(_)).
+source_option_like(src_text(_)).
+source_option_like(src_list(_)).
+source_option_like(src_predicates(_)).
+source_option_like(src_uri(_)).
 
 
 %  Both the legacy module name (actor — clients may still send goals
@@ -568,18 +568,18 @@ profile_check_toplevel_options(Profile, Options) :-
 profile_check_toplevel_options(_, _).
 
 
-profile_check_toplevel_option(Profile, load_text(SourceText)) :-
+profile_check_toplevel_option(Profile, src_text(SourceText)) :-
     !,
     profile_check_source_text(Profile, actor, SourceText).
-profile_check_toplevel_option(Profile, load_list(Terms)) :-
+profile_check_toplevel_option(Profile, src_list(Terms)) :-
     !,
-    profile_check_source_options(Profile, actor, [load_list(Terms)]).
-profile_check_toplevel_option(Profile, load_predicates(PIs)) :-
+    profile_check_source_options(Profile, actor, [src_list(Terms)]).
+profile_check_toplevel_option(Profile, src_predicates(PIs)) :-
     !,
-    profile_check_source_options(Profile, actor, [load_predicates(PIs)]).
-profile_check_toplevel_option(Profile, load_uri(URI)) :-
+    profile_check_source_options(Profile, actor, [src_predicates(PIs)]).
+profile_check_toplevel_option(Profile, src_uri(URI)) :-
     !,
-    profile_check_source_options(Profile, actor, [load_uri(URI)]).
+    profile_check_source_options(Profile, actor, [src_uri(URI)]).
 profile_check_toplevel_option(_, _).
 
 

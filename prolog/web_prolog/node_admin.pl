@@ -316,7 +316,7 @@ admin_doctor_response(Request, JSON) :-
 %
 %   Read-only view of security/operations settings that are configured
 %   elsewhere (or startup-only) and so are not on the editable Config
-%   form: the registered tier, anonymous per-IP identity, load_uri origin
+%   form: the registered tier, anonymous per-IP identity, src_uri origin
 %   allowlist, advertised RELATION patterns, IP allow/block/auto-ban, and
 %   the in-memory event-log capacity/retention. GET, admin-gated.
 node_admin_posture_page(Request) :-

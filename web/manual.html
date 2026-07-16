@@ -225,14 +225,14 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
         <li><code>node(+URI)</code><br>Creates the process locally or on a remote compatible node. Default is <code>localhost</code>.</li>
         <li><code>monitor(+Boolean)</code><br>If <code>true</code>, monitoring is installed as part of process creation. Default is <code>false</code>.</li>
         <li><code>link(+Boolean)</code><br>If <code>true</code>, installs directional parent-to-child link cleanup. Default is <code>true</code>.</li>
-        <li><code>load_text(+AtomOrString)</code><br>Loads the clauses specified by a Web Prolog source text into the actor's private Prolog database before calling <code>Goal</code>.</li>
-        <li><code>load_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the actor's private Prolog database before calling <code>Goal</code>.</li>
-        <li><code>load_uri(+URI)</code><br>Loads the clauses specified by a file path, file URI, or HTTP(S) URI into the actor's private Prolog database before calling <code>Goal</code>.</li>
-        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by <code>ListOfPredicateIndicators</code> into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>src_text(+AtomOrString)</code><br>Loads the clauses specified by a Web Prolog source text into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>src_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>src_uri(+URI)</code><br>Loads the clauses specified by a file path, file URI, or HTTP(S) URI into the actor's private Prolog database before calling <code>Goal</code>.</li>
+        <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by <code>ListOfPredicateIndicators</code> into the actor's private Prolog database before calling <code>Goal</code>.</li>
     </ul>
     <p><span class="note-label">Note:</span> In <code>spawn(+Goal,-Pid,+Options)</code>, the option <code>monitor(true)</code> installs monitoring as part of process creation. When the child terminates, the parent receives a message <code>down(Ref,Pid,Reason)</code> where <code>Pid</code> is the terminated actor, <code>Reason</code> is its exit reason, and <code>Ref</code> identifies the monitor instance. For monitoring created via <code>monitor(true)</code>, the current implementation uses <code>Ref = Pid</code>.</p>
     <p><span class="note-label">Note:</span> The semantics of <code>link(true)</code> are directional: if a parent spawns a child with linking enabled, termination of the parent causes linked children to be terminated. The link does not imply symmetric bidirectional exit propagation.</p>
-    <p><span class="note-label">Note:</span> It is possible to pass an arbitrary number of the <code>load_*</code> options to <code>spawn/3</code>, and possibly more than one instance of each variant. To ensure that clauses end up in a well-defined order, they are converted into Prolog source text before being loaded into the database. The order of clauses and directives in the resulting source text is determined by the order of the <code>load_*</code> options in the option list.</p>
+    <p><span class="note-label">Note:</span> It is possible to pass an arbitrary number of the <code>src_*</code> options to <code>spawn/3</code>, and possibly more than one instance of each variant. To ensure that clauses end up in a well-defined order, they are converted into Prolog source text before being loaded into the database. The order of clauses and directives in the resulting source text is determined by the order of the <code>src_*</code> options in the option list.</p>
 </article>
 
 <article class="predicate-entry" id="actors/1">
@@ -594,7 +594,7 @@ server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
     <pre>server_upgrade(+To, +Pred) is det.
 server_upgrade(+To, +Pred, +Options) is det.</pre>
     <p>Replaces the callback predicate of the running server <code>To</code> without disturbing its current state. <code>Pred</code> must denote a callback predicate of arity four.</p>
-    <p>The two-argument form transfers no code and requires the callback to be present already in the server's private database. The three-argument form loads callback source using <code>load_text/1</code>, <code>load_list/1</code>, <code>load_predicates/1</code>, or <code>load_uri/1</code>.</p>
+    <p>The two-argument form transfers no code and requires the callback to be present already in the server's private database. The three-argument form loads callback source using <code>src_text/1</code>, <code>src_list/1</code>, <code>src_predicates/1</code>, or <code>src_uri/1</code>.</p>
     <p>The operation replies only after the callback has been loaded and validated. It preserves the current state value and performs no state migration. If installation fails, <code>server_upgrade/2-3</code> rethrows the reported error and the state is unchanged. Source changes made in the server's private database before the error are not rolled back.</p>
 </article>
 
@@ -618,8 +618,8 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     <p>Spawns a statechart actor and binds <code>Pid</code> to its pid.</p>
     <p><code>statechart_spawn/2</code> requires exactly one source option:</p>
     <ul>
-        <li><code>load_uri(+URI)</code><br>Load and run a statechart from a URI or file path.</li>
-        <li><code>load_text(+Text)</code><br>Load and run a statechart from an XML text string.</li>
+        <li><code>src_uri(+URI)</code><br>Load and run a statechart from a URI or file path.</li>
+        <li><code>src_text(+Text)</code><br>Load and run a statechart from an XML text string.</li>
     </ul>
     <p>In addition, <code>statechart_spawn/2</code> accepts:</p>
     <ul>
@@ -627,7 +627,7 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
         <li><code>trace(+Mode)</code><br>Set the per-actor trace mode to <code>true</code>, <code>logger</code>, or <code>false</code>. The values <code>true</code> and <code>logger</code> enable trace events on the terminal-output path; <code>false</code> adds no per-actor trace. At most one <code>trace/1</code> option is accepted. Default is <code>false</code>.</li>
     </ul>
     <p>All remaining options are passed through to <code>spawn/3</code>.</p>
-    <p><code>load_list/1</code> and <code>load_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
+    <p><code>src_list/1</code> and <code>src_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
 </article>
 
 <article class="predicate-entry" id="statechart_halt/2-3">
@@ -802,13 +802,13 @@ first_solution(?Solution, +Goals, +Options) is semidet.</pre>
     <pre>rpc(+URI, +Goal) is nondet.
 rpc(+URI, +Goal, +Options) is nondet.</pre>
     <p>Executes a copy of <code>Goal</code> through the stateless <code>/call</code> endpoint of the node identified by <code>URI</code>, then unifies the local goal with each returned solution on backtracking. This remains a stateless call even when the destination is an ACTOR node: actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are not available through <code>rpc/2-3</code>.</p>
-    <p>The first argument alone selects the execution node. <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options supply source for the call's temporary private database and do not change that target. For example, <code>rpc('https://n2.example',Goal,[load_uri('https://n3.example')])</code> executes <code>Goal</code> on <code>n2.example</code> using source fetched from <code>n3.example</code>. The following options are portable across the native and SWI-WASM runtimes:</p>
+    <p>The first argument alone selects the execution node. <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options supply source for the call's temporary private database and do not change that target. For example, <code>rpc('https://n2.example',Goal,[src_uri('https://n3.example')])</code> executes <code>Goal</code> on <code>n2.example</code> using source fetched from <code>n3.example</code>. The following options are portable across the native and SWI-WASM runtimes:</p>
     <ul>
         <li><code>limit(+Integer)</code><br>Restricts the number of solutions retrieved per roundtrip.</li>
-        <li><code>load_text(+AtomOrString)</code><br>Loads source text into the temporary private database before calling <code>Goal</code>.</li>
-        <li><code>load_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the temporary private database.</li>
-        <li><code>load_uri(+URI)</code><br>Fetches source from <code>URI</code> and loads it into the temporary private database. This URI is a source location only.</li>
-        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Copies the caller's indicated predicates into the temporary private database.</li>
+        <li><code>src_text(+AtomOrString)</code><br>Loads source text into the temporary private database before calling <code>Goal</code>.</li>
+        <li><code>src_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the temporary private database.</li>
+        <li><code>src_uri(+URI)</code><br>Fetches source from <code>URI</code> and loads it into the temporary private database. This URI is a source location only.</li>
+        <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Copies the caller's indicated predicates into the temporary private database.</li>
     </ul>
     <p>The native runtime additionally accepts:</p>
     <ul>
@@ -831,10 +831,10 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
         <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
         <li><code>limit(+Integer)</code><br>Restrict the number of returned solutions to <code>Integer</code>.</li>
-        <li><code>load_text(+AtomOrString)</code><br>Load source text into the promised call's temporary private database.</li>
-        <li><code>load_list(+ListOfClauses)</code><br>Convert the clauses to source and load them into the promised call's temporary private database.</li>
-        <li><code>load_uri(+URI)</code><br>Fetch source from <code>URI</code> and load it into the promised call's temporary private database. This URI is a source location only.</li>
-        <li><code>load_predicates(+ListOfPredicateIndicators)</code><br>Copy the caller's indicated predicates into the promised call's temporary private database.</li>
+        <li><code>src_text(+AtomOrString)</code><br>Load source text into the promised call's temporary private database.</li>
+        <li><code>src_list(+ListOfClauses)</code><br>Convert the clauses to source and load them into the promised call's temporary private database.</li>
+        <li><code>src_uri(+URI)</code><br>Fetch source from <code>URI</code> and load it into the promised call's temporary private database. This URI is a source location only.</li>
+        <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Copy the caller's indicated predicates into the promised call's temporary private database.</li>
     </ul>
     <p>The native runtime additionally accepts <code>once(+Boolean)</code>, <code>timeout(+Number)</code>, and <code>http_timeout(+Number)</code>, with the same meanings as for native <code>rpc/3</code>. The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the single answer term.</p>
 </article>

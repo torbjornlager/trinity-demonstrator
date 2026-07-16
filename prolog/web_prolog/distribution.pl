@@ -772,7 +772,7 @@ node_url_to_ws_endpoint(NodeURL, WsURL) :-
 isolation:prepare_module(Module, _GoalModule, _Options) :-
     Module:op(200, xfx, @).
 
-%  Node-relative load_uri resolution uses the registered self URL.
+%  Node-relative src_uri resolution uses the registered self URL.
 :- multifile source_utils:self_base_url/1.
 source_utils:self_base_url(URL) :-
     registered_self_node_url(URL).

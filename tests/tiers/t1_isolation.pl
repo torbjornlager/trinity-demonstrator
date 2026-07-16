@@ -6,12 +6,11 @@
 
       - layer honesty: no toplevel/distribution/node modules, no legacy
         src/ modules, no websocket client;
-      - per-actor module isolation and the load_text/load_list/
-        load_uri/load_predicates options (adapted from the
+      - per-actor module isolation and the src_text/src_list/
+        src_uri/src_predicates options (adapted from the
         demonstrator's actor_tests.pl, pid-shape-agnostic);
       - the actor I/O prelude routing (writeln -> terminal_io_output);
-      - the spawn handshake on preparation errors (src_* rejection
-        surfaces as a thrown error from spawn/3);
+      - source-option compatibility and spawn-time source preparation;
       - isolation hook contracts: prepare_module/3 extension and
         prepare_goal/3 rewriting.
 */
@@ -79,11 +78,11 @@ actor_test_p(a). actor_test_p(b). actor_test_p(c).
    cleanup(ensure_mailbox_empty)
 ]).
 
-test(load_list, Msg == ready) :-
+test(src_list, Msg == ready) :-
    self(Self),
    spawn(run(Self), _Pid, [
        link(false),
-       load_list([
+       src_list([
            (run(Parent) :- send(Parent, ready))
        ])
    ]),
@@ -94,11 +93,11 @@ test(load_list, Msg == ready) :-
        on_timeout(fail)
    ]).
 
-test(load_text, Msg == hello_from_text) :-
+test(src_text, Msg == hello_from_text) :-
    self(Self),
    spawn(run(Self), _Pid, [
        link(false),
-       load_text("run(Parent) :- send(Parent, hello_from_text).")
+       src_text("run(Parent) :- send(Parent, hello_from_text).")
    ]),
    receive({
        hello_from_text -> Msg = hello_from_text
@@ -107,12 +106,12 @@ test(load_text, Msg == hello_from_text) :-
        on_timeout(fail)
    ]).
 
-test(load_predicates, Value == a) :-
+test(src_predicates, Value == a) :-
    self(Self),
    spawn(user:run(Self), _Pid, [
        link(false),
-       load_predicates([actor_test_p/1]),
-       load_list([
+       src_predicates([actor_test_p/1]),
+       src_list([
            (run(Parent) :-
                actor_test_p(V),
                send(Parent, value(V)),
@@ -134,7 +133,7 @@ test(load_uri_file_scheme, Msg == hello_from_file) :-
    atom_concat('file://', File, URI),
    spawn(run(Self), _Pid, [
        link(false),
-       load_uri(URI)
+       src_uri(URI)
    ]),
    receive({
        hello_from_file -> Msg = hello_from_file
@@ -150,12 +149,12 @@ test(private_databases_do_not_crosstalk, Values == [from_a, from_b]) :-
    self(Self),
    spawn(run(Self), _A, [
        link(false),
-       load_list([ (secret(from_a)),
+       src_list([ (secret(from_a)),
                    (run(Parent) :- secret(V), send(Parent, a(V))) ])
    ]),
    spawn(run(Self), _B, [
        link(false),
-       load_list([ (secret(from_b)),
+       src_list([ (secret(from_b)),
                    (run(Parent) :- secret(V), send(Parent, b(V))) ])
    ]),
    receive({ a(VA) -> true }, [timeout(1), on_timeout(fail)]),
@@ -169,7 +168,7 @@ test(io_prelude_routes_writeln, Data == hello_io_prelude) :-
    spawn(run, _Pid, [
        link(false),
        target(Queue),
-       load_text("run :- writeln(hello_io_prelude).")
+       src_text("run :- writeln(hello_io_prelude).")
    ]),
    (   thread_get_message(Queue, terminal_io_output(_, Data), [timeout(1)])
    ->  true
@@ -178,18 +177,22 @@ test(io_prelude_routes_writeln, Data == hello_io_prelude) :-
    message_queue_destroy(Queue),
    send(Self, sync), receive({ sync -> true }).
 
-test(src_options_are_rejected,
-     true(Error = error(domain_error(load_source_option, src_text(_)), _))) :-
-   catch(spawn(true, _Pid, [src_text("foo."), link(false)]),
-         Error,
-         true),
-   nonvar(Error).
+test(load_text_is_a_compatibility_alias, Msg == legacy_source_loaded) :-
+   self(Self),
+   spawn(run(Self), _Pid, [
+       load_text("run(Parent) :- send(Parent, legacy_source_loaded)."),
+       link(false)
+   ]),
+   receive({ legacy_source_loaded -> Msg = legacy_source_loaded }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
 
 test(consult_load_list_extends_private_db, Msg == extended) :-
    self(Self),
    spawn(run(Self), _Pid, [
        link(false),
-       load_list([
+       src_list([
            (run(Parent) :-
                isolation:consult_load_list([ (extra(extended)) ]),
                extra(V),
@@ -231,7 +234,7 @@ test(prepare_module_extends_actor_module, [
    self(Self),
    spawn(run(Self), _Pid, [
        link(false),
-       load_list([
+       src_list([
            (run(Parent) :- t1_marker(V), send(Parent, V))
        ])
    ]),
@@ -261,7 +264,7 @@ test(hooks_inert_without_clauses, Msg == plain) :-
    self(Self),
    spawn(run(Self), _Pid, [
        link(false),
-       load_list([
+       src_list([
            (run(Parent) :-
                (   current_predicate(t1_marker/1)
                ->  send(Parent, polluted)
@@ -286,7 +289,7 @@ test(hooks_inert_without_clauses, Msg == plain) :-
 %  The demonstrator's actor_tests.pl per-builtin I/O-target inheritance
 %  cases: a child spawned under with_io_target/2 must route each output
 %  builtin through the inherited target as a terminal_output/2 message.
-%  Ported verbatim (load_text needs isolation, so they belong here, not
+%  Ported verbatim (src_text needs isolation, so they belong here, not
 %  in T0).  The shared_db/2 variants depend on node:set_node_shared_db/1
 %  and live in T4 with the rest of the node surface.
 
@@ -300,7 +303,7 @@ test(spawned_child_inherits_io_target_for_writeln, Data == 'Alarm ringing!') :-
    with_io_target(Self,
        spawn(alarm, Pid, [
            monitor(true),
-           load_text("
+           src_text("
 alarm :-
     receive({
         ring ->
@@ -331,7 +334,7 @@ test(spawned_child_inherits_io_target_for_format, Data == "Alarm ringing!") :-
    with_io_target(Self,
        spawn(alarm, Pid, [
            monitor(true),
-           load_text("
+           src_text("
 alarm :-
     receive({
         ring ->
@@ -362,7 +365,7 @@ test(spawned_child_inherits_io_target_for_writeq, Data == "'Alarm ringing!'") :-
    with_io_target(Self,
        spawn(alarm, Pid, [
            monitor(true),
-           load_text("
+           src_text("
 alarm :-
     receive({
         ring ->
@@ -393,7 +396,7 @@ test(spawned_child_inherits_io_target_for_nl, Data == "\n") :-
    with_io_target(Self,
        spawn(alarm, Pid, [
            monitor(true),
-           load_text("
+           src_text("
 alarm :-
     receive({
         ring ->
@@ -424,7 +427,7 @@ test(spawned_child_inherits_io_target_for_print, Data == "1+2") :-
    with_io_target(Self,
        spawn(alarm, Pid, [
            monitor(true),
-           load_text("
+           src_text("
 alarm :-
     receive({
         ring ->
@@ -455,7 +458,7 @@ test(spawned_child_inherits_io_target_for_write_canonical, Data == "+(1,2)") :-
    with_io_target(Self,
        spawn(alarm, Pid, [
            monitor(true),
-           load_text("
+           src_text("
 alarm :-
     receive({
         ring ->
@@ -488,9 +491,9 @@ alarm :-
                 *      LOAD-OPTION SURFACE     *
                 *******************************/
 
-%  The remaining load_* / load_uri cases from the demonstrator's
+%  The remaining src_* / src_uri cases from the demonstrator's
 %  actor_tests.pl: option aliases, cross-actor private-db isolation,
-%  listing_private/1 targeting a selected actor, and the load_uri/1 URI
+%  listing_private/1 targeting a selected actor, and the src_uri/1 URI
 %  parsing variants (path, file://, shorthand, relative, and the
 %  user-bang-operator independence of the loader).  Ported verbatim
 %  except: actor:listing_private/1 -> listing_private/1 (isolation
@@ -587,7 +590,7 @@ test(load_predicates_alias, Result == true) :-
    spawn(user:run(Self), Pid, [
        monitor(true),
        load_predicates([actor_test_p/1]),
-       load_list([
+       src_list([
            (run(Parent) :-
                actor_test_p(Value),
                send(Parent, Value),
@@ -609,7 +612,7 @@ test(isolation_load_list, Sorted == [a,b]) :-
    self(Self),
    spawn(run(Self), PidA, [
        monitor(true),
-       load_list([
+       src_list([
            (run(Parent) :-
                self(Pid),
                id(Value),
@@ -619,7 +622,7 @@ test(isolation_load_list, Sorted == [a,b]) :-
    ]),
    spawn(run(Self), PidB, [
        monitor(true),
-       load_list([
+       src_list([
            (run(Parent) :-
                self(Pid),
                id(Value),
@@ -640,12 +643,12 @@ test(listing_actor_private_by_pid_targets_selected_actor_db) :-
            spawn(receive({stop -> true}), Pid1, [
                monitor(true),
                link(false),
-               load_text("hello(a).")
+               src_text("hello(a).")
            ]),
            spawn(receive({stop -> true}), Pid2, [
                monitor(true),
                link(false),
-               load_text("goodbye(b).")
+               src_text("goodbye(b).")
            ])
        ),
        (
@@ -662,7 +665,7 @@ test(listing_actor_private_by_pid_targets_selected_actor_db) :-
    ),
    !.
 
-test(load_uri_path, Result == true) :-
+test(load_uri_alias_path, Result == true) :-
    self(Self),
    setup_call_cleanup(
        ( tmp_file_stream(text, File, Stream),
@@ -698,7 +701,7 @@ test(load_uri_file_scheme_shorthand, Result == true) :-
        ),
        ( spawn(run(Self), Pid, [
              monitor(true),
-             load_uri(ShortFileURI)
+             src_uri(ShortFileURI)
          ]),
          receive({
              ready -> true
@@ -726,7 +729,7 @@ test(load_uri_file_scheme_relative, Result == true) :-
        ),
        ( spawn(run(Self), Pid, [
              monitor(true),
-             load_uri(RelFileURI)
+             src_uri(RelFileURI)
          ]),
          receive({
              ready -> true
@@ -752,7 +755,7 @@ test(load_uri_with_node_localhost, Result == true) :-
        ( spawn(run(Self), Pid, [
              monitor(true),
              node(localhost),
-             load_uri(File)
+             src_uri(File)
          ]),
          receive({
              ready -> true
@@ -777,7 +780,7 @@ test(load_uri_without_user_bang_operator, Result == true) :-
        ),
        ( spawn(count_server(0), Pid, [
              monitor(true),
-             load_uri(CountActorPath)
+             src_uri(CountActorPath)
          ]),
          send(Pid, count(Self)),
          receive({

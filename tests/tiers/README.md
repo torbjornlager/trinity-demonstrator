@@ -13,7 +13,7 @@ subsumed it, and `src/` was removed.
 | tier | loads | runs | layer-honesty assertion |
 |---|---|---|---|
 | T0 | `actors` only | actor tests not needing source options | no isolation/toplevel/distribution/node modules loaded |
-| T1 | + `isolation` + minimal glue | module prep, `load_text/1` & friends | no toplevel/distribution/node |
+| T1 | + `isolation` + minimal glue | module prep, `src_text/1` & friends | no toplevel/distribution/node |
 | T2 | + `toplevel_actors` | toplevel actor tests | no distribution/node |
 | T3 | + behaviours | server/supervisor/statechart/parallel | no distribution/node |
 | T4 | + `distribution` + node | node_tests, multi-node harness, golden responses | — |

@@ -48,7 +48,7 @@ mytoplevel_stop(Pid) :-
 /** <examples>
 
 ?- mytoplevel(Pid, [
-       load_predicates([session/2])
+       src_predicates([session/2])
    ]).
     
 ?- mytoplevel_call($Pid, X, member(X, [a,b,c])),

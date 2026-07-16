@@ -171,8 +171,8 @@ n5.elfenbenstornet.se {
 
 	# Public, read-only demo assets. The node serves /examples and
 	# /statecharts as unauthenticated static routes, and resolves
-	# node-relative load_uri against its own public URL -- so e.g.
-	# statechart_spawn(_, [load_uri('/examples/statecharts/...')]) (as in
+	# node-relative src_uri against its own public URL -- so e.g.
+	# statechart_spawn(_, [src_uri('/examples/statecharts/...')]) (as in
 	# the tutorial) makes the node fetch its own /examples URL
 	# server-side, with no oauth2 cookie. Gating these behind forward_auth
 	# bounces that self-fetch to the sign-in page, so the statechart

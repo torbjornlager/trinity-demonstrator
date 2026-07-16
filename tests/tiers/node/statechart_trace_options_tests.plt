@@ -67,4 +67,17 @@ test(default_false_when_absent) :-
     node_isotope_options:spawn_options_from_dict(Dict, _Opts, _LoadText, TraceEnabled),
     assertion(TraceEnabled == false).
 
+test(legacy_load_text_key_falls_back_to_src_text) :-
+    Dict = _{load_text:"legacy_source."},
+    node_isotope_options:spawn_options_from_dict(Dict, Options, LoadText, _),
+    assertion(LoadText == "legacy_source."),
+    assertion(memberchk(src_text("legacy_source."), Options)).
+
+test(src_text_key_wins_over_legacy_load_text) :-
+    Dict = _{src_text:"canonical_source.", load_text:"legacy_source."},
+    node_isotope_options:spawn_options_from_dict(Dict, Options, LoadText, _),
+    assertion(LoadText == "canonical_source."),
+    assertion(memberchk(src_text("canonical_source."), Options)),
+    assertion(\+ memberchk(src_text("legacy_source."), Options)).
+
 :- end_tests(statechart_trace_options).

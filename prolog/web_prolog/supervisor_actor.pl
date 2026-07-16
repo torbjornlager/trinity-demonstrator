@@ -274,7 +274,7 @@ do_spawn_child(Goal, _Name, Pid) :-
 
 is_server_actor_opt(initial_state(_)).
 
-callback_load_option(Pred, load_predicates([Name/Arity])) :-
+callback_load_option(Pred, src_predicates([Name/Arity])) :-
     strip_module(Pred, _, PlainPred),
     functor(PlainPred, Name, ExtraArity),
     Arity is ExtraArity + 4.
@@ -286,6 +286,10 @@ ensure_callback_load(_, Options, Options) :-
 ensure_callback_load(Pred, Options, [CallbackLoad|Options]) :-
     callback_load_option(Pred, CallbackLoad).
 
+server_source_option(src_text(_)).
+server_source_option(src_list(_)).
+server_source_option(src_predicates(_)).
+server_source_option(src_uri(_)).
 server_source_option(load_text(_)).
 server_source_option(load_list(_)).
 server_source_option(load_predicates(_)).

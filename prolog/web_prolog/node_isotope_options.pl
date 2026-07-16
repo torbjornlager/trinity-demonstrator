@@ -46,14 +46,16 @@ isotope_spawn_options(Request, Principal, EffectiveProfile, SpawnOptions, Initia
 spawn_options_from_query(Request, SpawnOptions, LoadText, TraceEnabled) :-
     http_parameters(Request, [
         options(OptionsAtom, [atom, default('[]')]),
-        load_text(LoadText0, [default('')]),
+        src_text(SrcText0, [optional(true)]),
+        load_text(LegacyLoadText0, [optional(true)]),
         statechart_trace(StatechartTrace0, [atom, default('')]),
         trace(LegacyTrace0, [atom, default('')])
     ]),
     check_term_text_size(options, OptionsAtom),
     parse_spawn_options_atom(OptionsAtom, SpawnOptions0),
+    preferred_source_text(SrcText0, LegacyLoadText0, LoadText0),
     text_to_string(LoadText0, LoadText),
-    check_source_text_size(load_text, LoadText),
+    check_source_text_size(src_text, LoadText),
     pick_trace_value(StatechartTrace0, LegacyTrace0, TraceRaw),
     parse_trace_value(TraceRaw, TraceEnabled),
     maybe_add_load_text(LoadText, SpawnOptions0, SpawnOptions).
@@ -81,13 +83,28 @@ spawn_options_from_dict(Dict, SpawnOptions, LoadText, TraceEnabled) :-
     ->  parse_trace_value(TraceValue, TraceEnabled)
     ;   TraceEnabled = false
     ),
-    (   get_dict(load_text, Dict, LoadTextValue)
+    (   source_text_dict_value(Dict, LoadTextValue)
     ->  text_to_string(LoadTextValue, LoadText),
-        check_source_text_size(load_text, LoadText),
+        check_source_text_size(src_text, LoadText),
         maybe_add_load_text(LoadText, SpawnOptions0, SpawnOptions)
     ;   LoadText = '',
         SpawnOptions = SpawnOptions0
     ).
+
+
+source_text_dict_value(Dict, Value) :-
+    (   get_dict(src_text, Dict, Value)
+    ->  true
+    ;   get_dict(load_text, Dict, Value)
+    ).
+
+preferred_source_text(SrcText, _, SrcText) :-
+    nonvar(SrcText),
+    !.
+preferred_source_text(_, LegacyLoadText, LegacyLoadText) :-
+    nonvar(LegacyLoadText),
+    !.
+preferred_source_text(_, _, '').
 
 
 %!  infer_initial_load_text(+SpawnOptions, +ExplicitLoadText,
@@ -96,7 +113,9 @@ infer_initial_load_text(_, ExplicitLoadText, ExplicitLoadText) :-
     ExplicitLoadText \== '',
     !.
 infer_initial_load_text(SpawnOptions, '', InitialLoadText) :-
-    (   member(load_text(LoadText0), SpawnOptions)
+    (   ( member(src_text(LoadText0), SpawnOptions)
+        ; member(load_text(LoadText0), SpawnOptions)
+        )
     ->  text_to_string(LoadText0, InitialLoadText)
     ;   InitialLoadText = ''
     ).
@@ -132,7 +151,7 @@ parse_spawn_options_atom(OptionsAtom, SpawnOptions) :-
 %!  maybe_add_load_text(+LoadText, +SpawnOptions0, -SpawnOptions) is det.
 maybe_add_load_text('', SpawnOptions, SpawnOptions) :-
     !.
-maybe_add_load_text(LoadText, SpawnOptions0, [load_text(LoadText)|SpawnOptions0]).
+maybe_add_load_text(LoadText, SpawnOptions0, [src_text(LoadText)|SpawnOptions0]).
 
 
 %!  enforce_session_option(+SpawnOptions0, -SpawnOptions) is det.

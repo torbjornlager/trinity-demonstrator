@@ -196,7 +196,7 @@ python3 tools/generate_dependency_graph.py
 
 - This artifact is generated. Edit the generator, not this file.
 - A missing edge here does not prove the absence of a runtime dependency.
-  Predicates loaded via `load_*` options, `consult/1`, or remote node mechanisms
+  Predicates loaded via `src_*` options, `consult/1`, or remote node mechanisms
   are outside the scope of this graph.
 - Local import resolution first tries paths relative to the importing file and then
   falls back to the repository root.

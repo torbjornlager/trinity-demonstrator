@@ -100,8 +100,8 @@ Layer 2  toplevel_actors.pl   '$call'/'$next'/'$stop' query actors;
          dollar_expansion.pl  $Var shell support
 Layer 2b behaviours           server_actor, supervisor_actor, statechart_*
                               (model/runtime/exec/actor), parallel
-Layer 1  isolation.pl         temporary per-actor modules; load_text/1,
-                              load_list/1, load_uri/1, load_predicates/1;
+Layer 1  isolation.pl         temporary per-actor modules; src_text/1,
+                              src_list/1, src_uri/1, src_predicates/1;
                               actor-I/O prelude; consult_load_list,
                               listing_private. Imports layer 0 (allowed:
                               imports only go downward) — unlike Jan's
@@ -171,7 +171,7 @@ triple):
 | `prepare_source_options(SourceModule, Opts0, Opts)` | node layer | sandbox vetting of load options (today's `sandbox_prepare_source_options/4`) |
 | `extra_prelude_text(Options, Text)` | node layer | public runtime guard prelude; all solutions collected |
 | `rewrite_source_text(Module, Src0, Src)` | node layer | blacklist source rewriting |
-| `source_text_guard_active` | node layer | force load_uri through text (so rewriting applies) |
+| `source_text_guard_active` | node layer | force src_uri through text (so rewriting applies) |
 | `shared_database_module(M)` | node layer | shared-db import + post-load shadow repair |
 
 And in **source_utils.pl**: `load_uri_allowed_origins(Origins)` (node
@@ -348,7 +348,7 @@ delta, not a semantic one.
 | tier | loads | runs | also asserts |
 |---|---|---|---|
 | T0 | `actors` only | actor tests not needing source options | `\+ current_module(isolation)`, `\+ current_module(distribution)`, … |
-| T1 | + `isolation` + glue | module-prep / `load_*` tests | no toplevel/distribution/node modules |
+| T1 | + `isolation` + glue | module-prep / `src_*` tests | no toplevel/distribution/node modules |
 | T2 | + `toplevel_actors` | toplevel actor tests | no distribution/node |
 | T3 | + behaviours | server/supervisor/statechart/parallel tests | no distribution/node |
 | T4 | + `distribution` + `node` | node_tests, multi_node_harness, WS/ISOTOPE/ISOBASE | — |

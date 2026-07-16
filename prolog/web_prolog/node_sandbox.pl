@@ -53,7 +53,8 @@ execution paths.
 ]).
 :- use_module(isolation, [
     source_options/3,
-    load_option_text/3
+    load_option_text/3,
+    canonical_source_option/2
 ]).
 :- use_module(source_utils, [
     normalize_load_uri_allowed_origins/2,
@@ -190,7 +191,7 @@ sandbox_check_source_text(Profile, GoalModule, SourceText0) :-
 
 %!  sandbox_check_source_options(+Profile, +GoalModule, +Options) is det.
 %
-%   Validate all load_* options in order.
+%   Validate all src_* options in order.
 sandbox_check_source_options(Profile, GoalModule, Options) :-
     profile_check_source_options(Profile, GoalModule, Options),
     sandbox_check_spawn_options(Profile, Options),
@@ -206,18 +207,25 @@ sandbox_check_source_options(Profile, GoalModule, Options) :-
 %!  is det.
 %
 %   Validate public source options and, in sandbox mode, materialize them to
-%   `load_text/1` so the later actor/session load uses the same source text
+%   `src_text/1` so the later actor/session load uses the same source text
 %   that was checked here.
 sandbox_prepare_source_options(Profile, GoalModule, Options0, Options) :-
     must_be(list, Options0),
-    profile_check_spawn_options(Profile, Options0),
-    profile_check_source_options(Profile, GoalModule, Options0),
+    maplist(canonical_source_option_or_same, Options0, CanonicalOptions),
+    profile_check_spawn_options(Profile, CanonicalOptions),
+    profile_check_source_options(Profile, GoalModule, CanonicalOptions),
     (   \+ sandbox_enabled
-    ->  Options = Options0
+    ->  Options = CanonicalOptions
     ;   in_temporary_module(Module,
                             sandbox_prepare_module(Module),
                             prepare_source_options(Profile, Module, GoalModule,
-                                                   Options0, Options))
+                                                   CanonicalOptions, Options))
+    ).
+
+canonical_source_option_or_same(Option0, Option) :-
+    (   canonical_source_option(Option0, Canonical)
+    ->  Option = Canonical
+    ;   Option = Option0
     ).
 
 
@@ -344,7 +352,7 @@ prepare_source_options(Profile, Module, GoalModule, [Option0|Options0],
     ->  check_source_text_size(Field, SourceText),
         sandbox_source_id(Index0, SourceId),
         validate_and_load_source_text(Profile, Module, SourceText, SourceId),
-        Option = load_text(SourceText),
+        Option = src_text(SourceText),
         Index is Index0 + 1
     ;   reject_forbidden_spawn_option(Profile, Option0),
         Option = Option0,
@@ -352,7 +360,7 @@ prepare_source_options(Profile, Module, GoalModule, [Option0|Options0],
     ),
     prepare_source_options(Profile, Module, GoalModule, Options0, Options, Index).
 
-materialize_source_option(_, load_uri(URI), load_uri, SourceText) :-
+materialize_source_option(_, src_uri(URI), src_uri, SourceText) :-
     !,
     current_max_load_text_bytes(Limit),
     uri_to_source_limited(URI, Limit, SourceText).
@@ -360,9 +368,9 @@ materialize_source_option(GoalModule, Option0, Field, SourceText) :-
     source_option_field(Option0, Field),
     load_option_text(GoalModule, Option0, SourceText).
 
-source_option_field(load_text(_), load_text).
-source_option_field(load_list(_), load_list).
-source_option_field(load_predicates(_), load_predicates).
+source_option_field(src_text(_), src_text).
+source_option_field(src_list(_), src_list).
+source_option_field(src_predicates(_), src_predicates).
 
 
 validate_and_load_source_text(_Profile, _Module, SourceText0, _SourceId) :-
@@ -923,13 +931,13 @@ has_deferred_nested_source_option(Options) :-
 %!  deferred_nested_source_option(+Option) is semidet.
 %
 %   True when a nested spawn option must not be materialized during
-%   static source pre-checking.  load_predicates/1 is always deferred
+%   static source pre-checking.  src_predicates/1 is always deferred
 %   because the predicates it references may be defined in the same
 %   source text being loaded (chicken-and-egg).  Other source-like
 %   options are deferred only when they are non-ground (contain
 %   variables), since their content is not yet known.  Runtime spawn
-%   validates load_predicates source through sandbox_prepare_public_spawn.
-deferred_nested_source_option(load_predicates(_)) :- !.
+%   validates src_predicates source through sandbox_prepare_public_spawn.
+deferred_nested_source_option(src_predicates(_)) :- !.
 deferred_nested_source_option(Option) :-
     source_option_like(Option),
     \+ ground(Option).
@@ -946,10 +954,10 @@ reject_deferred_nested_spawn_option(_Profile, Option) :-
 reject_deferred_nested_spawn_option(Profile, Option) :-
     reject_forbidden_spawn_option(Profile, Option).
 
-source_option_like(load_text(_)).
-source_option_like(load_list(_)).
-source_option_like(load_predicates(_)).
-source_option_like(load_uri(_)).
+source_option_like(src_text(_)).
+source_option_like(src_list(_)).
+source_option_like(src_predicates(_)).
+source_option_like(src_uri(_)).
 
 reject_toplevel_call_options(Profile, Options) :-
     is_list(Options),
@@ -958,18 +966,18 @@ reject_toplevel_call_options(Profile, Options) :-
            reject_toplevel_call_option(Profile, Option)).
 reject_toplevel_call_options(_, _).
 
-reject_toplevel_call_option(Profile, load_text(SourceText)) :-
+reject_toplevel_call_option(Profile, src_text(SourceText)) :-
     !,
     sandbox_check_source_text(Profile, actor, SourceText).
-reject_toplevel_call_option(Profile, load_list(Terms)) :-
+reject_toplevel_call_option(Profile, src_list(Terms)) :-
     !,
-    sandbox_check_source_options(Profile, actor, [load_list(Terms)]).
-reject_toplevel_call_option(Profile, load_uri(URI)) :-
+    sandbox_check_source_options(Profile, actor, [src_list(Terms)]).
+reject_toplevel_call_option(Profile, src_uri(URI)) :-
     !,
-    sandbox_check_source_options(Profile, actor, [load_uri(URI)]).
-reject_toplevel_call_option(Profile, load_predicates(PIs)) :-
+    sandbox_check_source_options(Profile, actor, [src_uri(URI)]).
+reject_toplevel_call_option(Profile, src_predicates(PIs)) :-
     !,
-    sandbox_check_source_options(Profile, actor, [load_predicates(PIs)]).
+    sandbox_check_source_options(Profile, actor, [src_predicates(PIs)]).
 reject_toplevel_call_option(_, _).
 
 reject_receive_options(Profile, Module, Options) :-
@@ -1070,7 +1078,7 @@ sandbox:safe_primitive(actor_api:node_setting(_, _)).
 %  Web Prolog distribution API.  rpc/2,3, promise/3,4, and yield/2,3 marshal
 %  the goal to a REMOTE node, which validates and executes it under its own
 %  sandbox; nothing in the supplied goal runs in this process, so these are
-%  safe primitives at the local floor.  (load_* options only read the
+%  safe primitives at the local floor.  (src_* options only read the
 %  caller's own clause text to ship; any URI fetch is the remote node's
 %  concern under its origin policy.)
 %

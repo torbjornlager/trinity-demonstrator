@@ -57,9 +57,9 @@
   }
 
   // A shell goal is parsed once more in the worker's private Prolog engine.
-  // Thus source passed to load_text/1 is nested inside a quoted literal in
+  // Thus source passed to src_text/1 is nested inside a quoted literal in
   // that goal.  A natural `\\+` in the source would otherwise be treated as
-  // SWI's undefined `\\+` character escape before load_text/1 sees it.
+  // SWI's undefined `\\+` character escape before src_text/1 sees it.
   // Protect only an unescaped backslash before `+` inside a quoted literal;
   // an already escaped `\\\\+` and an ordinary `\\+` goal operator remain
   // unchanged.
@@ -268,7 +268,7 @@
   }
 
   function actorLoadUri(uriText) {
-    return actorRequest("load_uri", { uri: String(uriText || "") });
+    return actorRequest("src_uri", { uri: String(uriText || "") });
   }
 
   function actorPromiseWait(refValue, timeoutSeconds) {
@@ -645,10 +645,22 @@
       "        down(_, Pid, _) -> worker_drain(Pid)",
       "    }, [timeout(0)]).",
       "",
+      "canonical_source_option(src_text(Text), src_text(Text)).",
+      "canonical_source_option(src_list(Terms), src_list(Terms)).",
+      "canonical_source_option(src_uri(URI), src_uri(URI)).",
+      "canonical_source_option(src_predicates(PIs), src_predicates(PIs)).",
+      "canonical_source_option(load_text(Text), src_text(Text)).",
+      "canonical_source_option(load_list(Terms), src_list(Terms)).",
+      "canonical_source_option(load_uri(URI), src_uri(URI)).",
+      "canonical_source_option(load_predicates(PIs), src_predicates(PIs)).",
+      "source_option_member(Canonical, Options) :-",
+      "    member(Option, Options),",
+      "    canonical_source_option(Option, Canonical).",
+      "",
       "statechart_spawn(Pid, Options) :-",
-      "    ( member(load_text(Source), Options) -> SourceKind = text",
-      "    ; member(load_uri(Source), Options) -> SourceKind = uri",
-      "    ; throw(error(domain_error(statechart_source_option, load_text_or_load_uri), statechart_spawn/2))",
+      "    ( source_option_member(src_text(Source), Options) -> SourceKind = text",
+      "    ; source_option_member(src_uri(Source), Options) -> SourceKind = uri",
+      "    ; throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2))",
       "    ),",
       "    ( option(trace(true), Options) -> Trace = true ; Trace = false ),",
       "    Promise := actorStatechartSpawn(#SourceKind, #Source, #Trace),",
@@ -675,13 +687,13 @@
       "    atomic_list_concat(Texts, '\\n', Source).",
       "",
       "spawn_source_option(Options, Text) :-",
-      "    member(load_text(Text), Options).",
+      "    source_option_member(src_text(Text), Options).",
       "spawn_source_option(Options, Text) :-",
-      "    member(load_list(Terms), Options),",
+      "    source_option_member(src_list(Terms), Options),",
       "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
       "    atomic_list_concat(ClauseTexts, '\\n', Text).",
       "spawn_source_option(Options, Text) :-",
-      "    member(load_predicates(Indicators), Options),",
+      "    source_option_member(src_predicates(Indicators), Options),",
       "    findall(ClauseText,",
       "            ( member(Name/Arity, Indicators),",
       "              functor(Head, Name, Arity),",
@@ -761,15 +773,15 @@
       "    atomic_list_concat(Texts, '\\n', LoadText).",
       "",
       "rpc_load_text(Options, Text) :-",
-      "    member(load_text(Source), Options),",
+      "    source_option_member(src_text(Source), Options),",
       "    ( atom(Source) -> atom_string(Source, Text0) ; string(Source) -> Text0 = Source ; term_string(Source, Text0) ),",
       "    Text := actorEnsureFinalFullStop(#Text0).",
       "rpc_load_text(Options, Text) :-",
-      "    member(load_list(Terms), Options),",
+      "    source_option_member(src_list(Terms), Options),",
       "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
       "    atomic_list_concat(ClauseTexts, '\\n', Text).",
       "rpc_load_text(Options, Text) :-",
-      "    member(load_predicates(Indicators), Options),",
+      "    source_option_member(src_predicates(Indicators), Options),",
       "    findall(ClauseText,",
       "            ( member(Name/Arity, Indicators),",
       "              functor(Head, Name, Arity),",
@@ -780,7 +792,7 @@
       "            ClauseTexts),",
       "    atomic_list_concat(ClauseTexts, '\\n', Text).",
       "rpc_load_text(Options, Text) :-",
-      "    member(load_uri(URI), Options),",
+      "    source_option_member(src_uri(URI), Options),",
       "    term_string(URI, URIText),",
       "    Promise := actorLoadUri(#URIText),",
       "    await(Promise, Text),",

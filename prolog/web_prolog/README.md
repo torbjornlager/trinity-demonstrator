@@ -38,7 +38,7 @@ Per-actor private modules and controlled source loading.
 
 | module | summary |
 |---|---|
-| [isolation.pl](isolation.pl) | Per-actor temporary module isolation; `load_text/1`, `load_list/1`, `load_uri/1`, `load_predicates/1`. |
+| [isolation.pl](isolation.pl) | Per-actor temporary module isolation; `src_text/1`, `src_list/1`, `src_uri/1`, `src_predicates/1`. |
 | [source_utils.pl](source_utils.pl) | Source-text and URI helpers shared by the isolation paths. |
 | [actor_io_support.pl](actor_io_support.pl) | Actor I/O prelude support. |
 | [worker_cleanup.pl](worker_cleanup.pl) | Race-free monitored-worker teardown and mailbox cleanup. |

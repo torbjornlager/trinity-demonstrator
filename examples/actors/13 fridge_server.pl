@@ -61,7 +61,7 @@ fridge2(_Other,      List, error(unknown_request), List).
            restart(permanent)
        ])
    ], Sup, [
-       load_predicates([fridge/4])
+       src_predicates([fridge/4])
    ]).
 
 
@@ -110,7 +110,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 % request that previously crashed the server now returns an error.
 
 ?- server_upgrade(fridge, fridge2, [
-       load_predicates([fridge2/4])
+       src_predicates([fridge2/4])
    ]).
 
 ?- server_request(fridge, sore(milk), Response).

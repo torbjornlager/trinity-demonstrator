@@ -87,9 +87,9 @@ Primary basis:
 
 | Item(s) | Status | Notes |
 | --- | --- | --- |
-| `load_text/1` | option only | Source-loading option, not an ordinary goal. Public `/call` exposes raw `load_text` directly; other routes and nested spawns use option lists. |
-| `load_list/1`, `load_predicates/1` | option only | Source-loading options for spawns, toplevel creation/calls, nested spawns, and similar paths. They are normalized into source text before loading. |
-| `load_uri/1` | option only | Source-loading option, not an ordinary goal. In unrestricted nodes it can still load local files, `file://` URIs, HTTP(S), and node-relative URIs. Nodes can now narrow this with `load_uri_allowed_origins([...])`, which blocks local paths and non-allowlisted origins. |
+| `src_text/1` | option only | Source-loading option, not an ordinary goal. Public `/call` exposes raw `src_text` directly; other routes and nested spawns use option lists. |
+| `src_list/1`, `src_predicates/1` | option only | Source-loading options for spawns, toplevel creation/calls, nested spawns, and similar paths. They are normalized into source text before loading. |
+| `src_uri/1` | option only | Source-loading option, not an ordinary goal. In unrestricted nodes it can still load local files, `file://` URIs, HTTP(S), and node-relative URIs. Nodes can now narrow this with `load_uri_allowed_origins([...])`, which blocks local paths and non-allowlisted origins. |
 
 ## Proposed but Not Current
 
@@ -104,5 +104,5 @@ Primary basis:
 - `server_*` and `supervisor_*` are still better understood as
   family-policy/catalog entries than as publicly reachable built-ins under the
   present blacklist implementation.
-- `load_text/1`, `load_list/1`, `load_predicates/1`, and `load_uri/1` are
+- `src_text/1`, `src_list/1`, `src_predicates/1`, and `src_uri/1` are
   source-loading options, not ordinary goals.

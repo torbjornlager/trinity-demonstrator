@@ -80,7 +80,8 @@ collect_xml_errors(Errors) :-
 
 %!  statechart_spawn_source(+Options0, -SourceGoal, -SpawnOptions) is det.
 statechart_spawn_source(Options0, SourceGoal, SpawnOptions) :-
-    partition(is_statechart_trace_option, Options0, TraceOptions, Options1),
+    maplist(canonical_statechart_option, Options0, CanonicalOptions),
+    partition(is_statechart_trace_option, CanonicalOptions, TraceOptions, Options1),
     partition(is_statechart_source_option, Options1, SourceOptions, SpawnOptions),
     (   member(Unsupported, SpawnOptions),
         unsupported_statechart_source_option(Unsupported)
@@ -92,25 +93,31 @@ statechart_spawn_source(Options0, SourceGoal, SpawnOptions) :-
     (   SourceOptions = [SourceOption]
     ->  source_option_goal(SourceOption, Goal0)
     ;   SourceOptions == []
-    ->  throw(error(existence_error(option, load_uri_or_load_text),
+    ->  throw(error(existence_error(option, src_uri_or_src_text),
                     context(statechart_actor:statechart_spawn/2,
-                            'statechart_spawn/2 requires one load_uri/1 or load_text/1 option')))
+                            'statechart_spawn/2 requires one src_uri/1 or src_text/1 option')))
     ;   throw(error(domain_error(single_statechart_source_option, SourceOptions),
                     context(statechart_actor:statechart_spawn/2,
                             'statechart_spawn/2 accepts only one source option')))
     ),
     trace_option_goal(TraceOptions, Goal0, SourceGoal).
 
+canonical_statechart_option(load_text(Text), src_text(Text)) :- !.
+canonical_statechart_option(load_uri(URI), src_uri(URI)) :- !.
+canonical_statechart_option(load_list(Terms), src_list(Terms)) :- !.
+canonical_statechart_option(load_predicates(PIs), src_predicates(PIs)) :- !.
+canonical_statechart_option(Option, Option).
 
-is_statechart_source_option(load_uri(_)).
-is_statechart_source_option(load_text(_)).
+
+is_statechart_source_option(src_uri(_)).
+is_statechart_source_option(src_text(_)).
 is_statechart_trace_option(trace(_)).
 
-unsupported_statechart_source_option(load_list(_)).
-unsupported_statechart_source_option(load_predicates(_)).
+unsupported_statechart_source_option(src_list(_)).
+unsupported_statechart_source_option(src_predicates(_)).
 
-source_option_goal(load_uri(URI), statechart_actor:interpret(URI)).
-source_option_goal(load_text(Text), statechart_actor:interpret_text(Text)).
+source_option_goal(src_uri(URI), statechart_actor:interpret(URI)).
+source_option_goal(src_text(Text), statechart_actor:interpret_text(Text)).
 
 trace_option_goal([], Goal, Goal) :-
     !.
@@ -177,7 +184,7 @@ model_generate_node(spawn, Attrs, Children, Parent, _ID) :-
     maplist(attr_to_option, Attrs1, Options),
     (   children_text(Children, Src)
     ->  load_text_terms(Src, Terms),
-        Options1 = [load_list(Terms)|Options]
+        Options1 = [src_list(Terms)|Options]
     ;   Options1 = Options
     ),
     model_assert(to_be_invoked(Parent, Type, Options1)).

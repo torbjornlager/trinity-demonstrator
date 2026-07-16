@@ -105,10 +105,10 @@ test(compute_answer_3,
 
 %  The shared_db half of the demonstrator's I/O-target inheritance
 %  matrix: a child spawned against the node-wide shared database (rather
-%  than load_text) still inherits the parent's I/O target.  Ported
+%  than src_text) still inherits the parent's I/O target.  Ported
 %  verbatim from actor_tests.pl — they depend on node:shared_db/1 and
 %  node:set_node_shared_db/1, so they belong at the node tier (the
-%  spawned/load_text variants live in T1).
+%  spawned/src_text variants live in T1).
 :- begin_tests(t4_shared_db_io).
 
 test(shared_db_child_inherits_io_target_for_writeln, Data == 'Alarm ringing!') :-
@@ -1072,7 +1072,7 @@ test(doctor_fails_when_sandbox_is_off, true(Overall == "fail")) :-
 
 %  /admin/posture (node_admin): a read-only view of security/ops settings
 %  configured outside the editable Config form (registered tier, anon
-%  per-IP, load_uri origins, RELATION patterns, IP allow/block/auto-ban,
+%  per-IP, src_uri origins, RELATION patterns, IP allow/block/auto-ban,
 %  in-memory log capacity/retention). GET, admin-gated.
 :- begin_tests(t4_posture).
 
@@ -1143,7 +1143,7 @@ test(route_matrix_exhaustive, Mismatches == []) :-
 
 :- use_module(library(http/websocket)).
 
-%  WS spawn cleanup (node_ws): a toplevel_spawn whose *initial* load_text
+%  WS spawn cleanup (node_ws): a toplevel_spawn whose *initial* src_text
 %  fails must tear the session down completely. The old path called
 %  toplevel_abort/1, which only interrupts the current goal — it left the
 %  idle actor alive plus its ws_actor/2 row, committed capacity, and
@@ -1173,7 +1173,7 @@ test(failed_initial_load_leaks_no_actor_or_capacity, Type == "error") :-
                     test_node:ws_send_json(WS,
                         json{command:toplevel_spawn,
                              options:"[session(true)]",
-                             load_text:":- use_module(library(lists))."}),
+                             src_text:":- use_module(library(lists))."}),
                     test_node:ws_receive_json(WS, Reply),
                     get_dict(type, Reply, Type),
                     %  Nothing about the failed session may survive. The

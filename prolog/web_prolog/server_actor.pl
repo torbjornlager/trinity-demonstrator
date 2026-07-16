@@ -244,7 +244,7 @@ server_upgrade(To, Pred0) :-
 
 %!  server_upgrade(+To, +Pred, +Options) is det.
 %
-%   Load the source selected by the load_* Options into the server's private
+%   Load the source selected by the src_* Options into the server's private
 %   module, then replace its callback without disturbing its state.
 
 server_upgrade(To, Pred0, Options) :-

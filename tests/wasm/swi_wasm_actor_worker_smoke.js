@@ -130,7 +130,7 @@ async function main() {
 
   S.onmessage({ data: {
     command: "shell_call",
-    goal: 'rpc(node, immortal(Who), [load_text("immortal(Who) :- \\+ mortal(Who).")])',
+    goal: 'rpc(node, immortal(Who), [src_text("immortal(Who) :- \\+ mortal(Who).")])',
     limit: 1
   } });
   const nestedNegation = await S.actorReceive(-1);
@@ -165,16 +165,16 @@ async function main() {
   ok((await rpcP) === "success([v(b)],false)", "RPC response text returns to Prolog");
   ok(S.actorEnsureFinalFullStop("p(a).\n   ") === "p(a).\n   " &&
      S.actorEnsureFinalFullStop("p(a)") === "p(a).",
-     "RPC load_text terminator detection ignores trailing whitespace");
+     "RPC src_text terminator detection ignores trailing whitespace");
 
   const loadUriP = S.actorLoadUri("'https://n2.example'");
   const loadUriReq = S._posted.filter(function(m) {
-    return m.type === "request" && m.action === "load_uri";
+    return m.type === "request" && m.action === "src_uri";
   }).pop();
   ok(!!loadUriReq && loadUriReq.uri === "'https://n2.example'",
-     "RPC load_uri source is delegated to the node controller");
+     "RPC src_uri source is delegated to the node controller");
   S.onmessage({ data: { command: "reply", id: loadUriReq.id, ok: true, result: "p(a)." } });
-  ok((await loadUriP) === "p(a).", "RPC load_uri source returns to the worker");
+  ok((await loadUriP) === "p(a).", "RPC src_uri source returns to the worker");
 
   // Promise/yield starts the same RPC request without blocking Prolog, then
   // consumes its response through a stable numeric reference.
@@ -199,7 +199,7 @@ async function main() {
   ok((await S.actorPromiseWait(retainedRef, -1)) === "success([slow(done)],false)",
      "a later yield consumes a previously timed-out promise");
 
-  // 11. Statechart creation is coordinated from JS so load_uri and Worker
+  // 11. Statechart creation is coordinated from JS so src_uri and Worker
   // placement stay node-controller responsibilities.
   const chartP = S.actorStatechartSpawn("uri", "/examples/chart.xml", "true");
   const chartReq = S._posted.filter(function(m) {

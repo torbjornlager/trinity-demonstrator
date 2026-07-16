@@ -1068,8 +1068,8 @@
           </div>
           <div class="field">
             <label for="config-max-load-bytes" class="field-label-row">
-              <span>Max load_text Bytes</span>
-              <button class="config-help-button" type="button" data-help-id="max_load_text_bytes" aria-label="Help for Max load_text Bytes">?</button>
+              <span>Max src_text Bytes</span>
+              <button class="config-help-button" type="button" data-help-id="max_load_text_bytes" aria-label="Help for Max src_text Bytes">?</button>
             </label>
             <input id="config-max-load-bytes" type="number" min="1" step="1">
           </div>
@@ -1230,7 +1230,7 @@
           max_sessions_per_principal: "Maximum number of ISOTOPE toplevel sessions owned by one principal. When the limit is reached, toplevel_spawn is rejected until capacity is freed.",
           max_ws_actors_per_principal: "Maximum number of WebSocket actors or toplevel connections owned by one principal. Each connection consumes memory and runtime resources.",
           max_term_text_bytes: "Maximum UTF-8 size of one textual Prolog term input, such as a goal, template, prompt response, or command term. Oversized term text is rejected before parsing.",
-          max_load_text_bytes: "Maximum UTF-8 size of one load_text source payload. This caps how much Prolog source a request can inject into a private database at once.",
+          max_load_text_bytes: "Maximum UTF-8 size of one src_text source payload. This caps how much Prolog source a request can inject into a private database at once.",
           max_ws_frame_bytes: "Maximum UTF-8 size of one inbound WebSocket text frame. Prevents oversized frames from exhausting memory.",
           max_admin_json_bytes: "Maximum UTF-8 size of one admin JSON request body, such as config or principal updates. Protects the admin surface from oversized payloads.",
           rate_window_seconds: "Length of the fixed window used for request and spawn rate limits. The per-window limits below are counted inside this interval.",

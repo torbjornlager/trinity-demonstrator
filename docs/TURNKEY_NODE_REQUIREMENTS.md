@@ -96,7 +96,7 @@ headless administration.
 ## 3. Administration — policy & execution control
 
 - ✅ Profile selection (relation/isobase/isotope/actor), sandbox mode,
-  builtin-family matrix, `load_text`/`load_uri` size caps + origin
+  builtin-family matrix, `src_text`/`src_uri` size caps + origin
   allowlist, per-call/session/actor timeouts.
 - 🟡 **Runtime-editable policy** — change profile, sandbox mode, families,
   limits live. (`/admin/config` does some of this; map exactly which

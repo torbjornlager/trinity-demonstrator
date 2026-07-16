@@ -285,7 +285,7 @@ log(Message) :-
 %   layer installs hook_check_chart_goal/1: the node layer does so to
 %   sandbox the goal under the active public execution profile, so an
 %   untrusted client chart (e.g. spawned via statechart_spawn/2 with
-%   load_text/1) cannot execute arbitrary predicates through its scripts.
+%   src_text/1) cannot execute arbitrary predicates through its scripts.
 %   Throws (rejecting the goal) if a hook does; trusted desktop/test
 %   execution installs no hook and is therefore unchanged.
 :- multifile hook_check_chart_goal/1.

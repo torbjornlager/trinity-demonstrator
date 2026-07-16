@@ -7,7 +7,7 @@
 #   ?- C = process_create(path(sh), ['-c', '...'], []), call(C).
 # (see SECURITY-hardening.md).  Everything SWI-Prolog actually needs —
 # reading its libraries, the writable tmpfs and log volume, and outbound
-# network for rpc/load_uri — is allowed.
+# network for rpc/src_uri — is allowed.
 #
 # This profile is NOT baked into the image; it is loaded on the HOST kernel.
 #
@@ -38,7 +38,7 @@ profile web-prolog-node flags=(attach_disconnected,mediate_deleted) {
   # /app, the writable tmpfs at /tmp, and the log volume), memory-mapping of
   # its shared objects (the `m` permission, distinct from execute), POSIX
   # capabilities it may probe, signals between its own threads, and outbound
-  # network sockets for rpc/2,3 and load_uri.
+  # network sockets for rpc/2,3 and src_uri.
   network,
   capability,
   signal,

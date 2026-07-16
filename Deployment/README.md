@@ -354,7 +354,7 @@ Still important before public launch:
 - tighten router and host firewall posture
 - expect `n3` and `n4` rate limits to apply to all anonymous users collectively
 
-`load_uri` is now restricted in the application layer on these launchers:
+`src_uri` is now restricted in the application layer on these launchers:
 
 - `n1`, `n2`, `n3`, and `n4` only allow source fetches from:
   `https://n1.elfenbenstornet.se`,
@@ -363,7 +363,7 @@ Still important before public launch:
   `https://n4.elfenbenstornet.se`
 - `admin` additionally allows its own hostname
 
-When this allowlist is active, public `load_uri` rejects:
+When this allowlist is active, public `src_uri` rejects:
 
 - bare local file paths
 - `file://...` URIs

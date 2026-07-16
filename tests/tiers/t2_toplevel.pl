@@ -89,7 +89,7 @@ test(simple_load_list, Results == [1,2]) :-
    toplevel_spawn(Pid, [
        session(false),
        monitor(true),
-       load_list([ta(1),ta(2)])
+       src_list([ta(1),ta(2)])
    ]),
    toplevel_call(Pid, ta(X), [
        template(X)
@@ -278,7 +278,7 @@ test(session_spawn_load_text_priority_queue_persists_across_calls,
    toplevel_spawn(Pid, [
        session(true),
        monitor(true),
-       load_text(Text)
+       src_text(Text)
    ]),
    toplevel_call(Pid,
                  ( self(S),
@@ -322,7 +322,7 @@ test(simple_load_list_next, Results == [2]) :-
    toplevel_spawn(Pid, [
        session(false),
        monitor(true),
-       load_list([ta(1),ta(2)])
+       src_list([ta(1),ta(2)])
    ]),
    toplevel_call(Pid, ta(X), [
        limit(1),
@@ -346,7 +346,7 @@ test(load_predicates_from_caller_module,
    toplevel_spawn(Pid, [
        session(false),
        monitor(true),
-       load_predicates([sample_wife/2])
+       src_predicates([sample_wife/2])
    ]),
    toplevel_call(Pid, sample_wife(X, Y), [
        template(X-Y)
@@ -736,7 +736,7 @@ test(injected_program_calls_toplevel_spawn, Result == true) :-
    self(Self),
    spawn(run_toplevel(Self), Pid, [
        monitor(true),
-       load_list([
+       src_list([
            (run_toplevel(Parent) :-
                toplevel_spawn(ToplevelPid, [target(Parent), link(false)]),
                toplevel_call(ToplevelPid, true, [template(true), limit(1)]))

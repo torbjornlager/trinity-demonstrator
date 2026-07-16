@@ -510,7 +510,7 @@ node_controller_isotope_spawn_1(Request) :-
 %
 %   Submit a goal to an existing session actor.
 %
-%   If `load_text` is provided and changed since the previous call, the session
+%   If `src_text` is provided and changed since the previous call, the session
 %   private module is refreshed before executing the goal.
 node_controller_isotope_call(Request) :-
     with_request_node_context(Request,

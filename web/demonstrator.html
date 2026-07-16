@@ -3472,11 +3472,11 @@
                       </label>
                       <label class="admin-field">
                         <span class="admin-field-label-row">
-                          <span class="admin-field-label">Max load_text Bytes</span>
+                          <span class="admin-field-label">Max src_text Bytes</span>
                           <button class="admin-config-help-button"
                                   type="button"
                                   :data-help="adminConfigHelpText('max_load_text_bytes')"
-                                  aria-label="Help for Max load_text Bytes"
+                                  aria-label="Help for Max src_text Bytes"
                                   @click.stop>?</button>
                         </span>
                         <input class="wb-input"
@@ -4041,7 +4041,7 @@
         max_sessions_per_principal: "Maximum number of ISOTOPE toplevel sessions owned by one principal. When the limit is reached, toplevel_spawn is rejected until capacity is freed.",
         max_ws_actors_per_principal: "Maximum number of WebSocket actors or toplevel connections owned by one principal. Each connection consumes memory and runtime resources.",
         max_term_text_bytes: "Maximum UTF-8 size of one textual Prolog term input, such as a goal, template, prompt response, or command term. Oversized term text is rejected before parsing.",
-        max_load_text_bytes: "Maximum UTF-8 size of one load_text source payload. This caps how much Prolog source a request can inject into a private database at once.",
+        max_load_text_bytes: "Maximum UTF-8 size of one src_text source payload. This caps how much Prolog source a request can inject into a private database at once.",
         max_ws_frame_bytes: "Maximum UTF-8 size of one inbound WebSocket text frame. Prevents oversized frames from exhausting memory.",
         max_admin_json_bytes: "Maximum UTF-8 size of one admin JSON request body, such as config or principal updates. Protects the admin surface from oversized payloads.",
         rate_window_seconds: "Length of the fixed window used for request and spawn rate limits. The per-window limits below are counted inside this interval.",
@@ -4334,7 +4334,7 @@
         return base;
       }
 
-      // Resolve source supplied to rpc/3's load_uri/1 before the browser
+      // Resolve source supplied to rpc/3's src_uri/1 before the browser
       // fetches it.  The terminal can paste a Markdown link such as
       // '[https://n2...](https://n2.../)', while the HTTP client needs the
       // actual link target.  Keep relative URI support for node-local source.
@@ -5040,8 +5040,8 @@
             continue;
           }
           if ((i === 0 || !/[A-Za-z0-9_]/.test(text.charAt(i - 1))) &&
-              text.slice(i, i + 9) === "load_text") {
-            match = /^load_text\s*\(\s*<editor>\s*\)/.exec(text.slice(i));
+              text.slice(i, i + 8) === "src_text") {
+            match = /^src_text\s*\(\s*<editor>\s*\)/.exec(text.slice(i));
             if (match) {
               out += replacement;
               i += match[0].length;
@@ -7171,7 +7171,7 @@
                     once: "true",
                     limit: "1",
                     format: "json",
-                    load_text: sourceText
+                    src_text: sourceText
                   }
                 }).then(function(event) {
                   if (!event || event.type !== "success") {
@@ -7340,7 +7340,7 @@
               var val = eqIdx < 0 ? "" : p.slice(eqIdx + 1);
               try { key = decodeURIComponent(key.replace(/\+/g, " ")); } catch(e) {}
               try { val = decodeURIComponent(val.replace(/\+/g, " ")); } catch(e) {}
-              if (key === "load_text") {
+              if (key === "src_text") {
                 val = val.replace(/\n/g, " ");
                 if (val.length > 25) { val = val.slice(0, 25) + "\u2026"; }
               }
@@ -7610,7 +7610,7 @@
           },
           prepareEditorCommand: function(command, term) {
             var value = String(command == null ? "" : command);
-            var inspected = rewriteEditorLoadTextAware(value, "load_text(<editor>)");
+            var inspected = rewriteEditorLoadTextAware(value, "src_text(<editor>)");
             var xml;
             var rewritten;
             var label;
@@ -7618,7 +7618,7 @@
             if (inspected.invalidCount > 0) {
               this.reportEditorPlaceholderError(
                 term,
-                "The <editor> placeholder is only valid as load_text(<editor>)."
+                "The <editor> placeholder is only valid as src_text(<editor>)."
               );
               return null;
             }
@@ -7628,7 +7628,7 @@
             if (this.editorKind !== "statechart") {
               this.reportEditorPlaceholderError(
                 term,
-                "load_text(<editor>) requires an active SXML editor."
+                "src_text(<editor>) requires an active SXML editor."
               );
               return null;
             }
@@ -7639,7 +7639,7 @@
             }
             rewritten = rewriteEditorLoadTextAware(
               value,
-              "load_text(" + this.prologQuotedText(xml) + ")"
+              "src_text(" + this.prologQuotedText(xml) + ")"
             );
             label = this.currentEditorSourceDirty()
               ? "<scratch-buffer>"
@@ -7815,10 +7815,10 @@
             var out = this.tutorialExampleText(text);
             out = out.replace(/{{host}}/g, window.location.origin);
             out = out.replace(/{{pengine}}/g, this.currentTutorialSessionPid());
-            out = out.replace(/\bsrc_text\s*\(/g, "load_text(");
-            out = out.replace(/\bsrc_list\s*\(/g, "load_list(");
-            out = out.replace(/\bsrc_uri\s*\(/g, "load_uri(");
-            out = out.replace(/\bsrc_predicates\s*\(/g, "load_predicates(");
+            out = out.replace(/\bload_text\s*\(/g, "src_text(");
+            out = out.replace(/\bload_list\s*\(/g, "src_list(");
+            out = out.replace(/\bload_uri\s*\(/g, "src_uri(");
+            out = out.replace(/\bload_predicates\s*\(/g, "src_predicates(");
             out = out.replace(/\bpengine_spawn\s*\(/g, "toplevel_spawn(");
             out = out.replace(/\bpengine_ask\s*\(/g, "toplevel_call(");
             out = out.replace(/\bpengine_next\s*\(/g, "toplevel_next(");
@@ -9300,7 +9300,7 @@
               catch(e) { console.error("[SWI-RPC] error", e); return null; }
             };
             // Keep user-provided source verbatim, but do not add a second full
-            // stop when a multiline load_text/1 string ends with whitespace.
+            // stop when a multiline src_text/1 string ends with whitespace.
             // A second standalone `.` is a syntax error on the remote node.
             window.swiEnsureFinalFullStop = function(text) {
               var source = String(text);
@@ -9744,7 +9744,7 @@
               pid: pid,
               goal: entry.goal,
               // Actor code crosses the worker boundary only through explicit
-              // load_* spawn options collected into extraSourceText.
+              // src_* spawn options collected into extraSourceText.
               source: String(extraSourceText || ""),
               behaviourSource: this.swiWasmBehaviourProlog(),
               role: entry.role
@@ -9786,10 +9786,10 @@
               "https://n4.elfenbenstornet.se", "https://n5.elfenbenstornet.se"
             ];
             if (allowedOrigins.indexOf(url.origin) < 0) {
-              return Promise.reject(new Error("load_uri origin is not allowed in SWI-WASM: " + url.origin));
+              return Promise.reject(new Error("src_uri origin is not allowed in SWI-WASM: " + url.origin));
             }
             return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
-              if (!response.ok) throw new Error("load_uri failed: HTTP " + response.status);
+              if (!response.ok) throw new Error("src_uri failed: HTTP " + response.status);
               return response.text();
             });
           },
@@ -9797,10 +9797,10 @@
             var uri = this.swiWasmRemoteNodeUrl(uriText);
             var url = new URL(uri, window.location.origin);
             if (url.origin !== window.location.origin) {
-              return Promise.reject(new Error("statechart load_uri must use this browser node: " + url.origin));
+              return Promise.reject(new Error("statechart src_uri must use this browser node: " + url.origin));
             }
             return fetch(url.href, { credentials: "same-origin", cache: "no-store" }).then(function(response) {
-              if (!response.ok) throw new Error("statechart load_uri failed: HTTP " + response.status);
+              if (!response.ok) throw new Error("statechart src_uri failed: HTTP " + response.status);
               return response.text();
             });
           },
@@ -9829,7 +9829,7 @@
             url.searchParams.set("offset", String(Number(message.offset || 0)));
             url.searchParams.set("limit", String(Number(message.limit || 10000)));
             if (message.loadText) {
-              url.searchParams.set("load_text", String(message.loadText));
+              url.searchParams.set("src_text", String(message.loadText));
             }
             return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
               return response.text().then(function(text) {
@@ -10053,7 +10053,7 @@
             // request subject to the public-node sandbox policy.
             var source = String(sourceText || "");
             var options = source
-              ? "[load_text('" + source.replace(/\\/g, "\\\\").replace(/'/g, "''") + "')]"
+              ? "[src_text('" + source.replace(/\\/g, "\\\\").replace(/'/g, "''") + "')]"
               : "[]";
             return this.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
               return new Promise(function(resolve, reject) {
@@ -10081,7 +10081,7 @@
                 try {
                   entry.socket.send(JSON.stringify({
                     command: "toplevel_spawn",
-                    load_text: source,
+                    src_text: source,
                     options: session ? "[session(true)]" : "[]"
                   }));
                 } catch (error) {
@@ -10430,7 +10430,7 @@
               case "rpc":
                 result = this.requestSwiWasmWorkerRpc(message);
                 break;
-              case "load_uri":
+              case "src_uri":
                 result = this.loadSwiWasmUriSource(message.uri || "");
                 break;
               case "send":
@@ -10968,9 +10968,9 @@
               "",
               "behaviour_spawn_options(Pred, Arity, Options, SpawnOptions) :-",
               "    wasm_behaviour_source(Behaviour),",
-              "    ( callback_source_option(Options, Pred/Arity) -> CallbackOptions = [] ; CallbackOptions = [load_predicates([Pred/Arity])] ),",
-              "    append([load_text(Behaviour)|CallbackOptions], Options, SpawnOptions).",
-              "callback_source_option(Options, PI) :- member(load_predicates(PIs), Options), memberchk(PI, PIs).",
+              "    ( callback_source_option(Options, Pred/Arity) -> CallbackOptions = [] ; CallbackOptions = [src_predicates([Pred/Arity])] ),",
+              "    append([src_text(Behaviour)|CallbackOptions], Options, SpawnOptions).",
+              "callback_source_option(Options, PI) :- (member(src_predicates(PIs), Options); member(load_predicates(PIs), Options)), memberchk(PI, PIs).",
               "",
               "wasm_behaviour_source(Source) :- Source := swiWasmBehaviourSource().",
               "",
@@ -11017,7 +11017,7 @@
               "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
               "    wasm_behaviour_source(Behaviour),",
               "    self(Parent),",
-              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [load_text(Behaviour)|Options]),",
+              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [src_text(Behaviour)|Options]),",
               "    wasm_wait_supervisor_ready(Pid),",
               "    ( option(name(Name), Options) -> register(Name, Pid) ; true ).",
               "",
@@ -11305,11 +11305,11 @@
               "    Texts = [Text|Rest].",
               "spawn_source_texts([_|Options], Texts) :- spawn_source_texts(Options, Texts).",
               "",
-              "spawn_source_option(load_text(Text), Text).",
-              "spawn_source_option(load_list(Terms), Text) :-",
+              "spawn_source_option(src_text(Text), Text).",
+              "spawn_source_option(src_list(Terms), Text) :-",
               "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
               "    atomic_list_concat(ClauseTexts, '\\n', Text).",
-              "spawn_source_option(load_predicates(Indicators), Text) :-",
+              "spawn_source_option(src_predicates(Indicators), Text) :-",
               "    findall(ClauseText,",
               "            ( member(Name/Arity, Indicators),",
               "              functor(Head, Name, Arity),",
@@ -11319,10 +11319,14 @@
               "            ),",
               "            ClauseTexts),",
               "    atomic_list_concat(ClauseTexts, '\\n', Text).",
-              "spawn_source_option(load_uri(URI), Text) :-",
+              "spawn_source_option(src_uri(URI), Text) :-",
               "    term_string(URI, URIText),",
               "    Promise := swiWasmLoadUriSource(#URIText),",
               "    await(Promise, Text).",
+              "spawn_source_option(load_text(Text), Source) :- spawn_source_option(src_text(Text), Source).",
+              "spawn_source_option(load_list(Terms), Source) :- spawn_source_option(src_list(Terms), Source).",
+              "spawn_source_option(load_uri(URI), Source) :- spawn_source_option(src_uri(URI), Source).",
+              "spawn_source_option(load_predicates(PIs), Source) :- spawn_source_option(src_predicates(PIs), Source).",
               "",
               "clause_source_text(Clause, Text) :-",
               "    copy_term(Clause, Copy),",
@@ -11632,10 +11636,10 @@
               "    Pid = statechart.",
               "",
               "statechart_spawn_source(Options, XML) :-",
-              "    member(load_text(XML), Options),",
+              "    (member(src_text(XML), Options); member(load_text(XML), Options)),",
               "    !.",
               "statechart_spawn_source(Options, XML) :-",
-              "    member(load_uri(URI), Options),",
+              "    (member(src_uri(URI), Options); member(load_uri(URI), Options)),",
               "    !,",
               "    URIText := swiResolveAssetUrl(#URI),",
               "    XML := swiRpcGet(#URIText),",
@@ -11644,7 +11648,7 @@
               "    ;   true",
               "    ).",
               "statechart_spawn_source(_, _) :-",
-              "    throw(error(domain_error(statechart_source_option, load_text_or_load_uri), statechart_spawn/2)).",
+              "    throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2)).",
               "",
               "statechart_trace_option(_).",
               "",
@@ -11868,7 +11872,7 @@
               "    ->  FinalURL = BaseURL",
               "    ;   atomic_list_concat(Parts, '\\n', LoadText),",
               "        LtEnc := encodeURIComponent(#LoadText),",
-              "        atomic_list_concat([BaseURL,'&load_text=',LtEnc], FinalURL)",
+              "        atomic_list_concat([BaseURL,'&src_text=',LtEnc], FinalURL)",
               "    ).",
               "",
               "promise(URL, Goal, Ref) :- promise(URL, Goal, Ref, []).",
@@ -11907,7 +11911,7 @@
               "    ->  FinalURL = BaseURL",
               "    ;   atomic_list_concat(Parts, '\\n', LoadText),",
               "        LtEnc := encodeURIComponent(#LoadText),",
-              "        atomic_list_concat([BaseURL,'&load_text=',LtEnc], FinalURL)",
+              "        atomic_list_concat([BaseURL,'&src_text=',LtEnc], FinalURL)",
               "    ).",
               "",
               "web_rpc_base_url(URL, Opts, BaseRPCURL) :-",
@@ -11923,24 +11927,24 @@
               "    findall(Part, rpc_load_part(Opts, Part), Parts).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    member(load_text(T), Opts),",
+              "    (member(src_text(T), Opts); member(load_text(T), Opts)),",
               "    (atom(T) -> atom_string(T,S) ; string(T) -> S=T ; term_string(T,S)),",
               "    Text := swiEnsureFinalFullStop(#S).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    member(load_list(Terms), Opts),",
+              "    (member(src_list(Terms), Opts); member(load_list(Terms), Opts)),",
               "    maplist([Term,A]>>(term_to_atom(Term,TA),atom_concat(TA,'.',A)), Terms, Atoms),",
               "    atomic_list_concat(Atoms,'\\n',Text).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    member(load_uri(URI), Opts),",
+              "    (member(src_uri(URI), Opts); member(load_uri(URI), Opts)),",
               "    term_string(URI, URIText),",
               "    ResolvedURI := swiResolveRpcLoadUri(#URIText),",
               "    Text := swiRpcGet(#ResolvedURI),",
               "    (Text = null -> throw(rpc_error(fetch_failed)) ; true).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    member(load_predicates(Inds), Opts),",
+              "    (member(src_predicates(Inds), Opts); member(load_predicates(Inds), Opts)),",
               "    findall(CT, (member(N/A, Inds), rpc_clause_text(N,A,CT)), CTs),",
               "    atomic_list_concat(CTs,'\\n',Text).",
               "",
@@ -12187,7 +12191,7 @@
                 name: "RPC",
                 kind: "prolog",
                 url: null,
-                text: "% Local predicates -- sent to a remote node via load_predicates.\n\nedge(a, b).\nedge(b, c).\nedge(c, d).\nedge(a, d).\n\npath(X, Y) :- edge(X, Y).\npath(X, Y) :- edge(X, Z), path(Z, Y).\n\n\n/** <examples>\n\n?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).\n\n?- rpc('https://n1.elfenbenstornet.se', between(1, 5, X)).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_list([p(a),p(b),p(c)])\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       load_text('p(a). p(b). p(c).')\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', path(a, X), [\n       load_predicates([edge/2, path/2])\n   ]).\n\n?- rpc(localhost, ancestor_descendant(X,Y), [\n       load_uri('https://n2.elfenbenstornet.se')\n   ]).\n\n?- rpc('https://n2.elfenbenstornet.se', ancestor_descendant(X,Y), [\n       load_uri('https://n3.elfenbenstornet.se')\n   ]).\n\n*/"
+                text: "% Local predicates -- sent to a remote node via src_predicates.\n\nedge(a, b).\nedge(b, c).\nedge(c, d).\nedge(a, d).\n\npath(X, Y) :- edge(X, Y).\npath(X, Y) :- edge(X, Z), path(Z, Y).\n\n\n/** <examples>\n\n?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).\n\n?- rpc('https://n1.elfenbenstornet.se', between(1, 5, X)).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       src_list([p(a),p(b),p(c)])\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', p(X), [\n       src_text('p(a). p(b). p(c).')\n   ]).\n\n?- rpc('https://n1.elfenbenstornet.se', path(a, X), [\n       src_predicates([edge/2, path/2])\n   ]).\n\n?- rpc(localhost, ancestor_descendant(X,Y), [\n       src_uri('https://n2.elfenbenstornet.se')\n   ]).\n\n?- rpc('https://n2.elfenbenstornet.se', ancestor_descendant(X,Y), [\n       src_uri('https://n3.elfenbenstornet.se')\n   ]).\n\n*/"
               }
             ];
             this.actorExamples = examples;
@@ -12292,7 +12296,7 @@
                 //  bridge module's copy can't override the built-in for user
                 //  calls.  Consult a small shim into user that delegates to the
                 //  bridge's async reader. Spawned workers do not receive this
-                //  shell-only shim through explicit load_* options.
+                //  shell-only shim through explicit src_* options.
                 Module.FS.writeFile("/swi_wasm_read_shim.pl",
                   ":- catch(redefine_system_predicate(read(_)), _, true).\n" +
                   ":- catch(redefine_system_predicate(read_term(_, _)), _, true).\n" +
@@ -12887,7 +12891,7 @@
                 ":clear\n" +
                 "<goal>.\n" +
                 ";\n" +
-                "load_text(<editor>)  snapshot the active SXML editor\n"
+                "src_text(<editor>)  snapshot the active SXML editor\n"
               );
               this.log("ui", "Terminal help requested.");
               return;
@@ -12923,7 +12927,7 @@
               limit: String(this.solutionLimit)
             };
             if (this.activeLoadText !== "") {
-              params.load_text = this.activeLoadText;
+              params.src_text = this.activeLoadText;
             }
             this.recordSessionEvent(
               "session",
@@ -13000,7 +13004,7 @@
               options: "[]",
               statechart_trace: this.isTraceLoggingEnabled()
             };
-            if (loadText !== "") { body.load_text = loadText; }
+            if (loadText !== "") { body.src_text = loadText; }
             return this.requestJson("/toplevel_spawn", {
               method: "POST",
               logScope: "isotope",
@@ -13062,7 +13066,7 @@
               format: "json"
             };
             if (reloadSpec && reloadSpec.text !== "") {
-              params.load_text = reloadSpec.text;
+              params.src_text = reloadSpec.text;
             }
             this.recordSessionEvent("session", "Query: " + this.clipText(this.activeGoal, 140), "isotope", pid);
             this.requestJson("/toplevel_call", {
@@ -13377,7 +13381,7 @@
                 goal: "true",
                 once: true,
                 limit: 1,
-                load_text: sourceText
+                src_text: sourceText
               });
             });
           },
@@ -13513,7 +13517,7 @@
                 };
                 spawnLoadSpec = self.spawnLoadSpec();
                 var spawnLoadText = spawnLoadSpec.text;
-                if (spawnLoadText !== "") { spawnCmd.load_text = spawnLoadText; }
+                if (spawnLoadText !== "") { spawnCmd.src_text = spawnLoadText; }
                 self.wsSpawnLoadText = spawnLoadText;
                 self.wsSpawnLoadOrigin = spawnLoadSpec.origin;
                 self.wsPendingExampleSpawn = spawnLoadSpec.origin === "editor" && spawnLoadText !== ""
@@ -13710,7 +13714,7 @@
                 limit: self.solutionLimit
               };
               if (reloadSpec && reloadSpec.text !== "") {
-                command.load_text = reloadSpec.text;
+                command.src_text = reloadSpec.text;
                 self.wsPendingCallLoad = reloadSpec;
               }
               self.recordSessionEvent("session", "Query: " + self.clipText(self.activeGoal, 140), "actor", pid);

@@ -79,7 +79,7 @@ test(parse_initial_element, [setup(statechart_actor:clean), cleanup(statechart_a
 test(parse_spawn, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     parse_statechart_fixture('test_statecharts/statechart-spawn-toplevel.statechart'),
     statechart_actor:to_be_invoked('spawn-ask-collect', toplevel, Options),
-    memberchk(load_list(_), Options).
+    memberchk(src_list(_), Options).
 
 :- end_tests(statechart_profile).
 
@@ -157,7 +157,7 @@ test(runtime_statechart_spawn_load_uri_relative_game) :-
         (
             statechart_spawn(Pid, [
                 monitor(true),
-                load_uri('examples/statecharts/game.xml')
+                src_uri('examples/statecharts/game.xml')
             ]),
             await_output(Pid, 'IDLE', 1.0),
             send(Pid, play),
@@ -186,7 +186,7 @@ test(runtime_statechart_spawn_from_toplevel_load_text) :-
         (
             toplevel_call(ToplevelPid,
                           statechart_spawn(StatechartPid,
-                                           [load_text(Text), monitor(true)]),
+                                           [src_text(Text), monitor(true)]),
                           [template(StatechartPid), limit(1)]),
             await_messages([success(ToplevelPid, [StatechartPid], false)], 2.0),
             sleep(0.05),
@@ -218,7 +218,7 @@ test(runtime_statechart_spawn_name_registers_pid) :-
     ], Text),
     setup_call_cleanup(
         statechart_spawn(Pid, [
-            load_text(Text),
+            src_text(Text),
             monitor(true),
             name(test_named_statechart)
         ]),
@@ -241,7 +241,7 @@ test(runtime_statechart_halt_reply_and_shutdown) :-
         "</statechart>\n"
     ], Text),
     setup_call_cleanup(
-        statechart_spawn(Pid, [load_text(Text), monitor(true)]),
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
         (
             statechart_halt(Pid, Reply, 1),
             assertion(Reply == true),
@@ -259,7 +259,7 @@ test(runtime_statechart_halt_timeout_defaults_reply_true) :-
         "</statechart>\n"
     ], Text),
     setup_call_cleanup(
-        statechart_spawn(Pid, [load_text(Text), monitor(true)]),
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
         (
             statechart_halt(Pid, Reply, 0.1),
             assertion(Reply == killed)
@@ -279,7 +279,7 @@ test(runtime_statechart_halt_timeout_honors_custom_on_timeout) :-
         "</statechart>\n"
     ], Text),
     setup_call_cleanup(
-        statechart_spawn(Pid, [load_text(Text), monitor(true)]),
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
         (
             statechart_halt(Pid, Reply, 0.1),
             assertion(Reply == killed)
@@ -303,7 +303,7 @@ test(runtime_statechart_writeln_uses_actor_io_path) :-
         (
             toplevel_call(ToplevelPid,
                           statechart_spawn(StatechartPid,
-                                           [load_text(Text), monitor(true)]),
+                                           [src_text(Text), monitor(true)]),
                           [template(StatechartPid), limit(1)]),
             await_messages([
                 success(ToplevelPid, [StatechartPid], false),
@@ -329,7 +329,7 @@ test(runtime_statechart_trace_true_emits_terminal_trace_messages) :-
         "  </state>\n",
         "</statechart>\n"
     ], Text),
-    once(statechart_spawn(Pid, [load_text(Text), monitor(true), trace(true)])),
+    once(statechart_spawn(Pid, [src_text(Text), monitor(true), trace(true)])),
     once(receive({
         terminal_output(Pid, statechart_trace(_Trace0)) -> true
     }, [timeout(2), on_timeout(fail)])),
@@ -361,7 +361,7 @@ test(runtime_statechart_trace_follows_client_session_setting) :-
             await_messages([success(ToplevelPid, [true], false)], 2.0),
             toplevel_call(ToplevelPid,
                           statechart_spawn(StatechartPid,
-                                           [load_text(Text), monitor(true)]),
+                                           [src_text(Text), monitor(true)]),
                           [template(StatechartPid), limit(1)]),
             await_messages([
                 success(ToplevelPid, [StatechartPid], false),
@@ -388,7 +388,7 @@ test(runtime_statechart_raise_onentry_triggers_internal_transition) :-
         "</statechart>\n"
     ], Text),
     setup_call_cleanup(
-        statechart_spawn(Pid, [load_text(Text), monitor(true)]),
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
         (
             actors:receive({
                 terminal_output(Pid, 'PING') -> true

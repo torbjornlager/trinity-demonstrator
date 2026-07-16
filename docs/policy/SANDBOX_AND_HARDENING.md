@@ -21,7 +21,7 @@ Current contract:
 - `blacklist` is the practical public-deployment mode currently described by
   this document
 - controller-owned and nested actor/toplevel source-loading paths go through
-  the same validated rewrite for `load_uri/1`
+  the same validated rewrite for `src_uri/1`
 
 Implementation note:
 
@@ -62,10 +62,10 @@ User-controlled execution paths include:
 
 User-controlled source-loading paths include:
 
-- `load_text/1`
-- `load_list/1`
-- `load_uri/1`
-- `load_predicates/1`
+- `src_text/1`
+- `src_list/1`
+- `src_uri/1`
+- `src_predicates/1`
 
 The main enforcement code lives in
 [node_sandbox.pl](node_sandbox.pl).
@@ -99,9 +99,9 @@ Important practical points:
 For the detailed first-pass inventory and rationale, see
 [BLACKLIST_SANDBOX_NOTES.md](docs/policy/BLACKLIST_SANDBOX_NOTES.md).
 
-## `load_uri/1` Status
+## `src_uri/1` Status
 
-`load_uri/1` is one of the main remaining deployment-sensitive features.
+`src_uri/1` is one of the main remaining deployment-sensitive features.
 
 Current status:
 
@@ -169,7 +169,7 @@ include:
 ## Recommended Next Hardening Steps
 
 1. make the reverse-proxy trust boundary explicit in deployment docs and startup messaging
-2. keep `load_uri` constrained to known nodes or aliases in public deployments
+2. keep `src_uri` constrained to known nodes or aliases in public deployments
 3. log sandbox rejections and execution timeouts
 4. build and maintain an adversarial regression corpus
 5. audit non-ISO auto-imported SWI predicates for dangerous ambient behavior

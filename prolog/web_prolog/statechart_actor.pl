@@ -112,8 +112,8 @@ inject_statechart_io_prelude :-
 %
 %   Exactly one source option must be supplied:
 %
-%     - `load_uri(URI)`  or
-%     - `load_text(Text)`
+%     - `src_uri(URI)`  or
+%     - `src_text(Text)`
 statechart_spawn(Pid, Options0) :-
     exclude(is_statechart_spawn_local_option, Options0, Options1),
     statechart_spawn_source(Options1, SourceGoal, SpawnOptions),

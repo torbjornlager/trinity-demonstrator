@@ -401,7 +401,7 @@ test(call_json_existence_error) :-
 test(call_parse_error) :-
     both_nodes_agree('/call?goal=foo(&format=prolog', _, _).
 
-test(call_json_load_text) :-
+test(call_json_load_text_compatibility_alias) :-
     both_nodes_agree('/call?goal=p(X)&template=X&load_text=p(1).%0Ap(2).', _, _).
 
 test(node_info_agrees) :-

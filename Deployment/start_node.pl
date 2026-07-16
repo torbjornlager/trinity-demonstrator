@@ -409,7 +409,7 @@ example_service_file(Name, File) :-
 %   When WP_PUBLIC_URL is set (the node sits behind a TLS-terminating
 %   reverse proxy), advertise that URL via SWI's http:public_* settings
 %   so self_node_url/1, cross-node addressing, and node-relative
-%   load_uri resolve to the public name rather than localhost:Port.
+%   src_uri resolve to the public name rather than localhost:Port.
 apply_public_url(Config) :-
     memberchk(public_url-URL, Config),
     (   URL == ''

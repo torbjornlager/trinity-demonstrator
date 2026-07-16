@@ -32,7 +32,7 @@ payloads before parsing or execution.
 :- setting(max_term_text_bytes, integer, 32768,
            'Max UTF-8 size of one textual Prolog term input').
 :- setting(max_load_text_bytes, integer, 262144,
-           'Max UTF-8 size of one load_text source payload').
+           'Max UTF-8 size of one src_text source payload').
 :- setting(max_ws_frame_bytes, integer, 262144,
            'Max UTF-8 size of one inbound WebSocket text frame').
 :- setting(max_admin_json_bytes, integer, 65536,

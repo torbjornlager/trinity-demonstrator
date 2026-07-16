@@ -1130,7 +1130,7 @@ price(Item, Price) :-
 
 <p>
     We can give a newly spawned actor a private pricing policy by passing it
-    with the <code>load_text</code> option. The actor uses the private
+    with the <code>src_text</code> option. The actor uses the private
     <code>price/2</code>, but its call to <code>list_price/2</code> still
     resolves to the shared facts:
 </p>
@@ -1141,7 +1141,7 @@ price(Item, Price) :-
          Self ! discounted_price(Price)
        ),
        _,
-       [ load_text("
+       [ src_text("
              price(Item, Price) :-
                  list_price(Item, ListPrice),
                  Price is ListPrice * 0.9.
@@ -1163,7 +1163,7 @@ price(Item, Price) :-
     The private pricing rule belongs only to the spawned actor. It neither
     modifies the shared rule nor becomes part of the parent's private
     database. Consequently, another actor spawned by the parent without that
-    <code>load_text</code> option uses the shared definition:
+    <code>src_text</code> option uses the shared definition:
 </p>
 
 <pre id="shadow-ordinary-price">?- self(Self),
@@ -1196,7 +1196,7 @@ price(Item, Price) :-
        ),
        _,
        [
-        load_text("list_price(widget, 80).")
+        src_text("list_price(widget, 80).")
        ]
    ),
    receive({private_prices(Prices) -&gt; true}).</pre>
@@ -1280,7 +1280,7 @@ price(Item, Price) :-
 </p>
 
 <pre id="epa-count-spawn">?- spawn(count_actor(0), Pid, [
-       load_predicates([count_actor/1]),
+       src_predicates([count_actor/1]),
        monitor(true)
    ]).
 </pre>
@@ -1399,7 +1399,7 @@ price(Item, Price) :-
 </p>
 
 <pre id="epa-fridge-spawn">?- spawn(fridge([]), Pid, [
-       load_predicates([fridge/1]),
+       src_predicates([fridge/1]),
        monitor(true)
    ]).
 </pre>
@@ -1510,7 +1510,7 @@ take(Pid, Food, Response) :-
 </p>
 
 <pre id="epa-fridge-api-spawn">?- spawn(fridge([]), Pid, [
-       load_predicates([fridge/1, store/3, take/3]),
+       src_predicates([fridge/1, store/3, take/3]),
        monitor(true)
    ]).
 </pre>
@@ -1592,10 +1592,10 @@ pong :-
 
 ping_pong :-
     spawn(pong, Pong_Pid, [
-        load_predicates([pong/0])
+        src_predicates([pong/0])
     ]),
     spawn(ping(3, Pong_Pid), _, [
-        load_predicates([ping/2])
+        src_predicates([ping/2])
     ]).
 </pre>
 
@@ -1643,7 +1643,7 @@ ping_pong :-
 <pre id="toplevel-spawn-demo">?- toplevel_spawn(Pid, [
        session(true),
        monitor(true),
-       load_list([p(a),p(b)])
+       src_list([p(a),p(b)])
    ]).
 </pre>
 
@@ -1983,7 +1983,7 @@ human(Who) :-
 </p>
 
 <pre id="rpc2">?- rpc('https://n3.elfenbenstornet.se', q(X), [
-       load_list([(q(X) :- p(X)), p(a), p(b)])
+       src_list([(q(X) :- p(X)), p(a), p(b)])
    ]).
 </pre>
 
@@ -1993,7 +1993,7 @@ human(Who) :-
 </p>
 
 <p>
-    The code passed in <code>load_text/1</code> is not installed permanently;
+    The code passed in <code>src_text/1</code> is not installed permanently;
     it exists only for that remote call.
 </p>
 
@@ -2008,7 +2008,7 @@ human(Who) :-
 
 <pre id="rpc-shadow-price">?- rpc('https://n1.elfenbenstornet.se',
        price(widget, Price),
-       [load_text("
+       [src_text("
            price(Item, Price) :-
                list_price(Item, ListPrice),
                Price is ListPrice * 0.9.
@@ -2035,8 +2035,8 @@ human(Who) :-
     remote call into two phases. <code>promise/3-4</code> starts the call and
     immediately returns a reference; <code>yield/2-3</code> uses that reference
     to collect the answer later. The four-argument form accepts the same
-    <code>load_text/1</code>, <code>load_list/1</code>, <code>load_uri/1</code>,
-    and <code>load_predicates/1</code> source-loading options as
+    <code>src_text/1</code>, <code>src_list/1</code>, <code>src_uri/1</code>,
+    and <code>src_predicates/1</code> source-loading options as
     <code>rpc/3</code>. 
 </p>
 
@@ -2119,7 +2119,7 @@ human(Who) :-
     A compact meta-interpreter achieves this by treating remote calls as
     proof-producing sub-derivations. When the interpreter encounters a remote
     goal it ships <em>itself</em> to the remote node via
-    <code>load_predicates([prove/2])</code>, so the remote node also runs
+    <code>src_predicates([prove/2])</code>, so the remote node also runs
     <code>prove/2</code> and returns a proof term. Remote contributions are
     marked in the result with the <code>@</code> operator.
 </p>
@@ -2133,7 +2133,7 @@ prove(rpc(URI, A), Proof) :- !,
     prove(rpc(URI, A, []), Proof).
 prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
     rpc(URI, prove(A, Query/Proof), [
-        load_predicates([prove/2])
+        src_predicates([prove/2])
       | Options
     ]).
 prove((A, B), (ProofA, ProofB)) :- !,
@@ -2175,7 +2175,7 @@ human(aristotle).
 </p>
 
 <pre id="dpt-prove-run">?- rpc('https://n3.elfenbenstornet.se', prove(mortal(X), Proof), [
-       load_predicates([prove/2])
+       src_predicates([prove/2])
    ]).
 </pre>
 
@@ -2239,7 +2239,7 @@ X = aristotle.
 <pre id="cpw-remote-echo-spawn">?- spawn(echo_actor, Pid, [
        node('{{actor_peer_host}}'),
        monitor(true),
-       load_text("
+       src_text("
            echo_actor :-
                receive({
                    echo(From, Msg) -&gt;
@@ -2343,11 +2343,11 @@ pong :-
 ping_pong_remote :-
     spawn(pong, Pong_Pid, [
         node('{{actor_peer_host}}'),
-        load_predicates([pong/0]),
+        src_predicates([pong/0]),
         monitor(true)
     ]),
     spawn(ping(3, Pong_Pid), Ping_Pid, [
-        load_predicates([ping/2]),
+        src_predicates([ping/2]),
         monitor(true)
     ]),
     receive({down(_,Pong_Pid, true) -> true}),
@@ -2484,7 +2484,7 @@ fridge(take(_Food), List, not_found, List).
            restart(permanent)
        ])
    ], Sup, [
-       load_predicates([fridge/4])
+       src_predicates([fridge/4])
    ]).
 </pre>
 
@@ -2598,7 +2598,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="srv-upgrade">?- server_upgrade(fridge, fridge2, [
-       load_predicates([fridge2/4])
+       src_predicates([fridge2/4])
    ]).
 </pre>
 
@@ -2774,7 +2774,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </figure>
 
 <p>
-    Spawn the statechart as an actor. <code>load_uri</code> fetches the XML
+    Spawn the statechart as an actor. <code>src_uri</code> fetches the XML
     for the interpreter, and <code>trace(true)</code> enables transition
     tracing so the diagram updates automatically as events fire.
     <code>Pid</code> is bound to the actor's pid. Spawning also populates
@@ -2783,7 +2783,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-pr-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/01%20pause-and-resume.xml'),
+       src_uri('/examples/statecharts/01%20pause-and-resume.xml'),
        trace(true)
    ]).
 </pre>
@@ -3367,7 +3367,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-spaghetti-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/02%20spaghetti.xml'),
+       src_uri('/examples/statecharts/02%20spaghetti.xml'),
        trace(true)
    ]).
 </pre>
@@ -3548,7 +3548,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-emotions-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/03%20emotions.xml'),
+       src_uri('/examples/statecharts/03%20emotions.xml'),
        trace(true)
    ]).
 </pre>
@@ -3627,7 +3627,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/08%20gcd.xml'),
+       src_uri('/examples/statecharts/08%20gcd.xml'),
        trace(true)
    ]).
 </pre>
@@ -3670,7 +3670,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-spawn-toplevel-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
+       src_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
        trace(true)
    ]).
 </pre>

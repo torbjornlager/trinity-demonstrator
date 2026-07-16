@@ -246,9 +246,9 @@ publicly.
 - shared DB role: common base plus deployment-local admin facts
 - shared DB file: `Deployment/shared_db_admin.pl`
 
-## `load_uri` Policy
+## `src_uri` Policy
 
-The deployment uses an application-level allowlist for `load_uri`.
+The deployment uses an application-level allowlist for `src_uri`.
 
 Public nodes only allow source fetches from:
 

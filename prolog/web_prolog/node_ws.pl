@@ -545,7 +545,7 @@ ws_action_toplevel_spawn(Dict, Queue, Principal) :-
     require_source_options_access(Principal, UserOptions),
     sandbox_prepare_source_options(EffectiveProfile, node_ws,
                                    UserOptions, PreparedOptions),
-    ws_get_load_text_or(Dict, load_text, '', LoadText0),
+    ws_get_load_text_or(Dict, src_text, '', LoadText0),
     require_source_text_access(Principal, LoadText0),
     text_to_string(LoadText0, LoadText),
     reserve_ws_actor_capacity(Principal, Reservation),
@@ -598,7 +598,7 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
     ws_get_int_or(Dict, limit, 10 000 000 000, Limit),
     ws_get_int_or(Dict, offset, 0, Offset),
     ws_get_atom_or(Dict, once, false, Once0),
-    ws_get_load_text_or(Dict, load_text, '', LoadText0),
+    ws_get_load_text_or(Dict, src_text, '', LoadText0),
     require_source_text_access(Principal, LoadText0),
     ws_get_atom_or(Dict, format, json, Format),
     parse_call_context(GoalAtom, TemplateAtom0, Format, Once0, none,
@@ -1015,7 +1015,7 @@ ws_kill_actor(Pid) :-
 
 %!  ws_discard_failed_session(+Pid) is det.
 %
-%   Tear down a toplevel session whose *initial* load_text failed, before
+%   Tear down a toplevel session whose *initial* src_text failed, before
 %   it was ever handed to the client.  Reverses every side effect of the
 %   spawn — the registry row, metadata, owner/committed capacity, the
 %   remembered isotope-session state, any cleanup monitor, and the actor
@@ -1204,7 +1204,7 @@ ws_command_context(Dict, _Command, Context) :-
     ws_command_context_hash(Dict, goal, goal_hash, Context0, Context1),
     ws_command_context_hash(Dict, message, message_hash, Context1, Context2),
     ws_command_context_hash(Dict, input, input_hash, Context2, Context3),
-    ws_command_context_size(Dict, load_text, load_text_chars, Context3, Context4),
+    ws_command_context_size(Dict, src_text, load_text_chars, Context3, Context4),
     ws_command_context_size(Dict, input, input_chars, Context4, Context5),
     ws_command_context_options(Dict, Context5, Context).
 
@@ -1443,6 +1443,15 @@ ws_get_term_string(Dict, Key, Value) :-
 ws_get_term_string_or(Dict, Key, Default, Value) :-
     ws_get_string_or(Dict, Key, Default, Value).
 
+ws_get_load_text_or(Dict, src_text, Default, Value) :-
+    !,
+    (   get_dict(src_text, Dict, Value0)
+    ->  atom_string(Value, Value0)
+    ;   get_dict(load_text, Dict, Value0)
+    ->  atom_string(Value, Value0)
+    ;   Value = Default
+    ),
+    check_source_text_size(src_text, Value).
 ws_get_load_text_or(Dict, Key, Default, Value) :-
     ws_get_string_or(Dict, Key, Default, Value),
     check_source_text_size(Key, Value).

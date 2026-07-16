@@ -29,7 +29,7 @@
 <!-- <examples>
 
 ?- statechart_spawn(Pid, [
-       load_text(<editor>),
+       src_text(<editor>),
        trace(true)
    ]).
 

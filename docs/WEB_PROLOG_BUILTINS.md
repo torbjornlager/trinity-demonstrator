@@ -195,9 +195,9 @@ services or only a selected subset.
 
 ### Private Database Loading
 
-`load_text/1`, `load_list/1`, `load_predicates/1`, `load_uri/1`, `listing/0`.
+`src_text/1`, `src_list/1`, `src_predicates/1`, `src_uri/1`, `listing/0`.
 
-`load_uri/1` remains a broad source-loading option in unrestricted setups, but
+`src_uri/1` remains a broad source-loading option in unrestricted setups, but
 the runtime now supports per-node exact-origin allowlists through
 `load_uri_allowed_origins([...])`. When that allowlist is configured, bare
 local paths, `file://` URIs, and arbitrary HTTP(S) origins are rejected, while

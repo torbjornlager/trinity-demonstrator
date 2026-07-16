@@ -13,6 +13,7 @@
 
      source_options/3,          % +Options, +GoalModule, -SourceOptions
      rewrite_source_options/3,  % +Options, +GoalModule, -Options
+     canonical_source_option/2, % +Option, -CanonicalOption
      load_sources/2,            % +Module, +Sources
      load_source_text/3,        % +Src, +Module, +SourceId
      load_source_uri/3,         % +URI, +Module, +SourceId
@@ -24,8 +25,8 @@
 /** <module> Per-Actor Module Isolation (layer 1)
 
 Temporary-module isolation for actors: each actor gets a private module
-where its `load_text/1`, `load_list/1`, `load_uri/1`, and
-`load_predicates/1` sources are loaded, importing the actor API (and,
+where its `src_text/1`, `src_list/1`, `src_uri/1`, and
+`src_predicates/1` sources are loaded, importing the actor API (and,
 on a node, the shared database) through the module import chain.
 
 Extracted from the demonstrator's actor_source.pl + source_loader.pl,
@@ -46,7 +47,7 @@ actor-coupled.
     solution wins; default identity.
   - prepare_source_options(+SourceModule, +Options0, -Options):
     caller-supplied load options pass through here before loading (the
-    node layer's sandbox vetting of load_text/load_uri).  First
+    node layer's sandbox vetting of src_text/src_uri).  First
     solution wins; default identity.
   - extra_prelude_text(+Options, -Text): additional prelude sources to
     load before the actor I/O prelude (the node layer's public runtime
@@ -54,7 +55,7 @@ actor-coupled.
   - rewrite_source_text(+Module, +Source0, -Source): rewrite source
     text before it is loaded (blacklist guard).  First solution wins;
     default identity.
-  - source_text_guard_active: when true, load_uri fetches the source as
+  - source_text_guard_active: when true, src_uri fetches the source as
     text (so rewrite_source_text/3 applies) instead of streaming it.
   - shared_database_module(-SharedModule): the node layer names the
     module holding the shared database; actor modules import it and
@@ -198,7 +199,7 @@ actor_module(Pid, Module) :-
 
 %!  execution_source_module(+Fallback, -Module) is det.
 %
-%   Resolve load_predicates/1 against the current actor's private module.
+%   Resolve src_predicates/1 against the current actor's private module.
 %   Calls made by an ordinary main thread retain their lexical fallback
 %   module, while node toplevel actors use the session module in which their
 %   dynamically loaded editor source actually lives.
@@ -217,7 +218,7 @@ execution_source_module(Fallback, Module) :-
 %   By default the actor imports GoalModule for trusted local spawning.
 %   The node layer supplies the internal inherit_goal_module(false) option
 %   for public actors so live session predicates cross the actor boundary
-%   only through an explicit source option such as load_predicates/1.
+%   only through an explicit source option such as src_predicates/1.
 prepare_actor_module(Module, GoalModule, Options) :-
     delete_import_module(Module, user),
     import_goal_module(Module, GoalModule, Options),
@@ -307,11 +308,11 @@ configure_actor_operators(Module) :-
     Module:op(800, xfx, !),
     Module:op(1000, xfy, if).
 
-inject_actor_io_prelude(Options0, [load_text(Prelude)|Options0]) :-
+inject_actor_io_prelude(Options0, [src_text(Prelude)|Options0]) :-
     actor_io_prelude_text(Prelude).
 
 inject_extra_preludes(Options0, Options) :-
-    findall(load_text(Text), extra_prelude_text(Options0, Text), Extras),
+    findall(src_text(Text), extra_prelude_text(Options0, Text), Extras),
     append(Extras, Options0, Options).
 
 prepare_runtime_source_options(SourceModule, Options0, Options) :-
@@ -334,12 +335,6 @@ source_options([Option|Options], GoalModule, SourceOptions) :-
     !,
     SourceOptions = [SourceOption|Rest],
     source_options(Options, GoalModule, Rest).
-source_options([Option|_], _, _) :-
-    removed_source_option(Option),
-    !,
-    throw(error(domain_error(load_source_option, Option),
-                context(source_loader:source_options/3,
-                        'src_* options are no longer supported; use load_* options'))).
 source_options([_|Options], GoalModule, SourceOptions) :-
     source_options(Options, GoalModule, SourceOptions).
 
@@ -357,18 +352,34 @@ rewrite_source_options([Option0|Options0], GoalModule, [Option|Options]) :-
     rewrite_source_options(Options0, GoalModule, Options).
 
 
-normalize_source_option(load_text(Text0), _, load_text(Text)) :-
-    text_to_string(Text0, Text).
-normalize_source_option(load_uri(URI), _, load_uri(URI)).
-normalize_source_option(load_list(Terms), _, load_text(Source)) :-
-    terms_to_source(Terms, Source).
-normalize_source_option(load_predicates(PIs), GoalModule, load_text(Source)) :-
-    predicates_to_source(GoalModule, PIs, Source).
+normalize_source_option(Option0, GoalModule, SourceOption) :-
+    canonical_source_option(Option0, Option),
+    normalize_canonical_source_option(Option, GoalModule, SourceOption).
 
-removed_source_option(src_text(_)).
-removed_source_option(src_uri(_)).
-removed_source_option(src_list(_)).
-removed_source_option(src_predicates(_)).
+
+%!  canonical_source_option(+Option, -CanonicalOption) is semidet.
+%
+%   Recognise canonical src_* source options and the deprecated load_*
+%   spellings accepted at compatibility boundaries.  This is deliberately
+%   a shallow rewrite: callers that need to retain src_list/src_predicates
+%   for policy or size diagnostics can canonicalise before materialising.
+canonical_source_option(src_text(Text), src_text(Text)).
+canonical_source_option(src_uri(URI), src_uri(URI)).
+canonical_source_option(src_list(Terms), src_list(Terms)).
+canonical_source_option(src_predicates(PIs), src_predicates(PIs)).
+canonical_source_option(load_text(Text), src_text(Text)).
+canonical_source_option(load_uri(URI), src_uri(URI)).
+canonical_source_option(load_list(Terms), src_list(Terms)).
+canonical_source_option(load_predicates(PIs), src_predicates(PIs)).
+
+
+normalize_canonical_source_option(src_text(Text0), _, src_text(Text)) :-
+    text_to_string(Text0, Text).
+normalize_canonical_source_option(src_uri(URI), _, src_uri(URI)).
+normalize_canonical_source_option(src_list(Terms), _, src_text(Source)) :-
+    terms_to_source(Terms, Source).
+normalize_canonical_source_option(src_predicates(PIs), GoalModule, src_text(Source)) :-
+    predicates_to_source(GoalModule, PIs, Source).
 
 
 %!  load_sources(+Module, +Sources) is det.
@@ -388,9 +399,9 @@ source_id(Module, Index, SourceId) :-
     format(atom(SourceId), '~w_source_~d', [Module, Index]).
 
 
-load_source(Module, load_text(Source), SourceId) :-
+load_source(Module, src_text(Source), SourceId) :-
     load_source_text(Source, Module, SourceId).
-load_source(Module, load_uri(URI), SourceId) :-
+load_source(Module, src_uri(URI), SourceId) :-
     load_source_uri(URI, Module, SourceId).
 
 
@@ -429,19 +440,23 @@ load_source_uri(URI0, Module, SourceId) :-
 
 
 %!  load_option_text(+GoalModule, +Option, -Text) is semidet.
-load_option_text(_, load_text(Text0), Text) :-
+load_option_text(GoalModule, Option0, Text) :-
+    canonical_source_option(Option0, Option),
+    load_canonical_option_text(GoalModule, Option, Text).
+
+load_canonical_option_text(_, src_text(Text0), Text) :-
     text_to_string(Text0, Text).
-load_option_text(_, load_list(Terms), Text) :-
+load_canonical_option_text(_, src_list(Terms), Text) :-
     terms_to_source(Terms, Text).
-load_option_text(GoalModule, load_predicates(PIs), Text) :-
+load_canonical_option_text(GoalModule, src_predicates(PIs), Text) :-
     predicates_to_source(GoalModule, PIs, Text).
-load_option_text(_, load_uri(URI), Text) :-
+load_canonical_option_text(_, src_uri(URI), Text) :-
     uri_to_source(URI, Text).
 
 
 %!  load_options_text(+GoalModule, +Options, -SourceText) is det.
 %
-%   Convert all load_* options in order into one source text string.
+%   Convert all src_* options in order into one source text string.
 load_options_text(GoalModule, Options, SourceText) :-
     findall(Text,
             ( member(Option, Options),
@@ -468,7 +483,7 @@ consult_load_list(ListSpec) :-
 
 consult_load_list(List, Module) :-
     terms_to_source(List, Source),
-    load_source_text(Source, Module, load_list).
+    load_source_text(Source, Module, src_list).
 
 %!  listing_private is det.
 %!  listing_private(+What) is det.

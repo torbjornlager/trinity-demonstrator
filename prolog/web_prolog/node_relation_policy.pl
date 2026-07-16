@@ -74,7 +74,7 @@ relation_check_load_text(LoadText0) :-
     normalize_space(string(LoadText), LoadText1),
     (   LoadText == ""
     ->  true
-    ;   throw(error(relation_violation(load_text),
+    ;   throw(error(relation_violation(src_text),
                     context(node_relation_policy:relation_check_call/3,
                             'source loading is not available in the RELATION profile')))
     ).

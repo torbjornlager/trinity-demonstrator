@@ -74,7 +74,7 @@ Hard upper bound on goal execution time. Clients can request lower timeouts; the
 
 #### **Cache Size**
 
-Maximum entries in the `/call` stateless cache. Caches results for repeated queries with identical `goal`, `template`, `offset`, and `load_text`.
+Maximum entries in the `/call` stateless cache. Caches results for repeated queries with identical `goal`, `template`, `offset`, and `src_text`.
 
 - Default: 100
 - Increase to reduce repeated computation cost
@@ -104,16 +104,16 @@ Maximum number of WebSocket actor connections per principal.
 - Increase for high-concurrency workloads
 - Each connection consumes memory; monitor resource usage
 
-#### **Max Term Bytes** (load_text)
+#### **Max Term Bytes** (src_text)
 
-Maximum size in bytes of term text supplied via `load_text` option.
+Maximum size in bytes of term text supplied via `src_text` option.
 
 - Default: 1 MB (1,000,000 bytes)
 - Prevents denial-of-service via oversized payloads
 
-#### **Max load_text Bytes** (source code)
+#### **Max src_text Bytes** (source code)
 
-Maximum size in bytes of source code text in `load_text` option.
+Maximum size in bytes of source code text in `src_text` option.
 
 - Default: 10 MB
 - Controls memory used for loading Prolog clauses

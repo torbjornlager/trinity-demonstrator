@@ -87,26 +87,26 @@ The source-loading story depends on both profile and transport.
 
 ### `isobase`
 
-- public `/call` accepts `load_text` directly
-- client-side `rpc/3` also accepts `load_list/1`, `load_predicates/1`, and
-  `load_uri/1`, but those are normalized client-side into `load_text` before
+- public `/call` accepts `src_text` directly
+- client-side `rpc/3` also accepts `src_list/1`, `src_predicates/1`, and
+  `src_uri/1`, but those are normalized client-side into `src_text` before
   the HTTP request is sent
 
 ### `isotope`
 
 Adds session/toplevel source loading:
 
-- `/toplevel_spawn` options may include `load_text/1`, `load_list/1`,
-  `load_predicates/1`, `load_uri/1`
+- `/toplevel_spawn` options may include `src_text/1`, `src_list/1`,
+  `src_predicates/1`, `src_uri/1`
 - `toplevel_call/3` and `toplevel_next/2` options may include the same
-  `load_*` options
+  `src_*` options
 
 ### `actor`
 
 Adds actor spawn source loading:
 
-- `spawn/3` options may include `load_text/1`, `load_list/1`,
-  `load_predicates/1`, `load_uri/1`
+- `spawn/3` options may include `src_text/1`, `src_list/1`,
+  `src_predicates/1`, `src_uri/1`
 
 
 ## Current Sandbox Status Against That Matrix
@@ -114,10 +114,10 @@ Adds actor spawn source loading:
 With `sandbox(blacklist)`, which is the current default/public mode in this
 repo:
 
-- controller-owned public `load_uri/1` paths are supported
-- nested actor/toplevel `load_uri/1` paths are also supported through the same
-  validated rewrite to `load_text/1`
-- `load_predicates/1` is supported
+- controller-owned public `src_uri/1` paths are supported
+- nested actor/toplevel `src_uri/1` paths are also supported through the same
+  validated rewrite to `src_text/1`
+- `src_predicates/1` is supported
 - loaded source is prevalidated before loading
 - blacklist mode does **not** use SWI's `sandboxed(true)` loader path; that
   extra loader hook is currently used only in `whitelist` mode

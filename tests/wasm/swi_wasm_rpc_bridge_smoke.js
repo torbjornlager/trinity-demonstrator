@@ -153,10 +153,10 @@ ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
    "web_rpc_page no longer uses synchronous XHR");
 ok(includes("window.swiEnsureFinalFullStop = function(text)") &&
    includes('"    Text := swiEnsureFinalFullStop(#S)."'),
-   "multiline load_text preserves a terminating full stop before trailing whitespace");
+   "multiline src_text preserves a terminating full stop before trailing whitespace");
 ok(includes("window.swiResolveRpcLoadUri = function(uri)") &&
    includes('"    ResolvedURI := swiResolveRpcLoadUri(#URIText),"'),
-   "rpc load_uri resolves its source before the browser fetches it");
+   "rpc src_uri resolves its source before the browser fetches it");
 {
   const savedWindow = global.window;
   global.window = { location: { origin: "https://n1.elfenbenstornet.se" } };
@@ -166,17 +166,17 @@ ok(includes("window.swiResolveRpcLoadUri = function(uri)") &&
        "https://n2.elfenbenstornet.se/" &&
      rpcUriHelpers.resolveBrowserRpcBaseUri("localhost") ===
        "https://n1.elfenbenstornet.se",
-     "localhost RPC keeps the browser node as target while Markdown load_uri resolves as source");
+     "localhost RPC keeps the browser node as target while Markdown src_uri resolves as source");
   global.window = savedWindow;
 }
 ok(workerSource.includes('function actorLoadUri(uriText)') &&
    workerSource.includes('Promise := actorLoadUri(#URIText)') &&
    !workerSource.includes('rpc_load_uri(Options, LoadURI)') &&
    !workerSource.includes('loadUri: String(loadUri || "")') &&
-   includes('case "load_uri":') &&
+   includes('case "src_uri":') &&
    includes('result = this.loadSwiWasmUriSource(message.uri || "");') &&
    includes('resolveBrowserRpcBaseUri(message.node || "")'),
-   "worker RPC fetches load_uri source without using it to choose the call target");
+   "worker RPC fetches src_uri source without using it to choose the call target");
 ok(workerSource.includes("function actorEnsureFinalFullStop(text)") &&
    workerSource.includes('"    Text := actorEnsureFinalFullStop(#Text0)."'),
    "worker RPC preserves a terminating full stop before trailing whitespace");
@@ -297,7 +297,7 @@ ok(includes('self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main"') 
 ok(includes('message.type === "output"') &&
    includes("this.terminal.echo(String(message.output)"),
    "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
-ok(tutorialIncludes('load_text("echo_actor :-') &&
+ok(tutorialIncludes('src_text("echo_actor :-') &&
    tutorialIncludes("node('{{actor_peer_host}}'),\n       session(true)") &&
    !tutorialIncludes("node('{{actor_peer_host}}')\n   ])."),
    "SWI-WASM remote tutorial examples ship remote echo source and keep remote toplevels as sessions");
@@ -371,31 +371,31 @@ ok(includes('.editor-source-label {') &&
    includes(':root[data-theme="dark"] .editor-source-label {\n        color: #ffffff;'),
    "editor scratch-buffer and filename labels are larger and theme-aware");
 const expandedEditorCommand = rewriteEditorLoadTextAware(
-  "statechart_spawn(Pid, [load_text(<editor>), trace(true)]).",
-  "load_text('<statechart/>')"
+  "statechart_spawn(Pid, [src_text(<editor>), trace(true)]).",
+  "src_text('<statechart/>')"
 );
 ok(expandedEditorCommand.count === 1 &&
    expandedEditorCommand.invalidCount === 0 &&
    expandedEditorCommand.text ===
-     "statechart_spawn(Pid, [load_text('<statechart/>'), trace(true)]).",
-   "load_text(<editor>) expands as one explicit UI placeholder");
+     "statechart_spawn(Pid, [src_text('<statechart/>'), trace(true)]).",
+   "src_text(<editor>) expands as one explicit UI placeholder");
 const ignoredEditorText = rewriteEditorLoadTextAware(
-  "writeln('load_text(<editor>)'), % load_text(<editor>)\n/* <editor> */ true.",
-  "load_text('wrong')"
+  "writeln('src_text(<editor>)'), % src_text(<editor>)\n/* <editor> */ true.",
+  "src_text('wrong')"
 );
 ok(ignoredEditorText.count === 0 && ignoredEditorText.invalidCount === 0,
    "quoted and commented <editor> text is not expanded");
 const invalidEditorText = rewriteEditorLoadTextAware(
-  "statechart_spawn(Pid, [load_uri(<editor>)]).",
-  "load_text('wrong')"
+  "statechart_spawn(Pid, [src_uri(<editor>)]).",
+  "src_text('wrong')"
 );
 ok(invalidEditorText.count === 0 && invalidEditorText.invalidCount === 1,
-   "<editor> outside load_text/1 is rejected instead of sent to Prolog");
+   "<editor> outside src_text/1 is rejected instead of sent to Prolog");
 ok(includes("prepareEditorCommand: function(command, term)") &&
    includes("prepared = this.prepareEditorCommand(combined, term);") &&
    includes('notice = "% <editor> expanded from') &&
    !includes('snapshot at submission') &&
-   includes('load_text(<editor>)  snapshot the active SXML editor') &&
+   includes('src_text(<editor>)  snapshot the active SXML editor') &&
    !includes('statechart_spawn(Pid, [...]).'),
    "terminal and Examples share visible submission-time editor expansion");
 ok(includes("escapeNestedPrologNegation: function(text)") &&
@@ -427,8 +427,8 @@ ok(includes('POST /interaction_log (durable usage log): ') &&
    "interaction logging is visible, including failed recording attempts");
 ok(includes('updating private code in ISOTOPE session ') &&
    includes('updating private code in ACTOR session ') &&
-   includes('params.load_text = reloadSpec.text') &&
-   includes('command.load_text = reloadSpec.text') &&
+   includes('params.src_text = reloadSpec.text') &&
+   includes('command.src_text = reloadSpec.text') &&
    includes('wsPendingCallLoad: null'),
    "edited source reloads in place without replacing persistent sessions");
 ok(includes('SWI-WASM actor" +') &&
@@ -444,12 +444,12 @@ ok([
 ].every(function(name) {
   const text = statechartExample(name);
   return text.includes(
-    "statechart_spawn(Pid, [\n       load_text(<editor>),\n       trace(true)\n   ])."
+    "statechart_spawn(Pid, [\n       src_text(<editor>),\n       trace(true)\n   ])."
   ) && /\?- statechart_halt\(\$Pid, Reply, 1\)\.\n\n-->\s*$/.test(text);
 }), "every numbered SXML file exposes launch and final halt queries");
 ok(includes("return this.loadTutorialSourceIntoWsSession(sourceText)") &&
    includes("handleWsTutorialLoadEvent: function(event)") &&
-   includes('load_text: sourceText') &&
+   includes('src_text: sourceText') &&
    includes('goal: "true"'),
    "tutorial Load extends the active session instead of replacing supervised actors");
 ok(includes("server_upgrade(To, Pred0, Options) :- collect_spawn_source(Options, Source)") &&
@@ -614,7 +614,7 @@ ok(tutorialIncludes('id="tutorial-private-and-shared-knowledge"') &&
    "the SWI-WASM tutorial demonstrates private pricing over shared knowledge");
 ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('id="shadow-private-price"') &&
-   actorTutorialSource.includes('load_text("list_price(widget, 80).")') &&
+   actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
    actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
 ok(sharedDbSource.includes('echo_actor :-') &&
@@ -641,19 +641,19 @@ ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
    "the user-module worker shell routes read/1 and read_term/2 through its explicit prompt protocol");
 ok(includes('source: String(extraSourceText || "")') &&
    !includes('extraSourceText || this.currentLoadText()'),
-   "spawned SWI-WASM actors receive only explicit load_* source");
-ok(actorExample("04 count_server.pl").includes("load_predicates([count_server/1])") &&
-   actorExample("05 fridge.pl").includes("load_predicates([fridge/1])") &&
-   actorExample("07 ping-pong.pl").includes("load_predicates([pong/0])") &&
-   actorExample("07 ping-pong.pl").includes("load_predicates([ping/2])") &&
-   actorExample("08 dining_philosophers.pl").includes("load_predicates([doForks/1])") &&
+   "spawned SWI-WASM actors receive only explicit src_* source");
+ok(actorExample("04 count_server.pl").includes("src_predicates([count_server/1])") &&
+   actorExample("05 fridge.pl").includes("src_predicates([fridge/1])") &&
+   actorExample("07 ping-pong.pl").includes("src_predicates([pong/0])") &&
+   actorExample("07 ping-pong.pl").includes("src_predicates([ping/2])") &&
+   actorExample("08 dining_philosophers.pl").includes("src_predicates([doForks/1])") &&
    actorExample("08 dining_philosophers.pl").includes("doWaiter/4, processWaitList/2, areAvailable/2") &&
    actorExample("08 dining_philosophers.pl").includes("philosopher/3, sleep/0") &&
-   actorExample("10 simple_toplevel.pl").includes("load_predicates([session/2])"),
+   actorExample("10 simple_toplevel.pl").includes("src_predicates([session/2])"),
    "actor examples explicitly transfer editor predicates to spawned workers");
-ok(includes("load_predicates([Pred/Arity])") &&
+ok(includes("src_predicates([Pred/Arity])") &&
    !includes("wasm_user_source") &&
-   actorExample("13 fridge_server.pl").includes("load_predicates([fridge/4])") &&
+   actorExample("13 fridge_server.pl").includes("src_predicates([fridge/4])") &&
    actorTutorialSource.includes("start(server(fridge, [initial_state([])]))"),
    "supervised servers transfer callbacks across both actor boundaries");
 ok(includes("numbervars(Copy, 0, _, [singletons(true)])") &&
@@ -666,7 +666,7 @@ ok(workerSource.includes('actorRequest("remote_spawn"') &&
    "worker actors delegate remote spawning to the JavaScript node controller");
 ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('Promise := actorRpc(') &&
-   workerSource.includes('member(load_predicates(Indicators), Options)') &&
+   workerSource.includes('member(src_predicates(Indicators), Options)') &&
    includes('case "rpc":') &&
    includes('requestSwiWasmWorkerRpc: function(message)'),
    "SWI-WASM-2 provides rpc/2-3 through the JavaScript node controller");

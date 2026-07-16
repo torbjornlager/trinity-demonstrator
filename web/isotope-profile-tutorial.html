@@ -848,7 +848,7 @@ assert_many(Count) :-
 </p>
 
 <pre id="rpc2">?- rpc('https://n1.elfenbenstornet.se', mortal(Who), [
-       load_text("mortal(Who) :- human(Who).")
+       src_text("mortal(Who) :- human(Who).")
    ]).
 </pre>
 
@@ -858,7 +858,7 @@ assert_many(Count) :-
 </p>
 
 <p>
-    The code passed in <code>load_text/1</code> is not installed permanently;
+    The code passed in <code>src_text/1</code> is not installed permanently;
     it exists only for that remote call.
 </p>
 
@@ -878,7 +878,7 @@ assert_many(Count) :-
     A compact meta-interpreter achieves this by treating remote calls as
     proof-producing sub-derivations. When the interpreter encounters a remote
     goal it ships <em>itself</em> to the remote node via
-    <code>load_predicates([prove/2])</code>, so the remote node also runs
+    <code>src_predicates([prove/2])</code>, so the remote node also runs
     <code>prove/2</code> and returns a proof term. Remote contributions are
     marked in the result with the <code>@</code> operator.
 </p>
@@ -898,7 +898,7 @@ prove(rpc(URI, A), Proof) :- !,
     prove(rpc(URI, A, []), Proof).
 prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
     rpc(URI, prove(A, Query/Proof), [
-        load_predicates([prove/2])
+        src_predicates([prove/2])
       | Options
     ]).
 prove((A, B), (ProofA, ProofB)) :- !,
@@ -2015,7 +2015,7 @@ ping_pong :-
 <pre id="toplevel-spawn-demo">?- toplevel_spawn(Pid, [
        session(true),
        monitor(true),
-       load_list([p(a),p(b)])
+       src_list([p(a),p(b)])
    ]).
 </pre>
 
@@ -2323,7 +2323,7 @@ ping_pong :-
 <pre id="cpw-remote-echo-spawn">?- spawn(echo_actor, Pid, [
        node('{{actor_peer_host}}'),
        monitor(true),
-       load_text("echo_actor :-
+       src_text("echo_actor :-
     receive({
         echo(From, Msg) -&gt;
             From ! echo(Msg),
@@ -2565,7 +2565,7 @@ fridge(take(_Food), List, not_found, List).
            restart(permanent)
        ])
    ], Sup, [
-       load_predicates([fridge/4])
+       src_predicates([fridge/4])
    ]).
 </pre>
 
@@ -2649,7 +2649,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="srv-upgrade">?- server_upgrade(fridge, fridge2, [
-       load_predicates([fridge2/4])
+       src_predicates([fridge2/4])
    ]).
 </pre>
 
@@ -2861,7 +2861,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </figure>
 
 <p>
-    Spawn the statechart as an actor. <code>load_uri</code> fetches the XML
+    Spawn the statechart as an actor. <code>src_uri</code> fetches the XML
     for the interpreter, and <code>trace(true)</code> enables transition
     tracing so the diagram updates automatically as events fire.
     <code>Pid</code> is bound to the actor's pid. Spawning also populates
@@ -2870,7 +2870,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-pr-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/01%20pause-and-resume.xml'),
+       src_uri('/examples/statecharts/01%20pause-and-resume.xml'),
        trace(true)
    ]).
 </pre>
@@ -2980,7 +2980,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-spaghetti-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/02%20spaghetti.xml'),
+       src_uri('/examples/statecharts/02%20spaghetti.xml'),
        trace(true)
    ]).
 </pre>
@@ -3064,7 +3064,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-emotions-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/03%20emotions.xml'),
+       src_uri('/examples/statecharts/03%20emotions.xml'),
        trace(true)
    ]).
 </pre>
@@ -3143,7 +3143,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/08%20gcd.xml'),
+       src_uri('/examples/statecharts/08%20gcd.xml'),
        trace(true)
    ]).
 </pre>
@@ -3181,7 +3181,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-dialog-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/11%20boxshop-1.xml'),
+       src_uri('/examples/statecharts/11%20boxshop-1.xml'),
        trace(true)
    ]).
 </pre>
@@ -3257,7 +3257,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-spawn-toplevel-spawn">?- statechart_spawn(Pid, [
-       load_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
+       src_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
        trace(true)
    ]).
 </pre>

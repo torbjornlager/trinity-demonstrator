@@ -18,7 +18,7 @@ map, hook inventory, conformance strategy — is in
 | layer | library | gives you |
 |---|---|---|
 | 0 | `library(web_prolog/actors)` | spawn/send/receive, links, monitors, registration — a stand-alone actor library; full SWI-Prolog available |
-| 1 | `library(web_prolog/isolation)` | per-actor temporary modules, `load_text/1` & friends |
+| 1 | `library(web_prolog/isolation)` | per-actor temporary modules, `src_text/1` & friends |
 | 2 | `library(web_prolog/toplevel_actors)` | query actors: `'$call'`/`'$next'`/`'$stop'` protocol |
 | 2b | server, supervisor, statechart, parallel | reusable actor behaviours |
 | 3 | `library(web_prolog/distribution)` + `rpc` | `Id@Node` pids, remote spawn/send/monitor/link, `rpc/2-3`, `promise/3-4`, `yield/2-3` |

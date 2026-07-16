@@ -271,7 +271,7 @@ authorization_error_string(error(authorization_error(_PrincipalId, actor(Pid0)),
     json_pid_value(Pid0, Pid),
     format(string(ErrorString), "Not authorized to access actor ~w", [Pid]).
 
-relation_error_string(error(relation_violation(load_text), _),
+relation_error_string(error(relation_violation(src_text), _),
                       "Source loading is not available in the RELATION profile") :-
     !.
 
@@ -333,13 +333,13 @@ request_size_error_string(error(request_size_exceeded(Field, _Size, Limit), _),
            "Request field too large: ~w (limit ~w bytes)",
            [FieldString, Limit]).
 
-request_size_field_string(load_text, "load_text") :-
+request_size_field_string(src_text, "src_text") :-
     !.
-request_size_field_string(load_uri, "load_uri") :-
+request_size_field_string(src_uri, "src_uri") :-
     !.
-request_size_field_string(load_list, "load_list") :-
+request_size_field_string(src_list, "src_list") :-
     !.
-request_size_field_string(load_predicates, "load_predicates") :-
+request_size_field_string(src_predicates, "src_predicates") :-
     !.
 request_size_field_string(ws_frame, "ws_frame") :-
     !.

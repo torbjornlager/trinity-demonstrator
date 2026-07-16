@@ -23,8 +23,8 @@ The central abstraction is an actor:
 - each actor runs in its own temporary Prolog module
 
 That last point is important. A spawned actor does not just get a new thread;
-it also gets a private module where `load_text/1`, `load_list/1`,
-`load_uri/1`, and `load_predicates/1` are loaded. This gives actors isolated
+it also gets a private module where `src_text/1`, `src_list/1`,
+`src_uri/1`, and `src_predicates/1` are loaded. This gives actors isolated
 code environments while still allowing a node-wide shared database to be
 imported.
 
@@ -84,8 +84,8 @@ The local spawn path is straightforward:
 Trusted local spawns also import the caller's goal module, preserving normal
 program-level calls such as `spawn(worker, Pid)`. Public node spawns do not
 inherit their session module: session-defined predicates must be copied into
-the actor explicitly with `load_predicates/1` (or supplied through another
-`load_*` option). Node-published shared predicates remain available by name.
+the actor explicitly with `src_predicates/1` (or supplied through another
+`src_*` option). Node-published shared predicates remain available by name.
 
 ### 2. Isolation
 

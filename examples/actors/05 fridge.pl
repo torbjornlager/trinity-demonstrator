@@ -41,7 +41,7 @@ take(Pid, Food, Response) :-
 /** <examples>
 
 ?- spawn(fridge([]), Pid, [
-       load_predicates([fridge/1])
+       src_predicates([fridge/1])
    ]).
     
 ?- store($Pid, milk, R1). 

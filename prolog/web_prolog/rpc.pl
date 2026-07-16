@@ -155,7 +155,7 @@ rpc_search_params(GoalAtom, TemplateAtom, Offset, Limit,
                   LoadText, RemoteTimeout, Once, Search) :-
     Search0 = [goal=GoalAtom, template=TemplateAtom,
                offset=Offset, limit=Limit, format=prolog],
-    append_optional_param(Search0, load_text, LoadText, Search1),
+    append_optional_param(Search0, src_text, LoadText, Search1),
     append_optional_param(Search1, timeout, RemoteTimeout, Search2),
     append_optional_param(Search2, once, Once, Search).
 
@@ -175,6 +175,10 @@ rpc_internal_option(template(_)).
 rpc_internal_option(offset(_)).
 rpc_internal_option(timeout(_)).
 rpc_internal_option(http_timeout(_)).
+rpc_internal_option(src_text(_)).
+rpc_internal_option(src_list(_)).
+rpc_internal_option(src_uri(_)).
+rpc_internal_option(src_predicates(_)).
 rpc_internal_option(load_text(_)).
 rpc_internal_option(load_list(_)).
 rpc_internal_option(load_uri(_)).

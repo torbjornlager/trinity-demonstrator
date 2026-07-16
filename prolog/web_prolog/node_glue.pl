@@ -182,7 +182,7 @@ actors:hook_spawn_abort(Context) :-
 %  statechart_actor:Goal with no checking of its own, so for a chart
 %  spawned by an untrusted client (public execution profile active, and
 %  propagated into the interpreter actor by hook_spawn_context/2) they
-%  must pass the node sandbox -- otherwise a load_text/1 chart could run
+%  must pass the node sandbox -- otherwise a src_text/1 chart could run
 %  arbitrary predicates.  No public profile (trusted desktop/test charts)
 %  => no clause => check_chart_goal/1 is a no-op and behaviour is frozen.
 :- multifile statechart_runtime:hook_check_chart_goal/1.
@@ -254,7 +254,7 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
 pid_utils:hook_current_node_url(URL) :-
     current_node_url(URL).
 
-%  load_uri origin allowlist (was source_utils' node_runtime_state
+%  src_uri origin allowlist (was source_utils' node_runtime_state
 %  import).
 :- multifile source_utils:load_uri_allowed_origins/1.
 source_utils:load_uri_allowed_origins(Origins) :-

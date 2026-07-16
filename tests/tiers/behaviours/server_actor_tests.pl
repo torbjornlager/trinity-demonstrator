@@ -134,7 +134,7 @@ test(hot_code_swap) :-
     server_spawn(test_fridge, [], Pid),
     server_request(Pid, store(milk), R1),
     R1 == ok,
-    server_upgrade(Pid, fridge2, [load_predicates([fridge2/4])]),
+    server_upgrade(Pid, fridge2, [src_predicates([fridge2/4])]),
     server_request(Pid, take(milk), R2),
     R2 == taken(milk),
     server_halt(Pid, _).
@@ -146,7 +146,7 @@ test(upgrade_preserves_state) :-
     server_request(Pid, inc, _),
     server_request(Pid, inc, _),
     server_request(Pid, inc, _),
-    server_upgrade(Pid, echo, [load_predicates([echo/4])]),
+    server_upgrade(Pid, echo, [src_predicates([echo/4])]),
     %% echo/4 returns the request as the response; state (3) is unchanged.
     server_request(Pid, get, R),
     R == get,
@@ -156,9 +156,9 @@ test(upgrade_preserves_state) :-
 %% 10. Multiple upgrades in sequence.
 test(multiple_upgrades) :-
     server_spawn(test_fridge, [milk], Pid),
-    server_upgrade(Pid, fridge2, [load_predicates([fridge2/4])]),
+    server_upgrade(Pid, fridge2, [src_predicates([fridge2/4])]),
     server_upgrade(Pid, original_fridge,
-                   [load_predicates([original_fridge/4])]),
+                   [src_predicates([original_fridge/4])]),
     server_request(Pid, take(milk), R),
     R == ok(milk),
     server_halt(Pid, _).
@@ -173,7 +173,7 @@ test(upgrade_without_source_rejects_unloaded_callback) :-
 
 test(upgrade_without_source_accepts_loaded_callback) :-
     server_spawn(test_fridge, [], Pid, [
-        load_predicates([fridge2/4])
+        src_predicates([fridge2/4])
     ]),
     server_upgrade(Pid, fridge2),
     server_halt(Pid, _).

@@ -288,10 +288,10 @@ builtin_route_family(toplevel_respond, semistateful_api).
 builtin_route_family(ws, stateful_api).
 
 
-builtin_source_option_policy(load_text(_), private_db).
-builtin_source_option_policy(load_list(_), private_db).
-builtin_source_option_policy(load_predicates(_), private_db).
-builtin_source_option_policy(load_uri(_), private_db).
+builtin_source_option_policy(src_text(_), private_db).
+builtin_source_option_policy(src_list(_), private_db).
+builtin_source_option_policy(src_predicates(_), private_db).
+builtin_source_option_policy(src_uri(_), private_db).
 
 
 %!  builtin_family_enabled(+Profile, +Family) is semidet.
@@ -406,7 +406,7 @@ builtin_family_spec(service_registry,
 builtin_family_spec(private_db,
                     "Private database",
                     "Load clauses into and inspect actor-local private databases.",
-                    ["load_text/1", "load_list/1", "load_predicates/1", "load_uri/1",
+                    ["src_text/1", "src_list/1", "src_predicates/1", "src_uri/1",
                      "listing/0", "listing/1"],
                     [isobase, isotope, actor]).
 builtin_family_spec(dynamic_db,

@@ -23,7 +23,7 @@ Two modes, selected per node by `WP_SANDBOX`:
 Chart-embedded goals (`<onentry>/<onexit>/<go>` scripts and transition
 conditions) are **not** exempt: they are routed through the sandbox via
 `statechart_runtime:hook_check_chart_goal/1` (glue in `node_glue.pl`) whenever
-a public execution profile is active, so a client `statechart_spawn(load_text(...))`
+a public execution profile is active, so a client `statechart_spawn(src_text(...))`
 cannot run dangerous predicates through its scripts. Trusted desktop/test
 charts install no hook and are unaffected.
 
@@ -41,7 +41,7 @@ either `whitelist` mode or OS containment (§3). **Treat OS containment as the
 real boundary for any `WP_AUTH=open` node.**
 
 ### `rpc/3` target host is not allowlisted
-`load_uri` is restricted to `load_uri_allowed_origins`, but `rpc(URL, Goal)`
+`src_uri` is restricted to `load_uri_allowed_origins`, but `rpc(URL, Goal)`
 will connect to **any** `URL` (`rpc.pl`, `resolve_rpc_uri/2`). It is therefore
 an SSRF channel and is bounded only by the network egress policy (§4).
 
@@ -80,7 +80,7 @@ distroless/minimal node image with no shell to exec.
 
 Nodes reach peers via public DNS (`rpc('https://n2.elfenbenstornet.se', …)`
 exits to Caddy's public IP and returns), so **do not blanket-block egress** —
-it breaks the cross-node `rpc`/`load_uri` tutorials. Scope it instead.
+it breaks the cross-node `rpc`/`src_uri` tutorials. Scope it instead.
 
 **Do now (one-liner, cannot break examples):** drop the cloud metadata
 endpoint, the highest-value SSRF/credential-theft target:
