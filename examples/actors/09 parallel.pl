@@ -78,9 +78,7 @@ tidy_up(Pid) :-
 
 drain_mailbox(Pid) :-
     receive({
-        Pid-_ ->
-            drain_mailbox(Pid) ;
-        down(Pid, _, _) ->
+        Msg if arg(1, Msg, Pid) ->
             drain_mailbox(Pid)
     }, [
         timeout(0)
