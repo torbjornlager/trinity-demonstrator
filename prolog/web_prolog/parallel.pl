@@ -64,14 +64,14 @@ par_yield(Pids, Pid, Goal) :-
     receive({
         Pid-Goal ->
             receive({
-                down(_, Pid, true) ->
+                down(Pid, _, true) ->
                     true
             }) ;
-        down(_, FailedPid, false)
+        down(FailedPid, _, false)
                 if memberchk(FailedPid, Pids) ->
             tidy_up_all(Pids),
             !, fail ;
-        down(_, FailedPid, exception(E))
+        down(FailedPid, _, exception(E))
                 if memberchk(FailedPid, Pids) ->
             tidy_up_all(Pids),
             throw(E)

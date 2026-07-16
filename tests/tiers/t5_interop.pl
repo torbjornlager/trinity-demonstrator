@@ -251,7 +251,7 @@ test(remote_spawn_completion_down, Reason == true) :-
    flush_shell_mailbox,
    spawn(true, Pid, [node(URL), monitor(true)]),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }, [
        timeout(5),
        on_timeout(fail)
@@ -262,7 +262,7 @@ test(remote_spawn_exit_custom_reason, Reason == test_reason) :-
    spawn(receive({never -> true}), Pid, [node(URL), monitor(true)]),
    exit(Pid, test_reason),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }, [
        timeout(5),
        on_timeout(fail)
@@ -276,7 +276,7 @@ test(remote_send_drives_remote_receive, Reason == told_to_stop) :-
          [node(URL), monitor(true)]),
    send(Pid, go),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }, [
        timeout(5),
        on_timeout(fail)
@@ -294,7 +294,7 @@ test(remote_toplevel_call_answers, Rows == [a, b]) :-
    ]),
    toplevel_halt(Pid, _Reply),
    receive({
-       down(_, Pid, _) -> true
+       down(Pid, _, _) -> true
    }, [
        timeout(5),
        on_timeout(fail)
@@ -305,7 +305,7 @@ test(remote_toplevel_halt_reply, Reply == true) :-
    toplevel_spawn(Pid, [node(URL), session(true), monitor(true)]),
    toplevel_halt(Pid, Reply),
    receive({
-       down(_, Pid, _) -> true
+       down(Pid, _, _) -> true
    }, [
        timeout(5),
        on_timeout(fail)
@@ -459,7 +459,7 @@ test(ping_pong_across_implementations, Got == pong) :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, _) -> true
+       down(Pid, _, _) -> true
    }, [
        timeout(5),
        on_timeout(fail)

@@ -115,7 +115,7 @@ answer_to_json(halted(Pid, Reply),
     term_to_json_string(Reply, ReplyString).
 %  Standard 3-arity down/3 (per manual.html:210/231).  Ref is serialized
 %  so the browser can correlate with the monitor it installed.
-answer_to_json(down(Ref, Pid, Reason),
+answer_to_json(down(Pid, Ref, Reason),
                json{type:down, ref:JsonRef, pid:JsonPid, reason:ReasonString}) :-
     json_pid_value(Ref, JsonRef),
     json_pid_value(Pid, JsonPid),

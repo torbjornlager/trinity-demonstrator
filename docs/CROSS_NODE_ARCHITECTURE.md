@@ -114,7 +114,7 @@ stop(Pid, Parent) :-
            exit(ChildPid, kill)),
     down_reason(Pid, Reason),
     forall(retract(monitor(Other, GlobalPid, Ref)),
-           Other ! down(Ref, GlobalPid, Reason)).
+           Other ! down(GlobalPid, Ref, Reason)).
 ```
 
 For cross-node compatibility the host must additionally drain the
@@ -125,7 +125,7 @@ controller's `remote_link_/2` table inside `stop/2`; see §8.
 All monitor termination notifications are delivered as the
 canonical 3-arity term:
 
-    down(Ref, Pid, Reason)
+    down(Pid, Ref, Reason)
 
 where `Ref` is the monitor's reference (or `Pid` itself when
 `monitor(true)` was used at spawn time, per the convention in
@@ -139,7 +139,7 @@ Monitor registration, termination delivery, and `demonitor(Ref, [flush])`
 share one lifecycle transaction across the local and cross-node paths. Thus a
 monitor either receives exactly one `down/3`, or demonitoring removes it before
 delivery; `[flush]` then removes any notification already enqueued for `Ref`.
-Monitoring an already-dead pid produces `down(Ref, Pid, noproc)` immediately.
+Monitoring an already-dead pid produces `down(Pid, Ref, noproc)` immediately.
 
 ---
 
@@ -174,7 +174,7 @@ installing every monitor and link it intends to install for the pid.
 
 **`remote_monitor_(Watcher, CompoundPid, Ref)`** — every cross-node
 monitor.  Drained when the remote pid dies; delivery sends
-`down(Ref, CompoundPid, Reason)` to each `Watcher`.
+`down(CompoundPid, Ref, Reason)` to each `Watcher`.
 
 **`remote_link_(LocalParent, CompoundPid)`** — every cross-node link
 from a local parent to a remote child.  Used by the local parent's
@@ -729,7 +729,7 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
     retractall(node_controller:remote_link_(_, CompoundPid)),
     retractall(link(_, CompoundPid)),
     forall(member(monitor(Watcher, Ref), Entries),
-           send(Watcher, down(Ref, CompoundPid, Reason))).
+           send(Watcher, down(CompoundPid, Ref, Reason))).
 ```
 
 `take_remote_monitors_for_pid/2` is the atomic drain.  Every
@@ -769,7 +769,7 @@ The dispatch tree, including the buffering and drop paths, is:
 flowchart TD
     Frame["inbound JSON frame"] --> Down{"type = down<br/>and has pid?"}
     Down -- yes --> ReadyForDown{"target row exists?"}
-    ReadyForDown -- yes --> DeliverDown["drain remote_monitor_<br/>send down(Ref, Pid, Reason)<br/>forget target/link rows"]
+    ReadyForDown -- yes --> DeliverDown["drain remote_monitor_<br/>send down(Pid, Ref, Reason)<br/>forget target/link rows"]
     ReadyForDown -- no --> BufferDown["buffer in ws_pending_event"]
     Down -- no --> Spawned{"type = spawned?"}
     Spawned -- yes --> SpawnQ["send spawned(Id)<br/>to spawn queue"]
@@ -853,7 +853,7 @@ remote_ws_connection_closed(NodeURL) :-
     node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
     forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
            ( retractall(monitor(_, CompoundPid, _)),
-             send(Watcher, down(Ref, CompoundPid, connection_closed))
+             send(Watcher, down(CompoundPid, Ref, connection_closed))
            )),
     node_controller:drop_remote_state_for_node(NodeURL).
 ```
@@ -866,7 +866,7 @@ In order:
 2. **Drain all monitors on the node.**  For each
    `remote_monitor_(Watcher, Id@NodeURL, Ref)`, retract any
    matching local `monitor/3` rows and send
-   `down(Ref, Id@NodeURL, connection_closed)` to the watcher.
+   `down(Id@NodeURL, Ref, connection_closed)` to the watcher.
 3. **Drop targets and links.**  Forget every `remote_target_` and
    `remote_link_` row whose remote pid lives on the disconnected
    node.
@@ -907,7 +907,7 @@ stop(Pid, Parent) :-
         GlobalPid, _DrainedRemoteChildren),
     down_reason(Pid, Reason),
     forall(retract(monitor(Other, GlobalPid, Ref)),
-           Other ! down(Ref, GlobalPid, Reason)).
+           Other ! down(GlobalPid, Ref, Reason)).
 ```
 
 The `_DrainedRemoteChildren` is discarded because each child has
@@ -995,7 +995,7 @@ testable; see §12.
    `CompoundPid` is already installed.
 
 2. **Single delivery per monitor.**  When a remote pid dies, each
-   surviving local watcher receives exactly one `down(Ref, Pid,
+   surviving local watcher receives exactly one `down(Pid, Ref,
    Reason)` message.  No duplicates.  No missed deliveries (subject
    to invariant 4).
 
@@ -1013,7 +1013,7 @@ testable; see §12.
 
 6. **Connection drop reaps cleanly.**  When the outbound WS to
    `NodeURL` closes, every `remote_monitor_/3` entry for pids on
-   `NodeURL` fires `down(Ref, Pid, connection_closed)` exactly once,
+   `NodeURL` fires `down(Pid, Ref, connection_closed)` exactly once,
    and no `remote_target_/2` or `remote_link_/2` rows for pids on
    `NodeURL` remain.
 

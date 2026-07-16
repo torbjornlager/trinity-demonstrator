@@ -139,7 +139,7 @@ alarm :-
                on_timeout(fail)
            ]),
            receive({
-               down(_, Pid, true) -> true
+               down(Pid, _, true) -> true
            }, [
                timeout(1),
                on_timeout(fail)
@@ -176,7 +176,7 @@ alarm :-
                on_timeout(fail)
            ]),
            receive({
-               down(_, Pid, true) -> true
+               down(Pid, _, true) -> true
            }, [
                timeout(1),
                on_timeout(fail)
@@ -213,7 +213,7 @@ alarm :-
                on_timeout(fail)
            ]),
            receive({
-               down(_, Pid, true) -> true
+               down(Pid, _, true) -> true
            }, [
                timeout(1),
                on_timeout(fail)
@@ -250,7 +250,7 @@ alarm :-
                on_timeout(fail)
            ]),
            receive({
-               down(_, Pid, true) -> true
+               down(Pid, _, true) -> true
            }, [
                timeout(1),
                on_timeout(fail)
@@ -285,7 +285,7 @@ test(spawn_remote_can_message_global_self, Msg == hello) :-
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }, [
              timeout(2),
              on_timeout(fail)
@@ -308,7 +308,7 @@ test(spawn_remote_can_message_global_self_with_bang, Msg == hello) :-
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }, [
              timeout(2),
              on_timeout(fail)
@@ -332,13 +332,13 @@ test(remote_node_reuses_shared_ws_connection, Connections == 1) :-
          length(Conns, Connections),
          exit(ToplevelPid, kill),
          receive({
-             down(_, ToplevelPid, kill) -> true
+             down(ToplevelPid, _, kill) -> true
          }, [
              timeout(2),
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }, [
              timeout(2),
              on_timeout(fail)

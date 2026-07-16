@@ -20,7 +20,7 @@ par_yield(Pids, Pid, Goal) :-
     receive({
         Pid-Goal ->
             receive({
-                down(_, Pid, true) ->
+                down(Pid, _, true) ->
                     true
             }) ;
         down(_, _, false) ->
@@ -56,7 +56,7 @@ wait_first(Pids, Solution) :-
     receive({
         _ - Solution ->
             tidy_up_all(Pids) ;
-        down(_, Pid, false) ->
+        down(Pid, _, false) ->
             select(Pid, Pids, Rest),
             wait_first(Rest, Solution) ;
         down(_, _, exception(Error)) ->
@@ -80,7 +80,7 @@ drain_mailbox(Pid) :-
     receive({
         Pid-_ ->
             drain_mailbox(Pid) ;
-        down(_, Pid, _) ->
+        down(Pid, _, _) ->
             drain_mailbox(Pid)
     }, [
         timeout(0)

@@ -675,7 +675,7 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
             retractall(node_controller:remote_link_(_, CompoundPid)),
             retractall(actors:link(_, CompoundPid)),
             forall(member(monitor(Watcher, Ref), Entries),
-                   send(Watcher, down(Ref, CompoundPid, Reason)))
+                   send(Watcher, down(CompoundPid, Ref, Reason)))
         )).
 
 %!  parse_halted_reply(+Raw, -Term) is semidet.
@@ -731,7 +731,7 @@ remote_ws_connection_closed(NodeURL) :-
         (   node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
             forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
                    ( retractall(actors:monitor(_, CompoundPid, _)),
-                     send(Watcher, down(Ref, CompoundPid, connection_closed))
+                     send(Watcher, down(CompoundPid, Ref, connection_closed))
                    )),
             node_controller:drop_remote_state_for_node(NodeURL)
         )).

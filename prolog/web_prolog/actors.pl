@@ -597,7 +597,7 @@ stop(Pid, Parent) :-
             with_mutex(actors_monitor_lifecycle,
                 (   down_reason(Pid, Reason),
                     forall(retract(monitor(Other, GlobalPid, Ref)),
-                           Other ! down(Ref, GlobalPid, Reason)),
+                           Other ! down(GlobalPid, Ref, Reason)),
                     retractall(pid_thread(Pid, _)),
                     retractall(thread_pid(_, Pid))
                 ))
@@ -678,7 +678,7 @@ self_local(Self) :-
 %!  demonitor(+Ref, +Options:list) is det.
 %
 %   Monitoring/demonitoring of processes. The `flush` option removes any
-%   pending `down(Ref, _, _)` messages for Ref from the caller's mailbox.
+%   pending `down(_, Ref, _)` messages for Ref from the caller's mailbox.
 
 :- dynamic monitor/3.
 
@@ -721,7 +721,7 @@ monitor_target_alive(CanonPid) :-
 
 deliver_missing_monitor(installed, _, _, _).
 deliver_missing_monitor(missing, Self, Ref, CanonPid) :-
-    Self ! down(Ref, CanonPid, noproc).
+    Self ! down(CanonPid, Ref, noproc).
 
 demonitor(Ref) :-
     demonitor(Ref, []).
@@ -738,7 +738,7 @@ demonitor(Ref, Options) :-
 
 flush_monitor_down(Ref) :-
     receive({
-        down(Ref, _, _) ->
+        down(_, Ref, _) ->
             flush_monitor_down(Ref)
     }, [timeout(0)]).
 

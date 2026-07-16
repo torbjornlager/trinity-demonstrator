@@ -228,7 +228,7 @@ server_yield(Ref, MonRef, Response, Options) :-
         Ref-Response0 ->
             demonitor(MonRef),
             Response = Response0 ;
-        down(MonRef, _Pid, Reason) ->
+        down(_Pid, MonRef, Reason) ->
             throw(server_down(Reason))
     }, Options).
 

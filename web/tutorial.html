@@ -1364,7 +1364,7 @@ known_with_birthdate(Me, He, Date) :-
 </p>
 
 <p>
-    The message has the form <code>down(Ref, Pid, Reason)</code>. Here the
+    The message has the form <code>down(Pid, Ref, Reason)</code>. Here the
     actor succeeds normally, so the reason should be <code>true</code>.
 </p>
 
@@ -1397,7 +1397,7 @@ known_with_birthdate(Me, He, Date) :-
    monitor(Pid, Ref),
    demonitor(Ref),
    receive({
-       down(_, Pid, _) -&gt;
+       down(Pid, _, _) -&gt;
            writeln('Unexpected down message.')
    }, [
        timeout(1.2),

@@ -187,7 +187,7 @@ take_remote_children_for_parent(LocalParent, Children) :-
 %
 %   Atomic snapshot-and-clear of every cross-node monitor whose
 %   watched pid resides on NodeURL.  Used by the connection-drop
-%   path to fire `down(Ref, CompoundPid, connection_closed)` to
+%   path to fire `down(CompoundPid, Ref, connection_closed)` to
 %   every watcher of an actor on the disconnected node.  Each entry
 %   in Entries is a term `monitor(Watcher, CompoundPid, Ref)`.
 take_remote_monitors_on_node(NodeURL, Entries) :-

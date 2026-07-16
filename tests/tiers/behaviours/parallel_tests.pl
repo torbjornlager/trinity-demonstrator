@@ -103,7 +103,7 @@ test(unrelated_failure_down_is_deferred) :-
     sleep(0.02),
     parallel([true]),
     receive({
-        down(_, Other, false) -> true
+        down(Other, _, false) -> true
     }, [timeout(1), on_timeout(throw(missing_unrelated_failure_down))]).
 
 
@@ -113,7 +113,7 @@ test(unrelated_exception_down_is_deferred) :-
     sleep(0.02),
     parallel([true]),
     receive({
-        down(_, Other, exception(unrelated_worker_error)) -> true
+        down(Other, _, exception(unrelated_worker_error)) -> true
     }, [timeout(1), on_timeout(throw(missing_unrelated_exception_down))]).
 
 
@@ -130,7 +130,7 @@ test(fail_fast_cleanup_leaves_mailbox_empty) :-
            \+ parallel([fail, sleep(0.001)])),
     sleep(0.05),
     receive({
-        down(Ref, Pid, Reason) ->
+        down(Pid, Ref, Reason) ->
             throw(leaked_parallel_down(Ref, Pid, Reason));
         Pid-Goal ->
             throw(leaked_parallel_result(Pid, Goal))
@@ -230,7 +230,7 @@ test(unrelated_down_is_deferred, Solution == winner) :-
     sleep(0.02),
     first_solution(Solution, [Solution = winner]),
     receive({
-        down(_, Other, false) -> true
+        down(Other, _, false) -> true
     }, [timeout(1), on_timeout(throw(missing_unrelated_down))]).
 
 
@@ -240,7 +240,7 @@ test(winner_cleanup_leaves_mailbox_empty) :-
            first_solution(ok, [ok = ok, (sleep(0.001), ok = slow)])),
     sleep(0.05),
     receive({
-        down(Ref, Pid, Reason) ->
+        down(Pid, Ref, Reason) ->
             throw(leaked_first_solution_down(Ref, Pid, Reason));
         Pid-Result ->
             throw(leaked_first_solution_result(Pid, Result))

@@ -399,7 +399,7 @@ test_restart_intensity :-
     %% Wait for the intensity to be exceeded and supervisor to die.
     GotDown = got(false),
     receive({
-        down(_, SupPid, _Reason) ->
+        down(SupPid, _, _Reason) ->
             nb_setarg(1, GotDown, true)
     }, [timeout(5)]),
     arg(1, GotDown, DownReceived),
@@ -471,7 +471,7 @@ test_cascade_cleanup :-
     exit(OuterPid, kill),
     GotDown = got(false),
     receive({
-        down(InnerRef, InnerPid, _Reason) ->
+        down(InnerPid, InnerRef, _Reason) ->
             nb_setarg(1, GotDown, true)
     }, [timeout(5)]),
     arg(1, GotDown, InnerDown),

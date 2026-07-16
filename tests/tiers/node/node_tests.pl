@@ -1932,7 +1932,7 @@ test(resource_limit_sweeps_stale_committed_resource) :-
                 node_limits:commit_ws_actor_capacity(Reservation0, Pid),
                 exit(Pid, kill),
                 receive({
-                    down(Ref, Pid, _) -> true
+                    down(Pid, Ref, _) -> true
                 }, [
                     timeout(1),
                     on_timeout(fail)
@@ -3966,7 +3966,7 @@ test(ws_actor_toplevel_session_exposes_actor_primitives) :-
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"(spawn(2 > 1, Child, [monitor(true)]), receive({down(_, Child, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)]))",
+                    goal:"(spawn(2 > 1, Child, [monitor(true)]), receive({down(Child, _, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)]))",
                     format:"json"
                 }),
                 ws_receive_json(WS, MonitorReply),
@@ -4067,7 +4067,7 @@ test(ws_actor_spawn_does_not_inherit_session_assertions,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"self(S), spawn((p(X), S ! X), Child, [monitor(true)]), receive({a -> Seen=a; down(_, Child, Reason) -> Seen=down(Reason)}, [timeout(1), on_timeout(Seen=timeout)])",
+                    goal:"self(S), spawn((p(X), S ! X), Child, [monitor(true)]), receive({a -> Seen=a; down(Child, _, Reason) -> Seen=down(Reason)}, [timeout(1), on_timeout(Seen=timeout)])",
                     format:"json"
                 }),
                 ws_receive_json_until_expected_types(WS, ["success"],
@@ -4099,7 +4099,7 @@ test(ws_actor_spawn_load_predicates_copies_session_assertions,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"self(S), spawn((p(X), S ! X), Child, [src_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(1), on_timeout(Value=timeout)]), receive({down(_, Child, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)])",
+                    goal:"self(S), spawn((p(X), S ! X), Child, [src_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(1), on_timeout(Value=timeout)]), receive({down(Child, _, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)])",
                     format:"json"
                 }),
                 ws_receive_json_until_expected_types(WS, ["success"],
@@ -4220,7 +4220,7 @@ test(ws_remote_actor_requires_load_predicates_for_session_code,
                     ws_receive_json(WS, AssertReply),
                     assertion(AssertReply.type == "success"),
                     format(string(NoLoadGoal),
-                           "self(S), spawn((p(X), S ! X), Child, [node(~q), monitor(true)]), receive({a -> Seen=a; down(_, Child, R) -> Seen=down(R)}, [timeout(2), on_timeout(Seen=timeout)])",
+                           "self(S), spawn((p(X), S ! X), Child, [node(~q), monitor(true)]), receive({a -> Seen=a; down(Child, _, R) -> Seen=down(R)}, [timeout(2), on_timeout(Seen=timeout)])",
                            [URI2]),
                     ws_send_json(WS, json{
                         command:toplevel_call,
@@ -4233,7 +4233,7 @@ test(ws_remote_actor_requires_load_predicates_for_session_code,
                     NoLoadReply.data = [NoLoadRow],
                     get_dict('Seen', NoLoadRow, Seen),
                     format(string(LoadGoal),
-                           "self(S), spawn((p(X), S ! X), Child, [node(~q), src_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(2), on_timeout(Value=timeout)]), receive({down(_, Child, R) -> Reason=R}, [timeout(2), on_timeout(Reason=timeout)])",
+                           "self(S), spawn((p(X), S ! X), Child, [node(~q), src_predicates([p/1]), monitor(true)]), receive({a -> Value=a}, [timeout(2), on_timeout(Value=timeout)]), receive({down(Child, _, R) -> Reason=R}, [timeout(2), on_timeout(Reason=timeout)])",
                            [URI2]),
                     ws_send_json(WS, json{
                         command:toplevel_call,

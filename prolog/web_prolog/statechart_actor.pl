@@ -162,11 +162,11 @@ statechart_halt(To, Reply, Timeout) :-
     receive({
         reply(Reply) ->
             demonitor(Ref) ;
-        down(Ref, To, _Reason) ->
+        down(To, Ref, _Reason) ->
             Reply = killed
     }, [timeout(Timeout), on_timeout((
             exit(To, kill),
-            receive({ down(Ref, To, _) -> Reply = killed })
+            receive({ down(To, Ref, _) -> Reply = killed })
         ))]).
 
 

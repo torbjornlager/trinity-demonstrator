@@ -10699,7 +10699,7 @@
             }
             if (pid === "statechart") {
               //  The running chart is a valid monitor watcher: a child's
-              //  down(Ref,Pid,Reason) routes back to it as an external event.
+              //  down(Pid, Ref, Reason) routes back to it as an external event.
               return !!this.swiWasmStatechartActive;
             }
             if (this.parseSwiWasmRemoteToplevelPid(pid) || this.parseSwiWasmRemoteActorPid(pid)) {
@@ -10762,7 +10762,7 @@
             this.clearSwiWasmActorNamesForPid(pid);
           },
           deliverSwiWasmActorDown: function(watcherText, refText, pidText, reasonText) {
-            var message = "down(" + refText + "," + qualifySwiWasmLocalPid(pidText) + "," + String(reasonText || "true") + ")";
+            var message = "down(" + qualifySwiWasmLocalPid(pidText) + "," + refText + "," + String(reasonText || "true") + ")";
             this.sendSwiWasmActorMessage(watcherText, message);
           },
           clearSwiWasmActorNamesForPid: function(pidText) {
@@ -10999,7 +10999,7 @@
               "server_promise(To, Request, Ref, MonRef) :- monitor(To, MonRef), server_promise(To, Request, Ref).",
               "server_yield(Ref, Reply) :- server_yield(Ref, Reply, []).",
               "server_yield(Ref, Reply, Options) :- receive({Ref-Reply -> true}, Options).",
-              "server_yield(Ref, MonRef, Reply, Options) :- receive({Ref-Reply0 -> demonitor(MonRef), Reply = Reply0 ; down(MonRef, _, Reason) -> throw(server_down(Reason))}, Options).",
+              "server_yield(Ref, MonRef, Reply, Options) :- receive({Ref-Reply0 -> demonitor(MonRef), Reply = Reply0 ; down(_, MonRef, Reason) -> throw(server_down(Reason))}, Options).",
               "server_request(To, Request, Reply) :- server_request(To, Request, Reply, []).",
               "server_request(To, Request, Reply, Options) :- server_promise(To, Request, Ref, MonRef), server_yield(Ref, MonRef, Reply, Options).",
               "server_upgrade(To, Pred0) :- server_upgrade_source(To, Pred0, '').",
@@ -11047,7 +11047,7 @@
               "wasm_child_start(Goal, Id, ChildOptions, Pid) :- spawn(Goal, Pid, [name(Id)|ChildOptions]).",
               "",
               "wasm_supervisor_loop(State0) :- receive({",
-              "    down(_, Pid, Reason) -> wasm_handle_down(Pid, Reason, State0, State1), wasm_supervisor_loop(State1) ;",
+              "    down(Pid, _, Reason) -> wasm_handle_down(Pid, Reason, State0, State1), wasm_supervisor_loop(State1) ;",
               "    '$sup'(From, Ref, Request) -> wasm_handle_supervisor_call(Request, Reply, State0, State1), send(From, Ref-Reply), wasm_supervisor_loop(State1) ;",
               "    '$sup_stop'(From) -> wasm_stop_children(State0), send(From, reply(true))",
               "  }).",
@@ -11220,10 +11220,10 @@
               "",
               "par_yield(Pids, Pid, Goal) :-",
               "    receive({",
-              "        Pid-Goal -> receive({down(_, Pid, true) -> true}) ;",
-              "        down(_, FailedPid, false) if memberchk(FailedPid, Pids) ->",
+              "        Pid-Goal -> receive({down(Pid, _, true) -> true}) ;",
+              "        down(FailedPid, _, false) if memberchk(FailedPid, Pids) ->",
               "            worker_tidy_all(Pids), !, fail ;",
-              "        down(_, FailedPid, exception(Error)) if memberchk(FailedPid, Pids) ->",
+              "        down(FailedPid, _, exception(Error)) if memberchk(FailedPid, Pids) ->",
               "            worker_tidy_all(Pids), throw(Error)",
               "    }).",
               "",
@@ -11259,11 +11259,11 @@
               "    receive({",
               "        Winner-Solution if memberchk(Winner, Pids) ->",
               "            worker_tidy_all(Pids) ;",
-              "        down(_, FailedPid, false) if memberchk(FailedPid, Pids) ->",
+              "        down(FailedPid, _, false) if memberchk(FailedPid, Pids) ->",
               "            ( OnFail == continue -> selectchk(FailedPid, Pids, Rest),",
               "              wait_first(Rest, Solution, OnFail, OnError)",
               "            ; worker_tidy_all(Pids), !, fail ) ;",
-              "        down(_, FailedPid, exception(Error)) if memberchk(FailedPid, Pids) ->",
+              "        down(FailedPid, _, exception(Error)) if memberchk(FailedPid, Pids) ->",
               "            ( OnError == continue -> selectchk(FailedPid, Pids, Rest),",
               "              wait_first(Rest, Solution, OnFail, OnError)",
               "            ; worker_tidy_all(Pids), throw(Error) )",
@@ -11274,12 +11274,12 @@
               "    demonitor(Pid, [flush]),",
               "    monitor(Pid, CleanupRef),",
               "    exit(Pid, kill),",
-              "    receive({down(CleanupRef, Pid, _) -> true}),",
+              "    receive({down(Pid, CleanupRef, _) -> true}),",
               "    worker_drain(Pid).",
               "worker_drain(Pid) :-",
               "    receive({",
               "        Pid-_ -> worker_drain(Pid) ;",
-              "        down(_, Pid, _) -> worker_drain(Pid)",
+              "        down(Pid, _, _) -> worker_drain(Pid)",
               "    }, [timeout(0)]).",
               "",
               "collect_spawn_source(Options, Source) :-",
@@ -11430,7 +11430,7 @@
               "    ).",
               "",
               "flush_down(Ref) :-",
-              "    receive({down(Ref, _, _) -> flush_down(Ref)}, [timeout(0)]),",
+              "    receive({down(_, Ref, _) -> flush_down(Ref)}, [timeout(0)]),",
               "    !.",
               "flush_down(_).",
               "",

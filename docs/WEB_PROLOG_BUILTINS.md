@@ -255,7 +255,7 @@ The default timeout goal is `true`, so timeout expiry succeeds unless
 `on_timeout(fail)` (or another failing goal) is supplied explicitly.
 
 `monitor(Pid, Ref)` returns a fresh opaque reference. If `Pid` has already
-terminated, the caller immediately receives `down(Ref, Pid, noproc)`.
+terminated, the caller immediately receives `down(Pid, Ref, noproc)`.
 Monitor installation, actor termination and `demonitor(Ref, [flush])` are
 serialized: either termination delivers one `down/3`, or demonitoring removes
 the monitor before delivery. The `[flush]` option removes any already-delivered

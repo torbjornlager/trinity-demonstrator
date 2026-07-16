@@ -1,7 +1,7 @@
 /*  Wire-format tests for down/3 standardization.
 
     Background: prior to this change, the WS layer downgraded the
-    canonical 3-arity down(Ref, Pid, Reason) message (manual.html:210/231)
+    canonical 3-arity down(Pid, Ref, Reason) message (manual.html:210/231)
     to 2-arity down(Pid, Reason) before JSON serialization, and a parallel
     2-arity producer/consumer convention had grown inside node_ws.pl.  The
     project standardized on down/3 everywhere; these tests pin the wire
@@ -15,8 +15,8 @@
 
 :- begin_tests(down_wire_format).
 
-test(down3_includes_ref_pid_reason) :-
-    answer_to_json(down(my_ref, 123, normal), JSON),
+test(down3_includes_pid_ref_reason) :-
+    answer_to_json(down(123, my_ref, normal), JSON),
     assertion(JSON.type == down),
     assertion(JSON.ref == my_ref),
     assertion(JSON.pid == 123),
@@ -25,12 +25,12 @@ test(down3_includes_ref_pid_reason) :-
 
 test(down3_compound_pid_normalized) :-
     answer_to_json(down(456@'https://example.test',
-                        456@'https://example.test',
+                        my_ref,
                         kill), JSON),
     %  Compound pids must serialize to strings (atom_json_dict can't
     %  serialize compound terms directly).
     assertion((atom(JSON.pid) ; string(JSON.pid))),
-    assertion((atom(JSON.ref) ; string(JSON.ref))).
+    assertion(JSON.ref == my_ref).
 
 test(down2_legacy_fallback_still_works) :-
     %  The legacy 2-arity producer path is kept as a fallback during

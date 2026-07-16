@@ -195,7 +195,7 @@ test(exit_self_reason, Reason == reason) :-
        monitor(true)
    ]),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }).
 
 test(exit_other_reason, Reason == reason) :-
@@ -204,7 +204,7 @@ test(exit_other_reason, Reason == reason) :-
    ]),
    exit(Pid, reason),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }).
 
 test(nested_spawn_exit_does_not_abort_parent, Result == true) :-
@@ -223,7 +223,7 @@ test(nested_spawn_exit_does_not_abort_parent, Result == true) :-
    ]),
    exit(Pid, kill),
    receive({
-       down(_, Pid, kill) -> true
+       down(Pid, _, kill) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -249,7 +249,7 @@ test(register_cleared_on_exit, Reason == reason) :-
    whereis(test2, undefined),
    unregister(test2),
    receive({
-       down(_, Pid2, Reason) -> true
+       down(Pid2, _, Reason) -> true
    }).
 
 test(send_to_unknown_name_raises,
@@ -316,7 +316,7 @@ test(service_registration_cleared_on_exit,
    spawn(receive({}), Pid, [link(false), monitor(true)]),
    register_service(short_service, Pid),
    exit(Pid, normal),
-   receive({down(_, Pid, normal) -> true}),
+   receive({down(Pid, _, normal) -> true}),
    whereis_service(short_service, Missing).
 
 test(link_kills_children, Result == true) :-
@@ -334,7 +334,7 @@ test(link_kills_children, Result == true) :-
    spawn(( monitor(Child, _),
            send(Self, watching),
            receive({
-               down(_, Child, _) -> send(Self, child_down)
+               down(Child, _, _) -> send(Self, child_down)
            })
          ), _Watcher, [link(false)]),
    receive({ watching -> true }, [timeout(1), on_timeout(fail)]),
@@ -403,7 +403,7 @@ test(demonitor_flush_discards_down, Result == clean) :-
    receive({ nothing -> true }, [timeout(0.2), on_timeout(true)]),
    demonitor(Ref, [flush]),
    receive({
-       down(Ref, _, _) -> Result = leaked
+       down(_, Ref, _) -> Result = leaked
    }, [
        timeout(0),
        on_timeout(Result = clean)
@@ -419,7 +419,7 @@ test(monitor_dead_pid_reports_noproc, Reason == noproc) :-
    ]),
    monitor(Pid, Ref),
    receive({
-       down(Ref, Pid, Reason) -> true
+       down(Pid, Ref, Reason) -> true
    }, [
        timeout(1),
        on_timeout(throw(missing_noproc_down))
@@ -434,7 +434,7 @@ monitor_one_terminating_actor :-
    Pid ! stop,
    monitor(Pid, Ref),
    receive({
-       down(Ref, Pid, Reason) ->
+       down(Pid, Ref, Reason) ->
            assertion(memberchk(Reason, [true, noproc]))
    }, [
        timeout(1),
@@ -446,7 +446,7 @@ test(demonitor_flush_race_leaves_no_late_down) :-
           demonitor_one_terminating_actor),
    sleep(0.05),
    receive({
-       down(Ref, Pid, Reason) ->
+       down(Pid, Ref, Reason) ->
            throw(late_down_after_flush(Ref, Pid, Reason))
    }, [timeout(0)]).
 
@@ -493,7 +493,7 @@ test(down_reason_survives_thread_death, Reason == custom_reason) :-
        monitor(true)
    ]),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -635,7 +635,7 @@ test(hook_thread_options_caps_actor_memory, [
      ]) :-
    spawn(length(_, 100000000), Pid, [monitor(true), link(false)]),
    receive({
-       down(_, Pid, Reason) -> true
+       down(Pid, _, Reason) -> true
    }, [
        timeout(5),
        on_timeout(fail)
@@ -807,11 +807,11 @@ ping_pong :-
         monitor(true)
     ]),
     receive({
-       down(_, Ping_Pid, true) ->
+       down(Ping_Pid, _, true) ->
           true
     }),
     receive({
-       down(_, Pong_Pid, true) ->
+       down(Pong_Pid, _, true) ->
           true
     }).
 
@@ -831,7 +831,7 @@ test(program1, Msg == hello) :-
    receive({Msg -> true}),
    exit(Pid, kill),
    receive({
-       down(_, Pid, kill) -> true
+       down(Pid, _, kill) -> true
    }).
 
 test(program2, Count == 3) :-
@@ -846,7 +846,7 @@ test(program2, Count == 3) :-
    Count is Count1 + Count2,
    Pid ! stop,
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }).
 
 test(program3, Messages == [high,high,low,low]) :-
@@ -864,7 +864,7 @@ test(program4, Response == ok(cheese)) :-
    take(Pid, cheese, Response),
    Pid ! terminate,
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }).
 
 test(program5, Response == ok(meat)) :-
@@ -878,7 +878,7 @@ test(program5, Response == ok(meat)) :-
    rpc_synch(Pid, take(meat), Response),
    Pid ! terminate,
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }).
 
 test(program6, Done == true) :-

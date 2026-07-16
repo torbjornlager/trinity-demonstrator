@@ -703,7 +703,7 @@ ok(workerSource.includes('adapted.replace(/self\\(statechart\\)\\./g') &&
    "SWI-WASM-2 statechart workers route child replies to their concrete chart pid");
 ok(workerSource.includes('"    monitor(Pid, Ref),"') &&
    workerSource.includes('"            exit(Pid, kill),"') &&
-   workerSource.includes('"            receive({down(Ref, Pid, _) -> Reply = killed})"'),
+   workerSource.includes('"            receive({down(Pid, Ref, _) -> Reply = killed})"'),
    "statechart_halt/3 force-stops a busy SWI-WASM chart after its timeout");
 ok(includes('typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1])'),
    "SWI-WASM-2 terminal output renders strings without Prolog quotes");

@@ -31,7 +31,7 @@ tidy_up(Pid) :-
     monitor(Pid, CleanupRef),
     exit(Pid, kill),
     receive({
-        down(CleanupRef, Pid, _) -> true
+        down(Pid, CleanupRef, _) -> true
     }),
     drain_mailbox(Pid).
 
@@ -40,6 +40,6 @@ drain_mailbox(Pid) :-
     receive({
         Pid-_ ->
             drain_mailbox(Pid) ;
-        down(_, Pid, _) ->
+        down(Pid, _, _) ->
             drain_mailbox(Pid)
     }, [timeout(0)]).

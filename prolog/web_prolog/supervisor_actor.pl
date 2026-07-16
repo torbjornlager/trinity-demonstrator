@@ -207,7 +207,7 @@ sup_call(Sup, Request, Reply) :-
             nb_setarg(1, Replied, true),
             Reply = Reply0
         ;
-        down(MonRef, _, Reason) ->
+        down(_, MonRef, Reason) ->
             nb_setarg(1, Replied, true),
             throw(supervisor_down(Reason))
     }, [timeout(10)]),
@@ -302,7 +302,7 @@ server_source_option(load_uri(_)).
 
 sup_loop(State) :-
     receive({
-        down(_, Pid, Reason) ->
+        down(Pid, _, Reason) ->
             handle_exit(Pid, Reason, State, State1),
             sup_loop(State1)
         ;
@@ -478,12 +478,12 @@ do_shutdown(Pid, Timeout) :-
     ).
 
 wait_down(Pid) :-
-    receive({ down(_, Pid, _) -> true }).
+    receive({ down(Pid, _, _) -> true }).
 
 wait_down_timeout(Pid, Timeout) :-
     Got = got(false),
     receive({
-        down(_, Pid, _) ->
+        down(Pid, _, _) ->
             nb_setarg(1, Got, true)
     }, [timeout(Timeout)]),
     arg(1, Got, true).

@@ -283,7 +283,7 @@ session_message_event(Pid, terminal_output(Pid, Data), terminal_output(Pid, Data
 session_message_event(Pid, prompt(Pid, Prompt), prompt(Pid, Prompt)) :-
     remember_pending_prompt(Pid, Prompt).
 session_message_event(Pid, '$abort_goal', abort(Pid)).
-session_message_event(Pid, down(_, Pid, _), abort(Pid)) :-
+session_message_event(Pid, down(Pid, _, _), abort(Pid)) :-
     cleanup_isotope_session(Pid).
 session_message_event(Pid, Message, error(Pid, Unexpected)) :-
     Unexpected = error(unexpected_session_message(Message),

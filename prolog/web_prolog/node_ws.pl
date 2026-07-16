@@ -819,7 +819,7 @@ actors:hook_stop(Pid0) :-
     canonical_pid(Pid0, Pid),
     forall(retract(ws_browser_monitor(Queue, Pid, Ref)),
            (   ( actors:exit_reason(Pid0, Reason) -> true ; Reason = true ),
-               thread_send_message(Queue, down(Ref, Pid, Reason))
+               thread_send_message(Queue, down(Pid, Ref, Reason))
            )).
 
 %!  ws_action_monitor(+Dict, +Queue, +Principal) is det.
@@ -1031,7 +1031,7 @@ ws_discard_failed_session(Pid) :-
 %  Canonical 3-arity down/3 (manual.html:210/231).  The 2-arity clause
 %  that used to live below has been removed -- all internal producers
 %  now emit down/3.
-ws_note_message(down(_Ref, Pid, Reason)) :-
+ws_note_message(down(Pid, _Ref, Reason)) :-
     !,
     ignore(catch(finish_activity(ws_actor, Pid, Reason), _, true)),
     ws_forget_actor_registry(Pid),
@@ -1317,7 +1317,7 @@ ws_actor_queues(Pid0, Queues) :-
 notify_ws_actor_termination([], _Pid, _Reason).
 notify_ws_actor_termination([Queue|Queues], Pid, Reason) :-
     retractall(actors:monitor(Queue, Pid, _)),
-    %  Use the canonical 3-arity down(Ref, Pid, Reason) form
+    %  Use the canonical 3-arity down(Pid, Ref, Reason) form
     %  (manual.html:210).  No specific monitor Ref applies here -- this
     %  is the WS layer fabricating a "your actor died" notification at
     %  teardown time -- so we follow the monitor(true) convention from

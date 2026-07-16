@@ -47,7 +47,7 @@ test(remote_spawn_monitor_fires_down,
         (   remote_only_actor_url(URLB),
             spawn(true, Pid, [node(URLB), monitor(true)]),
             receive({
-                down(Ref, P, Reason) ->
+                down(P, Ref, Reason) ->
                     assertion(P == Pid),
                     %  monitor(true) uses Ref = Pid as the convention.
                     assertion(Ref == Pid),
@@ -171,7 +171,7 @@ test(cross_node_exit_succeeds_silently,
             spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
             wait_until(node_ws_actor_count(URLB, 1), 5),
             exit(Pid, normal),
-            receive({ down(_, P, _) -> true },
+            receive({ down(P, _, _) -> true },
                     [timeout(5), on_timeout(fail)]),
             assertion(P == Pid),
             wait_until(node_ws_actor_count(URLB, 0), 5),
@@ -196,7 +196,7 @@ test(down_event_preserves_custom_exit_reason,
             spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
             wait_until(node_ws_actor_count(URLB, 1), 5),
             exit(Pid, custom_test_reason),
-            receive({ down(Ref, P, Reason) ->
+            receive({ down(P, Ref, Reason) ->
                         assertion(P == Pid),
                         assertion(Ref == Pid),       % monitor(true) sentinel
                         assertion(Reason == custom_test_reason)
@@ -222,7 +222,7 @@ test(explicit_monitor_2_carries_user_ref,
             monitor(Pid, Ref),
             assertion(Ref \== Pid),
             exit(Pid, normal),
-            receive({ down(DownRef, P, _) ->
+            receive({ down(P, DownRef, _) ->
                         assertion(P == Pid),
                         assertion(DownRef == Ref)
                     },
@@ -307,7 +307,7 @@ test(cross_node_send_round_trip,
                     [timeout(5), on_timeout(fail)]),
             %  Wait for the natural down notification (remote actor
             %  exits after sending pong).
-            receive({ down(_, P, _) -> assertion(P == Pid) },
+            receive({ down(P, _, _) -> assertion(P == Pid) },
                     [timeout(5), on_timeout(fail)]),
             wait_until(node_ws_actor_count(URLB, 0), 5),
             Result = ok

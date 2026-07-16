@@ -441,14 +441,14 @@ test(chart_reacts_to_child_down, [cleanup(statechart_stop)]) :-
     join_lines([
         "<statechart initial=\"waiting\">",
         "  <state id=\"waiting\">",
-        "    <go to=\"done\" on=\"down(_Ref, _Pid, _Reason)\"/>",
+        "    <go to=\"done\" on=\"down(_Pid, _Ref, _Reason)\"/>",
         "  </state>",
         "  <final id=\"done\"/>",
         "</statechart>"
     ], Text),
     start_text(Text),
     assertion(statechart_in(waiting)),
-    statechart_send(down(ref(1), worker_actor(1), normal)),
+    statechart_send(down(worker_actor(1), ref(1), normal)),
     \+ statechart_running.
 
 % Remote <spawn node="..."> binds Pid = Id@Node; the chart-side handling of
@@ -460,14 +460,14 @@ test(chart_handles_remote_pid_events, [cleanup(statechart_stop)]) :-
     join_lines([
         "<statechart initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" on=\"success(_@_, _, false)\"/></state>",
-        "  <state id=\"b\"><go to=\"done\" on=\"down(_, _@_, _)\"/></state>",
+        "  <state id=\"b\"><go to=\"done\" on=\"down(_@_, _, _)\"/></state>",
         "  <final id=\"done\"/>",
         "</statechart>"
     ], Text),
     start_text(Text),
     statechart_send(success(t1@n1, [a], false)),
     assertion(statechart_in(b)),
-    statechart_send(down(ref(1), t1@n1, normal)),
+    statechart_send(down(t1@n1, ref(1), normal)),
     \+ statechart_running.
 
 % Stopping a chart terminates the children it spawned (they must not

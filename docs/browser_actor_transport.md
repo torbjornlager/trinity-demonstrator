@@ -95,11 +95,11 @@ uses the supplied/generated reference. When the target exits, the browser
 receives the normal local mailbox message:
 
 ```prolog
-down(Ref, Pid, Reason)
+down(Pid, Ref, Reason)
 ```
 
 Socket closure rejects pending requests and delivers
-`down(Ref, Pid, connection_lost(URL))` for monitors associated with that
+`down(Pid, Ref, connection_lost(URL))` for monitors associated with that
 connection. Automatic reconnect, monitor restoration after reconnect, and
 cross-connection naming/service recovery are not part of version 1.
 

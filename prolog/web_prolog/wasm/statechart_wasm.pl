@@ -225,7 +225,7 @@ cancel_delayed_events :-
 
 %  monitor/2 and demonitor must record the chart (pid `statechart`) as the
 %  watcher, not `main` (the bridge's default), so a monitored child's
-%  down(Ref, Pid, Reason) routes back into the chart as an external event
+%  down(Pid, Ref, Reason) routes back into the chart as an external event
 %  (deliverSwiWasmActorDown -> sendSwiWasmActorMessage -> chart event).
 %  Kept local so the delegation directive below skips them.
 monitor(Pid, Ref) :-

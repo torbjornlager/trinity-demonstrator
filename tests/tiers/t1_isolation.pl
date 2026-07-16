@@ -323,7 +323,7 @@ alarm :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -354,7 +354,7 @@ alarm :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -385,7 +385,7 @@ alarm :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -416,7 +416,7 @@ alarm :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -447,7 +447,7 @@ alarm :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -478,7 +478,7 @@ alarm :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }, [
        timeout(1),
        on_timeout(fail)
@@ -532,7 +532,7 @@ collect_from_messages(Count, Acc, Pairs) :-
 wait_for_downs([]) :- !.
 wait_for_downs(Pids) :-
    receive({
-       down(_, Pid, true) ->
+       down(Pid, _, true) ->
            true
    }),
    remove_pid(Pid, Pids, Rest),
@@ -564,7 +564,7 @@ test(load_list_alias, Result == true) :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }),
    Result = true.
 
@@ -581,7 +581,7 @@ test(load_text_alias, Result == true) :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }),
    Result = true.
 
@@ -604,7 +604,7 @@ test(load_predicates_alias, Result == true) :-
        on_timeout(fail)
    ]),
    receive({
-       down(_, Pid, true) -> true
+       down(Pid, _, true) -> true
    }),
    Result = true.
 
@@ -659,8 +659,8 @@ test(listing_actor_private_by_pid_targets_selected_actor_db) :-
        (
            catch(send(Pid1, stop), _, true),
            catch(send(Pid2, stop), _, true),
-           receive({down(_, Pid1, _) -> true}, [timeout(1), on_timeout(true)]),
-           receive({down(_, Pid2, _) -> true}, [timeout(1), on_timeout(true)])
+           receive({down(Pid1, _, _) -> true}, [timeout(1), on_timeout(true)]),
+           receive({down(Pid2, _, _) -> true}, [timeout(1), on_timeout(true)])
        )
    ),
    !.
@@ -683,7 +683,7 @@ test(load_uri_alias_path, Result == true) :-
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }),
          Result = true
        ),
@@ -710,7 +710,7 @@ test(load_uri_file_scheme_shorthand, Result == true) :-
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }),
          Result = true
        ),
@@ -738,7 +738,7 @@ test(load_uri_file_scheme_relative, Result == true) :-
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }),
          Result = true
        ),
@@ -764,7 +764,7 @@ test(load_uri_with_node_localhost, Result == true) :-
              on_timeout(fail)
          ]),
          receive({
-             down(_, Pid, true) -> true
+             down(Pid, _, true) -> true
          }),
          Result = true
        ),
@@ -791,7 +791,7 @@ test(load_uri_without_user_bang_operator, Result == true) :-
          ]),
          exit(Pid, kill),
          receive({
-             down(_, Pid, kill) -> true
+             down(Pid, _, kill) -> true
          }, [
              timeout(1),
              on_timeout(fail)

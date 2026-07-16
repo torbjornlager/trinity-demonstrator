@@ -103,7 +103,7 @@ wait_first(Pids, Solution, OnFail, OnError) :-
         Winner-Solution
                 if memberchk(Winner, Pids) ->
             tidy_up_all(Pids) ;
-        down(_, FailedPid, false)
+        down(FailedPid, _, false)
                 if memberchk(FailedPid, Pids) ->
             (   OnFail == continue
             ->  selectchk(FailedPid, Pids, Rest),
@@ -112,7 +112,7 @@ wait_first(Pids, Solution, OnFail, OnError) :-
                 !,
                 fail
             ) ;
-        down(_, FailedPid, exception(Error))
+        down(FailedPid, _, exception(Error))
                 if memberchk(FailedPid, Pids) ->
             (   OnError == continue
             ->  selectchk(FailedPid, Pids, Rest),

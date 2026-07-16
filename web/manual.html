@@ -230,7 +230,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
         <li><code>src_uri(+URI)</code><br>Loads the clauses specified by a file path, file URI, or HTTP(S) URI into the actor's private Prolog database before calling <code>Goal</code>.</li>
         <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by <code>ListOfPredicateIndicators</code> into the actor's private Prolog database before calling <code>Goal</code>.</li>
     </ul>
-    <p><span class="note-label">Note:</span> In <code>spawn(+Goal,-Pid,+Options)</code>, the option <code>monitor(true)</code> installs monitoring as part of process creation. When the child terminates, the parent receives a message <code>down(Ref,Pid,Reason)</code> where <code>Pid</code> is the terminated actor, <code>Reason</code> is its exit reason, and <code>Ref</code> identifies the monitor instance. For monitoring created via <code>monitor(true)</code>, the current implementation uses <code>Ref = Pid</code>.</p>
+    <p><span class="note-label">Note:</span> In <code>spawn(+Goal,-Pid,+Options)</code>, the option <code>monitor(true)</code> installs monitoring as part of process creation. When the child terminates, the parent receives a message <code>down(Pid,Ref,Reason)</code> where <code>Pid</code> is the terminated actor, <code>Reason</code> is its exit reason, and <code>Ref</code> identifies the monitor instance. For monitoring created via <code>monitor(true)</code>, the current implementation uses <code>Ref = Pid</code>.</p>
     <p><span class="note-label">Note:</span> The semantics of <code>link(true)</code> are directional: if a parent spawns a child with linking enabled, termination of the parent causes linked children to be terminated. The link does not imply symmetric bidirectional exit propagation.</p>
     <p><span class="note-label">Note:</span> It is possible to pass an arbitrary number of the <code>src_*</code> options to <code>spawn/3</code>, and possibly more than one instance of each variant. To ensure that clauses end up in a well-defined order, they are converted into Prolog source text before being loaded into the database. The order of clauses and directives in the resulting source text is determined by the order of the <code>src_*</code> options in the option list.</p>
 </article>
@@ -251,7 +251,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>monitor(+PidOrName, -Ref) is det.</pre>
-    <p>Installs a monitor and returns a fresh reference in <code>Ref</code>. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Ref,Pid,Reason)</code>.</p>
+    <p>Installs a monitor and returns a fresh reference in <code>Ref</code>. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Pid,Ref,Reason)</code>.</p>
 </article>
 
 <article class="predicate-entry" id="demonitor/1-2">
@@ -263,7 +263,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
 demonitor(+Ref, +Options) is det.</pre>
     <p>Stops monitoring identified by <code>Ref</code>. This is idempotent. There is only one valid option:</p>
     <ul>
-        <li><code>flush</code><br>Non-blocking removal of all pending <code>down(Ref,_,_)</code> messages from the mailbox.</li>
+        <li><code>flush</code><br>Non-blocking removal of all pending <code>down(_,Ref,_)</code> messages from the mailbox.</li>
     </ul>
     <p>Using <code>monitor(true)</code> in <code>spawn/3</code> is the safest variant for short-lived children, since monitoring is established during spawn. Installing monitoring later with <code>monitor/2</code> is a separate step and may miss a child that exits immediately.</p>
 </article>

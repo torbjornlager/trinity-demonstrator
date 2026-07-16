@@ -684,7 +684,7 @@ p(p(with)) --&gt; [with].
 </p>
 
 <p>
-    The message has the form <code>down(Ref, Pid, Reason)</code>. Here the
+    The message has the form <code>down(Pid, Ref, Reason)</code>. Here the
     actor succeeds normally, so the reason should be <code>true</code>.
 </p>
 
@@ -910,7 +910,7 @@ wait_goodbye :-
    monitor(Pid, Ref),
    demonitor(Ref),
    receive({
-       down(_, Pid, _) -&gt;
+       down(Pid, _, _) -&gt;
            writeln('Unexpected down message.')
    }, [
        timeout(1.2),
@@ -2350,8 +2350,8 @@ ping_pong_remote :-
         src_predicates([ping/2]),
         monitor(true)
     ]),
-    receive({down(_,Pong_Pid, true) -> true}),
-    receive({down(_,Ping_Pid, true) -> true}).
+    receive({down(Pong_Pid, _, true) -> true}),
+    receive({down(Ping_Pid, _, true) -> true}).
 </pre>
 
 <p class="ask-buttons">

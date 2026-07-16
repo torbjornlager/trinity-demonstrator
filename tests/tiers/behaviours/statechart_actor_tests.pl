@@ -599,7 +599,7 @@ await_down_until(Pid, Deadline) :-
     Remaining is max(0.0, Deadline - Now),
     receive({
         down(Pid, _) -> true;
-        down(_, Pid, _) -> true;
+        down(Pid, _, _) -> true;
         after(Remaining) -> fail;
         _ -> test_statechart_profile:await_down_until(Pid, Deadline)
     }).
