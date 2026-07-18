@@ -235,7 +235,7 @@
         position: relative;
         display: flex;
         align-items: center;
-        padding-left: 68px;
+        padding-left: 78px;
         min-height: 56px;
         min-width: 0;
         flex: 0 0 auto;
@@ -249,10 +249,12 @@
         height: 65px;
         padding: 4px;
         box-sizing: border-box;
+        background: #fff;
+        border: 3px solid var(--brand-ink);
         border-radius: 50%;
         object-fit: contain;
         flex: 0 0 auto;
-        transform: translateY(calc(-50% - 4px));
+        transform: translateY(calc(-50% - 1px));
       }
 
       .wb-brand-copy {
@@ -2589,7 +2591,7 @@
       <header class="wb-header">
         <div class="wb-brand">
           <a href="https://trinity.elfenbenstornet.se" target="_blank" rel="noopener noreferrer">
-            <img class="wb-logo" src="/img/swi-logo.png" alt="Web Prolog logo">
+            <img class="wb-logo" src="/img/spider-agent.png" alt="Web Prolog logo">
           </a>
           <div class="wb-brand-copy">
             <h1 class="wb-title">Trinity demonstrator</h1>
@@ -5164,6 +5166,8 @@
         return { profile: profile, path: "/actor-profile-tutorial", label: "The ACTOR profile" };
       }
 
+      var initialNodeInfoReady = Promise.resolve();
+
       var app = Vue.createApp({
         data: function() {
           return {
@@ -5752,7 +5756,7 @@
           } else if (this.isSwiWasm2Mode) {
             this.initSwiWasm2Session();
           } else {
-            this.fetchNodeInfo();
+            initialNodeInfoReady = this.fetchNodeInfo();
             this.probeAdminAccess();
           }
           this.fetchExamplesIndex();
@@ -6327,7 +6331,20 @@
             window.location.assign(url.toString());
           },
           terminalGreetingText: function() {
-            return this.showTerminalGreeting ? "Welcome to SWI Web Prolog!\n" : false;
+            var profile;
+            if (!this.showTerminalGreeting) {
+              return false;
+            }
+            if (this.effectiveTransportProfile === "isotope") {
+              profile = "ISOTOPE";
+            } else if (this.effectiveTransportProfile === "stateless") {
+              profile = "ISOBASE";
+            } else {
+              profile = "ACTOR";
+            }
+            return "Welcome to [[b;;]Web Prolog]!\n" +
+              "The [[b;;]" + profile + "] profile.\n" +
+              "Powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog]\n";
           },
           echoTerminalSystemInfo: function(term, message, options) {
             var echoOptions;
@@ -12829,11 +12846,19 @@
           },
           initTerminal: function() {
             var self = this;
+            var greetings = this.terminalGreetingText();
+            if (greetings && !this.isBrowserSwiWasmMode) {
+              greetings = function(resolve) {
+                initialNodeInfoReady.then(function() {
+                  resolve(self.terminalGreetingText() || "");
+                });
+              };
+            }
             this.terminal = $(this.$refs.terminalHost).terminal(function(command, term) {
               self.echoTerminalCommand(term, command);
               self.handleTerminalCommand(command, term);
             }, {
-              greetings: this.terminalGreetingText(),
+              greetings: greetings,
               prompt: this.isBrowserSwiWasmMode ? " " : this.basePrompt(),
               convertLinks: this.terminalConvertLinks,
               echoCommand: false,

@@ -213,6 +213,15 @@ ok(includes("showTerminalSystemInfo: true") &&
    includes("--terminal-info-ink:") &&
    includes(".terminal .terminal-output .terminal-system-info"),
    "terminal system information is muted and can be disabled in Settings");
+ok(includes('return "Welcome to [[b;;]Web Prolog]!\\n" +') &&
+   includes('"The [[b;;]" + profile + "] profile.\\n" +') &&
+   includes('"Powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog]\\n"') &&
+   includes('profile = "ACTOR"') &&
+   includes('profile = "ISOTOPE"') &&
+   includes('profile = "ISOBASE"') &&
+   includes("initialNodeInfoReady = this.fetchNodeInfo()") &&
+   includes("initialNodeInfoReady.then(function()"),
+   "terminal greeting identifies the announced profile and links to SWI-Prolog");
 ok(includes("terminalHighlightPredicates: false") &&
    includes("Highlight Web Prolog predicates") &&
    includes("built-in predicate calls and predicate indicators") &&
