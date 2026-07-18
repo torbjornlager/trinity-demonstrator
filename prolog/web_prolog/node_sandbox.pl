@@ -287,7 +287,6 @@ public_runtime_support_goal_pi(send_with_delay/3).
 
 statechart_runtime_support_goal_pi(interpret/1).
 statechart_runtime_support_goal_pi(interpret_text/1).
-statechart_runtime_support_goal_pi(with_trace/2).
 
 
 %!  sandbox_check_goal_with_source(+Profile, +GoalModule, +Goal, +SourceText) is det.
@@ -1108,7 +1107,7 @@ sandbox:safe_primitive(rpc:runtime_property(_)).
 %  spawn hook, and the chart's own scripts/conditions are sandbox-checked
 %  at execution time via statechart_runtime:hook_check_chart_goal/1 (the
 %  glue is in node_glue).  The interpreter entry goals it spawns
-%  (interpret/1, interpret_text/1, with_trace/2) are exempted from spawn
+%  (interpret/1 and interpret_text/1) are exempted from spawn
 %  re-validation by public_runtime_support_goal/2 below, so they remain
 %  reachable only THROUGH statechart_spawn, never as a direct client goal.
 sandbox:safe_primitive(statechart_actor:statechart_spawn(_, _)).

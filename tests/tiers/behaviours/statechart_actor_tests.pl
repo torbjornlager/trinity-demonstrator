@@ -26,18 +26,6 @@
 ]).
 
 :- dynamic statechart_tests_directory/1.
-
-%  T3 stands in for the node layer's session-trace store so the
-%  statechart side of the session-trace hook contract is pinned here;
-%  the real implementation arrives with node_session in Phase 6.
-:- dynamic t3_session_trace/2.
-
-statechart_actor:hook_set_session_trace(Pid, Enabled) :-
-    retractall(t3_session_trace(Pid, _)),
-    assertz(t3_session_trace(Pid, Enabled)).
-
-statechart_actor:hook_session_trace_enabled(Pid) :-
-    t3_session_trace(Pid, true).
 :- prolog_load_context(directory, BehavioursDir),
    %  This adapted copy lives two levels below the original tests/
    %  directory; fixtures (test_statecharts/, examples/) resolve
@@ -317,7 +305,7 @@ test(runtime_statechart_writeln_uses_actor_io_path) :-
               true)
     ).
 
-test(runtime_statechart_trace_true_emits_terminal_trace_messages) :-
+test(runtime_statechart_automatically_emits_terminal_trace_messages) :-
     atomics_to_string([
         "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
@@ -329,7 +317,7 @@ test(runtime_statechart_trace_true_emits_terminal_trace_messages) :-
         "  </state>\n",
         "</statechart>\n"
     ], Text),
-    once(statechart_spawn(Pid, [src_text(Text), monitor(true), trace(true)])),
+    once(statechart_spawn(Pid, [src_text(Text), monitor(true)])),
     once(receive({
         terminal_output(Pid, statechart_trace(_Trace0)) -> true
     }, [timeout(2), on_timeout(fail)])),
@@ -340,7 +328,7 @@ test(runtime_statechart_trace_true_emits_terminal_trace_messages) :-
     once(exit(Pid, stop)),
     await_down(Pid, 2.0).
 
-test(runtime_statechart_trace_follows_client_session_setting) :-
+test(runtime_statechart_trace_routes_through_client_session_automatically) :-
     atomics_to_string([
         "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
@@ -356,10 +344,6 @@ test(runtime_statechart_trace_follows_client_session_setting) :-
         toplevel_spawn(ToplevelPid, [session(true), monitor(true)]),
         (
             toplevel_call(ToplevelPid,
-                          statechart_actor:set_client_trace(true),
-                          [template(true), limit(1)]),
-            await_messages([success(ToplevelPid, [true], false)], 2.0),
-            toplevel_call(ToplevelPid,
                           statechart_spawn(StatechartPid,
                                            [src_text(Text), monitor(true)]),
                           [template(StatechartPid), limit(1)]),
@@ -374,6 +358,11 @@ test(runtime_statechart_trace_follows_client_session_setting) :-
               _,
               true)
     ).
+
+test(runtime_statechart_trace_spawn_option_is_removed,
+     [throws(error(domain_error(statechart_spawn_option, trace(true)), _))]) :-
+    statechart_spawn(_Pid,
+                     [src_text("<statechart/>"), trace(true)]).
 
 test(runtime_statechart_raise_onentry_triggers_internal_transition) :-
     atomics_to_string([

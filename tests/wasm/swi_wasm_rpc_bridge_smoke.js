@@ -134,7 +134,7 @@ const makeBrowserPromiseRef = embeddedWorkbenchMethod(
 );
 const swiWasmValueRenderer = {
   swiWasmStructuredCompound: embeddedWorkbenchMethod(
-    "swiWasmStructuredCompound", "swiWasmStructuredList"
+    "swiWasmStructuredCompound", "runSwiWasm2Query"
   ),
   formatSwiWasmValue: embeddedWorkbenchMethod(
     "formatSwiWasmValue", "formatSwiWasmAtom"
@@ -143,6 +143,10 @@ const swiWasmValueRenderer = {
     "formatSwiWasmAtom", "reconnectActiveTransport"
   )
 };
+const formatJavaScriptObject = embeddedWorkbenchMethod(
+  "formatJavaScriptObject", "logSwiWasmWorkerTraffic"
+);
+const javaScriptObjectRenderer = { formatJavaScriptObject };
 
 ok(includes("window.swiRpcGetAsync = function(url, httpTimeout)"),
    "paged RPC has an asynchronous fetch helper");
@@ -383,13 +387,13 @@ ok(includes('.editor-source-label {') &&
    includes(':root[data-theme="dark"] .editor-source-label {\n        color: #ffffff;'),
    "editor scratch-buffer and filename labels are larger and theme-aware");
 const expandedEditorCommand = rewriteEditorLoadTextAware(
-  "statechart_spawn(Pid, [src_text(<editor>), trace(true)]).",
+  "statechart_spawn(Pid, [src_text(<editor>)]).",
   "src_text('<statechart/>')"
 );
 ok(expandedEditorCommand.count === 1 &&
    expandedEditorCommand.invalidCount === 0 &&
    expandedEditorCommand.text ===
-     "statechart_spawn(Pid, [src_text('<statechart/>'), trace(true)]).",
+     "statechart_spawn(Pid, [src_text('<statechart/>')]).",
    "src_text(<editor>) expands as one explicit UI placeholder");
 const ignoredEditorText = rewriteEditorLoadTextAware(
   "writeln('src_text(<editor>)'), % src_text(<editor>)\n/* <editor> */ true.",
@@ -434,6 +438,48 @@ ok(includes('visibleLogKinds: ["info", "trace", "transport"]') &&
    includes('var filterKind = entry.kind === "trace" || entry.kind === "transport"') &&
    includes('window.localStorage.setItem("wb.visibleLogKindsVersion", "2")'),
    "Logger groups lifecycle, warning, error, timing, and UI events under Info");
+ok(!includes("syncTracePreferenceToLiveSessions") &&
+   !includes("isTraceLoggingEnabled") &&
+   includes('this.log("trace", traceText, "statechart")') &&
+   includes('this.notifyTutorialStatechartTrace(text)') &&
+   includes('this.notifyTutorialStatechartTrace(event.data)'),
+   "statechart traces always feed both the Logger and tutorial animations while SXML trace only filters display");
+ok(includes('if (entry.scope === "wasm-worker") return "STATEFUL WORKER · JS OBJECT";') &&
+   includes('logSwiWasmWorkerTraffic: function(envelope, direction)') &&
+   includes('this.formatJavaScriptObject(envelope || {})') &&
+   includes('command: "toplevel_spawn"') &&
+   includes('command: "toplevel_call"') &&
+   includes('command: "toplevel_next"') &&
+   includes('command: "toplevel_stop"') &&
+   includes('command: "toplevel_respond"') &&
+   includes('message.type === "success"') &&
+   includes('message.type === "failure"') &&
+   includes('message.type === "stop"') &&
+   includes('message.type === "prompt"') &&
+   !includes('command: "shell_call"') &&
+   !workerSource.includes('post("shell_event"') &&
+   workerSource.includes('message.command === "toplevel_call"') &&
+   workerSource.includes('post("success"') &&
+   workerSource.includes('post("failure"'),
+   "SWI-WASM Worker toplevel traffic uses the stateful API protocol on the actual Worker boundary");
+ok(formatJavaScriptObject.call(javaScriptObjectRenderer, {
+     command: "toplevel_call",
+     pid: 4384261893,
+     data: [{ Xs: "[]" }],
+     more: true
+   }) === [
+     "{",
+     '  command: "toplevel_call",',
+     "  pid: 4384261893,",
+     "  data: [",
+     "    {",
+     '      Xs: "[]"',
+     "    }",
+     "  ],",
+     "  more: true",
+     "}"
+   ].join("\n"),
+   "SWI-WASM API traffic is rendered as a JavaScript object literal rather than JSON text");
 ok(includes('POST /interaction_log (durable usage log): ') &&
    includes('Interaction log request failed: '),
    "interaction logging is visible, including failed recording attempts");
@@ -456,7 +502,7 @@ ok([
 ].every(function(name) {
   const text = statechartExample(name);
   return text.includes(
-    "statechart_spawn(Pid, [\n       src_text(<editor>),\n       trace(true)\n   ])."
+    "statechart_spawn(Pid, [\n       src_text(<editor>)\n   ])."
   ) && /\?- statechart_halt\(\$Pid, Reply, 1\)\.\n\n-->\s*$/.test(text);
 }), "every numbered SXML file exposes launch and final halt queries");
 ok(includes("return this.loadTutorialSourceIntoWsSession(sourceText)") &&
@@ -587,11 +633,11 @@ ok(includes('aria-label="About SWI-WASM execution models"') &&
    "SWI-WASM model help is detailed and keyboard accessible");
 ok(includes('"swi_wasm_actor_bridge:ptcp(" + qualifySwiWasmLocalPid(pid) + ",terminal,true)"') &&
    includes('"shell_toplevel"') &&
-   includes('message.type === "shell_event"') &&
-   workerSource.includes('message.command === "shell_call"') &&
-   workerSource.includes('actorShellEvent(#Message, #Text)') &&
+   includes('message.type === "success"') &&
+   workerSource.includes('message.command === "toplevel_call"') &&
+   workerSource.includes('actorToplevelEvent(#Message, #Text)') &&
    workerSource.includes('flush_output(user_output)') &&
-   includes('this.swiWasmPromptText(args[1])'),
+   includes('this.requestSwiWasmActorInput(String(message.data || ""))'),
    "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
 ok(workerSource.includes('"    await(Promise, PidText),",\n      "    term_string(Pid, PidText).') &&
    includes('"    PidText := swiWasmActorWhereis(#Kind, #NameText),",\n              "    term_string(Pid, PidText).'),
@@ -758,8 +804,11 @@ ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
 ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    !workerSource.includes('statechart_spawn(Pid) :-') &&
    !workerSource.includes('statechart_spawn/1,') &&
+   workerSource.includes('statechart_wasm:set_trace_hook(user:statechart_trace_hook)') &&
+   !workerSource.includes('message.statechartTrace') &&
    !includes('statechart_spawn(Pid) :-') &&
    !includes('statechart_spawn/1,') &&
+   includes('statechart_wasm:set_trace_hook(') &&
    workerSource.includes('installStatechartRuntime(message)') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
@@ -777,10 +826,11 @@ ok(workerSource.includes('"    monitor(Pid, Ref),"') &&
    workerSource.includes('"            exit(Pid, kill),"') &&
    workerSource.includes('"            receive({down(Pid, Ref, _) -> Reply = killed})"'),
    "statechart_halt/3 force-stops a busy SWI-WASM chart after its timeout");
-ok(includes('typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1])'),
+ok(workerSource.includes('data = typeof args[1] === "string" ? args[1] : formatValue(args[1]);') &&
+   workerSource.includes('post("output", { data: data });'),
    "SWI-WASM-2 terminal output renders strings without Prolog quotes");
-ok(includes('!this.isSwiWasmUnboundVariable(row[key])') &&
-   includes('display[key] = this.formatSwiWasmValue(row[key])'),
+ok(workerSource.includes('!(row[key] && row[key].$t === "v")') &&
+   workerSource.includes('display[key] = formatValue(row[key])'),
    "SWI-WASM-2 omits unbound variables from successful binding rows");
 ok(includes('compound.functor === "-" && args.length === 2') &&
    includes('this.formatSwiWasmValue(args[0]) + "-" + this.formatSwiWasmValue(args[1])'),

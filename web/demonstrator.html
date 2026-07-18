@@ -3018,7 +3018,7 @@
                 </div>
                 <div class="logger-filters">
                   <label v-for="filter in loggerFilters" :key="filter.id" class="logger-chip">
-                    <input type="checkbox" v-model="visibleLogKinds" :value="filter.id" @change="handleLoggerFilterChange(filter.id)">
+                    <input type="checkbox" v-model="visibleLogKinds" :value="filter.id" @change="handleLoggerFilterChange">
                     <span>{{ filter.label }}</span>
                   </label>
                   <button class="terminal-action clear logger-filters-clear"
@@ -6411,16 +6411,8 @@
               this.persistLoggerFilters();
             }
           },
-          isTraceLoggingEnabled: function() {
-            return this.loggerFilters.some(function(filter) {
-              return filter.id === "trace";
-            }) && this.visibleLogKinds.indexOf("trace") >= 0;
-          },
-          handleLoggerFilterChange: function(filterId) {
+          handleLoggerFilterChange: function() {
             this.persistLoggerFilters();
-            if (filterId === "trace") {
-              this.syncTracePreferenceToLiveSessions();
-            }
             this.focusTerminalSoon(true);
           },
           restoreTerminalHistory: function() {
@@ -6448,47 +6440,6 @@
           persistLoggerFilters: function() {
             window.localStorage.setItem("wb.visibleLogKinds", JSON.stringify(this.visibleLogKinds));
             window.localStorage.setItem("wb.visibleLogKindsVersion", "2");
-          },
-          syncTracePreferenceToLiveSessions: function() {
-            var enabled = this.isTraceLoggingEnabled();
-            if (this.wsPid) {
-              this.syncWsTraceEnabled(this.wsPid, enabled);
-            }
-            if (this.isotopePid) {
-              this.syncIsotopeTraceEnabled(this.isotopePid, enabled);
-            }
-          },
-          syncWsTraceEnabled: function(pid, enabled) {
-            if (!pid || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-              return;
-            }
-            this.wsSend({
-              command: "set_statechart_trace",
-              pid: pid,
-              statechart_trace: enabled
-            });
-          },
-          syncIsotopeTraceEnabled: function(pid, enabled) {
-            var self = this;
-            var url = "/statechart_trace?" + new URLSearchParams({
-              pid: String(pid),
-              statechart_trace: enabled ? "true" : "false",
-              format: "json"
-            }).toString();
-            return fetch(url, {
-              method: "GET",
-              headers: { Accept: "application/json" }
-            }).then(function(response) {
-              return response.text().then(function(text) {
-                var parsed = text === "" ? {} : JSON.parse(text);
-                if (!response.ok) {
-                  throw new Error(parsed.data || parsed.message || text || (response.status + " " + response.statusText));
-                }
-                return parsed;
-              });
-            }).catch(function(error) {
-              self.log("warn", "Failed to update ISOTOPE trace setting: " + error.message, "isotope");
-            });
           },
           persistTerminalHistory: function() {
             window.localStorage.setItem("wb.recentQueries", JSON.stringify(this.recentQueries.slice(0, 15)));
@@ -8966,9 +8917,16 @@
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             var survivingPids;
             var abortMessage;
+            var abortEnvelope;
             if (!entry || !entry.worker || entry.done) {
               return false;
             }
+            abortEnvelope = {
+              pid: Number(this.swiWasm2ShellPid),
+              command: "toplevel_abort"
+            };
+            this.logSwiWasmWorkerTraffic(abortEnvelope, "request");
+            entry.worker.postMessage(abortEnvelope);
             // A Worker cannot process an abort message while Prolog is inside
             // a yield-free goal.  Replacing only the shell Worker provides a
             // hard pre-emption boundary while leaving child actor Workers and
@@ -9117,7 +9075,12 @@
             if (this.isSwiWasm2Mode) {
               var shell = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
               if (shell && shell.worker && !shell.done) {
-                shell.worker.postMessage({ command: "shell_stop" });
+                var stopEnvelope = {
+                  pid: Number(this.swiWasm2ShellPid),
+                  command: "toplevel_stop"
+                };
+                this.logSwiWasmWorkerTraffic(stopEnvelope, "request");
+                shell.worker.postMessage(stopEnvelope);
               }
               this.swiWasm2QueryPending = false;
               this.resetQueryState(term);
@@ -9736,7 +9699,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260715-browser-local-pids";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260718-toplevel-worker-protocol";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9777,17 +9740,37 @@
               }
               self.finalizeSwiWasmWorkerActor(pid, "error(" + JSON.stringify("worker_error: " + message) + ")");
             };
-            worker.postMessage(Object.assign({
-              command: "start",
-              pid: pid,
-              goal: entry.goal,
-              // Actor code crosses the worker boundary only through explicit
-              // src_* spawn options collected into extraSourceText.
-              source: String(extraSourceText || ""),
-              behaviourSource: this.swiWasmBehaviourProlog(),
-              role: entry.role
-            }, startFields || {}));
-            this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
+            if (entry.role === "shell_toplevel") {
+              var spawnEnvelope = {
+                command: "toplevel_spawn",
+                pid: Number(pid),
+                src_text: String(extraSourceText || ""),
+                options: "[session(true)]"
+              };
+              // Worker boot code is an implementation detail, transferred
+              // separately so the API message itself is the same envelope
+              // that the Logger displays.
+              worker.postMessage({
+                command: "configure",
+                goal: entry.goal,
+                behaviourSource: this.swiWasmBehaviourProlog(),
+                role: entry.role
+              });
+              this.logSwiWasmWorkerTraffic(spawnEnvelope, "request");
+              worker.postMessage(spawnEnvelope);
+            } else {
+              worker.postMessage(Object.assign({
+                command: "start",
+                pid: pid,
+                goal: entry.goal,
+                // Actor code crosses the worker boundary only through explicit
+                // src_* spawn options collected into extraSourceText.
+                source: String(extraSourceText || ""),
+                behaviourSource: this.swiWasmBehaviourProlog(),
+                role: entry.role
+              }, startFields || {}));
+              this.log("transport", "spawn " + pid + " using SWI-WASM WebWorker.", "swi-wasm", "request");
+            }
             return pid;
           },
           spawnSwiWasmWorkerActorReady: function(goalText, extraSourceText, pidText, nameText, roleText, startFields) {
@@ -9842,7 +9825,7 @@
               return response.text();
             });
           },
-          spawnSwiWasmStatechartActor: function(sourceKind, sourceText, trace) {
+          spawnSwiWasmStatechartActor: function(sourceKind, sourceText) {
             var self = this;
             var sourcePromise = String(sourceKind) === "text"
               ? Promise.resolve(String(sourceText || ""))
@@ -9850,7 +9833,7 @@
             return sourcePromise.then(function(xml) {
               return self.spawnSwiWasmWorkerActorReady(
                 "statechart_actor_loop", " ", "", "", "statechart_actor",
-                { statechartXml: xml, statechartTrace: trace === true }
+                { statechartXml: xml }
               );
             });
           },
@@ -10205,47 +10188,28 @@
             }
             return { functor: functor, args: Array.isArray(args) ? args : [] };
           },
-          swiWasmStructuredList: function(value) {
-            if (Array.isArray(value)) {
-              return value;
-            }
-            if (value && typeof value === "object" && value.$t === "l" && Array.isArray(value.v)) {
-              return value.v;
-            }
-            return [];
-          },
-          swiWasmStructuredTruth: function(value) {
-            return value === true || value === "true";
-          },
-          swiWasmPromptText: function(value) {
-            if (typeof value === "string") {
-              return value;
-            }
-            if (value && value.$t === "s") {
-              return String(value.v);
-            }
-            return this.formatSwiWasmValue(value);
-          },
           runSwiWasm2Query: function(term) {
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             var source = this.activeLoadText || "";
+            var callEnvelope;
             if (!entry || !entry.worker || entry.done || !entry.ready) {
               this.finishError(term, "The SWI-WASM worker toplevel actor is not ready.");
               return;
             }
             this.swiWasm2QueryPending = true;
             this.pauseTerm(term);
+            callEnvelope = {
+              pid: Number(this.swiWasm2ShellPid),
+              command: "toplevel_call",
+              goal: this.activeGoal,
+              limit: 1
+            };
             if (source !== this.swiWasm2LoadedSource) {
-              entry.worker.postMessage({ command: "shell_load", source: source });
+              callEnvelope.src_text = source;
               this.swiWasm2LoadedSource = source;
             }
-            entry.worker.postMessage({
-              command: "shell_call",
-              goal: this.activeGoal,
-              limit: 1,
-              offset: 0,
-              once: false
-            });
+            this.logSwiWasmWorkerTraffic(callEnvelope, "request");
+            entry.worker.postMessage(callEnvelope);
           },
           nextSwiWasm2Solution: function(term) {
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
@@ -10256,68 +10220,69 @@
             }
             this.queryState = "query";
             this.pauseTerm(term);
-            entry.worker.postMessage({ command: "shell_next", limit: 1 });
+            var nextEnvelope = {
+              pid: Number(this.swiWasm2ShellPid),
+              command: "toplevel_next",
+              limit: 1
+            };
+            this.logSwiWasmWorkerTraffic(nextEnvelope, "request");
+            entry.worker.postMessage(nextEnvelope);
           },
-          handleSwiWasm2ShellEvent: function(pid, value, eventText) {
+          handleSwiWasm2ToplevelMessage: function(pid, message) {
             var term = this.terminal;
-            var compound = this.swiWasmStructuredCompound(value);
-            var args;
             var rows;
-            var displayRows;
-            var more;
-            if (!term || pid !== this.swiWasm2ShellPid || !compound) {
-              return;
+            if (!term || pid !== this.swiWasm2ShellPid) {
+              return false;
             }
-            args = compound.args;
-            if (compound.functor === "success") {
-              rows = this.swiWasmStructuredList(args[1]);
-              if (rows.length > 0) {
-                this.captureSwiWasmBindings(rows[0]);
-              }
-              displayRows = rows.map(function(row) {
-                var display = {};
-                if (row && typeof row === "object") {
-                  Object.keys(row).forEach(function(key) {
-                    if (/^[A-Z_]/.test(key) && key !== "_" &&
-                        !this.isSwiWasmUnboundVariable(row[key])) {
-                      display[key] = this.formatSwiWasmValue(row[key]);
-                    }
-                  }.bind(this));
-                }
-                return display;
-              }.bind(this));
-              more = this.swiWasmStructuredTruth(args[2]);
-              this.swiWasm2QueryPending = more;
-              this.finishSuccess(term, displayRows, more);
+            if (message.type === "success") {
+              rows = Array.isArray(message.data) ? message.data : [];
+              this.captureBindingsFromRows(rows);
+              this.swiWasm2QueryPending = message.more === true;
+              this.logSwiWasmWorkerTraffic(message, "response");
+              this.finishSuccess(term, rows, message.more === true);
               this.resumeTerm(term);
-              return;
+              return true;
             }
-            if (compound.functor === "failure") {
+            if (message.type === "failure") {
               this.swiWasm2QueryPending = false;
+              this.logSwiWasmWorkerTraffic(message, "response");
               this.finishFailure(term);
               this.resumeTerm(term);
-              return;
+              return true;
             }
-            if (compound.functor === "error") {
+            if (message.type === "error" && Object.prototype.hasOwnProperty.call(message, "data")) {
               this.swiWasm2QueryPending = false;
-              this.finishError(term, eventText || this.formatSwiWasmValue(args[1]));
+              this.logSwiWasmWorkerTraffic(message, "response");
+              this.finishError(term, String(message.data || "unknown error"));
               this.resumeTerm(term);
-              return;
+              return true;
             }
-            if (compound.functor === "output" || compound.functor === "terminal_output") {
-              term.echo(this.formatDisplayText(
-                typeof args[1] === "string" ? args[1] : this.formatSwiWasmValue(args[1])
-              ));
-              return;
+            if (message.type === "output" && Object.prototype.hasOwnProperty.call(message, "data")) {
+              this.logSwiWasmWorkerTraffic(message, "response");
+              term.echo(this.formatDisplayText(String(message.data || "")));
+              return true;
             }
-            if (compound.functor === "prompt") {
-              this.requestSwiWasmActorInput(this.swiWasmPromptText(args[1])).then(function(answer) {
+            if (message.type === "prompt") {
+              this.logSwiWasmWorkerTraffic(message, "response");
+              this.requestSwiWasmActorInput(String(message.data || "")).then(function(answer) {
                 var entry = this.swiWasmActorWorkers[pid];
                 if (entry && entry.worker && !entry.done && answer !== null) {
-                  entry.worker.postMessage({ command: "shell_input", answer: String(answer) });
+                  var respondEnvelope = {
+                    pid: Number(pid),
+                    command: "toplevel_respond",
+                    input: String(answer)
+                  };
+                  this.logSwiWasmWorkerTraffic(respondEnvelope, "request");
+                  entry.worker.postMessage(respondEnvelope);
                 }
               }.bind(this));
+              return true;
             }
+            if (message.type === "stop" || message.type === "responded" || message.type === "abort") {
+              this.logSwiWasmWorkerTraffic(message, "response");
+              return true;
+            }
+            return false;
           },
           handleSwiWasmWorkerActorMessage: function(pid, event) {
             var entry = this.swiWasmActorWorkers[pid];
@@ -10325,15 +10290,15 @@
             if (!entry) {
               return;
             }
-            if (message.type === "ready") {
+            if (message.type === "ready" || message.type === "spawned") {
               entry.ready = true;
               if (entry.resolveReady) {
                 entry.resolveReady(pid);
                 entry.resolveReady = null;
                 entry.rejectReady = null;
               }
-              this.log("transport", pid + " ready.", "swi-wasm", "response");
               if (entry.role === "shell_toplevel") {
+                this.logSwiWasmWorkerTraffic(message, "response");
                 this.swiWasm2ShellReady = true;
                 if (this.terminal) {
                   this.terminal.set_prompt(this.basePrompt());
@@ -10341,15 +10306,29 @@
                 }
                 this.log("info", "SWI-WASM worker toplevel actor ready.", "swi-wasm");
                 this.fetchExamplesIndex();
+              } else {
+                this.log("transport", pid + " ready.", "swi-wasm", "response");
               }
               return;
             }
+            if (entry.role === "shell_toplevel" && this.handleSwiWasm2ToplevelMessage(pid, message)) {
+              return;
+            }
             if (message.type === "started") {
-              this.log("transport", pid + " started.", "swi-wasm", "response");
+              if (entry.role !== "shell_toplevel") {
+                this.log("transport", pid + " started.", "swi-wasm", "response");
+              }
               return;
             }
             if (message.type === "output") {
               if (message.output && this.terminal) {
+                if (entry.role === "shell_toplevel") {
+                  this.logSwiWasmWorkerTraffic({
+                    type: "output",
+                    pid: pid,
+                    data: String(message.output).replace(/\n$/, "")
+                  }, "response");
+                }
                 this.terminal.echo(String(message.output).replace(/\n$/, ""));
               }
               return;
@@ -10358,10 +10337,6 @@
               if (message.output && this.terminal) {
                 this.terminal.echo(String(message.output).replace(/\n$/, ""));
               }
-              return;
-            }
-            if (message.type === "shell_event") {
-              this.handleSwiWasm2ShellEvent(pid, message.event, message.text);
               return;
             }
             if (message.type === "statechart_trace") {
@@ -10430,7 +10405,6 @@
               if (pid !== "main" && entry.worker) {
                 try { entry.worker.terminate(); } catch (_reapError) {}
               }
-              this.log("transport", pid + " done.", "swi-wasm", "response");
               if (entry.role === "shell_toplevel") {
                 this.swiWasm2ShellReady = false;
                 this.swiWasm2QueryPending = false;
@@ -10438,6 +10412,8 @@
                   this.finishError(this.terminal, "The SWI-WASM worker toplevel actor stopped: " + entry.reason);
                   this.resumeTerm(this.terminal);
                 }
+              } else {
+                this.log("transport", pid + " done.", "swi-wasm", "response");
               }
               return;
             }
@@ -10451,6 +10427,9 @@
                   entry.rejectReady = null;
                 }
                 this.notifySwiWasmActorMonitors(pid, entry.reason);
+              }
+              if (entry.role === "shell_toplevel") {
+                this.logSwiWasmWorkerTraffic(message, "response");
               }
               this.log("error", pid + " failed: " + String(message.error || "unknown error"), "swi-wasm");
               if (message.output && this.terminal) {
@@ -10483,7 +10462,7 @@
                 result = this.spawnSwiWasmWorkerActorReady(message.goal || "true", message.source || "", message.pid || "", message.name || "");
                 break;
               case "statechart_spawn":
-                result = this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, message.trace);
+                result = this.spawnSwiWasmStatechartActor(message.sourceKind, message.source);
                 break;
               case "remote_spawn":
                 result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "");
@@ -11710,8 +11689,11 @@
               "    Aborted == true.",
               "",
               "statechart_spawn(Pid, Options) :-",
+              "    ( member(TraceOption, Options), TraceOption = trace(_)",
+              "    -> throw(error(domain_error(statechart_spawn_option, TraceOption), statechart_spawn/2))",
+              "    ; true",
+              "    ),",
               "    statechart_spawn_source(Options, XML),",
-              "    statechart_trace_option(Options),",
               "    statechart_wasm:statechart_start(text(XML)),",
               "    Pid = statechart.",
               "",
@@ -11729,8 +11711,6 @@
               "    ).",
               "statechart_spawn_source(_, _) :-",
               "    throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2)).",
-              "",
-              "statechart_trace_option(_).",
               "",
               "output(Term) :- output(Term, []).",
               "",
@@ -13110,10 +13090,7 @@
             if (loadSpec.origin === "editor" && loadText !== "") {
               examplePayload = this.exampleSpawnInteractionPayload("prolog", "isotope", loadSpec.origin);
             }
-            var body = {
-              options: "[]",
-              statechart_trace: this.isTraceLoggingEnabled()
-            };
+            var body = { options: "[]" };
             if (loadText !== "") { body.src_text = loadText; }
             return this.requestJson("/toplevel_spawn", {
               method: "POST",
@@ -13622,8 +13599,7 @@
                   // bindings.  toplevel_spawn defaults session/1 to
                   // false per the manual, so the portal must opt in
                   // explicitly.
-                  options: "[session(true)]",
-                  statechart_trace: self.isTraceLoggingEnabled()
+                  options: "[session(true)]"
                 };
                 spawnLoadSpec = self.spawnLoadSpec();
                 var spawnLoadText = spawnLoadSpec.text;
@@ -13906,6 +13882,7 @@
               if (entry.scope === "http")     return "STATELESS HTTP";
               if (entry.scope === "isotope")  return "SEMI-STATEFUL HTTP";
               if (entry.scope === "ws")       return "STATEFUL WEBSOCKET";
+              if (entry.scope === "wasm-worker") return "STATEFUL WORKER · JS OBJECT";
             }
             return (entry.scope || "").toUpperCase();
           },
@@ -13931,6 +13908,61 @@
               direction: direction || null
             });
             return logId;
+          },
+          formatJavaScriptObject: function(value, level, ancestors) {
+            var depth = Number(level || 0);
+            var seen = ancestors || [];
+            var indent = new Array(depth * 2 + 1).join(" ");
+            var childIndent = new Array((depth + 1) * 2 + 1).join(" ");
+            var keys;
+            var rendered;
+            if (value === null) return "null";
+            if (value === undefined) return "undefined";
+            if (typeof value === "string") return JSON.stringify(value);
+            if (typeof value === "number") {
+              if (Number.isNaN(value)) return "NaN";
+              if (value === Infinity) return "Infinity";
+              if (value === -Infinity) return "-Infinity";
+              return String(value);
+            }
+            if (typeof value === "bigint") return String(value) + "n";
+            if (typeof value === "boolean") return value ? "true" : "false";
+            if (typeof value !== "object") return String(value);
+            if (seen.indexOf(value) >= 0) return "[Circular]";
+            seen.push(value);
+            if (Array.isArray(value)) {
+              if (value.length === 0) {
+                seen.pop();
+                return "[]";
+              }
+              rendered = "[\n" + value.map(function(item) {
+                return childIndent + this.formatJavaScriptObject(item, depth + 1, seen);
+              }, this).join(",\n") + "\n" + indent + "]";
+              seen.pop();
+              return rendered;
+            }
+            keys = Object.keys(value);
+            if (keys.length === 0) {
+              seen.pop();
+              return "{}";
+            }
+            rendered = "{\n" + keys.map(function(key) {
+              var property = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
+                ? key
+                : JSON.stringify(key);
+              return childIndent + property + ": " +
+                this.formatJavaScriptObject(value[key], depth + 1, seen);
+            }, this).join(",\n") + "\n" + indent + "}";
+            seen.pop();
+            return rendered;
+          },
+          logSwiWasmWorkerTraffic: function(envelope, direction) {
+            return this.log(
+              "transport",
+              this.formatJavaScriptObject(envelope || {}),
+              "wasm-worker",
+              direction
+            );
           },
           clearLogger: function() {
             this.logEntries = [];

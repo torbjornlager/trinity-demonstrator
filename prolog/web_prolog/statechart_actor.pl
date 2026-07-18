@@ -22,7 +22,6 @@ into dedicated helper modules to keep the public actor module compact.
 :- use_module(toplevel_actors).
 
 :- use_module(library(debug)).
-:- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(actor_io_support, [actor_io_prelude_text/1]).
 :- use_module(statechart_model, [statechart_spawn_source/3]).
@@ -33,22 +32,6 @@ into dedicated helper modules to keep the public actor module compact.
 ]).
 :- use_module(statechart_exec, []).
 :- use_module(isolation, [load_source_text/3]).
-%  Session-trace integration is provided by the node layer (sessions
-%  are a node concept).  Stand-alone defaults: no session trace state,
-%  no client-session pids, so emit_trace/1 falls back to the explicit
-%  trace_force/trace_hook controls.
-%
-%    - hook_set_session_trace(+Pid, +Enabled): record the trace toggle
-%      for Pid's owning session (all solutions run; no clause = no-op).
-%    - hook_session_trace_enabled(+ClientPid): semidet; trace events
-%      are emitted to the terminal when this succeeds.
-%    - hook_client_session_pid(+Pid): semidet; true when Pid is a
-%      client-owned session pid.
-:- multifile
-    hook_set_session_trace/2,
-    hook_session_trace_enabled/1,
-    hook_client_session_pid/1.
-
 %  Loading this behaviour makes the statechart API visible inside
 %  every actor module, exactly as the demonstrator's
 %  import_statechart_api/1 did during module preparation.
@@ -91,8 +74,6 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
         states_to_invoke/1,
         invoked/2.
 
-:- thread_local trace_force/1.
-:- thread_local trace_client/1.
 :- thread_local trace_hook/1.
 
 % Debugging topics exist, but are disabled by default.
@@ -207,59 +188,12 @@ interpret_example(Name0) :-
     interpret(Source).
 
 
-%!  with_trace(+Mode, :Goal) is det.
-with_trace(logger, Goal) :-
-    !,
-    setup_call_cleanup(
-        assertz(trace_force(true)),
-        Goal,
-        retractall(trace_force(true))
-    ).
-with_trace(false, Goal) :-
-    !,
-    Goal.
-
-%!  set_client_trace(+Enabled) is det.
-%
-%   Toggle statechart trace emission for the current interactive client
-%   session. Intended for UI-side control routed through the owning session.
-set_client_trace(Enabled) :-
-    must_be(oneof([true, false]), Enabled),
-    self(Self),
-    forall(hook_set_session_trace(Self, Enabled), true).
-
-
 emit_trace(Event) :-
     (   trace_hook(Goal)
     ->  catch(call(Goal, Event), _, true)
     ;   true
     ),
-    (   trace_force(true)
-    ->  terminal_output(statechart_trace(Event))
-    ;   current_trace_client(ClientPid),
-        hook_session_trace_enabled(ClientPid)
-    ->  terminal_output(statechart_trace(Event))
-    ;   true
-    ).
-
-
-current_trace_client(ClientPid) :-
-    trace_client(ClientPid),
-    !.
-current_trace_client(ClientPid) :-
-    resolve_trace_client(ClientPid),
-    assertz(trace_client(ClientPid)).
-
-
-resolve_trace_client(ClientPid) :-
-    self(Self0),
-    canonical_pid(Self0, Self),
-    (   hook_client_session_pid(Self)
-    ->  ClientPid = Self
-    ;   catch(actors:'$actor_parent'(Parent0), _, fail)
-    ->  canonical_pid(Parent0, ClientPid)
-    ;   ClientPid = Self
-    ).
+    terminal_output(statechart_trace(Event)).
 
 
 %!  interpret_parsed(-Root) is det.

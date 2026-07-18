@@ -81,8 +81,14 @@ collect_xml_errors(Errors) :-
 %!  statechart_spawn_source(+Options0, -SourceGoal, -SpawnOptions) is det.
 statechart_spawn_source(Options0, SourceGoal, SpawnOptions) :-
     maplist(canonical_statechart_option, Options0, CanonicalOptions),
-    partition(is_statechart_trace_option, CanonicalOptions, TraceOptions, Options1),
-    partition(is_statechart_source_option, Options1, SourceOptions, SpawnOptions),
+    (   member(Unsupported, CanonicalOptions),
+        unsupported_statechart_option(Unsupported)
+    ->  throw(error(domain_error(statechart_spawn_option, Unsupported),
+                    context(statechart_actor:statechart_spawn/2,
+                            'unsupported option for statechart_spawn/2')))
+    ;   true
+    ),
+    partition(is_statechart_source_option, CanonicalOptions, SourceOptions, SpawnOptions),
     (   member(Unsupported, SpawnOptions),
         unsupported_statechart_source_option(Unsupported)
     ->  throw(error(domain_error(statechart_source_option, Unsupported),
@@ -100,7 +106,7 @@ statechart_spawn_source(Options0, SourceGoal, SpawnOptions) :-
                     context(statechart_actor:statechart_spawn/2,
                             'statechart_spawn/2 accepts only one source option')))
     ),
-    trace_option_goal(TraceOptions, Goal0, SourceGoal).
+    SourceGoal = Goal0.
 
 canonical_statechart_option(load_text(Text), src_text(Text)) :- !.
 canonical_statechart_option(load_uri(URI), src_uri(URI)) :- !.
@@ -111,39 +117,14 @@ canonical_statechart_option(Option, Option).
 
 is_statechart_source_option(src_uri(_)).
 is_statechart_source_option(src_text(_)).
-is_statechart_trace_option(trace(_)).
 
 unsupported_statechart_source_option(src_list(_)).
 unsupported_statechart_source_option(src_predicates(_)).
 
+unsupported_statechart_option(trace(_)).
+
 source_option_goal(src_uri(URI), statechart_actor:interpret(URI)).
 source_option_goal(src_text(Text), statechart_actor:interpret_text(Text)).
-
-trace_option_goal([], Goal, Goal) :-
-    !.
-trace_option_goal([trace(Mode)], Goal, WrappedGoal) :-
-    !,
-    statechart_trace_mode(Mode, TraceMode),
-    (   TraceMode == false
-    ->  WrappedGoal = Goal
-    ;   WrappedGoal = statechart_actor:with_trace(TraceMode, Goal)
-    ).
-trace_option_goal(TraceOptions, _Goal, _WrappedGoal) :-
-    throw(error(domain_error(single_statechart_trace_option, TraceOptions),
-                context(statechart_actor:statechart_spawn/2,
-                        'statechart_spawn/2 accepts at most one trace/1 option'))).
-
-statechart_trace_mode(true, logger) :-
-    !.
-statechart_trace_mode(false, false) :-
-    !.
-statechart_trace_mode(logger, logger) :-
-    !.
-statechart_trace_mode(Mode, _TraceMode) :-
-    \+ memberchk(Mode, [true, false, logger]),
-    throw(error(domain_error(statechart_trace_mode, Mode),
-                context(statechart_actor:statechart_spawn/2,
-                        'trace/1 must be true, false, or logger'))).
 
 
 model_generate([], _).

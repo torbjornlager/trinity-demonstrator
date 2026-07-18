@@ -17,6 +17,7 @@
   var inheritedSource = "";
   var behaviourSource = "";
   var workerRole = "actor";
+  var workerConfiguration = {};
   var statechartTimers = {};
 
   if (typeof self.window === "undefined") {
@@ -27,7 +28,9 @@
     var message = fields || {};
     message.type = type;
     if (selfPidText && !Object.prototype.hasOwnProperty.call(message, "pid")) {
-      message.pid = selfPidText;
+      message.pid = workerRole === "shell_toplevel" && /^[0-9]+$/.test(selfPidText)
+        ? Number(selfPidText)
+        : selfPidText;
     }
     self.postMessage(message);
   }
@@ -38,11 +41,19 @@
     while ((index = outputBuffer.indexOf("\n")) >= 0) {
       chunk = outputBuffer.slice(0, index + 1);
       outputBuffer = outputBuffer.slice(index + 1);
-      post("output", { output: chunk });
+      postWorkerOutput(chunk);
     }
     if (force && outputBuffer) {
-      post("output", { output: outputBuffer });
+      postWorkerOutput(outputBuffer);
       outputBuffer = "";
+    }
+  }
+
+  function postWorkerOutput(text) {
+    if (workerRole === "shell_toplevel") {
+      post("output", { data: String(text).replace(/\n$/, "") });
+    } else {
+      post("output", { output: String(text) });
     }
   }
 
@@ -321,11 +332,10 @@
     });
   }
 
-  function actorStatechartSpawn(sourceKind, sourceText, traceText) {
+  function actorStatechartSpawn(sourceKind, sourceText) {
     return actorRequest("statechart_spawn", {
       sourceKind: String(sourceKind || ""),
-      source: String(sourceText || ""),
-      trace: String(traceText || "false") === "true"
+      source: String(sourceText || "")
     });
   }
 
@@ -398,19 +408,143 @@
   }
 
   function actorTerminalOutput(text) {
-    post("output", { output: String(text) + "\n" });
+    postWorkerOutput(String(text) + "\n");
     return true;
   }
 
-  function actorShellEvent(value, text) {
+  function structuredCompound(value) {
+    var functor;
+    var args;
+    if (!value || typeof value !== "object" || value.$t !== "t") {
+      return null;
+    }
+    functor = value.functor || Object.keys(value).find(function(key) {
+      return key !== "$t";
+    });
+    if (!functor) {
+      return null;
+    }
+    args = typeof value.arguments === "function" ? value.arguments() : value[functor];
+    if (Array.isArray(args) && args.length === 1 && Array.isArray(args[0])) {
+      args = args[0];
+    }
+    return { functor: functor, args: Array.isArray(args) ? args : [] };
+  }
+
+  function structuredList(value) {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (value && typeof value === "object" && value.$t === "l" && Array.isArray(value.v)) {
+      return value.v;
+    }
+    return [];
+  }
+
+  function formatAtom(value) {
+    var text = String(value);
+    if (/^[a-z][A-Za-z0-9_]*$/.test(text) ||
+        text === "[]" || text === "!" || text === "true" || text === "false") {
+      return text;
+    }
+    return "'" + text.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
+  }
+
+  function formatValue(value) {
+    var compound;
+    var args;
+    if (value === null) return "null";
+    if (value === undefined) return "_";
+    if (typeof value === "number" || typeof value === "bigint") return String(value);
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "string") return formatAtom(value);
+    if (Array.isArray(value)) {
+      return "[" + value.map(formatValue).join(",") + "]";
+    }
+    if (value && value.$t === "v") {
+      return "_" + (value.v !== undefined ? value.v : "");
+    }
+    if (value && value.$t === "s") {
+      return JSON.stringify(String(value.v));
+    }
+    if (value && value.$t === "l") {
+      var items = Array.isArray(value.v) ? value.v.map(formatValue) : [];
+      return "[" + items.join(",") +
+        (value.t !== undefined ? "|" + formatValue(value.t) : "") + "]";
+    }
+    compound = structuredCompound(value);
+    if (compound) {
+      args = compound.args;
+      if (compound.functor === "@" && args.length === 2) {
+        return formatValue(args[0]) + "@" + formatValue(args[1]);
+      }
+      if (compound.functor === "/" && args.length === 2) {
+        return formatValue(args[0]) + "/" + formatValue(args[1]);
+      }
+      if (compound.functor === "-" && args.length === 2) {
+        return formatValue(args[0]) + "-" + formatValue(args[1]);
+      }
+      if (compound.functor === "=" && args.length === 2) {
+        return formatValue(args[0]) + "=" + formatValue(args[1]);
+      }
+      if (compound.functor === "," && args.length === 2) {
+        return "(" + formatValue(args[0]) + "," + formatValue(args[1]) + ")";
+      }
+      if (args.length === 0) return formatAtom(compound.functor);
+      return formatAtom(compound.functor) + "(" + args.map(formatValue).join(",") + ")";
+    }
+    return String(value);
+  }
+
+  function displayRows(value) {
+    return structuredList(value).map(function(row) {
+      var display = {};
+      if (row && typeof row === "object") {
+        Object.keys(row).forEach(function(key) {
+          if (/^[A-Z_]/.test(key) && key !== "_" && !(row[key] && row[key].$t === "v")) {
+            display[key] = formatValue(row[key]);
+          }
+        });
+      }
+      return display;
+    });
+  }
+
+  function actorToplevelEvent(value, text) {
     var eventValue = value;
+    var compound;
+    var args;
+    var data;
     try {
       eventValue = JSON.parse(JSON.stringify(value));
     } catch (_) {
     }
     // Publish a final non-newline fragment before its query answer.
     flushOutput(true);
-    post("shell_event", { event: eventValue, text: String(text || "") });
+    compound = structuredCompound(eventValue);
+    if (!compound) {
+      post("error", { data: String(text || "Unexpected toplevel event") });
+      return true;
+    }
+    args = compound.args;
+    if (compound.functor === "success") {
+      post("success", {
+        data: displayRows(args[1]),
+        more: args[2] === true || args[2] === "true"
+      });
+    } else if (compound.functor === "failure") {
+      post("failure", {});
+    } else if (compound.functor === "error") {
+      post("error", { data: String(text || formatValue(args[1])) });
+    } else if (compound.functor === "output" || compound.functor === "terminal_output") {
+      data = typeof args[1] === "string" ? args[1] : formatValue(args[1]);
+      post("output", { data: data });
+    } else if (compound.functor === "prompt") {
+      data = typeof args[1] === "string" ? args[1] : formatValue(args[1]);
+      post("prompt", { data: data });
+    } else {
+      post("error", { data: String(text || "Unexpected toplevel event") });
+    }
     return true;
   }
 
@@ -448,7 +582,7 @@
   self.actorExit = actorExit;
   self.actorAbort = actorAbort;
   self.actorTerminalOutput = actorTerminalOutput;
-  self.actorShellEvent = actorShellEvent;
+  self.actorToplevelEvent = actorToplevelEvent;
   self.actorSetDoneReason = actorSetDoneReason;
   self.actorInput = actorInput;
   // A parent passes its complete runtime source to the coordinator when
@@ -690,12 +824,15 @@
       "    canonical_source_option(Option, Canonical).",
       "",
       "statechart_spawn(Pid, Options) :-",
+      "    ( member(TraceOption, Options), TraceOption = trace(_)",
+      "    -> throw(error(domain_error(statechart_spawn_option, TraceOption), statechart_spawn/2))",
+      "    ; true",
+      "    ),",
       "    ( source_option_member(src_text(Source), Options) -> SourceKind = text",
       "    ; source_option_member(src_uri(Source), Options) -> SourceKind = uri",
       "    ; throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2))",
       "    ),",
-      "    ( option(trace(true), Options) -> Trace = true ; Trace = false ),",
-      "    Promise := actorStatechartSpawn(#SourceKind, #Source, #Trace),",
+      "    Promise := actorStatechartSpawn(#SourceKind, #Source),",
       "    await(Promise, PidText),",
       "    term_string(Pid, PidText).",
       "",
@@ -883,15 +1020,15 @@
       "",
       "Pid ! Message :- send(Pid, Message).",
       "",
-      "shell_event_text(error(_, Error), Text) :- !, term_string(Error, Text).",
-      "shell_event_text(Message, Text) :- term_string(Message, Text).",
+      "toplevel_event_text(error(_, Error), Text) :- !, term_string(Error, Text).",
+      "toplevel_event_text(Message, Text) :- term_string(Message, Text).",
       "",
       "send(terminal, Message) :-",
       "    shell_toplevel_role, !,",
       "    catch(flush_output(user_output), _, true),",
       "    catch(flush_output(user_error), _, true),",
-      "    shell_event_text(Message, Text),",
-      "    _ := actorShellEvent(#Message, #Text).",
+      "    toplevel_event_text(Message, Text),",
+      "    _ := actorToplevelEvent(#Message, #Text).",
       "",
       "send(Pid, Message) :-",
       "    must_be_transportable_term(Message),",
@@ -1405,9 +1542,7 @@
         "    ; true",
         "    )."
       ].join("\n"), "/worker_statechart_actor.pl");
-      if (message.statechartTrace === true) {
-        Prolog.query("statechart_wasm:set_trace_hook(user:statechart_trace_hook)").once();
-      }
+      Prolog.query("statechart_wasm:set_trace_hook(user:statechart_trace_hook)").once();
     });
   }
 
@@ -1417,7 +1552,7 @@
       return;
     }
     selfPidText = String(message.pid || "");
-    workerRole = String(message.role || "actor");
+    workerRole = String(message.role || workerConfiguration.role || "actor");
     exitReason = null;
     if (!/^[1-9][0-9]{9}$/.test(selfPidText)) {
       post("error", { error: "invalid worker actor pid" });
@@ -1433,14 +1568,16 @@
     }).then(function(module) {
       Module = module;
       Prolog = module.prolog;
-      inheritedSource = String(message.source || "");
-      behaviourSource = String(message.behaviourSource || "");
+      inheritedSource = String(message.source !== undefined
+        ? message.source
+        : (message.src_text || ""));
+      behaviourSource = String(message.behaviourSource || workerConfiguration.behaviourSource || "");
       installActorPredicates();
       return installSharedDatabase().then(function() {
         consultSource(inheritedSource, "/worker_user_code.pl");
         return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then(function() {
-          post("ready", {});
-          return runGoal(message.goal || "true");
+          post(workerRole === "shell_toplevel" ? "spawned" : "ready", {});
+          return runGoal(message.goal || workerConfiguration.goal || "true");
         });
       });
     }).catch(function(error) {
@@ -1451,47 +1588,68 @@
 
   self.onmessage = function(event) {
     var message = event && event.data ? event.data : {};
+    if (message.command === "configure") {
+      workerConfiguration = Object.assign({}, message);
+      return;
+    }
     if (message.command === "start") {
       start(message);
+      return;
+    }
+    if (message.command === "toplevel_spawn") {
+      start(Object.assign({}, workerConfiguration, {
+        command: "toplevel_spawn",
+        pid: message.pid,
+        src_text: message.src_text || "",
+        role: "shell_toplevel"
+      }));
       return;
     }
     if (message.command === "deliver") {
       deliver(message.message || "true");
       return;
     }
-    if (message.command === "shell_load" && workerRole === "shell_toplevel") {
-      inheritedSource = String(message.source || "");
+    if (message.command === "toplevel_call" && workerRole === "shell_toplevel") {
+      if (Object.prototype.hasOwnProperty.call(message, "src_text")) {
+        inheritedSource = String(message.src_text || "");
+      }
       if (Module && Module.FS) {
         Module.FS.writeFile("/worker_user_code.pl", inheritedSource);
       }
-      deliver("'$reload'");
-      return;
-    }
-    if (message.command === "shell_call" && workerRole === "shell_toplevel") {
+      if (Object.prototype.hasOwnProperty.call(message, "src_text")) {
+        deliver("'$reload'");
+      }
       deliver("'$call_text'(" + JSON.stringify(escapeNestedPrologNegation(message.goal || "true")) + "," +
               Number(message.limit || 1) + "," + Number(message.offset || 0) + "," +
               (message.once === true ? "true" : "false") + ")");
       return;
     }
-    if (message.command === "shell_next" && workerRole === "shell_toplevel") {
+    if (message.command === "toplevel_next" && workerRole === "shell_toplevel") {
       deliver("'$next'([limit(" + Number(message.limit || 1) + ")])");
       return;
     }
-    if (message.command === "shell_stop" && workerRole === "shell_toplevel") {
+    if (message.command === "toplevel_stop" && workerRole === "shell_toplevel") {
       deliver("'$stop'");
+      post("stop", {});
       return;
     }
-    if (message.command === "shell_input" && workerRole === "shell_toplevel") {
+    if (message.command === "toplevel_respond" && workerRole === "shell_toplevel") {
       // Mirror the main-thread reader: an empty line is end_of_file; otherwise
       // strip a single trailing '.' (the read/1 terminator) and parenthesise
       // the answer so the whole line is ONE argument term.  Without the
       // parentheses a bare comma or operator (e.g. read of `a, b.`) would turn
       // the message into '$input'/3 and the shell's receive({'$input'(_, A)})
       // would never match, hanging the prompt.
-      var inputLine = message.answer == null ? "" : String(message.answer);
+      var inputLine = message.input == null ? "" : String(message.input);
       var inputBody = inputLine.replace(/\.[ \t]*$/, "");
       var inputArg = inputBody.trim() === "" ? "end_of_file" : "(" + inputBody + ")";
       deliver("'$input'(terminal," + inputArg + ")");
+      post("responded", {});
+      return;
+    }
+    if (message.command === "toplevel_abort" && workerRole === "shell_toplevel") {
+      abortCurrentGoal();
+      post("abort", {});
       return;
     }
     if (message.command === "reply") {

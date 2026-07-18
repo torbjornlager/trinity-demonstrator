@@ -2775,16 +2775,16 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <p>
     Spawn the statechart as an actor. <code>src_uri</code> fetches the XML
-    for the interpreter, and <code>trace(true)</code> enables transition
-    tracing so the diagram updates automatically as events fire.
+    for the interpreter. Transition traces are published automatically,
+    so the diagram updates as events fire and the same events appear in
+    the Logger when its <strong>SXML trace</strong> filter is selected.
     <code>Pid</code> is bound to the actor's pid. Spawning also populates
     the <strong>Examples</strong> menu (the button below the terminal input)
     with all five event queries:
 </p>
 
 <pre id="sc-pr-spawn">?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/01%20pause-and-resume.xml'),
-       trace(true)
+       src_uri('/examples/statecharts/01%20pause-and-resume.xml')
    ]).
 </pre>
 
@@ -3367,8 +3367,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-spaghetti-spawn">?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/02%20spaghetti.xml'),
-       trace(true)
+       src_uri('/examples/statecharts/02%20spaghetti.xml')
    ]).
 </pre>
 
@@ -3548,8 +3547,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-emotions-spawn">?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/03%20emotions.xml'),
-       trace(true)
+       src_uri('/examples/statecharts/03%20emotions.xml')
    ]).
 </pre>
 
@@ -3627,8 +3625,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/08%20gcd.xml'),
-       trace(true)
+       src_uri('/examples/statecharts/08%20gcd.xml')
    ]).
 </pre>
 
@@ -3670,8 +3667,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <pre id="sc-spawn-toplevel-spawn">?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/10%20spawn-toplevel.xml'),
-       trace(true)
+       src_uri('/examples/statecharts/10%20spawn-toplevel.xml')
    ]).
 </pre>
 

@@ -625,8 +625,8 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     <p>In addition, <code>statechart_spawn/2</code> accepts:</p>
     <ul>
         <li><code>name(+Name)</code><br>Register the statechart actor under <code>Name</code> in the local ordinary-name namespace.</li>
-        <li><code>trace(+Mode)</code><br>Set the per-actor trace mode to <code>true</code>, <code>logger</code>, or <code>false</code>. The values <code>true</code> and <code>logger</code> enable trace events on the terminal-output path; <code>false</code> adds no per-actor trace. At most one <code>trace/1</code> option is accepted. Default is <code>false</code>.</li>
     </ul>
+    <p>Statechart trace events are published automatically. The Logger's <strong>SXML trace</strong> filter controls their visibility; tutorial diagrams consume the same events for animation.</p>
     <p>All remaining options are passed through to <code>spawn/3</code>.</p>
     <p><code>src_list/1</code> and <code>src_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
 </article>

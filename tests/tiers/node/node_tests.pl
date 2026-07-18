@@ -3874,7 +3874,7 @@ test(statechart_spawn_load_uri_node_relative) :-
             exit(Pid, stop)
         )).
 
-test(ws_toplevel_spawn_honors_initial_trace_flag,
+test(ws_statechart_spawn_automatically_emits_trace,
      true(TraceData \== "")) :-
     with_node_server_options([auth(dev)], URI,
         setup_call_cleanup(
@@ -3882,8 +3882,7 @@ test(ws_toplevel_spawn_honors_initial_trace_flag,
             (
                 ws_send_json(WS, json{
                     command:toplevel_spawn,
-                    options:"[session(true)]",
-                    trace:"true"
+                    options:"[session(true)]"
                 }),
                 ws_receive_json(WS, Spawned),
                 get_dict(type, Spawned, "spawned"),

@@ -120,16 +120,16 @@ async function main() {
   ok((await remoteSpawnP) === "1234567890@'https://n4.example'",
      "remote spawn reply preserves the distributed pid");
 
-  // 9. A shell-role worker translates controller commands into the ptcp/3
+  // 9. A shell-role worker translates toplevel API commands into the ptcp/3
   // mailbox protocol.  An invalid pid avoids booting the actual WASM bundle.
-  S.onmessage({ data: { command: "start", pid: "invalid_shell", role: "shell_toplevel" } });
-  S.onmessage({ data: { command: "shell_call", goal: "member(X,[a,b])", limit: 1 } });
+  S.onmessage({ data: { command: "toplevel_spawn", pid: "invalid_shell" } });
+  S.onmessage({ data: { command: "toplevel_call", goal: "member(X,[a,b])", limit: 1 } });
   const shellCall = await S.actorReceive(-1);
   ok(shellCall.indexOf("'$call_text'") === 0 && shellCall.includes("member(X,[a,b])"),
      "shell call enters the toplevel actor mailbox");
 
   S.onmessage({ data: {
-    command: "shell_call",
+    command: "toplevel_call",
     goal: 'rpc(node, immortal(Who), [src_text("immortal(Who) :- \\+ mortal(Who).")])',
     limit: 1
   } });
@@ -142,15 +142,26 @@ async function main() {
   // 9b. A read/1 answer carrying a comma + trailing '.' is parenthesised and
   // the period stripped, so '$input' stays arity 2 (a bare comma would make
   // it '$input'/3 and the shell's receive would never match).
-  S.onmessage({ data: { command: "shell_input", answer: "a, b." } });
+  S.onmessage({ data: { command: "toplevel_respond", input: "a, b." } });
   const shellInput = await S.actorReceive(-1);
   ok(shellInput === "'$input'(terminal,(a, b))",
      "shell input parenthesises the answer and strips the read terminator");
   // An empty answer maps to end_of_file (not the invalid term '()').
-  S.onmessage({ data: { command: "shell_input", answer: "" } });
+  S.onmessage({ data: { command: "toplevel_respond", input: "" } });
   const shellEof = await S.actorReceive(-1);
   ok(shellEof === "'$input'(terminal,end_of_file)",
      "an empty shell input answer is end_of_file");
+
+  // Prolog toplevel events cross the Worker boundary as the canonical API
+  // response itself, not wrapped in a private shell_event envelope.
+  S.actorToplevelEvent({
+    $t: "t",
+    success: ["invalid_shell", [{ Xs: { $t: "l", v: ["a"] } }], true]
+  }, "success(invalid_shell,[_{Xs:[a]}],true)");
+  const successEvent = S._posted.filter(function(m) { return m.type === "success"; }).pop();
+  ok(!!successEvent && successEvent.data[0].Xs === "[a]" && successEvent.more === true &&
+     !Object.prototype.hasOwnProperty.call(successEvent, "event"),
+     "toplevel success is posted in the canonical API response shape");
 
   // 10. Worker-side rpc/2-3 uses the same controller request channel as
   // remote actor transport; the Worker does not own browser HTTP policy.
@@ -207,11 +218,11 @@ async function main() {
 
   // 11. Statechart creation is coordinated from JS so src_uri and Worker
   // placement stay node-controller responsibilities.
-  const chartP = S.actorStatechartSpawn("uri", "/examples/chart.xml", "true");
+  const chartP = S.actorStatechartSpawn("uri", "/examples/chart.xml");
   const chartReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "statechart_spawn";
   }).pop();
-  ok(!!chartReq && chartReq.source === "/examples/chart.xml" && chartReq.trace === true,
+  ok(!!chartReq && chartReq.source === "/examples/chart.xml" && !("trace" in chartReq),
      "statechart spawn is delegated to the node controller");
   S.onmessage({ data: { command: "reply", id: chartReq.id, ok: true, result: "5500000000" } });
   ok((await chartP) === "5500000000", "statechart spawn returns its Worker pid");

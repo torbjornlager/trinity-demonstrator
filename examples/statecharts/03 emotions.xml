@@ -43,8 +43,7 @@
 <!-- <examples>
 
 ?- statechart_spawn(Pid, [
-       src_text(<editor>),
-       trace(true)
+       src_text(<editor>)
    ]).
 
 ?- $Pid ! e.

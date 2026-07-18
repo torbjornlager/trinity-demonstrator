@@ -284,22 +284,3 @@ distribution:hook_connection_context(Goal0,
 distribution:hook_ws_endpoint_override(NodeURL, WsURL) :-
     current_node_value(ws_endpoint_overrides, Overrides),
     memberchk(NodeURL-WsURL, Overrides).
-
-
-                /*******************************
-                *      STATECHART HOOKS        *
-                *******************************/
-
-%  Session trace integration (was statechart_actor's node_session
-%  import).
-:- multifile statechart_actor:hook_set_session_trace/2.
-statechart_actor:hook_set_session_trace(Pid, Enabled) :-
-    node_session:set_isotope_session_trace(Pid, Enabled).
-
-:- multifile statechart_actor:hook_session_trace_enabled/1.
-statechart_actor:hook_session_trace_enabled(ClientPid) :-
-    node_session:isotope_session_trace_enabled(ClientPid).
-
-:- multifile statechart_actor:hook_client_session_pid/1.
-statechart_actor:hook_client_session_pid(Pid) :-
-    node_session:is_client_session_pid(Pid).
