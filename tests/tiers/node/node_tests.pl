@@ -3977,6 +3977,26 @@ test(ws_actor_toplevel_session_exposes_actor_primitives) :-
             catch(ws_close(WS, 1000, done), _, true)
         )).
 
+test(ws_actor_toplevel_session_exposes_runtime_property) :-
+    with_node_server_options([profile(actor), auth(dev)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"runtime_property(dom(false))",
+                    format:"json"
+                }),
+                ws_receive_json(WS, Reply),
+                assertion(Reply.type == "success")
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
+        )).
+
 test(ws_actor_toplevel_nested_spawn_accepts_per_connection_anon,
      true(Type == "success")) :-
     with_node_server_options([profile(actor), auth(open)], URI,
@@ -5462,6 +5482,26 @@ test(rpc_3_honors_limit, set(X == [a, b, c])) :-
 test(rpc_3_once_true_returns_first_slice_only, set(X == [a])) :-
     with_node_server(URI,
                      rpc(URI, member(X, [a, b, c]), [limit(1), once(true)])).
+
+test(runtime_properties_describe_native_host, true(Properties == Expected)) :-
+    findall(Property, runtime_property(Property), Properties),
+    Expected = [ implementation(swi_native),
+                 persistent(true),
+                 inbound_addressable(true),
+                 dom(false),
+                 actor_isolation(native_thread),
+                 hard_termination(true)
+               ].
+
+test(runtime_property_is_available_through_isobase,
+     set(Property == [ actor_isolation(native_thread),
+                       dom(false),
+                       hard_termination(true),
+                       implementation(swi_native),
+                       inbound_addressable(true),
+                       persistent(true)
+                     ])) :-
+    with_node_server(URI, rpc(URI, runtime_property(Property))).
 
 test(rpc_3_failure, [fail]) :-
     with_node_server(URI, rpc(URI, fail, [limit(1)])).

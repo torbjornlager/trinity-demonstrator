@@ -5,6 +5,7 @@
      promise/4,              % +URI, :Goal, -Reference, +Options
      yield/2,                % +Reference, ?Message
      yield/3,                % +Reference, ?Message, +Options
+     runtime_property/1,     % ?HostProperty
      node/1,                 % +Port
      node/2                  % +Port, +Options
    ]).
@@ -51,6 +52,7 @@ Design notes:
     promise/4,
     yield/2,
     yield/3,
+    runtime_property/1,
     text_to_string/2,
     normalize_requested_timeout/2,
     normalize_timeout/2

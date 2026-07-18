@@ -215,7 +215,26 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 
 ### Remote Queries
 
-`rpc/2`, `rpc/3`, `promise/3`, `promise/4`, `yield/2`, `yield/3`.
+`rpc/2`, `rpc/3`, `promise/3`, `promise/4`, `yield/2`, `yield/3`,
+`runtime_property/1`.
+
+All runtimes accept the same `rpc/3` transport options: `limit/1`, `once/1`,
+`timeout/1`, and `http_timeout/1`, together with the `src_*` source options.
+`promise/4` accepts these plus `template/1` and `offset/1`; offset selects the
+single slice collected by the promise and is not a public `rpc/3` option.
+Promise references are opaque ten-digit integers. A `yield/3` timeout never
+consumes its promise; without `on_timeout/1`, the timeout path succeeds.
+
+`runtime_property/1` reports host capabilities rather than changing language
+semantics. Its properties are `implementation/1`, `persistent/1`,
+`inbound_addressable/1`, `dom/1`, `actor_isolation/1`, and
+`hard_termination/1`.
+
+Actor application messages use the portable wire-term subset: acyclic ordinary
+Prolog terms without attributed variables, streams, or other non-text blob
+values. Plain variables are copied as fresh variables. Serialization boundaries
+enforce the subset; accepting extra host terms on a native local-only path is
+an implementation extension and is not placement-independent.
 
 ### Generic Servers
 

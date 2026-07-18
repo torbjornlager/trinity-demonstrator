@@ -7,7 +7,6 @@
   var outputBuffer = "";
   var started = false;
   var nextRequestId = 1;
-  var nextRefId = 1;
   var pendingRequests = {};
   var pendingRpcPromises = {};
   var Prolog = null;
@@ -163,11 +162,13 @@
 
   function qualifyLocalPid(pidText) {
     var text = String(pidText || "").trim();
+    if (text === "main") return "main@localhost";
     return /^[1-9][0-9]{9}$/.test(text) ? text + "@localhost" : text;
   }
 
   function localizePid(pidText) {
     var text = String(pidText || "").trim();
+    if (/^main\s*@\s*'?localhost'?$/.test(text)) return "main";
     var match = /^([1-9][0-9]{9})\s*@\s*'?localhost'?$/.exec(text);
     return match ? match[1] : text;
   }
@@ -242,28 +243,53 @@
     return /\.\s*$/.test(source) ? source : source + ".";
   }
 
-  function actorRpc(nodeText, goalText, templateText, offset, limit, loadText) {
+  function actorRpc(nodeText, goalText, templateText, offset, limit, loadText,
+                    remoteTimeout, once, httpTimeout) {
     return actorRequest("rpc", {
       node: String(nodeText || ""),
       goal: String(goalText || "true"),
       template: String(templateText || "true"),
       offset: Number(offset || 0),
-      limit: Number(limit || 10000),
-      loadText: String(loadText || "")
+      limit: Number(limit || 10000000000),
+      loadText: String(loadText || ""),
+      remoteTimeout: Number(remoteTimeout),
+      once: once === true || String(once) === "true",
+      httpTimeout: Number(httpTimeout)
     });
   }
 
-  function actorPromiseStart(nodeText, goalText, templateText, offset, limit, loadText) {
-    var ref = nextRefId++;
+  function actorPromiseStart(nodeText, goalText, templateText, offset, limit,
+                             loadText, remoteTimeout, once, httpTimeout) {
+    var ref = makePromiseRef();
     // Attach a rejection handler immediately so an HTTP failure cannot become
     // an unhandled promise rejection while Prolog is doing other work.
     pendingRpcPromises[ref] = actorRpc(
-      nodeText, goalText, templateText, offset, limit, loadText
+      nodeText, goalText, templateText, offset, limit, loadText,
+      remoteTimeout, once, httpTimeout
     ).then(function(value) {
       return { ok: true, value: value };
     }, function(error) {
       return { ok: false, error: error && error.message ? error.message : String(error) };
     });
+    return ref;
+  }
+
+  function makePromiseRef() {
+    var ref;
+    var min = 1000000000;
+    // Keep the value within SWI-WASM's tagged-integer range while retaining
+    // the canonical ten-digit opaque-reference presentation.
+    var span = 73741824;
+    do {
+      if (self.crypto && typeof self.crypto.getRandomValues === "function") {
+        var values = new Uint32Array(1);
+        self.crypto.getRandomValues(values);
+        ref = min + (values[0] % span);
+      } else {
+        ref = min + Math.floor(Math.random() * span);
+      }
+      ref = Math.floor(ref);
+    } while (Object.prototype.hasOwnProperty.call(pendingRpcPromises, String(ref)));
     return ref;
   }
 
@@ -522,7 +548,7 @@
       "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
       "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
       "    parallel/1, first_solution/2, first_solution/3,",
-      "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
+      "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3, runtime_property/1",
       "]).",
       ":- use_module(library(wasm)).",
       ":- use_module(library(apply)).",
@@ -539,6 +565,12 @@
       workerRole === "shell_toplevel" ? "shell_toplevel_role." : "shell_toplevel_role :- fail.",
       "",
       "self(" + qualifyLocalPid(selfPidText) + ").",
+      "runtime_property(implementation(swi_wasm_worker)).",
+      "runtime_property(persistent(false)).",
+      "runtime_property(inbound_addressable(false)).",
+      "runtime_property(dom(false)).",
+      "runtime_property(actor_isolation(web_worker)).",
+      "runtime_property(hard_termination(true)).",
       "",
       "spawn(Goal) :- spawn(Goal, _).",
       "",
@@ -718,13 +750,14 @@
       "    term_string(Node, NodeText),",
       "    term_to_atom(Goal, GoalText),",
       "    term_to_atom(Template, TemplateText),",
-      "    option(offset(Offset), Options, 0),",
-      "    option(limit(Limit), Options, 10000),",
+      "    Offset = 0,",
+      "    option(limit(Limit), Options, 10000000000),",
+      "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
       "    collect_rpc_load_text(Options, LoadText),",
-      "    worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText).",
+      "    worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout).",
       "",
-      "worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText) :-",
-      "    Promise := actorRpc(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText),",
+      "worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout) :-",
+      "    Promise := actorRpc(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout),",
       "    await(Promise, ResponseText),",
       "    (   catch(term_string(Response, ResponseText), _, fail)",
       "    ->  true",
@@ -732,8 +765,9 @@
       "    ),",
       "    (   Response = success(Slice, true)",
       "    ->  ( member(Bound, Slice), Template = Bound",
-      "        ; NextOffset is Offset + Limit,",
-      "          worker_rpc_page(NodeText, GoalText, TemplateText, Template, NextOffset, Limit, LoadText)",
+      "        ; Once == false,",
+      "          NextOffset is Offset + Limit,",
+      "          worker_rpc_page(NodeText, GoalText, TemplateText, Template, NextOffset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout)",
       "        )",
       "    ;   Response = success(Slice, false)",
       "    ->  member(Bound, Slice), Template = Bound",
@@ -753,8 +787,9 @@
       "    term_to_atom(Template, TemplateText),",
       "    option(offset(Offset), Options, 0),",
       "    option(limit(Limit), Options, 10000000000),",
+      "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
       "    collect_rpc_load_text(Options, LoadText),",
-      "    Ref := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText).",
+      "    Ref := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout).",
       "",
       "yield(Ref, Message) :- yield(Ref, Message, []).",
       "",
@@ -767,6 +802,24 @@
       "        call(OnTimeout)",
       "    ;   catch(term_string(Message, ResponseText), _, throw(rpc_error(parse_failed)))",
       "    ).",
+      "",
+      "rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout) :-",
+      "    option(timeout(RemoteTimeout0), Options, none),",
+      "    normalize_optional_timeout(RemoteTimeout0, RemoteTimeout),",
+      "    option(once(Once0), Options, false),",
+      "    normalize_boolean(Once0, Once),",
+      "    option(http_timeout(HTTPTimeout0), Options, none),",
+      "    normalize_optional_timeout(HTTPTimeout0, HTTPTimeout).",
+      "",
+      "normalize_optional_timeout(none, -1) :- !.",
+      "normalize_optional_timeout(Value, Timeout) :-",
+      "    must_be(number, Value),",
+      "    Timeout is max(0, Value).",
+      "",
+      "normalize_boolean(true, true) :- !.",
+      "normalize_boolean(false, false) :- !.",
+      "normalize_boolean(Value, _) :-",
+      "    throw(error(domain_error(boolean, Value), rpc/3)).",
       "",
       "collect_rpc_load_text(Options, LoadText) :-",
       "    findall(Text, rpc_load_text(Options, Text), Texts),",
@@ -820,6 +873,14 @@
       "canonical_pid(Pid, Pid@localhost) :- integer(Pid), !.",
       "canonical_pid(Pid, Pid).",
       "",
+      "transportable_term(Term) :-",
+      "    acyclic_term(Term),",
+      "    term_attvars(Term, []),",
+      "    \\+ (sub_term(Sub, Term), nonvar(Sub), blob(Sub, BlobType), BlobType \\== text, BlobType \\== reserved_symbol).",
+      "must_be_transportable_term(Term) :-",
+      "    ( transportable_term(Term) -> true",
+      "    ; throw(error(type_error(transportable_term, Term), send/2)) ).",
+      "",
       "Pid ! Message :- send(Pid, Message).",
       "",
       "shell_event_text(error(_, Error), Text) :- !, term_string(Error, Text).",
@@ -833,6 +894,7 @@
       "    _ := actorShellEvent(#Message, #Text).",
       "",
       "send(Pid, Message) :-",
+      "    must_be_transportable_term(Message),",
       "    term_string(Pid, PidText),",
       "    term_string(Message, MessageText),",
       "    Promise := actorSend(#PidText, #MessageText),",
@@ -845,6 +907,7 @@
       "send(Pid, Message, Options) :-",
       "    option(delay(Delay), Options),",
       "    !,",
+      "    must_be_transportable_term(Message),",
       "    delayed_send_id(Options, Id),",
       "    term_string(Pid, PidText),",
       "    term_string(Message, MessageText),",

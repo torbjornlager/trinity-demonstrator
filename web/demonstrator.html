@@ -4381,11 +4381,13 @@
       // remains a local-node designator rather than a network destination.
       function qualifySwiWasmLocalPid(pidText) {
         var text = String(pidText || "").trim();
+        if (text === "main") return "main@localhost";
         return /^[1-9][0-9]{9}$/.test(text) ? text + "@localhost" : text;
       }
 
       function localizeSwiWasmPid(pidText) {
         var text = String(pidText || "").trim();
+        if (/^main\s*@\s*'?localhost'?$/.test(text)) return "main";
         var match = /^([1-9][0-9]{9})\s*@\s*'?localhost'?$/.exec(text);
         return match ? match[1] : text;
       }
@@ -4649,7 +4651,7 @@
         if (!enabled) {
           return String(text);
         }
-        m = String(text).match(/^([0-9]+)\s*@\s*'?localhost'?$/);
+        m = String(text).match(/^([0-9]+|main)\s*@\s*'?localhost'?$/);
         if (m) {
           return m[1];
         }
@@ -4668,6 +4670,7 @@
           return String(text);
         }
         return String(text)
+          .replace(/main\s*@\s*'?localhost'?(?=$|[\s,;\.\]\)\}])/g, "main")
           .replace(/([0-9]+)\s*@\s*'?localhost'?(?=$|[\s,;\.\]\)\}])/g, "$1")
           .replace(/([0-9]+)@'?(https?:\/\/[^'"\s,\]\)\}]+)'?/g, function(match, id, node) {
             if (isLocalNode(node)) {
@@ -9326,9 +9329,15 @@
             // The RPC predicate awaits this promise between pages.  Do not use
             // the synchronous helper above: it would block the browser and
             // make Abort ineffective during an unbounded remote enumeration.
-            window.swiRpcGetAsync = function(url) {
+            window.swiRpcGetAsync = function(url, httpTimeout) {
               var controller = new AbortController();
               window.swiRpcAbortController = controller;
+              var timeout = httpTimeout === null || httpTimeout === undefined
+                ? NaN
+                : Number(httpTimeout);
+              var timer = isFinite(timeout) && timeout >= 0
+                ? setTimeout(function() { controller.abort(); }, timeout * 1000)
+                : null;
               var request = fetch(url, {
                 credentials: "same-origin",
                 signal: controller.signal
@@ -9347,6 +9356,7 @@
                 }, { once: true });
               });
               return Promise.race([request, cancelled]).finally(function() {
+                if (timer !== null) clearTimeout(timer);
                 if (window.swiRpcAbortController === controller) {
                   window.swiRpcAbortController = null;
                 }
@@ -9375,21 +9385,32 @@
             };
             this.installSwiWasmActorBridge();
             window._swiPromiseStore = window._swiPromiseStore || { items: {} };
-            window.swiPromiseStart = function(url) {
+            window.swiPromiseStart = function(url, httpTimeout) {
               var ref = self.makeBrowserPromiseRef(window._swiPromiseStore.items);
               var entry = { status: "pending", text: null, promise: null };
               window._swiPromiseStore.items[String(ref)] = entry;
-              entry.promise = fetch(url)
+              var controller = new AbortController();
+              var timeout = httpTimeout === null || httpTimeout === undefined
+                ? NaN
+                : Number(httpTimeout);
+              var timer = isFinite(timeout) && timeout >= 0
+                ? setTimeout(function() { controller.abort(); }, timeout * 1000)
+                : null;
+              entry.promise = fetch(url, { signal: controller.signal })
                 .then(function(response) { return response.text(); })
                 .then(function(text) {
                   entry.status = "done";
                   entry.text = text;
                   return text;
                 })
-                .catch(function() {
+                .catch(function(error) {
                   entry.status = "done";
-                  entry.text = "error(rpc_error(fetch_failed)).";
+                  entry.text = controller.signal.aborted
+                    ? "error(rpc_error(http_timeout))."
+                    : "error(rpc_error(fetch_failed)).";
                   return entry.text;
+                }).finally(function() {
+                  if (timer !== null) clearTimeout(timer);
                 });
               return ref;
             };
@@ -9400,22 +9421,22 @@
               return new Promise(function(resolve) {
                 var settled = false;
                 var timer = null;
-                function finish(value) {
+                function finish(value, consume) {
                   if (settled) return;
                   settled = true;
                   if (timer !== null) clearTimeout(timer);
-                  delete window._swiPromiseStore.items[key];
+                  if (consume !== false) delete window._swiPromiseStore.items[key];
                   resolve(value);
                 }
                 if (entry.status === "done") {
-                  finish(entry.text);
+                  finish(entry.text, true);
                   return;
                 }
                 if (typeof timeout === "number" && isFinite(timeout) && timeout >= 0) {
-                  timer = setTimeout(function() { finish(null); }, timeout * 1000);
+                  timer = setTimeout(function() { finish(null, false); }, timeout * 1000);
                 }
                 entry.promise.then(function() {
-                  finish(entry.text);
+                  finish(entry.text, true);
                 });
               });
             };
@@ -9848,7 +9869,24 @@
             if (message.loadText) {
               url.searchParams.set("src_text", String(message.loadText));
             }
-            return fetch(url.href, { credentials: "same-origin" }).then(function(response) {
+            var remoteTimeout = Number(message.remoteTimeout);
+            if (isFinite(remoteTimeout) && remoteTimeout >= 0) {
+              url.searchParams.set("timeout", String(remoteTimeout));
+            }
+            if (message.once === true) {
+              url.searchParams.set("once", "true");
+            }
+            var controller = new AbortController();
+            var httpTimeout = message.httpTimeout === null || message.httpTimeout === undefined
+              ? NaN
+              : Number(message.httpTimeout);
+            var timer = isFinite(httpTimeout) && httpTimeout >= 0
+              ? setTimeout(function() { controller.abort(); }, httpTimeout * 1000)
+              : null;
+            return fetch(url.href, {
+              credentials: "same-origin",
+              signal: controller.signal
+            }).then(function(response) {
               return response.text().then(function(text) {
                 if (!response.ok) {
                   var detail = String(text || "").replace(/\s+/g, " ").trim();
@@ -9857,6 +9895,13 @@
                 }
                 return text;
               });
+            }).catch(function(error) {
+              if (controller.signal.aborted && isFinite(httpTimeout) && httpTimeout >= 0) {
+                throw new Error("RPC transport timeout after " + httpTimeout + " seconds");
+              }
+              throw error;
+            }).finally(function() {
+              if (timer !== null) clearTimeout(timer);
             });
           },
           swiWasmRemoteWsUrl: function(nodeText) {
@@ -10555,7 +10600,7 @@
             this.focusTerminalSoon();
           },
           routeSwiWasmActorMessage: function(fromPid, toText, messageText) {
-            var to = String(toText || "");
+            var to = localizeSwiWasmPid(toText);
             var message = String(messageText || "true");
             if (to === "main") {
               this.deliverSwiWasmMainActorMessage(message);
@@ -10588,7 +10633,7 @@
             return localizeSwiWasmPid(pid);
           },
           swiWasmActorListText: function() {
-            var pids = this.isSwiWasm2Mode ? [] : ["main"];
+            var pids = this.isSwiWasm2Mode ? [] : [qualifySwiWasmLocalPid("main")];
             Object.keys(this.swiWasmActorWorkers || {}).sort().forEach(function(pid) {
               var entry = this.swiWasmActorWorkers[pid];
               if (entry && !entry.done) {
@@ -11143,7 +11188,7 @@
               "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
               "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
               "    parallel/1, first_solution/2, first_solution/3,",
-              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3",
+              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3, runtime_property/1",
               "]).",
               ":- op(800, xfx, !).",
               ":- op(200, xfx, @).",
@@ -11159,7 +11204,13 @@
               ":- dynamic deferred/1, io_target/1, suppress_shared_override_warnings/0.",
               ":- multifile user:message_hook/3.",
               "",
-              "self(main).",
+              "self(main@localhost).",
+              "runtime_property(implementation(swi_wasm_main)).",
+              "runtime_property(persistent(false)).",
+              "runtime_property(inbound_addressable(false)).",
+              "runtime_property(dom(true)).",
+              "runtime_property(actor_isolation(cooperative_engine)).",
+              "runtime_property(hard_termination(false)).",
               "",
               "load_private_source(File) :-",
               "    setup_call_cleanup(",
@@ -11373,6 +11424,14 @@
               "canonical_pid(Pid, Pid@localhost) :- integer(Pid), !.",
               "canonical_pid(Pid, Pid).",
               "",
+              "transportable_term(Term) :-",
+              "    acyclic_term(Term),",
+              "    term_attvars(Term, []),",
+              "    \\+ (sub_term(Sub, Term), nonvar(Sub), blob(Sub, BlobType), BlobType \\== text, BlobType \\== reserved_symbol).",
+              "must_be_transportable_term(Term) :-",
+              "    ( transportable_term(Term) -> true",
+              "    ; throw(error(type_error(transportable_term, Term), send/2)) ).",
+              "",
               "Pid ! Message :- send(Pid, Message).",
               "",
               "%  The chart is addressed as the pid `statechart`.  In the main",
@@ -11399,6 +11458,7 @@
               "send(Pid, Message, Options) :-",
               "    option(delay(Delay), Options),",
               "    !,",
+              "    must_be_transportable_term(Message),",
               "    delayed_send_id(Options, Id),",
               "    term_string(Pid, PidText),",
               "    term_string(Message, MessageText),",
@@ -11420,6 +11480,7 @@
               "    Cancelled == true.",
               "",
               "send_worker_actor(Pid, Message) :-",
+              "    must_be_transportable_term(Message),",
               "    term_string(Pid, PidText),",
               "    term_string(Message, MessageText),",
               "    Promise := swiWasmActorSend(#PidText, #MessageText),",
@@ -11856,12 +11917,13 @@
               "    (member(limit(Lim), Opts) -> true ; Lim = 10000),",
               "    web_rpc_base_url(URL, Opts, BaseRPCURL),",
               "    collect_rpc_load(Opts, Parts),",
-              "    (member(offset(Offset), Opts) -> true ; Offset = 0),",
-              "    web_rpc_page(Template, Offset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts).",
+              "    Offset = 0,",
+              "    rpc_transport_options(Opts, RemoteTimeout, Once, HTTPTimeout),",
+              "    web_rpc_page(Template, Offset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts, RemoteTimeout, Once, HTTPTimeout).",
               "",
-              "web_rpc_page(Template, Offset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts) :-",
-              "    web_rpc_call_url(BaseRPCURL, GoalAtom, TplAtom, Offset, Lim, Parts, FinalURL),",
-              "    Promise := swiRpcGetAsync(#FinalURL),",
+              "web_rpc_page(Template, Offset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts, RemoteTimeout, Once, HTTPTimeout) :-",
+              "    web_rpc_call_url(BaseRPCURL, GoalAtom, TplAtom, Offset, Lim, Parts, RemoteTimeout, Once, FinalURL),",
+              "    Promise := swiRpcGetAsync(#FinalURL, #HTTPTimeout),",
               "    await(Promise, Resp),",
               "    (Resp = null -> throw(rpc_error(fetch_failed)) ; true),",
               "    (   catch(term_string(Response, Resp), _, catch(term_to_atom(Response, Resp), _, fail))",
@@ -11870,8 +11932,9 @@
               "    ),",
               "    (   Response = success(Slice, true)",
               "    ->  (   member(Bound, Slice), Template = Bound",
-              "        ;   NewOffset is Offset + Lim,",
-              "            web_rpc_page(Template, NewOffset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts)",
+              "        ;   Once == false,",
+              "            NewOffset is Offset + Lim,",
+              "            web_rpc_page(Template, NewOffset, Lim, BaseRPCURL, GoalAtom, TplAtom, Parts, RemoteTimeout, Once, HTTPTimeout)",
               "        )",
               "    ;   Response = success(Slice, false)",
               "    ->  member(Bound, Slice), Template = Bound",
@@ -11882,16 +11945,18 @@
               "    ;   throw(rpc_error(unexpected_response))",
               "    ).",
               "",
-              "web_rpc_call_url(BaseRPCURL, GoalAtom, TplAtom, Offset, Lim, Parts, FinalURL) :-",
+              "web_rpc_call_url(BaseRPCURL, GoalAtom, TplAtom, Offset, Lim, Parts, RemoteTimeout, Once, FinalURL) :-",
               "    GoalEnc := encodeURIComponent(#GoalAtom),",
               "    TplEnc  := encodeURIComponent(#TplAtom),",
               "    atomic_list_concat([BaseRPCURL,'/call?goal=(',GoalEnc,')&template=',TplEnc,",
               "                        '&format=prolog&offset=',Offset,'&limit=',Lim], BaseURL),",
+              "    rpc_url_option(BaseURL, timeout, RemoteTimeout, TimeoutURL),",
+              "    rpc_url_option(TimeoutURL, once, Once, OptionURL),",
               "    (   Parts = []",
-              "    ->  FinalURL = BaseURL",
+              "    ->  FinalURL = OptionURL",
               "    ;   atomic_list_concat(Parts, '\\n', LoadText),",
               "        LtEnc := encodeURIComponent(#LoadText),",
-              "        atomic_list_concat([BaseURL,'&src_text=',LtEnc], FinalURL)",
+              "        atomic_list_concat([OptionURL,'&src_text=',LtEnc], FinalURL)",
               "    ).",
               "",
               "promise(URL, Goal, Ref) :- promise(URL, Goal, Ref, []).",
@@ -11900,24 +11965,25 @@
               "    (member(template(Template), Opts) -> true ; Template = Goal),",
               "    (member(offset(Offset), Opts) -> true ; Offset = 0),",
               "    (member(limit(Lim), Opts) -> true ; Lim = 10000000000),",
-              "    web_rpc_url(URL, Goal, Template, Offset, Lim, Opts, FinalURL),",
-              "    Ref := swiPromiseStart(#FinalURL).",
+              "    rpc_transport_options(Opts, RemoteTimeout, Once, HTTPTimeout),",
+              "    web_rpc_url(URL, Goal, Template, Offset, Lim, Opts, RemoteTimeout, Once, FinalURL),",
+              "    Ref := swiPromiseStart(#FinalURL, #HTTPTimeout).",
               "",
               "yield(Ref, Message) :-",
               "    Promise := swiPromiseWait(#Ref, -1),",
               "    await(Promise, Resp),",
-              "    (Resp = null -> fail ; web_parse_rpc_response(Resp, Message)).",
+              "    (Resp = null -> true ; web_parse_rpc_response(Resp, Message)).",
               "",
               "yield(Ref, Message, Opts) :-",
               "    (member(timeout(Timeout), Opts) -> true ; Timeout = -1),",
               "    Promise := swiPromiseWait(#Ref, #Timeout),",
               "    await(Promise, Resp),",
               "    (   Resp = null",
-              "    ->  (member(on_timeout(OnTimeout), Opts) -> call(OnTimeout) ; fail)",
+              "    ->  (member(on_timeout(OnTimeout), Opts) -> call(OnTimeout) ; true)",
               "    ;   web_parse_rpc_response(Resp, Message)",
               "    ).",
               "",
-              "web_rpc_url(URL, Goal, Template, Offset, Lim, Opts, FinalURL) :-",
+              "web_rpc_url(URL, Goal, Template, Offset, Lim, Opts, RemoteTimeout, Once, FinalURL) :-",
               "    term_to_atom(Goal, GoalAtom),",
               "    term_to_atom(Template, TplAtom),",
               "    web_rpc_base_url(URL, Opts, BaseRPCURL),",
@@ -11926,12 +11992,29 @@
               "    atomic_list_concat([BaseRPCURL,'/call?goal=(',GoalEnc,')&template=',TplEnc,",
               "                        '&format=prolog&offset=',Offset,'&limit=',Lim], BaseURL),",
               "    collect_rpc_load(Opts, Parts),",
+              "    rpc_url_option(BaseURL, timeout, RemoteTimeout, TimeoutURL),",
+              "    rpc_url_option(TimeoutURL, once, Once, OptionURL),",
               "    (   Parts = []",
-              "    ->  FinalURL = BaseURL",
+              "    ->  FinalURL = OptionURL",
               "    ;   atomic_list_concat(Parts, '\\n', LoadText),",
               "        LtEnc := encodeURIComponent(#LoadText),",
-              "        atomic_list_concat([BaseURL,'&src_text=',LtEnc], FinalURL)",
+              "        atomic_list_concat([OptionURL,'&src_text=',LtEnc], FinalURL)",
               "    ).",
+              "",
+              "rpc_transport_options(Opts, RemoteTimeout, Once, HTTPTimeout) :-",
+              "    (member(timeout(RemoteTimeout0), Opts) -> normalize_optional_timeout(RemoteTimeout0, RemoteTimeout) ; RemoteTimeout = -1),",
+              "    (member(once(Once0), Opts) -> normalize_boolean(Once0, Once) ; Once = false),",
+              "    (member(http_timeout(HTTPTimeout0), Opts) -> normalize_optional_timeout(HTTPTimeout0, HTTPTimeout) ; HTTPTimeout = -1).",
+              "",
+              "normalize_optional_timeout(Value, Timeout) :- must_be(number, Value), Timeout is max(0, Value).",
+              "normalize_boolean(true, true) :- !.",
+              "normalize_boolean(false, false) :- !.",
+              "normalize_boolean(Value, _) :- throw(error(domain_error(boolean, Value), rpc/3)).",
+              "",
+              "rpc_url_option(URL, _, -1, URL) :- !.",
+              "rpc_url_option(URL, once, false, URL) :- !.",
+              "rpc_url_option(URL, Key, Value, FinalURL) :-",
+              "    atomic_list_concat([URL,'&',Key,'=',Value], FinalURL).",
               "",
               "web_rpc_base_url(URL, Opts, BaseRPCURL) :-",
               "    BaseRPCURL := swiResolveRpcBase(#URL).",

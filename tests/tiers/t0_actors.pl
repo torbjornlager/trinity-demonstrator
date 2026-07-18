@@ -473,6 +473,22 @@ test(spawned_child_inherits_io_target, Data == hello_io) :-
                   )),
    message_queue_destroy(Queue).
 
+test(portable_wire_term_accepts_ordinary_terms) :-
+   transportable_term(message([atom, "string", 42, Variable], pair(a, b))),
+   var(Variable).
+
+test(portable_wire_term_rejects_cycles, [fail]) :-
+   Cyclic = loop(Cyclic),
+   transportable_term(Cyclic).
+
+test(portable_wire_term_rejects_attributed_variables, [fail]) :-
+   put_attr(Variable, test_wire_term, marked),
+   transportable_term(Variable).
+
+test(portable_wire_term_rejects_streams, [fail]) :-
+   current_output(Stream),
+   transportable_term(Stream).
+
 :- end_tests(t0_actors).
 
 

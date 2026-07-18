@@ -154,13 +154,15 @@ async function main() {
 
   // 10. Worker-side rpc/2-3 uses the same controller request channel as
   // remote actor transport; the Worker does not own browser HTTP policy.
-  const rpcP = S.actorRpc("'https://n1.example'", "path(a,X)", "v(X)", 0, 10, "edge(a,b).");
+  const rpcP = S.actorRpc("'https://n1.example'", "path(a,X)", "v(X)", 0, 10,
+    "edge(a,b).", 2.5, true, 3);
   const rpcReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "rpc";
   }).pop();
   ok(!!rpcReq && rpcReq.goal === "path(a,X)" && rpcReq.loadText === "edge(a,b)." &&
+     rpcReq.remoteTimeout === 2.5 && rpcReq.once === true && rpcReq.httpTimeout === 3 &&
      !Object.prototype.hasOwnProperty.call(rpcReq, "loadUri"),
-     "RPC is delegated to the node controller");
+     "RPC delegates the common execution and transport options to the node controller");
   S.onmessage({ data: { command: "reply", id: rpcReq.id, ok: true, result: "success([v(b)],false)" } });
   ok((await rpcP) === "success([v(b)],false)", "RPC response text returns to Prolog");
   ok(S.actorEnsureFinalFullStop("p(a).\n   ") === "p(a).\n   " &&
@@ -177,13 +179,15 @@ async function main() {
   ok((await loadUriP) === "p(a).", "RPC src_uri source returns to the worker");
 
   // Promise/yield starts the same RPC request without blocking Prolog, then
-  // consumes its response through a stable numeric reference.
+  // consumes its response through an opaque ten-digit reference.
   const promiseRef = S.actorPromiseStart("'https://n2.example'", "mortal(Who)", "mortal(Who)", 0, 10, "");
   const promiseReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "rpc";
   }).pop();
-  ok(Number.isInteger(promiseRef) && promiseReq.goal === "mortal(Who)",
-     "promise starts RPC and returns a numeric reference");
+  ok(Number.isInteger(promiseRef) && String(promiseRef).length === 10 &&
+     promiseRef >= 1000000000 && promiseRef <= 1073741823 &&
+     promiseReq.goal === "mortal(Who)",
+     "promise starts RPC and returns an opaque ten-digit reference");
   const promiseWait = S.actorPromiseWait(promiseRef, -1);
   S.onmessage({ data: { command: "reply", id: promiseReq.id, ok: true, result: "success([mortal(socrates)],false)" } });
   ok((await promiseWait) === "success([mortal(socrates)],false)",
@@ -193,6 +197,8 @@ async function main() {
   const retainedReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "rpc";
   }).pop();
+  ok(String(retainedRef).length === 10 && retainedRef !== promiseRef,
+     "separate worker promises receive distinct ten-digit references");
   ok((await S.actorPromiseWait(retainedRef, 0)) === null,
      "timed-out yield leaves the promise pending");
   S.onmessage({ data: { command: "reply", id: retainedReq.id, ok: true, result: "success([slow(done)],false)" } });

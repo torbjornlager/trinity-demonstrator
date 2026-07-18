@@ -433,7 +433,7 @@ builtin_family_spec(rpc,
                     "Remote queries",
                     "Call remote nodes through the sequential RPC interface.",
                     ["rpc/2", "rpc/3", "promise/3", "promise/4",
-                     "yield/2", "yield/3"],
+                     "yield/2", "yield/3", "runtime_property/1"],
                     [isobase, isotope, actor]).
 builtin_family_spec(server,
                     "Generic servers",

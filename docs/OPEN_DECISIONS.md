@@ -33,3 +33,25 @@ Alternatives to consider:
 
 Until this is decided, preserve the current remote-capable behaviour under
 the project's semantics-freeze rule.
+
+## Main-thread view actor
+
+**Status:** Postponed
+
+Decide the protocol and lifecycle of a distinguished main-thread view actor
+for browser nodes. Worker actors cannot access `window` or `document`; today
+the JavaScript controller already mediates the terminal's output and input,
+but there is no general actor-facing interface for application views.
+
+Questions to resolve:
+
+1. Which display commands and browser-event messages form the smallest stable
+   protocol, and how applications negotiate extensions to it.
+2. Whether the view has a reserved pid or a registered service name, and how
+   that address is represented outside the browser node.
+3. How ownership, teardown, navigation, and multiple simultaneous views are
+   handled.
+
+Until this is decided, keep DOM access as a host capability. Main-thread
+SWI-WASM code may use it directly; Worker actors communicate only through the
+existing terminal/controller facilities.

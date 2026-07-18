@@ -209,7 +209,7 @@
     </div>
     <pre>self(-Pid) is det.</pre>
     <p>Binds <code>Pid</code> to the process identifier of the calling process.</p>
-    <p><span class="note-label">Note:</span> The runtime uses globally qualified pids of the form <code>Id@Node</code>. Worker-based browser actors use the reserved local-node designator <code>localhost</code>, for example <code>2159438818@localhost</code>. The optional main-thread SWI-WASM compatibility model represents its single engine actor by the special pid <code>main</code>; worker actors spawned from it still use <code>Id@localhost</code>. A shell presentation setting may omit <code>@Node</code> for a pid on the shell's own node; this affects only printing, and the pid remains qualified in actor messages and protocol representations.</p>
+    <p><span class="note-label">Note:</span> A pid is an opaque capability value. Programs must not inspect it, perform arithmetic on it, or construct one from its printed components. Its canonical presentation is <code>Id@Node</code>; a shell may omit <code>@Node</code> for a pid on the shell's own node, but this changes only presentation. Browser runtimes reserve <code>localhost</code> as the local-node designator. Worker actors are therefore presented as, for example, <code>2159438818@localhost</code>, and the optional main-thread SWI-WASM engine is presented as <code>main@localhost</code>.</p>
 </article>
 
 <article class="predicate-entry" id="spawn/1-3">
@@ -360,6 +360,7 @@ send(+PidOrName, +Message, +Options) is det.</pre>
         <li><code>delay(+Number)</code><br>Delays the sending by a specified number of seconds. Default is <code>0</code>.</li>
         <li><code>id(+ID)</code><br><code>ID</code> is a user-supplied identifier that can be used by <code>cancel/1</code> to stop the sending from taking place.</li>
     </ul>
+    <p>Portable actor application messages are acyclic ordinary Prolog terms. Atoms, strings, numbers, variables, lists, and compound terms are portable; variables arrive as fresh variables. Attributed variables, streams, and other non-text blob values must be encoded explicitly by the application. The demonstrator validates this subset whenever serialization is required. Native local delivery may happen to carry additional host terms, but programs using them are outside the placement-independent contract.</p>
 </article>
 
 <article class="predicate-entry" id="cancel/1">
@@ -802,21 +803,17 @@ first_solution(?Solution, +Goals, +Options) is semidet.</pre>
     <pre>rpc(+URI, +Goal) is nondet.
 rpc(+URI, +Goal, +Options) is nondet.</pre>
     <p>Executes a copy of <code>Goal</code> through the stateless <code>/call</code> endpoint of the node identified by <code>URI</code>, then unifies the local goal with each returned solution on backtracking. This remains a stateless call even when the destination is an ACTOR node: actor-only predicates such as <code>self/1</code>, <code>spawn/1-3</code>, and <code>receive/1-2</code> are not available through <code>rpc/2-3</code>.</p>
-    <p>The first argument alone selects the execution node. <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options supply source for the call's temporary private database and do not change that target. For example, <code>rpc('https://n2.example',Goal,[src_uri('https://n3.example')])</code> executes <code>Goal</code> on <code>n2.example</code> using source fetched from <code>n3.example</code>. The following options are portable across the native and SWI-WASM runtimes:</p>
+    <p>The first argument alone selects the execution node. <code>localhost</code> means the node on which <code>rpc/2-3</code> is running. Source-loading options supply source for the call's temporary private database and do not change that target. For example, <code>rpc('https://n2.example',Goal,[src_uri('https://n3.example')])</code> executes <code>Goal</code> on <code>n2.example</code> using source fetched from <code>n3.example</code>. All conforming native and browser runtimes accept:</p>
     <ul>
         <li><code>limit(+Integer)</code><br>Restricts the number of solutions retrieved per roundtrip.</li>
+        <li><code>once(+Boolean)</code><br>When <code>true</code>, retrieves only the first slice and does not request later slices. Default is <code>false</code>.</li>
+        <li><code>timeout(+Number)</code><br>Requests a timeout in seconds for goal execution on the destination node. The effective timeout is the minimum of this value and the node owner's configured timeout.</li>
+        <li><code>http_timeout(+Number)</code><br>Sets the client-side HTTP transport timeout in seconds for each request. It does not change the destination node's execution timeout.</li>
         <li><code>src_text(+AtomOrString)</code><br>Loads source text into the temporary private database before calling <code>Goal</code>.</li>
         <li><code>src_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the temporary private database.</li>
         <li><code>src_uri(+URI)</code><br>Fetches source from <code>URI</code> and loads it into the temporary private database. This URI is a source location only.</li>
         <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Copies the caller's indicated predicates into the temporary private database.</li>
     </ul>
-    <p>The native runtime additionally accepts:</p>
-    <ul>
-        <li><code>once(+Boolean)</code><br>When <code>true</code>, retrieves only the first slice and does not request later slices. Default is <code>false</code>.</li>
-        <li><code>timeout(+Number)</code><br>Requests a timeout in seconds for goal execution on the destination node. The effective timeout is the minimum of this value and the node owner's configured timeout.</li>
-        <li><code>http_timeout(+Number)</code><br>Sets the client-side HTTP transport timeout in seconds for each request. It does not change the destination node's execution timeout.</li>
-    </ul>
-    <p>The SWI-WASM runtimes additionally accept <code>offset(+Integer)</code> to select the starting offset of the first slice.</p>
 </article>
 
 <article class="predicate-entry" id="promise/3-4">
@@ -826,17 +823,12 @@ rpc(+URI, +Goal, +Options) is nondet.</pre>
     </div>
     <pre>promise(+URI, +Goal, -Ref) is det.
 promise(+URI, +Goal, -Ref, +Options) is det.</pre>
-    <p>Starts one asynchronous stateless call to node <code>URI</code> with <code>Goal</code> and returns a local promise reference in <code>Ref</code>. As with <code>rpc/2-3</code>, the first argument selects the execution node and <code>localhost</code> denotes the current node. Source-loading options populate the promised call's temporary private database; they do not change its execution node. The following options are portable across the native and SWI-WASM runtimes:</p>
+    <p>Starts one asynchronous stateless call to node <code>URI</code> with <code>Goal</code> and returns a local promise reference in <code>Ref</code>. As with <code>rpc/2-3</code>, the first argument selects the execution node and <code>localhost</code> denotes the current node. Source-loading options populate the promised call's temporary private database; they do not change its execution node. It accepts the same <code>limit/1</code>, <code>once/1</code>, <code>timeout/1</code>, <code>http_timeout/1</code>, and <code>src_*/1</code> options as <code>rpc/3</code>, together with:</p>
     <ul>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
-        <li><code>offset(+Integer)</code><br>Collect only the slice of solutions starting from <code>Integer</code>. Default is <code>0</code>.</li>
-        <li><code>limit(+Integer)</code><br>Restrict the number of returned solutions to <code>Integer</code>.</li>
-        <li><code>src_text(+AtomOrString)</code><br>Load source text into the promised call's temporary private database.</li>
-        <li><code>src_list(+ListOfClauses)</code><br>Convert the clauses to source and load them into the promised call's temporary private database.</li>
-        <li><code>src_uri(+URI)</code><br>Fetch source from <code>URI</code> and load it into the promised call's temporary private database. This URI is a source location only.</li>
-        <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Copy the caller's indicated predicates into the promised call's temporary private database.</li>
+        <li><code>offset(+Integer)</code><br>Selects the starting offset of the single solution slice collected by the promise. Default is <code>0</code>.</li>
     </ul>
-    <p>The native runtime additionally accepts <code>once(+Boolean)</code>, <code>timeout(+Number)</code>, and <code>http_timeout(+Number)</code>, with the same meanings as for native <code>rpc/3</code>. The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the single answer term.</p>
+    <p>The reference returned in <code>Ref</code> is an opaque ten-digit integer, local to the runtime that created it. It can later be used by <code>yield/2-3</code> to collect the single answer term. Programs must not infer meaning from its digits or construct references themselves.</p>
 </article>
 
 <article class="predicate-entry" id="yield/2-3">
@@ -851,7 +843,25 @@ yield(+Ref, ?Answer, +Options) is det.</pre>
         <li><code>timeout(+Number)</code><br>Waits at most <code>Number</code> seconds for the promised answer. Default is no timeout.</li>
         <li><code>on_timeout(+Goal)</code><br>Calls <code>Goal</code> if the timeout expires before the answer is available.</li>
     </ul>
-    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds in the native and worker-actor SWI-WASM runtimes. In the optional main-thread SWI-WASM compatibility model, that path fails.</p>
+    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds.</p>
+</article>
+
+<article class="predicate-entry" id="runtime_property/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">runtime_property/1</span></div>
+        <div class="predicate-family">isobase</div>
+    </div>
+    <pre>runtime_property(?Property) is nondet.</pre>
+    <p>Enumerates properties of the host runtime. This predicate reports capabilities; it does not alter the Web Prolog profile or the semantics of the predicates above. Defined properties are:</p>
+    <ul>
+        <li><code>implementation(swi_native|swi_wasm_worker|swi_wasm_main)</code></li>
+        <li><code>persistent(+Boolean)</code></li>
+        <li><code>inbound_addressable(+Boolean)</code></li>
+        <li><code>dom(+Boolean)</code></li>
+        <li><code>actor_isolation(native_thread|web_worker|cooperative_engine)</code></li>
+        <li><code>hard_termination(+Boolean)</code></li>
+    </ul>
+    <p>Native nodes are persistent and inbound-addressable and use native threads with hard termination, but have no DOM. Worker SWI-WASM actors have Web-Worker isolation and hard termination but share the page's lifetime, are not inbound-addressable, and have no DOM. The optional main-thread SWI-WASM engine has DOM access but cooperative engine isolation and no hard termination; it too shares the page's lifetime and initiates rather than accepts remote connections.</p>
 </article>
 
 <h2 id="sec:iso-predicates">ISO predicates and related constructs</h2>

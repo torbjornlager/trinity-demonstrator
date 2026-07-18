@@ -69,7 +69,7 @@ Primary basis:
 | `toplevel_spawn/1-2`, `toplevel_call/2-3`, `toplevel_next/1-2`, `toplevel_stop/1`, `toplevel_abort/1`, `toplevel_halt/2` | no | no | yes | These are accepted as client goals only in the `actor` profile. The HTTP `/toplevel_*` endpoints are separate host-side routes. |
 | `statechart_spawn/2`, `statechart_halt/2-3` | no | no | yes | Imported into public temporary client modules through `statechart_actor`. |
 | `raise/1`, `in/1` | no | no | yes | Imported through `statechart_actor`; meaningful only inside statechart execution. |
-| `rpc/2-3`, `promise/3-4`, `yield/2-3` | yes | yes | yes | Public temporary client modules import these predicates through `actor_api`, so both terminal goals and loaded example predicates can call them unqualified. |
+| `rpc/2-3`, `promise/3-4`, `yield/2-3`, `runtime_property/1` | yes | yes | yes | Public temporary client modules import these predicates through `actor_api`, so both terminal goals and loaded example predicates can call them unqualified. The RPC and promise option vocabulary and non-consuming yield timeout semantics are identical in native and browser runtimes; `runtime_property/1` reports genuine host capabilities. |
 | `node/1-2` | no | no | yes (node:) | `node_control` is `actor`-profile only and currently reachable through top-level `node:node(...)`, not as an unqualified client goal. |
 | `server_spawn/3-4`, `server_request/3-4`, `server_promise/3-4`, `server_yield/2-4`, `server_upgrade/2`, `server_halt/2` | no | no | no | Catalogued in family policy, but not currently imported into public temporary client modules. Top-level `server_actor:...` qualification is also blocked by blacklist-mode qualified-goal rules. |
 | `supervisor_spawn/2-3`, `supervisor_spawn_child/3`, `supervisor_terminate_child/3`, `supervisor_delete_child/3`, `supervisor_respawn_child/3`, `supervisor_which_children/2`, `supervisor_count_children/2`, `supervisor_halt/1` | no | no | no | Same issue as the server family: catalogued, but not currently reachable from public client code under the current blacklist path. |
@@ -99,7 +99,7 @@ Primary basis:
 
 ## Main Verified Mismatches vs the Catalog
 
-- `rpc/2-3`, `promise/3-4`, and `yield/2-3` are available as unqualified
+- `rpc/2-3`, `promise/3-4`, `yield/2-3`, and `runtime_property/1` are available as unqualified
   client goals; `node/1-2` remains an owner-side controller entry point.
 - `server_*` and `supervisor_*` are still better understood as
   family-policy/catalog entries than as publicly reachable built-ins under the

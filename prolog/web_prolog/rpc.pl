@@ -6,6 +6,7 @@
      promise_cleanup/1,
      yield/2,
      yield/3,
+     runtime_property/1,
      text_to_string/2,
      normalize_requested_timeout/2,
      normalize_timeout/2,
@@ -44,6 +45,19 @@ the queue so a later yield can collect the pending answer. Manual
 :- use_module(source_utils, [uri_atom/2]).
 
 :- debug.
+
+%!  runtime_property(?Property) is nondet.
+%
+%   Describe host properties outside the portable Web Prolog profile
+%   contract. Portable code should not need these; applications may inspect
+%   them before relying on persistence, inbound addressability, DOM access,
+%   or a particular actor-isolation mechanism.
+runtime_property(implementation(swi_native)).
+runtime_property(persistent(true)).
+runtime_property(inbound_addressable(true)).
+runtime_property(dom(false)).
+runtime_property(actor_isolation(native_thread)).
+runtime_property(hard_termination(true)).
 
 :- meta_predicate
     rpc(+, :),

@@ -1,5 +1,6 @@
 :- module(remote_protocol, [
     protocol_version/1,
+    transportable_term/1,
     term_to_wire_atom/2,
     goal_template_to_wire_atoms/4,
     ws_json_down_reason/2,
@@ -20,6 +21,8 @@ The protocol itself is specified in docs/CROSS_NODE_ARCHITECTURE.md.
 
 :- op(200, xfx, @).
 
+:- use_module(actors, [transportable_term/1]).
+
 %!  protocol_version(-Version) is det.
 %
 %   The version of the JSON-over-WebSocket cross-node wire protocol
@@ -37,6 +40,12 @@ protocol_version(1).
 %
 %   Serialize a term preserving variable sharing and quoting.
 term_to_wire_atom(Term, Atom) :-
+    (   transportable_term(Term)
+    ->  true
+    ;   throw(error(type_error(transportable_term, Term),
+                    context(remote_protocol:term_to_wire_atom/2,
+                            'term is outside the portable wire-term subset')))
+    ),
     copy_term(Term, Copy),
     numbervars(Copy, 0, _),
     with_output_to(atom(Atom),

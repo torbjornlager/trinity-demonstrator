@@ -1101,6 +1101,7 @@ sandbox:safe_meta(rpc:promise(_, _, _), []).
 sandbox:safe_meta(rpc:promise(_, _, _, _), []).
 sandbox:safe_primitive(rpc:yield(_, _)).
 sandbox:safe_primitive(rpc:yield(_, _, _)).
+sandbox:safe_primitive(rpc:runtime_property(_)).
 
 %  Statechart behaviour entry points.  statechart_spawn/2 routes through
 %  spawn/3, so its chart source options are re-validated by the runtime

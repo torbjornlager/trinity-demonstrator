@@ -129,6 +129,9 @@ const pidDisplayHelpers = Function(
   pidDisplayHelpersSource +
   "\nreturn { token: shortenPidToken, text: shortenLocalPidsInText };"
 )();
+const makeBrowserPromiseRef = embeddedWorkbenchMethod(
+  "makeBrowserPromiseRef", "isSwiWasmUnboundVariable"
+);
 const swiWasmValueRenderer = {
   swiWasmStructuredCompound: embeddedWorkbenchMethod(
     "swiWasmStructuredCompound", "swiWasmStructuredList"
@@ -141,12 +144,12 @@ const swiWasmValueRenderer = {
   )
 };
 
-ok(includes("window.swiRpcGetAsync = function(url)"),
+ok(includes("window.swiRpcGetAsync = function(url, httpTimeout)"),
    "paged RPC has an asynchronous fetch helper");
 ok(includes("signal: controller.signal") &&
    includes("window.swiAbortRpc = function()"),
    "paged RPC fetch is abortable");
-ok(includes('"    Promise := swiRpcGetAsync(#FinalURL),"') &&
+ok(includes('"    Promise := swiRpcGetAsync(#FinalURL, #HTTPTimeout),"') &&
    includes('"    await(Promise, Resp),"'),
    "web_rpc_page awaits each remote page");
 ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
@@ -525,7 +528,7 @@ ok(swiWasmLocalPidHelpers.qualify("2159438818") === "2159438818@localhost" &&
    includes('qualifySwiWasmLocalPid(pidText)') &&
    nodeWsSource.includes('browser_local_pid(Id@localhost)') &&
    includes("'?localhost'?") &&
-   manualSource.includes('reserved local-node designator <code>localhost</code>'),
+   manualSource.includes('reserve <code>localhost</code> as the local-node designator'),
    "browser actors expose Id@localhost while coordinator keys remain numeric");
 ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
      "2159438818@localhost" &&
@@ -550,6 +553,17 @@ ok(includes("reserveSwiWasmActorRef: function()") &&
    !workerSource.includes('return "ref(" + selfPidText') &&
    !includes('return "ref(" + self.swiWasmNextActorRefId'),
    "SWI-WASM references are coordinator-reserved ten-digit numeric tokens");
+{
+  const livePromises = {};
+  const ref1 = makeBrowserPromiseRef(livePromises);
+  livePromises[String(ref1)] = true;
+  const ref2 = makeBrowserPromiseRef(livePromises);
+  ok(String(ref1).length === 10 && String(ref2).length === 10 &&
+     ref1 >= 1000000000 && ref2 <= 1073741823 && ref1 !== ref2 &&
+     workerSource.includes("function makePromiseRef()") &&
+     !workerSource.includes("var nextRefId = 1"),
+     "main and Worker SWI-WASM promises use opaque ten-digit references");
+}
 ok(includes('window.localStorage.getItem("wb.swiWasmModel") === "main"') &&
    includes('node === "swi-wasm-2" || (node === "swi-wasm" && model !== "main")') &&
    includes('this.initSwiWasmSession();') &&
@@ -682,14 +696,56 @@ ok(workerSource.includes('actorRequest("remote_spawn"') &&
    "worker actors delegate remote spawning to the JavaScript node controller");
 ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('Promise := actorRpc(') &&
+   workerSource.includes('option(limit(Limit), Options, 10000000000)') &&
+   workerSource.includes('"    Offset = 0,"') &&
+   includes('"    Offset = 0,"') &&
+   workerSource.includes('rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout)') &&
    workerSource.includes('member(src_predicates(Indicators), Options)') &&
    includes('case "rpc":') &&
-   includes('requestSwiWasmWorkerRpc: function(message)'),
-   "SWI-WASM-2 provides rpc/2-3 through the JavaScript node controller");
+   includes('requestSwiWasmWorkerRpc: function(message)') &&
+   includes('url.searchParams.set("once", "true")') &&
+   includes('setTimeout(function() { controller.abort(); }, httpTimeout * 1000)'),
+   "both SWI-WASM rpc/3 models keep initial transport offset internal");
 ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
    workerSource.includes('Ref := actorPromiseStart(') &&
-   workerSource.includes('Promise := actorPromiseWait('),
-   "SWI-WASM-2 provides promise/3-4 and yield/2-3 over controller RPC");
+   workerSource.includes('option(offset(Offset), Options, 0)') &&
+   includes('(member(offset(Offset), Opts) -> true ; Offset = 0)') &&
+   workerSource.includes('Promise := actorPromiseWait(') &&
+   includes('finish(null, false)') &&
+   workerSource.includes('option(on_timeout(OnTimeout), Options, true)'),
+   "both browser models provide non-consuming yield timeouts with the common default");
+ok(workerSource.includes('runtime_property(implementation(swi_wasm_worker)).') &&
+   workerSource.includes('runtime_property(inbound_addressable(false)).') &&
+   includes('runtime_property(implementation(swi_wasm_main)).') &&
+   includes('runtime_property(dom(true)).'),
+   "browser runtimes expose their host capabilities through runtime_property/1");
+ok(workerSource.includes('self(main@localhost).') === false &&
+   includes('self(main@localhost).') &&
+   includes('if (text === "main") return "main@localhost";') &&
+   workerSource.includes('if (text === "main") return "main@localhost";'),
+   "browser pid presentation consistently qualifies the main actor");
+ok(workerSource.includes('transportable_term(Term) :-') &&
+   includes('transportable_term(Term) :-') &&
+   workerSource.includes('must_be_transportable_term(Message)') &&
+   includes('must_be_transportable_term(Message)'),
+   "browser actor boundaries enforce the shared portable-term subset");
+ok(manualSource.includes('id="runtime_property/1"') &&
+   manualSource.includes('<code>main@localhost</code>') &&
+   manualSource.includes('All conforming native and browser runtimes accept:') &&
+   manualSource.includes('<code>http_timeout(+Number)</code>') &&
+   !manualSource.slice(
+     manualSource.indexOf('<article class="predicate-entry" id="rpc/2-3">'),
+     manualSource.indexOf('<article class="predicate-entry" id="promise/3-4">')
+   ).includes('offset(+Integer)') &&
+   manualSource.slice(
+     manualSource.indexOf('<article class="predicate-entry" id="promise/3-4">'),
+     manualSource.indexOf('<article class="predicate-entry" id="yield/2-3">')
+   ).includes('offset(+Integer)') &&
+   manualSource.includes('opaque ten-digit integer') &&
+   manualSource.includes('If <code>on_timeout/1</code> is omitted, the timeout path succeeds.') &&
+   !manualSource.includes('The native runtime additionally accepts') &&
+   !manualSource.includes('The SWI-WASM runtimes additionally accept'),
+   "the HTML manual presents one common browser/native programming contract");
 ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
    workerSource.includes('parallel(QualifiedGoals) :-') &&
    workerSource.includes('first_solution_(Solution, QualifiedGoals, Options) :-') &&

@@ -91,6 +91,11 @@ The source-loading story depends on both profile and transport.
 - client-side `rpc/3` also accepts `src_list/1`, `src_predicates/1`, and
   `src_uri/1`, but those are normalized client-side into `src_text` before
   the HTTP request is sent
+- `rpc/3` accepts the same `limit/1`, `once/1`, `timeout/1`, and
+  `http_timeout/1` options on native and browser runtimes; `promise/4` also
+  accepts `template/1` and `offset/1` for its single result slice
+- `runtime_property/1` reports implementation capabilities without changing
+  the ISOBASE language contract
 
 ### `isotope`
 

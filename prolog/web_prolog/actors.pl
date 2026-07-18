@@ -32,6 +32,7 @@
      flush/0,                %
      make_ref/1,             % -Ref
      canonical_pid/2,        % +Pid0, -Pid
+     transportable_term/1,   % @Term
 
      % The spawn-handshake protocol travels INSIDE hook_start_body/6
      % as closures, so no callable plumbing API is exported; sibling
@@ -1008,6 +1009,22 @@ send(Pid, Message, Options) :-
     ->  assertz(delayed_send(ID, DelayPid))
     ;   true
     ).
+
+%!  transportable_term(@Term) is semidet.
+%
+%   True when Term has the portable actor-message representation shared by
+%   native and SWI-WASM runtimes: an acyclic ordinary Prolog term without
+%   attributed variables, streams, or other blob values. Plain variables are
+%   allowed and arrive as fresh variables in the receiver's copied term.
+transportable_term(Term) :-
+    acyclic_term(Term),
+    term_attvars(Term, []),
+    \+ ( sub_term(Sub, Term),
+         nonvar(Sub),
+         blob(Sub, BlobType),
+         BlobType \== text,
+         BlobType \== reserved_symbol
+       ).
 
 cancel(ID) :-
     forall(retract(delayed_send(ID, DelayPid)),

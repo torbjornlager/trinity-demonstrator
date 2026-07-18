@@ -44,7 +44,8 @@ facade re-publishes it for legacy-surface consumers.
     promise/3,
     promise/4,
     yield/2,
-    yield/3
+    yield/3,
+    runtime_property/1
 ]).
 
 :- use_module(node_runtime_state, [

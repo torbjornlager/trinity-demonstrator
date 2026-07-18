@@ -50,7 +50,9 @@ The architecture rests on three properties:
 
 1. **Pid transparency.**  A canonical pid `Id@URL` denotes the same
    actor regardless of which node holds the reference.  Local
-   primitives operate on `Id@URL` identically to a bare local pid.
+   primitives operate on `Id@URL` identically to a local pid. Pids are opaque
+   capability values: application code must not inspect, perform arithmetic
+   on, or construct the `Id` component.
 2. **Two-step messaging (the *ether*).**  Send is a semantic act of
    placing an in-flight record into a notional system queue; delivery
    is a separate step that puts the message into the receiver's
@@ -73,15 +75,27 @@ ones used in the reference implementation; rename freely.
 
 ### 2.1 Pids
 
-- **Local pid**: an integer in a defined range.  The reference uses
-  10-digit positive integers chosen at random per spawn so that
-  guessing a live pid is computationally infeasible — names are
-  themselves the capability handle (§9.3 of the book).
-- **Canonical pid**: a compound term `Id@URL`.  The local pid `Id`
-  and the canonical `Id@SelfURL` are interchangeable; conversion is
-  provided by `canonical_pid/2`.
+- **Local pid**: an opaque, fresh capability value. The current native
+  implementation internally uses a random positive integer, but that is not a
+  language guarantee and clients must not depend on the representation.
+- **Canonical pid**: the presentation `Id@URL`. The local pid and its
+  `Id@SelfURL` presentation are interchangeable; conversion is provided by
+  `canonical_pid/2`. Browser runtimes reserve `localhost` as the local-node
+  designator and present the main engine, when enabled, as `main@localhost`.
 
-### 2.2 Required predicates
+### 2.2 Portable wire terms
+
+Portable actor application messages, and goals crossing a runtime boundary,
+are acyclic ordinary Prolog terms. They may contain atoms, strings, numbers,
+variables, lists, and compound terms. Variables arrive as fresh variables.
+Attributed variables, streams, and other non-text blob values are outside the
+portable subset and must be encoded explicitly by the application. Operator
+declarations do not form part of the wire contract; transports use canonical
+term parsing and printing. Local implementations may use a cheaper
+representation internally, and may accept host-specific terms as an extension,
+but must preserve the portable subset's copying semantics.
+
+### 2.3 Required predicates
 
 | Predicate | Purpose |
 |---|---|
@@ -97,7 +111,7 @@ ones used in the reference implementation; rename freely.
 | `register/2`, `whereis/2`, `unregister/1` | Local name registry |
 | `at_exit/1` hook on threads | Run cleanup on any termination path |
 
-### 2.3 Local link and monitor tables
+### 2.4 Local link and monitor tables
 
 ```prolog
 :- dynamic link/2.        % Parent, Child (both canonical pids)
