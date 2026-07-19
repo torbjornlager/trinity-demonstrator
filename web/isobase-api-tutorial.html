@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The ISOBASE API</title>
+  <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fff; --ink: #111; --muted: #4b5563; --heading: darkgreen;
+      --link: darkgreen; --surface: #f8f8f8; --border: #d8d8d8;
+      --info-bg: #edf9ef; --info-border: #b7dec0; --code-bg: rgba(15,23,42,.05);
+      --button: #4b88c7; --button-border: #3f76ad;
+      --mono-font: "IBM Plex Mono", Menlo, Consolas, monospace;
+      --mono-size: 13px; --mono-weight: 400; --mono-line-height: 1.45;
+      --text-size: 14px; --title-size: 25px; --h1-size: 21px; --h2-size: 17px;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0f141a; --ink: #e5edf5; --muted: #a8b6c5; --heading: #8fd782;
+      --link: #9cc8ff; --surface: #161d24; --border: #34414e;
+      --info-bg: #112319; --info-border: #2f6d45; --code-bg: rgba(255,255,255,.05);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    main { margin: 50px; padding: 16px; max-width: 780px; }
+    h1, h2 { color: var(--heading); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    h1 { font-size: var(--title-size); margin: 0 0 18px; }
+    h2 { font-size: var(--h2-size); margin: 42px 0 15px; }
+    p, li, th, td { font: var(--text-size)/1.45 Inter, ui-sans-serif, system-ui, sans-serif; }
+    .lede { color: var(--muted); font-size: calc(var(--text-size) + 1px); }
+    a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+    code, pre { font: var(--mono-weight) var(--mono-size)/var(--mono-line-height) var(--mono-font); }
+    code { background: var(--code-bg); border-radius: 4px; padding: .08em .28em; }
+    pre { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; padding: 11px 13px; }
+    pre code { background: transparent; padding: 0; }
+    nav, .note { background: var(--surface); border: 1px solid var(--border); margin: 20px 0; padding: 13px 16px; }
+    nav ul { margin: 0; padding-left: 20px; }
+    .note { background: var(--info-bg); border-color: var(--info-border); }
+    table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--surface); }
+    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 6px 10px; }
+    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>The ISOBASE API</h1>
+  <p class="lede">A short tour of Web Prolog's stateless HTTP protocol. Every call carries everything needed to compute its answer.</p>
+
+  <nav aria-label="Table of contents">
+    <ul>
+      <li><a href="#one-query">One query</a></li>
+      <li><a href="#next-answer">The next answer</a></li>
+      <li><a href="#javascript">Calling it from JavaScript</a></li>
+      <li><a href="#trade-offs">Advantages and disadvantages</a></li>
+    </ul>
+  </nav>
+
+  <section id="one-query">
+    <h2>One query, one HTTP request</h2>
+    <pre id="shared-query"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
+    <p><button type="button" data-ask="#shared-query">CALL</button></p>
+    <p>The direct API equivalent asks for one solution, starting at offset zero:</p>
+    <pre><code>GET /call?goal=append(Xs,Ys,[a,b,c])&amp;offset=0&amp;limit=1&amp;format=json</code></pre>
+    <pre><code>{
+  "type": "success",
+  "data": [{ "Xs": "[]", "Ys": "[a,b,c]" }],
+  "more": true
+}</code></pre>
+    <p>There is no session identifier. The goal, source text if any, paging controls and execution options belong to this one request.</p>
+  </section>
+
+  <section id="next-answer">
+    <h2>The next answer is another complete call</h2>
+    <pre><code>GET /call?goal=append(Xs,Ys,[a,b,c])&amp;offset=1&amp;limit=1&amp;format=json</code></pre>
+    <pre><code>{
+  "type": "success",
+  "data": [{ "Xs": "[a]", "Ys": "[b,c]" }],
+  "more": true
+}</code></pre>
+    <p>The node may cache work internally, but the protocol does not expose that cache. Repeating this URL still has the same meaning after a restart or on another equivalent node.</p>
+  </section>
+
+  <section id="javascript">
+    <h2>Calling it from JavaScript</h2>
+    <pre><code>const url = new URL("/call", location.origin);
+url.search = new URLSearchParams({
+  goal: "append(Xs,Ys,[a,b,c])",
+  offset: "0",
+  limit: "1",
+  format: "json"
+});
+
+const answer = await fetch(url).then(response =&gt; response.json());</code></pre>
+    <div class="note">Select <strong>API traffic</strong> in the Logger before pressing <strong>CALL</strong>. You will see the stateless request and response generated by the demonstrator.</div>
+    <p>Within Prolog, <code>rpc/2-3</code> offers a synchronous wrapper over this model; <code>promise/3-4</code> and <code>yield/2-3</code> provide the asynchronous form.</p>
+  </section>
+
+  <section id="trade-offs">
+    <h2>Advantages and disadvantages</h2>
+    <table>
+      <thead><tr><th>Advantages</th><th>Disadvantages</th></tr></thead>
+      <tbody><tr>
+        <td>Self-contained, replayable requests; simple HTTP deployment; easy horizontal scaling; responses can be cached.</td>
+        <td>No private state between requests; no interactive input; no control channel with which to abort a running request, so server-enforced timeouts matter.</td>
+      </tr></tbody>
+    </table>
+    <p><strong>Choose ISOBASE</strong> when a remote computation naturally fits a function-like request and answer. Move to ISOTOPE when a sequence of calls must share a private database or interactive toplevel.</p>
+  </section>
+</main>
+<script>
+  (function () {
+    function bridge() {
+      try { return window.parent !== window ? window.parent.webPrologTutorialBridge : null; }
+      catch (_error) { return null; }
+    }
+    function applyAppearance(options) {
+      options = options || {};
+      var root = document.documentElement;
+      var size = parseInt(options.fontSize, 10);
+      root.setAttribute("data-theme", options.theme === "dark" ? "dark" : "light");
+      if (options.fontFamily) root.style.setProperty("--mono-font", options.fontFamily);
+      if (Number.isFinite(size)) {
+        root.style.setProperty("--mono-size", size + "px");
+        root.style.setProperty("--text-size", (size + 1) + "px");
+      }
+      if (options.fontWeight) root.style.setProperty("--mono-weight", options.fontWeight);
+    }
+    function restoreAppearance() {
+      applyAppearance({
+        theme: localStorage.getItem("wb.themeMode"),
+        fontFamily: localStorage.getItem("wb.monoFontFamily"),
+        fontSize: localStorage.getItem("wb.monoFontSize"),
+        fontWeight: localStorage.getItem("wb.monoFontWeight")
+      });
+    }
+    window.tutorialFrameBridge = { applyAppearance: applyAppearance, applyTheme: function (theme) { applyAppearance({ theme: theme }); } };
+    window.addEventListener("message", function (event) {
+      if (event.origin !== location.origin || !event.data) return;
+      if (event.data.type === "webprolog-appearance") applyAppearance(event.data);
+      if (event.data.type === "webprolog-theme") applyAppearance({ theme: event.data.theme });
+    });
+    document.querySelectorAll("[data-ask]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var selector = button.getAttribute("data-ask");
+        var node = document.querySelector(selector);
+        var api = bridge();
+        var query = node ? node.textContent.replace(/^\s*\?-\s*/, "").trim() : "";
+        if (api && typeof api.askExample === "function") api.askExample(query, selector);
+      });
+    });
+    var api = bridge();
+    if (api && typeof api.appearanceOptions === "function") applyAppearance(api.appearanceOptions());
+    else restoreAppearance();
+  }());
+</script>
+</body>
+</html>

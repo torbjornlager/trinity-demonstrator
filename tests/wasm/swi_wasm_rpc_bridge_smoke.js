@@ -354,12 +354,23 @@ ok(includes('"02 grammar.pl": "stateless"') &&
 }
 ok(includes(':href="profileTutorial.path"') &&
    includes('{{ profileTutorial.label }}') &&
-   includes('path: "/isobase-profile-tutorial", label: "The ISOBASE profile"') &&
-   includes('path: "/isotope-profile-tutorial", label: "The ISOTOPE profile"') &&
-   includes('path: "/actor-profile-tutorial", label: "The ACTOR profile"') &&
+   includes('path: "/isobase-profile-tutorial"') &&
+   includes('label: "The ISOBASE profile"') &&
+   includes('path: "/isotope-profile-tutorial"') &&
+   includes('label: "The ISOTOPE profile"') &&
+   includes('path: "/actor-profile-tutorial"') &&
+   includes('label: "The ACTOR profile"') &&
+   includes(':href="profileTutorial.apiPath"') &&
+   includes('{{ profileTutorial.apiLabel }}') &&
+   includes('apiPath: "/isobase-api-tutorial"') &&
+   includes('apiLabel: "The stateless HTTP API"') &&
+   includes('apiPath: "/isotope-api-tutorial"') &&
+   includes('apiLabel: "The semi-stateful HTTP API"') &&
+   includes('apiPath: "/actor-api-tutorial"') &&
+   includes('apiLabel: "The stateful WebSocket API"') &&
    !includes('href="/wp-tutorial"') &&
    !includes('>Web Prolog Tutorial</a>'),
-   "the Tutorials drawer exposes one profile-specific tutorial link");
+   "the Tutorials drawer exposes profile and API tutorials for each profile");
 ok(includes('<div class="settings-option-label">SXML code</div>') &&
    !includes('<div class="settings-option-label">Statechart XML</div>'),
    "Settings calls Statechart XML coloring SXML code");

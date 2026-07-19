@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The ACTOR API</title>
+  <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <style>
+    :root { color-scheme:light; --bg:#fff; --ink:#111; --muted:#4b5563; --heading:darkgreen; --link:darkgreen; --surface:#f8f8f8; --border:#d8d8d8; --info-bg:#edf9ef; --info-border:#b7dec0; --code-bg:rgba(15,23,42,.05); --button:#4b88c7; --button-border:#3f76ad; --mono-font:"IBM Plex Mono",Menlo,Consolas,monospace; --mono-size:13px; --mono-weight:400; --mono-line-height:1.45; --text-size:14px; --title-size:25px; --h2-size:17px; }
+    :root[data-theme="dark"] { color-scheme:dark; --bg:#0f141a; --ink:#e5edf5; --muted:#a8b6c5; --heading:#8fd782; --link:#9cc8ff; --surface:#161d24; --border:#34414e; --info-bg:#112319; --info-border:#2f6d45; --code-bg:rgba(255,255,255,.05); }
+    body{margin:0;background:var(--bg);color:var(--ink)}main{margin:50px;padding:16px;max-width:780px}h1,h2{color:var(--heading);font-family:Inter,ui-sans-serif,system-ui,sans-serif}h1{font-size:var(--title-size);margin:0 0 18px}h2{font-size:var(--h2-size);margin:42px 0 15px}p,li,th,td{font:var(--text-size)/1.45 Inter,ui-sans-serif,system-ui,sans-serif}.lede{color:var(--muted);font-size:calc(var(--text-size) + 1px)}a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}code,pre{font:var(--mono-weight) var(--mono-size)/var(--mono-line-height) var(--mono-font)}code{background:var(--code-bg);border-radius:4px;padding:.08em .28em}pre{background:var(--surface);border:1px solid var(--border);overflow-x:auto;padding:11px 13px}pre code{background:transparent;padding:0}nav,.note{background:var(--surface);border:1px solid var(--border);margin:20px 0;padding:13px 16px}nav ul{margin:0;padding-left:20px}.note{background:var(--info-bg);border-color:var(--info-border)}table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--surface)}button{background:var(--button);border:1px solid var(--button-border);border-radius:6px;color:#fff;cursor:pointer;font:700 10px/1 Inter,sans-serif;letter-spacing:.04em;padding:6px 10px}@media(max-width:700px){main{margin:18px;padding:8px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>The ACTOR API</h1>
+  <p class="lede">A short tour of Web Prolog's stateful WebSocket protocol. Commands travel in both directions over one live connection, and the server can speak first.</p>
+  <nav aria-label="Table of contents"><ul>
+    <li><a href="#connect">Open the channel</a></li><li><a href="#one-query">Run the same query</a></li><li><a href="#push">What push changes</a></li><li><a href="#worker">WebSocket versus SWI-WASM</a></li><li><a href="#trade-offs">Advantages and disadvantages</a></li>
+  </ul></nav>
+
+  <section id="connect">
+    <h2>Open one bidirectional channel</h2>
+    <pre><code>const socket = new WebSocket("wss://node.example/ws");</code></pre>
+    <p>Once it opens, send a spawn command as JSON:</p>
+    <pre><code>{ "command": "toplevel_spawn", "options": "[session(true)]" }</code></pre>
+    <pre><code>{ "type": "spawned", "pid": 4384261893 }</code></pre>
+  </section>
+
+  <section id="one-query">
+    <h2>The same query, now as WebSocket messages</h2>
+    <pre id="shared-query"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
+    <p><button type="button" data-ask="#shared-query">CALL</button></p>
+    <pre><code>{
+  "command": "toplevel_call",
+  "pid": 4384261893,
+  "goal": "append(Xs,Ys,[a,b,c])",
+  "limit": 1
+}</code></pre>
+    <pre><code>{
+  "type": "success",
+  "pid": 4384261893,
+  "data": [{ "Xs": "[]", "Ys": "[a,b,c]" }],
+  "more": true
+}</code></pre>
+    <p>Ask for the continuation on the same socket:</p>
+    <pre><code>{ "command": "toplevel_next", "pid": 4384261893, "limit": 1 }</code></pre>
+    <pre><code>{
+  "type": "success",
+  "pid": 4384261893,
+  "data": [{ "Xs": "[a]", "Ys": "[b,c]" }],
+  "more": true
+}</code></pre>
+  </section>
+
+  <section id="push">
+    <h2>What push changes</h2>
+    <p>Answers, output, prompts and monitor events arrive as soon as the node emits them; no <code>/toplevel_poll</code> round trip is needed. Events from several actors may be interleaved on one connection, so clients route them by <code>pid</code> and <code>type</code>.</p>
+    <p>The toplevel has the same private state as ISOTOPE, while the ACTOR profile additionally exposes actor creation, messaging, monitoring and links.</p>
+    <div class="note">Select <strong>API traffic</strong> in the Logger before pressing <strong>CALL</strong>. On a remote ACTOR node, the entries are the actual JSON messages carried by the stateful WebSocket.</div>
+    <p>For executable browser code, compare the <a href="/examples/APIs/ws-example-1.html" target="_blank" rel="noopener">WebSocket toplevel demo</a> and the <a href="/examples/APIs/ws-example-2.html" target="_blank" rel="noopener">actor messaging demo</a>.</p>
+  </section>
+
+  <section id="worker">
+    <h2>WebSocket versus SWI-WASM</h2>
+    <p>In SWI-WASM Worker mode there is no network WebSocket. The browser UI sends the same command vocabulary to a Web Worker as JavaScript objects, using the structured-clone mechanism; replies return as JavaScript event objects. The Logger therefore shows <code>STATEFUL WORKER · JS OBJECT</code>. This is the real carrier used there, not JSON styled to look like WebSocket traffic.</p>
+  </section>
+
+  <section id="trade-offs">
+    <h2>Advantages and disadvantages</h2>
+    <table><thead><tr><th>Advantages</th><th>Disadvantages</th></tr></thead><tbody><tr>
+      <td>Low-latency push; mixed-initiative interaction; several actors can share one connection; access to the full concurrent actor model.</td>
+      <td>A persistent connection must be opened, monitored and re-established; clients must handle routing, ordering, disconnect semantics and back-pressure.</td>
+    </tr></tbody></table>
+    <p><strong>Choose ACTOR</strong> for reactive or concurrent applications where either side may initiate activity. Prefer ISOBASE for independent function-like calls, or ISOTOPE when session state is needed but HTTP polling is sufficient.</p>
+  </section>
+</main>
+<script>
+  (function(){
+    function bridge(){try{return window.parent!==window?window.parent.webPrologTutorialBridge:null}catch(_error){return null}}
+    function applyAppearance(options){options=options||{};var root=document.documentElement,size=parseInt(options.fontSize,10);root.setAttribute("data-theme",options.theme==="dark"?"dark":"light");if(options.fontFamily)root.style.setProperty("--mono-font",options.fontFamily);if(Number.isFinite(size)){root.style.setProperty("--mono-size",size+"px");root.style.setProperty("--text-size",(size+1)+"px")}if(options.fontWeight)root.style.setProperty("--mono-weight",options.fontWeight)}
+    function restoreAppearance(){applyAppearance({theme:localStorage.getItem("wb.themeMode"),fontFamily:localStorage.getItem("wb.monoFontFamily"),fontSize:localStorage.getItem("wb.monoFontSize"),fontWeight:localStorage.getItem("wb.monoFontWeight")})}
+    window.tutorialFrameBridge={applyAppearance:applyAppearance,applyTheme:function(theme){applyAppearance({theme:theme})}};
+    window.addEventListener("message",function(event){if(event.origin!==location.origin||!event.data)return;if(event.data.type==="webprolog-appearance")applyAppearance(event.data);if(event.data.type==="webprolog-theme")applyAppearance({theme:event.data.theme})});
+    document.querySelectorAll("[data-ask]").forEach(function(button){button.addEventListener("click",function(){var selector=button.getAttribute("data-ask"),node=document.querySelector(selector),api=bridge(),query=node?node.textContent.replace(/^\s*\?-\s*/,"").trim():"";if(api&&typeof api.askExample==="function")api.askExample(query,selector)})});
+    var api=bridge();if(api&&typeof api.appearanceOptions==="function")applyAppearance(api.appearanceOptions());else restoreAppearance();
+  }());
+</script>
+</body>
+</html>

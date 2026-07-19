@@ -2790,6 +2790,11 @@
                          :href="profileTutorial.path"
                          @click.prevent="openTutorialDocument(profileTutorial.path)">{{ profileTutorial.label }}</a>
                     </li>
+                    <li class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         :href="profileTutorial.apiPath"
+                         @click.prevent="openTutorialDocument(profileTutorial.apiPath)">{{ profileTutorial.apiLabel }}</a>
+                    </li>
                   </ul>
                 </div>
                 <div v-if="showPrologExamples" class="project-group">
@@ -5161,12 +5166,30 @@
           profile = "actor";
         }
         if (profile === "isobase") {
-          return { profile: profile, path: "/isobase-profile-tutorial", label: "The ISOBASE profile" };
+          return {
+            profile: profile,
+            path: "/isobase-profile-tutorial",
+            label: "The ISOBASE profile",
+            apiPath: "/isobase-api-tutorial",
+            apiLabel: "The stateless HTTP API"
+          };
         }
         if (profile === "isotope") {
-          return { profile: profile, path: "/isotope-profile-tutorial", label: "The ISOTOPE profile" };
+          return {
+            profile: profile,
+            path: "/isotope-profile-tutorial",
+            label: "The ISOTOPE profile",
+            apiPath: "/isotope-api-tutorial",
+            apiLabel: "The semi-stateful HTTP API"
+          };
         }
-        return { profile: profile, path: "/actor-profile-tutorial", label: "The ACTOR profile" };
+        return {
+          profile: profile,
+          path: "/actor-profile-tutorial",
+          label: "The ACTOR profile",
+          apiPath: "/actor-api-tutorial",
+          apiLabel: "The stateful WebSocket API"
+        };
       }
 
       var initialNodeInfoReady = Promise.resolve();

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The ISOTOPE API</title>
+  <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <style>
+    :root { color-scheme:light; --bg:#fff; --ink:#111; --muted:#4b5563; --heading:darkgreen; --link:darkgreen; --surface:#f8f8f8; --border:#d8d8d8; --info-bg:#edf9ef; --info-border:#b7dec0; --code-bg:rgba(15,23,42,.05); --button:#4b88c7; --button-border:#3f76ad; --mono-font:"IBM Plex Mono",Menlo,Consolas,monospace; --mono-size:13px; --mono-weight:400; --mono-line-height:1.45; --text-size:14px; --title-size:25px; --h2-size:17px; }
+    :root[data-theme="dark"] { color-scheme:dark; --bg:#0f141a; --ink:#e5edf5; --muted:#a8b6c5; --heading:#8fd782; --link:#9cc8ff; --surface:#161d24; --border:#34414e; --info-bg:#112319; --info-border:#2f6d45; --code-bg:rgba(255,255,255,.05); }
+    body{margin:0;background:var(--bg);color:var(--ink)} main{margin:50px;padding:16px;max-width:780px} h1,h2{color:var(--heading);font-family:Inter,ui-sans-serif,system-ui,sans-serif} h1{font-size:var(--title-size);margin:0 0 18px} h2{font-size:var(--h2-size);margin:42px 0 15px} p,li,th,td{font:var(--text-size)/1.45 Inter,ui-sans-serif,system-ui,sans-serif}.lede{color:var(--muted);font-size:calc(var(--text-size) + 1px)} a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline} code,pre{font:var(--mono-weight) var(--mono-size)/var(--mono-line-height) var(--mono-font)}code{background:var(--code-bg);border-radius:4px;padding:.08em .28em}pre{background:var(--surface);border:1px solid var(--border);overflow-x:auto;padding:11px 13px}pre code{background:transparent;padding:0}nav,.note{background:var(--surface);border:1px solid var(--border);margin:20px 0;padding:13px 16px}nav ul{margin:0;padding-left:20px}.note{background:var(--info-bg);border-color:var(--info-border)}table{border-collapse:collapse;width:100%}th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--surface)}button{background:var(--button);border:1px solid var(--button-border);border-radius:6px;color:#fff;cursor:pointer;font:700 10px/1 Inter,sans-serif;letter-spacing:.04em;padding:6px 10px}@media(max-width:700px){main{margin:18px;padding:8px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>The ISOTOPE API</h1>
+  <p class="lede">A short tour of Web Prolog's semi-stateful HTTP protocol. A persistent toplevel actor supplies state, while the browser still initiates every exchange.</p>
+  <nav aria-label="Table of contents"><ul>
+    <li><a href="#spawn">Spawn a session</a></li><li><a href="#one-query">Run the same query</a></li><li><a href="#state">What the session adds</a></li><li><a href="#trade-offs">Advantages and disadvantages</a></li>
+  </ul></nav>
+
+  <section id="spawn">
+    <h2>First, spawn a toplevel</h2>
+    <pre><code>POST /toplevel_spawn
+Content-Type: application/json
+
+{ "options": "[session(true)]" }</code></pre>
+    <pre><code>{ "type": "spawned", "pid": 4384261893 }</code></pre>
+    <p>The returned <code>pid</code> names a private, long-lived Prolog toplevel. Subsequent requests must carry it.</p>
+  </section>
+
+  <section id="one-query">
+    <h2>The same query, one answer at a time</h2>
+    <pre id="shared-query"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
+    <p><button type="button" data-ask="#shared-query">CALL</button></p>
+    <pre><code>GET /toplevel_call?pid=4384261893&amp;goal=append(Xs,Ys,[a,b,c])&amp;limit=1&amp;format=json</code></pre>
+    <pre><code>{
+  "type": "success",
+  "pid": 4384261893,
+  "data": [{ "Xs": "[]", "Ys": "[a,b,c]" }],
+  "more": true
+}</code></pre>
+    <p>The continuation lives inside the toplevel, so the next request names it rather than repeating the goal:</p>
+    <pre><code>GET /toplevel_next?pid=4384261893&amp;limit=1&amp;format=json</code></pre>
+    <pre><code>{
+  "type": "success",
+  "pid": 4384261893,
+  "data": [{ "Xs": "[a]", "Ys": "[b,c]" }],
+  "more": true
+}</code></pre>
+  </section>
+
+  <section id="state">
+    <h2>What the session adds</h2>
+    <p>Separate calls share the toplevel's private dynamic database. For example, an assertion made in one call remains visible in the next:</p>
+    <pre id="state-query"><code>?- assertz(saved(api)), saved(X).</code></pre>
+    <p><button type="button" data-ask="#state-query">CALL</button></p>
+    <p>Output and prompts also belong to the session. HTTP cannot push them spontaneously, so the client retrieves events with <code>/toplevel_poll</code> and answers prompts with <code>/toplevel_respond</code>. Use <code>/toplevel_stop</code> to discard an answer continuation and <code>/toplevel_abort</code> to interrupt a running goal; node idle limits reclaim abandoned sessions.</p>
+    <div class="note">Select <strong>API traffic</strong> in the Logger before pressing <strong>CALL</strong>. The session choreography—spawn, call, next and stop—is the defining feature to watch.</div>
+    <p>For executable browser code, compare the <a href="/examples/APIs/http_example-1.html" target="_blank" rel="noopener">answer-paging demo</a> and the <a href="/examples/APIs/http-example-2.html" target="_blank" rel="noopener">prompt-and-response demo</a>.</p>
+  </section>
+
+  <section id="trade-offs">
+    <h2>Advantages and disadvantages</h2>
+    <table><thead><tr><th>Advantages</th><th>Disadvantages</th></tr></thead><tbody><tr>
+      <td>Private state and interactive I/O without a persistent network connection; ordinary HTTP remains friendly to familiar infrastructure.</td>
+      <td>The client must track session pids and their lifecycle; polling and multi-request choreography add latency and complexity; idle sessions consume server resources until reclaimed.</td>
+    </tr></tbody></table>
+    <p><strong>Choose ISOTOPE</strong> when calls need memory or toplevel interaction, but HTTP request/response is operationally preferable. Choose ACTOR when the server must push events immediately or several actors must share a live channel.</p>
+  </section>
+</main>
+<script>
+  (function(){
+    function bridge(){try{return window.parent!==window?window.parent.webPrologTutorialBridge:null}catch(_error){return null}}
+    function applyAppearance(options){options=options||{};var root=document.documentElement,size=parseInt(options.fontSize,10);root.setAttribute("data-theme",options.theme==="dark"?"dark":"light");if(options.fontFamily)root.style.setProperty("--mono-font",options.fontFamily);if(Number.isFinite(size)){root.style.setProperty("--mono-size",size+"px");root.style.setProperty("--text-size",(size+1)+"px")}if(options.fontWeight)root.style.setProperty("--mono-weight",options.fontWeight)}
+    function restoreAppearance(){applyAppearance({theme:localStorage.getItem("wb.themeMode"),fontFamily:localStorage.getItem("wb.monoFontFamily"),fontSize:localStorage.getItem("wb.monoFontSize"),fontWeight:localStorage.getItem("wb.monoFontWeight")})}
+    window.tutorialFrameBridge={applyAppearance:applyAppearance,applyTheme:function(theme){applyAppearance({theme:theme})}};
+    window.addEventListener("message",function(event){if(event.origin!==location.origin||!event.data)return;if(event.data.type==="webprolog-appearance")applyAppearance(event.data);if(event.data.type==="webprolog-theme")applyAppearance({theme:event.data.theme})});
+    document.querySelectorAll("[data-ask]").forEach(function(button){button.addEventListener("click",function(){var selector=button.getAttribute("data-ask"),node=document.querySelector(selector),api=bridge(),query=node?node.textContent.replace(/^\s*\?-\s*/,"").trim():"";if(api&&typeof api.askExample==="function")api.askExample(query,selector)})});
+    var api=bridge();if(api&&typeof api.appearanceOptions==="function")applyAppearance(api.appearanceOptions());else restoreAppearance();
+  }());
+</script>
+</body>
+</html>

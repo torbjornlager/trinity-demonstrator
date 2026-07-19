@@ -870,6 +870,27 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'Local ACTOR programming'))
         )).
 
+test(node_api_tutorial_routes_served) :-
+    with_node_server(URI,
+        (
+            format(atom(IsobaseURL), '~w/isobase-api-tutorial', [URI]),
+            read_text(IsobaseURL, IsobaseBody),
+            format(atom(IsotopeURL), '~w/isotope-api-tutorial', [URI]),
+            read_text(IsotopeURL, IsotopeBody),
+            format(atom(ActorURL), '~w/actor-api-tutorial', [URI]),
+            read_text(ActorURL, ActorBody),
+            assertion(sub_string(IsobaseBody, _, _, _, 'The ISOBASE API')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'The ISOTOPE API')),
+            assertion(sub_string(ActorBody, _, _, _, 'The ACTOR API')),
+            assertion(sub_string(IsobaseBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
+            assertion(sub_string(ActorBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
+            assertion(sub_string(IsobaseBody, _, _, _, 'GET /call?goal=')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'GET /toplevel_next?pid=')),
+            assertion(sub_string(ActorBody, _, _, _, 'STATEFUL WORKER')),
+            assertion(sub_string(ActorBody, _, _, _, 'JS OBJECT'))
+        )).
+
 test(node_admin_page_served,
      true((sub_string(AdminBody, _, _, _, '<title>Web Prolog Admin</title>'),
            sub_string(AdminBody, _, _, _, 'value="whitelist"'),
