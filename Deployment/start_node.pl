@@ -358,10 +358,11 @@ owner_option(private, [owner(Owner)]) :-
     !.
 owner_option(_, []).
 
-%  An explicit WP_SHARED_DB_FILE always wins.  Otherwise, in discovery-hub
-%  mode the node's shared database IS the hub's read side
-%  (discovery_directory.pl), so the replica the registry publishes is
-%  reachable over /call.
+%  An explicit WP_SHARED_DB_FILE always wins and replaces the default.
+%  Otherwise, in discovery-hub mode the node's shared database IS the hub's
+%  read side (discovery_directory.pl), so the replica the registry publishes
+%  is reachable over /call.  WP_SHARED_DB_OVERLAY_FILE keeps the normal node
+%  database and appends deployment-specific clauses to it.
 shared_db_option([load_shared_db_file(File)]) :-
     getenv('WP_SHARED_DB_FILE', File),
     File \== '',
@@ -370,6 +371,12 @@ shared_db_option([load_shared_db_file(File)]) :-
     discovery_hub_enabled,
     !,
     discovery_directory_path(File).
+shared_db_option([load_shared_db_file(DefaultFile),
+                  load_shared_db_file(OverlayFile)]) :-
+    getenv('WP_SHARED_DB_OVERLAY_FILE', OverlayFile),
+    OverlayFile \== '',
+    !,
+    node_startup_options:default_node_shared_db_file(DefaultFile).
 shared_db_option([]).
 
 

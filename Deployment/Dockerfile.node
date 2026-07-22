@@ -28,6 +28,7 @@ COPY examples/ /app/examples/
 COPY img/      /app/img/
 COPY pack.pl   /app/pack.pl
 COPY Deployment/start_node.pl /app/Deployment/start_node.pl
+COPY Deployment/shared_db_n5.pl /app/Deployment/shared_db_n5.pl
 # Discovery-hub seed files are baked in (small data files, used only when
 # WP_DISCOVERY_SEED_FILE points at one) so a hub deployment needs no host
 # bind mount — portable across hosts and not subject to Docker Desktop

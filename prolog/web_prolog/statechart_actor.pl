@@ -31,7 +31,10 @@ into dedicated helper modules to keep the public actor module compact.
     log/1
 ]).
 :- use_module(statechart_exec, []).
-:- use_module(isolation, [load_source_text/3]).
+:- use_module(isolation, [
+    execution_source_module/2,
+    load_source_text/3
+]).
 %  Loading this behaviour makes the statechart API visible inside
 %  every actor module, exactly as the demonstrator's
 %  import_statechart_api/1 did during module preparation.
@@ -242,45 +245,46 @@ enter_states(EnabledTransitions) :-
 
 
 load_datamodel(Children) :-
+    execution_source_module(statechart_actor, Module),
     setup_call_cleanup(
         atom_to_memory_file(Children, Handle),
         setup_call_cleanup(
             open_memory_file(Handle, read, Stream),
-            read_source(Stream),
+            read_source(Stream, Module),
             close(Stream)
         ),
         free_memory_file(Handle)
     ).
 
 
-read_source(Stream) :-
+read_source(Stream, Module) :-
     read(Stream, Term),
-    read_source(Term, Stream).
+    read_source(Term, Stream, Module).
 
-read_source(end_of_file, _Stream) :- !.
-read_source(Term, Stream) :-
-    expand_and_assert(Term),
-    read_source(Stream).
+read_source(end_of_file, _Stream, _Module) :- !.
+read_source(Term, Stream, Module) :-
+    expand_and_assert(Term, Module),
+    read_source(Stream, Module).
 
 
-expand_and_assert(Term) :-
-    expand_term(Term, ExpandedTerm),
+expand_and_assert(Term, Module) :-
+    Module:expand_term(Term, ExpandedTerm),
     (   is_list(ExpandedTerm)
-    ->  maplist(assert_local, ExpandedTerm)
-    ;   assert_local(ExpandedTerm)
+    ->  maplist(assert_local(Module), ExpandedTerm)
+    ;   assert_local(Module, ExpandedTerm)
     ).
 
 
-assert_local(:-(Head, Body)) :- !,
+assert_local(Module, :-(Head, Body)) :- !,
     functor(Head, F, N),
-    thread_local(F/N),
-    assert(:-(Head, Body)).
-assert_local(:-Body) :- !,
-    call(Body).
-assert_local(Fact) :-
+    Module:thread_local(F/N),
+    assertz(Module:(Head :- Body)).
+assert_local(Module, :-Body) :- !,
+    call(Module:Body).
+assert_local(Module, Fact) :-
     functor(Fact, F, N),
-    thread_local(F/N),
-    assert(Fact).
+    Module:thread_local(F/N),
+    assertz(Module:Fact).
 
 
 :- thread_local num/1.

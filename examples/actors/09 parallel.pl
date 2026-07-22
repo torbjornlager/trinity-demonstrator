@@ -1,12 +1,14 @@
-%%  parallel(+Goals)
+%%  myparallel(+Goals)
 %
 %   Runs all Goals concurrently and succeeds only if every goal succeeds.
 %   Fails or throws immediately if any goal fails or raises an error.
 %
+%   This code works, but has a problem - the book has a correct version.
+%
 %	@param	Goals - list of goals to execute in parallel
 %	@author Torbjörn Lager
 
-parallel(Goals) :-
+myparallel(Goals) :-
     maplist(par_solve, Goals, Pids),
     maplist(par_yield(Pids), Pids, Goals).
 
@@ -32,7 +34,7 @@ par_yield(Pids, Pid, Goal) :-
     }).
     
     
-%%  first_solution(+Solution, +Goals)
+%%  myfirst_solution(+Solution, +Goals)
 %
 %   Spawns all Goals in parallel and binds Solution to the result of whichever
 %   goal succeeds first, killing the remaining actors.
@@ -41,7 +43,7 @@ par_yield(Pids, Pid, Goal) :-
 %	@param	Goals - list of goals to race in parallel
 %	@author Torbjörn Lager
 
-first_solution(Solution, Goals) :-
+myfirst_solution(Solution, Goals) :-
     maplist(first_solve(Solution), Goals, Pids),
     wait_first(Pids, Solution).
 
@@ -87,10 +89,10 @@ drain_mailbox(Pid) :-
 
 /** <examples>
 
-?- time(parallel([(X=a,sleep(1)),(Y=b,sleep(3)),(Z=c,sleep(2))])).
-?- time(parallel([(X=a,sleep(1)),(Y=b,fail),(Z=c,sleep(2))])).
-?- time(parallel([(X=a,sleep(1)),(Y=b,sleep(a)),(Z=c,sleep(2))])).
+?- time(myparallel([(X=a,sleep(1)),(Y=b,sleep(3)),(Z=c,sleep(2))])).
+?- time(myparallel([(X=a,sleep(1)),(Y=b,fail),(Z=c,sleep(2))])).
+?- time(myparallel([(X=a,sleep(1)),(Y=b,sleep(a)),(Z=c,sleep(2))])).
     
-?- time(first_solution(X, [(sleep(2),X=a),(sleep(1),X=b)])).
+?- time(myfirst_solution(X, [(sleep(2),X=a),(sleep(1),X=b)])).
 
 */

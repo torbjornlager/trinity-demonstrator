@@ -252,6 +252,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
     </div>
     <pre>monitor(+PidOrName, -Ref) is det.</pre>
     <p>Installs a monitor and returns a fresh reference in <code>Ref</code>. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Pid,Ref,Reason)</code>.</p>
+    <p><span class="note-label">Note:</span> Using <code>monitor(true)</code> in <code>spawn/3</code> is the safest variant for short-lived children, since monitoring is established during spawn. Installing monitoring later with <code>monitor/2</code> is a separate step and may miss a child that exits immediately.</p>
 </article>
 
 <article class="predicate-entry" id="demonitor/1-2">
@@ -265,7 +266,6 @@ demonitor(+Ref, +Options) is det.</pre>
     <ul>
         <li><code>flush</code><br>Non-blocking removal of all pending <code>down(_,Ref,_)</code> messages from the mailbox.</li>
     </ul>
-    <p>Using <code>monitor(true)</code> in <code>spawn/3</code> is the safest variant for short-lived children, since monitoring is established during spawn. Installing monitoring later with <code>monitor/2</code> is a separate step and may miss a child that exits immediately.</p>
 </article>
 
 <article class="predicate-entry" id="register/2">
@@ -274,7 +274,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>register(+Name, +Pid) is det.</pre>
-    <p>Registers a local process under a name, where <code>Name</code> is an atom and <code>Pid</code> identifies the actor process. The association between the name and the pid is removed when the process terminates.</p>
+    <p>Registers an actor process under a name, where <code>Name</code> is an atom and <code>Pid</code> identifies the actor. The association between the name and the pid is removed when the process terminates.</p>
 </article>
 
 <article class="predicate-entry" id="whereis/2">
@@ -406,7 +406,6 @@ input(+Prompt, -Data, +Options) is det.</pre>
     </div>
     <pre>respond(+Pid, +Input) is det.</pre>
     <p>Sends <code>Input</code> to the process identified by <code>Pid</code> as a response to a <code>prompt(Pid,Prompt)</code> message.</p>
-    <p><span class="note-label">Note:</span> These predicates expose the actor I/O protocol and are therefore part of the ACTOR client language. An ISOTOPE implementation may use the same protocol internally, but ISOTOPE clients perform textual I/O using the ordinary Prolog predicates such as <code>write/1</code>, <code>writeln/1</code>, <code>format/1-2</code>, and <code>read/1</code>.</p>
 </article>
 
 <article class="predicate-entry" id="receive/1-2">
@@ -486,7 +485,7 @@ toplevel_call(+Pid, +Goal, +Options) is det.</pre>
         <li><code>once(+Boolean)</code><br>When <code>true</code>, commits to the first returned slice and reports <code>More = false</code>, even if <code>Goal</code> has further solutions. Default is <code>false</code>. This option is useful primarily with <code>limit/1</code>.</li>
         <li><code>target(+Pid)</code><br>Send the answer term to <code>Pid</code>. Default is the value of <code>target</code> when passed as an option to <code>toplevel_spawn/2</code>.</li>
     </ul>
-    <p>Variables in <code>Goal</code> are not bound directly in the caller. Instead, solutions and other kinds of output are returned in the form of answer messages delivered to the mailbox of the target process.</p>
+    <p>Variables in <code>Goal</code> are not bound directly in the caller. Instead, solutions and other kinds of output are returned in the form of answer messages delivered to the mailbox of the target process:</p>
     <ul>
         <li><code>success(Pid, Data, More)</code><br><code>Pid</code> is the pid of the toplevel process that succeeded in finding solutions to <code>Goal</code>. <code>Data</code> is a list holding instantiations of <code>Template</code>. <code>More</code> is either <code>true</code> or <code>false</code>, indicating whether the toplevel can return more solutions if <code>toplevel_next/1-2</code> is called.</li>
         <li><code>failure(Pid)</code><br><code>Pid</code> is the pid of the toplevel process that failed for lack of solutions.</li>
@@ -828,7 +827,7 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
         <li><code>offset(+Integer)</code><br>Selects the starting offset of the single solution slice collected by the promise. Default is <code>0</code>.</li>
     </ul>
-    <p>The reference returned in <code>Ref</code> is an opaque ten-digit integer, local to the runtime that created it. It can later be used by <code>yield/2-3</code> to collect the single answer term. Programs must not infer meaning from its digits or construct references themselves.</p>
+    <p>The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the single answer term. Programs must not infer meaning from its digits or construct references themselves.</p>
 </article>
 
 <article class="predicate-entry" id="yield/2-3">

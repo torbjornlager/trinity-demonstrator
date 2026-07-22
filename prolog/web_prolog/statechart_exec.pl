@@ -55,7 +55,7 @@ actor profile. Model and runtime facts live in `statechart_actor`.
     has_parent/2,
     has_descendant_in_set/2,
     invoke/1,
-    check_chart_goal/1
+    call_chart_goal/1
 ]).
 
 
@@ -208,7 +208,7 @@ dedup([H|Rest], Seen, Deduped) :-
     ).
 
 evaluate_condition(Condition) :-
-    catch(( check_chart_goal(Condition), once(statechart_actor:Condition) ),
+    catch(once(call_chart_goal(Condition)),
           Error,
           ( enqueue_internal_event(error(Error)),
             fail

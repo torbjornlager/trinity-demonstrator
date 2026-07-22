@@ -43,6 +43,7 @@ instance; calling `statechart_start/1` twice resets state.
 :- catch(use_module(library(wasm)), _, true).
 
 :- use_module(library(option)).
+:- use_module(library(modules)).
 :- use_module(statechart_wasm_model, [
     statechart_wasm_parse_text/1
 ]).
@@ -139,6 +140,7 @@ statechart_start(text(Text)) :-
     !,
     cancel_delayed_events,
     runtime_clean,
+    import_shared_database,
     retractall(last_halt_reason(_)),
     statechart_wasm_parse_text(Text),
     start_parsed(_Root),
@@ -148,6 +150,7 @@ statechart_start(stream(Stream)) :-
     !,
     cancel_delayed_events,
     runtime_clean,
+    import_shared_database,
     retractall(last_halt_reason(_)),
     statechart_wasm_model:statechart_wasm_parse_stream(Stream),
     start_parsed(_Root),
@@ -157,6 +160,17 @@ statechart_start(Source) :-
     throw(error(domain_error(statechart_source, Source),
                 context(statechart_start/1,
                         'expected text(Text) or stream(Stream)'))).
+
+
+% Each browser runtime loads its own node database as wasm_shared_db and
+% imports it into user.  Statechart executable content runs in this module,
+% so mirror that import here.  Datamodel predicates remain local to the chart
+% module and therefore shadow shared predicates with the same indicator.
+import_shared_database :-
+    (   current_module(wasm_shared_db)
+    ->  add_import_module(statechart_wasm, wasm_shared_db, start)
+    ;   true
+    ).
 
 
 %!  statechart_stop is det.
@@ -179,9 +193,14 @@ statechart_stop :-
 % Browser-statechart equivalents of the actor calls used by chart scripts.
 % A delayed event is scheduled by the hosting page and is cancelled by its
 % stable id on state exit.  The host callback re-enters statechart_send/1.
+% In the main-thread model self/1 is left as statechart; the dedicated-worker
+% loader rewrites it to the worker's concrete pid.  Matching self/1 here keeps
+% self-sends on this local scheduler in both models, so cancel/1 always acts on
+% the scheduler that created the delayed event.
 self(statechart).
 
-send(statechart, Event) :-
+send(Self, Event) :-
+    self(Self),
     !,
     statechart_send(Event).
 %  Any other target is a spawned child actor/toplevel: forward to the
@@ -190,7 +209,8 @@ send(statechart, Event) :-
 %  worker, e.g. `ponger ! ping(Self)`.
 send(Pid, Message) :-
     swi_wasm_actor_bridge:send(Pid, Message).
-send(statechart, Event, Options) :-
+send(Self, Event, Options) :-
+    self(Self),
     !,
     option(delay(Delay), Options, 0),
     (   Delay =:= 0
@@ -204,10 +224,9 @@ send(statechart, Event, Options) :-
 send(Pid, Message, Options) :-
     swi_wasm_actor_bridge:send(Pid, Message, Options).
 
-%  `Pid ! Message` stays local: send/2 routes the `statechart` target into
-%  the chart's own event queue (and forwards every other target to the
-%  bridge), so a child told `ping(Self)` with self/1 = statechart replies
-%  back into the chart.
+%  `Pid ! Message` stays local when Pid is self/1 and forwards every other
+%  target to the bridge, so a child told `ping(Self)` replies back into the
+%  chart in either execution model.
 Pid ! Message :-
     send(Pid, Message).
 

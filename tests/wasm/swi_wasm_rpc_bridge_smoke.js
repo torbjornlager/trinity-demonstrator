@@ -46,6 +46,10 @@ const sharedDbSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "shared_db.pl"),
   "utf8"
 );
+const statechartWasmSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "statechart_wasm.pl"),
+  "utf8"
+);
 const editorFrameSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "editor_frame.html"),
   "utf8"
@@ -146,6 +150,9 @@ const swiWasmValueRenderer = {
 const formatJavaScriptObject = embeddedWorkbenchMethod(
   "formatJavaScriptObject", "logSwiWasmWorkerTraffic"
 );
+const conciseSwiWasmOutput = embeddedWorkbenchMethod(
+  "conciseSwiWasmOutput", "echoSwiWasmOutput"
+);
 const javaScriptObjectRenderer = { formatJavaScriptObject };
 
 ok(includes("window.swiRpcGetAsync = function(url, httpTimeout)"),
@@ -220,6 +227,17 @@ ok(includes("showTerminalSystemInfo: true") &&
    includes("--terminal-info-ink:") &&
    includes(".terminal .terminal-output .terminal-system-info"),
    "terminal system information is muted and can be disabled in Settings");
+ok(conciseSwiWasmOutput("Warning: /worker_user_code.pl:1:") === "" &&
+   conciseSwiWasmOutput(
+     "Warning:    Local definition of user:parallel/1 overrides weak import from swi_wasm_actor_bridge"
+   ) === "Warning: parallel/1 replaces the built-in definition." &&
+   conciseSwiWasmOutput("ordinary output") === "ordinary output" &&
+   includes('output.addClass("terminal-swi-wasm-override")') &&
+   includes("color: var(--terminal-override-ink) !important;") &&
+   includes("--terminal-override-ink: #1d6fa8;") &&
+   includes("--terminal-override-ink: #67b8ff;") &&
+   includes('this.echoSwiWasmOutput(term, String(message.data || ""))'),
+   "SWI-WASM override notices are concise and blue in both themes");
 ok(includes('return "Welcome to [[b;;]Web Prolog]!\\n" +') &&
    includes('"The [[b;;]" + profile + "] profile.\\n" +') &&
    includes('"Powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog]\\n"') &&
@@ -276,8 +294,15 @@ ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
    editorIncludes("editor.removeOverlay(webPrologCodeMirrorOverlay)") &&
    !editorIncludes('"flush",'),
    "CodeMirror can apply the same Web Prolog predicate highlighting overlay");
-ok(includes("self.terminal.echo(self.formatDisplayText(String(text).replace(/\\n$/, \"\")));"),
+ok(includes("self.echoSwiWasmOutput(self.terminal, String(text).replace(/\\n$/, \"\"));"),
    "output is streamed to the terminal while a runner is active");
+ok(includes('"flush :-",') &&
+   includes("atomics_to_string(['Shell got ', Atom], MessageString)") &&
+   includes('"        terminal_output(MessageString),",') &&
+   workerSource.includes('"flush :-",') &&
+   workerSource.includes("atomics_to_string(['Shell got ', Atom], MessageString)") &&
+   workerSource.includes('"        terminal_output(MessageString),",'),
+   "flush always writes the Shell got prefix in both SWI-WASM models");
 ok(includes("{ heartbeat: 1 }"),
    "long-running WASM queries yield frequently");
 ok(includes("enqueueSwiWasmStatechartEvent") &&
@@ -311,7 +336,7 @@ ok(includes('self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main"') 
    includes("self.deliverSwiWasmRemoteResult(remoteMessage,"),
    "remote <spawn> in WASM charts only owns browser actor traffic while the statechart workbench is active");
 ok(includes('message.type === "output"') &&
-   includes("this.terminal.echo(String(message.output)"),
+   includes("this.echoSwiWasmOutput(this.terminal, String(message.output)"),
    "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
 ok(tutorialIncludes('src_text("echo_actor :-') &&
    tutorialIncludes("node('{{actor_peer_host}}'),\n       session(true)") &&
@@ -560,6 +585,37 @@ ok(includes("finalizeSwiWasmWorkerActor: function") &&
    includes("self.finalizeSwiWasmWorkerActor(pid,") &&
    includes('"worker_error: "'),
    "an uncaught worker error finalizes the actor (monitors' down/3 + name clear + reap), not just a log");
+{
+  const installMonitor = embeddedWorkbenchMethod(
+    "monitorSwiWasmActor", "demonitorSwiWasmActor"
+  );
+  const delivered = [];
+  const controller = {
+    swiWasmActorWorkers: {
+      main: { worker: {}, done: false, reason: null },
+      failed: { worker: {}, done: true, reason: "false" }
+    },
+    swiWasmActorMonitors: [],
+    resolveSwiWasmActorTarget: function(pid) { return String(pid); },
+    parseSwiWasmRemoteToplevelPid: function() { return null; },
+    parseSwiWasmRemoteActorPid: function() { return null; },
+    swiWasmActorPidLive: function(pid) {
+      const entry = this.swiWasmActorWorkers[String(pid)];
+      return !!(entry && entry.worker && !entry.done);
+    },
+    deliverSwiWasmActorDown: function(watcher, ref, pid, reason) {
+      delivered.push({ watcher, ref, pid, reason });
+    }
+  };
+  const installed = installMonitor.call(
+    controller, "main", "failed", "failed-ref"
+  );
+  ok(installed === true &&
+     delivered.length === 1 &&
+     delivered[0].reason === "false" &&
+     controller.swiWasmActorMonitors.length === 0,
+     "a monitor installed after a SWI-WASM worker exits receives its recorded failure reason");
+}
 ok(includes("function settleReject(error)") &&
    includes("remote actor connection timed out:") &&
    includes("remote actor connection closed before ready:"),
@@ -599,8 +655,9 @@ ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
    ) === "Shell got down(5074010345,2356029108,true)" &&
    includes("self.terminal.echo(self.formatDisplayText(String(text)))") &&
    includes("term.echo(this.formatDisplayText(") &&
-   includes("this.terminal.echo(this.formatDisplayText(buf.replace") &&
-   includes("this.terminal.echo(this.formatDisplayText(output.replace"),
+   includes("var text = this.formatDisplayText(renderOutputData(data));") &&
+   includes("this.echoSwiWasmOutput(this.terminal, buf.replace") &&
+   includes("this.echoSwiWasmOutput(this.terminal, output.replace"),
    "Hide local node in pid only removes @localhost from terminal display");
 ok(includes("reserveSwiWasmActorRef: function()") &&
    includes("this.swiWasmReservedActorRefs[ref] = true;") &&
@@ -824,6 +881,14 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
+ok(workerSource.includes('post("terminal_output", {') &&
+   workerSource.includes('term: String(termText || "true")') &&
+   includes('/swi_wasm_actor_worker.js?v=20260722-statechart-parent-output') &&
+   includes('parentPid: startFields && startFields.parentPid') &&
+   includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
+   includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
+   includes('this.sendSwiWasmActorMessage('),
+   "SWI-WASM statechart terminal output is delivered to the spawning actor mailbox");
 ok(includes("spawnSwiWasmWorkerActorReady") &&
    includes('result = this.spawnSwiWasmWorkerActorReady(message.goal') &&
    includes("await(SpawnPromise, SpawnedText)"),
@@ -833,6 +898,16 @@ ok(workerSource.includes('adapted.replace(/self\\(statechart\\)\\./g') &&
    includes('"statechart_actor",') &&
    !includes('"statechart", "statechart_actor"'),
    "SWI-WASM-2 statechart workers route child replies to their concrete chart pid");
+ok(statechartWasmSource.includes('send(Self, Event, Options) :-\n    self(Self),') &&
+   statechartWasmSource.includes('Scheduled := wasmStatechartSchedule') &&
+   statechartWasmSource.includes('Cancelled := wasmStatechartCancel') &&
+   !statechartWasmSource.includes('send(statechart, Event, Options) :-'),
+   "delayed statechart self-sends use the cancellable local scheduler in both SWI-WASM models");
+ok(includes('statechart_spawn/2, statechart_halt/2, statechart_halt/3,') &&
+   includes('statechart_halt(statechart, Reply, _Timeout) :-') &&
+   includes('statechart_wasm:statechart_stop') &&
+   includes('Reply = stopped.'),
+   "the main-thread SWI-WASM bridge implements statechart_halt/2-3");
 ok(workerSource.includes('"    monitor(Pid, Ref),"') &&
    workerSource.includes('"            exit(Pid, kill),"') &&
    workerSource.includes('"            receive({down(Pid, Ref, _) -> Reply = killed})"'),

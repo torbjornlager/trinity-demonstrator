@@ -13,3 +13,13 @@ echo_actor :-
             From ! echo(Msg),
             echo_actor
     }).
+
+% Shared database used by example 13 shared-database.xml.
+
+shared_fact(browser_shared_db).
+
+% The statechart datamodel defines local_label/1 too.  Its local definition
+% shadows this shared one while the chart is running.
+local_label(browser_shared_db).
+
+shared_transition_enabled.

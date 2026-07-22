@@ -90,10 +90,10 @@ Shared databases:
 
 - `shared_db_common.pl`: common shared database loaded by every deployment node
 - `shared_db_actor_common.pl`: shared database loaded by ACTOR-profile nodes (`n3`, `n4`)
-- `shared_db_n1.pl` … `shared_db_n4.pl`: per-node overlays for `n1`–`n4`
+- `shared_db_n1.pl` … `shared_db_n5.pl`: per-node overlays for `n1`–`n5`
 - `shared_db_admin.pl`: per-node overlay for `admin`
-- `n5` uses the repo default `shared_db.pl` (no overlay); `n0` serves
-  `examples/services/discovery_directory.pl` as its shared database
+- `n5` loads the repo default `shared_db.pl` plus `shared_db_n5.pl`; `n0`
+  serves `examples/services/discovery_directory.pl` as its shared database
 - `provides/1` facts in these files are the owner-curated capability lists
   the hub harvests (surfaced via `/node_info`, not queryable relations)
 
@@ -125,7 +125,10 @@ docker compose version
 
 6. For `n5`'s SSO, register a GitHub OAuth App with callback
    `https://n5.elfenbenstornet.se/oauth2/callback`, then put its client id /
-   secret and a cookie secret in `.env` (see `.env.n5-sso.example`).
+   secret, a cookie secret, your sole GitHub login in
+   `OAUTH2_PROXY_GITHUB_USERS`, and your verified GitHub email in
+   `WP_N5_OWNER` in `.env` (see `.env.n5-sso.example`). Compose refuses to
+   render the N5 services when either owner identity is missing.
 
 ## Start The Stack
 
@@ -301,10 +304,18 @@ docker compose up --build -d        # rebuilds caddy, wp_n1..wp_n5, wp_admin
 `auth(private)`. The `oauth2_n5` sidecar authenticates each visitor against
 GitHub; the n5 Caddy vhost runs `forward_auth` and injects the verified
 identity as `X-Web-Prolog-User` (trusted only from the private proxy peer,
-so a public client cannot spoof it). Signed-in users get the
-`WP_AUTHENTICATED_DEFAULT_CAPS` ("registered") capability tier. It builds
-from `Dockerfile.node` (context `..`) and uses the repo default
-`shared_db.pl`.
+so a public client cannot spoof it). The mandatory GitHub-login allowlist
+admits only the configured account. N5 grants capabilities only to the
+mandatory `WP_N5_OWNER`; the authenticated-default tier is empty, so any
+other identity is denied even if the outer SSO gate is accidentally widened.
+Every application route, including `/examples/*` and `/statecharts/*`, is
+behind SSO. It builds from `Dockerfile.node` (context `..`) and uses the repo
+default `shared_db.pl` plus the deployment overlay `shared_db_n5.pl`.
+
+Because those static routes are private, an N5 process cannot fetch a
+node-relative `src_uri('/examples/...')` through its own public URL (the
+server-side request has no browser SSO cookie). Load the example in the
+editor and use `src_text(<editor>)`, as in the shared-database example.
 
 ## Security Model
 
@@ -324,7 +335,9 @@ Current protections:
   the register over `/call` only — no `/ws`, no arbitrary goal execution
 - `n5` is `auth(private)` behind GitHub SSO; the forwarded identity header
   is trusted only from the private proxy peer, so a public client cannot
-  assume an identity by setting it
+  assume an identity by setting it; the required GitHub-login allowlist,
+  required owner email, empty authenticated-default tier, and SSO on all N5
+  application routes make access owner-only
 
 ## Testing Node-Local Logs
 
@@ -381,6 +394,7 @@ Each deployment node now loads:
 - `n2` -> [`shared_db_n2.pl`](shared_db_n2.pl)
 - `n3` -> [`shared_db_n3.pl`](shared_db_n3.pl)
 - `n4` -> [`shared_db_n4.pl`](shared_db_n4.pl)
+- `n5` -> [`shared_db_n5.pl`](shared_db_n5.pl)
 - `admin` -> [`shared_db_admin.pl`](shared_db_admin.pl)
 
 The current deployment split is:
@@ -391,6 +405,7 @@ The current deployment split is:
 - `shared_db_n2.pl`: isotope-friendly derived predicates over the common base
 - `shared_db_n3.pl`: `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that the distributed proof tree pulls through to `n4`
 - `shared_db_n4.pl`: `deployment_node(n4).` plus `human(plato)` / `human(aristotle)` (used by `n3`'s distributed proof tree)
+- `shared_db_n5.pl`: the n5-specific Statechart shared-database example facts
 - `shared_db_admin.pl`: local deployment facts for admin use
 
 This keeps the repo-level
@@ -400,7 +415,7 @@ unchanged for non-deployment defaults.
 After editing any of the shared DB files, rebuild the node containers:
 
 ```bash
-docker compose up --build -d wp_n1 wp_n2 wp_n3 wp_n4 wp_admin
+docker compose up --build -d wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 ```
 
 `n3` and `n4` additionally start the node-resident `counter` and `pubsub_service`

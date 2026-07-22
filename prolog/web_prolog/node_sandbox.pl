@@ -266,7 +266,7 @@ public_runtime_support_goal(actor, Goal) :-
 
 %  Statechart interpreter entry goals spawned by statechart_spawn/2.
 %  They are framework code, not client code; the chart's own embedded
-%  goals are sandbox-checked separately at execution (hook_check_chart_goal/1),
+%  goals are sandbox-checked separately at execution (hook_check_chart_goal/2),
 %  so exempting the entry goal here does not bypass any client-supplied goal.
 public_runtime_support_goal(statechart_actor, Goal) :-
     callable(Goal),
@@ -1105,7 +1105,7 @@ sandbox:safe_primitive(rpc:runtime_property(_)).
 %  Statechart behaviour entry points.  statechart_spawn/2 routes through
 %  spawn/3, so its chart source options are re-validated by the runtime
 %  spawn hook, and the chart's own scripts/conditions are sandbox-checked
-%  at execution time via statechart_runtime:hook_check_chart_goal/1 (the
+%  at execution time via statechart_runtime:hook_check_chart_goal/2 (the
 %  glue is in node_glue).  The interpreter entry goals it spawns
 %  (interpret/1 and interpret_text/1) are exempted from spawn
 %  re-validation by public_runtime_support_goal/2 below, so they remain

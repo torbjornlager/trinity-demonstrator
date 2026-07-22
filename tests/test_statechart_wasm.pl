@@ -43,6 +43,22 @@ start_text(Text) :-
 config(C) :-
     statechart_configuration(C).
 
+setup_statechart_shared_db :-
+    ignore(catch(delete_import_module(statechart_wasm, wasm_shared_db), _, true)),
+    ignore(catch(abolish(wasm_shared_db:shared_fact/1), _, true)),
+    ignore(catch(abolish(wasm_shared_db:local_label/1), _, true)),
+    ignore(catch(abolish(wasm_shared_db:shared_transition_enabled/0), _, true)),
+    assertz(wasm_shared_db:shared_fact(browser_shared_db)),
+    assertz(wasm_shared_db:local_label(browser_shared_db)),
+    assertz(wasm_shared_db:shared_transition_enabled).
+
+cleanup_statechart_shared_db :-
+    statechart_stop,
+    ignore(catch(delete_import_module(statechart_wasm, wasm_shared_db), _, true)),
+    ignore(catch(abolish(wasm_shared_db:shared_fact/1), _, true)),
+    ignore(catch(abolish(wasm_shared_db:local_label/1), _, true)),
+    ignore(catch(abolish(wasm_shared_db:shared_transition_enabled/0), _, true)).
+
 
 :- begin_tests(statechart_wasm_unit).
 
@@ -155,6 +171,34 @@ test(datamodel_dynamic_facts_visible, [cleanup(statechart_stop)]) :-
     statechart_send(inc),
     statechart_send(check),
     statechart_in(done).
+
+test(shared_database_visible_and_datamodel_shadows,
+     [ setup(setup_statechart_shared_db),
+       cleanup(cleanup_statechart_shared_db)
+     ]) :-
+    join_lines([
+        "<statechart initial=\"start\">",
+        "  <datamodel>",
+        "    :- dynamic seen/2.",
+        "    local_label(statechart_datamodel).",
+        "    observed(Node, Local) :- shared_fact(Node), local_label(Local).",
+        "  </datamodel>",
+        "  <state id=\"start\">",
+        "    <go if=\"shared_transition_enabled\" to=\"done\">",
+        "      observed(Node, Local), assertz(seen(Node, Local))",
+        "    </go>",
+        "  </state>",
+        "  <state id=\"done\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(statechart_in(done)),
+    once(statechart_wasm:seen(Node, Local)),
+    assertion(Node-Local == browser_shared_db-statechart_datamodel),
+    % Starting another chart keeps the one shared-module import and rebuilds
+    % the chart-local shadow cleanly.
+    start_text(Text),
+    once(statechart_wasm:seen(browser_shared_db, statechart_datamodel)).
 
 :- end_tests(statechart_wasm_unit).
 

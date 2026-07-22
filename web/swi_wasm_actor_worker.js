@@ -407,7 +407,13 @@
     return false;
   }
 
-  function actorTerminalOutput(text) {
+  function actorTerminalOutput(text, termText) {
+    if (workerRole === "statechart_actor") {
+      post("terminal_output", {
+        term: String(termText || "true")
+      });
+      return true;
+    }
     postWorkerOutput(String(text) + "\n");
     return true;
   }
@@ -1311,7 +1317,8 @@
       "    ->  Text = Term",
       "    ;   term_string(Term, Text)",
       "    ),",
-      "    _ := actorTerminalOutput(#Text).",
+      "    term_string(Term, TermText),",
+      "    _ := actorTerminalOutput(#Text, #TermText).",
       "",
       "input(Prompt, Answer) :- input(Prompt, Answer, []).",
       "",

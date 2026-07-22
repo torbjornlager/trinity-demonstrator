@@ -835,12 +835,21 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="epa-published-counter"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, "counter@'https://n3.elfenbenstornet.se'")),
             assertion(sub_string(ActorTutorialBody, _, _, _, '<a href="https://n0.elfenbenstornet.se/discovery-hub" target="_blank" rel="noopener noreferrer">Discovery Hub</a>')),
-            assertion(sub_string(ActorTutorialBody, _, _, _, '<h2>Remote calls with promise/3-4 and yield/2-3</h2>')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, '<h1>Remote calls with promise/3-4 and yield/2-3</h1>')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="rpc-promise-timeout"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="rpc-promise-poll"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'on_timeout(Answer = timeout)')),
-            assertion(IsobaseTutorialBody == TutorialBody),
-            assertion(IsotopeTutorialBody == TutorialBody),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'browser-based <strong>SWI-WASM</strong> ACTOR node')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="recommended-path"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, '/actor-api-tutorial')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'the ISOBASE profile')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Timeout instead of Abort')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, '/isobase-api-tutorial')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Select <strong>N1</strong>')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'the ISOTOPE profile')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'What ISOTOPE removes')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, '/isotope-api-tutorial')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'Select <strong>N2</strong>')),
             assertion(OldWorkbenchStatus == 404),
             assertion(sub_string(PortalBody, _, _, _, 'https://trinity.elfenbenstornet.se/book.html')),
             assertion(sub_string(PortalBody, _, _, _, '<div class="settings-title">Font</div>')),
@@ -867,7 +876,7 @@ test(node_portal_and_example_routes_served) :-
                       ActorEntries),
             assertion(\+ memberchk(_{name:"game.xml", url:"/examples/statecharts/game.xml", kind:"statechart"},
                                    StatechartEntries)),
-            assertion(sub_string(PortalBody, _, _, _, 'Local ACTOR programming'))
+            assertion(sub_string(PortalBody, _, _, _, '/actor-profile-tutorial'))
         )).
 
 test(node_api_tutorial_routes_served) :-
@@ -3894,6 +3903,50 @@ test(statechart_spawn_load_uri_node_relative) :-
             await_actor_output(Pid, 'PLAYING', 1.0),
             exit(Pid, stop)
         )).
+
+test(statechart_executable_content_uses_node_shared_db_and_local_shadow) :-
+    with_node_server_options(
+        [load_shared_db_file('Deployment/shared_db_n3.pl')],
+        _URI,
+        setup_call_cleanup(
+            statechart_spawn(Pid, [
+                monitor(true),
+                src_uri('statecharts/13%20shared-database.xml')
+            ]),
+            (
+                await_actor_output(
+                    Pid,
+                    result(n3_shared_db, statechart_datamodel),
+                    1.0
+                ),
+                await_actor_output(Pid, 'DONE', 1.0)
+            ),
+            catch(exit(Pid, stop), _, true)
+        )
+    ).
+
+test(statechart_executable_content_uses_n5_shared_db_overlay) :-
+    with_node_server_options(
+        [ load_shared_db_file('prolog/web_prolog/shared_db.pl'),
+          load_shared_db_file('Deployment/shared_db_n5.pl')
+        ],
+        _URI,
+        setup_call_cleanup(
+            statechart_spawn(Pid, [
+                monitor(true),
+                src_uri('statecharts/13%20shared-database.xml')
+            ]),
+            (
+                await_actor_output(
+                    Pid,
+                    result(n5_shared_db, statechart_datamodel),
+                    1.0
+                ),
+                await_actor_output(Pid, 'DONE', 1.0)
+            ),
+            catch(exit(Pid, stop), _, true)
+        )
+    ).
 
 test(ws_statechart_spawn_automatically_emits_trace,
      true(TraceData \== "")) :-
@@ -7259,7 +7312,7 @@ test(sandbox_rejects_dangerous_in_both_modes) :-
 
 %  A statechart spawned by an untrusted client runs its <onentry>/<onexit>/
 %  <go> scripts and conditions under a public execution profile (propagated
-%  into the interpreter actor).  hook_check_chart_goal/1 must then sandbox
+%  into the interpreter actor).  hook_check_chart_goal/2 must then sandbox
 %  those goals: dangerous ones rejected, safe ones allowed.  With NO public
 %  profile (trusted desktop/test charts) the hook is inert -- the semantics
 %  freeze.  Guards the statechart-script RCE fix (node_glue + statechart_*).

@@ -1,0 +1,43 @@
+<!--
+
+    Reading a node's shared database from Statechart executable content.
+
+    summary/2 and local_label/1 are local to this chart.  summary/2 calls
+    shared_fact/1 from the node database, while local_label/1 shadows the
+    predicate with the same name in that database.  The eventless guard also
+    calls the shared predicate shared_transition_enabled/0.
+
+-->
+
+<statechart datamodel="web-prolog" initial="start">
+    <datamodel> 
+        local_label(statechart_datamodel).
+        
+        summary(Node, Local) :-
+            shared_fact(Node),
+            local_label(Local).
+    </datamodel>
+
+    <state id="start">
+        <onentry>
+            summary(Node, Local),
+            output(result(Node, Local))
+        </onentry>
+        <go if="shared_transition_enabled" to="done" />
+    </state>
+
+    <final id="done">
+        <onentry>output('DONE')</onentry>
+    </final>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]),
+   sleep(0.1),
+   flush.
+
+-->

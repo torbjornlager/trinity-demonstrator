@@ -1,5 +1,6 @@
 :- module(node_startup_options, [
-    node_options/24
+    node_options/24,
+    default_node_shared_db_file/1
 ]).
 
 /** <module> Node Startup Option Parsing

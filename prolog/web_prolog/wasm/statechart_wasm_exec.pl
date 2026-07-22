@@ -62,7 +62,7 @@ to the desktop implementation.
     has_descendant_in_set/2,
     invoke/1,
     cancel_invoked_child/1,
-    check_chart_goal/1
+    call_chart_goal/1
 ]).
 
 
@@ -229,7 +229,7 @@ dedup([H|Rest], Seen, Deduped) :-
     ).
 
 evaluate_condition(Condition) :-
-    catch(( check_chart_goal(Condition), once(statechart_wasm:Condition) ),
+    catch(once(call_chart_goal(Condition)),
           Error,
           ( enqueue_internal_event(error(Error)),
             fail

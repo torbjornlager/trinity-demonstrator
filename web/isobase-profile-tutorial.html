@@ -1,1404 +1,179 @@
-
 <!DOCTYPE html>
 <html lang="en">
-
-<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
-
-    <title>Web Prolog Tutorial</title>
-    <meta name="description" content="">
-    <meta name="author" content="Torbjörn Lager">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet"
-          href="/vendor/fonts/ibm-plex-mono.css">
-
-    <style>
-        :root {
-            color-scheme: light;
-            --tutorial-bg: #ffffff;
-            --tutorial-ink: #111111;
-            --tutorial-muted: #444444;
-            --tutorial-heading: darkgreen;
-            --tutorial-link: darkgreen;
-            --tutorial-surface: #f8f8f8;
-            --tutorial-border: #d8d8d8;
-            --tutorial-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-            --tutorial-code-bg: rgba(15, 23, 42, 0.05);
-            --tutorial-info-bg: #edf9ef;
-            --tutorial-info-border: #b7dec0;
-            --tutorial-danger-bg: #fdf0f0;
-            --tutorial-danger-border: #e6b8b8;
-            --tutorial-button-bg: #ffffff;
-            --tutorial-button-ink: #1f2937;
-            --tutorial-button-line: #d4d4d4;
-            --tutorial-button-primary-bg: #4b88c7;
-            --tutorial-button-primary-ink: #ffffff;
-            --tutorial-button-primary-line: #3f76ad;
-            --tutorial-button-load-bg: #d8eafa;
-            --tutorial-button-load-ink: #17466f;
-            --tutorial-button-load-line: #a9cceb;
-            --tutorial-diagram-ink: #000000;
-            --tutorial-diagram-line: #555555;
-            --tutorial-diagram-highlight: #e07b00;
-            --tutorial-diagram-active-fill: #fef08a;
-            --mono-font: "IBM Plex Mono", "Menlo", "Consolas", monospace;
-            --mono-size: 13px;
-            --mono-weight: 400;
-            --mono-line-height: 1.45;
-            --tutorial-text-size: 14px;
-            --tutorial-title-size: 25px;
-            --tutorial-h1-size: 21px;
-            --tutorial-h2-size: 17px;
-            --tutorial-h3-size: 13px;
-        }
-
-        :root[data-theme="dark"] {
-            color-scheme: dark;
-            --tutorial-bg: #0f141a;
-            --tutorial-ink: #e5edf5;
-            --tutorial-muted: #a8b6c5;
-            --tutorial-heading: #8fd782;
-            --tutorial-link: #9cc8ff;
-            --tutorial-surface: #161d24;
-            --tutorial-border: #34414e;
-            --tutorial-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
-            --tutorial-code-bg: rgba(255, 255, 255, 0.05);
-            --tutorial-info-bg: #112319;
-            --tutorial-info-border: #2f6d45;
-            --tutorial-danger-bg: #2a1518;
-            --tutorial-danger-border: #7e434d;
-            --tutorial-button-bg: #151c23;
-            --tutorial-button-ink: #e5edf5;
-            --tutorial-button-line: #32404d;
-            --tutorial-button-primary-bg: #4b88c7;
-            --tutorial-button-primary-ink: #ffffff;
-            --tutorial-button-primary-line: #3f76ad;
-            --tutorial-button-load-bg: #254968;
-            --tutorial-button-load-ink: #e5f2ff;
-            --tutorial-button-load-line: #3b6f9c;
-            --tutorial-diagram-ink: #e5edf5;
-            --tutorial-diagram-line: #94a3b8;
-            --tutorial-diagram-highlight: #f3b55b;
-            --tutorial-diagram-active-fill: #4d4312;
-        }
-
-        body {
-            margin: 0;
-            background: var(--tutorial-bg);
-            color: var(--tutorial-ink);
-        }
-
-        #tutorial {
-            margin: 50px;
-            padding: 16px;
-            display: block;
-        }
-
-        h1,
-        h2,
-        h3 {
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-        }
-
-        h1 { font-size: var(--tutorial-h1-size); color: var(--tutorial-heading); margin: 56px 0 24px 0; }
-        h2 { font-size: var(--tutorial-h2-size); margin-top: 46px; color: var(--tutorial-heading); }
-        h3 { font-size: var(--tutorial-h3-size); margin-top: 30px; color: var(--tutorial-heading); }
-
-        .tutorial-main-title {
-            font-size: var(--tutorial-title-size);
-            margin: 0 0 24px 0;
-        }
-
-        p,
-        li,
-        blockquote p {
-            line-height: 1.18;
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-            font-size: var(--tutorial-text-size);
-        }
-
-        pre,
-        code {
-            font-family: var(--mono-font);
-            font-size: var(--mono-size);
-            font-weight: var(--mono-weight);
-            line-height: var(--mono-line-height);
-        }
-
-        code {
-            background: var(--tutorial-code-bg);
-            border: 0;
-            border-radius: 4px;
-            padding: 0.08em 0.28em;
-        }
-
-        pre {
-            background: var(--tutorial-surface);
-            border: 1px solid var(--tutorial-border);
-            padding: 10px 12px;
-            overflow-x: auto;
-        }
-
-        pre code {
-            background: transparent;
-            border: 0;
-            padding: 0;
-            border-radius: 0;
-        }
-
-        .alert {
-            margin: 16px 0;
-            padding: 12px 14px;
-            border: 1px solid var(--tutorial-border);
-            box-shadow: var(--tutorial-shadow);
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-            font-size: var(--tutorial-text-size);
-        }
-
-        .alert p:last-child {
-            margin-bottom: 0;
-        }
-
-        .alert-info {
-            background: var(--tutorial-info-bg);
-            border-color: var(--tutorial-info-border);
-        }
-
-        .alert-danger {
-            background: var(--tutorial-danger-bg);
-            border-color: var(--tutorial-danger-border);
-        }
-
-        .tutorial-toc {
-            margin: 22px 0 30px 0;
-            padding: 14px 16px;
-            border: 1px solid var(--tutorial-border);
-            background: var(--tutorial-surface);
-        }
-
-        .tutorial-toc h2 {
-            margin: 0 0 12px 0;
-        }
-
-        .tutorial-toc ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .tutorial-toc li {
-            margin: 4px 0;
-        }
-
-        .tutorial-toc li.toc-h2 {
-            padding-left: 14px;
-        }
-
-        .tutorial-toc li.toc-h3 {
-            padding-left: 28px;
-        }
-
-        .tutorial-toc li.toc-h1 a {
-            font-weight: 700;
-        }
-
-        .tutorial-toc a {
-            text-decoration: none;
-        }
-
-        .heading-link {
-            border: 0;
-            background: transparent;
-            color: var(--tutorial-link);
-            cursor: pointer;
-            font: inherit;
-            font-size: 0.78em;
-            margin-left: 8px;
-            opacity: 0.55;
-            padding: 0 2px;
-            vertical-align: baseline;
-        }
-
-        h1:hover .heading-link,
-        h2:hover .heading-link,
-        h3:hover .heading-link,
-        .heading-link:focus {
-            opacity: 1;
-        }
-
-        .heading-link.copied {
-            opacity: 1;
-        }
-
-        ul {
-            margin-top: 8px;
-        }
-
-        a {
-            color: var(--tutorial-link);
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        table {
-            color: var(--tutorial-ink);
-        }
-
-        .ask-buttons {
-            margin: 12px 0;
-        }
-
-        .btn {
-            border: 1px solid var(--tutorial-button-line);
-            border-radius: 6px;
-            background: var(--tutorial-button-bg);
-            color: var(--tutorial-button-ink);
-            min-height: 21px;
-            padding: 0 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            line-height: 1;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: var(--tutorial-button-primary-bg);
-            color: var(--tutorial-button-primary-ink);
-            border-color: var(--tutorial-button-primary-line);
-        }
-
-        .btn-load {
-            background: var(--tutorial-button-load-bg);
-            color: var(--tutorial-button-load-ink);
-            border-color: var(--tutorial-button-load-line);
-        }
-
-        .btn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        #sc-pr-diagram {
-            display: block;
-            background: transparent;
-            box-sizing: border-box;
-        }
-
-        .statechart-raster {
-            display: block;
-            width: 100%;
-            height: auto;
-            background: var(--tutorial-surface);
-            box-sizing: border-box;
-        }
-
-        .statechart-raster-narrow {
-            width: 75%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        img.theme-img-dark,
-        :root:not([data-theme="dark"]) img.theme-img-dark {
-            display: none;
-        }
-
-        img.theme-img-light,
-        :root:not([data-theme="dark"]) img.theme-img-light {
-            display: block;
-        }
-
-        :root[data-theme="dark"] img.theme-img-light {
-            display: none;
-        }
-
-        :root[data-theme="dark"] img.theme-img-dark {
-            display: block;
-        }
-
-        em {
-            font-weight: bold;
-            font-style: normal;
-        }
-
-        blockquote {
-            margin-top: 12px;
-        }
-
-        .profile-hierarchy {
-            margin: 20px 0 24px;
-        }
-
-        .profile-hierarchy img {
-            display: block;
-            max-width: min(680px, 100%);
-            height: auto;
-            background: var(--tutorial-bg);
-        }
-    </style>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Prolog Tutorial — The ISOBASE Profile</title>
+  <meta name="description" content="A brief, profile-focused introduction to the Web Prolog ISOBASE profile.">
+  <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fff; --ink: #111; --muted: #4b5563; --heading: darkgreen;
+      --link: darkgreen; --surface: #f8f8f8; --border: #d8d8d8;
+      --info-bg: #edf9ef; --info-border: #b7dec0;
+      --danger-bg: #fdf0f0; --danger-border: #e6b8b8;
+      --code-bg: rgba(15,23,42,.05); --button: #4b88c7; --button-border: #3f76ad;
+      --mono-font: "IBM Plex Mono", Menlo, Consolas, monospace;
+      --mono-size: 13px; --mono-weight: 400; --mono-line-height: 1.45;
+      --text-size: 14px; --title-size: 25px; --h1-size: 21px; --h2-size: 17px;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0f141a; --ink: #e5edf5; --muted: #a8b6c5; --heading: #8fd782;
+      --link: #9cc8ff; --surface: #161d24; --border: #34414e;
+      --info-bg: #112319; --info-border: #2f6d45;
+      --danger-bg: #2a1518; --danger-border: #7e434d;
+      --code-bg: rgba(255,255,255,.05);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    main { margin: 50px; padding: 16px; max-width: 820px; }
+    h1, h2 { color: var(--heading); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    h1 { font-size: var(--h1-size); margin: 52px 0 20px; }
+    h1:first-child { font-size: var(--title-size); margin-top: 0; }
+    h2 { font-size: var(--h2-size); margin: 34px 0 14px; }
+    p, li { font: var(--text-size)/1.45 Inter, ui-sans-serif, system-ui, sans-serif; }
+    .lede { color: var(--muted); font-size: calc(var(--text-size) + 1px); }
+    a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+    code, pre { font: var(--mono-weight) var(--mono-size)/var(--mono-line-height) var(--mono-font); }
+    code { background: var(--code-bg); border-radius: 4px; padding: .08em .28em; }
+    pre { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; padding: 11px 13px; }
+    pre code { background: transparent; padding: 0; }
+    nav, .note, .warning { border: 1px solid var(--border); margin: 20px 0; padding: 13px 16px; }
+    nav { background: var(--surface); } nav ul { margin: 0; padding-left: 20px; }
+    .note { background: var(--info-bg); border-color: var(--info-border); }
+    .warning { background: var(--danger-bg); border-color: var(--danger-border); }
+    .path { color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+    .path strong { color: var(--heading); }
+    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 6px 10px; text-transform: uppercase; }
+    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } }
+  </style>
 </head>
 <body>
-<div id="tutorial">
-
-
-<div>
-    <h1 id="tutorial-top" class="tutorial-main-title">Web Prolog tutorial &ndash; the ISOBASE profile</h1>
-</div>
-
-<nav id="tutorial-toc" class="tutorial-toc" aria-label="Table of contents"></nav>
-
-<section id="tutorial-getting-started">
-<h1>Introduction</h1>
-
-<p>
-   Web Prolog is Prolog with two things added: a network and a process model.
-   The simplest nodes just speak HTTP and evaluate logical queries on demand;
-   the richer ones also speak WebSocket and host Erlang-style actors, each
-   with its own mailbox.
-</p>
-
-<p>
-   The same Prolog predicates work whether the other side of the conversation
-   is a function on this node, an actor across the room, or a service on
-   another continent &mdash; remote calls that read like local ones,
-   distribution that disappears into the language.
-</p>
-
-<p>
-   Web Prolog nodes do not all have to do everything. A small hierarchy of
-   profiles &mdash; ISOBASE, ISOTOPE, ACTOR &mdash; lets a node advertise
-   exactly how much of the system it implements, and this tutorial walks up
-   that hierarchy: pure relational queries first, then session state, then
-   actors, then the higher-level patterns (server behaviours, statecharts)
-   that build on actors. You can stop at any level; each one is a coherent way
-   to use the system.
-</p>
-
-</section>
-
-<section id="tutorial-local-isobase-programming" data-tutorial-sections="local_isobase">
-<h1 id="tutorial-introduction">Local ISOBASE programming</h1>
-
-<p>
-    ISOBASE programming starts with ordinary, side-effect-free Prolog queries.
-    These examples use local predicates hosted by the current node and are safe
-    to run through the stateless <code>/call</code> API.
-</p>
-
-<p>
-    If you are reading this inside the portal, use the terminal to the right.
-    Queries must end with a full stop. If a query has more than one answer,
-    press <code>;</code> or the space bar for more, or use the green Next button.
-</p>
-
-<div class="alert alert-info">
-  <strong>Tip!</strong> The portal also has a Logger panel to the right of the
-  terminal. If it is hidden, open it with the chevron at the far right. By
-  ticking the <code>API</code> checkbox at the bottom of the Logger, you can
-  watch the HTTP traffic generated by your queries.
-</div>
-
-
-<h2>append/3 in two modes</h2>
-
-<p>
-    Prolog is a relational language. The same predicate can often be used in
-    more than one direction. First, use <code>append/3</code> in the ordinary
-    way to join two lists:
-</p>
-
-<pre id="append1">?- append([a],[b,c],Xs).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#append1&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    Now run the same predicate backwards and let Prolog split a list in all
-    possible ways:
-</p>
-
-<pre id="append2">?- append(Xs,Ys,[a,b,c]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#append2&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    This second query has several answers. Again, press <code>;</code> or the space bar for more, or use the green Next button.
-</p>
-
-<h2>A small family program</h2>
-
-<p>
-    This node hosts some shared Prolog code. The small family program below is
-    part of that shared database, so you can query it directly.
-</p>
-
-<pre id="a">
-ancestor_descendant(X, Y) :-
-    parent_child(X, Y).
-ancestor_descendant(X, Z) :-
-    parent_child(X, Y),
-    ancestor_descendant(Y, Z).
-
-parent_child(X, Y) :-
-    mother_child(X, Y).
-parent_child(X, Y) :-
-    father_child(X, Y).
-
-mother_child(trude, sally).
-
-father_child(tom, sally).
-father_child(tom, erica).
-father_child(mike, tom).
-</pre>
-
-<p>
-    Ask for Mike's descendants:
-</p>
-
-<pre id="ancestor1">?- ancestor_descendant(mike, Who).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#ancestor1&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<h2>Stateless API limitations</h2>
-
-<p>
-    ISOBASE requests are independent: the server returns an answer or reaches
-    its request limit, then forgets the execution context. This deliberately
-    rules out the controls available on persistent ISOTOPE and ACTOR sessions.
-</p>
-
-<p>
-    That trade-off is useful when each query is self-contained: clients can
-    use ordinary HTTP, requests cannot leave session state behind, and the
-    node can enforce a clear time and resource bound for every call.
-</p>
-
-<h3>No abort</h3>
-
-<p>
-    There is no client-side abort operation for a stateless call. This goal
-    runs until n1's request timeout expires (currently two seconds):
-</p>
-
-<pre id="isobase-no-abort">?- repeat, fail.</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#isobase-no-abort&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-<h3>No I/O</h3>
-
-<p>
-    Output and input need a persistent conversation with the client, so they
-    are not part of the stateless API. The node rejects this call:
-</p>
-
-<pre id="isobase-no-io">?- writeln(hello).</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#isobase-no-io&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-<h3>No dynamic database manipulation</h3>
-
-<p>
-    A change made during one stateless request would have no session in which
-    to persist, so dynamic database updates are unavailable as well:
-</p>
-
-<pre id="isobase-no-dynamic-db">?- assertz(p(1)).</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#isobase-no-dynamic-db&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-</section>
-
-<section id="tutorial-movie-database" data-tutorial-sections="movie_database">
-<h1>Movie database</h1>
-
-<p>
-    Node <code>n1</code> hosts a movie database. Its facts describe films,
-    directors, actors, and actresses, and can be queried directly through the
-    stateless <code>/call</code> API.
-</p>
-
-<h2>Find films by year</h2>
-
-<pre id="movie-by-year">?- movie(Film, 2000).</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#movie-by-year&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-<h2>Find co-stars</h2>
-
-<p>
-    This query finds pairs of performers who appeared in the same film:
-</p>
-
-<pre id="movie-co-stars">?- actor(Film, First, _), actor(Film, Second, _), First @&gt; Second.</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#movie-co-stars&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-<h2>Find directors who also acted</h2>
-
-<pre id="movie-actor-director">?- actor(_, Person, _), director(_, Person).</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#movie-actor-director&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-</section>
-
-<section id="tutorial-dcg" data-tutorial-sections="dcg">
-<h1>Parsing and generating with a DCG</h1>
-
-<p>
-    A Definite Clause Grammar (DCG) is a clean Prolog notation for grammars.
-    Load this small one into your session, and you can use it to parse or
-    generate sentences:
-</p>
-
-<pre id="dcg1">s(s(NP,VP)) --&gt; np(NP, Num), vp(VP, Num).
-
-np(NP, Num) --&gt; pn(NP, Num).
-np(np(Det,N), Num) --&gt; det(Det, Num), n(N, Num).
-np(np(Det,N,PP), Num) --&gt; det(Det, Num), n(N, Num), pp(PP).
-
-vp(vp(V,NP), Num) --&gt; v(V, Num), np(NP, _).
-vp(vp(V,NP,PP), Num) --&gt; v(V, Num), np(NP, _), pp(PP).
-
-pp(pp(P,NP)) --&gt; p(P), np(NP, _).
-
-det(det(a), sg) --&gt; [a].
-det(det(the), _) --&gt; [the].
-
-pn(pn(john), sg) --&gt; [john].
-
-n(n(man), sg) --&gt; [man].
-n(n(men), pl) --&gt; [men].
-n(n(telescope), sg) --&gt; [telescope].
-
-v(v(sees), sg) --&gt; [sees].
-v(v(see), pl) --&gt; [see].
-v(v(saw), _) --&gt; [saw].
-
-p(p(with)) --&gt; [with].
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="consult(&quot;#dcg1&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
-</p>
-
-<p>
-    Ask for a parse tree:
-</p>
-
-<pre id="dcg2">?- phrase(s(Tree), [john,saw,a,man,with,a,telescope]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#dcg2&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    You can also use the same grammar for generation:
-</p>
-
-<pre id="dcg3">?- phrase(s(_),S).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#dcg3&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<div class="alert alert-info">
-  <strong>Tip!</strong> This program, like many other programs in this tutorial, can  
-  also be accessed from the list of Web Prolog source code in the Examples drawer. Clicking
-  on a file name will place the code in the editor and allow you to edit and run it.
-</div>
-
-</section>
-
-<section id="tutorial-distributed-isobase-programming" data-tutorial-sections="distributed_isobase">
-<h1>Distributed ISOBASE programming</h1>
-
-<p>
-    ISOBASE nodes can be composed across HTTP. The simplest form is a remote
-    query that behaves like ordinary Prolog backtracking; the promise form lets
-    you start the remote work first and collect the answer later.
-</p>
-
-
-<h2>Remote calls with rpc/2-3</h2>
-
-<p>
-    Web Prolog nodes can talk to each other. The predicate
-    <code>rpc/2-3</code> sends a goal to a remote node identified by a URI,
-    receives the answers over the stateless <code>/call</code> API, and turns
-    them back into ordinary Prolog backtracking.
-</p>
-
-<p>
-    Note that <code>rpc/2-3</code> talks specifically to the remote node's
-    stateless <code>/call</code> route. This remains true even if the target
-    happens to be an ACTOR node. So <code>rpc/2-3</code> can be used for
-    remote logical queries, but not for actor-only goals such as
-    <code>self/1</code>, <code>spawn/1-3</code>, or <code>receive/1-2</code>.
-</p>
-
-<p>
-    In this deployment, <code>n1</code> hosts:
-</p>
-
-<pre>human(plato).
-human(aristotle).
-</pre>
-
-<p>
-    while <code>n2</code> hosts:
-</p>
-
-<pre>mortal(Who) :- human(Who).
-
-human(socrates).
-human(Who) :-
-    rpc('https://n1.elfenbenstornet.se', human(Who)).
-</pre>
-
-<p>
-    From this portal, you can query <code>n2</code> directly:
-</p>
-
-<pre id="rpc1">?- rpc('https://n2.elfenbenstornet.se', mortal(Who)).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#rpc1&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    You should get
-    <code>socrates</code> from <code>n2</code> itself, followed by
-    <code>plato</code> and <code>aristotle</code> fetched remotely from
-    <code>n1</code>.
-</p>
-
-<h2>Remote calls with promises</h2>
-
-<p>
-    <code>promise/3-4</code> starts an asynchronous remote query and returns a
-    reference. Later, <code>yield/2-3</code> collects the answer produced by
-    that remote call.
-</p>
-
-<pre id="promise1">?- promise('https://n2.elfenbenstornet.se', mortal(Who), Ref).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#promise1&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="promise2">?- yield($Ref, Answer).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#promise2&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    The answer is returned as the same Prolog term format used by the stateless
-    remote call. The promise is useful when the caller has other work to do
-    before it needs the result.
-</p>
-
-<p>
-    That is essentially all of distributed ISOBASE: synchronous remote calls
-    via <code>rpc/2-3</code>, plus their asynchronous cousins
-    <code>promise/3-4</code> and <code>yield/2-3</code>. Anything more &mdash;
-    session state, side effects, actors that survive between requests &mdash;
-    needs the ISOTOPE or ACTOR profile, which the rest of the tutorial covers.
-</p>
-
-</section>
-
-
-
-</div>
-
+<main>
+  <h1>Web Prolog tutorial &ndash; the ISOBASE profile</h1>
+  <p class="lede">The final stop on the recommended path. ISOBASE treats each Prolog computation as an independent, bounded request.</p>
+  <p class="path">ACTOR &rarr; ISOTOPE &rarr; <strong>ISOBASE</strong></p>
+
+  <div class="note">
+    <strong>Before you begin.</strong> Select <strong>N1</strong>. Open the
+    Logger with the chevron on the right and select <strong>API</strong> to see
+    each stateless request and response. The separate
+    <a href="/isobase-api-tutorial">ISOBASE API tutorial</a> examines the HTTP
+    contract itself; this page stays with the programming profile.
+  </div>
+
+  <nav aria-label="Table of contents">
+    <ul>
+      <li><a href="#familiar">Familiar Prolog</a></li>
+      <li><a href="#stateless">The stateless boundary</a></li>
+      <li><a href="#unavailable">What is unavailable</a></li>
+      <li><a href="#choice">When to choose ISOBASE</a></li>
+    </ul>
+  </nav>
+
+  <section id="familiar">
+    <h2>Familiar Prolog</h2>
+    <p>Begin once more with the query used in the ACTOR and ISOTOPE tutorials:</p>
+    <pre id="isobase-append"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
+    <p><button type="button" data-ask="#isobase-append">Call</button></p>
+    <p>The answers are the same. What changes is the execution contract: asking for another answer means another self-contained stateless call rather than resuming a private toplevel session.</p>
+  </section>
+
+  <section id="stateless">
+    <h2>The stateless boundary</h2>
+    <p>Every N1 request carries the goal, any temporary source text and the paging options needed for that computation. When the response is returned or the time limit is reached, no client-visible execution context remains.</p>
+    <p>The Examples drawer makes the boundary visible. Actor programs and SXML statecharts are struck out as they were on N2; on N1, examples that need a persistent session, editor loading, I/O or database updates are struck out as well.</p>
+  </section>
+
+  <section id="unavailable">
+    <h2>What is unavailable</h2>
+
+    <h3>No interactive I/O</h3>
+    <p>There is no ongoing conversation to receive output or answer an input prompt, so N1 rejects I/O goals such as:</p>
+    <pre id="isobase-output"><code>?- writeln(hello).</code></pre>
+    <p><button type="button" data-ask="#isobase-output">Call</button></p>
+
+    <h3>No dynamic session database</h3>
+    <p>A database update would have no private session in which to survive. Both assertion and retraction fall outside the profile:</p>
+    <pre id="isobase-assert"><code>?- assertz(saved(isobase)).</code></pre>
+    <p><button type="button" data-ask="#isobase-assert">Call</button></p>
+    <pre id="isobase-retract"><code>?- retract(saved(X)).</code></pre>
+    <p><button type="button" data-ask="#isobase-retract">Call</button></p>
+
+    <h3>Timeout instead of Abort</h3>
+    <p>Start this non-terminating goal and observe that the workbench has no <strong>Abort</strong> button for N1:</p>
+    <pre id="isobase-timeout"><code>?- repeat, fail.</code></pre>
+    <p><button type="button" data-ask="#isobase-timeout">Call</button></p>
+    <div class="warning">
+      A stateless HTTP call has no separate control channel through which the
+      client can address and abort the running computation. N1 terminates it at
+      the server-enforced request timeout and reports the timeout as the result.
+    </div>
+  </section>
+
+  <section id="choice">
+    <h2>When to choose ISOBASE</h2>
+    <p>ISOBASE's main advantages are:</p>
+    <ul>
+      <li>a small, self-contained request/response contract;</li>
+      <li>no client session state to retain or recover;</li>
+      <li>straightforward replay, caching and load balancing; and</li>
+      <li>clear server-enforced time and resource bounds.</li>
+    </ul>
+    <p>It is a good fit for search, validation, transformation, inference and other function-like services whose result depends entirely on the request and shared read-only knowledge.</p>
+    <p>The price is deliberate: no private state between calls, interactive I/O, client Abort, independent actors or push communication. When one of those is essential, use ISOTOPE or ACTOR. When it is not, ISOBASE is the smallest and clearest Web Prolog contract.</p>
+    <div class="note">
+      <strong>The recommended profile path is complete.</strong> To see exactly
+      how the browser expresses these independent computations over HTTP, finish
+      with the <a href="/isobase-api-tutorial">ISOBASE API tutorial</a>.
+    </div>
+  </section>
+</main>
 <script>
-    function readThemeCookie(name) {
-        var prefix = name + "=";
-        var parts = String(document.cookie || "").split(/;\s*/);
-        var index;
-        for (index = 0; index < parts.length; index += 1) {
-            if (parts[index].indexOf(prefix) === 0) {
-                return decodeURIComponent(parts[index].slice(prefix.length));
-            }
-        }
-        return "";
+  (function () {
+    function bridge() {
+      try { return window.parent !== window ? window.parent.webPrologTutorialBridge : null; }
+      catch (_error) { return null; }
     }
-    function normalizeTutorialTheme(value) {
-        return value === "dark" ? "dark" : "light";
+    function applyAppearance(options) {
+      options = options || {};
+      var root = document.documentElement;
+      var size = parseInt(options.fontSize, 10);
+      root.setAttribute("data-theme", options.theme === "dark" ? "dark" : "light");
+      if (options.fontFamily) root.style.setProperty("--mono-font", options.fontFamily);
+      if (Number.isFinite(size)) {
+        root.style.setProperty("--mono-size", size + "px");
+        root.style.setProperty("--text-size", (size + 1) + "px");
+      }
+      if (options.fontWeight) root.style.setProperty("--mono-weight", options.fontWeight);
     }
-    function applyTutorialTheme(theme) {
-        var next = normalizeTutorialTheme(theme);
-        document.documentElement.setAttribute("data-theme", next);
-        document.documentElement.style.colorScheme = next;
-        refreshTutorialThemeSensitiveArtwork();
+    function restoreAppearance() {
+      applyAppearance({
+        theme: localStorage.getItem("wb.themeMode"),
+        fontFamily: localStorage.getItem("wb.monoFontFamily"),
+        fontSize: localStorage.getItem("wb.monoFontSize"),
+        fontWeight: localStorage.getItem("wb.monoFontWeight")
+      });
     }
-    function tutorialThemeValue(name) {
-        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    }
-    function refreshTutorialThemeSensitiveArtwork() {
-        if (typeof _scRefreshDiagramTheme === "function") {
-            _scRefreshDiagramTheme();
-        }
-    }
-    function tutorialAppearanceFromOptions(options) {
-        var fontSize = options && options.fontSize ? parseInt(options.fontSize, 10) : 13;
-        var fontWeight = options && options.fontWeight ? parseInt(options.fontWeight, 10) : 400;
-        var lineHeight = options && options.lineHeight ? String(options.lineHeight) : "1.45";
-        var theme = normalizeTutorialTheme(options && options.theme);
-        var textSize;
-        if (!Number.isFinite(fontSize)) {
-            fontSize = 13;
-        }
-        if ([300, 400, 500, 600].indexOf(fontWeight) < 0) {
-            fontWeight = 400;
-        }
-        textSize = fontSize + 1;
-        return {
-            theme: theme,
-            fontFamily: options && options.fontFamily ? String(options.fontFamily) : "\"IBM Plex Mono\", \"Menlo\", \"Consolas\", monospace",
-            fontSize: fontSize,
-            fontWeight: fontWeight,
-            lineHeight: lineHeight,
-            textSize: textSize,
-            titleSize: 25,
-            h1Size: 21,
-            h2Size: 17,
-            h3Size: 13
-        };
-    }
-    function applyTutorialAppearance(options) {
-        var root = document.documentElement;
-        var values = tutorialAppearanceFromOptions(options || {});
-        applyTutorialTheme(values.theme);
-        root.style.setProperty("--mono-font", values.fontFamily);
-        root.style.setProperty("--mono-size", values.fontSize + "px");
-        root.style.setProperty("--mono-weight", String(values.fontWeight));
-        root.style.setProperty("--mono-line-height", values.lineHeight);
-        root.style.setProperty("--tutorial-text-size", values.textSize + "px");
-        root.style.setProperty("--tutorial-title-size", values.titleSize + "px");
-        root.style.setProperty("--tutorial-h1-size", values.h1Size + "px");
-        root.style.setProperty("--tutorial-h2-size", values.h2Size + "px");
-        root.style.setProperty("--tutorial-h3-size", values.h3Size + "px");
-    }
-    function restoreTutorialAppearanceFromStorage() {
-        var family = window.localStorage.getItem("wb.monoFontFamily");
-        var size = parseInt(window.localStorage.getItem("wb.monoFontSize"), 10);
-        var weight = parseInt(window.localStorage.getItem("wb.monoFontWeight"), 10);
-        var cookieTheme = readThemeCookie("wp_theme_mode");
-        var themeValue = (cookieTheme === "dark" || cookieTheme === "light")
-            ? cookieTheme
-            : window.localStorage.getItem("wb.themeMode");
-        if (themeValue === "dark" || themeValue === "light") {
-            window.localStorage.setItem("wb.themeMode", themeValue);
-        }
-        applyTutorialAppearance({
-            theme: themeValue,
-            fontFamily: family || "\"IBM Plex Mono\", \"Menlo\", \"Consolas\", monospace",
-            fontSize: Number.isFinite(size) ? size : 13,
-            fontWeight: [300, 400, 500, 600].indexOf(weight) >= 0 ? weight : 400,
-            lineHeight: "1.45"
-        });
-    }
-    window.tutorialFrameBridge = {
-        applyAppearance: applyTutorialAppearance,
-        applyTheme: applyTutorialTheme
-    };
-    window.addEventListener("message", function(event) {
-        if (event.origin !== window.location.origin || !event.data) {
-            return;
-        }
-        if (event.data.type === "webprolog-theme") {
-            applyTutorialTheme(event.data.theme);
-        } else if (event.data.type === "webprolog-appearance") {
-            applyTutorialAppearance(event.data);
-        }
+    window.tutorialFrameBridge = { applyAppearance: applyAppearance, applyTheme: function (theme) { applyAppearance({ theme: theme }); } };
+    window.addEventListener("message", function (event) {
+      if (event.origin !== location.origin || !event.data) return;
+      if (event.data.type === "webprolog-appearance") applyAppearance(event.data);
+      if (event.data.type === "webprolog-theme") applyAppearance({ theme: event.data.theme });
     });
-    function tutorialBridge() {
-        try {
-            if (window.parent &&
-                window.parent !== window &&
-                window.parent.webPrologTutorialBridge) {
-                return window.parent.webPrologTutorialBridge;
-            }
-        } catch (e) {
-        }
-        return null;
-    }
-    function tutorialCurrentHost() {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.currentHost === "function") {
-            return bridge.currentHost();
-        }
-        return window.location.origin;
-    }
-    function tutorialCurrentSession() {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.currentSessionPid === "function") {
-            return bridge.currentSessionPid();
-        }
-        return "{{toplevel}}";
-    }
-    function replaceTutorialPlaceholder(value, placeholder, replacement) {
-        if (typeof value !== "string" || value.indexOf(placeholder) < 0) {
-            return value;
-        }
-        return value.split(placeholder).join(replacement);
-    }
-    function recursiveReplacePlaceholder(node, placeholder, replacement) {
-        var i;
-        if (!node) {
-            return;
-        }
-        if (node.nodeType === 3) {
-            node.nodeValue = replaceTutorialPlaceholder(node.nodeValue, placeholder, replacement);
-            return;
-        }
-        if (node.nodeType !== 1) {
-            return;
-        }
-        if (node.attributes) {
-            for (i = 0; i < node.attributes.length; i += 1) {
-                node.attributes[i].value = replaceTutorialPlaceholder(
-                    node.attributes[i].value,
-                    placeholder,
-                    replacement
-                );
-            }
-        }
-        Array.prototype.forEach.call(node.childNodes, function(child) {
-            recursiveReplacePlaceholder(child, placeholder, replacement);
-        });
-    }
-    function recursiveReplaceHost(node, host) {
-        recursiveReplacePlaceholder(node, "{{host}}", host);
-    }
-    function recursiveReplacePengine(node, pid) {
-        recursiveReplacePlaceholder(node, "{{toplevel}}", pid);
-    }
-    function recursiveReplaceActorPeerHost(node, host) {
-        recursiveReplacePlaceholder(node, "{{actor_peer_host}}", host);
-    }
-    function tutorialSlugify(text) {
-        var slug = String(text || "")
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "");
-        return slug || "section";
-    }
-    function tutorialHeadingText(heading) {
-        var clone = heading.cloneNode(true);
-        Array.prototype.forEach.call(clone.querySelectorAll(".heading-link"), function(link) {
-            link.remove();
-        });
-        return clone.textContent.trim();
-    }
-    function tutorialLinkForHeading(id) {
-        var bridge = tutorialBridge();
-        var url;
-        if (bridge && typeof bridge.tutorialSectionUrl === "function") {
-            return bridge.tutorialSectionUrl(id);
-        }
-        url = new URL(window.location.href);
-        url.hash = id;
-        return url.toString();
-    }
-    function copyTutorialHeadingLink(button, heading) {
-        var url = tutorialLinkForHeading(heading.id);
-        function markCopied() {
-            button.classList.add("copied");
-            button.setAttribute("aria-label", "Copied link to " + tutorialHeadingText(heading));
-            window.setTimeout(function() {
-                button.classList.remove("copied");
-                button.setAttribute("aria-label", "Copy link to " + tutorialHeadingText(heading));
-            }, 1200);
-        }
-        function fallbackCopy() {
-            var field = document.createElement("textarea");
-            field.value = url;
-            field.setAttribute("readonly", "");
-            field.style.position = "fixed";
-            field.style.left = "-9999px";
-            document.body.appendChild(field);
-            field.select();
-            try { document.execCommand("copy"); } catch (_error) {}
-            field.remove();
-            markCopied();
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(markCopied).catch(fallbackCopy);
-        } else {
-            fallbackCopy();
-        }
-    }
-    function installTutorialHeadingLinks(headings) {
-        headings.forEach(function(heading) {
-            var button;
-            if (!heading.id || heading.querySelector(".heading-link")) {
-                return;
-            }
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = "heading-link";
-            button.textContent = "#";
-            button.title = "Copy link";
-            button.setAttribute("aria-label", "Copy link to " + tutorialHeadingText(heading));
-            button.addEventListener("click", function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                copyTutorialHeadingLink(button, heading);
-            });
-            heading.appendChild(button);
-        });
-    }
-    function normalizeTutorialSections(value) {
-        if (!Array.isArray(value) || !value.length) {
-            return ["all"];
-        }
-        return value.map(function(section) { return String(section); });
-    }
-    function tutorialSectionEnabled(section, allowed) {
-        return allowed.indexOf("all") >= 0 || allowed.indexOf(section) >= 0;
-    }
-    function applyTutorialSections(value) {
-        var allowed = normalizeTutorialSections(value);
-        var firstVisible = null;
-        Array.prototype.forEach.call(
-            document.querySelectorAll("[data-tutorial-sections]"),
-            function(section) {
-                var names = String(section.getAttribute("data-tutorial-sections") || "")
-                    .split(/\s+/)
-                    .filter(Boolean);
-                var visible = names.some(function(name) {
-                    return tutorialSectionEnabled(name, allowed);
-                });
-                section.hidden = !visible;
-                section.setAttribute("aria-hidden", visible ? "false" : "true");
-                if (visible && !firstVisible) {
-                    firstVisible = section;
-                }
-            }
-        );
-        if (window.location.hash) {
-            var target = document.getElementById(window.location.hash.slice(1));
-            if (target && target.closest("section[hidden]") && firstVisible) {
-                window.location.hash = firstVisible.id;
-            }
-        }
-    }
-    function loadTutorialSections(bridge) {
-        if (bridge && typeof bridge.tutorialSections === "function") {
-            applyTutorialSections(bridge.tutorialSections());
-            return;
-        }
-        fetch("/node_info", { headers: { Accept: "application/json" } })
-            .then(function(response) {
-                if (!response.ok) {
-                    throw new Error("node_info unavailable");
-                }
-                return response.json();
-            })
-            .then(function(info) {
-                applyTutorialSections(info && info.tutorial_sections);
-                buildTutorialToc();
-            })
-            .catch(function() {});
-    }
-    function buildTutorialToc() {
-        var tutorial = document.getElementById("tutorial");
-        var toc = document.getElementById("tutorial-toc");
-        var headings;
-        var firstTitleSeen = false;
-        var used = Object.create(null);
-        if (!tutorial || !toc) {
-            return;
-        }
-        headings = Array.prototype.slice.call(
-            tutorial.querySelectorAll("h1, h2, h3")
-        ).filter(function(heading) {
-            if (toc.contains(heading)) {
-                return false;
-            }
-            if (heading.closest("section[hidden]")) {
-                return false;
-            }
-            if (!firstTitleSeen && heading.tagName === "H1") {
-                firstTitleSeen = true;
-                return false;
-            }
-            return true;
-        });
-        headings.forEach(function(heading) {
-            var baseId;
-            var uniqueId;
-            var suffix = 2;
-            if (heading.id) {
-                used[heading.id] = true;
-                return;
-            }
-            baseId = tutorialSlugify(tutorialHeadingText(heading));
-            uniqueId = baseId;
-            while (used[uniqueId] ||
-                   (document.getElementById(uniqueId) &&
-                    document.getElementById(uniqueId) !== heading)) {
-                uniqueId = baseId + "-" + suffix;
-                suffix += 1;
-            }
-            heading.id = uniqueId;
-            used[uniqueId] = true;
-        });
-        installTutorialHeadingLinks(headings);
-        toc.innerHTML = "";
-        if (!headings.length) {
-            return;
-        }
-        var title = document.createElement("h2");
-        var list = document.createElement("ul");
-        title.textContent = "Table of Contents";
-        toc.appendChild(title);
-        headings.forEach(function(heading) {
-            var item = document.createElement("li");
-            var link = document.createElement("a");
-            item.className = "toc-" + heading.tagName.toLowerCase();
-            link.href = "#" + heading.id;
-            link.textContent = tutorialHeadingText(heading);
-            item.appendChild(link);
-            list.appendChild(item);
-        });
-        toc.appendChild(list);
-    }
-    function tutorialBootstrapBridge() {
-        var bridge = tutorialBridge();
-        var currentHost = tutorialCurrentHost();
-        try {
-            recursiveReplaceHost(document.body, currentHost);
-            recursiveReplacePengine(document.body, tutorialCurrentSession());
-            recursiveReplaceActorPeerHost(document.body, tutorialActorPeerHost(currentHost));
-            loadTutorialSections(bridge);
-            buildTutorialToc();
-            if (bridge && typeof bridge.appearanceOptions === "function") {
-                applyTutorialAppearance(bridge.appearanceOptions());
-            } else {
-                restoreTutorialAppearanceFromStorage();
-            }
-            if (bridge) {
-                bridge.onStatechartTrace = function(text) { _scHandleTrace(text); };
-            }
-        } catch (e) {
-            console.warn("Tutorial bridge bootstrap failed:", e);
-        }
-    }
-    function withLegacyTerminal(action) {
-        if (typeof gterm === "undefined" || !gterm) {
-            return false;
-        }
-        if (gterm.get_prompt().trim() != "?-") {
-            gterm.exec("");
-        }
-        setTimeout(function() {
-            action(gterm);
-            setTimeout(gterm.enable, 0);
-        }, 5);
-        return true;
-    }
-    function tutorialUnavailable(actionName) {
-        console.warn("Tutorial action unavailable in this context:", actionName);
-    }
-    function tutorialNode(id) {
-        return document.querySelector(id);
-    }
-    function tutorialNodeText(id) {
-        var node = tutorialNode(id);
-        return node ? node.textContent : "";
-    }
-    function tutorialQueryFromExample(id) {
-        return tutorialNodeText(id).replace(/^\s*\?-\s*/, "").trim();
-    }
-    function tutorialActorPeerHost(host) {
-        if (/^https?:\/\/n3\.elfenbenstornet\.se\b/.test(host)) {
-            return "https://n4.elfenbenstornet.se";
-        }
-        if (/^https?:\/\/n4\.elfenbenstornet\.se\b/.test(host)) {
-            return "https://n3.elfenbenstornet.se";
-        }
-        return "https://n4.elfenbenstornet.se";
-    }
-    function consult(id) {
-        var bridge = tutorialBridge();
-        var val = tutorialNodeText(id);
-        if (bridge && typeof bridge.consultSource === "function") {
-            bridge.consultSource(val, id);
-            return;
-        }
-        if (!withLegacyTerminal(function(term) {
-            var program = val.replace(/'/g, "\\'");
-            term.echo("\n?- consult_text('" + id + "').");
-            term.exec("consult_text('" + program + "').", true);
-        })) {
-            tutorialUnavailable("consult");
-        }
-    }
-    function paste(query) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.pasteText === "function") {
-            bridge.pasteText(query);
-            return;
-        }
-        if (!withLegacyTerminal(function(term) {
-            term.insert(query);
-        })) {
-            tutorialUnavailable("paste");
-        }
-    }
-    function pasteExample(id) {
-        var query = tutorialQueryFromExample(id);
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.pasteExample === "function") {
-            bridge.pasteExample(query, id);
-            return;
-        }
-        if (!withLegacyTerminal(function(term) {
-            term.insert(query);
-        })) {
-            tutorialUnavailable("pasteExample");
-        }
-    }
-    function pasteAndAskExample(id) {
-        var query = tutorialQueryFromExample(id);
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.askExample === "function") {
-            bridge.askExample(query, id);
-            return;
-        }
-        if (!withLegacyTerminal(function(term) {
-            term.exec(query);
-        })) {
-            tutorialUnavailable("pasteAndAskExample");
-        }
-    }
-    function load_example(path) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.loadExample === "function") {
-            bridge.loadExample(path);
-            return;
-        }
-        console.warn("Tutorial example path is not wired in this context:", path);
-    }
-    tutorialBootstrapBridge();
-
-    // ── Statechart spawn: populate Examples menu then submit query ───────────
-    function scSpawn(exampleId) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.setTerminalExamples === 'function') {
-            bridge.setTerminalExamples([
-                { label: '$Pid ! play.',   query: '$Pid ! play.'   },
-                { label: '$Pid ! reset.',  query: '$Pid ! reset.'  },
-                { label: '$Pid ! pause.',  query: '$Pid ! pause.'  },
-                { label: '$Pid ! resume.', query: '$Pid ! resume.' },
-                { label: '$Pid ! stop.',   query: '$Pid ! stop.'   }
-            ]);
-        }
-        pasteAndAskExample(exampleId);
-    }
-
-    function scSpawnGcd(exampleId) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.setTerminalExamples === 'function') {
-            bridge.setTerminalExamples([
-                { label: '$Pid ! input([25, 10, 15, 30]).', query: '$Pid ! input([25, 10, 15, 30]).' },
-                { label: '$Pid ! input([12, 8, 4]).',       query: '$Pid ! input([12, 8, 4]).'       }
-            ]);
-        }
-        pasteAndAskExample(exampleId);
-    }
-
-    function scSpawnSpaghetti(exampleId) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.setTerminalExamples === 'function') {
-            bridge.setTerminalExamples([
-                { label: '$Pid ! a.', query: '$Pid ! a.' },
-                { label: '$Pid ! b.', query: '$Pid ! b.' },
-                { label: '$Pid ! c.', query: '$Pid ! c.' },
-                { label: '$Pid ! d.', query: '$Pid ! d.' },
-                { label: '$Pid ! e.', query: '$Pid ! e.' },
-                { label: '$Pid ! f.', query: '$Pid ! f.' },
-                { label: '$Pid ! g.', query: '$Pid ! g.' },
-                { label: '$Pid ! h.', query: '$Pid ! h.' }
-            ]);
-        }
-        pasteAndAskExample(exampleId);
-    }
-
-    function scSpawnEmotions(exampleId) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.setTerminalExamples === 'function') {
-            bridge.setTerminalExamples([
-                { label: '$Pid ! e.', query: '$Pid ! e.' },
-                { label: '$Pid ! d.', query: '$Pid ! d.' },
-                { label: '$Pid ! f.', query: '$Pid ! f.' }
-            ]);
-        }
-        pasteAndAskExample(exampleId);
-    }
-
-    function scSpawnDialog(exampleId) {
-        var bridge = tutorialBridge();
-        if (bridge && typeof bridge.setTerminalExamples === 'function') {
-            bridge.setTerminalExamples([
-                { label: '$Pid ! input([red]).',           query: '$Pid ! input([red]).'           },
-                { label: '$Pid ! input([blue]).',          query: '$Pid ! input([blue]).'          },
-                { label: '$Pid ! input([a, red, box]).',   query: '$Pid ! input([a, red, box]).'   },
-                { label: '$Pid ! input([big]).',           query: '$Pid ! input([big]).'           },
-                { label: '$Pid ! input([small]).',         query: '$Pid ! input([small]).'         },
-                { label: '$Pid ! input([a, big, box]).',   query: '$Pid ! input([a, big, box]).'   },
-                { label: '$Pid ! input([a, small, box]).', query: '$Pid ! input([a, small, box]).' },
-                { label: '$Pid ! input([hello]).',         query: '$Pid ! input([hello]).'         }
-            ]);
-        }
-        pasteAndAskExample(exampleId);
-    }
-
-    // ── Pause-and-resume statechart diagram ──────────────────────────────────
-    // Driven by statechart_trace events forwarded from the demonstrator.
-    // The demonstrator calls bridge.onStatechartTrace(text) whenever a trace
-    // event arrives; tutorialBootstrapBridge registers the callback below.
-
-    var _scLastEvent = null;   // most recent external_event seen
-    var _scCurrentState = null;
-    var _scCurrentTrans = null;
-
-    function _scHandleTrace(text) {
-        var parsed = _scParseTerm(text);
-        if (!parsed) { return; }
-        if (parsed.name === 'external_event' && parsed.args.length >= 1) {
-            _scLastEvent = parsed.args[0].trim();
-            return;
-        }
-        if (parsed.name === 'configuration' && parsed.args.length >= 1) {
-            var states  = _scParseList(parsed.args[0]);
-            var leafs   = ['s1', 's2', 'interrupted', 'final'];
-            var active  = null;
-            for (var i = 0; i < leafs.length; i++) {
-                if (states.indexOf(leafs[i]) >= 0) { active = leafs[i]; break; }
-            }
-            if (active) {
-                var eventToTrans = {
-                    play: 'play', reset: 'reset',
-                    pause: 'pause', resume: 'resume', stop: 'stop'
-                };
-                var trans = _scLastEvent ? (eventToTrans[_scLastEvent] || null) : null;
-                _scRenderDiagram(active, trans);
-            }
-            _scLastEvent = null;
-        }
-    }
-
-    function _scParseTerm(text) {
-        var m = String(text).match(/^([a-z_][A-Za-z0-9_]*)\(([\s\S]*)\)$/);
-        if (!m) { return null; }
-        return { name: m[1], args: _scSplitArgs(m[2]) };
-    }
-
-    function _scSplitArgs(s) {
-        var args = [], depth = 0, start = 0;
-        for (var i = 0; i < s.length; i++) {
-            var c = s[i];
-            if (c === '(' || c === '[') { depth++; }
-            else if (c === ')' || c === ']') { depth--; }
-            else if (c === ',' && depth === 0) {
-                args.push(s.slice(start, i).trim());
-                start = i + 1;
-            }
-        }
-        args.push(s.slice(start).trim());
-        return args;
-    }
-
-    function _scParseList(text) {
-        var m = text.trim().match(/^\[([\s\S]*)\]$/);
-        if (!m) { return []; }
-        var inner = m[1].trim();
-        return inner ? _scSplitArgs(inner) : [];
-    }
-
-    function _scRenderDiagram(state, trans) {
-        var svg = document.getElementById('sc-pr-diagram');
-        if (!svg) { return; }
-        _scCurrentState = state || null;
-        _scCurrentTrans = trans || null;
-        ['s1', 's2', 'interrupted', 'final'].forEach(function(id) {
-            var el = document.getElementById('sc-state-' + id);
-            if (el) { el.setAttribute('fill', 'none'); }
-        });
-        ['play', 'reset', 'pause', 'resume', 'stop'].forEach(function(id) {
-            var el = document.getElementById('sc-trans-' + id);
-            if (el) {
-                el.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-line'));
-                el.setAttribute('stroke-width', '1.5');
-                el.setAttribute('marker-end', 'url(#sc-arr)');
-            }
-        });
-        if (state) {
-            var stateEl = document.getElementById('sc-state-' + state);
-            if (stateEl) { stateEl.setAttribute('fill', tutorialThemeValue('--tutorial-diagram-active-fill')); }
-        }
-        if (trans) {
-            var transEl = document.getElementById('sc-trans-' + trans);
-            if (transEl) {
-                transEl.setAttribute('stroke', tutorialThemeValue('--tutorial-diagram-highlight'));
-                transEl.setAttribute('stroke-width', '2');
-                transEl.setAttribute('marker-end', 'url(#sc-arr-hi)');
-            }
-        }
-    }
-    function _scRefreshDiagramTheme() {
-        if (document.getElementById('sc-pr-diagram')) {
-            _scRenderDiagram(_scCurrentState, _scCurrentTrans);
-        }
-    }
+    document.querySelectorAll("[data-ask]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var node = document.querySelector(button.getAttribute("data-ask"));
+        var api = bridge();
+        var query = node ? node.textContent.replace(/^\s*\?-\s*/, "").trim() : "";
+        if (api && typeof api.askExample === "function") api.askExample(query, button.getAttribute("data-ask"));
+      });
+    });
+    var api = bridge();
+    if (api && typeof api.appearanceOptions === "function") applyAppearance(api.appearanceOptions());
+    else restoreAppearance();
+  }());
 </script>
 </body>
 </html>

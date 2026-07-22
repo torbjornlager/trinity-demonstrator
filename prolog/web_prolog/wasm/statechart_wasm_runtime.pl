@@ -34,7 +34,8 @@
     in/1,
     log/1,
     script/1,
-    check_chart_goal/1
+    check_chart_goal/1,
+    call_chart_goal/1
 ]).
 
 /** <module> Statechart Runtime Helpers (SWI-WASM port)
@@ -322,9 +323,13 @@ log(Message) :-
 check_chart_goal(Goal) :-
     forall(hook_check_chart_goal(Goal), true).
 
+call_chart_goal(Goal) :-
+    forall(hook_check_chart_goal(Goal), true),
+    call(statechart_wasm:Goal).
+
 script(Goal) :-
     emit_trace(execution(Goal)),
-    (   catch(( check_chart_goal(Goal), once(statechart_wasm:Goal) ),
+    (   catch(once(call_chart_goal(Goal)),
               Error,
               ( enqueue_internal_event(error(Error)),
                 true

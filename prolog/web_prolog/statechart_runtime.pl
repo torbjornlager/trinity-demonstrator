@@ -33,7 +33,8 @@
     in/1,
     log/1,
     script/1,
-    check_chart_goal/1
+    check_chart_goal/1,
+    call_chart_goal/1
 ]).
 
 /** <module> Statechart Runtime Helpers
@@ -48,6 +49,7 @@ statechart actor interpreter. The runtime state itself lives in
 
 :- use_module(library(option)).
 :- use_module(library(debug)).
+:- use_module(isolation, [execution_source_module/2]).
 
 :- meta_predicate with_internal_queue(0).
 
@@ -279,23 +281,36 @@ log(Message) :-
     debug(statechart_actor(log), '   Output log: ~p', [Message]).
 
 %!  check_chart_goal(+Goal) is det.
+%!  call_chart_goal(+Goal) is nondet.
 %
 %   Vet a chart-embedded goal -- an <onentry>/<onexit>/<go> script action
 %   or a transition condition -- before it runs.  A no-op unless a higher
-%   layer installs hook_check_chart_goal/1: the node layer does so to
+%   layer installs hook_check_chart_goal/2: the node layer does so to
 %   sandbox the goal under the active public execution profile, so an
 %   untrusted client chart (e.g. spawned via statechart_spawn/2 with
 %   src_text/1) cannot execute arbitrary predicates through its scripts.
+%   call_chart_goal/1 executes in the current actor's private module.  On a
+%   node this exposes the node's shared database while letting predicates in
+%   the chart datamodel shadow shared predicates with the same name.
 %   Throws (rejecting the goal) if a hook does; trusted desktop/test
 %   execution installs no hook and is therefore unchanged.
-:- multifile hook_check_chart_goal/1.
+:- multifile hook_check_chart_goal/2.
 
 check_chart_goal(Goal) :-
-    forall(hook_check_chart_goal(Goal), true).
+    chart_goal_module(Module),
+    forall(hook_check_chart_goal(Module, Goal), true).
+
+call_chart_goal(Goal) :-
+    chart_goal_module(Module),
+    forall(hook_check_chart_goal(Module, Goal), true),
+    call(Module:Goal).
+
+chart_goal_module(Module) :-
+    execution_source_module(statechart_actor, Module).
 
 script(Goal) :-
     emit_trace(execution(Goal)),
-    (   catch(( check_chart_goal(Goal), once(statechart_actor:Goal) ),
+    (   catch(once(call_chart_goal(Goal)),
               Error,
               ( enqueue_internal_event(error(Error)),
                 true

@@ -181,8 +181,8 @@ services:
   # start_node.pl), self-contained — no sibling web-prolog checkout. The
   # node runs WP_AUTH=private; oauth2_n5 authenticates each visitor and
   # the n5 Caddy vhost injects the verified identity as X-Web-Prolog-User
-  # (trusted only from this private proxy peer). Logged-in users get the
-  # WP_AUTHENTICATED_DEFAULT_CAPS "registered" tier.
+  # (trusted only from this private proxy peer). Only WP_N5_OWNER gets
+  # capabilities; every other authenticated identity is denied.
   wp_n5:
     build:
       context: ..
@@ -198,12 +198,12 @@ services:
       WP_PORT: "3060"
       WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
       WP_PROFILE: "${WP_N5_PROFILE:-actor}"
+      WP_SHARED_DB_OVERLAY_FILE: "/app/Deployment/shared_db_n5.pl"
       WP_AUTH: "private"
       WP_SANDBOX: "${WP_N5_SANDBOX:-blacklist}"
-      # SSO users (verified by oauth2_n5, injected as X-Web-Prolog-User)
-      # with no explicit policy entry get this capability tier.
-      WP_AUTHENTICATED_DEFAULT_CAPS: "${WP_N5_DEFAULT_CAPS:-execute}"
-      WP_OWNER: "${WP_N5_OWNER:-}"
+      # Fail closed: only the explicitly configured owner gets capabilities.
+      WP_AUTHENTICATED_DEFAULT_CAPS: ""
+      WP_OWNER: "${WP_N5_OWNER:?Set WP_N5_OWNER to your verified GitHub email}"
       # n5 is the complete reference node; its tutorial retains every section.
       WP_TUTORIAL_SECTIONS: "${WP_N5_TUTORIAL_SECTIONS:-all}"
       # Resource ceilings (now actually forwarded — see compose passthrough).
@@ -239,17 +239,15 @@ services:
       OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
       OAUTH2_PROXY_COOKIE_SECURE: "true"
       OAUTH2_PROXY_REDIRECT_URL: "https://n5.elfenbenstornet.se/oauth2/callback"
-      OAUTH2_PROXY_PROVIDER: "${OAUTH2_PROXY_PROVIDER:-github}"
+      OAUTH2_PROXY_PROVIDER: "github"
       OAUTH2_PROXY_CLIENT_ID: "${OAUTH2_PROXY_CLIENT_ID}"
       OAUTH2_PROXY_CLIENT_SECRET: "${OAUTH2_PROXY_CLIENT_SECRET}"
       OAUTH2_PROXY_COOKIE_SECRET: "${OAUTH2_PROXY_COOKIE_SECRET}"
-      # Registration allowlist — set the one(s) matching your provider.
-      # NB: --email-domain is repeatable, so the env var is PLURAL
-      # (OAUTH2_PROXY_EMAIL_DOMAINS); the singular form is silently ignored.
-      OAUTH2_PROXY_EMAIL_DOMAINS: "${OAUTH2_PROXY_EMAIL_DOMAINS:-*}"
-      OAUTH2_PROXY_GITHUB_ORG: "${OAUTH2_PROXY_GITHUB_ORG:-}"
-      OAUTH2_PROXY_GITHUB_USERS: "${OAUTH2_PROXY_GITHUB_USERS:-}"
-      OAUTH2_PROXY_OIDC_ISSUER_URL: "${OAUTH2_PROXY_OIDC_ISSUER_URL:-}"
+      # GitHub itself verifies the identity; this mandatory login allowlist
+      # is the outer owner-only gate. '*' is safe here because GitHub user
+      # restriction is also required.
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_GITHUB_USERS: "${OAUTH2_PROXY_GITHUB_USERS:?Set OAUTH2_PROXY_GITHUB_USERS to your sole GitHub login}"
     expose:
       - "4180"
     networks:

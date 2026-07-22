@@ -227,6 +227,23 @@ async function main() {
   S.onmessage({ data: { command: "reply", id: chartReq.id, ok: true, result: "5500000000" } });
   ok((await chartP) === "5500000000", "statechart spawn returns its Worker pid");
 
+  // 12. Deliberate terminal output from a statechart remains a Prolog term
+  // for the coordinator to place in the spawning shell's actor mailbox.
+  // Raw engine output continues to use the ordinary output stream.
+  const Chart = loadWorker();
+  Chart.onmessage({ data: {
+    command: "start",
+    pid: "invalid_statechart",
+    role: "statechart_actor"
+  } });
+  Chart.actorTerminalOutput("result(shared,local)", "result(shared,local)");
+  const chartOutput = Chart._posted.filter(function(m) {
+    return m.type === "terminal_output";
+  }).pop();
+  ok(!!chartOutput && chartOutput.term === "result(shared,local)" &&
+     !Object.prototype.hasOwnProperty.call(chartOutput, "output"),
+     "statechart terminal output crosses the Worker boundary as a mailbox term");
+
   console.log(failures === 0
     ? "\nswi_wasm_actor_worker smoke: PASS"
     : "\nswi_wasm_actor_worker smoke: FAIL (" + failures + ")");

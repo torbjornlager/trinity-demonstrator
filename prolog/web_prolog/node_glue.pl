@@ -178,18 +178,18 @@ actors:hook_spawn_abort(Context) :-
     node_ws:abort_inherited_ws_actor_spawn(Context).
 
 %  Sandbox the goals a statechart embeds in its <onentry>/<onexit>/<go>
-%  scripts and transition conditions.  The interpreter runs these as
-%  statechart_actor:Goal with no checking of its own, so for a chart
-%  spawned by an untrusted client (public execution profile active, and
-%  propagated into the interpreter actor by hook_spawn_context/2) they
+%  scripts and transition conditions.  The interpreter runs these in its
+%  private actor module.  For a chart spawned by an untrusted client, the
+%  public execution profile is propagated into the interpreter actor by
+%  hook_spawn_context/2, so its goals
 %  must pass the node sandbox -- otherwise a src_text/1 chart could run
 %  arbitrary predicates.  No public profile (trusted desktop/test charts)
 %  => no clause => check_chart_goal/1 is a no-op and behaviour is frozen.
-:- multifile statechart_runtime:hook_check_chart_goal/1.
-statechart_runtime:hook_check_chart_goal(Goal) :-
+:- multifile statechart_runtime:hook_check_chart_goal/2.
+statechart_runtime:hook_check_chart_goal(Module, Goal) :-
     current_public_execution_profile(Profile),
     !,
-    node_sandbox:sandbox_check_goal_in_module(Profile, statechart_actor, Goal).
+    node_sandbox:sandbox_check_goal_in_module(Profile, Module, Goal).
 
 
                 /*******************************
