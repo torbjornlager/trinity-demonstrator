@@ -28,7 +28,6 @@ facade re-publishes it for legacy-surface consumers.
 :- reexport(distribution, [
     make_id/1,
     remote_request_spawn/3,
-    remote_request_halt/3,
     remote_send_command/2,
     register_remote_pid/2,
     flush_pending_for_pid/2

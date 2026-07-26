@@ -526,13 +526,15 @@ toplevel_next(+Pid, +Options) is det.</pre>
     <p>Tells the local toplevel <code>Pid</code> to abort the execution of the currently running goal. An unknown or non-local pid has no effect.</p>
 </article>
 
-<article class="predicate-entry" id="toplevel_halt/2">
+<article class="predicate-entry" id="toplevel_halt/1-2">
     <div class="predicate-head">
-        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_halt/2</span></div>
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">toplevel_halt/1-2</span></div>
         <div class="predicate-family">actor</div>
     </div>
-    <pre>toplevel_halt(+Pid, -Reply) is det.</pre>
-    <p>Sends <code>'$halt'</code> to an idle toplevel actor <code>Pid</code>, causing it to terminate from its idle state and acknowledge with <code>Reply</code>.</p>
+    <pre>toplevel_halt(+Pid) is det.
+toplevel_halt(+Pid, -Reply) is det.</pre>
+    <p>Terminates toplevel actor <code>Pid</code> from any protocol state. The one-argument form requests termination through the actor runtime and returns without waiting for confirmation. The two-argument form installs a private monitor, requests termination, and waits until termination has been observed; it then unifies <code>Reply</code> with <code>true</code>.</p>
+    <p><strong>Note:</strong> The private monitor used by <code>toplevel_halt/2</code> is distinct from any existing monitor. If the toplevel was spawned with <code>monitor(true)</code>, the caller still receives its original <code>down(Pid, Pid, true)</code> notification.</p>
 </article>
 
 <h2 id="sec:server-api">Predicates for programming with server actors</h2>

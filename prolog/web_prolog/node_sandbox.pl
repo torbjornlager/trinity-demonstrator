@@ -645,6 +645,7 @@ sandbox_public_goal(toplevel_call(_, _, _)).
 sandbox_public_goal(toplevel_next(_)).
 sandbox_public_goal(toplevel_next(_, _)).
 sandbox_public_goal(toplevel_stop(_)).
+sandbox_public_goal(toplevel_halt(_)).
 sandbox_public_goal(toplevel_halt(_, _)).
 sandbox_public_goal(toplevel_abort(_)).
 

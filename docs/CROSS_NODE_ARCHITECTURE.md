@@ -249,11 +249,11 @@ flowchart LR
     Conn <-->|"JSON frames"| WS
     WS -->|"spawn/send/exit/toplevel_*"| RemoteActor
     RemoteActor -->|"actor events"| Queue
-    WS -->|"spawned/halted/error"| Queue
+    WS -->|"spawned/error"| Queue
     WS -->|"success/output/prompt/down/..."| Queue
     Queue -->|"serialized events"| Conn
     Conn --> Reader
-    Reader -->|"spawned/halted/error"| SpawnQ
+    Reader -->|"spawned/error"| SpawnQ
     Reader -->|"pid event, target ready"| Controller
     Reader -->|"pid event, target missing"| Pending
     Controller -->|"send(Target, Event)"| Parent
@@ -273,9 +273,8 @@ connection there is:
 - one socket;
 - one reader thread (runs the inbound dispatch loop, §6);
 - one per-connection **spawn queue** — an in-process message queue
-  used as the rendezvous for `spawned`, `halted`, and `spawn_error`
-  responses to synchronous requests (`remote_request_spawn`,
-  `remote_request_halt`);
+  used as the rendezvous for `spawned` and `spawn_error` responses to
+  synchronous `remote_request_spawn` requests;
 - one **send mutex** that serializes outbound frames so that
   per-(sender, receiver) FIFO is preserved.
 
@@ -593,38 +592,38 @@ observability so dropped kills do not orphan remote actors silently.
 
 ### 5.6 Cross-node `toplevel_halt`
 
-The local entry point:
+Toplevel termination uses the ordinary distributed actor primitives
+rather than a separate mailbox or wire protocol:
 
 ```prolog
-toplevel_halt(RemoteId@NodeURL, Reply) :-
-    \+ localhost_node(NodeURL),
-    !,
-    remote_request_halt(NodeURL, RemoteId, Reply).
+toplevel_halt(Pid) :-
+    exit(Pid, true).
+
+toplevel_halt(Pid, Reply) :-
+    monitor(Pid, Ref),
+    setup_call_cleanup(
+        true,
+        (   toplevel_halt(Pid),
+            receive({
+                down(Pid, Ref, _) ->
+                    Reply = true
+            })
+        ),
+        demonitor(Ref, [flush])
+    ).
 ```
 
-`remote_request_halt/3` is symmetric with `remote_request_spawn/3`:
+For a remote pid, `monitor/2` records the private monitor in the
+controller and `exit/2` sends the ordinary `exit` command. The remote
+actor's `down` event is routed back through the controller to the
+waiting caller. The private reference is distinct from any spawn-time
+monitor, so `toplevel_halt/2` does not consume an application-owned
+notification.
 
-```prolog
-remote_request_halt(NodeURL, RemotePid, Reply) :-
-    ws_mutex(NodeURL, ws_spawn_lock, Mutex),
-    with_mutex(Mutex,
-        ( remote_connection(NodeURL, Socket, SpawnQueue),
-          ws_send_json(Socket, json{
-              command: toplevel_halt,
-              pid: RemotePid
-          }),
-          remote_wait_halted(SpawnQueue, RemotePid, Reply)
-        )).
-```
-
-The remote node's `toplevel_halt` WS handler is a synchronous
-predicate that calls the local `toplevel_halt(Pid, Reply)`,
-receives the toplevel's `reply(_)` term, and emits `halted(Pid,
-Reply)` on the connection's send queue.  The relay serializes the
-reply via `term_to_json_string/2`.  On the caller side the inbound
-dispatcher parses the wire reply string back into a term via
-`term_to_atom/2` before placing `halted(RemotePid, ReplyTerm)` on
-the spawn queue.
+The browser transport retains its `toplevel_halt` command and
+`halted` response for API compatibility. Its handler calls the same
+local `toplevel_halt/2`, so it also terminates a toplevel from any
+protocol state and acknowledges only after observing termination.
 
 ### 5.7 The `register_remote_pid` and `flush_pending_for_pid` helpers
 
@@ -689,29 +688,18 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
         normalize_remote_pid(RawPid, RemotePid)
     ->  best_effort(thread_send_message(SpawnQueue, spawned(RemotePid)))
 
-    ;   %  3. halt ack
-        get_dict(type, Dict, "halted"),
-        get_dict(pid, Dict, RawPid),
-        normalize_remote_pid(RawPid, RemotePid)
-    ->  (   get_dict(reply, Dict, Reply0),
-            parse_halted_reply(Reply0, ReplyTerm)
-        ->  ReplyValue = ReplyTerm
-        ;   ReplyValue = true
-        ),
-        best_effort(thread_send_message(SpawnQueue, halted(RemotePid, ReplyValue)))
-
-    ;   %  4. spawn error (no pid)
+    ;   %  3. spawn error (no pid)
         get_dict(type, Dict, "error"),
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
         best_effort(thread_send_message(SpawnQueue, spawn_error(ErrorData)))
 
-    ;   %  5. remote I/O output -- dropped (capability scoping)
+    ;   %  4. remote I/O output -- dropped (capability scoping)
         remote_event_pid(Dict, _),
         ws_json_is_io_output(Dict)
     ->  true
 
-    ;   %  6. per-pid event, target registered -- forward
+    ;   %  5. per-pid event, target registered -- forward
         remote_event_pid(Dict, RemotePid),
         CompoundPid = RemotePid@NodeURL,
         node_controller:current_remote_target(CompoundPid, Target),
@@ -1099,7 +1087,6 @@ take_remote_monitors_on_node/2    drop_remote_state_for_node/1
 
 ```
 remote_request_spawn/3            % +NodeURL, +Command, -RemotePid
-remote_request_halt/3             % +NodeURL, +RemotePid, -Reply
 remote_send_command/2             % +NodeURL, +Command
 safe_remote_kill_send/4           % +Node, +Pid, +ReasonAtom, +Command
 
@@ -1159,11 +1146,11 @@ delivers correctly.
 ### 14.3 Connection-drop during in-flight operations
 
 If the outbound WS drops while a synchronous `remote_request_spawn`
-or `remote_request_halt` is waiting on the spawn queue, the
-connection-drop cleanup destroys the queue.  The caller's
-`thread_get_message/2` then throws; the synchronous helper wraps
-this in a domain-specific error (`remote_spawn_failed`,
-`remote_halt_failed`).
+is waiting on the spawn queue, the connection-drop cleanup destroys
+the queue. The caller's `thread_get_message/2` then throws, and the
+synchronous helper wraps this in `remote_spawn_failed`. A
+`toplevel_halt/2` call instead waits on its private monitor; connection
+cleanup resolves outstanding remote monitors with a `down` event.
 
 ### 14.4 Concurrent spawns to the same remote
 
@@ -1171,7 +1158,7 @@ Multiple local actors spawning concurrently on the same remote
 serialize through the per-connection spawn mutex.  Spawn responses
 on the shared spawn queue are therefore consumed in the order
 spawn commands were issued; each waiter receives the first
-unconsumed `spawned/halted/spawn_error` message.
+unconsumed `spawned` or `spawn_error` message.
 
 ---
 
@@ -1180,15 +1167,15 @@ unconsumed `spawned/halted/spawn_error` message.
 In the reference (this repository):
 
 - `node_controller.pl` — the controller module and its three tables.
-- `actor.pl` — `spawn_remote/4`, `remote_request_spawn/3`,
-  `remote_request_halt/3`, `safe_remote_kill_send/4`,
+- `distribution.pl` — `spawn_remote/4`, `remote_request_spawn/3`,
+  `safe_remote_kill_send/4`,
   `register_remote_pid/2`, `flush_pending_for_pid/2`,
   `remote_ws_dispatch/3`, `remote_per_pid_dispatch/2`,
   `deliver_remote_down_via_controller/2`,
   `remote_ws_connection_closed/1`, and the cleanup integration in
   `stop/2`.
-- `toplevel_actor.pl` — `toplevel_spawn/2` (remote case),
-  `toplevel_halt/2` (remote case).
+- `toplevel_actors.pl` — `toplevel_spawn/2` and
+  `toplevel_halt/1-2`.
 - `remote_protocol.pl` — wire encoding helpers
   (`term_to_wire_atom/2`, `ws_json_to_actor_event/3`, etc.).
 - `node_ws.pl` — the remote-side WebSocket handlers

@@ -652,14 +652,10 @@ ws_action_toplevel_stop(Dict, Queue, Principal) :-
 
 %!  ws_action_toplevel_halt(+Dict, +Queue, +Principal) is det.
 %
-%   Halt an idle local toplevel session and send a `halted(Pid, Reply)`
-%   event back over the connection.  Used to terminate cross-node
-%   toplevel_halt/2 calls: the remote-side proxy on the calling node
-%   sends a {command:toplevel_halt, pid} JSON command, this handler
-%   delivers '$halt'(Self) to the local toplevel, waits for its
-%   reply(_) message, then thread_send_message(Queue, halted(Pid, Reply)).
-%   The relay serializes that as {type:halted, pid, reply} which the
-%   calling node routes to its waiting remote_request_halt/3 caller.
+%   Terminate a local toplevel session from any protocol state and send a
+%   `halted(Pid, Reply)` event after termination has been observed.  This
+%   command remains part of the browser transport; Prolog-to-Prolog calls use
+%   the ordinary distributed monitor/exit machinery.
 ws_action_toplevel_halt(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_halt),
     ws_get_pid(Dict, Pid),
@@ -1080,8 +1076,8 @@ prepare_inherited_ws_actor_spawn(ParentPid0, Options, Context) :-
 %   ws_forget_actor_registry to retract this Pid's ws_actor/2 row.
 %   Without this monitor, the row leaks and /admin/runtime keeps
 %   listing the actor after its thread is gone (concretely observed
-%   for cross-node toplevel_halt where the local proxy on the calling
-%   node exits cleanly but its ws_actor record is never reaped).
+%   when a cross-node proxy exits cleanly but its ws_actor record is
+%   never reaped).
 commit_inherited_ws_actor_spawn(none, _Pid) :-
     !.
 commit_inherited_ws_actor_spawn(inherited_ws_actor(Queue, Principal,

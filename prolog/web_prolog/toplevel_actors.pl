@@ -5,6 +5,7 @@
      toplevel_call/3,
      toplevel_next/1,
      toplevel_next/2,
+     toplevel_halt/1,
      toplevel_halt/2,
      toplevel_stop/1,
      toplevel_abort/1
@@ -21,20 +22,19 @@ The actor speaks a small command protocol over mailbox messages:
 
   - `'$call'(Goal, Options)` to start a query,
   - `'$next'(Options)` to fetch additional solutions,
-  - `'$stop'` to stop paging,
-  - `'$halt'(From)` to halt an idle toplevel session.
+  - `'$stop'` to stop paging.
 
 Replies are sent as `success/failure/error` terms enriched with `Pid`.
 
-Extracted from the demonstrator's toplevel_actor.pl.  The cross-node
-paths (remote toplevel spawn, remote halt) are claimed by the
-distribution layer through two hooks:
+Extracted from the demonstrator's toplevel_actor.pl.  Cross-node
+toplevel spawns are claimed by the distribution layer through a hook:
 
   - hook_toplevel_spawn(-Pid, +SourceModule, +Options): take over a
     toplevel spawn entirely (distribution claims spawns whose node(N)
     option names a non-local node).
-  - hook_toplevel_halt(+Pid, -Reply): take over halting (distribution
-    claims `Id@Node` pids).
+
+Halting uses the ordinary actor exit and monitor machinery, including
+for remote pids.
 
 Per-'$call' goal guarding goes through isolation's prepare_goal/3 hook
 (via isolation:prepared_goal/3), exactly where the demonstrator called
@@ -48,6 +48,9 @@ rewrite_goal_if_needed/3.
     self/1,
     send/2,
     receive/1,
+    monitor/2,
+    demonitor/2,
+    exit/2,
     register/2,
     with_io_target/2
 ]).
@@ -58,7 +61,6 @@ rewrite_goal_if_needed/3.
 
 :- multifile
     hook_toplevel_spawn/3,
-    hook_toplevel_halt/2,
     hook_inference_limit/1.
 
 :- meta_predicate
@@ -135,7 +137,6 @@ ptcp(Pid, Target, Session) :-
 %   This lets shell tools such as `receive/1` and `flush/0` inspect them.
 
 state_1(Pid, Target0, Session) :-
-    Control = control(continue),
     receive({
         '$call'(Goal, Options) ->
             option(template(Template0), Options, Goal),
@@ -152,14 +153,9 @@ state_1(Pid, Target0, Session) :-
             (   arg(3, Answer, true)
             ->  state_3(Limit, Target)
             ;   true
-            );
-        '$halt'(From) ->
-            send(From, reply(true)),
-            nb_setarg(1, Control, halt)
+            )
         }),
-    (   arg(1, Control, halt)
-    ->  true
-    ;   Session == false
+    (   Session == false
     ->  true
     ;   state_1(Pid, Target0, Session)
     ).
@@ -298,19 +294,29 @@ toplevel_next(Pid, Options) :-
     send(Pid, '$next'(Options)).
 
 
+%!  toplevel_halt(+Pid) is det.
+%
+%   Ask the actor runtime to terminate a toplevel from any protocol state.
+toplevel_halt(Pid) :-
+    exit(Pid, true).
+
 %!  toplevel_halt(+Pid, -Reply) is det.
 %
-%   Halt an idle toplevel session and wait for its reply.  Cross-node
-%   halts are claimed by the distribution layer via hook_toplevel_halt/2.
+%   Terminate a toplevel and wait until its termination has been observed.
+%   The private monitor is distinct from any spawn-time monitor already owned
+%   by the caller; Reply retains the historical value `true`.
 toplevel_halt(Pid, Reply) :-
-    hook_toplevel_halt(Pid, Reply),
-    !.
-toplevel_halt(Pid, Reply) :-
-    self(Self),
-    send(Pid, '$halt'(Self)),
-    receive({
-        reply(Reply) -> true
-    }).
+    monitor(Pid, Ref),
+    setup_call_cleanup(
+        true,
+        (   toplevel_halt(Pid),
+            receive({
+                down(Pid, Ref, _) ->
+                    Reply = true
+            })
+        ),
+        demonitor(Ref, [flush])
+    ).
 
 %!  toplevel_stop(+Pid) is det.
 

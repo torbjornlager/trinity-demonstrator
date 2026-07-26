@@ -211,7 +211,7 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 
 `toplevel_spawn/1`, `toplevel_spawn/2`, `toplevel_call/2`,
 `toplevel_call/3`, `toplevel_next/1`, `toplevel_next/2`,
-`toplevel_stop/1`, `toplevel_abort/1`, `toplevel_halt/2`.
+`toplevel_stop/1`, `toplevel_abort/1`, `toplevel_halt/1-2`.
 
 ### Remote Queries
 

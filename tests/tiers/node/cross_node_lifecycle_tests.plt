@@ -100,8 +100,8 @@ test(remote_spawn_link_propagates_on_parent_kill,
 
 %  -------------------- cross-node toplevel_halt --------------------
 %
-%  Pins both the rename/JSON-boolean wiring and the parse_halted_reply
-%  fix that turns the JSON string "true" back into the atom true.
+%  Pins synchronous termination over the generic distributed monitor/exit
+%  path and preserves the historical Reply = true interface.
 
 test(remote_toplevel_halt_returns_atom_true,
      [setup(flush_mailbox), Result == ok]) :-
@@ -117,7 +117,6 @@ test(remote_toplevel_halt_returns_atom_true,
             assert_no_orphans(URLB),
             Result = ok
         )).
-
 
 %  ---- no leftover proxy registration on the caller after halt ----
 %

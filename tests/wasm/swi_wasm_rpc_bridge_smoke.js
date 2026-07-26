@@ -626,6 +626,39 @@ ok(includes("finalizeSwiWasmWorkerActor: function") &&
      controller.swiWasmActorMonitors.length === 0,
      "a monitor installed after a SWI-WASM worker exits receives its recorded failure reason");
 }
+{
+  const exitActor = embeddedWorkbenchMethod(
+    "exitSwiWasmActor", "abortSwiWasmActor"
+  );
+  let terminated = false;
+  let notified = null;
+  const controller = {
+    swiWasmActorWorkers: {
+      busy: {
+        worker: {
+          postMessage: function() {},
+          terminate: function() { terminated = true; }
+        },
+        done: false,
+        reason: null
+      }
+    },
+    resolveSwiWasmActorTarget: function(pid) { return String(pid); },
+    parseSwiWasmRemoteToplevelPid: function() { return null; },
+    parseSwiWasmRemoteActorPid: function() { return null; },
+    notifySwiWasmActorMonitors: function(pid, reason) {
+      notified = { pid, reason };
+    },
+    log: function() {}
+  };
+  const exited = exitActor.call(controller, "busy", "true");
+  ok(exited === true &&
+     terminated === true &&
+     controller.swiWasmActorWorkers.busy.done === true &&
+     controller.swiWasmActorWorkers.busy.reason === "true" &&
+     notified && notified.pid === "busy" && notified.reason === "true",
+     "SWI-WASM exit hard-terminates a busy Worker and notifies its monitors");
+}
 ok(includes("function settleReject(error)") &&
    includes("remote actor connection timed out:") &&
    includes("remote actor connection closed before ready:"),
@@ -735,6 +768,18 @@ ok(workerSource.includes(':- module(swi_wasm_actor_bridge, [') &&
    workerSource.includes('swi_wasm_actor_bridge:load_private_source(') &&
    includes('currentSwiWasm2LoadText: function()'),
    "SWI-WASM-2 keeps module-private runtime predicates separate from reloadable user source");
+ok(workerSource.includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
+   workerSource.includes('"toplevel_halt(Pid) :- exit(Pid, true)."') &&
+   workerSource.includes('"    monitor(Pid, Ref),"') &&
+   workerSource.includes('"    receive({down(Pid, Ref, _) -> Reply = true}),"') &&
+   !workerSource.includes('"        (   toplevel_halt(Pid),"') &&
+   !workerSource.includes("'$halt'(From)") &&
+   includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
+   includes('"toplevel_halt(Pid) :- exit(Pid, true)."') &&
+   includes('"    receive({down(Pid, Ref, _) -> Reply = true}),"') &&
+   !includes('"        (   toplevel_halt(Pid),"') &&
+   !includes("'$halt'(From)"),
+   "both SWI-WASM bridges halt through runtime exit without awaiting in cleanup");
 ok(workerSource.includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
    workerSource.includes('return installSharedDatabase().then(function()') &&
    workerSource.includes("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])") &&
@@ -893,7 +938,7 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260722-statechart-parent-output') &&
+   includes('/swi_wasm_actor_worker.js?v=20260726-toplevel-halt-await') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&

@@ -291,6 +291,8 @@ profile_check_step_(toplevel_next(Pid, Options), Profile) :-
     profile_check_toplevel_options(Profile, Options).
 profile_check_step_(toplevel_stop(Pid), Profile) :-
     ensure_goal_profile(Profile, toplevel_stop(Pid)).
+profile_check_step_(toplevel_halt(Pid), Profile) :-
+    ensure_goal_profile(Profile, toplevel_halt(Pid)).
 profile_check_step_(toplevel_halt(Pid, Reply), Profile) :-
     ensure_goal_profile(Profile, toplevel_halt(Pid, Reply)).
 profile_check_step_(toplevel_abort(Pid), Profile) :-

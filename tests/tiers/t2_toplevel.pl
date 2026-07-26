@@ -548,7 +548,8 @@ test(stop, Results = [a]) :-
        success(Pid, Results, true) -> true
    }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
-test(halt_idle, true((Reply == true, Down == true))) :-
+test(halt_idle_preserves_spawn_monitor,
+     true((Reply == true, Down == true))) :-
    toplevel_spawn(Pid, [
        session(true),
        monitor(true)
@@ -556,6 +557,20 @@ test(halt_idle, true((Reply == true, Down == true))) :-
    toplevel_halt(Pid, Reply),
    receive({
        down(Pid, _, Down) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
+
+test(halt_running_nonterminating_goal, Down == true) :-
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true)
+   ]),
+   toplevel_call(Pid, (output(started), repeat, fail)),
+   receive({
+       output(Pid, started) -> true
+   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+   toplevel_halt(Pid),
+   receive({
+       down(Pid, Pid, Down) -> true
    }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
 test(failure, Result = failure) :-

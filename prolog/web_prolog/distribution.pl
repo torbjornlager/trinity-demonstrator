@@ -1,7 +1,6 @@
 :- module(distribution,
    [ make_id/1,               % -Id
      remote_request_spawn/3,  % +NodeURL, +Command, -RemotePid
-     remote_request_halt/3,   % +NodeURL, +RemotePid, -Reply
      remote_send_command/2,   % +NodeURL, +Command
      register_remote_pid/2,   % +CompoundPid, +Target
      flush_pending_for_pid/2, % +NodeURL, +RemotePid
@@ -397,12 +396,6 @@ maybe_register_toplevel_name(Options, Pid) :-
     ;   true
     ).
 
-toplevel_actors:hook_toplevel_halt(RemoteId@NodeURL, Reply) :-
-    \+ localhost_node(NodeURL),
-    !,
-    remote_request_halt(NodeURL, RemoteId, Reply).
-
-
                 /*******************************
                 *        WS WIRE CLIENT        *
                 *******************************/
@@ -440,32 +433,6 @@ remote_wait_spawned(SpawnQueue, RemotePid) :-
     ;   remote_wait_spawned(SpawnQueue, RemotePid)
     ).
 
-
-%!  remote_request_halt(+NodeURL, +RemotePid, -Reply) is det.
-%
-%   Send a toplevel_halt command for RemotePid over the shared per-node
-%   WebSocket and synchronously wait for the corresponding halted event.
-remote_request_halt(NodeURL, RemotePid, Reply) :-
-    ws_mutex(NodeURL, ws_spawn_lock, Mutex),
-    with_mutex(Mutex,
-               ( remote_connection(NodeURL, Socket, SpawnQueue),
-                 ws_send_json(Socket, json{
-                     command: toplevel_halt,
-                     pid: RemotePid
-                 }),
-                 remote_wait_halted(SpawnQueue, RemotePid, Reply)
-               )).
-
-remote_wait_halted(SpawnQueue, RemotePid, Reply) :-
-    catch(thread_get_message(SpawnQueue, Message),
-          Error,
-          throw(error(remote_halt_failed(Error),
-                      context(actor:remote_request_halt/3,
-                              'failed waiting for halted event')))),
-    (   Message = halted(RemotePid, Reply)
-    ->  true
-    ;   remote_wait_halted(SpawnQueue, RemotePid, Reply)
-    ).
 
 %!  remote_send_command(+NodeURL, +Command) is det.
 %
@@ -606,22 +573,6 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
         get_dict(pid, Dict, RawPid),
         normalize_remote_pid(RawPid, RemotePid)
     ->  best_effort(thread_send_message(SpawnQueue, spawned(RemotePid)))
-    %  Halted ack from a cross-node toplevel_halt/2 request: route to the
-    %  shared SpawnQueue (reused for control-plane request/response) where
-    %  remote_request_halt/3 is waiting.  The Reply field is serialized
-    %  on the remote node via term_to_json_string/2, so it arrives as a
-    %  JSON string -- parse it back to a Prolog term here so callers see
-    %  the atom `true` (or whatever term the remote toplevel returned)
-    %  instead of the string "true".
-    ;   get_dict(type, Dict, "halted"),
-        get_dict(pid, Dict, RawPid),
-        normalize_remote_pid(RawPid, RemotePid)
-    ->  (   get_dict(reply, Dict, Reply0),
-            parse_halted_reply(Reply0, ReplyTerm)
-        ->  ReplyValue = ReplyTerm
-        ;   ReplyValue = true
-        ),
-        best_effort(thread_send_message(SpawnQueue, halted(RemotePid, ReplyValue)))
     ;   get_dict(type, Dict, "error"),
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
@@ -677,16 +628,6 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
             forall(member(monitor(Watcher, Ref), Entries),
                    send(Watcher, down(CompoundPid, Ref, Reason)))
         )).
-
-%!  parse_halted_reply(+Raw, -Term) is semidet.
-parse_halted_reply(Raw, Term) :-
-    (   atom(Raw)
-    ->  RawAtom = Raw
-    ;   string(Raw)
-    ->  atom_string(RawAtom, Raw)
-    ;   fail
-    ),
-    catch(term_to_atom(Term, RawAtom), _, fail).
 
 normalize_remote_pid(Pid0, Pid) :-
     integer(Pid0),
