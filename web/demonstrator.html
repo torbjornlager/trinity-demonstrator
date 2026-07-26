@@ -3981,6 +3981,11 @@
         return theme === "dark" ? "#8fd782" : "#006400";
       }
 
+      function webPrologTerminalTimingColor() {
+        var theme = document.documentElement.getAttribute("data-theme");
+        return theme === "dark" ? "#7ae2a1" : "#15803d";
+      }
+
       function highlightWebPrologTerminalPredicates(text) {
         var markup = "[[b;" + webPrologTerminalPredicateHighlightColor() + ";]";
         return String(text || "")
@@ -7251,7 +7256,7 @@
             var escaped = window.$ && $.terminal && typeof $.terminal.escape_brackets === "function"
               ? $.terminal.escape_brackets(value)
               : value;
-            return "[[;#15803d;]" + escaped + "]";
+            return "[[;" + webPrologTerminalTimingColor() + ";]" + escaped + "]";
           },
           formatOutputDisplay: function(data, kind) {
             var text = this.formatDisplayText(renderOutputData(data));
@@ -7268,6 +7273,10 @@
                 return !/^Warning:\s+\/(?:worker_)?user_code\.pl:\d+:\s*$/.test(line);
               })
               .map(function(line) {
+                var timing = /^%\s+([0-9][0-9,]*)\s+inferences,\s+\S+\s+CPU\s+in\s+(\S+)\s+seconds(?:\s+\([^)]*\))?\s*$/.exec(line);
+                if (timing) {
+                  return "% " + timing[1] + " inferences in " + timing[2] + " seconds";
+                }
                 var match = /^Warning:\s+Local definition of user:([^\s]+)\s+overrides weak import from swi_wasm_actor_bridge\s*$/.exec(line);
                 return match
                   ? "Warning: " + match[1] + " replaces the built-in definition."
@@ -7282,7 +7291,12 @@
             if (!text || !term || typeof term.echo !== "function") {
               return false;
             }
-            term.echo(text, /^Warning: [^\s]+ replaces the built-in definition\.$/.test(text) ? {
+            var displayText = text.split("\n").map(function(line) {
+              return /^% [0-9][0-9,]* inferences in \S+ seconds$/.test(line)
+                ? this.formatTimingDisplay(line)
+                : line;
+            }.bind(this)).join("\n");
+            term.echo(displayText, /^Warning: [^\s]+ replaces the built-in definition\.$/.test(text) ? {
               exec: false,
               finalize: function(output) {
                 output.addClass("terminal-swi-wasm-override");
@@ -13188,13 +13202,14 @@
             if (loadSpec.origin === "editor" && loadText !== "") {
               examplePayload = this.exampleSpawnInteractionPayload("prolog", "isotope", loadSpec.origin);
             }
-            var body = { options: "[]" };
+            var body = { options: "[session(true)]" };
             if (loadText !== "") { body.src_text = loadText; }
             return this.requestJson("/toplevel_spawn", {
               method: "POST",
               logScope: "isotope",
               jsonBody: body
             }).then(function(event) {
+              self.log("transport", JSON.stringify(event, null, 2), "isotope", "response");
               if (self.isStaleIsotopeGeneration(generation)) {
                 throw new Error("stale isotope session");
               }

@@ -238,6 +238,13 @@ ok(conciseSwiWasmOutput("Warning: /worker_user_code.pl:1:") === "" &&
    includes("--terminal-override-ink: #67b8ff;") &&
    includes('this.echoSwiWasmOutput(term, String(message.data || ""))'),
    "SWI-WASM override notices are concise and blue in both themes");
+ok(conciseSwiWasmOutput(
+     "% 805 inferences, 3.335 CPU in 3.335 seconds (100% CPU, 241 Lips)"
+   ) === "% 805 inferences in 3.335 seconds" &&
+   includes("this.formatTimingDisplay(line)") &&
+   includes('return theme === "dark" ? "#7ae2a1" : "#15803d";') &&
+   includes('return "[[;" + webPrologTerminalTimingColor() + ";]" + escaped + "]";'),
+   "SWI-WASM time/1 output keeps inference and elapsed time only and uses theme-aware green");
 ok(includes('return "Welcome to [[b;;]Web Prolog]!\\n" +') &&
    includes('"The [[b;;]" + profile + "] profile.\\n" +') &&
    includes('"Powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog]\\n"') &&
@@ -480,6 +487,9 @@ ok(!includes("syncTracePreferenceToLiveSessions") &&
    includes('this.notifyTutorialStatechartTrace(text)') &&
    includes('this.notifyTutorialStatechartTrace(event.data)'),
    "statechart traces always feed both the Logger and tutorial animations while SXML trace only filters display");
+ok(includes('var body = { options: "[session(true)]" };') &&
+   includes('jsonBody: body\n            }).then(function(event) {\n              self.log("transport", JSON.stringify(event, null, 2), "isotope", "response");'),
+   "ISOTOPE explicitly requests a persistent session and logs the spawned response as API traffic");
 ok(includes('if (entry.scope === "wasm-worker") return "STATEFUL WORKER · JS OBJECT";') &&
    includes('logSwiWasmWorkerTraffic: function(envelope, direction)') &&
    includes('this.formatJavaScriptObject(envelope || {})') &&
