@@ -48,7 +48,10 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
 
 /* Profile deviations (Web Prolog statechart-actor profile)
    - Root element is <statechart>.
-   - Transitions are written as <go> with attributes on/if/to.
+   - Transitions are written as <go> with attributes on/after/if/to.
+     The after value is a non-negative delay in seconds.
+   - <defer on="Pattern" if="Guard"/> postpones unmatched events while
+     its state remains active.
    - Executable content and datamodel are Prolog, not ECMAScript.
    - <spawn> invokes a child actor tied to the state lifetime.
 */
@@ -63,6 +66,8 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
         initial/1,
         initial/2,
         transition/5,
+        after_transition/6,
+        defer/3,
         onexit/2,
         onentry/2,
         n/2.
@@ -72,10 +77,13 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
         running/0,
         event/1,
         internal_queue/1,
+        postponed_queue/1,
+        macrostep_start/1,
         historyValue/2,
         configuration/1,
         states_to_invoke/1,
-        invoked/2.
+        invoked/2,
+        after_timer/3.
 
 :- thread_local trace_hook/1.
 

@@ -256,6 +256,12 @@ an implementation extension and is not placement-independent.
 `statechart_spawn/2`,
 `statechart_halt/2`, `statechart_halt/3`, `raise/1`, `in/1`.
 
+Within SXML, `<defer on="Pattern" if="Guard"/>` postpones a matching event
+only when no transition is enabled for that event. Postponed events are
+re-offered oldest first on the internal event queue after a macrostep changes
+the active configuration. Enabled transitions take precedence; a re-offered
+event may be postponed again.
+
 ### Parallel Goals
 
 `parallel/1`, `first_solution/2`, `first_solution/3`.

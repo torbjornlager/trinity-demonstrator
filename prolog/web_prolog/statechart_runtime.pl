@@ -4,8 +4,15 @@
     root_state/1,
     initial_state/2,
     exit_interpreter/0,
+    schedule_after_transitions/1,
+    cancel_after_transitions/1,
     execute_content/1,
     enqueue_internal_event/1,
+    initialise_event_processing/0,
+    begin_macrostep/0,
+    ensure_macrostep/0,
+    postpone_event/1,
+    reoffer_postponed_events/1,
     update_eventdata/1,
     configuration_add/1,
     configuration_delete/1,
@@ -56,12 +63,15 @@ statechart actor interpreter. The runtime state itself lives in
 
 %!  clean is det.
 clean :-
+    cancel_all_after_transitions,
     destroy_internal_queues,
     retractall(statechart_actor:state(_, _)),
     retractall(statechart_actor:to_be_invoked(_, _, _)),
     retractall(statechart_actor:initial(_)),
     retractall(statechart_actor:initial(_, _)),
     retractall(statechart_actor:transition(_, _, _, _, _)),
+    retractall(statechart_actor:after_transition(_, _, _, _, _, _)),
+    retractall(statechart_actor:defer(_, _, _)),
     retractall(statechart_actor:parallel(_, _)),
     retractall(statechart_actor:history(_, _, _)),
     retractall(statechart_actor:final(_, _)),
@@ -73,7 +83,10 @@ clean :-
     retractall(statechart_actor:historyValue(_, _)),
     retractall(statechart_actor:configuration(_)),
     retractall(statechart_actor:states_to_invoke(_)),
-    retractall(statechart_actor:invoked(_, _)).
+    retractall(statechart_actor:invoked(_, _)),
+    retractall(statechart_actor:after_timer(_, _, _)),
+    retractall(statechart_actor:postponed_queue(_)),
+    retractall(statechart_actor:macrostep_start(_)).
 
 destroy_internal_queues :-
     forall(retract(statechart_actor:internal_queue(Internal)),
@@ -109,6 +122,7 @@ exit_interpreter :-
 
 exit_interpreter([]).
 exit_interpreter([State|States]) :-
+    cancel_after_transitions(State),
     forall(statechart_actor:onexit(State, Content), execute_content(Content)),
     forall(statechart_actor:invoked(State, Pid), exit(Pid, stop)),
     configuration_delete(State),
@@ -119,12 +133,81 @@ exit_interpreter([State|States]) :-
     ;   exit_interpreter(States)
     ).
 
+
+%!  schedule_after_transitions(+State) is det.
+%
+%   Arm every timed transition whose source is State.  The activation
+%   reference is both the delayed-send cancellation id and part of the
+%   private event, so a message that races with cancellation cannot affect
+%   a later activation of the same state.
+schedule_after_transitions(State) :-
+    forall(statechart_actor:after_transition(State, Key, Delay, _, _, _),
+           schedule_after_transition(State, Key, Delay)).
+
+schedule_after_transition(State, Key, Delay) :-
+    make_ref(Ref),
+    self(Self),
+    assertz(statechart_actor:after_timer(State, Key, Ref)),
+    catch(send(Self, '$statechart_after'(State, Key, Ref),
+               [delay(Delay), id(Ref)]),
+          Error,
+          ( retractall(statechart_actor:after_timer(State, Key, Ref)),
+            throw(Error)
+          )).
+
+
+%!  cancel_after_transitions(+State) is det.
+%
+%   Invalidate timers before the state's exit actions run.  cancel/1 is
+%   best-effort; the private activation reference makes an already queued
+%   firing harmless.
+cancel_after_transitions(State) :-
+    forall(retract(statechart_actor:after_timer(State, _Key, Ref)),
+           catch(cancel(Ref), _, true)).
+
+cancel_all_after_transitions :-
+    forall(retract(statechart_actor:after_timer(_State, _Key, Ref)),
+           catch(cancel(Ref), _, true)).
+
 execute_content(Content) :-
     maplist(call, Content).
 
 enqueue_internal_event(Event) :-
     statechart_actor:internal_queue(Internal),
     thread_send_message(Internal, Event).
+
+initialise_event_processing :-
+    retractall(statechart_actor:postponed_queue(_)),
+    assertz(statechart_actor:postponed_queue([])),
+    retractall(statechart_actor:macrostep_start(_)),
+    assertz(statechart_actor:macrostep_start([])).
+
+begin_macrostep :-
+    statechart_actor:configuration(Configuration),
+    retractall(statechart_actor:macrostep_start(_)),
+    assertz(statechart_actor:macrostep_start(Configuration)).
+
+ensure_macrostep :-
+    (   statechart_actor:macrostep_start(_)
+    ->  true
+    ;   begin_macrostep
+    ).
+
+postpone_event(Event) :-
+    retract(statechart_actor:postponed_queue(Events)),
+    append(Events, [Event], NewEvents),
+    assertz(statechart_actor:postponed_queue(NewEvents)).
+
+reoffer_postponed_events(Events) :-
+    retract(statechart_actor:macrostep_start(StartConfiguration)),
+    statechart_actor:configuration(Configuration),
+    Configuration \== StartConfiguration,
+    statechart_actor:postponed_queue(Events),
+    Events \= [],
+    retractall(statechart_actor:postponed_queue(_)),
+    assertz(statechart_actor:postponed_queue([])),
+    maplist(enqueue_internal_event, Events),
+    assertz(statechart_actor:macrostep_start(Configuration)).
 
 update_eventdata(Event) :-
     retractall(statechart_actor:event(_)),

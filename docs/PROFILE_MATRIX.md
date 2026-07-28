@@ -69,6 +69,12 @@ Adds to `isotope`:
   `whereis/2`, `cancel/1`, `exit/1-2`
 - statechart predicates `statechart_spawn/2`, `raise/1`, and `in/1`
 
+The SXML statechart profile includes state-scoped timed transitions with
+`<go after="Seconds">` and state-scoped event postponement with
+`<defer on="Pattern" if="Guard"/>`. Deferred events are re-offered oldest
+first after a configuration change and before the actor consumes a newer
+external message.
+
 An ACTOR implementation additionally provides the owner-only administrative
 operations `register_service/2` and `unregister_service/1`. These operations
 publish and withdraw stable names in the node's public service namespace; they

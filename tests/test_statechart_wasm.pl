@@ -110,6 +110,168 @@ test(internal_event_via_raise, [cleanup(statechart_stop)]) :-
     start_text(Text),
     statechart_in(b).
 
+% A zero-delay timed transition is queued and taken after state entry.
+% This exercises the same private-token selection path used by browser
+% timer callbacks without requiring a browser scheduler in this unit test.
+test(after_transition_zero_delay,
+     [cleanup((clear_trace_hook, statechart_stop))]) :-
+    nb_setval(trace_collected, []),
+    set_trace_hook(test_statechart_wasm:collect_trace),
+    join_lines([
+        "<statechart initial=\"a\">",
+        "  <state id=\"a\"><go to=\"b\" after=\"0\"/></state>",
+        "  <state id=\"b\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_in(b),
+    \+ statechart_in(a),
+    nb_getval(trace_collected, RevEvents),
+    assertion(memberchk(internal_event(after(a, 0)), RevEvents)),
+    assertion(\+ memberchk(
+        internal_event('$statechart_after'(_, _, _)), RevEvents)).
+
+test(after_transition_rejects_on,
+     [ cleanup(statechart_stop),
+       throws(error(domain_error(statechart_transition_trigger,
+                                 on_and_after), _))
+     ]) :-
+    join_lines([
+        "<statechart initial=\"a\">",
+        "  <state id=\"a\"><go to=\"b\" on=\"go\" after=\"1\"/></state>",
+        "  <state id=\"b\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text).
+
+test(deferred_events_are_reoffered_fifo,
+     [cleanup((clear_trace_hook, statechart_stop))]) :-
+    nb_setval(trace_collected, []),
+    set_trace_hook(test_statechart_wasm:collect_trace),
+    join_lines([
+        "<statechart initial=\"waiting\">",
+        "  <datamodel>:- dynamic(seen/1).</datamodel>",
+        "  <state id=\"waiting\">",
+        "    <defer on=\"command(_)\"/>",
+        "    <go to=\"ready\" on=\"ready\"/>",
+        "  </state>",
+        "  <state id=\"ready\">",
+        "    <go on=\"command(C)\">assertz(seen(C))</go>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(command(a)),
+    statechart_send(command(b)),
+    assertion(\+ statechart_wasm:seen(_)),
+    statechart_send(ready),
+    findall(C, statechart_wasm:seen(C), Seen),
+    assertion(Seen == [a,b]),
+    nb_getval(trace_collected, RevEvents),
+    assertion(memberchk(deferred(command(a)), RevEvents)),
+    assertion(memberchk(reoffered([command(a),command(b)]), RevEvents)).
+
+test(enabled_transition_precedes_deferral, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"ready\">",
+        "  <datamodel>:- dynamic(seen/1).</datamodel>",
+        "  <state id=\"ready\">",
+        "    <defer on=\"command(_)\"/>",
+        "    <go on=\"command(C)\">assertz(seen(C))</go>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(command(now)),
+    assertion(statechart_wasm:seen(now)),
+    assertion(statechart_wasm:postponed_queue([])).
+
+test(defer_guard_uses_pattern_bindings, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"waiting\">",
+        "  <datamodel>:- dynamic(seen/1).</datamodel>",
+        "  <state id=\"waiting\">",
+        "    <defer on=\"command(C)\" if=\"C == later\"/>",
+        "    <go to=\"ready\" on=\"advance\"/>",
+        "  </state>",
+        "  <state id=\"ready\">",
+        "    <go on=\"command(C)\">assertz(seen(C))</go>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(command(now)),
+    statechart_send(command(later)),
+    assertion(statechart_wasm:postponed_queue([command(later)])),
+    statechart_send(advance),
+    assertion(statechart_wasm:seen(later)),
+    assertion(\+ statechart_wasm:seen(now)).
+
+test(deferred_event_can_be_deferred_again, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"first\">",
+        "  <datamodel>:- dynamic(seen/1).</datamodel>",
+        "  <state id=\"first\">",
+        "    <defer on=\"command(_)\"/>",
+        "    <go to=\"second\" on=\"advance\"/>",
+        "  </state>",
+        "  <state id=\"second\">",
+        "    <defer on=\"command(_)\"/>",
+        "    <go to=\"ready\" on=\"advance\"/>",
+        "  </state>",
+        "  <state id=\"ready\">",
+        "    <go on=\"command(C)\">assertz(seen(C))</go>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(command(later)),
+    statechart_send(advance),
+    assertion(statechart_in(second)),
+    assertion(\+ statechart_wasm:seen(_)),
+    assertion(statechart_wasm:postponed_queue([command(later)])),
+    statechart_send(advance),
+    assertion(statechart_in(ready)),
+    assertion(statechart_wasm:seen(later)),
+    assertion(statechart_wasm:postponed_queue([])).
+
+test(reoffered_event_without_new_defer_is_discarded,
+     [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"waiting\">",
+        "  <state id=\"waiting\">",
+        "    <defer on=\"command(_)\"/>",
+        "    <go to=\"ready\" on=\"advance\"/>",
+        "  </state>",
+        "  <state id=\"ready\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(command(obsolete)),
+    statechart_send(advance),
+    assertion(statechart_in(ready)),
+    assertion(statechart_wasm:postponed_queue([])),
+    assertion(statechart_running).
+
+test(ancestor_can_defer_for_active_descendant, [cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"device\">",
+        "  <datamodel>:- dynamic(seen/1).</datamodel>",
+        "  <state id=\"device\" initial=\"cold\">",
+        "    <defer on=\"command(_)\"/>",
+        "    <state id=\"cold\"><go to=\"warm\" on=\"heat\"/></state>",
+        "    <state id=\"warm\">",
+        "      <go on=\"command(C)\">assertz(seen(C))</go>",
+        "    </state>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(command(later)),
+    statechart_send(heat),
+    assertion(statechart_in(warm)),
+    assertion(statechart_wasm:seen(later)).
+
 % Reaching the top-level <final> stops the interpreter.
 test(top_level_final_stops_interpreter, [cleanup(statechart_stop)]) :-
     join_lines([
@@ -213,6 +375,16 @@ join_lines(Lines, Text) :-
 
 
 :- begin_tests(statechart_wasm_examples).
+
+test(deferred_commands_are_replayed, [cleanup(statechart_stop)]) :-
+    start_example('14 deferred-events.xml'),
+    statechart_send(command(open)),
+    statechart_send(command(close)),
+    assertion(statechart_wasm:postponed_queue(
+        [command(open), command(close)])),
+    statechart_send(initialised),
+    assertion(statechart_in(ready)),
+    assertion(statechart_wasm:postponed_queue([])).
 
 % 01 pause-and-resume.xml — hierarchy + history.
 test(pause_and_resume, [cleanup(statechart_stop)]) :-

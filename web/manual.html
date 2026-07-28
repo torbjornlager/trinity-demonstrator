@@ -630,6 +630,12 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     <p>Statechart trace events are published automatically. The Logger's <strong>SXML trace</strong> filter controls their visibility; tutorial diagrams consume the same events for animation.</p>
     <p>All remaining options are passed through to <code>spawn/3</code>.</p>
     <p><code>src_list/1</code> and <code>src_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
+    <p>SXML supports state-scoped timed transitions:</p>
+    <pre>&lt;go to="Target" after="5"&gt;...&lt;/go&gt;</pre>
+    <p>The <code>after</code> value is a non-negative number of seconds. The timer is armed when the source state is entered and cancelled automatically when that state is left. Re-entry creates a fresh activation, so a late firing from an earlier activation is ignored. <code>after</code> may be combined with <code>if</code>, whose guard is tested when the timer fires, but it cannot be combined with <code>on</code> on the same transition.</p>
+    <p>SXML also supports state-scoped event deferral:</p>
+    <pre>&lt;defer on="command(C)" if="temporarily_unavailable(C)"/&gt;</pre>
+    <p>If no transition is enabled for an event, matching <code>&lt;defer&gt;</code> declarations are sought in the active configuration, from the innermost states outwards. A match postpones the event. After a macrostep changes the configuration, postponed events are re-offered oldest first on the internal event queue, before invocation or receipt of another external event. Enabled transitions always take precedence. An event that still matches a defer declaration may be postponed again; otherwise it is discarded if no transition accepts it. The optional <code>if</code> guard uses bindings from the <code>on</code> pattern. The postponed queue has no implicit size limit.</p>
 </article>
 
 <article class="predicate-entry" id="statechart_halt/2-3">

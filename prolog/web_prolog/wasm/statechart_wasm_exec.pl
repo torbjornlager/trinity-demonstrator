@@ -35,9 +35,16 @@ to the desktop implementation.
     root_state/1,
     initial_state/2,
     exit_interpreter/0,
+    schedule_after_transitions/1,
+    cancel_after_transitions/1,
     execute_content/1,
     enqueue_internal_event/1,
     dequeue_internal_event/1,
+    initialise_event_processing/0,
+    begin_macrostep/0,
+    ensure_macrostep/0,
+    postpone_event/1,
+    reoffer_postponed_events/1,
     update_eventdata/1,
     configuration_add/1,
     configuration_delete/1,
@@ -82,6 +89,7 @@ start_parsed(Root) :-
     assertz(statechart_wasm:configuration([])),
     assertz(statechart_wasm:states_to_invoke([])),
     assertz(statechart_wasm:internal_queue([])),
+    initialise_event_processing,
     assertz(statechart_wasm:running),
     assertz(statechart_wasm:state(dummy, Root)),
     initial_state(Root, Initial),
@@ -99,13 +107,58 @@ send_event(Event) :-
     (   \+ statechart_wasm:running
     ->  true
     ;   update_eventdata(Event),
-        trace_emit(external_event(Event)),
+        begin_macrostep,
+        trace_external_event(Event),
         (   select_transitions(Event, EnabledTransitions)
         ->  microstep(EnabledTransitions)
-        ;   trace_emit(unmatched(Event))
+        ;   defer_event(Event)
+        ->  true
+        ;   trace_unmatched_event(Event)
         ),
         run_to_quiescence
     ).
+
+trace_external_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(external_event(TraceEvent)).
+
+trace_internal_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(internal_event(TraceEvent)).
+
+trace_unmatched_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(unmatched(TraceEvent)).
+
+trace_deferred_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(deferred(TraceEvent)).
+
+trace_reoffered_events(Events) :-
+    maplist(trace_event_term, Events, TraceEvents),
+    trace_emit(reoffered(TraceEvents)).
+
+trace_event_term('$statechart_after'(Source, Key, _Ref),
+                 after(Source, Delay)) :-
+    statechart_wasm:after_transition(Source, Key, Delay, _, _, _),
+    !.
+trace_event_term(Event, Event).
+
+defer_event('$statechart_after'(_, _, _)) :-
+    !,
+    fail.
+defer_event(Event) :-
+    statechart_wasm:configuration(Configuration),
+    member(State, Configuration),
+    is_atomic(State),
+    ancestor(State, null, Source),
+    statechart_wasm:defer(Source, Pattern, Condition),
+    copy_term(Event, Candidate),
+    Pattern = Candidate,
+    evaluate_condition(Condition),
+    !,
+    postpone_event(Event),
+    trace_deferred_event(Event).
 
 
 %!  run_to_quiescence is det.
@@ -136,18 +189,25 @@ run_to_quiescence(0) :-
     assertz(statechart_wasm:last_halt_reason(budget_exhausted)).
 run_to_quiescence(N) :-
     (   select_transitions(null, EnabledTransitions)
-    ->  microstep(EnabledTransitions),
+    ->  ensure_macrostep,
+        microstep(EnabledTransitions),
         N1 is N - 1,
         run_to_quiescence(N1)
     ;   dequeue_internal_event(Event)
-    ->  update_eventdata(Event),
-        trace_emit(internal_event(Event)),
+    ->  ensure_macrostep,
+        update_eventdata(Event),
+        trace_internal_event(Event),
         (   select_transitions(Event, EnabledTransitions)
         ->  microstep(EnabledTransitions)
-        ;   trace_emit(unmatched(Event))
+        ;   defer_event(Event)
+        ->  true
+        ;   trace_unmatched_event(Event)
         ),
         N1 is N - 1,
         run_to_quiescence(N1)
+    ;   reoffer_postponed_events(Events)
+    ->  trace_reoffered_events(Events),
+        run_to_quiescence(N)
     ;   statechart_wasm:states_to_invoke(States),
         States \= []
     ->  maplist(invoke, States),
@@ -189,6 +249,13 @@ current_microstep_budget(N) :-
 %!  select_transitions(+Event, -EnabledTransitions) is semidet.
 
 select_transitions(Event, EnabledTransitions) :-
+    Event = '$statechart_after'(Source, Key, Ref),
+    !,
+    call_cleanup(
+        select_after_transition(Source, Key, Ref, EnabledTransitions),
+        retractall(statechart_wasm:after_timer(Source, Key, Ref))
+    ).
+select_transitions(Event, EnabledTransitions) :-
     statechart_wasm:configuration(Configuration),
     findall(EnabledTransition,
             ( member(State, Configuration),
@@ -200,6 +267,19 @@ select_transitions(Event, EnabledTransitions) :-
     dedup(EnabledTransitions0, EnabledTransitions1),
     remove_conflicting_transitions(EnabledTransitions1, EnabledTransitions),
     maplist(trace_transition, EnabledTransitions).
+
+select_after_transition(Source, Key, Ref, [Transition]) :-
+    statechart_wasm:after_timer(Source, Key, Ref),
+    statechart_wasm:configuration(Configuration),
+    member(State, Configuration),
+    is_atomic(State),
+    ancestor(State, null, Source),
+    statechart_wasm:after_transition(Source, Key, _Delay,
+                                      Condition, Targets, Actions),
+    evaluate_condition(Condition),
+    Transition = t(Source, Targets, Actions),
+    trace_transition(Transition),
+    !.
 
 select_transition(null, State, t(Ancestor, Targets, Actions)) :-
     ancestor(State, null, Ancestor),
@@ -335,6 +415,7 @@ exit_states(EnabledTransitions) :-
 
 process_states_to_exit([]).
 process_states_to_exit([State|States]) :-
+    cancel_after_transitions(State),
     forall(statechart_wasm:onexit(State, Content), execute_content(Content)),
     forall(retract(statechart_wasm:invoked(State, Pid)), cancel_invoked_child(Pid)),
     configuration_delete(State),
@@ -375,6 +456,7 @@ process_states_to_enter([]).
 process_states_to_enter([State|States]) :-
     configuration_add(State),
     states_to_invoke_add(State),
+    schedule_after_transitions(State),
     forall(statechart_wasm:onentry(State, Content), execute_content(Content)),
     (   is_final(State)
     ->  once(has_parent(State, Parent)),

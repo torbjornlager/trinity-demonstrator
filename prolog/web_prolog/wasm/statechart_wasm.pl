@@ -78,6 +78,8 @@ instance; calling `statechart_start/1` twice resets state.
         initial/1,
         initial/2,
         transition/5,
+        after_transition/6,
+        defer/3,
         onexit/2,
         onentry/2,
         n/2.
@@ -87,10 +89,13 @@ instance; calling `statechart_start/1` twice resets state.
         running/0,
         event/1,
         internal_queue/1,
+        postponed_queue/1,
+        macrostep_start/1,
         historyValue/2,
         configuration/1,
         states_to_invoke/1,
         invoked/2,
+        after_timer/3,
         num/1,
         last_halt_reason/1,
         % Indicators of predicates a <datamodel> asserted, so clean/0 can

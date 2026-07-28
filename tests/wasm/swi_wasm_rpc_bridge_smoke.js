@@ -50,6 +50,10 @@ const statechartWasmSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "statechart_wasm.pl"),
   "utf8"
 );
+const statechartWasmRuntimeSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "statechart_wasm_runtime.pl"),
+  "utf8"
+);
 const editorFrameSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "editor_frame.html"),
   "utf8"
@@ -544,7 +548,8 @@ ok([
   "01 pause-and-resume.xml", "02 spaghetti.xml", "03 emotions.xml",
   "04 clock.xml", "05 pingpong.xml", "06 parallel.xml",
   "07 closure.xml", "08 gcd.xml", "09 spawn-actor.xml",
-  "10 spawn-toplevel.xml", "11 boxshop-1.xml", "12 boxshop-2.xml"
+  "10 spawn-toplevel.xml", "11 boxshop-1.xml", "12 boxshop-2.xml",
+  "14 deferred-events.xml"
 ].every(function(name) {
   const text = statechartExample(name);
   return text.includes(
@@ -958,6 +963,13 @@ ok(statechartWasmSource.includes('send(Self, Event, Options) :-\n    self(Self),
    statechartWasmSource.includes('Cancelled := wasmStatechartCancel') &&
    !statechartWasmSource.includes('send(statechart, Event, Options) :-'),
    "delayed statechart self-sends use the cancellable local scheduler in both SWI-WASM models");
+ok(statechartWasmRuntimeSource.includes(
+     'statechart_wasm:self(Self),\n    statechart_wasm:send(Self, Event, [delay(Delay), id(Ref)])'
+   ) &&
+   !statechartWasmRuntimeSource.includes(
+     'statechart_wasm:send(statechart, Event, [delay(Delay), id(Ref)])'
+   ),
+   "after transitions resolve the rewritten worker self pid before scheduling");
 ok(includes('statechart_spawn/2, statechart_halt/2, statechart_halt/3,') &&
    includes('statechart_halt(statechart, Reply, _Timeout) :-') &&
    includes('statechart_wasm:statechart_stop') &&

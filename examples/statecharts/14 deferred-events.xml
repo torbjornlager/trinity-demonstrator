@@ -1,0 +1,51 @@
+<!--
+
+    Postponing commands until the statechart is ready to handle them.
+
+    Send two command/1 events while the machine is initialising.  They
+    match <defer> and are kept in arrival order.  Sending initialised
+    changes the active state to ready, where both commands are re-offered
+    before a newer external event is accepted.
+
+    Keep the Logger open and SXML trace selected to see the deferred/1
+    and reoffered/1 trace events.
+
+-->
+
+<statechart datamodel="web-prolog" initial="initialising">
+    <state id="initialising">
+        <onentry>
+            writeln('Initialising...')
+        </onentry>
+        <defer on="command(_)"/>
+        <go to="ready" on="initialised"/>
+    </state>
+
+    <state id="ready">
+        <onentry>
+            writeln('Ready.')
+        </onentry>
+        <go on="command(Command)">
+            format('Performing ~p.~n', [Command])
+        </go>
+    </state>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! command(open).
+
+?- $Pid ! command(close).
+
+?- $Pid ! initialised.
+
+?- $Pid ! command(status).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

@@ -30,8 +30,15 @@ actor profile. Model and runtime facts live in `statechart_actor`.
     root_state/1,
     initial_state/2,
     exit_interpreter/0,
+    schedule_after_transitions/1,
+    cancel_after_transitions/1,
     execute_content/1,
     enqueue_internal_event/1,
+    initialise_event_processing/0,
+    begin_macrostep/0,
+    ensure_macrostep/0,
+    postpone_event/1,
+    reoffer_postponed_events/1,
     update_eventdata/1,
     configuration_add/1,
     configuration_delete/1,
@@ -99,6 +106,7 @@ interpret_parsed(Root) :-
     assertz(statechart_actor:state(dummy, Root)),
     initial_state(Root, Initial),
     with_internal_queue((
+        initialise_event_processing,
         enter_states([t(dummy, [Initial], [])]),
         catch(
             main_event_loop,
@@ -121,14 +129,19 @@ main_event_loop :-
 
 main_event_loop_2 :-
     (   select_transitions(null, EnabledTransitions)
-    ->  microstep(EnabledTransitions),
+    ->  ensure_macrostep,
+        microstep(EnabledTransitions),
         main_event_loop
     ;   statechart_actor:internal_queue(Internal),
         thread_get_message(Internal, Event, [timeout(0)]),
+        ensure_macrostep,
         update_eventdata(Event),
-        trace_emit(internal_event(Event)),
+        trace_internal_event(Event),
         debug(statechart_actor(event), '   Int. event: ~p', [Event])
     ->  main_event_loop(Event)
+    ;   reoffer_postponed_events(Events)
+    ->  trace_reoffered_events(Events),
+        main_event_loop
     ;   statechart_actor:states_to_invoke(States),
         States \= []
     ->  maplist(invoke, States),
@@ -136,13 +149,14 @@ main_event_loop_2 :-
         assertz(statechart_actor:states_to_invoke([])),
         main_event_loop
     ;   receive({Event -> true}),
-        trace_emit(external_event(Event)),
+        trace_external_event(Event),
         debug(statechart_actor(event), '   Ext. event: ~p', [Event]),
         (   Event = '$stop'(From)
         ->  retractall(statechart_actor:running),
             exit_interpreter,
             send(From, reply(true))
         ;   update_eventdata(Event),
+            begin_macrostep,
             main_event_loop(Event)
         )
     ).
@@ -151,10 +165,54 @@ main_event_loop(Event) :-
     (   select_transitions(Event, EnabledTransitions)
     ->  microstep(EnabledTransitions),
         main_event_loop
-    ;   trace_emit(unmatched(Event)),
+    ;   defer_event(Event)
+    ->  main_event_loop
+    ;   trace_unmatched_event(Event),
         debug(statechart_actor(info), '    Unmatched: ~p', [Event]),
         main_event_loop
     ).
+
+trace_external_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(external_event(TraceEvent)).
+
+trace_internal_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(internal_event(TraceEvent)).
+
+trace_unmatched_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(unmatched(TraceEvent)).
+
+trace_deferred_event(Event) :-
+    trace_event_term(Event, TraceEvent),
+    trace_emit(deferred(TraceEvent)).
+
+trace_reoffered_events(Events) :-
+    maplist(trace_event_term, Events, TraceEvents),
+    trace_emit(reoffered(TraceEvents)).
+
+trace_event_term('$statechart_after'(Source, Key, _Ref),
+                 after(Source, Delay)) :-
+    statechart_actor:after_transition(Source, Key, Delay, _, _, _),
+    !.
+trace_event_term(Event, Event).
+
+defer_event('$statechart_after'(_, _, _)) :-
+    !,
+    fail.
+defer_event(Event) :-
+    statechart_actor:configuration(Configuration),
+    member(State, Configuration),
+    is_atomic(State),
+    ancestor(State, null, Source),
+    statechart_actor:defer(Source, Pattern, Condition),
+    copy_term(Event, Candidate),
+    Pattern = Candidate,
+    evaluate_condition(Condition),
+    !,
+    postpone_event(Event),
+    trace_deferred_event(Event).
 
 
 %!  select_transitions(+Event, -EnabledTransitions) is semidet.
@@ -164,6 +222,13 @@ main_event_loop(Event) :-
 %   them and remove pairs in conflict (preferring the descendant source).
 %   Fails when no transition is enabled.
 
+select_transitions(Event, EnabledTransitions) :-
+    Event = '$statechart_after'(Source, Key, Ref),
+    !,
+    call_cleanup(
+        select_after_transition(Source, Key, Ref, EnabledTransitions),
+        retractall(statechart_actor:after_timer(Source, Key, Ref))
+    ).
 select_transitions(Event, EnabledTransitions) :-
     statechart_actor:configuration(Configuration),
     findall(EnabledTransition,
@@ -176,6 +241,19 @@ select_transitions(Event, EnabledTransitions) :-
     dedup(EnabledTransitions0, EnabledTransitions1),
     remove_conflicting_transitions(EnabledTransitions1, EnabledTransitions),
     maplist(trace_transition, EnabledTransitions).
+
+select_after_transition(Source, Key, Ref, [Transition]) :-
+    statechart_actor:after_timer(Source, Key, Ref),
+    statechart_actor:configuration(Configuration),
+    member(State, Configuration),
+    is_atomic(State),
+    ancestor(State, null, Source),
+    statechart_actor:after_transition(Source, Key, _Delay,
+                                      Condition, Targets, Actions),
+    evaluate_condition(Condition),
+    Transition = t(Source, Targets, Actions),
+    trace_transition(Transition),
+    !.
 
 select_transition(null, State, t(Ancestor, Targets, Actions)) :-
     ancestor(State, null, Ancestor),
@@ -319,6 +397,7 @@ exit_states(EnabledTransitions) :-
 
 process_states_to_exit([]).
 process_states_to_exit([State|States]) :-
+    cancel_after_transitions(State),
     forall(statechart_actor:onexit(State, Content), execute_content(Content)),
     forall(statechart_actor:invoked(State, Pid), exit(Pid, stop)),
     configuration_delete(State),
@@ -369,6 +448,7 @@ process_states_to_enter([]).
 process_states_to_enter([State|States]) :-
     configuration_add(State),
     states_to_invoke_add(State),
+    schedule_after_transitions(State),
     forall(statechart_actor:onentry(State, Content), execute_content(Content)),
     (   is_final(State)
     ->  once(has_parent(State, Parent)),

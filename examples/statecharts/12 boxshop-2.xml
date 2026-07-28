@@ -31,35 +31,28 @@
         </state>
         <state id="Color">
             <onentry>
-                writeln('What color do you want?'),
-                self(Self),
-                send(Self, timeout, [delay(8), id(foo)])
+                writeln('What color do you want?')
             </onentry>
             <go to="selectFormItem" on="says(color(Color))">
                 assert(color(Color))
             </go>
-            <onexit>
-                cancel(foo)
-            </onexit>
+            <go to="selectFormItem" after="8">
+                writeln('I did not hear you.')
+            </go>
         </state>
         <state id="Size">
             <onentry>
-                writeln('What size do you want?'),
-                self(Self),
-                send(Self, timeout, [delay(8), id(bar)])
+                writeln('What size do you want?')
             </onentry>
             <go to="selectFormItem" on="says(size(Size))">
                 assert(size(Size))
             </go>
-            <onexit>
-                cancel(bar)
-            </onexit>
+            <go to="selectFormItem" after="8">
+                writeln('I did not hear you.')
+            </go>
         </state>
         <go to="selectFormItem" on="says(_)">
             writeln('I did not understand.')
-        </go>
-        <go to="selectFormItem" on="timeout">
-            writeln('I did not hear you.')
         </go>
     </state>
     <final id="Respond">

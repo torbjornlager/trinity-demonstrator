@@ -3,9 +3,16 @@
     root_state/1,
     initial_state/2,
     exit_interpreter/0,
+    schedule_after_transitions/1,
+    cancel_after_transitions/1,
     execute_content/1,
     enqueue_internal_event/1,
     dequeue_internal_event/1,
+    initialise_event_processing/0,
+    begin_macrostep/0,
+    ensure_macrostep/0,
+    postpone_event/1,
+    reoffer_postponed_events/1,
     update_eventdata/1,
     configuration_add/1,
     configuration_delete/1,
@@ -60,6 +67,7 @@ Differences from the desktop `statechart_runtime`:
 
 %!  clean is det.
 clean :-
+    cancel_all_after_transitions,
     %  Terminate any children spawned via <spawn>, consuming each invoked/2
     %  record (retract, not just iterate) so a child is cancelled exactly
     %  once across process_states_to_exit, exit_interpreter and here.  Covers
@@ -76,6 +84,8 @@ clean :-
     retractall(statechart_wasm:initial(_)),
     retractall(statechart_wasm:initial(_, _)),
     retractall(statechart_wasm:transition(_, _, _, _, _)),
+    retractall(statechart_wasm:after_transition(_, _, _, _, _, _)),
+    retractall(statechart_wasm:defer(_, _, _)),
     retractall(statechart_wasm:parallel(_, _)),
     retractall(statechart_wasm:history(_, _, _)),
     retractall(statechart_wasm:final(_, _)),
@@ -88,7 +98,10 @@ clean :-
     retractall(statechart_wasm:configuration(_)),
     retractall(statechart_wasm:states_to_invoke(_)),
     retractall(statechart_wasm:invoked(_, _)),
+    retractall(statechart_wasm:after_timer(_, _, _)),
     retractall(statechart_wasm:internal_queue(_)),
+    retractall(statechart_wasm:postponed_queue(_)),
+    retractall(statechart_wasm:macrostep_start(_)),
     retractall(statechart_wasm:running).
 
 
@@ -111,6 +124,7 @@ exit_interpreter :-
 
 exit_interpreter([]).
 exit_interpreter([State|States]) :-
+    cancel_after_transitions(State),
     forall(statechart_wasm:onexit(State, Content), execute_content(Content)),
     forall(retract(statechart_wasm:invoked(State, Pid)), cancel_invoked_child(Pid)),
     configuration_delete(State),
@@ -120,6 +134,53 @@ exit_interpreter([State|States]) :-
     ->  true
     ;   exit_interpreter(States)
     ).
+
+
+%!  schedule_after_transitions(+State) is det.
+%
+%   Arm every timed transition whose source is State.  Browser timers call
+%   statechart_send/1 with a private event.  A zero delay is queued locally
+%   so it still runs after the current microstep rather than re-entering the
+%   interpreter during state entry.
+schedule_after_transitions(State) :-
+    forall(statechart_wasm:after_transition(State, Key, Delay, _, _, _),
+           schedule_after_transition(State, Key, Delay)).
+
+schedule_after_transition(State, Key, Delay) :-
+    fresh_after_ref(Ref),
+    Event = '$statechart_after'(State, Key, Ref),
+    assertz(statechart_wasm:after_timer(State, Key, Ref)),
+    catch(schedule_after_event(Delay, Event, Ref),
+          Error,
+          ( retractall(statechart_wasm:after_timer(State, Key, Ref)),
+            throw(Error)
+          )).
+
+schedule_after_event(0, Event, _Ref) :-
+    !,
+    enqueue_internal_event(Event).
+schedule_after_event(Delay, Event, Ref) :-
+    statechart_wasm:self(Self),
+    statechart_wasm:send(Self, Event, [delay(Delay), id(Ref)]).
+
+fresh_after_ref(Ref) :-
+    catch(once(statechart_wasm:make_ref(Ref)), _, fail),
+    !.
+fresh_after_ref(ref(N)) :-
+    flag(wp_wasm_after_ref_counter, N, N + 1).
+
+
+%!  cancel_after_transitions(+State) is det.
+%
+%   Invalidate first, then ask the host scheduler to cancel.  A callback
+%   already queued by the host carries the old reference and is ignored.
+cancel_after_transitions(State) :-
+    forall(retract(statechart_wasm:after_timer(State, _Key, Ref)),
+           catch(statechart_wasm:cancel(Ref), _, true)).
+
+cancel_all_after_transitions :-
+    forall(retract(statechart_wasm:after_timer(_State, _Key, Ref)),
+           catch(statechart_wasm:cancel(Ref), _, true)).
 
 execute_content(Content) :-
     maplist(call, Content).
@@ -132,6 +193,39 @@ enqueue_internal_event(Event) :-
 dequeue_internal_event(Event) :-
     retract(statechart_wasm:internal_queue([Event|Q])),
     assertz(statechart_wasm:internal_queue(Q)).
+
+initialise_event_processing :-
+    retractall(statechart_wasm:postponed_queue(_)),
+    assertz(statechart_wasm:postponed_queue([])),
+    retractall(statechart_wasm:macrostep_start(_)),
+    assertz(statechart_wasm:macrostep_start([])).
+
+begin_macrostep :-
+    statechart_wasm:configuration(Configuration),
+    retractall(statechart_wasm:macrostep_start(_)),
+    assertz(statechart_wasm:macrostep_start(Configuration)).
+
+ensure_macrostep :-
+    (   statechart_wasm:macrostep_start(_)
+    ->  true
+    ;   begin_macrostep
+    ).
+
+postpone_event(Event) :-
+    retract(statechart_wasm:postponed_queue(Events)),
+    append(Events, [Event], NewEvents),
+    assertz(statechart_wasm:postponed_queue(NewEvents)).
+
+reoffer_postponed_events(Events) :-
+    retract(statechart_wasm:macrostep_start(StartConfiguration)),
+    statechart_wasm:configuration(Configuration),
+    Configuration \== StartConfiguration,
+    statechart_wasm:postponed_queue(Events),
+    Events \= [],
+    retractall(statechart_wasm:postponed_queue(_)),
+    assertz(statechart_wasm:postponed_queue([])),
+    maplist(enqueue_internal_event, Events),
+    assertz(statechart_wasm:macrostep_start(Configuration)).
 
 update_eventdata(Event) :-
     retractall(statechart_wasm:event(_)),

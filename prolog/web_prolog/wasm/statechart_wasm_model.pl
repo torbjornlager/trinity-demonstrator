@@ -142,8 +142,7 @@ model_generate_node(history, Attrs, _Children, Parent, ID) :-
     option(type(Type), Attrs, shallow),
     model_assert(history(ID, Parent, Type)).
 model_generate_node(go, Attrs, Children, Parent, _ID) :-
-    option(on(EventAtom), Attrs, ''),
-    my_atom_to_term(EventAtom, Event, Bindings0),
+    transition_trigger(Attrs, Parent, Trigger, Bindings0),
     option(if(CondAtom), Attrs, true),
     my_atom_to_term(CondAtom, Cond, Bindings1),
     unify_bindings(Bindings0, Bindings1, Bindings2),
@@ -152,7 +151,19 @@ model_generate_node(go, Attrs, Children, Parent, _ID) :-
     ;   TargetList = []
     ),
     children_to_actions(Children, Actions, Bindings2),
-    model_assert(transition(Parent, Event, Cond, TargetList, Actions)).
+    assert_transition(Trigger, Parent, Cond, TargetList, Actions).
+model_generate_node(defer, Attrs, _Children, Parent, _ID) :-
+    (   option(on(EventAtom), Attrs)
+    ->  true
+    ;   throw(error(existence_error(attribute, on),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<defer> requires an on attribute')))
+    ),
+    my_atom_to_term(EventAtom, Event, Bindings0),
+    option(if(CondAtom), Attrs, true),
+    my_atom_to_term(CondAtom, Cond, Bindings1),
+    unify_bindings(Bindings0, Bindings1, _),
+    model_assert(defer(Parent, Event, Cond)).
 model_generate_node(final, Attrs, _Children, Parent, ID) :-
     option(id(ID), Attrs),
     gennum(N),
@@ -175,6 +186,44 @@ model_generate_node(datamodel, _Attrs, Children, _Parent, _ID) :-
 
 model_assert(Fact) :-
     assertz(statechart_wasm:Fact).
+
+
+transition_trigger(Attrs, Parent, after(Key, Delay), []) :-
+    option(after(DelayAtom), Attrs),
+    !,
+    (   option(on(_), Attrs)
+    ->  throw(error(domain_error(statechart_transition_trigger,
+                                 on_and_after),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<go> cannot have both on and after attributes')))
+    ;   true
+    ),
+    after_delay(DelayAtom, Delay),
+    gennum(N),
+    Key = after(Parent, N).
+transition_trigger(Attrs, _Parent, event(Event), Bindings) :-
+    option(on(EventAtom), Attrs, ''),
+    my_atom_to_term(EventAtom, Event, Bindings).
+
+after_delay(Value, Delay) :-
+    (   number(Value)
+    ->  Delay0 = Value
+    ;   atom(Value),
+        catch(atom_number(Value, Delay0), _, fail)
+    ),
+    Delay0 >= 0,
+    Delay0 < 1.0Inf,
+    !,
+    Delay = Delay0.
+after_delay(Value, _Delay) :-
+    throw(error(domain_error(non_negative_number, Value),
+                context(statechart_wasm_model:model_generate_node/5,
+                        'the after attribute is a delay in seconds'))).
+
+assert_transition(event(Event), Parent, Cond, Targets, Actions) :-
+    model_assert(transition(Parent, Event, Cond, Targets, Actions)).
+assert_transition(after(Key, Delay), Parent, Cond, Targets, Actions) :-
+    model_assert(after_transition(Parent, Key, Delay, Cond, Targets, Actions)).
 
 
 children_to_actions([], [], _Bindings).

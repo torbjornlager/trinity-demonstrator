@@ -69,6 +69,46 @@ test(parse_spawn, [setup(statechart_actor:clean), cleanup(statechart_actor:clean
     statechart_actor:to_be_invoked('spawn-ask-collect', toplevel, Options),
     memberchk(src_list(_), Options).
 
+test(parse_after_transition,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">",
+        "<state id=\"waiting\"><go to=\"done\" after=\"0.25\"/></state>",
+        "<state id=\"done\"/>",
+        "</statechart>"
+    ], Text),
+    statechart_model:statechart_actor_parse_text(Text),
+    statechart_actor:after_transition(waiting, _Key, 0.25,
+                                      true, [done], []).
+
+test(parse_after_rejects_on,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_transition_trigger,
+                                 on_and_after), _))
+     ]) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">",
+        "<state id=\"waiting\">",
+        "<go to=\"done\" on=\"go\" after=\"1\"/>",
+        "</state>",
+        "<state id=\"done\"/>",
+        "</statechart>"
+    ], Text),
+    statechart_model:statechart_actor_parse_text(Text).
+
+test(parse_defer,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">",
+        "<state id=\"waiting\">",
+        "<defer on=\"command(C)\" if=\"C == later\"/>",
+        "</state>",
+        "</statechart>"
+    ], Text),
+    statechart_model:statechart_actor_parse_text(Text),
+    statechart_actor:defer(waiting, command(C), C==later).
+
 :- end_tests(statechart_profile).
 
 
@@ -388,6 +428,91 @@ test(runtime_statechart_raise_onentry_triggers_internal_transition) :-
         catch(exit(Pid, stop), _, true)
     ).
 
+test(runtime_after_transition_fires) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">\n",
+        "  <state id=\"waiting\">\n",
+        "    <go to=\"done\" after=\"0.02\"/>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>\n"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        await_down(Pid, 1.0),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_after_transition_cancelled_on_exit) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">\n",
+        "  <state id=\"waiting\">\n",
+        "    <go to=\"timed_out\" after=\"0.10\"/>\n",
+        "    <go to=\"left\" on=\"leave\"/>\n",
+        "  </state>\n",
+        "  <final id=\"timed_out\"/>\n",
+        "  <state id=\"left\">\n",
+        "    <go to=\"done\" on=\"finish\"/>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>\n"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        (
+            send(Pid, leave),
+            receive({
+                down(Pid, _) -> fail;
+                down(Pid, _, _) -> fail
+            }, [timeout(0.20), on_timeout(true)]),
+            send(Pid, finish),
+            await_down(Pid, 1.0)
+        ),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_deferred_event_reoffered_after_state_change) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">\n",
+        "  <state id=\"waiting\">\n",
+        "    <defer on=\"finish\"/>\n",
+        "    <go to=\"ready\" on=\"start\"/>\n",
+        "  </state>\n",
+        "  <state id=\"ready\">\n",
+        "    <go to=\"done\" on=\"finish\"/>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>\n"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        (
+            send(Pid, finish),
+            send(Pid, start),
+            await_down(Pid, 1.0)
+        ),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_enabled_transition_precedes_deferral) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">\n",
+        "  <state id=\"waiting\">\n",
+        "    <defer on=\"finish\"/>\n",
+        "    <go to=\"done\" on=\"finish\"/>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>\n"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        (
+            send(Pid, finish),
+            await_down(Pid, 1.0)
+        ),
+        catch(exit(Pid, stop), _, true)
+    ).
+
 :- end_tests(statechart_profile_runtime).
 
 
@@ -540,6 +665,31 @@ test(trace_golden_parallel_compatible, [setup(enable_trace_capture),
     same_set(EntrySet, ['L2','R2']),
     !.
 
+test(after_reentry_ignores_stale_firing,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    atomics_to_string([
+        "<statechart initial=\"waiting\">\n",
+        "  <state id=\"waiting\">\n",
+        "    <go to=\"timed_out\" after=\"100\"/>\n",
+        "    <go to=\"away\" on=\"leave\"/>\n",
+        "  </state>\n",
+        "  <state id=\"away\"><go to=\"waiting\" on=\"back\"/></state>\n",
+        "  <state id=\"timed_out\"/>\n",
+        "</statechart>\n"
+    ], Text),
+    init_interpreter_text(Text),
+    statechart_actor:after_timer(waiting, Key, Ref1),
+    step_event(leave),
+    step_event(back),
+    statechart_actor:after_timer(waiting, Key, Ref2),
+    assertion(Ref1 \=@= Ref2),
+    \+ statechart_actor:select_transitions(
+           '$statechart_after'(waiting, Key, Ref1), _),
+    assertion(statechart_actor:in(waiting)),
+    assertion(statechart_actor:after_timer(waiting, Key, Ref2)),
+    step_event('$statechart_after'(waiting, Key, Ref2)),
+    assertion(statechart_actor:in(timed_out)).
+
 :- end_tests(statechart_profile_semantics).
 
 start_statechart_actor(File, Pid) :-
@@ -691,6 +841,14 @@ step_event(Event) :-
 init_interpreter(File) :-
     statechart_actor:clean,
     parse_statechart_fixture(File),
+    init_parsed_interpreter.
+
+init_interpreter_text(Text) :-
+    statechart_actor:clean,
+    statechart_model:statechart_actor_parse_text(Text),
+    init_parsed_interpreter.
+
+init_parsed_interpreter :-
     statechart_actor:root_state(Root),
     assertz(statechart_actor:configuration([])),
     assertz(statechart_actor:states_to_invoke([])),
