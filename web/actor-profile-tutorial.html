@@ -1401,9 +1401,8 @@ price(Item, Price) :-
 <h2>A count server</h2>
 
 <p>
-    This actor keeps its state in an argument. Each <code>count(From)</code>
-    message increments the counter and sends the new count back. A
-    <code>stop</code> message terminates the server cleanly.
+    The following code is available in the shared database of the browser node (SWI-WASM) and in the shared databases of the
+    remote nodes N3 and N4:
 </p>
 
 <pre id="epa-count-source">count_actor(Count0) :-
@@ -1417,12 +1416,14 @@ price(Item, Price) :-
     }).
 </pre>
 
-<p class="ask-buttons">
-  <button onclick="consult(&quot;#epa-count-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+<p>
+    This actor keeps its state in an argument. Each <code>count(From)</code>
+    message increments the counter and sends the new count back. A
+    <code>stop</code> message terminates the server cleanly. Let's make ourselves 
+    a count server:
 </p>
 
 <pre id="epa-count-spawn">?- spawn(count_actor(0), Pid, [
-       src_predicates([count_actor/1]),
        monitor(true)
    ]).
 </pre>
@@ -1432,15 +1433,7 @@ price(Item, Price) :-
 </button>
 </p>
 
-<pre id="epa-count-self">?- self(Self).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#epa-count-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="epa-count-send-once">?- $Pid ! count($Self).
+<pre id="epa-count-send-once">?- self(Self), $Pid ! count(Self).
 </pre>
 
 <p class="ask-buttons">

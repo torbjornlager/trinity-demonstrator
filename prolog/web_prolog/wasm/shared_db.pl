@@ -7,11 +7,22 @@ list_price(gizmo, 400).
 price(Item, Price) :-
     list_price(Item, Price).
 
+
 echo_actor :-
     receive({
         echo(From, Msg) ->
             From ! echo(Msg),
             echo_actor
+    }).
+    
+count_actor(Count0) :-
+    receive({
+        count(From) ->
+            Count is Count0 + 1,
+            From ! count(Count),
+            count_actor(Count) ;
+        stop ->
+            true
     }).
 
 % Shared database used by example 13 shared-database.xml.
