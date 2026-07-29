@@ -101,7 +101,7 @@ but must preserve the portable subset's copying semantics.
 |---|---|
 | `self/1` | Canonical pid of the current actor or thread |
 | `canonical_pid/2` | Normalize pid to `Id@URL` |
-| `make_id/1` | Generate a fresh, unguessable id (used for pids and Refs) |
+| `make_id/1` | Generate a fresh, unguessable 10-digit id from the system CSPRNG (used for pids and Refs) |
 | `spawn/3` | Local spawn with options `node`, `link`, `monitor`, `monitor_target`, `monitor_ref` |
 | `send/2` | Send to a pid's mailbox (local) |
 | `exit/2` | Terminate an actor (local) |

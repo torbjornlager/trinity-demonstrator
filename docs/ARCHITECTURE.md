@@ -86,6 +86,11 @@ program-level calls such as `spawn(worker, Pid)`. Public node spawns do not
 inherit their session module: session-defined predicates must be copied into
 the actor explicitly with `src_predicates/1` (or supplied through another
 `src_*` option). Node-published shared predicates remain available by name.
+Trusted native actors import the immutable standard I/O implementation from
+[`actor_io_template.pl`](../prolog/web_prolog/actor_io_template.pl), avoiding
+recompilation in every private module. Public sandbox actors retain local I/O
+wrappers so policy checks can distinguish actor I/O from unrestricted stream
+I/O.
 
 ### 2. Isolation
 

@@ -40,8 +40,11 @@ actor-coupled.
 
   - prepare_module(+Module, +GoalModule, +Options): extend the fresh
     actor module (extra imports, operators).  All solutions are run.
-    The behaviours layer adds its statechart API import here; the
-    distribution layer adds the `@`/2 operator.
+    The hook runs once during initial preparation and, when effective
+    source is loaded, once more afterwards to restore extensions that
+    the source may have shadowed.  Source-free actors need no repair
+    pass.  The behaviours layer adds its statechart API import here;
+    the distribution layer adds the `@`/2 operator.
   - prepare_goal(+Module, +Goal0, -Goal): rewrite the start goal just
     before execution (the node layer's public-profile guard).  First
     solution wins; default identity.
@@ -77,6 +80,7 @@ actor-coupled.
 :- use_module(actor_io_support, [
     actor_io_prelude_text/1
 ]).
+:- use_module(actor_io_template, []).
 :- use_module(source_utils, [
     terms_to_source/2,
     predicates_to_source/3,
@@ -228,9 +232,22 @@ prepare_actor_module(Module, GoalModule, Options) :-
     configure_actor_operators(Module),
     option(source_module(SourceModule), Options, GoalModule),
     prepare_runtime_source_options(SourceModule, Options, PreparedOptions),
-    inject_actor_io_prelude(PreparedOptions, WithIOPrelude),
+    prepare_actor_io(Module, Options, PreparedOptions, WithIOPrelude),
     inject_extra_preludes(WithIOPrelude, EffectiveOptions),
     source_options(EffectiveOptions, SourceModule, SourceOptions),
+    load_actor_sources(Module, SourceOptions, GoalModule, Options).
+
+
+%!  load_actor_sources(+Module, +Sources, +GoalModule, +Options) is det.
+%
+%   Load effective actor source and repair imports or hook-installed module
+%   state that the source may have shadowed.  When Sources is empty there is
+%   nothing to load and, crucially, nothing that could have disturbed the
+%   module prepared above.  Avoiding the otherwise redundant repair pass is
+%   the source-free actor fast path.
+load_actor_sources(_, [], _, _) :-
+    !.
+load_actor_sources(Module, SourceOptions, GoalModule, Options) :-
     load_sources(Module, SourceOptions),
     restore_shadowed_shared_db_imports(Module),
     restore_runtime_imports(Module, GoalModule, Options).
@@ -240,6 +257,7 @@ restore_runtime_imports(Module, GoalModule, Options) :-
     import_goal_module(Module, GoalModule, Options),
     import_actor_api(Module),
     import_shared_db(Module),
+    restore_actor_io_import(Module, Options),
     forall(prepare_module(Module, GoalModule, Options), true).
 
 
@@ -307,6 +325,33 @@ import_shared_db(Module) :-
 configure_actor_operators(Module) :-
     Module:op(800, xfx, !),
     Module:op(1000, xfy, if).
+
+prepare_actor_io(Module, Options, Options0, PreparedOptions) :-
+    actor_io_mode(Options, Mode),
+    prepare_actor_io_mode(Mode, Module, Options0, PreparedOptions).
+
+actor_io_mode(Options, Mode) :-
+    option(isolation_io(Mode), Options, precompiled).
+
+prepare_actor_io_mode(generated, _, Options, WithPrelude) :-
+    !,
+    inject_actor_io_prelude(Options, WithPrelude).
+prepare_actor_io_mode(precompiled, Module, Options, Options) :-
+    !,
+    import_actor_io_template(Module).
+prepare_actor_io_mode(Mode, _, _, _) :-
+    throw(error(domain_error(isolation_io_mode, Mode),
+                context(isolation:prepare_actor_module/3,
+                        'isolation_io must be generated or precompiled'))).
+
+restore_actor_io_import(Module, Options) :-
+    actor_io_mode(Options, precompiled),
+    !,
+    import_actor_io_template(Module).
+restore_actor_io_import(_, _).
+
+import_actor_io_template(Module) :-
+    add_import_module(Module, actor_io_template, start).
 
 inject_actor_io_prelude(Options0, [src_text(Prelude)|Options0]) :-
     actor_io_prelude_text(Prelude).

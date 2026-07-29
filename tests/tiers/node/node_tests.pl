@@ -61,7 +61,7 @@
 ]).
 :- use_module('../../../prolog/web_prolog/node_execution_context.pl', [with_public_execution_profile/2]).
 :- use_module('../../../prolog/web_prolog/toplevel_actors.pl', [toplevel_spawn/2, toplevel_call/3, toplevel_next/1]).
-:- use_module('../../../prolog/web_prolog/actor_api.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, op(200, xfx, @)]).
+:- use_module('../../../prolog/web_prolog/actor_api.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, make_id/1, op(200, xfx, @)]).
 :- use_module('../../../prolog/web_prolog/pid_utils.pl', [pid_local/2]).
 :- use_module('../../../prolog/web_prolog/statechart_actor.pl', [statechart_spawn/2]).
 :- use_module('../../../prolog/web_prolog/server_actor.pl', []).
@@ -713,6 +713,20 @@ rp(left).
 rp(right).
 
 :- begin_tests(node).
+
+test(make_id_is_unique_ten_digit_integer,
+     true((Length == 64, UniqueLength == 64))) :-
+    findall(Id,
+            ( between(1, 64, _),
+              make_id(Id),
+              assertion(integer(Id)),
+              assertion(Id >= 1000000000),
+              assertion(Id =< 9999999999)
+            ),
+            Ids),
+    length(Ids, Length),
+    sort(Ids, Unique),
+    length(Unique, UniqueLength).
 
 test(rpc_localhost_finds_user_dispatcher_port) :-
     pick_free_port(Port),
@@ -4472,12 +4486,14 @@ test(ws_remote_actor_requires_load_predicates_for_session_code,
             ))).
 
 test(public_spawn_cannot_override_goal_module_isolation,
-     true(Options == [inherit_goal_module(false)])) :-
+     true(Options == [isolation_io(generated),
+                      inherit_goal_module(false)])) :-
     with_sandbox_mode(off,
         with_public_execution_profile(actor,
             once(actors:hook_spawn_options(
                 test_node:true,
-                [inherit_goal_module(true)],
+                [inherit_goal_module(true),
+                 isolation_io(precompiled)],
                 Options
             )))).
 

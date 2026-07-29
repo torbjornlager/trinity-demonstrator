@@ -224,6 +224,7 @@ def section_groups(all_edges: list[tuple[str, str]]) -> list[tuple[str, list[tup
         or source in {
             "prolog/web_prolog/actors.pl",
             "prolog/web_prolog/actor_io_support.pl",
+            "prolog/web_prolog/actor_io_template.pl",
             "prolog/web_prolog/toplevel_actors.pl",
             "prolog/web_prolog/pid_utils.pl",
             "prolog/web_prolog/dollar_expansion.pl",
@@ -287,6 +288,7 @@ LAYERS = {
     # layer 1 — isolation
     _WP + "source_utils.pl": 1,
     _WP + "actor_io_support.pl": 1,
+    _WP + "actor_io_template.pl": 1,
     _WP + "isolation.pl": 1,
     _WP + "worker_cleanup.pl": 1,
     # layer 2 — toplevels and behaviours

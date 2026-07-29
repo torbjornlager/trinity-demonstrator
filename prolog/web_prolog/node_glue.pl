@@ -68,9 +68,15 @@ actors:hook_spawn_options(Goal, Options0, Options) :-
                                               PlainGoal, PublicOptions,
                                               PreparedOptions),
     public_spawn_module_options(GoalModule, PlainGoal, PreparedOptions,
-                                Options).
+                                ModuleOptions),
+    % Public profiles retain actor-local I/O wrappers.  The sandbox
+    % deliberately recognises these local predicates as actor I/O, whereas
+    % importing the shared precompiled implementation would expose them as
+    % ordinary stream-I/O predicates during goal validation.
+    Options = [isolation_io(generated)|ModuleOptions].
 
 internal_spawn_option(inherit_goal_module(_)).
+internal_spawn_option(isolation_io(_)).
 
 public_spawn_module_options(GoalModule, Goal, Options, Options) :-
     public_framework_start_goal(GoalModule, Goal),

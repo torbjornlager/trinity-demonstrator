@@ -1,0 +1,1500 @@
+Appendix C
+How to implement a Prolog node
+
+
+
+
+The preceding chapters have described Web Prolog chiefly from the programmer’s
+point of view. This appendix turns the system around and asks what a node im-
+plementer must provide. The answer depends on the node’s profile, its host Prolog
+system, and the environment in which it is deployed.
+    At the time of writing, the demonstrator provides substantial implementations of
+all four profiles, including native and browser-resident actors, cross-node commu-
+nication, source installation, statechart actors, authentication, policy enforcement,
+resource limits, and administrative facilities. It should nevertheless be regarded as
+a research implementation, not as a final interoperable standard or a production
+platform suitable for arbitrary deployment. In particular, there is not yet a second
+independent implementation against which its observable behaviour can be tested.
+    The distinction matters throughout this appendix. The public interfaces are spec-
+ified in Appendix A; the code below is explanatory. Some fragments closely follow
+the demonstrator, while others deliberately omit machinery that would obscure the
+central idea. Whenever a fragment is pedagogical rather than complete, we say so
+and identify what a deployable implementation must add.
+
+
+
+C.1 From a profile to a running node
+
+A Prolog node is not simply a Prolog system with an HTTP server attached. Even
+the least capable public node must translate between a network request and a Prolog
+computation while preserving the contracts for terms, answers, errors, limits, and
+profiles. More capable nodes add persistent execution contexts, actors, distribution,
+and lifecycle management.
+   The profiles therefore imply a progression of implementation responsibilities:
+relation.
+   Parse a call to an owner-defined relation, execute it within the advertised relation
+
+
+
+
+                                                                                   359
+360                                                    C How to implement a Prolog node
+
+    surface, and encode its answers. Such a node need not implement ISO Prolog
+    generally and need not itself be written in Prolog.
+isobase.
+    Add the advertised ISOBASE language fragment, the stateless /call API, term
+    and error conversion, and bounded nondeterministic query evaluation.
+isotope.
+    Add private execution contexts, source installation, and the semi-stateful toplevel
+    API. The node must retain query state between requests and reclaim it when a
+    session is stopped, halted, abandoned, or expired.
+actor.
+    Add actors, mailboxes, selective receive, links, monitors, naming, remote place-
+    ment, actor I/O, and the stateful WebSocket protocol. The actor profile also
+    requires a clear account of isolation and of the lifetime relationship between a
+    client, a connection, and the actors created through it.
+
+These are language and protocol responsibilities. A public deployment adds another
+layer: authentication, authorisation, sandboxing, quotas, overload control, transport
+security, logging, observability, and administration. A small teaching implementation
+can omit that layer. An Internet-facing node cannot.
+
+
+
+C.1.1 A useful decomposition
+
+The native demonstrator separates the request path into several layers. The exact
+module boundaries are implementation choices, but the decomposition is portable:
+ 1. A transport adapter accepts HTTP or WebSocket input and converts it into a
+    typed internal request.
+ 2. Authentication identifies a principal, and profile and capability checks decide
+    whether that principal may perform the requested operation.
+ 3. Input validation checks term size, syntax, source options, relation visibility, and
+    the permitted language fragment.
+ 4. An execution-context layer creates or selects the private database, actor, toplevel,
+    or stateless query engine in which the goal will run.
+ 5. The runtime applies time, inference, memory, actor, mailbox, and result limits
+    as appropriate.
+ 6. A response layer converts success, failure, errors, prompts, output, and lifecycle
+    events into the representation required by the transport.
+This order is significant. Validation must occur before untrusted source is loaded or
+an untrusted goal is called, and resource ownership must be established before work
+is started. Conversely, transport-specific JSON or WebSocket details should not leak
+into the actor and query semantics.
+C.2 A native node on top of SWI-Prolog                                          361
+
+C.2 A native node on top of SWI-Prolog
+
+The native demonstrator wraps a node around SWI-Prolog. Native threads supply the
+scheduling substrate for actors, temporary modules supply private clause databases,
+and the HTTP and WebSocket libraries supply the network transports. This is not
+the only possible design, but it shows how much of a node can be implemented as a
+library on top of a mature Prolog system.
+
+
+
+C.2.1 The stateless HTTP endpoint
+
+Chapter 5.3 developed answer terms and Chapter 4 showed how rpc/2-3 recon-
+structs Prolog nondeterminism from stateless HTTP responses. We do not repeat
+those client-side mechanisms here. Instead, the following program implements a
+small but complete stateless endpoint. It accepts Prolog-formatted calls only; JSON,
+source installation, and policy enforcement are added later by more capable imple-
+mentations.
+:- use_module(library(http/http_server)).
+:- use_module(library(http/http_parameters)).
+:- use_module(library(solution_sequences)).
+
+:- http_handler(root(call), call_handler, []).
+
+node(Port) :-
+    http_server(http_dispatch, [port(Port)]).
+
+call_handler(Request) :-
+    http_parameters(Request, [
+        goal(GoalAtom, [atom]),
+        template(TemplateAtom, [
+            atom,
+            default(GoalAtom)
+        ]),
+        offset(Offset, [integer, default(0)]),
+        limit(Limit, [
+            integer,
+            default(10 000 000 000)
+        ]),
+        format(prolog, [default(prolog)])
+    ]),
+    parse_goal_template(
+        GoalAtom, TemplateAtom, Goal, Template
+    ),
+362                                      C How to implement a Prolog node
+
+      compute_answer(Goal, Template, Offset, Limit, Answer),
+      reply_prolog(Answer).
+
+parse_goal_template(GoalAtom, TemplateAtom, Goal, Template) :-
+    atomic_list_concat([
+        ’(’, GoalAtom, ’)+(’, TemplateAtom, ’)’
+    ], Text),
+    read_term_from_atom(Text, Goal+Template, [
+        syntax_errors(error)
+    ]).
+
+compute_answer(Goal, Template, Offset, Limit, Answer) :-
+    once(answer(Goal, Template, Offset, Limit, Answer)).
+
+answer(Goal, Template, Offset, Limit, Answer) :-
+    catch(
+        call_cleanup(
+            slice(Goal, Template, Offset, Limit, Slice),
+            Deterministic = true
+        ),
+        Error,
+        true
+    ),
+    (   nonvar(Error)
+    -> Answer = error(Error)
+    ;   Slice == []
+    -> Answer = failure
+    ;   var(Deterministic)
+    -> Answer = success(Slice, true)
+    ;   Answer = success(Slice, false)
+    ).
+
+slice(Goal, Template, Offset, Limit, Slice) :-
+    findnsols(
+        Limit,
+        Template,
+        offset(Offset, Goal),
+        Slice
+    ).
+
+reply_prolog(Answer) :-
+    format(
+        ’Content-type: application/x-prolog; charset=UTF-8˜n˜n’
+    ),
+    write_term(Answer, [
+C.2 A native node on top of SWI-Prolog                                              363
+
+           quoted(true),
+           numbervars(true),
+           fullstop(true),
+           nl(true)
+     ]).
+The goal and template are parsed together so that occurrences of the same vari-
+able name denote the same variable. A call to once/1 makes the HTTP handler
+deterministic even though answer/5 is itself nondeterministic.
+    This program must be bound only to a trusted local interface. It executes arbitrary
+goals with the authority of the host Prolog process. The complete node surrounds
+the call to the query engine with parsing limits, authentication, profile and relation
+checks, sandbox validation, a private execution context, time and inference lim-
+its, maintenance and overload checks, and response logging. Those are substantial
+subsystems, so we describe their placement rather than disguise them as undefined
+predicates in an otherwise executable example.
+
+
+
+C.2.2 Avoiding spurious recomputation
+
+The compute answer/5 implementation above is correct, but successive HTTP
+requests may repeat work. Consider a goal whose first solution is expensive and
+whose second solution is cheap:
+?- time((sleep(1), X=foo ; X=bar)).
+X = foo ;
+X = bar.
+?-
+
+If the two solutions are requested in separate slices, a purely offset-based imple-
+mentation recomputes the expensive first branch when serving the second request.
+More generally, computing the 𝑛th slice requires recomputing and discarding the
+preceding 𝑛 − 1 slices.
+    The demonstrator avoids this by retaining a bounded cache of suspended toplevel
+actors. After producing a non-final slice, a toplevel is waiting at the PTCP slice
+boundary with its remaining choice points intact. The node may associate that
+continuation with the next offset. A later request for the same computation can
+resume the actor rather than repeat the search.
+    This does not turn the HTTP interface into a client session. The cached actor is an
+internal optimisation: the client neither receives its pid nor gains exclusive ownership
+of it. The node may expire or evict it, in which case a later request is recomputed
+from the information carried by that request.
+364                                                    C How to implement a Prolog node
+
+Keys, ownership, and cleanup
+
+A cache key must contain every input that can affect the computation, including the
+goal, template, installed source, and relevant evaluation options. Treating a bounded
+term hash/2 result as a unique identity would be unsound unless collisions are
+checked. A simple pedagogical implementation can instead retain the canonical
+term itself:
+goal_key(Goal-Template-Source-Once, Key) :-
+    copy_term(Goal-Template-Source-Once, Key),
+    numbervars(Key, 0, _).
+A production key may use a hash for indexing, but it must still establish equality of the
+full canonical input. It may also have to include the node instance or execution-policy
+context so that continuations are not mixed across incompatible authorities.
+   The following alternative implementation exposes the control structure of the
+cache. It is complete except for the public toplevel * predicates implemented in
+Section 5.3. A private message queue is used for the answer so that the HTTP worker
+does not consume an unrelated actor message:
+:- use_module(library(aggregate)).
+
+:- dynamic cached/3.
+
+max_cache_size(100).
+
+compute_answer_cached(Goal, Template, Offset, Limit,
+                      Source, Answer) :-
+    goal_key(Goal-Template-Source-false, Key),
+    setup_call_cleanup(
+        message_queue_create(Queue),
+        compute_answer_cached(
+            Queue, Key, Goal, Template, Offset, Limit, Source,
+            Answer
+        ),
+        message_queue_destroy(Queue)
+    ).
+
+compute_answer_cached(Queue, Key, Goal, Template, Offset,
+                      Limit, Source, Answer) :-
+    (   take_cached(Key, Offset, Pid)
+    -> toplevel_next(Pid, [
+            limit(Limit),
+            target(Queue)
+        ])
+    ;   spawn_options(Source, Queue, SpawnOptions),
+C.2 A native node on top of SWI-Prolog                      365
+
+           toplevel_spawn(Pid, SpawnOptions),
+           toplevel_call(Pid, Goal, [
+               template(Template),
+               offset(Offset),
+               limit(Limit),
+               target(Queue)
+           ])
+     ),
+     await_slice(Queue, Key, Offset, Limit, Pid, Answer).
+
+spawn_options(’’, Queue, [
+    session(false),
+    target(Queue)
+]) :-
+    !.
+spawn_options(Source, Queue, [
+    session(false),
+    target(Queue),
+    src_text(Source)
+]).
+
+await_slice(Queue, Key, Offset, Limit, Pid, Answer) :-
+    (   thread_get_message(Queue, Message, [timeout(30)])
+    -> slice_message(
+            Message, Key, Offset, Limit, Pid, Answer
+        )
+    ;   stop_toplevel(Pid),
+        Answer = error(timeout)
+    ).
+
+slice_message(success(Pid, Slice, true),
+              Key, Offset, Limit, Pid,
+              success(Slice, true)) :-
+    Next is Offset + Limit,
+    save_cached(Key, Next, Pid).
+slice_message(success(Pid, Slice, false),
+              _, _, _, Pid, success(Slice, false)).
+slice_message(failure(Pid),
+              _, _, _, Pid, failure).
+slice_message(error(Pid, Error),
+              _, _, _, Pid, error(Error)).
+slice_message(Message, _, _, _, Pid,
+              error(unexpected_message(Message))) :-
+    stop_toplevel(Pid).
+366                                                  C How to implement a Prolog node
+
+take_cached(Key, Offset, Pid) :-
+    with_mutex(
+        continuation_cache,
+        once(retract(cached(Key, Offset, Pid)))
+    ).
+
+save_cached(Key, Offset, Pid) :-
+    with_mutex(
+        continuation_cache,
+        (
+            assertz(cached(Key, Offset, Pid)),
+            evict_excess(Evicted)
+        )
+    ),
+    dispose_cached(Evicted).
+
+evict_excess(Evicted) :-
+    max_cache_size(Max),
+    aggregate_all(count, cached(_, _, _), Count),
+    (   Count > Max
+    -> once(retract(cached(_, _, Evicted)))
+    ;   Evicted = none
+    ).
+
+dispose_cached(none) :-
+    !.
+dispose_cached(Pid) :-
+    stop_toplevel(Pid).
+
+stop_toplevel(Pid) :-
+    catch(toplevel_halt(Pid), _, true).
+The mutex makes acquisition and insertion race-safe. Eviction removes the old-
+est clause and terminates its toplevel rather than merely forgetting its pid. To use
+this version in the HTTP controller, replace its call to compute answer/5 with
+compute answer cached/6 and pass the empty atom as the source.
+   The example has a size bound but no expiry clock. The demonstrator also asso-
+ciates an alarm with every cache entry, cancels the alarm when the entry is acquired,
+and terminates the toplevel when the entry expires. It further uses a node-specific
+cache key and preserves the timeout budget while discarding unrelated internal
+messages.
+C.2 A native node on top of SWI-Prolog                                             367
+
+C.2.3 Implementing the actor primitives
+
+The actor layer can be explained economically on a Prolog system that implements
+the ISO thread draft. The following host predicates provide the principal mechanisms:
+  Web Prolog                                      Host Prolog
+
+  spawn/1-3                                       thread_create/3
+  self/1                                          thread_self/1
+  send/2, !/2                                     thread_send_message/2
+  receive/1-2                                     thread_get_message/3
+  exit/2                                          thread_signal/2
+This table is only a starting point. A thread identifier is not a Web Prolog pid, and a
+thread queue does not by itself implement links, monitors, names, remote addressing,
+private databases, or the specified selective-receive semantics. The implementation
+must place an actor layer between the public predicates and the host thread API.
+
+
+Pids and process creation
+
+The small implementation below separates pids from host thread identifiers. The
+mappings also make it possible for a distribution layer to replace the local pid
+generator without exposing thread identities to programs.
+:- use_module(library(option)).
+
+:- op(800, xfx, !).
+
+:- meta_predicate
+    spawn(0),
+    spawn(0, -),
+    spawn(0, -, +).
+
+:- dynamic pid_thread/2.
+:- dynamic thread_pid/2.
+:- dynamic link/2.
+:- dynamic monitor/3.
+:- dynamic exit_reason/2.
+
+:- thread_local parent/1.
+
+:- initialization(init_main_actor, after_load).
+
+init_main_actor :-
+    thread_self(Thread),
+368                                       C How to implement a Prolog node
+
+      (    thread_pid(Thread, _)
+      ->   true
+      ;    fresh_pid(Pid),
+           assertz(pid_thread(Pid, Thread)),
+           assertz(thread_pid(Thread, Pid))
+      ).
+
+self(Pid) :-
+    thread_self(Thread),
+    thread_pid(Thread, Pid).
+
+fresh_pid(Pid) :-
+    flag(web_prolog_pid, N, N + 1),
+    Pid is 10 000 000 + N.
+
+spawn(Goal) :-
+    spawn(Goal, _).
+
+spawn(Goal, Pid) :-
+    spawn(Goal, Pid, []).
+
+spawn(Goal, Pid, Options) :-
+    self(Parent),
+    fresh_pid(Pid),
+    thread_create(
+        actor_boot(Parent, Pid, Goal, Options),
+        Thread,
+        [at_exit(actor_stopped(Pid))]
+    ),
+    assertz(pid_thread(Pid, Thread)),
+    assertz(thread_pid(Thread, Pid)),
+    thread_send_message(Thread, ’$start’),
+    thread_get_message(initialized(Pid)).
+
+actor_boot(Parent, Pid, Goal, Options) :-
+    thread_get_message(’$start’),
+    assertz(parent(Parent)),
+    install_lifetime_options(Parent, Pid, Options),
+    Parent ! initialized(Pid),
+    call(Goal).
+
+install_lifetime_options(Parent, Pid, Options) :-
+    option(link(Link), Options, true),
+    (   Link == true
+    -> assertz(link(Parent, Pid))
+C.2 A native node on top of SWI-Prolog                                           369
+
+     ;   true
+     ),
+     option(monitor(Monitor), Options, false),
+     (   Monitor == true
+     -> assertz(monitor(Parent, Pid, Pid))
+     ;   true
+     ).
+The counter in fresh pid/1 is sufficient for this single-runtime sketch. A node must
+prevent pid reuse and collision across concurrent allocation, and its distribution
+layer must add the node component of the canonical pid. The private ’$start’
+message prevents the child from using its pid before the parent has installed the two
+mappings. The spawn-time monitor uses the pid itself as its reference, matching the
+public convention documented in Appendix A. A separately installed monitor would
+receive a fresh opaque reference.
+   When an actor terminates, the runtime applies the lifetime relations and reports
+the reason:
+actor_stopped(Pid) :-
+    termination_reason(Pid, Reason),
+    forall(
+        retract(link(Pid, Child)),
+        exit(Child, kill)
+    ),
+    retractall(link(_, Pid)),
+    forall(
+        retract(monitor(Watcher, Pid, Ref)),
+        Watcher ! down(Pid, Ref, Reason)
+    ),
+    retract(pid_thread(Pid, Thread)),
+    retractall(thread_pid(Thread, Pid)).
+
+termination_reason(Pid, Reason) :-
+    retract(exit_reason(Pid, Reason)),
+    !.
+termination_reason(Pid, Reason) :-
+    pid_thread(Pid, Thread),
+    thread_property(Thread, status(Reason)).
+
+This makes links directional: if the parent terminates, its linked children are ter-
+minated, whereas termination of a child does not by itself terminate the parent.
+Monitoring is observational and produces down(Pid,Ref,Reason).
+370                                                   C How to implement a Prolog node
+
+Sending and termination
+
+Local sending resolves the pid to a thread and delegates copying and queueing to the
+host:
+
+Pid ! Message :-
+    send(Pid, Message).
+
+send(Pid, Message) :-
+    (   pid_thread(Pid, Thread)
+    -> catch(
+             thread_send_message(Thread, Message),
+             error(existence_error(_, _), _),
+             true
+        )
+    ;   true
+    ).
+Sending to a pid that no longer exists is a no-op. Sending to an unknown registered
+name is different: the public interface reports an existence error because the name is
+a deliberate promise made by the node.
+   Self-termination records the reason before unwinding the actor. Termination of
+another local actor is implemented as a host-thread interrupt:
+exit(Reason) :-
+    self(Self),
+    asserta(exit_reason(Self, Reason)),
+    abort.
+
+exit(Pid, Reason) :-
+    (   pid_thread(Pid, Thread)
+    -> catch(
+             thread_signal(Thread, exit(Reason)),
+             error(existence_error(_, _), _),
+             true
+        )
+    ;   true
+    ).
+The real implementation must serialise termination with monitor installation and
+removal so that a monitor is either removed or notified exactly once. It must also
+translate host termination statuses into the documented Web Prolog reasons.
+C.2 A native node on top of SWI-Prolog                                       371
+
+Selective receive
+
+Host message queues already support pattern-directed reception, but Web Prolog
+receive clauses also have ordering, optional guards, and committed selection. One
+clear implementation keeps unmatched messages in a thread-local deferred queue:
+:- thread_local deferred/1.
+
+receive(Clauses) :-
+    receive(Clauses, []).
+
+receive(Clauses, Options) :-
+    thread_self(Mailbox),
+    (   clause(deferred(Message), true, Ref),
+        select_body(Clauses, Message, Body)
+    -> erase(Ref),
+        call(Body)
+    ;   receive_new(Mailbox, Clauses, Options)
+    ).
+
+receive_new(Mailbox, Clauses, Options) :-
+    (   thread_get_message(Mailbox, Message, Options)
+    -> (    select_body(Clauses, Message, Body)
+        -> call(Body)
+        ;   assertz(deferred(Message)),
+            receive_new(Mailbox, Clauses, Options)
+        )
+    ;   option(on_timeout(Body), Options, true),
+        call(Body)
+    ).
+
+select_body({Clauses}, Message, Body) :-
+    select_clause(Clauses, Message, Body),
+    !.
+
+select_clause((Clause ; _), Message, Body) :-
+    select_clause(Clause, Message, Body).
+select_clause((_ ; Clauses), Message, Body) :-
+    select_clause(Clauses, Message, Body).
+select_clause((Head -> Body), Message, Body) :-
+    (   Head = if(Pattern, Guard)
+    -> subsumes_term(Pattern, Message),
+        Pattern = Message,
+        catch(once(Guard), _, fail)
+    ;   subsumes_term(Head, Message),
+        Head = Message
+372                                                    C How to implement a Prolog node
+
+      ).
+The cut commits to the first matching message and clause. The selected body is then
+an ordinary Prolog goal and may itself have several solutions; backtracking through
+that body never returns the consumed message to the mailbox.
+   This fragment omits module propagation, detailed option checking, and the atomic
+interaction between deferred and newly arriving messages. Those are important in
+an implementation, but they do not alter the semantic idea: scan in arrival order,
+preserve messages that do not currently match, and commit when a receive clause is
+selected.
+
+
+Why the real actor layer is larger
+
+The preceding code is intentionally smaller than the demonstrator. The real native
+runtime additionally provides:
+  • collision-safe opaque pids and monitor references;
+  • atomic monitor installation, dead-pid notification, and demonitor/1-2 with
+    optional flushing;
+  • registered actor names and node-resident service names;
+  • delayed sends and cancellation;
+  • spawn admission and per-actor stack limits;
+  • private execution modules and controlled source installation;
+  • hooks for remote spawn, send, exit, monitoring, and naming;
+  • checks that terms crossing a Worker or network boundary have a portable rep-
+    resentation; and
+  • cleanup for failed actor initialisation, node shutdown, and abandoned sessions.
+These are not embellishments. They are what turns a mapping from actors to threads
+into a node that preserves the same public semantics under failure, concurrency,
+and distribution. The pedagogical core remains useful because it shows where each
+of those additions attaches. In particular, the sketch implements the spawn-time
+monitor(true) option but deliberately does not present a naı̈ve monitor/2 imple-
+mentation: correct monitoring of an independently supplied pid requires the atomic
+dead-pid and termination handling described above.
+
+
+
+C.2.4 Actor I/O
+
+Actor I/O is expressed as a message protocol rather than as access to the host process’s
+terminal. The basic predicates can therefore be implemented on top of sending and
+receiving:
+output(Term) :-
+    output(Term, []).
+C.2 A native node on top of SWI-Prolog                                            373
+
+
+
+output(Term, Options) :-
+    self(Self),
+    parent(Parent),
+    option(target(Target), Options, Parent),
+    Target ! output(Self, Term).
+
+input(Prompt, Input) :-
+    input(Prompt, Input, []).
+
+input(Prompt, Input, Options) :-
+    self(Self),
+    parent(Parent),
+    option(target(Target), Options, Parent),
+    Target ! prompt(Self, Prompt),
+    receive({
+        ’$input’(Target, Input) -> true
+    }).
+
+respond(Pid, Input) :-
+    self(Self),
+    Pid ! ’$input’(Self, Input).
+The sender identity in the private response term prevents an unrelated process from
+satisfying the prompt accidentally. Transport adapters convert the outward-facing
+output/2 and prompt/2 events into JSON, terminal output, or another presentation
+protocol as appropriate.
+
+
+
+C.2.5 Private databases and source installation
+
+An actor needs a private clause database, not merely a private stack and mailbox.
+A native implementation can create a temporary module for each actor, load the
+requested src * material into it, and arrange for the actor goal to resolve against
+that module. Node-published predicates may be imported deliberately, while another
+client’s session module must remain invisible.
+   This boundary is easy to weaken accidentally. If a spawned goal retains an
+unrestricted module reference to its creator, the child can observe later changes
+to the creator’s dynamic database. That is sharing, not source installation. The
+implementation must instead copy explicitly requested predicates or source text into
+the child context and expose shared node state only through the node’s public surface.
+   Browser actors obtain a stronger version of this separation as a consequence of
+their execution substrate: each Worker contains a distinct Prolog virtual machine.
+Native temporary modules must emulate the language-level part of that isolation
+inside one host process.
+374                                                   C How to implement a Prolog node
+
+   Fresh private state does not require recompiling immutable runtime support. The
+current native implementation compiles the standard actor-I/O predicates once and
+imports them into each trusted actor module. Requested src * material, dynamic
+predicates, and all other actor-specific state remain in the fresh temporary module.
+Public sandboxed actors retain actor-local I/O wrappers, since the sandbox uses their
+locality to distinguish actor I/O from unrestricted stream I/O. The effect of this
+prepared runtime module is measured in Appendix D.
+
+
+
+C.2.6 Distribution and toplevel actors
+
+Network transparency is most easily implemented by keeping local actor operations
+behind a dispatch layer. A local pid is resolved to a thread; a remote pid is resolved
+to a connection and encoded as a protocol message. The public spawn/3, send/2,
+exit/2, and monitor predicates need not know which branch was taken.
+   Remote communication adds responsibilities not visible in the pedagogical actor
+core: connection ownership, handshake and version negotiation, reconnection pol-
+icy, pending-command correlation, remote monitor delivery, term conversion, and
+cleanup when a WebSocket closes. The owner of the remote node must also revali-
+date source, goals, and capabilities rather than trust a decision made by the sending
+node.
+   Toplevel actors reuse the same substrate. Their PTCP implementation was de-
+veloped in Section 5.3. In the current runtime, toplevel halt/1 terminates the
+actor through exit/2; toplevel halt/2 installs a private monitor and waits until
+termination has been observed. This works even when the toplevel is computing a
+nonterminating goal, provided that the substrate supports hard termination.
+
+
+
+C.3 Sandboxing, isolation, and capability control
+
+A production-quality node must enforce a boundary strong enough for running
+untrusted client code. Four concerns must be kept distinct:
+Expressibility.
+    Which language constructs and built-in predicates may client code invoke?
+Authority.
+    Which actors, services, node-owned predicates, and external resources may the
+    computation affect?
+Isolation.
+    What prevents the Prolog runtime or a fault in its sandbox from escaping into
+    the host or interfering with another computation?
+Resource consumption.
+    How much CPU time, memory, actor space, mailbox space, output, and network
+    activity may the computation consume?
+C.3 Sandboxing, isolation, and capability control                                     375
+
+No single mechanism answers all four questions.
+
+
+
+C.3.1 Whitelist and blacklist strategies
+
+A language-level sandbox may be organised as a whitelist or a blacklist. Whitelist-
+ing permits only predicates explicitly declared safe. Blacklisting exposes a defined
+language fragment but excludes specified predicates, meta-call paths, and capability
+families.
+   For a full reflective Prolog system, whitelisting is the safer starting point. Au-
+thority may otherwise be reconstructed indirectly through meta-calling, predicate
+inspection, dynamic database operations, foreign predicates, parser changes, or un-
+restricted module qualification. A newly added host predicate is denied until it has
+been examined.
+   Blacklisting becomes more plausible when the exposed language is already nar-
+row, the dangerous host facilities are absent or unreachable, and all meta-level paths
+are checked recursively. It remains one layer of a security architecture, not a sufficient
+foundation for trust. The demonstrator supports both strategies because they make
+different trade-offs between compatibility and conservative denial.
+
+
+
+C.3.2 Language sandboxing and host isolation
+
+Language sandboxing decides what client code can express. Host isolation decides
+what the runtime process itself can do. A perfect predicate whitelist does not protect
+against a defect in the Prolog system or a foreign library. Conversely, a container with
+no useful filesystem or network authority does not prevent one client from reading
+another client’s Prolog clauses if the language-level isolation is wrong.
+   A robust native deployment therefore places the Prolog process inside an
+operating-system, container, or virtual-machine boundary with minimal ambient
+authority. The Prolog sandbox, node capability policy, and host boundary then fail
+independently rather than standing or falling together.
+
+
+
+C.3.3 WASM and WASI
+
+WebAssembly provides another useful host boundary. In the browser, a WASM
+runtime inherits the browser’s origin and Worker security model. In a standalone
+embedding, WASI-style capabilities can make filesystem handles, sockets, and host
+callbacks absent unless explicitly granted.
+    This substantially reduces ambient authority, but it does not solve Prolog-level
+reflection or resource exhaustion. Nor should a browser-resident demonstrator engine
+376                                                   C How to implement a Prolog node
+
+be confused with the server sandbox: code executed in the visitor’s browser runs with
+the authority available to that page or Worker and is not governed by the remote node’s
+Prolog sandbox.
+
+
+
+C.3.4 Capability control inside the node
+
+Even a host-isolated runtime needs an internal authority policy. Ordinary clients
+should receive session-scoped capabilities: bounded calls, actor creation within their
+containment scope, messaging to permitted targets, and access to explicitly exported
+services.
+    Node owners may possess additional capabilities for publishing services, register-
+ing public names, installing persistent code, modifying shared node state, inspecting
+operations, or detaching services from a client session. These operations must not
+become available merely because a client can name the predicate that implements
+them.
+    The implementation should therefore establish a principal at the transport bound-
+ary, carry that principal into nested execution and actor creation, and check authority
+at every operation that crosses from client-owned state into node-owned state.
+
+
+
+C.3.5 Resource governance
+
+Timeouts, actor limits, mailbox bounds, RPC limits, source-size limits, cache bounds,
+and rate limits answer a different question from sandboxing: how much may this
+program do? A program can remain within its language authority and still deny
+service by spawning actors, constructing enormous terms, producing unbounded
+output, or repeatedly invoking expensive public relations.
+   Limits must be associated with an owner or principal rather than applied only
+to individual calls. Otherwise a client can remain below every per-call limit while
+exceeding the node’s capacity through multiplicity. The runtime also needs a policy
+for cleanup: refusing new work is insufficient if abandoned actors, sessions, cached
+continuations, and queues remain resident.
+
+
+
+C.3.6 A layered deployment strategy
+
+A realistic public implementation combines all four layers:
+ 1. expose only the intended Web Prolog language and public relation surface;
+ 2. associate every request and spawned computation with a principal and capability
+    policy;
+ 3. bound calls, sessions, actors, queues, source, results, and network activity;
+C.4 A browser-resident node                                                       377
+
+ 4. deploy the runtime with minimal host authority and secure transport; and
+ 5. make denials, saturation, lifecycle events, and policy changes observable to the
+    node owner.
+
+Security is therefore an architectural property of the request path, not a predicate
+that can be called immediately before call(Goal).
+
+
+
+C.4 A browser-resident node
+
+Prolog can be brought into a browser by interpreting or compiling it in JavaScript,
+by compiling an existing system to WebAssembly, or by installing a browser exten-
+sion. The demonstrator uses SWI-Prolog’s WebAssembly port. Its implementation
+problem is not merely how to run a Prolog query, but how to reproduce the actor and
+node abstractions on a single-threaded browser substrate.
+
+
+
+C.4.1 Implementing a browser node
+
+Cooperative engines are not isolated actors
+
+The SWI-Prolog WASM interface lets JavaScript call into a Prolog virtual machine.
+Open queries and engines can retain search state and yield control to JavaScript. A
+heartbeat based on an inference budget allows asynchronous query drivers to return
+periodically to the browser event loop.
+   This is useful cooperative execution, but it is not actor isolation. Engines inside
+one WASM instance share a virtual machine and global Prolog state, and only one
+of them executes WASM instructions at a time. A synchronous call, a long-running
+foreign operation, or JavaScript that does not yield can still seize that VM. Another
+engine in the same instance cannot forcibly terminate it.
+   The distinction determines the architecture. If actors shared one single-threaded
+instance, a non-cooperative actor could prevent every other actor in the node from
+receiving messages. It could also compromise the private-state model unless a second
+isolation mechanism were built inside the VM.
+
+
+One Worker and one VM per actor
+
+The demonstrator therefore runs each local browser actor in its own Web Worker,
+with a complete and private SWI-Prolog WASM instance. A JavaScript node con-
+troller remains on the main thread. It owns pid allocation, actor and name registries,
+monitors, delayed sends, Worker lifecycles, remote connections, stateless HTTP
+calls, the terminal, and the page.
+378                                                      C How to implement a Prolog node
+
+    An ordinary actor executes the goal passed to spawn/1-3. A toplevel actor runs
+the mailbox-driven PTCP loop. The shell’s toplevel is also a PTCP actor in a Worker;
+it is special only because the controller creates it directly, attaches the terminal to it,
+and can replace its Worker during a hard shell reset.
+    Each Worker has its own linear memory, stacks, dynamic database, modules,
+atoms, and virtual filesystem. A non-yielding actor blocks only its Worker, and
+the controller can terminate that Worker. This is the browser equivalent of the
+containment that native actors obtain from the runtime’s ability to interrupt a thread.
+    The cost is actor density. Every actor instantiates a VM and grows private memory,
+so Worker start-up and per-Worker memory are much larger than the cost of an
+Erlang process or a native Prolog thread. Pools could reduce start-up latency, but
+multiplexing actors onto a shared Worker would give up some of the isolation that
+motivates the design.
+
+
+Terms on the wire
+
+Workers cannot exchange Prolog heap objects. The sending Worker serialises a
+message as text, the controller routes the text, and the receiving Worker parses it
+into a fresh term. Variable bindings are therefore lost exactly as they are in a remote
+send.
+    Using the same representation locally and remotely has a useful consequence:
+local browser communication is not a privileged semantic fast path. Cyclic terms,
+attributed variables, streams, and non-text blobs are rejected at the boundary, while
+ordinary acyclic Prolog terms are copied. An implementation using native threads
+may copy terms more directly, but it must preserve the same observable contract if
+location transparency is to hold.
+
+
+The DOM stays on the main thread
+
+A Worker has no direct access to window or document. This is not merely an
+inconvenience. The DOM is a stateful, location-bound, single-threaded resource,
+precisely the kind of resource that actor systems normally place behind a message
+interface.
+    The main-thread controller already performs a limited version of this role: it
+renders terminal output and delivers user input to the shell actor. A general application
+can use the same pattern. A Worker-resident application actor sends presentation
+messages to a main-thread view component, and the view returns browser events as
+actor messages. The application logic then has the same shape whether the actor is
+in the current tab or on a remote node.
+    This arrangement also fits component frameworks such as React or Vue.
+Framework-owned DOM is updated by changing component state, not by allow-
+ing an external Prolog engine to mutate reconciled nodes. An actor subscription can
+feed that state in the same way as a WebSocket or another asynchronous data source.
+C.5 Alternative implementation approaches                                                      379
+
+The optional main-thread mode
+
+There is one useful exception. A self-contained Prolog page may want direct DOM
+access and may be willing to run a Prolog engine on the main thread. The demonstra-
+tor supports such a mode. It can use the browser integration facilities of SWI-WASM
+directly, including yielding while waiting for asynchronous input.
+   The trade-off is local and explicit. The main-thread engine has DOM access but
+lacks Worker isolation and hard termination. Actors it spawns still run in Workers,
+and its calls and messages use the same public contracts as the default model. Portable
+code can inspect such genuine host differences through runtime property/1 rather
+than infer them from a pid or node URI.
+
+
+Summary of the browser architecture
+
+The browser node can therefore be summarised as follows:
+   A JavaScript controller on the main thread owns routing, networking, lifecycle, terminal, and
+   page; each local actor owns an independent SWI-Prolog WASM instance in a Web Worker;
+   messages cross Worker and node boundaries as portable Prolog terms; and an optional
+   main-thread engine is available for the specialised case of a self-rendering page.
+
+This is not necessarily the optimal browser architecture for all future Prolog sys-
+tems. A threaded WASM port or a dedicated actor VM could support much lighter
+processes. The worker-per-actor design is instead a faithful realisation of actor iso-
+lation on the substrate available to the demonstrator. Its main achievement is that a
+local browser actor and a remote actor differ in placement and cost, but not in the
+programming model through which they are addressed.
+
+
+
+C.5 Alternative implementation approaches
+
+C.5.1 Other Prolog systems and host languages
+
+A node need not be based on SWI-Prolog. Another Prolog system may offer threads,
+engines, modules, HTTP, or WebSocket facilities with different names and guaran-
+tees. The implementation task is to reproduce the observable Web Prolog contracts,
+not the internal structure of the demonstrator.
+   Nor must every node contain a general-purpose Prolog system. A RELATION
+node can be written in Python, Rust, Erlang, Java, or another host language if it
+accepts the specified calls, performs the advertised relation, and returns conforming
+answers. More capable profiles require increasingly complete implementations of
+unification, control, source installation, private databases, and actor semantics.
+   An Erlang-based implementation is particularly interesting. Erlang already pro-
+vides lightweight isolated processes, mailboxes, distribution, monitors, and supervi-
+380                                                    C How to implement a Prolog node
+
+sion, but it does not provide Prolog unification, backtracking, or the Web Prolog term
+and error contracts. A conforming ACTOR node on the BEAM would therefore be
+more than an adapter around an Erlang service: it would combine a Prolog execution
+engine with the specified Web Prolog process semantics.
+
+
+
+C.5.2 Prospects for a dedicated Web Prolog VM
+
+The BEAM demonstrates what can be achieved by a runtime designed around
+lightweight, isolated, pre-emptible processes. It is natural to ask whether a Web
+Prolog runtime could combine those properties with unification, logical variables,
+nondeterministic search, and dynamic symbolic code.
+    An earlier paper described such a runtime as a “holy grail” for Web Prolog
+(Lager, 2019). Richard O’Keefe, drawing on experience with both Prolog and Erlang,
+responded that the idea was feasible and pointed to the small processes of Logix and
+to the lineage connecting the WAM, JAM, BAM, and BEAM. The history does not
+supply an implementation, but it does show that the design space is less alien than
+the phrase “dedicated VM” may suggest.
+    Such a VM would need more than fast process switching. It would have to specify
+how backtracking interacts with committed message effects, how heaps and code are
+isolated or shared, how a process is interrupted safely, how terms are copied, and
+how local execution preserves the same observable semantics as remote execution.
+It would also need the network, policy, and administrative layers described earlier in
+this appendix.
+    A mature existing Prolog system consequently retains major advantages: optimis-
+ing compilation, libraries, debugging, tabling, constraints, foreign interfaces, and
+decades of operational experience. A dedicated runtime would be justified only if
+its gains in actor density, scheduling, isolation, or portability outweighed the cost of
+rebuilding that environment.
+
+
+
+C.5.3 Less capable profiles need less work
+
+The profile structure allows implementation to proceed incrementally. A RELA-
+TION node can expose a single owner-defined predicate without implementing ISO
+control constructs. An ISOBASE node can add bounded stateless querying without
+persistent sessions. An ISOTOPE node can then add source installation and toplevel
+continuation before any general actor distribution is attempted.
+   This is not merely a convenience for implementers. Independent implementations
+are easier to compare first at a narrow boundary. Agreement on term syntax, answer
+forms, errors, paging, and relation visibility provides a base on which the more
+demanding lifecycle and concurrency contracts can later be tested.
+C.6 Summary                                                                       381
+
+C.6 Summary
+
+There is no single privileged way to implement a Prolog node. A native node may
+map actors onto threads and private modules; a browser node may map them onto
+Workers and independent WASM instances; a narrow relation node may not contain
+a Prolog runtime at all. What makes them nodes on the same Prolog Web is their
+agreement at the observable boundaries.
+    The implementation task is therefore layered. Query evaluation must preserve
+solutions, failure, errors, and paging. Actor execution must preserve mailboxes,
+selective receive, lifecycle relations, and location-transparent addressing. Source
+installation must preserve private execution contexts. Policy, sandboxing, host isola-
+tion, and resource governance must contain work performed for untrusted principals.
+Finally, transports must carry the same terms and events without quietly changing
+their semantics.
+    The demonstrator shows that these layers can be assembled on both native SWI-
+Prolog and SWI-WASM. It remains one implementation, however. The decisive
+next test is whether the contracts can be stated precisely enough for a different
+implementation, built on a different substrate, to interoperate without reproducing
+its internal design.
+Appendix D
+Benchmarking three actor substrates
+
+
+
+
+Performance claims require a more precise subject than a language name. The actor
+interface described in this book has three implementations of immediate interest:
+browser actors implemented as SWI-WASM Web Workers, native actors imple-
+mented as SWI-Prolog threads, and Erlang processes running on the BEAM virtual
+machine. They expose similar message-passing patterns, but they realise an actor at
+very different levels of granularity.
+   This appendix compares those three substrates. It is not a contest between Prolog
+and Erlang as languages, nor does it attempt to reduce the usefulness of a program-
+ming model to a single number. Its purpose is narrower: to measure some costs
+that a programmer can observe, relate them to the implementations described in
+Appendix C, and identify where optimisation work would have the greatest effect.
+
+
+
+D.1 What is being compared
+
+Table D.1 summarises the three implementations. The unit called an actor is inten-
+tionally the same at the interface and intentionally different underneath.
+
+
+Table D.1 The three actor substrates.
+Substrate     Actor representation                     Communication path
+
+Browser node An independent SWI-WASM virtual ma- Messages relayed between Workers by the
+             chine in a Web Worker                    browser-side actor bridge
+Native node An SWI-Prolog thread with a private actor In-process delivery through the native ac-
+             context                                  tor runtime
+Erlang       A lightweight BEAM process               In-VM delivery through an Erlang process
+                                                      mailbox
+
+
+
+
+                                                                                            383
+384                                                   D Benchmarking three actor substrates
+
+These differences make the result partly predictable. A BEAM process is designed to
+be created cheaply and in great numbers. A native Web Prolog actor is heavier, since
+it is built from a native Prolog thread and its execution context. A browser actor
+is heavier again: creating one means starting another Worker, instantiating SWI-
+WASM, installing its source, and connecting it to the page-level message router. The
+measurements tell us the size of these differences in the current implementations;
+they do not establish an intrinsic cost for Web Prolog.
+
+
+
+D.2 Method
+
+The measurements reported here were made on 29 July 2026 on a 2023 Apple iMac
+with an eight-core M3 processor and 16 GB of memory, running macOS 26.5.1. The
+native implementation used SWI-Prolog 10.1.3. The browser implementation used
+SWI-WASM 10.1.8 in the Worker-based browser node. The Erlang implementation
+used Erlang/OTP 26 with ERTS 14.2.5.
+   Three microbenchmarks were used:
+Actor lifecycle.
+    Start one actor, send it an instruction to stop, wait for its monitor notification, and
+    repeat. The timed interval therefore includes actor creation, initialisation, source
+    installation where required, one message, termination, and monitor delivery. It is
+    an end-to-end actor-lifecycle measurement, not a measurement of the underlying
+    thread or process creation primitive alone.
+Chained spawning.
+    Have each actor create one unlinked child and send it a message, producing a
+    chain of actor creations. This reconstructs the older start/1 experiment and
+    measures the layer-0 native actor core separately from the full isolated node.
+Steady-state ping-pong.
+    Create two actors before timing begins, warm them up with 100 round trips, and
+    then time 1,000 round trips over the same pair. One round trip consists of a ping
+    message and its pong reply. Actor creation and termination are outside the timed
+    interval.
+Elapsed wall time was measured in microseconds. A short warm-up preceded the
+recorded native and Erlang series. The tables report medians: three observations
+for the browser lifecycle test, seven for the native lifecycle test, and twenty-one for
+Erlang; the native ping-pong median is from eleven observations and the Erlang
+median from twenty-one. Browser ping-pong observations required the additional
+precaution described in Section D.4.1.
+   The chained-spawning medians use seven native observations at 1,000 actors,
+five at 10,000 and 100,000, twenty-one Erlang observations at 1,000 and 10,000,
+and eleven at 100,000. The final isolated-node check uses nine observations at 1,000
+actors.
+D.3 Actor lifecycle                                                                385
+
+    The Web Prolog and Erlang programs use the same lifecycle and message pro-
+tocols. In particular, links are disabled in Web Prolog where Erlang’s ordinary
+unlinked spawning is used, and both versions wait for monitor notifications be-
+fore considering an actor terminated. The complete sources are also provided as
+benchmarks/actor benchmarks.pl and benchmarks/actor benchmark.erl
+in the demonstrator repository.
+
+
+
+D.3 Actor lifecycle
+
+The earlier draft of this appendix adapted a chained spawning example from Cesarini
+and Thompson (2009). That program is useful for demonstrating rapid process
+creation, but it is not a clean measurement of spawning alone. It also interacts badly
+with Web Prolog’s default links: Erlang’s spawn creates an unlinked process, whereas
+Web Prolog actors are linked by default. An intermediate actor that terminates may
+therefore terminate the actor it has just created.
+   The present benchmark avoids both problems. It measures a complete, explicitly
+unlinked actor lifecycle:
+benchmark_lifecycle(Actors, Microseconds) :-
+    get_time(T0),
+    forall(between(1, Actors, _),
+           benchmark_one_lifecycle),
+    get_time(T1),
+    Microseconds is round((T1-T0)*1_000_000).
+
+benchmark_one_lifecycle :-
+    spawn(benchmark_idle, Pid, [
+        link(false),
+        monitor(true),
+        src_predicates([benchmark_idle/0])
+    ]),
+    Pid ! stop,
+    receive({down(Pid, _, true) -> true}).
+
+benchmark_idle :-
+    receive({stop -> true}).
+
+Only one child is live at a time. The test consequently measures the cost of repeatedly
+creating and reclaiming actors, not the maximum number of simultaneously live
+actors. Capacity and memory consumption require a separate experiment.
+   The corresponding Erlang operation is:
+one_lifecycle() ->
+    {Pid, Ref} = spawn_monitor(?MODULE, idle, []),
+386                                                      D Benchmarking three actor substrates
+
+      Pid ! stop,
+      receive
+           {’DOWN’, Ref, process, Pid, normal} -> ok
+      end.
+
+idle() ->
+    receive stop -> ok end.
+Table D.2 gives the median elapsed time for a sequence of complete lifecycles.
+
+
+Table D.2 Median time for complete actor lifecycles, in milliseconds.
+
+                          Actors Browser node Native node Erlang
+
+                              10          1 271         5.285   0.011
+                              30          3 971        15.294   0.035
+                             100         13 107        51.478   0.117
+
+
+
+The near-linear progression is more informative than the largest number alone. In
+this implementation, one Worker actor lifecycle costs about 130 ms, one native actor
+lifecycle about 0.515 ms, and one BEAM process lifecycle about 1.2 microseconds.
+At 100 actors, the browser node is about 255 times slower than the native node. For
+this complete lifecycle operation, the full native node is about 440 times slower than
+Erlang.
+    These ratios describe the chosen end-to-end operation. The browser and native
+measurements include preparation of private Prolog execution contexts; the Erlang
+module is already loaded. The table should therefore be read as the price of the actor
+abstractions supplied by the three systems, not as a comparison of their lowest-level
+schedulers.
+    The native result uses a prepared actor-I/O module. Earlier measurements com-
+piled the same I/O prelude separately in every actor context, giving 220.594 ms
+rather than 51.478 ms for 100 lifecycles. The optimisation does not pool actors
+or reuse their mutable modules: every actor still receives a fresh private context,
+but imports one immutable implementation of the standard I/O wrappers. Public
+sandboxed actors retain actor-local wrappers, since those predicates form part of the
+sandbox’s distinction between actor I/O and general stream I/O.
+
+
+
+D.3.1 Revisiting the chained spawning test
+
+The lifecycle ratio must not be read as a raw spawning ratio. The older benchmark
+used a different program in which every actor creates the next actor in a chain. With
+links made explicitly equivalent to Erlang’s ordinary spawn, its Web Prolog form is:
+start(Num) :-
+D.3 Actor lifecycle                                                                 387
+
+      self(Self),
+      start_proc(Num, Self).
+
+start_proc(0, Pid) :- !,
+    Pid ! ok.
+start_proc(Num, Pid) :-
+    Num1 is Num-1,
+    spawn(start_proc(Num1, Pid), NPid, [
+        link(false)
+    ]),
+    NPid ! ok,
+    receive({ok -> true}).
+Each child receives its ok message from its parent and the last actor sends an ok to
+the original caller. Unlike the lifecycle test, the program installs no monitor and does
+not serialise creation with a complete monitored shutdown.
+   The current stand-alone actor core runs the goal in the spawning module’s context,
+without the private-module isolation added by the full node. Table D.3 compares
+this layer-0 core with Erlang.
+
+
+Table D.3 Median time for the unlinked actor chain, in milliseconds.
+
+                            Actors Native actor core Erlang Ratio
+
+                             1 000             30.926 0.589 52.5
+                            10 000            307.601 6.242 49.3
+                           100 000          3 081.924 58.060 53.1
+
+
+
+The current layer-0 spawning gap is therefore about 50 times, not 1,900 times. The
+historical results in the earlier draft were also internally consistent: 23.918 seconds
+versus 0.089440 seconds at 100,000 actors is a ratio of about 267, while 251.514
+seconds versus 0.644545 seconds at one million actors is a ratio of about 390.
+Describing the first point as “roughly 250 times” was reasonable, but it was not a
+constant factor across the two sizes.
+   The current core is considerably faster than the version measured by that older
+experiment. Running the same chain through the full current native node still prepares
+a new private Prolog context at every generation, but imports the prepared actor-I/O
+implementation rather than compiling it again. It also omits the post-load repair
+pass when an actor has no source to load: without source, no imported predicate or
+hook-installed module state can have been shadowed.
+   Profiling then exposed a less obvious cost in the distribution layer. Ten-digit
+pids were generated with random between/3. Since every generation of the chain
+spawns from a fresh Prolog thread, every generation also paid for initialising that
+thread’s pseudo-random state. The current allocator draws five bytes from the process
+CSPRNG, rejects the short tail that would introduce modulo bias, and retains the
+388                                              D Benchmarking three actor substrates
+
+same unpredictable, currently unused ten-digit pid space. Thus the optimisation
+changes neither pid shape nor the fact that pids are unguessable identifiers.
+   With both changes, the full native node completes the 1,000-actor chain in
+74.170 ms, against 0.589 ms for Erlang – a ratio of about 126. Temporary mod-
+ule creation and destruction by themselves cost about 2.4 microseconds per actor
+on this machine; complete source-free module preparation raises that to about 8.8
+microseconds. Fresh private contexts are therefore no longer the dominant cost in
+this test.
+   These optimisations were prompted by an initial median of 2,020.966 ms, or
+about 3,431 times the Erlang result. Repeating the test with a stable goal module
+made no material difference. Importing prepared actor I/O first reduced the median
+to 296.305 ms; omitting source-free repair reduced a fresh comparison from 285.900
+to 274.051 ms; and removing per-thread pseudo-random initialisation produced the
+final 74.170 ms result. The large initial ratio was therefore chiefly a measurement
+of repeatedly compiling identical runtime support, followed by a distribution-layer
+pid-allocation cost, rather than an inherent requirement of private actor contexts.
+   The apparently conflicting ratios thus answer three different questions: the his-
+torical implementation gave roughly 267–390 times for its chain; the current layer-0
+actor core gives roughly 50 times for the same chain; and the optimised full current
+node gives roughly 126 times when fresh private context construction and distributed
+pid handling are included.
+
+
+
+D.4 Steady-state message passing
+
+Actor startup would dominate a short browser ping-pong test. The benchmark there-
+fore starts its two actors first and reuses them:
+benchmark_ping_once(Ping, N, Microseconds) :-
+    self(Self),
+    get_time(T0),
+    Ping ! run(N, Self),
+    receive({ping_done -> true}),
+    get_time(T1),
+    Microseconds is round((T1-T0)*1_000_000).
+
+benchmark_ping_server(Pong) :-
+    receive({
+        run(N, From) ->
+            benchmark_ping_rounds(N, Pong),
+            From ! ping_done,
+            benchmark_ping_server(Pong);
+        stop ->
+            true
+    }).
+D.4 Steady-state message passing                                                   389
+
+
+
+benchmark_ping_rounds(0, _) :- !.
+benchmark_ping_rounds(N, Pong) :-
+    self(Self),
+    Pong ! ping(Self),
+    receive({pong -> true}),
+    N1 is N-1,
+    benchmark_ping_rounds(N1, Pong).
+
+benchmark_pong_server :-
+    receive({
+        ping(Ping) ->
+            Ping ! pong,
+            benchmark_pong_server;
+        stop ->
+            true
+    }).
+The omitted setup routine starts and monitors both actors, with their default links
+disabled. It performs the warm-up and calls benchmark ping once/3 for each
+observation. Finally, it stops both actors and receives both monitor notifications. The
+Erlang program uses the same sequence.
+
+
+Table D.4 Steady-state time and throughput for 1,000 round trips.
+
+                   Substrate       Median time Round trips/s Relative rate
+
+                   Browser node       1 110 ms            901           1.0
+                   Native node       17.087 ms         58 524          65.0
+                   Erlang             0.580 ms      1 724 138       1 914.0
+
+
+
+Moving actor creation outside the timed interval narrows the gap, but does not
+remove it. The native node completes about 65 times as many round trips per second
+as the browser node. Erlang in turn completes about 29 times as many as the native
+node. The browser path crosses two Worker boundaries and the page-level relay on
+every round trip; the native and BEAM paths remain inside one runtime.
+
+
+
+D.4.1 A browser measurement caveat
+
+Repeated browser batches in one page session did not behave as independent observa-
+tions. Five consecutive batches of 100 round trips over one actor pair took 33, 49, 66,
+84, and 103 ms. Recreating the pair did not remove all of the drift, whereas reloading
+390                                                 D Benchmarking three actor substrates
+
+the page did. The cause has not yet been isolated; possible locations include the
+Worker relay, retained mailbox or routing state, and demonstrator instrumentation.
+   The browser result in Table D.4 is therefore the median of three observations
+made in freshly loaded page sessions, followed by a fourth foreground run that
+reproduced the result. It should be treated as an indicative measurement of the
+current demonstrator, not as a stable limit of SWI-WASM or browser actors. The
+drift is also an actionable performance finding: before larger browser benchmarks
+are meaningful, the retained state responsible for it should be identified.
+
+
+
+D.5 RPC, pagination, and query placement
+
+An earlier version of this appendix also timed a WordNet query distributed over two
+HTTP nodes:
+
+rpc(URI1, type(S, v)),
+rpc(URI2, word(S, W))
+This is a valuable example, but it does not belong in the three-substrate tables. In the
+dataset used by that experiment, type(S,v) produced 25,047 solutions. The second
+call was therefore made 25,047 times. Most of the elapsed time measured an N+1
+remote-query plan: HTTP request construction, network round trips, connection
+reuse, and repeated remote setup. Options such as the solution-page limit and
+HTTP keep-alive policy could change the result by an order of magnitude without
+changing the logical meaning of the query.
+    The lesson remains important. Moving a join to the node that holds the relevant
+data, batching requests, keeping connections alive, and choosing a suitable page
+size can matter more than the raw speed of either Prolog engine. The old numerical
+results have not been carried forward, however. They used an earlier rpc/2-3 imple-
+mentation, did not include a browser or Erlang equivalent, and did not record enough
+information about the WordNet release and node configuration to be reproducible.
+    A future RPC benchmark should consequently be reported as a separate transport
+and placement experiment. At minimum it should distinguish local execution, one
+warm persistent connection, one fresh connection per call, and a genuinely remote
+network path; record the dataset and node policies; and report both latency to the
+first answer and throughput for all answers.
+
+
+
+D.6 Interpretation and limits
+
+For these two workloads, the ordering is unambiguous: the browser node is slowest,
+the native node is substantially faster, and Erlang is fastest by a wide margin. The
+reasons are architectural. A browser actor is a strong isolation boundary containing
+a Prolog virtual machine. A native actor is a lighter thread and Prolog context. A
+D.6 Interpretation and limits                                                      391
+
+BEAM process is the unit for which the Erlang virtual machine has been specialised
+over several decades.
+   That ordering should not be generalised beyond the evidence:
+
+  • The results come from one machine and one set of runtime versions.
+  • The browser measurements use the demonstrator in an embedded Chromium-
+    based browser, whose exact browser-engine build was not exposed.
+  • The benchmark messages are small local terms. It does not measure large-term
+    copying, cross-node communication, HTTP, WebSocket transport, or application
+    computation.
+  • Lifecycle measurements include source and context preparation. A different
+    browser architecture – for example, several actors in one Worker – would answer
+    a different isolation and performance question.
+  • No claim is made here about maximum actor population or memory per actor.
+    Those require a capacity benchmark with resource measurements and well-
+    defined failure criteria.
+The comparison nevertheless gives useful engineering direction. Browser actors
+should be used at a granularity that justifies a Worker and an independent Prolog
+VM, rather than as replacements for millions of tiny BEAM processes. Native
+actors can be substantially finer-grained, although their private Prolog contexts still
+make them much heavier than Erlang processes. The public actor semantics remain
+common across the substrates; what differs is the cost at which each implementation
+currently provides them.
+References
+
+
+
+
+Andersen C, Swift T (2023) The janus system: A bridge to new prolog applications.
+  In: Prolog: The Next 50 Years, Springer, Lecture Notes in Computer Science, vol
+  13900, pp 93–104
+Arias J, Carro M, Salazar E, Marple K, Gupta G (2018) Constraint answer set
+  programming without grounding. Theory and Practice of Logic Programming
+  18(3–4):337–354, DOI 10.1017/S1471068418000285
+Armstrong J (2003a) Concurrency oriented programming in Erlang. Invited talk,
+  FFG
+Armstrong J (2003b) Making reliable distributed systems in the presence of software
+  errors. PhD thesis, Royal Institute of Technology, Stockholm
+Armstrong J (2007) A history of erlang. In: Proceedings of the Third ACM SIG-
+  PLAN History of Programming Languages Conference (HOPL-III), San Diego,
+  California, USA, 9-10 June 2007, pp 1–26, DOI 10.1145/1238844.1238850, URL
+  https://doi.org/10.1145/1238844.1238850
+Barnett J, Akolkar R, Auburn R, Bodell M, Burnett D, Carter J, McGlashan S, Lager
+  T, Helbing M, Hosn R, Reifenrath K, Rosenthal N, Roxendal J (2015) State chart
+  xml (scxml) state machine notation for control abstraction. w3c recommendation
+Beek W, Wielemaker J (2016) SWISH: An integrated semantic web notebook.
+  CEUR Workshop Proceedings 1690, URL https://ceur-ws.org/Vol-1690/
+  paper115.pdf
+Berners-Lee T, Hendler J, Lassila O (2001) The semantic web. Scientific Ameri-
+  can 284(5):34–43, URL http://www.sciam.com/article.cfm?articleID=
+  00048144-10D2-1C70-84A9809EC588EF21
+Brusk J, Lager T (2008) Developing natural language enabled games in SCXML.
+  Journal of Advanced Computational Intelligence and Intelligent Informatics
+  (JACIII) 12(2):156–163, DOI 10.20965/jaciii.2008.p0156, URL https://doi.
+  org/10.20965/jaciii.2008.p0156
+Ceri S, Gottlob G, Tanca L (1989) What you always wanted to know about Datalog
+  (and never dared to ask). IEEE Transactions on Knowledge and Data Engineering
+  1(1):146–166, DOI 10.1109/69.43410
+
+
+
+                                                                               393
+394                                                                      References
+
+Cesarini F, Thompson S (2009) ERLANG Programming, 1st edn. O’Reilly Media,
+  Inc.
+Cicirelli F, Furfaro A, Giordano A, Nigro L (2009) Statechart-based actors for
+  modelling and distributed simulation of complex multi-agent systems. In: Euro-
+  pean Conference on Modelling and Simulation, ECMS 2009, Madrid, Spain,
+  June 9-12, 2009, pp 233–239, DOI 10.7148/2009-0233-0239, URL https:
+  //doi.org/10.7148/2009-0233-0239
+Clark HH, Brennan SE (1991) Grounding in communication. In: Resnick LB, Levine
+  JM, Teasley SD (eds) Perspectives on Socially Shared Cognition, American Psy-
+  chological Association, Washington, DC, pp 127–149, DOI 10.1037/10096-006
+Clark KL (1978) Negation as failure. In: Gallaire H, Minker J (eds) Logic and Data
+  Bases, Springer, pp 293–322
+Clark KL, Gregory S (1986) PARLOG: Parallel Programming in Logic. ACM Press
+Costantini S, Tocchio A (2004) The DALI logic programming agent-oriented lan-
+  guage. In: Lifschitz V, Niemelä I (eds) Logics in Artificial Intelligence, Lec-
+  ture Notes in Artificial Intelligence, vol 3229, Springer, pp 685–688, DOI
+  10.1007/978-3-540-30227-8 57
+Cropper A, Dumančić S, Evans R, Muggleton SH (2022) Inductive
+  logic programming at 30. Machine Learning 111(1):147–172, DOI
+  10.1007/s10994-021-06089-1,            URL         https://doi.org/10.1007/
+  s10994-021-06089-1
+De Raedt L, Kimmig A, Toivonen H (2007) ProbLog: A probabilistic Prolog and
+  its application in link discovery. In: Veloso MM (ed) Proceedings of the 20th
+  International Joint Conference on Artificial Intelligence (IJCAI), pp 2462–2467
+Frühwirth T (2009) Constraint Handling Rules. Cambridge University Press
+d’Avila Garcez A, Lamb LC (2023) Neurosymbolic AI: The third wave. Artificial
+  Intelligence Review 56(11):12387–12406, DOI 10.1007/s10462-023-10448-w,
+  URL https://doi.org/10.1007/s10462-023-10448-w
+Garvey C (2018) Broken promises and empty threats: The evolution of AI in the
+  USA, 1956–1996. Technology’s Stories 6(1), DOI 10.15763/jou.ts.2018.03.16.02,
+  URL https://www.technologystories.org/ai-evolution/
+Gelernter D (1985) Generative communication in Linda. ACM Transactions on
+  Programming Languages and Systems 7(1):80–112, DOI 10.1145/2363.2433
+Gelfond M, Lifschitz V (1988) The stable model semantics for logic programming.
+  In: Kowalski RA, Bowen KA (eds) Proceedings of the Fifth International Confer-
+  ence and Symposium on Logic Programming, MIT Press, pp 1070–1080
+Green TJ, Huang SS, Loo BT, Zhou W (2013) Datalog and recursive query pro-
+  cessing. Foundations and Trends in Databases 5(2):105–195, DOI 10.1561/
+  1900000017
+Gupta G, Salazar E, Shakerin F, Arias J, Varanasi SC, Basu K, Wang H, Li F, Erbatur
+  S, Padalkar P, Rajasekharan A, Zeng Y, Carro M (2023) Prolog: Past, present, and
+  future. In: Warren DS, Dahl V, Eiter T, Hermenegildo MV, Kowalski R, Rossi F
+  (eds) Prolog: The Next 50 Years, Lecture Notes in Computer Science, vol 13900,
+  Springer, Cham, pp 48–61, DOI 10.1007/978-3-031-35254-6 4
+

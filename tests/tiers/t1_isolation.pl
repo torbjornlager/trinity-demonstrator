@@ -168,6 +168,7 @@ test(io_prelude_routes_writeln, Data == hello_io_prelude) :-
    spawn(run, _Pid, [
        link(false),
        target(Queue),
+       isolation_io(generated),
        src_text("run :- writeln(hello_io_prelude).")
    ]),
    (   thread_get_message(Queue, terminal_io_output(_, Data), [timeout(1)])
@@ -176,6 +177,76 @@ test(io_prelude_routes_writeln, Data == hello_io_prelude) :-
    ),
    message_queue_destroy(Queue),
    send(Self, sync), receive({ sync -> true }).
+
+test(precompiled_io_routes_writeln, Data == hello_precompiled_io) :-
+   self(Self),
+   message_queue_create(Queue),
+   spawn(run, _Pid, [
+       link(false),
+       target(Queue),
+       src_text("run :- writeln(hello_precompiled_io).")
+   ]),
+   (   thread_get_message(Queue, terminal_io_output(_, Data), [timeout(1)])
+   ->  true
+   ;   Data = timeout
+   ),
+   message_queue_destroy(Queue),
+   send(Self, sync), receive({ sync -> true }).
+
+test(precompiled_io_rejects_format_call_specifier,
+     true(Error = error(permission_error(use, format_specifier, '~@'), _))) :-
+   self(Self),
+   spawn(run(Self), _Pid, [
+       link(false),
+       src_text("run(Parent) :- catch(format('~@', [true]), E, send(Parent, error(E))).")
+   ]),
+   receive({
+       error(Error) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
+
+test(precompiled_io_preserves_meta_call_context, Value == local) :-
+   self(Self),
+   message_queue_create(Queue),
+   spawn(run(Self), _Pid, [
+       link(false),
+       target(Queue),
+       src_text("
+run(Parent) :-
+    time(local_value(Value)),
+    send(Parent, value(Value)).
+local_value(local).
+")
+   ]),
+   receive({
+       value(Value) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   thread_get_message(Queue, terminal_io_output(_, timing_report(_)),
+                      [timeout(1)]),
+   message_queue_destroy(Queue).
+
+test(private_source_can_override_precompiled_io, Msg == overridden) :-
+   self(Self),
+   spawn(run(Self), _Pid, [
+       link(false),
+       src_text("
+writeln(Parent) :-
+    send(Parent, overridden).
+run(Parent) :-
+    writeln(Parent).
+")
+   ]),
+   receive({
+       overridden -> Msg = overridden
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]).
 
 test(load_text_is_a_compatibility_alias, Msg == legacy_source_loaded) :-
    self(Self),
@@ -225,6 +296,56 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
 
 isolation:prepare_goal(_Module, t1_goal_probe(Parent), actors:send(Parent, was_rewritten)) :-
    t1_pg_active.
+
+t1_prepare_probe_goal(Parent) :-
+   send(Parent, actor_started).
+
+%  Probe the preparation-pass contract without modifying the actor module.
+%  A source-free actor invokes this hook once; effective source loading
+%  invokes it again during the post-load repair pass.
+isolation:prepare_module(_Module, _GoalModule, Options) :-
+   memberchk(t1_prepare_probe(Parent), Options),
+   actors:send(Parent, prepare_called).
+
+test(source_free_module_skips_post_load_repair,
+     true(Extra == no_extra_prepare)) :-
+   self(Self),
+   spawn(t1_prepare_probe_goal(Self), _Pid, [
+       link(false),
+       t1_prepare_probe(Self)
+   ]),
+   receive({ prepare_called -> true }, [timeout(1), on_timeout(fail)]),
+   receive({ actor_started -> true }, [timeout(1), on_timeout(fail)]),
+   receive({
+       prepare_called -> Extra = unexpected_extra_prepare
+   }, [
+       timeout(0),
+       on_timeout(Extra = no_extra_prepare)
+   ]).
+
+test(explicit_source_retains_post_load_repair, Calls == two) :-
+   self(Self),
+   spawn(run(Self), _Pid, [
+       link(false),
+       t1_prepare_probe(Self),
+       src_list([
+           (run(Parent) :- send(Parent, actor_started))
+       ])
+   ]),
+   receive({ prepare_called -> true }, [timeout(1), on_timeout(fail)]),
+   receive({ prepare_called -> Calls = two }, [timeout(1), on_timeout(fail)]),
+   receive({ actor_started -> true }, [timeout(1), on_timeout(fail)]).
+
+test(generated_io_prelude_retains_post_load_repair, Calls == two) :-
+   self(Self),
+   spawn(t1_prepare_probe_goal(Self), _Pid, [
+       link(false),
+       isolation_io(generated),
+       t1_prepare_probe(Self)
+   ]),
+   receive({ prepare_called -> true }, [timeout(1), on_timeout(fail)]),
+   receive({ prepare_called -> Calls = two }, [timeout(1), on_timeout(fail)]),
+   receive({ actor_started -> true }, [timeout(1), on_timeout(fail)]).
 
 test(prepare_module_extends_actor_module, [
         true(Msg == installed),

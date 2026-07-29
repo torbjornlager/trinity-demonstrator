@@ -24,5 +24,6 @@ digraph dependency_graph {
   n5 -> n7;
   n6 -> n3;
   n7 -> n1;
+  n7 -> n2;
   n7 -> n8;
 }

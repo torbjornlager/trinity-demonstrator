@@ -17,9 +17,9 @@ the demonstrator's actor.pl and toplevel_actor.pl and installed as
 implementations of the layer-0/layer-2 hooks.
 
 Loading this module changes pid representation to the demonstrator's:
-locally minted pids become random 10-digit integers (make_id/1), and
-canonicalization globalizes them to `Id@SelfNodeURL` (pid_utils).  The
-main thread's pid is re-minted accordingly at load time.
+locally minted pids become cryptographically random 10-digit integers
+(make_id/1), and canonicalization globalizes them to `Id@SelfNodeURL`
+(pid_utils).  The main thread's pid is re-minted accordingly at load time.
 
 Own hooks (multifile, implemented by the node layer in Phase 6):
 
@@ -33,7 +33,7 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
 */
 
 :- use_module(library(option)).
-:- use_module(library(random)).
+:- use_module(library(crypto)).
 :- use_module(library(apply)).
 :- use_module(library(debug)).
 :- use_module(library(http/websocket)).
@@ -83,23 +83,39 @@ best_effort_fail(Goal) :-
 
 %!  make_id(-Id) is det.
 %
-%   Generate a random, currently-unused 10-digit actor id.
+%   Generate a cryptographically random, currently-unused 10-digit actor id.
 %   A mutex makes the uniqueness check and reservation atomic.
 %   The reserved_id/1 fact acts as a lightweight claim so that
 %   concurrent spawners cannot pick the same id before the child
 %   thread asserts pid_thread/2.  The reservation is cleaned up
 %   through actors' hook_pid_activated/1 once the mapping is in place.
+%
+%   crypto_n_random_bytes/2 is deliberately used instead of
+%   random_between/3.  SWI-Prolog initializes the latter's pseudo-random
+%   state separately in every thread, making the first child spawn from
+%   each actor disproportionately expensive.  The CSPRNG keeps ids
+%   unguessable without that per-actor initialization cost.
 :- dynamic reserved_id/1.
 
 make_id(Id) :-
     with_mutex('$make_id', (
         repeat,
-        random_between(1000000000, 9999999999, Id),
+        random_ten_digit_id(Id),
         \+ actors:pid_thread(Id, _),
         \+ reserved_id(Id),
         !,
         assertz(reserved_id(Id))
     )).
+
+random_ten_digit_id(Id) :-
+    repeat,
+    crypto_n_random_bytes(5, [B0, B1, B2, B3, B4]),
+    Raw is (((((B0*256)+B1)*256+B2)*256+B3)*256+B4),
+    %  1,098,000,000,000 is the largest multiple of 9,000,000,000
+    %  below 2^40.  Rejecting the short tail avoids modulo bias.
+    Raw < 1098000000000,
+    !,
+    Id is 1000000000 + (Raw mod 9000000000).
 
 actors:hook_make_pid(Pid) :-
     make_id(Pid).
@@ -217,6 +233,7 @@ local_only_spawn_option(monitor(_)).
 local_only_spawn_option(monitor_target(_)).
 local_only_spawn_option(monitor_ref(_)).
 local_only_spawn_option(source_module(_)).
+local_only_spawn_option(isolation_io(_)).
 
 
 %  Cross-node sends go directly over the per-node WebSocket.  If the

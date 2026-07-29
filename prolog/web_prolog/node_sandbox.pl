@@ -331,7 +331,11 @@ sandbox_prepare_module(Module) :-
 
 sandbox_prepare_module(Module, GoalModule) :-
     without_public_execution_context(
-        prepare_actor_module(Module, GoalModule, [])
+        % Source validation must model the public actor's local I/O wrappers.
+        % The shared precompiled implementation is intentionally the trusted
+        % native default, not the public sandbox model.
+        prepare_actor_module(Module, GoalModule,
+                             [isolation_io(generated)])
     ).
 
 
