@@ -1110,6 +1110,7 @@ matrix_route(toplevel_next).
 matrix_route(toplevel_poll).
 matrix_route(toplevel_stop).
 matrix_route(toplevel_abort).
+matrix_route(toplevel_halt).
 matrix_route(toplevel_respond).
 matrix_route(ws).
 
@@ -1118,10 +1119,10 @@ matrix_allows(relation, [call]).
 matrix_allows(isobase,  [call]).
 matrix_allows(isotope,  [call, toplevel_spawn, toplevel_call, toplevel_next,
                          toplevel_poll, toplevel_stop, toplevel_abort,
-                         toplevel_respond]).
+                         toplevel_halt, toplevel_respond]).
 matrix_allows(actor,    [call, toplevel_spawn, toplevel_call, toplevel_next,
                          toplevel_poll, toplevel_stop, toplevel_abort,
-                         toplevel_respond, ws]).
+                         toplevel_halt, toplevel_respond, ws]).
 
 test(route_matrix_exhaustive, Mismatches == []) :-
     findall(Profile-Route-expected(Expected)-got(Got),

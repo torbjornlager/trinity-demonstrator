@@ -159,6 +159,7 @@ Design notes:
 :- use_module(node_session, [
     isotope_session_queue/2,
     require_isotope_session_owner/2,
+    admin_terminate_isotope_session/2,
     set_isotope_session_trace/2,
     wait_for_session_event/4,
     with_isotope_session_public_execution_profile/2
@@ -222,6 +223,7 @@ HTTP endpoint layout:
     - GET      /toplevel_poll
     - GET      /toplevel_stop
     - GET      /toplevel_abort
+    - GET      /toplevel_halt
     - GET      /toplevel_trace
     - GET      /toplevel_respond
 */
@@ -234,6 +236,7 @@ HTTP endpoint layout:
 :- http_handler(root(toplevel_poll), node_controller_isotope_poll, []).
 :- http_handler(root(toplevel_stop), node_controller_isotope_stop, []).
 :- http_handler(root(toplevel_abort), node_controller_isotope_abort, []).
+:- http_handler(root(toplevel_halt), node_controller_isotope_halt, []).
 :- http_handler(root(toplevel_trace), node_controller_isotope_trace, []).
 :- http_handler(root(statechart_trace), node_controller_isotope_trace, []).
 :- http_handler(root(toplevel_respond), node_controller_isotope_respond, []).
@@ -555,15 +558,22 @@ node_controller_isotope_next_1(Request) :-
     request_principal(Request, Principal),
     parse_isotope_wait_request(Request, Pid, Format, Timeout),
     http_parameters(Request, [
-        limit(Limit, [integer, default(10 000 000 000)])
+        limit(Limit0, [integer, optional(true)])
     ]),
+    (   var(Limit0)
+    ->  LimitSpec = inherit,
+        LogContext = _{route:"toplevel_next", action:"toplevel_next", pid:Pid,
+                       timeout_seconds:Timeout}
+    ;   LimitSpec = Limit0,
+        LogContext = _{route:"toplevel_next", action:"toplevel_next", pid:Pid,
+                       timeout_seconds:Timeout, limit:Limit0}
+    ),
     execute_and_respond_logged(
         Request,
         Principal,
         Format,
-        _{route:"toplevel_next", action:"toplevel_next", pid:Pid,
-          timeout_seconds:Timeout, limit:Limit},
-        isotope_next_authorized_event(Principal, Pid, Timeout, Limit),
+        LogContext,
+        isotope_next_authorized_event(Principal, Pid, Timeout, LimitSpec),
         pid_error_mapper(Pid)
     ).
 
@@ -635,6 +645,31 @@ node_controller_isotope_abort_1(Request) :-
         Format,
         _{route:"toplevel_abort", action:"toplevel_abort", pid:Pid},
         isotope_abort_authorized_event(Principal, Pid),
+        pid_error_mapper(Pid)
+    ).
+
+
+%!  node_controller_isotope_halt(+Request) is det.
+%
+%   Terminate a session toplevel and release its queue and capacity.
+node_controller_isotope_halt(Request) :-
+    with_request_node_context(Request,
+                              node_controller_isotope_halt_1(Request)).
+
+node_controller_isotope_halt_1(Request) :-
+    request_principal(Request, Principal),
+    http_parameters(Request, [
+        pid(Pid0, [atom]),
+        format(Format, [atom, default(json)])
+    ]),
+    parse_pid_or_throw(Pid0, node:parse_request_pid/2,
+                       'pid must be an integer, atom name, or Id@Node term', Pid),
+    execute_and_respond_logged(
+        Request,
+        Principal,
+        Format,
+        _{route:"toplevel_halt", action:"toplevel_halt", pid:Pid},
+        isotope_halt_authorized_event(Principal, Pid),
         pid_error_mapper(Pid)
     ).
 
@@ -1744,9 +1779,9 @@ isotope_call_authorized_event(Principal, Pid, GoalAtom, TemplateAtom0, Offset, L
                        Format, LoadText0, Once0, RequestedTimeout0, Event).
 
 
-isotope_next_authorized_event(Principal, Pid, Timeout, Limit, Event) :-
+isotope_next_authorized_event(Principal, Pid, Timeout, LimitSpec, Event) :-
     authorize_isotope_session_access(Principal, toplevel_next, Pid),
-    isotope_next_event(Pid, Timeout, Limit, Event).
+    isotope_next_event(Pid, Timeout, LimitSpec, Event).
 
 
 isotope_poll_authorized_event(Principal, Pid, Timeout, Event) :-
@@ -1762,6 +1797,12 @@ isotope_stop_authorized_event(Principal, Pid, Event) :-
 isotope_abort_authorized_event(Principal, Pid, Event) :-
     authorize_isotope_session_access(Principal, toplevel_abort, Pid),
     isotope_abort_event(Pid, Event).
+
+
+isotope_halt_authorized_event(Principal, Pid, halted(Pid, true)) :-
+    authorize_isotope_session_access(Principal, toplevel_halt, Pid),
+    profile_check_route(toplevel_halt),
+    admin_terminate_isotope_session(Pid, true).
 
 
 isotope_trace_authorized_event(Principal, Pid, Enabled, Event) :-
@@ -1823,18 +1864,20 @@ parse_enabled_atom(Value, _) :-
                         'enabled must be true or false'))).
 
 
-isotope_next_event(Pid, Timeout, Limit, Event) :-
+isotope_next_event(Pid, Timeout, LimitSpec, Event) :-
     profile_check_route(toplevel_next),
     isotope_session_queue(Pid, Queue),
+    isotope_next_options(LimitSpec, Queue, Options),
     with_isotope_session_public_execution_profile(
         Pid,
-        toplevel_next(Pid, [
-            limit(Limit),
-            target(Queue)
-        ])
+        toplevel_next(Pid, Options)
     ),
     wait_for_session_event(Pid, Queue, Timeout, Event),
     capture_answer_bindings(Event).
+
+isotope_next_options(inherit, Queue, [target(Queue)]) :-
+    !.
+isotope_next_options(Limit, Queue, [limit(Limit), target(Queue)]).
 
 
 isotope_poll_event(Pid, Timeout, Event) :-

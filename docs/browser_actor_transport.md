@@ -51,9 +51,9 @@ as Prolog source text in the named term fields.
 | `exit` | `pid`, optional `reason` | actor lifecycle events |
 | `monitor` | `pid`, optional `ref` | installs a browser-owned monitor; the node later emits `down` |
 | `demonitor` | `ref` | removes the browser-owned monitor |
-| `toplevel_spawn` | optional `src_text`, `options` | `spawned` |
-| `toplevel_call` | `pid`, `goal`, optional `template`, `limit`, `offset`, `once` | `success`, `failure`, `error`, `timeout` |
-| `toplevel_next` | `pid`, optional `limit` | `success`, `failure`, `error`, `timeout` |
+| `toplevel_spawn` | optional `options`; source is supplied as a `src_*` spawn option | `spawned` |
+| `toplevel_call` | `pid`, `goal`, optional `options` containing `template/1`, `limit/1`, `offset/1`, or `once/1` | `success`, `failure`, `error`, `timeout` |
+| `toplevel_next` | `pid` | `success`, `failure`, `error`, `timeout`; inherits the preceding call's `limit` |
 | `toplevel_stop` / `toplevel_abort` / `toplevel_halt` | `pid` | `stop` / `abort` / `halted` |
 
 The node owns parsing and policy enforcement.  Browser runtimes must not
@@ -64,7 +64,15 @@ infer permissions from the advertised node profile.
 Events are JSON objects with a `type` field.  Standard node events preserve
 the established Web Prolog WebSocket protocol (`spawned`, `success`,
 `failure`, `error`, `output`, `prompt`, `timeout`, `down`, and lifecycle
-events).  A browser transport additionally accepts:
+events).  In particular, Prolog I/O uses only the canonical public fields:
+
+```json
+{ "type": "output", "pid": 56120932, "data": "hello" }
+```
+
+I/O provenance and node-to-node terminal suppression are internal concerns;
+they do not add members to this event.  A browser transport additionally
+accepts:
 
 ```json
 {

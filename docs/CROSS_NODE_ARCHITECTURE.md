@@ -343,11 +343,11 @@ field.  Prolog terms in arguments are encoded as wire atoms via
 | `command` | Fields | Response |
 |---|---|---|
 | `spawn` | `goal`, `options` | `spawned` or `error` |
-| `toplevel_spawn` | `options` | `spawned` or `error` |
+| `toplevel_spawn` | `options` (including any `src_*` option) | `spawned` or `error` |
 | `send` | `pid`, `message` | (none) |
 | `exit` | `pid`, `reason` | (none, observed indirectly via `down`) |
-| `toplevel_call` | `pid`, `goal`, `template`, `format`, `limit`, `offset`, `once` | `success` / `failure` / `error` / streaming events |
-| `toplevel_next` | `pid`, `limit` | as `toplevel_call` |
+| `toplevel_call` | `pid`, `goal`, `options` | `success` / `failure` / `error` / streaming events |
+| `toplevel_next` | `pid` | as `toplevel_call`; inherits the preceding call's `limit` |
 | `toplevel_stop` | `pid` | `stop` |
 | `toplevel_halt` | `pid` | `halted` |
 
@@ -365,7 +365,7 @@ arguments.
 | `success` | `pid`, `data`, `more` | controller target |
 | `failure` | `pid` | controller target |
 | `error` (with `pid`) | `pid`, `data` | controller target |
-| `output` | `pid`, `data`, optional `source` | controller target (dropped if `source="io"`) |
+| `output` | `pid`, `data` | controller target |
 | `prompt` | `pid`, `data` | controller target |
 | `stop` / `abort` / `responded` | `pid` | controller target |
 
@@ -621,9 +621,10 @@ monitor, so `toplevel_halt/2` does not consume an application-owned
 notification.
 
 The browser transport retains its `toplevel_halt` command and
-`halted` response for API compatibility. Its handler calls the same
-local `toplevel_halt/2`, so it also terminates a toplevel from any
-protocol state and acknowledges only after observing termination.
+`halted` response for API compatibility. Its handler uses the
+connection-owned retirement path, so it can terminate a toplevel from
+any protocol state, release capacity immediately, and queue `down`
+before `halted`.
 
 ### 5.7 The `register_remote_pid` and `flush_pending_for_pid` helpers
 
@@ -779,8 +780,8 @@ flowchart TD
     Halted -- yes --> HaltQ["parse reply term<br/>send halted(Id, Reply)<br/>to spawn queue"]
     Halted -- no --> SpawnError{"error without pid?"}
     SpawnError -- yes --> ErrorQ["send spawn_error(Data)<br/>to spawn queue"]
-    SpawnError -- no --> IO{"output source = io?"}
-    IO -- yes --> DropIO["drop remote terminal I/O"]
+    SpawnError -- no --> IO{"legacy output source = io?"}
+    IO -- yes --> DropIO["drop for compatibility<br/>with older peers"]
     IO -- no --> Target{"pid event and<br/>target row exists?"}
     Target -- yes --> Forward["decode event<br/>send(Target, Event)"]
     Target -- no --> HasPid{"has pid?"}
@@ -819,22 +820,27 @@ sees them.
 
 ### 6.5 I/O suppression rule
 
-```prolog
-ws_json_is_io_output(Dict) :-
-    get_dict(type, Dict, "output"),
-    get_dict(source, Dict, "io").
+The runtime represents output from a Prolog I/O sink (for example,
+`writeln/1`) internally as `terminal_io_output(Pid, Data)`.  That
+provenance is deliberately not serialized: browser clients receive
+the book's canonical shape:
+
+```json
+{ "type": "output", "pid": 56120932, "data": "hello" }
 ```
 
-Output events from a remote actor that originated from a Prolog
-I/O sink (e.g. `writeln/1`) are dropped on the receiver side.  This
-implements the capability rule from the manual: a terminal is
-attached to one particular toplevel actor, and outputs from actors
-outside that toplevel's local descendant lineage do not surface in
-its mailbox.
+For a node-to-node WebSocket (a principal with the
+`internal_transport` capability), the originating relay drops
+`terminal_io_output/2` before JSON serialization.  This implements the
+terminal capability rule without adding a private member to the public
+wire protocol: a terminal is attached to one particular toplevel actor,
+and I/O from actors outside that toplevel's local descendant lineage
+does not surface in its mailbox.  Explicit actor `output/1` events still
+pass through normally.
 
-Outputs explicitly sent as actor events (e.g. via the actor-level
-`output/1` builtin in the local execution context) carry no
-`source: "io"` and pass through normally.
+The receiver continues to recognize the former `source: "io"` member
+only as a compatibility measure for an older peer; conforming nodes do
+not emit it.
 
 ---
 
@@ -976,7 +982,7 @@ A port's remote-side WebSocket dispatcher must implement:
 | `toplevel_call` | Submit goal to the toplevel actor's mailbox; emit `success` / `failure` / `error` slices as they arrive. |
 | `toplevel_next` | Resume paging the toplevel. |
 | `toplevel_stop` | Signal toplevel to stop; emit `stop(Pid)`. |
-| `toplevel_halt` | Synchronously call local `toplevel_halt(Pid, Reply)`, then emit `halted(Pid, Reply)`. |
+| `toplevel_halt` | Retire the connection-owned session, emit its normal `down` event, then emit `halted(Pid, true)`. |
 
 The remote node's relay thread reads its per-connection WS queue
 and serializes each message via a JSON-shape mapping (the inverse

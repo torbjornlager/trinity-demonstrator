@@ -82,11 +82,11 @@ answer_to_json(terminal_output(Pid, statechart_trace(Data)),
     json_pid_value(Pid, JsonPid),
     trace_term_to_json_string(Data, DataString).
 answer_to_json(terminal_io_output(Pid, timing_report(Data)),
-               json{type:output, pid:JsonPid, data:DataString, kind:"timing", source:"io"}) :-
+               json{type:output, pid:JsonPid, data:DataString, kind:"timing"}) :-
     json_pid_value(Pid, JsonPid),
     prompt_to_json_string(Data, DataString).
 answer_to_json(terminal_io_output(Pid, Data),
-               json{type:output, pid:JsonPid, data:DataString, source:"io"}) :-
+               json{type:output, pid:JsonPid, data:DataString}) :-
     json_pid_value(Pid, JsonPid),
     terminal_output_to_json_string(Data, DataString).
 answer_to_json(terminal_output(Pid, timing_report(Data)),

@@ -24,7 +24,10 @@
     profile_check_goal/2,
     profile_check_source_text/3
 ]).
-:- use_module('../../../prolog/web_prolog/node_call_context.pl', [parse_call_context/9]).
+:- use_module('../../../prolog/web_prolog/node_call_context.pl', [
+    parse_call_context/9,
+    parse_call_options_context/9
+]).
 :- use_module('../../../prolog/web_prolog/node_relation_policy.pl', [relation_check_call/3]).
 :- use_module('../../../prolog/web_prolog/node_principal_policy.pl', [normalize_principal_policies/2]).
 :- use_module('../../../prolog/web_prolog/node_startup_options.pl', [node_options/24]).
@@ -2783,16 +2786,15 @@ test(ws_toplevel_spawn_session_true_keeps_toplevel_alive,
             catch(ws_close(WS, 1000, "done"), _, true)
         )).
 
-test(ws_toplevel_call_reloads_source_before_spawn_load_predicates,
-     true((Type == "success", ReplyPid == ToplevelPid))) :-
+test(ws_toplevel_call_rejects_src_text_field,
+     true((Type == "error", OriginalSourceType == "success"))) :-
     with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
         setup_call_cleanup(
             ws_open(URI, WS),
             (
                 ws_send_json(WS, json{
                     command:toplevel_spawn,
-                    options:"[session(true)]",
-                    src_text:"worker(From) :- From ! old."
+                    options:"[session(true),src_text('worker(From) :- From ! old.')]"
                 }),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, ToplevelPid),
@@ -2800,13 +2802,83 @@ test(ws_toplevel_call_reloads_source_before_spawn_load_predicates,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"self(Me), spawn(worker(Me), _Child, [src_predicates([worker/1])]), receive({edited -> true}, [timeout(1), on_timeout(fail)])",
-                    template:"true",
+                    goal:"true",
+                    options:"[limit(1)]",
                     src_text:"worker(From) :- From ! edited."
                 }),
                 ws_receive_json_first_of(WS, ["success", "failure", "error"], Reply),
                 Type = Reply.type,
-                ReplyPid = Reply.pid
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"self(Me),spawn(worker(Me),_Child,[src_predicates([worker/1])]),receive({old -> true; edited -> fail},[timeout(1),on_timeout(fail)])",
+                    options:"[limit(1)]"
+                }),
+                ws_receive_json_first_of(WS, ["success", "failure", "error"], OriginalSourceReply),
+                OriginalSourceType = OriginalSourceReply.type
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
+
+test(ws_toplevel_call_parses_goal_and_options_together,
+     true((Type == "success", Value == "a"))) :-
+    with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true),src_text('p(a). p(b).')]"
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"p(X)",
+                    options:"[template(X),limit(1)]"
+                }),
+                ws_receive_json_first_of(WS, ["success", "failure", "error"], Reply),
+                Type = Reply.type,
+                [Row] = Reply.data,
+                Value = Row.'X'
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
+
+test(ws_toplevel_source_change_halts_then_spawns,
+     true((HaltedPid == FirstPid, SecondValue == "b"))) :-
+    with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true),src_text('p(a).')]"
+                }),
+                ws_receive_json(WS, FirstSpawn),
+                FirstPid = FirstSpawn.pid,
+                ws_send_json(WS, json{
+                    command:toplevel_halt,
+                    pid:FirstPid
+                }),
+                ws_receive_json_until_expected_types(WS, ["halted"], [Halted]),
+                HaltedPid = Halted.pid,
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true),src_text('p(b).')]"
+                }),
+                ws_receive_json_until_expected_types(WS, ["spawned"], [SecondSpawn]),
+                SecondPid = SecondSpawn.pid,
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:SecondPid,
+                    goal:"p(X)",
+                    options:"[limit(1)]"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [SecondReply]),
+                [SecondRow] = SecondReply.data,
+                SecondValue = SecondRow.'X'
             ),
             catch(ws_close(WS, 1000, "done"), _, true)
         )).
@@ -3825,9 +3897,63 @@ test(answer_to_json_strips_trailing_newline_from_terminal_output_string) :-
     once(answer_to_json(terminal_output(42, "Ping received pong.\n"), JSON)),
     JSON = json{type:output, pid:42, data:"Ping received pong."}.
 
-test(answer_to_json_marks_io_terminal_output_source) :-
+test(answer_to_json_keeps_io_provenance_off_wire) :-
     once(answer_to_json(terminal_io_output(42, "Ping received pong.\n"), JSON)),
-    JSON = json{type:output, pid:42, data:"Ping received pong.", source:"io"}.
+    JSON = json{type:output, pid:42, data:"Ping received pong."}.
+
+test(ws_relay_suppresses_io_at_internal_transport_origin) :-
+    Principal = principal{
+        id:"node:https://n1.example",
+        capabilities:[execute, internal_transport],
+        unknown:false
+    },
+    assertion(\+ node_ws:ws_relay_message_allowed(
+                    Principal,
+                    terminal_io_output(42, "hello")
+                )),
+    assertion(node_ws:ws_relay_message_allowed(
+                  Principal,
+                  output(42, "explicit actor output")
+              )).
+
+test(ws_relay_keeps_canonical_io_output_for_browser) :-
+    Principal = principal{
+        id:"browser-user",
+        capabilities:[execute],
+        unknown:false
+    },
+    assertion(node_ws:ws_relay_message_allowed(
+                  Principal,
+                  terminal_io_output(42, "hello")
+              )).
+
+test(ws_browser_io_output_uses_book_shape) :-
+    with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true)]"
+                }),
+                ws_receive_json_first_of(WS, ["spawned"], Spawned),
+                ToplevelPid = Spawned.pid,
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"writeln(hello)",
+                    options:"[limit(1)]"
+                }),
+                ws_receive_json_first_of(WS, ["output"], Output),
+                dict_pairs(Output, _, OutputPairs),
+                assertion(OutputPairs == [
+                    data-"hello",
+                    pid-ToplevelPid,
+                    type-"output"
+                ])
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
 
 test(answer_to_json_sanitizes_prolog_stack_context,
      true(sub_string(Data, _, _, _, "sandboxed"))) :-
@@ -3890,6 +4016,16 @@ test(parse_call_context_json_exposes_bindings_from_anon_assignment_used_as_data,
     GoalAtom = '_Goals=[(X=a,true),(Y=b,true),(Z=c,true)],parallel(_Goals)',
     parse_call_context(GoalAtom, _TemplateAtom0, json, false, none,
                        _Goal, Template, _Once, _RequestedTimeout).
+
+test(parse_call_options_context_preserves_template_variable_identity) :-
+    parse_call_options_context(
+        'p(X)',
+        '[template(pair(X)),format(prolog),limit(1)]',
+        Goal, Template, 0, 1, false, none, _Options
+    ),
+    Goal = p(GoalX),
+    Template = pair(TemplateX),
+    assertion(GoalX == TemplateX).
 
 test(statechart_spawn_load_uri_node_relative) :-
     with_node_server(_URI,
@@ -4000,17 +4136,16 @@ test(ws_toplevel_next_preserves_member_solutions,
                     offset:0,
                     limit:1,
                     once:false,
-                    format:"json",
-                    src_text:""
+                    format:"json"
                 }),
                 ws_receive_json(WS, Reply1),
                 [Row1] = Reply1.data,
                 Y1 = Row1.'Y',
-                ws_send_json(WS, json{command:toplevel_next, pid:ToplevelPid, limit:1}),
+                ws_send_json(WS, json{command:toplevel_next, pid:ToplevelPid}),
                 ws_receive_json(WS, Reply2),
                 [Row2] = Reply2.data,
                 Y2 = Row2.'Y',
-                ws_send_json(WS, json{command:toplevel_next, pid:ToplevelPid, limit:1}),
+                ws_send_json(WS, json{command:toplevel_next, pid:ToplevelPid}),
                 ws_receive_json(WS, Reply3),
                 [Row3] = Reply3.data,
                 Y3 = Row3.'Y'
@@ -4204,18 +4339,21 @@ test(ws_actor_spawn_load_predicates_copies_session_assertions,
             catch(ws_close(WS, 1000, done), _, true)
         )).
 
-test(ws_tutorial_reload_preserves_supervised_server,
+test(ws_tutorial_spawn_source_supports_supervised_server_upgrade,
      true((Stored == "ok", Taken == "ok(eggs)", Bad == "error(unknown_request)"))) :-
     Fridge = "fridge(store(F),L,ok,[F|L]). fridge(take(F),L,ok(F),R):-select(F,L,R),!. fridge(take(_),L,not_found,L). fridge(_,_,_,_):-fail.",
     Fridge2 = "fridge2(store(F),L,ok,[F|L]). fridge2(take(F),L,ok(F),R):-select(F,L,R),!. fridge2(take(_),L,not_found,L). fridge2(_,L,error(unknown_request),L).",
+    string_concat(Fridge, Fridge2, FridgeSource),
+    format(string(SpawnOptions),
+           "[session(true),src_text(~q)]",
+           [FridgeSource]),
     with_node_server_options([profile(actor), auth(dev), sandbox(off)], URI,
         setup_call_cleanup(
             ws_open(URI, WS),
             (
                 ws_send_json(WS, json{
                     command:toplevel_spawn,
-                    options:"[session(true)]",
-                    src_text:Fridge
+                    options:SpawnOptions
                 }),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
@@ -4243,16 +4381,6 @@ test(ws_tutorial_reload_preserves_supervised_server,
                 assertion(StoreReply.type == "success"),
                 StoreReply.data = [StoreRow],
                 get_dict('Stored', StoreRow, Stored),
-                ws_send_json(WS, json{
-                    command:toplevel_call,
-                    pid:Pid,
-                    goal:"true",
-                    once:true,
-                    limit:1,
-                    src_text:Fridge2,
-                    format:"json"
-                }),
-                ws_receive_json_until_expected_types(WS, ["success"], [_]),
                 format(string(UpgradeGoal),
                        "true,server_actor:server_upgrade(~s,fridge2,[src_predicates([fridge2/4])])",
                        [FridgePid]),
@@ -4723,7 +4851,7 @@ test(isotope_next_returns_following_solution,
                 Data1 = First.data,
                 More1 = First.more,
                 format(atom(NextURL),
-                       '~w/toplevel_next?pid=~w&limit=1&format=json',
+                       '~w/toplevel_next?pid=~w&format=json',
                        [URI, Pid]),
                 read_json_answer(NextURL, Second),
                 Type2 = Second.type,
@@ -5481,6 +5609,76 @@ test(isotope_abort_returns_abort_event,
                 PID = JSON.pid
             ),
             kill_isotope_session(Pid)
+        )).
+
+test(isotope_halt_terminates_and_releases_session,
+     true((Type == "halted", PID == Pid, Reply == "true",
+           SessionGone == true))) :-
+    with_node_server(URI,
+        (
+            format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+            read_json_post(SpawnURL, _{options:"[session(true)]"}, SpawnJSON),
+            Pid = SpawnJSON.pid,
+            format(atom(HaltURL),
+                   '~w/toplevel_halt?pid=~w&format=json',
+                   [URI, Pid]),
+            read_json_answer(HaltURL, JSON),
+            Type = JSON.type,
+            PID = JSON.pid,
+            Reply = JSON.reply,
+            (   catch(node:isotope_session_queue(Pid, _), _, fail)
+            ->  SessionGone = false
+            ;   SessionGone = true
+            )
+        )).
+
+test(isotope_replacement_spawns_before_retiring_previous,
+     true((FirstValue == "new", SecondValue == "new",
+           OldSessionGone == true))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(
+                    SpawnURL,
+                    _{options:"[session(true),src_text('version(old).')]"},
+                    OldSpawn
+                ),
+                OldPid = OldSpawn.pid,
+                read_json_post(
+                    SpawnURL,
+                    _{options:"[session(true),src_text('version(new).')]"},
+                    NewSpawn
+                ),
+                NewPid = NewSpawn.pid
+            ),
+            (
+                format(atom(FirstCallURL),
+                       '~w/toplevel_call?pid=~w&goal=version(X)&limit=1&format=json',
+                       [URI, NewPid]),
+                read_json_answer(FirstCallURL, FirstReply),
+                [FirstRow] = FirstReply.data,
+                FirstValue = FirstRow.'X',
+                format(atom(HaltURL),
+                       '~w/toplevel_halt?pid=~w&format=json',
+                       [URI, OldPid]),
+                read_json_answer(HaltURL, HaltReply),
+                assertion(HaltReply.type == "halted"),
+                format(atom(SecondCallURL),
+                       '~w/toplevel_call?pid=~w&goal=version(X)&limit=1&format=json',
+                       [URI, NewPid]),
+                read_json_answer(SecondCallURL, SecondReply),
+                [SecondRow] = SecondReply.data,
+                SecondValue = SecondRow.'X',
+                (   catch(node:isotope_session_queue(OldPid, _), _, fail)
+                ->  OldSessionGone = false
+                ;   OldSessionGone = true
+                )
+            ),
+            (
+                catch(kill_isotope_session(OldPid), _, true),
+                catch(kill_isotope_session(NewPid), _, true)
+            )
         )).
 
 test(isotope_pull_maps_abort_goal_message_to_abort_event,

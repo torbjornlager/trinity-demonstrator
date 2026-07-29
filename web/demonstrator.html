@@ -5274,6 +5274,10 @@
             wsSpawnResolve: null,
             wsSpawnReject: null,
             wsSpawnTimer: null,
+            wsRetirePid: null,
+            wsRetirePromise: null,
+            wsRetireResolve: null,
+            wsRetireTimer: null,
             wsTutorialLoadPid: null,
             wsTutorialLoadText: "",
             wsTutorialLoadResolve: null,
@@ -7170,22 +7174,12 @@
             if (this.transportMode === "isotope") {
               if (this.isotopePid !== null) {
                 this.transientLoadText = "";
-                return this.requestJson("/toplevel_call", {
-                  method: "GET",
-                  logScope: "isotope",
-                  params: {
-                    pid: this.isotopePid,
-                    goal: "true",
-                    once: "true",
-                    limit: "1",
-                    format: "json",
-                    src_text: sourceText
-                  }
-                }).then(function(event) {
-                  if (!event || event.type !== "success") {
-                    throw new Error(describeJsonError(event || {}));
-                  }
-                  self.isotopeLoadedText = sourceText;
+                var tutorialGeneration = this.nextIsotopeGeneration();
+                return this.replaceIsotopeSession(
+                  this.terminal,
+                  tutorialGeneration,
+                  { text: sourceText, origin: "transient" }
+                ).then(function() {
                   self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
                   self.focusTerminalSoon(true);
                   return true;
@@ -7338,44 +7332,64 @@
 	            }
 	            return text;
 	          },
+          protocolLogFieldOrder: function(value) {
+            var preferred = Object.prototype.hasOwnProperty.call(value || {}, "command")
+              ? ["command", "pid", "goal", "options"]
+              : Object.prototype.hasOwnProperty.call(value || {}, "type")
+                ? ["type", "pid", "data", "more"]
+                : [];
+            var keys = [];
+            preferred.forEach(function(key) {
+              if (Object.prototype.hasOwnProperty.call(value, key)) {
+                keys.push(key);
+              }
+            });
+            Object.keys(value || {}).forEach(function(key) {
+              if (keys.indexOf(key) < 0) {
+                keys.push(key);
+              }
+            });
+            return keys;
+          },
+          sortProtocolLogValue: function(value) {
+            if (Array.isArray(value)) {
+              return value.map(this.sortProtocolLogValue.bind(this));
+            }
+            if (value && typeof value === "object") {
+              var out = {};
+              this.protocolLogFieldOrder(value).forEach(function(key) {
+                out[key] = this.sortProtocolLogValue(value[key]);
+              }, this);
+              return out;
+            }
+            return value;
+          },
+          cropProtocolLogValue: function(value) {
+            if (typeof value === "string") {
+              var text = value.replace(/\n/g, " ").replace(/ {2,}/g, " ");
+              return text.length > 25 ? text.slice(0, 25) + "..." : text;
+            }
+            if (Array.isArray(value)) {
+              return value.map(this.cropProtocolLogValue.bind(this));
+            }
+            if (value && typeof value === "object") {
+              var out = {};
+              Object.keys(value).forEach(function(key) {
+                out[key] = this.cropProtocolLogValue(value[key]);
+              }, this);
+              return out;
+            }
+            return value;
+          },
           prettyJsonText: function(text) {
-            var KEY_ORDER = ["type", "pid", "data", "more"];
-            function sortKeys(value) {
-              if (Array.isArray(value)) {
-                return value.map(sortKeys);
-              }
-              if (value && typeof value === "object") {
-                var out = {};
-                KEY_ORDER.forEach(function(k) {
-                  if (Object.prototype.hasOwnProperty.call(value, k)) { out[k] = sortKeys(value[k]); }
-                });
-                Object.keys(value).forEach(function(k) {
-                  if (!Object.prototype.hasOwnProperty.call(out, k)) { out[k] = sortKeys(value[k]); }
-                });
-                return out;
-              }
-              return value;
-            }
-            function cropJsonStrings(value) {
-              if (typeof value === "string") {
-                var s = value.replace(/\n/g, " ").replace(/ {2,}/g, " ");
-                return s.length > 25 ? s.slice(0, 25) + "..." : s;
-              }
-              if (Array.isArray(value)) {
-                return value.map(cropJsonStrings);
-              }
-              if (value && typeof value === "object") {
-                var out = {};
-                Object.keys(value).forEach(function(key) {
-                  out[key] = cropJsonStrings(value[key]);
-                });
-                return out;
-              }
-              return value;
-            }
-
             try {
-              return JSON.stringify(cropJsonStrings(sortKeys(JSON.parse(String(text)))), null, 2);
+              return JSON.stringify(
+                this.cropProtocolLogValue(
+                  this.sortProtocolLogValue(JSON.parse(String(text)))
+                ),
+                null,
+                2
+              );
             } catch (_error) {
               return null;
             }
@@ -7648,6 +7662,33 @@
             return "'" + String(text == null ? "" : text)
               .replace(/\\/g, "\\\\")
               .replace(/'/g, "''") + "'";
+          },
+          toplevelSpawnOptionsText: function(sourceText, session) {
+            var options = [];
+            if (session !== false) {
+              options.push("session(true)");
+            }
+            if (String(sourceText || "") !== "") {
+              options.push("src_text(" + this.prologQuotedText(sourceText) + ")");
+            }
+            return "[" + options.join(",") + "]";
+          },
+          toplevelCallOptionsText: function(options) {
+            var value = options || {};
+            var terms = [];
+            if (value.template !== undefined) {
+              terms.push("template(" + String(value.template) + ")");
+            }
+            if (value.offset !== undefined) {
+              terms.push("offset(" + Number(value.offset) + ")");
+            }
+            if (value.limit !== undefined) {
+              terms.push("limit(" + Number(value.limit) + ")");
+            }
+            if (value.once !== undefined) {
+              terms.push("once(" + (value.once === true || value.once === "true" ? "true" : "false") + ")");
+            }
+            return "[" + terms.join(",") + "]";
           },
           reportEditorPlaceholderError: function(term, message) {
             if (term && typeof term.error === "function") {
@@ -8998,8 +9039,8 @@
               return false;
             }
             abortEnvelope = {
-              pid: Number(this.swiWasm2ShellPid),
-              command: "toplevel_abort"
+              command: "toplevel_abort",
+              pid: Number(this.swiWasm2ShellPid)
             };
             this.logSwiWasmWorkerTraffic(abortEnvelope, "request");
             entry.worker.postMessage(abortEnvelope);
@@ -9052,8 +9093,10 @@
                 command: "toplevel_call",
                 pid: this.wsPid,
                 goal: goal,
-                template: "true",
-                limit: 1
+                options: this.toplevelCallOptionsText({
+                  template: "true",
+                  limit: 1
+                })
               });
               return;
             }
@@ -9152,8 +9195,8 @@
               var shell = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
               if (shell && shell.worker && !shell.done) {
                 var stopEnvelope = {
-                  pid: Number(this.swiWasm2ShellPid),
-                  command: "toplevel_stop"
+                  command: "toplevel_stop",
+                  pid: Number(this.swiWasm2ShellPid)
                 };
                 this.logSwiWasmWorkerTraffic(stopEnvelope, "request");
                 shell.worker.postMessage(stopEnvelope);
@@ -9229,6 +9272,39 @@
             }).catch(function() {
             });
           },
+          haltIsotopeSession: function(pid) {
+            if (!pid) {
+              return Promise.resolve(null);
+            }
+            return this.requestJson("/toplevel_halt", {
+              method: "GET",
+              logScope: "isotope",
+              params: { pid: pid, format: "json" }
+            });
+          },
+          replaceIsotopeSession: function(term, generation, loadSpec) {
+            var self = this;
+            var retiringPid = this.isotopePid;
+            return this.spawnIsotopeSession(term, generation, loadSpec).then(function(newPid) {
+              // The replacement is live before the old session is retired.
+              // A node that predates /toplevel_halt may return 404 here; that
+              // must not discard the successfully spawned replacement.
+              self.haltIsotopeSession(retiringPid).then(function(event) {
+                if (!event || event.type !== "halted") {
+                  self.log("warn",
+                    "Could not confirm retirement of ISOTOPE session " + retiringPid + ".",
+                    "isotope");
+                }
+              }).catch(function(error) {
+                self.log("warn",
+                  "Could not retire ISOTOPE session " + retiringPid +
+                  "; the node's idle-session cleanup will reclaim it. " +
+                  error.message,
+                  "isotope");
+              });
+              return newPid;
+            });
+          },
           abortIsotopeComputation: function(term) {
             var self = this;
             if (!this.isotopePid) {
@@ -9263,7 +9339,8 @@
               this.recordSessionEvent("session", "Session reset.", "isotope", this.isotopePid, resetLogId);
             }
             this.nextIsotopeGeneration();
-            this.abortIsotopeSession(this.isotopePid);
+            this.haltIsotopeSession(this.isotopePid).catch(function() {
+            });
             this.isotopePid = null;
             this.isotopeLoadedText = "";
             this.editorDirty = true;
@@ -9284,6 +9361,16 @@
             if (this.wsSpawnReject) {
               this.wsSpawnReject(new Error("WebSocket session reset"));
             }
+            if (this.wsRetireTimer) {
+              clearTimeout(this.wsRetireTimer);
+              this.wsRetireTimer = null;
+            }
+            if (this.wsRetireResolve) {
+              this.wsRetireResolve(false);
+            }
+            this.wsRetirePid = null;
+            this.wsRetirePromise = null;
+            this.wsRetireResolve = null;
             this.wsSpawnPromise = null;
             this.wsSpawnResolve = null;
             this.wsSpawnReject = null;
@@ -9775,7 +9862,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260726-toplevel-halt-await";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260729-spawn-source";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -9789,6 +9876,9 @@
               reason: null,
               goal: String(goalText || ""),
               role: String(roleText || "actor"),
+              shellCandidate: !!(startFields && startFields.shellCandidate),
+              shellRetired: false,
+              retireTimer: null,
               parentPid: startFields && startFields.parentPid
                 ? String(startFields.parentPid)
                 : "",
@@ -9823,8 +9913,7 @@
               var spawnEnvelope = {
                 command: "toplevel_spawn",
                 pid: Number(pid),
-                src_text: String(extraSourceText || ""),
-                options: "[session(true)]"
+                options: this.toplevelSpawnOptionsText(extraSourceText, true)
               };
               // Worker boot code is an implementation detail, transferred
               // separately so the API message itself is the same envelope
@@ -10001,7 +10090,7 @@
             if (existing && existing.connecting) {
               return existing.connecting;
             }
-            var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelLimits: {}, toplevelTargets: {} };
+            var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelTargets: {} };
             entry.toplevelTargets = entry.toplevelTargets || {};
             this.swiWasmRemoteActorConnections[node] = entry;
             entry.connecting = new Promise(function(resolve, reject) {
@@ -10197,6 +10286,7 @@
             });
           },
           spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText, targetPid) {
+            var self = this;
             var node = this.swiWasmRemoteNodeUrl(nodeText);
             var source = String(sourceText || "");
             var session = String(sessionText || "false") === "true";
@@ -10206,8 +10296,7 @@
                 try {
                   entry.socket.send(JSON.stringify({
                     command: "toplevel_spawn",
-                    src_text: source,
-                    options: session ? "[session(true)]" : "[]"
+                    options: self.toplevelSpawnOptionsText(source, session)
                   }));
                 } catch (error) {
                   entry.pendingSpawns.pop();
@@ -10217,19 +10306,21 @@
             });
           },
           callSwiWasmRemoteToplevel: function(pidText, goalText, templateText, limit, offset, once) {
+            var self = this;
             var remote = this.parseSwiWasmRemoteToplevelPid(pidText);
             if (!remote) return Promise.resolve(false);
             return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
               entry.toplevelTemplates[String(remote.pid)] = String(templateText || goalText || "true");
-              entry.toplevelLimits[String(remote.pid)] = Number(limit || 10000000000);
               entry.socket.send(JSON.stringify({
                 command: "toplevel_call",
                 pid: remote.pid,
                 goal: String(goalText || "true"),
-                template: String(templateText || goalText || "true"),
-                limit: Number(limit || 10000000000),
-                offset: Number(offset || 0),
-                once: once === true ? "true" : "false"
+                options: self.toplevelCallOptionsText({
+                  template: String(templateText || goalText || "true"),
+                  limit: Number(limit || 10000000000),
+                  offset: Number(offset || 0),
+                  once: once === true
+                })
               }));
               return true;
             });
@@ -10239,14 +10330,14 @@
             if (!remote) return Promise.resolve(false);
             return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
               var requestedLimit = String(limitText || "default");
-              var limit = requestedLimit === "default"
-                ? (entry.toplevelLimits[String(remote.pid)] || 10000000000)
-                : Number(requestedLimit);
-              entry.socket.send(JSON.stringify({
+              var envelope = {
                 command: "toplevel_next",
-                pid: remote.pid,
-                limit: limit
-              }));
+                pid: remote.pid
+              };
+              if (requestedLimit !== "default") {
+                envelope.limit = Number(requestedLimit);
+              }
+              entry.socket.send(JSON.stringify(envelope));
               return true;
             });
           },
@@ -10268,28 +10359,123 @@
             }
             return { functor: functor, args: Array.isArray(args) ? args : [] };
           },
-          runSwiWasm2Query: function(term) {
-            var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
-            var source = this.activeLoadText || "";
+          cleanupSwiWasm2ShellEntry: function(pid, entry) {
+            var current = this.swiWasmActorWorkers[pid];
+            if (!entry || current !== entry) {
+              return;
+            }
+            if (entry.retireTimer) {
+              clearTimeout(entry.retireTimer);
+              entry.retireTimer = null;
+            }
+            if (entry.worker) {
+              try { entry.worker.terminate(); } catch (_error) {}
+            }
+            delete this.swiWasmActorWorkers[pid];
+          },
+          retireSwiWasm2Shell: function(pid) {
+            var entry = this.swiWasmActorWorkers[pid];
+            var envelope;
+            if (!entry || !entry.worker || entry.done) {
+              this.cleanupSwiWasm2ShellEntry(pid, entry);
+              return;
+            }
+            entry.shellRetired = true;
+            envelope = {
+              command: "toplevel_halt",
+              pid: Number(pid)
+            };
+            this.logSwiWasmWorkerTraffic(envelope, "request");
+            entry.worker.postMessage(envelope);
+            entry.retireTimer = setTimeout(function() {
+              this.cleanupSwiWasm2ShellEntry(pid, entry);
+            }.bind(this), 1000);
+          },
+          replaceSwiWasm2Shell: function(sourceText) {
+            var oldPid = String(this.swiWasm2ShellPid);
+            var oldEntry = this.swiWasmActorWorkers[oldPid];
+            var newPid = this.reserveSwiWasmWorkerActorPid();
+            var source = String(sourceText || "");
+            var goal = "swi_wasm_actor_bridge:ptcp(" +
+              qualifySwiWasmLocalPid(newPid) + ",terminal,true)";
+            return this.spawnSwiWasmWorkerActorReady(
+              goal,
+              source,
+              newPid,
+              "",
+              "shell_toplevel",
+              { shellCandidate: true }
+            ).then(function(readyPid) {
+              var entry = this.swiWasmActorWorkers[readyPid];
+              if (!entry || entry.done || !entry.ready) {
+                throw new Error("Replacement SWI-WASM toplevel did not become ready.");
+              }
+              entry.shellCandidate = false;
+              this.swiWasm2ShellPid = readyPid;
+              this.swiWasm2ShellReady = true;
+              this.swiWasm2QueryPending = false;
+              this.swiWasm2LoadedSource = source;
+              this.lastBindings = {};
+              this.lastDollarVars = [];
+              try {
+                this.retireSwiWasm2Shell(oldPid);
+              } catch (retireError) {
+                this.log("WARN", "SWI-WASM", "Could not halt replaced Worker toplevel " + oldPid + ": " +
+                  (retireError && retireError.message ? retireError.message : retireError));
+                this.cleanupSwiWasm2ShellEntry(oldPid, oldEntry);
+              }
+              return readyPid;
+            }.bind(this)).catch(function(error) {
+              var candidate = this.swiWasmActorWorkers[newPid];
+              this.cleanupSwiWasm2ShellEntry(newPid, candidate);
+              throw error;
+            }.bind(this));
+          },
+          sendSwiWasm2Call: function(term, pid) {
+            var entry = this.swiWasmActorWorkers[pid];
             var callEnvelope;
             if (!entry || !entry.worker || entry.done || !entry.ready) {
-              this.finishError(term, "The SWI-WASM worker toplevel actor is not ready.");
-              return;
+              throw new Error("The SWI-WASM worker toplevel actor is not ready.");
             }
             this.swiWasm2QueryPending = true;
             this.pauseTerm(term);
             callEnvelope = {
-              pid: Number(this.swiWasm2ShellPid),
               command: "toplevel_call",
+              pid: Number(pid),
               goal: this.activeGoal,
-              limit: 1
+              options: this.toplevelCallOptionsText({ limit: 1 })
             };
-            if (source !== this.swiWasm2LoadedSource) {
-              callEnvelope.src_text = source;
-              this.swiWasm2LoadedSource = source;
-            }
             this.logSwiWasmWorkerTraffic(callEnvelope, "request");
             entry.worker.postMessage(callEnvelope);
+          },
+          runSwiWasm2Query: function(term) {
+            var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
+            var source = this.activeLoadText || "";
+            if (!entry || !entry.worker || entry.done || !entry.ready) {
+              this.finishError(term, "The SWI-WASM worker toplevel actor is not ready.");
+              return;
+            }
+            if (source !== this.swiWasm2LoadedSource) {
+              var oldPid = this.swiWasm2ShellPid;
+              this.pauseTerm(term);
+              this.echoTerminalSystemInfo(
+                term,
+                "% Editor source changed; replacing SWI-WASM session " + oldPid + "."
+              );
+              this.replaceSwiWasm2Shell(source).then(function(pid) {
+                this.sendSwiWasm2Call(term, pid);
+              }.bind(this)).catch(function(error) {
+                this.finishError(term, error.message);
+                this.resumeTerm(term);
+              }.bind(this));
+              return;
+            }
+            try {
+              this.sendSwiWasm2Call(term, this.swiWasm2ShellPid);
+            } catch (error) {
+              this.finishError(term, error.message);
+              this.resumeTerm(term);
+            }
           },
           nextSwiWasm2Solution: function(term) {
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
@@ -10301,9 +10487,8 @@
             this.queryState = "query";
             this.pauseTerm(term);
             var nextEnvelope = {
-              pid: Number(this.swiWasm2ShellPid),
               command: "toplevel_next",
-              limit: 1
+              pid: Number(this.swiWasm2ShellPid)
             };
             this.logSwiWasmWorkerTraffic(nextEnvelope, "request");
             entry.worker.postMessage(nextEnvelope);
@@ -10348,8 +10533,8 @@
                 var entry = this.swiWasmActorWorkers[pid];
                 if (entry && entry.worker && !entry.done && answer !== null) {
                   var respondEnvelope = {
-                    pid: Number(pid),
                     command: "toplevel_respond",
+                    pid: Number(pid),
                     input: String(answer)
                   };
                   this.logSwiWasmWorkerTraffic(respondEnvelope, "request");
@@ -10370,6 +10555,11 @@
             if (!entry) {
               return;
             }
+            if (message.type === "halted" && entry.shellRetired) {
+              this.logSwiWasmWorkerTraffic(message, "response");
+              this.cleanupSwiWasm2ShellEntry(pid, entry);
+              return;
+            }
             if (message.type === "ready" || message.type === "spawned") {
               entry.ready = true;
               if (entry.resolveReady) {
@@ -10379,13 +10569,15 @@
               }
               if (entry.role === "shell_toplevel") {
                 this.logSwiWasmWorkerTraffic(message, "response");
-                this.swiWasm2ShellReady = true;
-                if (this.terminal) {
-                  this.terminal.set_prompt(this.basePrompt());
-                  this.resumeTerm(this.terminal);
+                if (!entry.shellCandidate) {
+                  this.swiWasm2ShellReady = true;
+                  if (this.terminal) {
+                    this.terminal.set_prompt(this.basePrompt());
+                    this.resumeTerm(this.terminal);
+                  }
+                  this.log("info", "SWI-WASM worker toplevel actor ready.", "swi-wasm");
+                  this.fetchExamplesIndex();
                 }
-                this.log("info", "SWI-WASM worker toplevel actor ready.", "swi-wasm");
-                this.fetchExamplesIndex();
               } else {
                 this.log("transport", pid + " ready.", "swi-wasm", "response");
               }
@@ -10496,7 +10688,8 @@
               if (pid !== "main" && entry.worker) {
                 try { entry.worker.terminate(); } catch (_reapError) {}
               }
-              if (entry.role === "shell_toplevel") {
+              if (entry.role === "shell_toplevel" &&
+                  !entry.shellCandidate && !entry.shellRetired) {
                 this.swiWasm2ShellReady = false;
                 this.swiWasm2QueryPending = false;
                 if (this.terminal) {
@@ -10526,7 +10719,8 @@
               if (message.output && this.terminal) {
                 this.echoSwiWasmOutput(this.terminal, String(message.output).replace(/\n$/, ""));
               }
-              if (entry.role === "shell_toplevel") {
+              if (entry.role === "shell_toplevel" &&
+                  !entry.shellCandidate && !entry.shellRetired) {
                 this.swiWasm2ShellReady = false;
                 this.swiWasm2QueryPending = false;
                 if (this.terminal) {
@@ -13192,21 +13386,24 @@
               self.resumeTerm(term);
             });
           },
-          ensureIsotopeSession: function(term, generation) {
-            var self = this;
-            var loadSpec;
-            var loadText;
-            var examplePayload;
+          ensureIsotopeSession: function(term, generation, requestedLoadSpec) {
             if (this.isotopePid !== null) {
               return Promise.resolve(this.isotopePid);
             }
-            loadSpec = this.spawnLoadSpec();
+            return this.spawnIsotopeSession(term, generation, requestedLoadSpec);
+          },
+          spawnIsotopeSession: function(term, generation, requestedLoadSpec) {
+            var self = this;
+            var loadSpec = requestedLoadSpec || this.spawnLoadSpec();
+            var loadText;
+            var examplePayload;
             loadText = loadSpec.text;
             if (loadSpec.origin === "editor" && loadText !== "") {
               examplePayload = this.exampleSpawnInteractionPayload("prolog", "isotope", loadSpec.origin);
             }
-            var body = { options: "[session(true)]" };
-            if (loadText !== "") { body.src_text = loadText; }
+            var body = {
+              options: this.toplevelSpawnOptionsText(loadText, true)
+            };
             return this.requestJson("/toplevel_spawn", {
               method: "POST",
               logScope: "isotope",
@@ -13224,6 +13421,8 @@
               }
               self.isotopePid = event.pid;
               self.pendingPromptPid = null;
+              self.lastBindings = {};
+              self.lastDollarVars = [];
               self.isotopeLoadedText = loadText;
               if (loadSpec.origin === "editor") {
                 self.editorDirty = false;
@@ -13243,12 +13442,15 @@
                 this.isotopePid !== null) {
               reloadSpec = this.spawnLoadSpec();
               this.echoTerminalSystemInfo(term, "% " + (reloadSpec.origin === "transient" ? "Loading new source" : "Editor source changed") +
-                "; updating private code in ISOTOPE session " + this.isotopePid + ".");
+                "; replacing ISOTOPE session " + this.isotopePid + ".");
             }
             var generation = this.nextIsotopeGeneration();
             this.pauseTerm(term);
-            this.ensureIsotopeSession(term, generation).then(function(pid) {
-              self.runIsotopeCall(term, pid, generation, reloadSpec);
+            var sessionPromise = reloadSpec
+              ? this.replaceIsotopeSession(term, generation, reloadSpec)
+              : this.ensureIsotopeSession(term, generation);
+            sessionPromise.then(function(pid) {
+              self.runIsotopeCall(term, pid, generation);
             }).catch(function(error) {
               if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
                 self.transientLoadText = reloadSpec.text;
@@ -13260,7 +13462,7 @@
               self.resumeTerm(term);
             });
           },
-          runIsotopeCall: function(term, pid, generation, reloadSpec) {
+          runIsotopeCall: function(term, pid, generation) {
             var self = this;
             var params = {
               pid: pid,
@@ -13268,9 +13470,6 @@
               limit: String(this.solutionLimit),
               format: "json"
             };
-            if (reloadSpec && reloadSpec.text !== "") {
-              params.src_text = reloadSpec.text;
-            }
             this.recordSessionEvent("session", "Query: " + this.clipText(this.activeGoal, 140), "isotope", pid);
             this.requestJson("/toplevel_call", {
               method: "GET",
@@ -13280,19 +13479,8 @@
               if (self.isStaleIsotopeGeneration(generation)) {
                 return;
               }
-              if (reloadSpec && event.type !== "error") {
-                self.isotopeLoadedText = reloadSpec.text;
-                if (reloadSpec.origin === "editor") {
-                  self.editorDirty = false;
-                }
-              } else if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
-                self.transientLoadText = reloadSpec.text;
-              }
               self.handleIsotopeEvent(term, event, generation);
             }).catch(function(error) {
-              if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
-                self.transientLoadText = reloadSpec.text;
-              }
               if (self.isStaleIsotopeGeneration(generation)) {
                 return;
               }
@@ -13444,7 +13632,6 @@
               logScope: "isotope",
               params: {
                 pid: this.isotopePid,
-                limit: String(this.solutionLimit),
                 format: "json"
               }
             }).then(function(event) {
@@ -13523,13 +13710,24 @@
           },
           wsSend: function(obj) {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-              var text = JSON.stringify(obj);
-              this.log("transport", JSON.stringify(obj, null, 2), "ws", "request");
+              var ordered = this.sortProtocolLogValue(obj);
+              var text = JSON.stringify(ordered);
+              this.log("transport", JSON.stringify(ordered, null, 2), "ws", "request");
               this.ws.send(text);
             }
           },
           closeWs: function() {
             this.cancelWsTutorialLoad("ACTOR session closed during tutorial load.");
+            if (this.wsRetireTimer) {
+              clearTimeout(this.wsRetireTimer);
+              this.wsRetireTimer = null;
+            }
+            if (this.wsRetireResolve) {
+              this.wsRetireResolve(false);
+            }
+            this.wsRetirePid = null;
+            this.wsRetirePromise = null;
+            this.wsRetireResolve = null;
             if (this.wsSpawnTimer) {
               clearTimeout(this.wsSpawnTimer);
               this.wsSpawnTimer = null;
@@ -13566,26 +13764,14 @@
             this.wsTutorialLoadReject = null;
           },
           loadTutorialSourceIntoWsSession: function(sourceText) {
-            var self = this;
             if (this.wsPid === null) {
               return Promise.reject(new Error("No active ACTOR session."));
             }
-            if (this.wsTutorialLoadResolve) {
-              return Promise.reject(new Error("A tutorial program is already loading."));
-            }
-            return new Promise(function(resolve, reject) {
-              self.wsTutorialLoadPid = self.wsPid;
-              self.wsTutorialLoadText = sourceText;
-              self.wsTutorialLoadResolve = resolve;
-              self.wsTutorialLoadReject = reject;
-              self.wsSend({
-                command: "toplevel_call",
-                pid: self.wsPid,
-                goal: "true",
-                once: true,
-                limit: 1,
-                src_text: sourceText
-              });
+            return this.replaceWsSession({
+              text: String(sourceText || ""),
+              origin: "transient"
+            }).then(function() {
+              return true;
             });
           },
           handleWsTutorialLoadEvent: function(event) {
@@ -13692,7 +13878,7 @@
             });
             return this.wsConnectPromise;
           },
-          ensureWsSession: function(term) {
+          ensureWsSession: function(term, requestedLoadSpec) {
             var self = this;
             var spawnLoadSpec;
             if (this.wsPid !== null) {
@@ -13717,9 +13903,9 @@
                   // explicitly.
                   options: "[session(true)]"
                 };
-                spawnLoadSpec = self.spawnLoadSpec();
+                spawnLoadSpec = requestedLoadSpec || self.spawnLoadSpec();
                 var spawnLoadText = spawnLoadSpec.text;
-                if (spawnLoadText !== "") { spawnCmd.src_text = spawnLoadText; }
+                spawnCmd.options = self.toplevelSpawnOptionsText(spawnLoadText, true);
                 self.wsSpawnLoadText = spawnLoadText;
                 self.wsSpawnLoadOrigin = spawnLoadSpec.origin;
                 self.wsPendingExampleSpawn = spawnLoadSpec.origin === "editor" && spawnLoadText !== ""
@@ -13738,8 +13924,68 @@
               return self.wsSpawnPromise;
             });
           },
+          completeWsRetirement: function(pid) {
+            var resolve;
+            if (this.wsRetirePid === null || String(pid) !== String(this.wsRetirePid)) {
+              return false;
+            }
+            if (this.wsRetireTimer) {
+              clearTimeout(this.wsRetireTimer);
+              this.wsRetireTimer = null;
+            }
+            resolve = this.wsRetireResolve;
+            this.wsRetirePid = null;
+            this.wsRetirePromise = null;
+            this.wsRetireResolve = null;
+            this.wsPid = null;
+            this.wsLoadedText = "";
+            this.wsEditorDirty = true;
+            this.pendingPromptPid = null;
+            this.lastBindings = {};
+            this.lastDollarVars = [];
+            if (resolve) {
+              resolve(true);
+            }
+            return true;
+          },
+          retireWsSession: function() {
+            var self = this;
+            var retiringPid;
+            if (this.wsPid === null) {
+              return Promise.resolve(true);
+            }
+            if (this.wsRetirePromise) {
+              return this.wsRetirePromise;
+            }
+            retiringPid = this.wsPid;
+            this.wsRetirePid = retiringPid;
+            this.wsRetirePromise = new Promise(function(resolve) {
+              self.wsRetireResolve = resolve;
+              self.wsSend({
+                command: "toplevel_halt",
+                pid: retiringPid
+              });
+              self.wsRetireTimer = setTimeout(function() {
+                self.wsRetireTimer = null;
+                self.log("warn", "Timed out retiring ACTOR session " + retiringPid + "; reconnecting the socket.", "actor");
+                self.resetActorTransport();
+                resolve(false);
+              }, 5000);
+            });
+            return this.wsRetirePromise;
+          },
+          replaceWsSession: function(loadSpec) {
+            var self = this;
+            return this.retireWsSession().then(function() {
+              return self.ensureWsSession(self.terminal, loadSpec);
+            });
+          },
           handleWsEvent: function(term, event, generation) {
             if (generation !== this.wsGeneration) {
+              return;
+            }
+            if ((event.type === "halted" || event.type === "down") &&
+                this.completeWsRetirement(event.pid)) {
               return;
             }
             if (this.handleWsTutorialLoadEvent(event)) {
@@ -13905,20 +14151,21 @@
                 this.wsPid !== null) {
               reloadSpec = this.spawnLoadSpec();
               this.echoTerminalSystemInfo(term, "% " + (reloadSpec.origin === "transient" ? "Loading new source" : "Editor source changed") +
-                "; updating private code in ACTOR session " + this.wsPid + ".");
+                "; replacing ACTOR session " + this.wsPid + ".");
             }
             this.pauseTerm(term);
-            this.ensureWsSession(term).then(function(pid) {
+            var sessionPromise = reloadSpec
+              ? this.replaceWsSession(reloadSpec)
+              : this.ensureWsSession(term);
+            sessionPromise.then(function(pid) {
               var command = {
                 command: "toplevel_call",
                 pid: pid,
                 goal: self.activeGoal,
-                limit: self.solutionLimit
+                options: self.toplevelCallOptionsText({
+                  limit: self.solutionLimit
+                })
               };
-              if (reloadSpec && reloadSpec.text !== "") {
-                command.src_text = reloadSpec.text;
-                self.wsPendingCallLoad = reloadSpec;
-              }
               self.recordSessionEvent("session", "Query: " + self.clipText(self.activeGoal, 140), "actor", pid);
               self.wsSend(command);
             }).catch(function(error) {
@@ -13939,8 +14186,7 @@
             this.pauseTerm(term);
             this.wsSend({
               command: "toplevel_next",
-              pid: this.wsPid,
-              limit: this.solutionLimit
+              pid: this.wsPid
             });
           },
           stopPagingWs: function(term) {
@@ -14034,7 +14280,9 @@
             var rendered;
             if (value === null) return "null";
             if (value === undefined) return "undefined";
-            if (typeof value === "string") return JSON.stringify(value);
+            if (typeof value === "string") {
+              return JSON.stringify(this.cropProtocolLogValue(value));
+            }
             if (typeof value === "number") {
               if (Number.isNaN(value)) return "NaN";
               if (value === Infinity) return "Infinity";
@@ -14057,7 +14305,7 @@
               seen.pop();
               return rendered;
             }
-            keys = Object.keys(value);
+            keys = this.protocolLogFieldOrder(value);
             if (keys.length === 0) {
               seen.pop();
               return "{}";

@@ -158,8 +158,7 @@
               if (event.more) {
                 sendJSON({
                   command: "toplevel_next",
-                  pid: sessionPid,
-                  limit: 2
+                  pid: sessionPid
                 });
               } else {
                 sendJSON({

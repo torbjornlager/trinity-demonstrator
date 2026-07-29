@@ -18,6 +18,14 @@ const workerSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
   "utf8"
 );
+const workerToplevelOptionHelpersSource = workerSource.slice(
+  workerSource.indexOf("function readSpawnSourceAtom"),
+  workerSource.indexOf("function actorReceive")
+);
+const workerToplevelOptionHelpers = Function(
+  workerToplevelOptionHelpersSource +
+  "\nreturn { spawnSource: toplevelSpawnSource, callOptions: toplevelCallOptions };"
+)();
 const manualSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "manual.html"),
   "utf8"
@@ -142,7 +150,7 @@ const makeBrowserPromiseRef = embeddedWorkbenchMethod(
 );
 const swiWasmValueRenderer = {
   swiWasmStructuredCompound: embeddedWorkbenchMethod(
-    "swiWasmStructuredCompound", "runSwiWasm2Query"
+    "swiWasmStructuredCompound", "cleanupSwiWasm2ShellEntry"
   ),
   formatSwiWasmValue: embeddedWorkbenchMethod(
     "formatSwiWasmValue", "formatSwiWasmAtom"
@@ -154,10 +162,41 @@ const swiWasmValueRenderer = {
 const formatJavaScriptObject = embeddedWorkbenchMethod(
   "formatJavaScriptObject", "logSwiWasmWorkerTraffic"
 );
+const protocolLogFieldOrder = embeddedWorkbenchMethod(
+  "protocolLogFieldOrder", "sortProtocolLogValue"
+);
+const sortProtocolLogValue = embeddedWorkbenchMethod(
+  "sortProtocolLogValue", "cropProtocolLogValue"
+);
+const cropProtocolLogValue = embeddedWorkbenchMethod(
+  "cropProtocolLogValue", "prettyJsonText"
+);
+const prettyJsonText = embeddedWorkbenchMethod(
+  "prettyJsonText", "formatQueryParams"
+);
+const wsSend = embeddedWorkbenchMethod(
+  "wsSend", "closeWs"
+);
 const conciseSwiWasmOutput = embeddedWorkbenchMethod(
   "conciseSwiWasmOutput", "echoSwiWasmOutput"
 );
-const javaScriptObjectRenderer = { formatJavaScriptObject };
+const replaceIsotopeSession = embeddedWorkbenchMethod(
+  "replaceIsotopeSession", "abortIsotopeComputation"
+);
+const replaceSwiWasm2Shell = embeddedWorkbenchMethod(
+  "replaceSwiWasm2Shell", "sendSwiWasm2Call"
+);
+const sendSwiWasm2Call = embeddedWorkbenchMethod(
+  "sendSwiWasm2Call", "runSwiWasm2Query"
+);
+const protocolLogRenderer = {
+  protocolLogFieldOrder,
+  sortProtocolLogValue,
+  cropProtocolLogValue,
+  prettyJsonText,
+  formatJavaScriptObject
+};
+const javaScriptObjectRenderer = protocolLogRenderer;
 
 ok(includes("window.swiRpcGetAsync = function(url, httpTimeout)"),
    "paged RPC has an asynchronous fetch helper");
@@ -355,8 +394,10 @@ ok(tutorialIncludes('src_text("echo_actor :-') &&
    "SWI-WASM remote tutorial examples ship remote echo source and keep remote toplevels as sessions");
 ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge-source&quot;)"'),
    "supervised fridge tutorial source has a Load control");
-ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"'),
-   "supervised fridge upgrade source has a Load control");
+ok(!tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"') &&
+   tutorialIncludes('<pre id="srv-upgrade">?- server_upgrade(fridge, fridge2, [') &&
+   tutorialIncludes('src_text("'),
+   "supervised fridge upgrade transfers callback source without replacing the shell");
 ok(includes('<div class="project-title">Web Prolog code</div>') &&
    includes('<div class="project-title">SXML code</div>') &&
    includes('showPrologExamples: function() {\n            return this.hasWorkspacePane;') &&
@@ -491,9 +532,9 @@ ok(!includes("syncTracePreferenceToLiveSessions") &&
    includes('this.notifyTutorialStatechartTrace(text)') &&
    includes('this.notifyTutorialStatechartTrace(event.data)'),
    "statechart traces always feed both the Logger and tutorial animations while SXML trace only filters display");
-ok(includes('var body = { options: "[session(true)]" };') &&
+ok(includes('options: this.toplevelSpawnOptionsText(loadText, true)') &&
    includes('jsonBody: body\n            }).then(function(event) {\n              self.log("transport", JSON.stringify(event, null, 2), "isotope", "response");'),
-   "ISOTOPE explicitly requests a persistent session and logs the spawned response as API traffic");
+   "ISOTOPE puts session and initial source in spawn options and logs the response as API traffic");
 ok(includes('if (entry.scope === "wasm-worker") return "STATEFUL WORKER · JS OBJECT";') &&
    includes('logSwiWasmWorkerTraffic: function(envelope, direction)') &&
    includes('this.formatJavaScriptObject(envelope || {})') &&
@@ -512,6 +553,30 @@ ok(includes('if (entry.scope === "wasm-worker") return "STATEFUL WORKER · JS OB
    workerSource.includes('post("success"') &&
    workerSource.includes('post("failure"'),
    "SWI-WASM Worker toplevel traffic uses the stateful API protocol on the actual Worker boundary");
+ok(includes('options: this.toplevelSpawnOptionsText(extraSourceText, true)') &&
+   includes('options: this.toplevelCallOptionsText({ limit: 1 })') &&
+   !includes('callEnvelope.src_text = source') &&
+   !includes('src_text: String(extraSourceText || "")') &&
+   workerSource.includes('spawnSource = toplevelSpawnSource(message.options || "[]")') &&
+   workerSource.includes('var callOptions = toplevelCallOptions(message.options || "[]")') &&
+   workerSource.includes('toplevelCallHasSourceOption(message.options)') &&
+   workerSource.includes('Unsupported toplevel_call source option') &&
+   !workerSource.includes('deliver("\'$reload\'")'),
+   "SWI-WASM Worker source crosses only in toplevel_spawn options and calls reject source options");
+ok(includes('var nextEnvelope = {\n              command: "toplevel_next",\n              pid: Number(this.swiWasm2ShellPid)\n            };') &&
+   includes('this.wsSend({\n              command: "toplevel_next",\n              pid: this.wsPid\n            });') &&
+   includes('if (requestedLimit !== "default") {\n                envelope.limit = Number(requestedLimit);') &&
+   workerSource.includes('deliver("\'$next\'([])")') &&
+   !includes('pid: Number(this.swiWasm2ShellPid),\n              limit: 1') &&
+   !includes('pid: this.isotopePid,\n                limit: String(this.solutionLimit)'),
+   "browser-generated toplevel_next carries only pid and inherits the active call limit");
+ok(workerToplevelOptionHelpers.spawnSource(
+     "[session(true),src_text('p(''quoted''). q :- \\\\+ bad.')]"
+   ) === "p('quoted'). q :- \\+ bad." &&
+   JSON.stringify(workerToplevelOptionHelpers.callOptions(
+     "[limit(7),offset(3),once(true)]"
+   )) === JSON.stringify({ limit: 7, offset: 3, once: true }),
+   "the Worker consumes canonical spawn and call options instead of parallel private fields");
 ok(formatJavaScriptObject.call(javaScriptObjectRenderer, {
      command: "toplevel_call",
      pid: 4384261893,
@@ -530,15 +595,72 @@ ok(formatJavaScriptObject.call(javaScriptObjectRenderer, {
      "}"
    ].join("\n"),
    "SWI-WASM API traffic is rendered as a JavaScript object literal rather than JSON text");
+ok(formatJavaScriptObject.call(javaScriptObjectRenderer, {
+     options: "abcdefghijklmnopqrstuvwxyz",
+     goal: "q(X)",
+     pid: 4384261893,
+     command: "toplevel_call"
+   }) === [
+     "{",
+     '  command: "toplevel_call",',
+     "  pid: 4384261893,",
+     '  goal: "q(X)",',
+     '  options: "abcdefghijklmnopqrstuvwxy..."',
+     "}"
+   ].join("\n"),
+   "SWI-WASM request fields follow book order and long values use remote-node cropping");
+ok(prettyJsonText.call(protocolLogRenderer, JSON.stringify({
+     more: false,
+     data: [{ Pid: 91883433 }],
+     pid: 23981144,
+     type: "success"
+   })) === [
+     "{",
+     '  "type": "success",',
+     '  "pid": 23981144,',
+     '  "data": [',
+     "    {",
+     '      "Pid": 91883433',
+     "    }",
+     "  ],",
+     '  "more": false',
+     "}"
+   ].join("\n"),
+   "JSON responses follow the book's type, pid, data, more field order");
+{
+  const previousWebSocket = global.WebSocket;
+  let sentText = null;
+  global.WebSocket = { OPEN: 1 };
+  wsSend.call(Object.assign({
+    ws: {
+      readyState: 1,
+      send: function(text) { sentText = text; }
+    },
+    log: function() {}
+  }, protocolLogRenderer), {
+    options: "[limit(1)]",
+    goal: "q(X)",
+    pid: 23981144,
+    command: "toplevel_call"
+  });
+  global.WebSocket = previousWebSocket;
+  ok(sentText === '{"command":"toplevel_call","pid":23981144,"goal":"q(X)","options":"[limit(1)]"}',
+     "actual WebSocket request JSON is serialized in the book's field order");
+}
 ok(includes('POST /interaction_log (durable usage log): ') &&
    includes('Interaction log request failed: '),
    "interaction logging is visible, including failed recording attempts");
-ok(includes('updating private code in ISOTOPE session ') &&
-   includes('updating private code in ACTOR session ') &&
-   includes('params.src_text = reloadSpec.text') &&
-   includes('command.src_text = reloadSpec.text') &&
-   includes('wsPendingCallLoad: null'),
-   "edited source reloads in place without replacing persistent sessions");
+ok(includes('replacing ISOTOPE session ') &&
+   includes('replacing ACTOR session ') &&
+   includes('return this.spawnIsotopeSession(term, generation, loadSpec).then(function(newPid)') &&
+   includes('self.haltIsotopeSession(retiringPid).then(function(event)') &&
+   includes("the node's idle-session cleanup will reclaim it") &&
+   includes('this.requestJson("/toplevel_halt"') &&
+   includes('command: "toplevel_halt"') &&
+   includes('return self.ensureWsSession(self.terminal, loadSpec)') &&
+   !includes('params.src_text = reloadSpec.text') &&
+   !includes('command.src_text = reloadSpec.text'),
+   "edited source spawns an ISOTOPE replacement before best-effort retirement and never loads source through a call");
 ok(includes('SWI-WASM actor" +') &&
    includes('" running: " + survivingPids.join(", ")'),
    "SWI-WASM hard Abort reports surviving actor pids");
@@ -557,10 +679,9 @@ ok([
   ) && /\?- statechart_halt\(\$Pid, Reply, 1\)\.\n\n-->\s*$/.test(text);
 }), "every numbered SXML file exposes launch and final halt queries");
 ok(includes("return this.loadTutorialSourceIntoWsSession(sourceText)") &&
-   includes("handleWsTutorialLoadEvent: function(event)") &&
-   includes('src_text: sourceText') &&
-   includes('goal: "true"'),
-   "tutorial Load extends the active session instead of replacing supervised actors");
+   includes("return this.replaceWsSession({") &&
+   includes('origin: "transient"'),
+   "tutorial Load replaces the ACTOR toplevel and transfers source only at spawn");
 ok(includes("server_upgrade(To, Pred0, Options) :- collect_spawn_source(Options, Source)") &&
    includes("'$upgrade'(From, Ref, PlainPred, Source)") &&
    includes("server_upgrade(To, Pred0) :- server_upgrade_source(To, Pred0, '')"),
@@ -943,7 +1064,7 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260726-toplevel-halt-await') &&
+   includes('/swi_wasm_actor_worker.js?v=20260729-spawn-source') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
@@ -1012,7 +1133,123 @@ ok(includes('compound.functor === "=" && args.length === 2') &&
    }) === "success([(sleep(1),a=a)],false)",
    "SWI-WASM renders unification and conjunction in operator notation inside RPC answers");
 
-console.log(failures === 0
-  ? "\nswi_wasm_rpc_bridge smoke: PASS"
-  : "\nswi_wasm_rpc_bridge smoke: FAIL (" + failures + ")");
-process.exit(failures === 0 ? 0 : 1);
+{
+  const isotopeCalls = [];
+  const isotopeHarness = {
+    isotopePid: 11,
+    spawnIsotopeSession: function() {
+      isotopeCalls.push("spawn");
+      this.isotopePid = 22;
+      return Promise.resolve(22);
+    },
+    haltIsotopeSession: function(pid) {
+      isotopeCalls.push("halt:" + pid);
+      return Promise.reject(new Error("Not found"));
+    },
+    log: function(kind) {
+      isotopeCalls.push("log:" + kind);
+    }
+  };
+  replaceIsotopeSession.call(
+    isotopeHarness, null, 1, { text: "p(new).", origin: "editor" }
+  ).then(function(pid) {
+    return new Promise(function(resolve) {
+      setTimeout(function() {
+        ok(pid === 22 &&
+           isotopeCalls[0] === "spawn" &&
+           isotopeCalls[1] === "halt:11" &&
+           isotopeCalls.indexOf("log:warn") >= 0,
+           "ISOTOPE replacement survives an older node's /toplevel_halt 404 after switching to the new pid");
+        resolve();
+      }, 0);
+    });
+  }).catch(function(error) {
+    ok(false, "ISOTOPE replacement survives retirement failure: " + error.message);
+  }).then(function() {
+    const workerCalls = [];
+    const oldEntry = { ready: true, done: false };
+    const workerHarness = {
+      swiWasm2ShellPid: "11",
+      swiWasm2ShellReady: true,
+      swiWasm2QueryPending: false,
+      swiWasm2LoadedSource: "old.",
+      swiWasmActorWorkers: { "11": oldEntry },
+      lastBindings: { Old: "binding" },
+      lastDollarVars: ["Old"],
+      reserveSwiWasmWorkerActorPid: function() {
+        return "22";
+      },
+      spawnSwiWasmWorkerActorReady: function(goal, sourceText, pid, name, role, fields) {
+        workerCalls.push({
+          action: "spawn",
+          goal: goal,
+          source: sourceText,
+          pid: pid,
+          name: name,
+          role: role,
+          candidate: fields.shellCandidate
+        });
+        this.swiWasmActorWorkers[pid] = {
+          ready: true,
+          done: false,
+          shellCandidate: true
+        };
+        return Promise.resolve(pid);
+      },
+      retireSwiWasm2Shell: function(pid) {
+        workerCalls.push({ action: "halt", pid: pid });
+      },
+      cleanupSwiWasm2ShellEntry: function(pid) {
+        delete this.swiWasmActorWorkers[pid];
+      }
+    };
+    global.qualifySwiWasmLocalPid = swiWasmLocalPidHelpers.qualify;
+    return replaceSwiWasm2Shell.call(workerHarness, "new.").then(function(pid) {
+      ok(pid === "22" &&
+         workerHarness.swiWasm2ShellPid === "22" &&
+         workerHarness.swiWasm2LoadedSource === "new." &&
+         workerCalls[0].action === "spawn" &&
+         workerCalls[0].source === "new." &&
+         workerCalls[0].candidate === true &&
+         workerCalls[1].action === "halt" &&
+         workerCalls[1].pid === "11",
+         "SWI-WASM Worker spawns and activates the sourced replacement before halting its predecessor");
+
+      let sentEnvelope = null;
+      const callHarness = {
+        swiWasmActorWorkers: {
+          "22": {
+            ready: true,
+            done: false,
+            worker: {
+              postMessage: function(envelope) {
+                sentEnvelope = envelope;
+              }
+            }
+          }
+        },
+        swiWasm2QueryPending: false,
+        activeGoal: "queens(8, Queens)",
+        pauseTerm: function() {},
+        toplevelCallOptionsText: function() { return "[limit(1)]"; },
+        logSwiWasmWorkerTraffic: function() {}
+      };
+      sendSwiWasm2Call.call(callHarness, {}, "22");
+      ok(JSON.stringify(sentEnvelope) === JSON.stringify({
+           command: "toplevel_call",
+           pid: 22,
+           goal: "queens(8, Queens)",
+           options: "[limit(1)]"
+         }),
+         "SWI-WASM Worker calls use the canonical options field and carry no source");
+      delete global.qualifySwiWasmLocalPid;
+    });
+  }).catch(function(error) {
+    ok(false, "SWI-WASM replacement lifecycle: " + error.message);
+  }).then(function() {
+    console.log(failures === 0
+      ? "\nswi_wasm_rpc_bridge smoke: PASS"
+      : "\nswi_wasm_rpc_bridge smoke: FAIL (" + failures + ")");
+    process.exit(failures === 0 ? 0 : 1);
+  });
+}

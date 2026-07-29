@@ -24,7 +24,7 @@
     <pre><code>POST /toplevel_spawn
 Content-Type: application/json
 
-{ "options": "[session(true)]" }</code></pre>
+{ "options": "[session(true),src_text('q(X):-p(X).')]" }</code></pre>
     <pre><code>{ "type": "spawned", "pid": 4384261893 }</code></pre>
     <p>The returned <code>pid</code> names a private, long-lived Prolog toplevel. Subsequent requests must carry it.</p>
   </section>
@@ -41,7 +41,7 @@ Content-Type: application/json
   "more": true
 }</code></pre>
     <p>The continuation lives inside the toplevel, so the next request names it rather than repeating the goal:</p>
-    <pre><code>GET /toplevel_next?pid=4384261893&amp;limit=1&amp;format=json</code></pre>
+    <pre><code>GET /toplevel_next?pid=4384261893&amp;format=json</code></pre>
     <pre><code>{
   "type": "success",
   "pid": 4384261893,
@@ -55,7 +55,7 @@ Content-Type: application/json
     <p>Separate calls share the toplevel's private dynamic database. For example, an assertion made in one call remains visible in the next:</p>
     <pre id="state-query"><code>?- assertz(saved(api)), saved(X).</code></pre>
     <p><button type="button" data-ask="#state-query">CALL</button></p>
-    <p>Output and prompts also belong to the session. HTTP cannot push them spontaneously, so the client retrieves events with <code>/toplevel_poll</code> and answers prompts with <code>/toplevel_respond</code>. Use <code>/toplevel_stop</code> to discard an answer continuation and <code>/toplevel_abort</code> to interrupt a running goal; node idle limits reclaim abandoned sessions.</p>
+    <p>Output and prompts also belong to the session. HTTP cannot push them spontaneously, so the client retrieves events with <code>/toplevel_poll</code> and answers prompts with <code>/toplevel_respond</code>. Use <code>/toplevel_stop</code> to discard an answer continuation, <code>/toplevel_abort</code> to interrupt a running goal, and <code>/toplevel_halt</code> to terminate the session and release its resources.</p>
     <div class="note">Select <strong>API traffic</strong> in the Logger before pressing <strong>CALL</strong>. The session choreography—spawn, call, next and stop—is the defining feature to watch.</div>
     <p>For executable browser code, compare the <a href="/examples/APIs/http_example-1.html" target="_blank" rel="noopener">answer-paging demo</a> and the <a href="/examples/APIs/http-example-2.html" target="_blank" rel="noopener">prompt-and-response demo</a>.</p>
   </section>

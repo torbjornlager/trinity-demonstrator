@@ -108,6 +108,7 @@ endpoint_profile_ceiling(toplevel_next, isotope).
 endpoint_profile_ceiling(toplevel_poll, isotope).
 endpoint_profile_ceiling(toplevel_stop, isotope).
 endpoint_profile_ceiling(toplevel_abort, isotope).
+endpoint_profile_ceiling(toplevel_halt, isotope).
 endpoint_profile_ceiling(toplevel_respond, isotope).
 endpoint_profile_ceiling(ws, actor).
 

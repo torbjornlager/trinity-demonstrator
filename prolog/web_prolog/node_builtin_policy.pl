@@ -285,6 +285,7 @@ builtin_route_family(toplevel_next, semistateful_api).
 builtin_route_family(toplevel_poll, semistateful_api).
 builtin_route_family(toplevel_stop, semistateful_api).
 builtin_route_family(toplevel_abort, semistateful_api).
+builtin_route_family(toplevel_halt, semistateful_api).
 builtin_route_family(toplevel_respond, semistateful_api).
 builtin_route_family(ws, stateful_api).
 
@@ -375,6 +376,7 @@ builtin_family_spec(semistateful_api,
                     "Offer the semi-stateful HTTP toplevel API.",
                     ["/toplevel_spawn", "/toplevel_call", "/toplevel_next",
                      "/toplevel_poll", "/toplevel_stop", "/toplevel_abort",
+                     "/toplevel_halt",
                      "/toplevel_respond"],
                     [isotope, actor]).
 builtin_family_spec(stateful_api,

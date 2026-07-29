@@ -48,8 +48,7 @@ Architecture per connection:
     toplevel_call/3,
     toplevel_next/2,
     toplevel_stop/1,
-    toplevel_abort/1,
-    toplevel_halt/2
+    toplevel_abort/1
 ]).
 :- use_module(node_response, [answer_to_json/2]).
 :- use_module(node_ip_policy, [ip_access_denied/1]).
@@ -69,7 +68,10 @@ Architecture per connection:
     cleanup_isotope_session/1,
     with_isotope_session_public_execution_profile/2
 ]).
-:- use_module(node_call_context, [parse_call_context/9]).
+:- use_module(node_call_context, [
+    parse_call_context/9,
+    parse_call_options_context/9
+]).
 :- use_module(node_auth, [
     ws_principal/2,
     principal_id/2,
@@ -332,7 +334,7 @@ ws_main(NodePort, Principal, ClientMeta, WebSocket) :-
             assertz(ws_browser_connection(NamespaceId, Queue)),
             ignore(catch(start_activity(ws_connection, NamespaceId,
                                         ConnectionMeta), _, true)),
-            thread_create(ws_relay_loop(NodePort, WebSocket, Queue), RelayThread, [
+            thread_create(ws_relay_loop(NodePort, WebSocket, Queue, Principal), RelayThread, [
                 detached(false)
             ]),
             catch(
@@ -352,14 +354,17 @@ ws_main(NodePort, Principal, ClientMeta, WebSocket) :-
                 *         RELAY THREAD         *
                 *******************************/
 
-%!  ws_relay_loop(+NodePort, +WebSocket, +Queue) is det.
+%!  ws_relay_loop(+NodePort, +WebSocket, +Queue, +Principal) is det.
 %
 %   Read actor messages from Queue, convert to JSON, send over WebSocket.
 %   Terminates on '$ws_close' sentinel.
-ws_relay_loop(NodePort, WebSocket, Queue) :-
-    with_node_port_context(NodePort, ws_relay_loop_1(NodePort, WebSocket, Queue)).
+ws_relay_loop(NodePort, WebSocket, Queue, Principal) :-
+    with_node_port_context(
+        NodePort,
+        ws_relay_loop_1(NodePort, WebSocket, Queue, Principal)
+    ).
 
-ws_relay_loop_1(NodePort, WebSocket, Queue) :-
+ws_relay_loop_1(NodePort, WebSocket, Queue, Principal) :-
     catch(
         thread_get_message(Queue, Message),
         _,
@@ -369,13 +374,29 @@ ws_relay_loop_1(NodePort, WebSocket, Queue) :-
     ->  true
     ;   catch(capture_answer_bindings(Message), _, true),
         ws_note_message(Message),
-        catch(
-            ws_relay_message(WebSocket, Message),
-            _,
-            true
+        (   ws_relay_message_allowed(Principal, Message)
+        ->  catch(
+                ws_relay_message(WebSocket, Message),
+                _,
+                true
+            )
+        ;   true
         ),
-        ws_relay_loop_1(NodePort, WebSocket, Queue)
+        ws_relay_loop_1(NodePort, WebSocket, Queue, Principal)
     ).
+
+%!  ws_relay_message_allowed(+Principal, +Message) is semidet.
+%
+%   Prolog terminal I/O belongs to the WebSocket that owns the local
+%   toplevel lineage.  A node-to-node connection therefore suppresses it at
+%   the originating relay, while its terminal_io_output/2 provenance remains
+%   available through the relay decision.  Browser connections receive the
+%   canonical output JSON shape; no private provenance marker crosses the
+%   public protocol boundary.
+ws_relay_message_allowed(Principal, terminal_io_output(_, _)) :-
+    !,
+    \+ principal_has_capability(Principal, internal_transport).
+ws_relay_message_allowed(_, _).
 
 %!  ws_relay_message(+WebSocket, +Message) is det.
 %
@@ -594,53 +615,84 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
     ws_get_term_string(Dict, goal, GoalAtom0),
     session_bindings(Pid, Bindings),
     expand_dollar_vars(GoalAtom0, Bindings, GoalAtom),
+    ws_reject_toplevel_call_source(Dict),
+    ws_parse_toplevel_call_context(
+        Dict, GoalAtom, Goal, Template, Offset, Limit, Once
+    ),
+    strip_module(Goal, _GoalCaller, PlainClientGoal),
+    actor_module(Pid, Module),
+    % The session's private actor module imports the node shared DB.
+    % Validate and execute the unqualified goal there; a resolved
+    % user: predicate is an import artefact, not client authority to
+    % invoke arbitrary modules.
+    sandbox_check_goal_in_module(EffectiveProfile, Module, PlainClientGoal),
+    rewrite_isotope_goal(PlainClientGoal, PlainGoal),
+    with_isotope_session_public_execution_profile(
+        Pid,
+        toplevel_call(Pid, PlainGoal, [
+            template(Template),
+            offset(Offset),
+            limit(Limit),
+            once(Once),
+            target(Queue)
+        ])
+    ).
+
+%!  ws_reject_toplevel_call_source(+Dict) is det.
+%
+%   Source belongs to `toplevel_spawn`.  Reject the former call-time source
+%   extension explicitly so clients cannot mistake ignored data for a reload.
+ws_reject_toplevel_call_source(Dict) :-
+    (   get_dict(src_text, Dict, Value)
+    ->  domain_error(toplevel_call_field, src_text(Value))
+    ;   get_dict(load_text, Dict, Value)
+    ->  domain_error(toplevel_call_field, load_text(Value))
+    ;   true
+    ).
+
+%!  ws_parse_toplevel_call_context(+Dict, +GoalAtom, -Goal, -Template,
+%!                                 -Offset, -Limit, -Once) is det.
+%
+%   `options` is the canonical wire representation.  The flattened fields
+%   remain an input-only compatibility boundary for older clients.
+ws_parse_toplevel_call_context(Dict, GoalAtom, Goal, Template,
+                               Offset, Limit, Once) :-
+    get_dict(options, Dict, OptionsValue),
+    !,
+    atom_string(OptionsAtom, OptionsValue),
+    check_term_text_size(options, OptionsAtom),
+    parse_call_options_context(
+        GoalAtom, OptionsAtom, Goal, Template, Offset, Limit, Once,
+        _RequestedTimeout, _Options
+    ).
+ws_parse_toplevel_call_context(Dict, GoalAtom, Goal, Template,
+                               Offset, Limit, Once) :-
     ws_get_term_string_or(Dict, template, GoalAtom, TemplateAtom0),
     ws_get_int_or(Dict, limit, 10 000 000 000, Limit),
     ws_get_int_or(Dict, offset, 0, Offset),
     ws_get_atom_or(Dict, once, false, Once0),
-    ws_get_load_text_or(Dict, src_text, '', LoadText0),
-    require_source_text_access(Principal, LoadText0),
     ws_get_atom_or(Dict, format, json, Format),
     parse_call_context(GoalAtom, TemplateAtom0, Format, Once0, none,
-                       Goal, Template, Once, _RequestedTimeout),
-    strip_module(Goal, _GoalCaller, PlainClientGoal),
-    text_to_string(LoadText0, LoadText),
-    catch(load_text_into_session(Pid, LoadText), LoadError, true),
-    (   var(LoadError)
-    ->  actor_module(Pid, Module),
-        % The session's private actor module imports the node shared DB.
-        % Validate and execute the unqualified goal there; a resolved
-        % user: predicate is an import artefact, not client authority to
-        % invoke arbitrary modules.
-        sandbox_check_goal_in_module(EffectiveProfile, Module, PlainClientGoal),
-        rewrite_isotope_goal(PlainClientGoal, PlainGoal),
-        with_isotope_session_public_execution_profile(
-            Pid,
-            toplevel_call(Pid, PlainGoal, [
-                template(Template),
-                offset(Offset),
-                limit(Limit),
-                once(Once),
-                target(Queue)
-            ])
-        )
-    ;
-        thread_send_message(Queue, error(Pid, load_text_error(LoadError)))
-    ).
+                       Goal, Template, Once, _RequestedTimeout).
 
 %!  ws_action_toplevel_next(+Dict, +Queue, +Principal) is det.
 ws_action_toplevel_next(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_next),
     ws_get_pid(Dict, Pid),
     ws_require_owned_session(Queue, Principal, Pid),
-    ws_get_int_or(Dict, limit, 10 000 000 000, Limit),
+    (   get_dict(limit, Dict, _)
+    ->  ws_get_int_or(Dict, limit, 10 000 000 000, LimitSpec)
+    ;   LimitSpec = inherit
+    ),
+    ws_toplevel_next_options(LimitSpec, Queue, Options),
     with_isotope_session_public_execution_profile(
         Pid,
-        toplevel_next(Pid, [
-            limit(Limit),
-            target(Queue)
-        ])
+        toplevel_next(Pid, Options)
     ).
+
+ws_toplevel_next_options(inherit, Queue, [target(Queue)]) :-
+    !.
+ws_toplevel_next_options(Limit, Queue, [limit(Limit), target(Queue)]).
 
 %!  ws_action_toplevel_stop(+Dict, +Queue, +Principal) is det.
 ws_action_toplevel_stop(Dict, Queue, Principal) :-
@@ -652,16 +704,16 @@ ws_action_toplevel_stop(Dict, Queue, Principal) :-
 
 %!  ws_action_toplevel_halt(+Dict, +Queue, +Principal) is det.
 %
-%   Terminate a local toplevel session from any protocol state and send a
-%   `halted(Pid, Reply)` event after termination has been observed.  This
-%   command remains part of the browser transport; Prolog-to-Prolog calls use
-%   the ordinary distributed monitor/exit machinery.
+%   Terminate a local toplevel session from any protocol state, release its
+%   connection-owned bookkeeping, and emit `halted(Pid, true)`.  The normal
+%   `down` event is queued first.  Prolog-to-Prolog calls use the ordinary
+%   distributed monitor/exit machinery.
 ws_action_toplevel_halt(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_halt),
     ws_get_pid(Dict, Pid),
     ws_require_owned_session(Queue, Principal, Pid),
-    toplevel_halt(Pid, Reply),
-    thread_send_message(Queue, halted(Pid, Reply)).
+    admin_terminate_ws_actor(Pid, true),
+    thread_send_message(Queue, halted(Pid, true)).
 
 %!  ws_action_toplevel_abort(+Dict, +Queue, +Principal) is det.
 ws_action_toplevel_abort(Dict, Queue, Principal) :-

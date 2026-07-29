@@ -475,7 +475,7 @@ remote_per_pid_dispatch(NodeURL, Dict) :-
         (   get_dict(type, Dict, "down")
         ->  deliver_remote_down_via_controller(CompoundPid, Dict)
         ;   ws_json_is_io_output(Dict)
-        ->  true        % suppress remote I/O outputs -- see remote_ws_dispatch/3
+        ->  true        % legacy peer compatibility; current peers suppress at origin
         ;   node_controller:current_remote_target(CompoundPid, Target),
             ws_json_to_actor_event(Dict, CompoundPid, Event)
         ->  send(Target, Event)
@@ -577,10 +577,9 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
         best_effort(thread_send_message(SpawnQueue, spawn_error(ErrorData)))
-    ;   %  Remote I/O outputs are dropped: a local toplevel only
-        %  sees terminal output from actors in its own node and
-        %  local descendant lineage (manual.html capability rule for
-        %  the terminal I/O channel).
+    ;   %  Compatibility with older peers that serialized the private
+        %  source:"io" marker.  Current peers suppress terminal I/O at
+        %  the originating relay and never put that marker on the wire.
         remote_event_pid(Dict, _RemotePid),
         ws_json_is_io_output(Dict)
     ->  true

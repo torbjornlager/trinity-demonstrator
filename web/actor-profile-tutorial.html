@@ -2722,18 +2722,22 @@ fridge2(take(_Food), List, not_found, List).
 fridge2(_Other,      List, error(unknown_request), List).
 </pre>
 
-<p class="ask-buttons">
-  <button onclick="consult(&quot;#srv-fridge2-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
-</p>
-
 <p>
     We can swap the running server&rsquo;s callback in place with
-    <code>server_upgrade/3</code>. The pid does not change, the registered
-    name does not change, and crucially the current state is preserved:
+    <code>server_upgrade/3</code>. The source is transferred explicitly to
+    the server rather than loaded into the shell session. The pid does not
+    change, the registered name does not change, and crucially the current
+    state is preserved:
 </p>
 
 <pre id="srv-upgrade">?- server_upgrade(fridge, fridge2, [
-       src_predicates([fridge2/4])
+       src_text("
+           fridge2(store(Food), List, ok, [Food|List]).
+           fridge2(take(Food), List, ok(Food), Rest) :-
+               select(Food, List, Rest), !.
+           fridge2(take(_Food), List, not_found, List).
+           fridge2(_Other, List, error(unknown_request), List).
+       ")
    ]).
 </pre>
 

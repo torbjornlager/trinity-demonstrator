@@ -122,22 +122,66 @@ async function main() {
 
   // 9. A shell-role worker translates toplevel API commands into the ptcp/3
   // mailbox protocol.  An invalid pid avoids booting the actual WASM bundle.
-  S.onmessage({ data: { command: "toplevel_spawn", pid: "invalid_shell" } });
-  S.onmessage({ data: { command: "toplevel_call", goal: "member(X,[a,b])", limit: 1 } });
+  S.onmessage({ data: {
+    command: "toplevel_spawn",
+    pid: "invalid_shell",
+    options: "[session(true),src_text('p(a).')]"
+  } });
+  S.onmessage({ data: {
+    command: "toplevel_call",
+    goal: "member(X,[a,b])",
+    options: "[limit(7),offset(3),once(true)]"
+  } });
   const shellCall = await S.actorReceive(-1);
-  ok(shellCall.indexOf("'$call_text'") === 0 && shellCall.includes("member(X,[a,b])"),
-     "shell call enters the toplevel actor mailbox");
+  ok(shellCall.indexOf("'$call_text'") === 0 &&
+     shellCall.includes("member(X,[a,b])") &&
+     shellCall.endsWith(",7,3,true)"),
+     "shell call consumes limit, offset, and once from canonical options");
+
+  S.onmessage({ data: {
+    command: "toplevel_next",
+    pid: "invalid_shell"
+  } });
+  const shellNext = await S.actorReceive(-1);
+  ok(shellNext === "'$next'([])",
+     "shell next carries no limit and leaves the active call limit unchanged");
 
   S.onmessage({ data: {
     command: "toplevel_call",
     goal: 'rpc(node, immortal(Who), [src_text("immortal(Who) :- \\+ mortal(Who).")])',
-    limit: 1
+    options: "[limit(1)]"
   } });
   const nestedNegation = await S.actorReceive(-1);
   const nestedGoalLiteral = nestedNegation.match(/^'\$call_text'\(("(?:[^"\\]|\\.)*"),/);
   const nestedGoal = nestedGoalLiteral && JSON.parse(nestedGoalLiteral[1]);
   ok(nestedGoal && nestedGoal.includes(String.fromCharCode(92, 92) + "+ mortal(Who)"),
      "shell call escapes negation inside nested Prolog source before reparsing it");
+
+  S.onmessage({ data: {
+    command: "toplevel_call",
+    goal: "true",
+    options: "[limit(1)]",
+    src_text: "p(edited)."
+  } });
+  const rejectedCallSource = S._posted.filter(function(m) {
+    return m.type === "error" &&
+      m.data === "Unsupported toplevel_call source option";
+  }).pop();
+  ok(!!rejectedCallSource,
+     "shell call rejects the legacy call-time src_text field");
+
+  await S.onmessage({ data: {
+    command: "toplevel_call",
+    pid: 42,
+    goal: "p(X)",
+    options: "[limit(1),src_text('forbidden.')]"
+  } });
+  const rejectedOptionSource = S._posted.filter(function(m) {
+    return m.type === "error" &&
+      m.data === "Unsupported toplevel_call source option";
+  }).pop();
+  ok(!!rejectedOptionSource,
+     "shell call rejects source hidden in call options");
 
   // 9b. A read/1 answer carrying a comma + trailing '.' is parenthesised and
   // the period stripped, so '$input' stays arity 2 (a bare comma would make
@@ -162,6 +206,9 @@ async function main() {
   ok(!!successEvent && successEvent.data[0].Xs === "[a]" && successEvent.more === true &&
      !Object.prototype.hasOwnProperty.call(successEvent, "event"),
      "toplevel success is posted in the canonical API response shape");
+  ok(JSON.stringify(Object.keys(successEvent)) ===
+     JSON.stringify(["type", "pid", "data", "more"]),
+     "toplevel success fields are emitted in the book's response order");
 
   // 10. Worker-side rpc/2-3 uses the same controller request channel as
   // remote actor transport; the Worker does not own browser HTTP policy.

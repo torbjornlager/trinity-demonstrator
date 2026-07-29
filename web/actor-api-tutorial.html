@@ -23,7 +23,8 @@
     <h2>Open one bidirectional channel</h2>
     <pre><code>const socket = new WebSocket("wss://node.example/ws");</code></pre>
     <p>Once it opens, send a spawn command as JSON:</p>
-    <pre><code>{ "command": "toplevel_spawn", "options": "[session(true)]" }</code></pre>
+    <pre><code>{ "command": "toplevel_spawn",
+  "options": "[session(true),src_text('q(X):-p(X).')]" }</code></pre>
     <pre><code>{ "type": "spawned", "pid": 4384261893 }</code></pre>
   </section>
 
@@ -35,7 +36,7 @@
   "command": "toplevel_call",
   "pid": 4384261893,
   "goal": "append(Xs,Ys,[a,b,c])",
-  "limit": 1
+  "options": "[limit(1)]"
 }</code></pre>
     <pre><code>{
   "type": "success",
@@ -44,7 +45,7 @@
   "more": true
 }</code></pre>
     <p>Ask for the continuation on the same socket:</p>
-    <pre><code>{ "command": "toplevel_next", "pid": 4384261893, "limit": 1 }</code></pre>
+    <pre><code>{ "command": "toplevel_next", "pid": 4384261893 }</code></pre>
     <pre><code>{
   "type": "success",
   "pid": 4384261893,

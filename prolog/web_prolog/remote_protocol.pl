@@ -79,6 +79,8 @@ ws_json_down_reason(Dict, Reason) :-
     ).
 
 ws_json_is_io_output(Dict) :-
+    % Legacy inbound compatibility only.  Current nodes suppress this
+    % internal event at the originating relay and never emit source:"io".
     get_dict(type, Dict, "output"),
     get_dict(source, Dict, "io").
 

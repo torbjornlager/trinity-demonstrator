@@ -1,6 +1,7 @@
 :- module(node_call_context, [
     http_parse_call_request/10,
-    parse_call_context/9
+    parse_call_context/9,
+    parse_call_options_context/9
 ]).
 
 /** <module> Node Call Request Parsing
@@ -14,7 +15,9 @@ Shared request parsing and execution context normalization for stateless
 :- op(1000, xfy, if).
 
 :- use_module(library(apply)).
+:- use_module(library(error)).
 :- use_module(library(http/http_parameters)).
+:- use_module(library(option)).
 :- use_module(actor_api, []).
 :- use_module(rpc, [
     normalize_requested_timeout/2,
@@ -84,6 +87,55 @@ parse_call_context(GoalAtom, TemplateAtom0, Format, Once0, RequestedTimeout0,
     fix_template(Format, Goal, Template0, Bindings, Template),
     normalize_once(Once0, Once),
     normalize_requested_timeout(RequestedTimeout0, RequestedTimeout).
+
+%!  parse_call_options_context(+GoalAtom, +OptionsAtom, -Goal, -Template,
+%!                             -Offset, -Limit, -Once, -RequestedTimeout,
+%!                             -Options) is det.
+%
+%   Parse the canonical WebSocket `toplevel_call` representation.  Goal and
+%   options are read as one term so a `template/1` option shares variables
+%   with Goal.  The returned Options are the parsed, validated client options;
+%   transport-owned options such as `target/1` are deliberately not accepted.
+parse_call_options_context(GoalAtom, OptionsAtom, Goal, Template,
+                           Offset, Limit, Once, RequestedTimeout, Options) :-
+    atomic_list_concat(['(', GoalAtom, ')+(', OptionsAtom, ')'], CallAtom),
+    read_term_from_atom(CallAtom, Goal+Options0,
+                        [ module(actor),
+                          variable_names(Bindings)
+                        ]),
+    must_be(list, Options0),
+    maplist(validate_call_option, Options0),
+    option(template(Template0), Options0, Goal),
+    option(format(Format), Options0, json),
+    option(offset(Offset), Options0, 0),
+    option(limit(Limit), Options0, 10 000 000 000),
+    option(once(Once0), Options0, false),
+    must_be(integer, Offset),
+    must_be(integer, Limit),
+    (   Offset >= 0
+    ->  true
+    ;   domain_error(not_less_than_zero, Offset)
+    ),
+    (   Limit >= 0
+    ->  true
+    ;   domain_error(not_less_than_zero, Limit)
+    ),
+    fix_template(Format, Goal, Template0, Bindings, Template),
+    normalize_once(Once0, Once),
+    RequestedTimeout = none,
+    Options = Options0.
+
+validate_call_option(Option) :-
+    allowed_call_option(Option),
+    !.
+validate_call_option(Option) :-
+    domain_error(toplevel_call_option, Option).
+
+allowed_call_option(template(_)).
+allowed_call_option(offset(_)).
+allowed_call_option(limit(_)).
+allowed_call_option(once(_)).
+allowed_call_option(format(_)).
 
 %!  template_atom(+TemplateAtom0, +GoalAtom, -TemplateAtom) is det.
 %

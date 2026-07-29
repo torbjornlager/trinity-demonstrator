@@ -162,15 +162,30 @@ across pagination:
 A session is a long-lived toplevel actor plus a dedicated message queue:
 
 1. `/toplevel_spawn` creates a toplevel actor and registers a session queue.
-2. `/toplevel_call` optionally refreshes the session's private loaded code and
-   sends a query.
+2. Canonical `/toplevel_call` requests send a query against the private code
+   installed when the session was spawned. Dynamic changes use ordinary goals
+   such as `assert/1` and `retract/1`. The former HTTP call-time `src_text`
+   parameter remains an input-only compatibility boundary.
 3. Output, prompts, success, failure, and errors are collected from the queue.
 4. `/toplevel_next`, `/toplevel_poll`, `/toplevel_respond`, and
-   `/toplevel_abort` keep interacting with the same session.
+   `/toplevel_abort` keep interacting with the same session;
+   `/toplevel_halt` terminates it and releases its resources.
+
+`/toplevel_next` identifies the existing computation by `pid`; the toplevel
+retains the slice `limit` established by `/toplevel_call`. The ACTOR
+WebSocket and stateful SWI-WASM Worker commands use the same continuation
+rule.
+
+When editor source changes, the portal first spawns and validates the
+replacement session, switches subsequent calls to its pid, and only then
+retires the predecessor. A failed replacement therefore leaves the working
+session intact. Retirement is best-effort for compatibility with an older
+node process that does not yet expose `/toplevel_halt`; such a predecessor is
+eventually reclaimed by the node's idle-session cleanup.
 
 [`node_session.pl`](../prolog/web_prolog/node_session.pl) holds the
-session-specific logic (queue bookkeeping, readiness handshake, load-text
-persistence across calls, and rewriting `write/1`, `writeln/1`, `read/1` into
+session-specific logic (queue bookkeeping, readiness handshake, initial
+source loading, and rewriting `write/1`, `writeln/1`, `read/1` into
 actor I/O). [`node_isotope_controller.pl`](../prolog/web_prolog/node_isotope_controller.pl)
 is the thin controller that glues request parsing, session helpers, and
 toplevel-actor commands together.
@@ -185,6 +200,18 @@ respond to them, spawn bare actors, send messages, and exit actors. This is the
 most direct exposure of the actor runtime; the demonstrator frontend is
 [`demonstrator.html`](../web/demonstrator.html), and the owner console is
 [`admin.html`](../web/admin.html).
+
+### Stateful SWI-WASM Worker mode
+
+The browser's Worker-hosted SWI-WASM runtime exposes the same toplevel command
+shape at its JavaScript boundary. Initial editor source is installed from a
+`src_text/1` term in `toplevel_spawn`'s `options`; `toplevel_call` carries only
+the goal and ordinary call options. A source change starts a new Worker
+toplevel and waits for its `spawned` event before making it current. The
+controller then sends `toplevel_halt` to the previous Worker and retains a
+short forced-termination fallback for a Worker that cannot acknowledge.
+Consequently, changing examples changes the executing Prolog world rather
+than merely changing what the Logger displays.
 
 ## Shared Database and Actor Code
 

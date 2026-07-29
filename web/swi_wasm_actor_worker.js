@@ -25,13 +25,25 @@
   }
 
   function post(type, fields) {
-    var message = fields || {};
-    message.type = type;
-    if (selfPidText && !Object.prototype.hasOwnProperty.call(message, "pid")) {
+    var input = fields || {};
+    var message = { type: type };
+    if (Object.prototype.hasOwnProperty.call(input, "pid")) {
+      message.pid = input.pid;
+    } else if (selfPidText) {
       message.pid = workerRole === "shell_toplevel" && /^[0-9]+$/.test(selfPidText)
         ? Number(selfPidText)
         : selfPidText;
     }
+    ["data", "more"].forEach(function(key) {
+      if (Object.prototype.hasOwnProperty.call(input, key)) {
+        message[key] = input[key];
+      }
+    });
+    Object.keys(input).forEach(function(key) {
+      if (key !== "type" && key !== "pid" && key !== "data" && key !== "more") {
+        message[key] = input[key];
+      }
+    });
     self.postMessage(message);
   }
 
@@ -114,6 +126,63 @@
       }
     }
     return output;
+  }
+
+  function readSpawnSourceAtom(text, start) {
+    var output = "";
+    var index = start;
+    if (text.charAt(index) !== "'") {
+      throw new Error("toplevel_spawn src_text/1 must contain a quoted atom");
+    }
+    index += 1;
+    while (index < text.length) {
+      var character = text.charAt(index);
+      if (character === "'") {
+        if (text.charAt(index + 1) === "'") {
+          output += "'";
+          index += 2;
+          continue;
+        }
+        return output;
+      }
+      if (character === "\\" && text.charAt(index + 1) === "\\") {
+        output += "\\";
+        index += 2;
+        continue;
+      }
+      output += character;
+      index += 1;
+    }
+    throw new Error("unterminated src_text/1 option");
+  }
+
+  function toplevelSpawnSource(optionsText) {
+    var text = String(optionsText || "[]");
+    var match = /(?:^|[,\[])\s*src_text\s*\(\s*/.exec(text);
+    return match
+      ? readSpawnSourceAtom(text, match.index + match[0].length)
+      : "";
+  }
+
+  function callIntegerOption(optionsText, name, defaultValue) {
+    var expression = new RegExp(
+      "(?:^|[,\\[])\\s*" + name + "\\s*\\(\\s*([0-9]+)\\s*\\)"
+    );
+    var match = expression.exec(String(optionsText || "[]"));
+    return match ? Number(match[1]) : defaultValue;
+  }
+
+  function toplevelCallOptions(optionsText) {
+    var text = String(optionsText || "[]");
+    return {
+      limit: callIntegerOption(text, "limit", 1),
+      offset: callIntegerOption(text, "offset", 0),
+      once: /(?:^|[,\[])\s*once\s*\(\s*true\s*\)/.test(text)
+    };
+  }
+
+  function toplevelCallHasSourceOption(optionsText) {
+    return /(?:^|[,\[])\s*(?:src_text|load_text)\s*\(/.test(String(optionsText || "[]"));
   }
 
   function actorReceive(timeoutSeconds) {
@@ -1605,10 +1674,24 @@
       return;
     }
     if (message.command === "toplevel_spawn") {
+      var spawnSource;
+      try {
+        spawnSource = toplevelSpawnSource(message.options || "[]");
+      } catch (error) {
+        post("error", { error: String(error) });
+        return;
+      }
+      // Input compatibility for an older controller. Current controllers put
+      // source only in the canonical options field.
+      if (spawnSource === "" &&
+          Object.prototype.hasOwnProperty.call(message, "src_text")) {
+        spawnSource = String(message.src_text || "");
+      }
       start(Object.assign({}, workerConfiguration, {
         command: "toplevel_spawn",
         pid: message.pid,
-        src_text: message.src_text || "",
+        options: message.options || "[]",
+        source: spawnSource,
         role: "shell_toplevel"
       }));
       return;
@@ -1618,22 +1701,19 @@
       return;
     }
     if (message.command === "toplevel_call" && workerRole === "shell_toplevel") {
-      if (Object.prototype.hasOwnProperty.call(message, "src_text")) {
-        inheritedSource = String(message.src_text || "");
+      if (Object.prototype.hasOwnProperty.call(message, "src_text") ||
+          toplevelCallHasSourceOption(message.options)) {
+        post("error", { data: "Unsupported toplevel_call source option" });
+        return;
       }
-      if (Module && Module.FS) {
-        Module.FS.writeFile("/worker_user_code.pl", inheritedSource);
-      }
-      if (Object.prototype.hasOwnProperty.call(message, "src_text")) {
-        deliver("'$reload'");
-      }
+      var callOptions = toplevelCallOptions(message.options || "[]");
       deliver("'$call_text'(" + JSON.stringify(escapeNestedPrologNegation(message.goal || "true")) + "," +
-              Number(message.limit || 1) + "," + Number(message.offset || 0) + "," +
-              (message.once === true ? "true" : "false") + ")");
+              callOptions.limit + "," + callOptions.offset + "," +
+              (callOptions.once ? "true" : "false") + ")");
       return;
     }
     if (message.command === "toplevel_next" && workerRole === "shell_toplevel") {
-      deliver("'$next'([limit(" + Number(message.limit || 1) + ")])");
+      deliver("'$next'([])");
       return;
     }
     if (message.command === "toplevel_stop" && workerRole === "shell_toplevel") {
@@ -1658,6 +1738,11 @@
     if (message.command === "toplevel_abort" && workerRole === "shell_toplevel") {
       abortCurrentGoal();
       post("abort", {});
+      return;
+    }
+    if (message.command === "toplevel_halt" && workerRole === "shell_toplevel") {
+      post("halted", {});
+      self.close();
       return;
     }
     if (message.command === "reply") {
