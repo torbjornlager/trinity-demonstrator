@@ -128,6 +128,17 @@ test(server_halt_reply) :-
     server_halt(Pid, Reply),
     Reply == true.
 
+test(server_halt_ignores_uncorrelated_reply) :-
+    self(Self),
+    Self ! reply(stale),
+    server_spawn(test_fridge, [], Pid),
+    server_halt(Pid, Reply),
+    Reply == true,
+    receive({
+        reply(Stale) -> true
+    }),
+    Stale == stale.
+
 
 %% 8. Hot code swap: state preserved, new callback used for subsequent requests.
 test(hot_code_swap) :-

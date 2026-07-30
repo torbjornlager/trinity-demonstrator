@@ -395,6 +395,35 @@ test(cancel_all_delayed_sends_with_same_id, Result == timeout) :-
        on_timeout(Result = timeout)
    ]).
 
+test(cancel_is_scoped_to_scheduling_actor, Result == foreign_only) :-
+   self(Self),
+   make_ref(ID),
+   send(Self, own_delayed(ID), [
+       delay(0.25),
+       id(ID)
+   ]),
+   spawn(( send(Self, foreign_delayed(ID), [
+               delay(0.25),
+               id(ID)
+           ]),
+           send(Self, foreign_scheduled),
+           receive({ done -> true })
+         ),
+         Scheduler,
+         [link(false)]),
+   receive({ foreign_scheduled -> true },
+           [timeout(1), on_timeout(fail)]),
+   cancel(ID),
+   receive({ foreign_delayed(ID) -> true },
+           [timeout(1), on_timeout(fail)]),
+   Scheduler ! done,
+   receive({
+       own_delayed(ID) -> Result = own_was_not_cancelled
+   }, [
+       timeout(0.1),
+       on_timeout(Result = foreign_only)
+   ]).
+
 test(demonitor_flush_discards_down, Result == clean) :-
    spawn(receive({}), Pid, []),
    monitor(Pid, Ref),

@@ -351,15 +351,21 @@ test(capture_answer_bindings_updates_shared_prior_bindings,
     memberchk('X'-XValue, Pairs).
 
 read_answer(URL, Answer) :-
+    request_options_for_url(URL, [], Options),
     setup_call_cleanup(
-        http_open(URL, Stream, []),
+        http_open(URL, Stream, Options),
         read(Stream, Answer),
         close(Stream)
     ).
 
 read_json_answer(URL, JSON) :-
+    request_options_for_url(
+        URL,
+        [request_header('Accept'='application/json')],
+        Options
+    ),
     setup_call_cleanup(
-        http_open(URL, Stream, [request_header('Accept'='application/json')]),
+        http_open(URL, Stream, Options),
         json_read_dict(Stream, JSON),
         close(Stream)
     ).
@@ -368,7 +374,8 @@ read_json_answer_headers(URL, Headers, JSON) :-
     request_header_options(Headers, HeaderOptions),
     append(HeaderOptions,
            [request_header('Accept'='application/json')],
-           HTTPOptions),
+           HTTPOptions0),
+    request_options_for_url(URL, HTTPOptions0, HTTPOptions),
     setup_call_cleanup(
         http_open(URL, Stream, HTTPOptions),
         json_read_dict(Stream, JSON),
@@ -376,11 +383,15 @@ read_json_answer_headers(URL, Headers, JSON) :-
     ).
 
 read_json_status(URL, Status, JSON) :-
+    request_options_for_url(
+        URL,
+        [ status_code(Status),
+          request_header('Accept'='application/json')
+        ],
+        Options
+    ),
     setup_call_cleanup(
-        http_open(URL, Stream, [
-            status_code(Status),
-            request_header('Accept'='application/json')
-        ]),
+        http_open(URL, Stream, Options),
         json_read_dict(Stream, JSON),
         close(Stream)
     ).
@@ -389,11 +400,18 @@ read_json_status_headers(URL, Headers, Status, JSON) :-
     request_header_options(Headers, HeaderOptions),
     append(HeaderOptions,
            [status_code(Status), request_header('Accept'='application/json')],
-           HTTPOptions),
+           HTTPOptions0),
+    request_options_for_url(URL, HTTPOptions0, HTTPOptions),
     setup_call_cleanup(
         http_open(URL, Stream, HTTPOptions),
         json_read_dict(Stream, JSON),
         close(Stream)
+    ).
+
+request_options_for_url(URL, Options0, Options) :-
+    (   sub_atom(URL, _, _, _, '/toplevel_')
+    ->  Options = [method(post), post(form([]))|Options0]
+    ;   Options = Options0
     ).
 
 read_json_post(URL, Body, JSON) :-
@@ -912,7 +930,7 @@ test(node_api_tutorial_routes_served) :-
             assertion(sub_string(IsotopeBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(ActorBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(IsobaseBody, _, _, _, 'GET /call?goal=')),
-            assertion(sub_string(IsotopeBody, _, _, _, 'GET /toplevel_next?pid=')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'POST /toplevel_next')),
             assertion(sub_string(ActorBody, _, _, _, 'STATEFUL WORKER')),
             assertion(sub_string(ActorBody, _, _, _, 'JS OBJECT'))
         )).

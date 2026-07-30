@@ -580,7 +580,7 @@ stop(Pid, Parent) :-
     ;   true
     ),
     retractall(link(Parent, GlobalPid)),
-    retractall(delayed_send(_ID, GlobalPid)),
+    retractall(delayed_send(_Owner, _ID, GlobalPid)),
     forall(retract(link(GlobalPid, ChildPid)),
            exit(ChildPid, kill)),
     forall(hook_stop(GlobalPid), true),
@@ -749,7 +749,7 @@ flush_monitor_down(Ref) :-
 
 :- dynamic registered/3.
 :- dynamic registered_service/2.
-:- dynamic delayed_send/2.
+:- dynamic delayed_send/3.
 
 register(Name, Pid) :-
     must_be(atom, Name),
@@ -1004,9 +1004,10 @@ send(Pid, Message) :-
 
 send(Pid, Message, Options) :-
     option(delay(Delay), Options, 0),
+    self(Owner),
     spawn(send_with_delay(Pid, Message, Delay), DelayPid),
     (   option(id(ID), Options)
-    ->  assertz(delayed_send(ID, DelayPid))
+    ->  assertz(delayed_send(Owner, ID, DelayPid))
     ;   true
     ).
 
@@ -1027,7 +1028,8 @@ transportable_term(Term) :-
        ).
 
 cancel(ID) :-
-    forall(retract(delayed_send(ID, DelayPid)),
+    self(Owner),
+    forall(retract(delayed_send(Owner, ID, DelayPid)),
            send(DelayPid, '$cancel')).
 
 %!  send_with_delay(+Pid, +Message, +Delay) is det.
@@ -1041,7 +1043,7 @@ send_with_delay(Pid, Message, Delay) :-
         on_timeout(send(Pid, Message))
     ]),
     self(Self),
-    retractall(delayed_send(_, Self)).
+    retractall(delayed_send(_, _, Self)).
 
 
                 /*******************************

@@ -217,29 +217,29 @@ HTTP endpoint layout:
     - GET /call
 
   Semi-stateful (ISOTOPE):
-    - POST/GET /toplevel_spawn
-    - GET      /toplevel_call
-    - GET      /toplevel_next
-    - GET      /toplevel_poll
-    - GET      /toplevel_stop
-    - GET      /toplevel_abort
-    - GET      /toplevel_halt
-    - GET      /toplevel_trace
-    - GET      /toplevel_respond
+    - POST /toplevel_spawn
+    - POST /toplevel_call
+    - POST /toplevel_next
+    - POST /toplevel_poll
+    - POST /toplevel_stop
+    - POST /toplevel_abort
+    - POST /toplevel_halt
+    - POST /toplevel_trace
+    - POST /toplevel_respond
 */
 
 :- http_handler(root(.), node_controller_root, []).
-:- http_handler(root(call), node_controller_isobase, []).
-:- http_handler(root(toplevel_spawn), node_controller_isotope_spawn, []).
-:- http_handler(root(toplevel_call), node_controller_isotope_call, []).
-:- http_handler(root(toplevel_next), node_controller_isotope_next, []).
-:- http_handler(root(toplevel_poll), node_controller_isotope_poll, []).
-:- http_handler(root(toplevel_stop), node_controller_isotope_stop, []).
-:- http_handler(root(toplevel_abort), node_controller_isotope_abort, []).
-:- http_handler(root(toplevel_halt), node_controller_isotope_halt, []).
-:- http_handler(root(toplevel_trace), node_controller_isotope_trace, []).
-:- http_handler(root(statechart_trace), node_controller_isotope_trace, []).
-:- http_handler(root(toplevel_respond), node_controller_isotope_respond, []).
+:- http_handler(root(call), node_controller_isobase, [method(get)]).
+:- http_handler(root(toplevel_spawn), node_controller_isotope_spawn, [method(post)]).
+:- http_handler(root(toplevel_call), node_controller_isotope_call, [method(post)]).
+:- http_handler(root(toplevel_next), node_controller_isotope_next, [method(post)]).
+:- http_handler(root(toplevel_poll), node_controller_isotope_poll, [method(post)]).
+:- http_handler(root(toplevel_stop), node_controller_isotope_stop, [method(post)]).
+:- http_handler(root(toplevel_abort), node_controller_isotope_abort, [method(post)]).
+:- http_handler(root(toplevel_halt), node_controller_isotope_halt, [method(post)]).
+:- http_handler(root(toplevel_trace), node_controller_isotope_trace, [method(post)]).
+:- http_handler(root(statechart_trace), node_controller_isotope_trace, [method(post)]).
+:- http_handler(root(toplevel_respond), node_controller_isotope_respond, [method(post)]).
 :- http_handler(root(portal), node_portal_page, []).
 :- http_handler(root(demonstrator), node_portal_page, []).
 :- http_handler(root('discovery-hub'), node_discovery_hub_page, []).

@@ -33,7 +33,10 @@ Content-Type: application/json
     <h2>The same query, one answer at a time</h2>
     <pre id="shared-query"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
     <p><button type="button" data-ask="#shared-query">CALL</button></p>
-    <pre><code>GET /toplevel_call?pid=4384261893&amp;goal=append(Xs,Ys,[a,b,c])&amp;limit=1&amp;format=json</code></pre>
+    <pre><code>POST /toplevel_call
+Content-Type: application/x-www-form-urlencoded
+
+pid=4384261893&amp;goal=append(Xs,Ys,[a,b,c])&amp;limit=1&amp;format=json</code></pre>
     <pre><code>{
   "type": "success",
   "pid": 4384261893,
@@ -41,7 +44,10 @@ Content-Type: application/json
   "more": true
 }</code></pre>
     <p>The continuation lives inside the toplevel, so the next request names it rather than repeating the goal:</p>
-    <pre><code>GET /toplevel_next?pid=4384261893&amp;format=json</code></pre>
+    <pre><code>POST /toplevel_next
+Content-Type: application/x-www-form-urlencoded
+
+pid=4384261893&amp;format=json</code></pre>
     <pre><code>{
   "type": "success",
   "pid": 4384261893,

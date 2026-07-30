@@ -1499,6 +1499,34 @@
         gap: 10px;
       }
 
+      .portal-splash-runtime {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding-top: 4px;
+      }
+
+      .portal-splash-runtime-logo {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 auto;
+        object-fit: contain;
+      }
+
+      .portal-splash-runtime-copy {
+        display: grid;
+        gap: 3px;
+      }
+
+      .portal-splash-runtime-copy strong {
+        color: var(--ink);
+      }
+
+      .portal-splash-runtime-copy a {
+        width: fit-content;
+        color: var(--brand-ink);
+      }
+
       .portal-splash-grid {
         display: grid;
         gap: 14px;
@@ -2727,8 +2755,8 @@
           </div>
           <div class="portal-splash-body">
             <section class="portal-splash-hero">
-              <h2 class="portal-splash-title">Trinity shell {{ portalVersionLabel }}</h2>
-              <p class="portal-splash-copy">Targeting production... &mdash; runs in your browser, talks to a real Prolog node or to a browser-based runtime system.</p>
+              <h2 class="portal-splash-title">Trinity demonstrator {{ portalVersionLabel }}</h2>
+              <p class="portal-splash-copy">Runs in your browser, talks to a real Prolog node or to a browser-based runtime system.</p>
               <div class="portal-splash-link-row">
                 <a class="wb-button"
                    :href="bookManuscriptUrl"
@@ -2741,6 +2769,17 @@
                    :href="repositoryUrl"
                    target="_blank"
                    rel="noopener">Git repo</a>
+              </div>
+              <div class="portal-splash-runtime">
+                <img class="portal-splash-runtime-logo"
+                     src="/img/swi-logo.png"
+                     alt="SWI-Prolog logo">
+                <div class="portal-splash-runtime-copy">
+                  <span><strong>Powered by</strong> <strong>SWI-Prolog {{ portalSwiplVersion || "version unavailable" }}</strong></span>
+                  <a href="https://www.swi-prolog.org/"
+                     target="_blank"
+                     rel="noopener noreferrer">https://www.swi-prolog.org</a>
+                </div>
               </div>
             </section>
           </div>
@@ -5390,6 +5429,7 @@
             introVisible: false,
             introSuppressFuture: false,
             portalVersion: "0.2.0",
+            portalSwiplVersion: "",
             tutorialSrc: (function() {
               var base = profileTutorialForCurrentRuntime().path;
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
@@ -6214,6 +6254,9 @@
             }).then(function(json) {
               if (json && json.web_prolog) {
                 self.portalVersion = String(json.web_prolog);
+              }
+              if (json && json.swipl) {
+                self.portalSwiplVersion = String(json.swipl);
               }
             }).catch(function() {
             });
@@ -9101,7 +9144,7 @@
               return;
             }
             this.requestJson("/toplevel_call", {
-              method: "GET",
+              method: "POST",
               params: {
                 pid: this.isotopePid,
                 goal: goal,
@@ -9266,7 +9309,7 @@
               return;
             }
             this.requestJson("/toplevel_abort", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: { pid: pid, format: "json" }
             }).catch(function() {
@@ -9277,7 +9320,7 @@
               return Promise.resolve(null);
             }
             return this.requestJson("/toplevel_halt", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: { pid: pid, format: "json" }
             });
@@ -9314,7 +9357,7 @@
             this.recordSessionEvent("session", "Abort requested.", "isotope", this.isotopePid);
             this.pauseTerm(term);
             this.requestJson("/toplevel_abort", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: {
                 pid: this.isotopePid,
@@ -13472,7 +13515,7 @@
             };
             this.recordSessionEvent("session", "Query: " + this.clipText(this.activeGoal, 140), "isotope", pid);
             this.requestJson("/toplevel_call", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: params
             }).then(function(event) {
@@ -13600,7 +13643,7 @@
               return;
             }
             this.requestJson("/toplevel_poll", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: {
                 pid: this.isotopePid,
@@ -13628,7 +13671,7 @@
             this.recordSessionEvent("session", "Requested next slice.", "isotope", this.isotopePid);
             this.pauseTerm(term);
             this.requestJson("/toplevel_next", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: {
                 pid: this.isotopePid,
@@ -13650,7 +13693,7 @@
             var generation = this.nextIsotopeGeneration();
             this.pauseTerm(term);
             this.requestJson("/toplevel_stop", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: {
                 pid: this.isotopePid,
@@ -13684,7 +13727,7 @@
             this.recordSessionEvent("session", "Input sent: " + this.clipText(inputTerm, 80), "isotope", pid);
             this.pauseTerm(term);
             this.requestJson("/toplevel_respond", {
-              method: "GET",
+              method: "POST",
               logScope: "isotope",
               params: {
                 pid: pid,

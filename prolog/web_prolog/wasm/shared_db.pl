@@ -1,11 +1,31 @@
 % Read-only knowledge copied into each SWI-WASM actor.
 
+ancestor_descendant(X, Y) :-
+    parent_child(X, Y).
+ancestor_descendant(X, Z) :-
+    parent_child(X, Y),
+    ancestor_descendant(Y, Z).
+
+parent_child(X, Y) :-
+    mother_child(X, Y).
+parent_child(X, Y) :-
+    father_child(X, Y).
+
+mother_child(trude, sally).
+
+father_child(tom, sally).
+father_child(tom, erica).
+father_child(mike, tom).
+
+
+
 list_price(widget, 100).
 list_price(gadget, 250).
 list_price(gizmo, 400).
 
 price(Item, Price) :-
     list_price(Item, Price).
+
 
 
 echo_actor :-
@@ -24,6 +44,7 @@ count_actor(Count0) :-
         stop ->
             true
     }).
+
 
 % Shared database used by example 13 shared-database.xml.
 

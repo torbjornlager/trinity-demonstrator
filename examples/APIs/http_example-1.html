@@ -129,7 +129,7 @@
             await fetchJSON(buildGetURL("/toplevel_abort", {
               pid: pid,
               format: "json"
-            }));
+            }), { method: "POST" });
           } catch (error) {
             logLine("cleanup failed: " + error.message, "error");
           }
@@ -157,7 +157,7 @@
               template: "X",
               limit: "1",
               format: "json"
-            }));
+            }), { method: "POST" });
 
             while (reply.type === "success") {
               reply.data.forEach(function(row) {
@@ -169,7 +169,7 @@
               reply = await fetchJSON(buildGetURL("/toplevel_next", {
                 pid: pid,
                 format: "json"
-              }));
+              }), { method: "POST" });
             }
           } catch (error) {
             logLine("error: " + error.message, "error");

@@ -31,9 +31,9 @@ Message protocol (internal):
 
   - `'$call'(From, Ref, Request)`  - client request
   - `'$upgrade'(From, Ref, Pred1, Source)` - acknowledged hot code swap
-  - `'$stop'(From)`                - graceful shutdown
+  - `'$stop'(From, Ref)`           - graceful shutdown
   - `Ref-Response`                 - server reply (to client)
-  - `reply(true)`                  - stop acknowledgement (to client)
+  - `Ref-true`                     - stop acknowledgement (to client)
 */
 
 :- use_module(library(option)).
@@ -115,7 +115,7 @@ server_callback_source_module(Fallback, _, Fallback).
 %
 %     - '$call'(From, Ref, Request): invoke Pred/4, reply, recur.
 %     - '$upgrade'(From,Ref,Pred1,Source): load and replace callback, recur.
-%     - '$stop'(From):               acknowledge and exit.
+%     - '$stop'(From,Ref):           acknowledge and exit.
 
 server_loop(Pred, State0) :-
     receive({
@@ -142,8 +142,8 @@ server_loop(Pred, State0) :-
             ;   From ! Ref-error(Error),
                 server_loop(Pred, State0)
             ) ;
-        '$stop'(From) ->
-            From ! reply(true)
+        '$stop'(From, Ref) ->
+            From ! Ref-true
     }).
 
 call_server_callback(Pred, Request, State0, Response, State) :-
@@ -343,9 +343,10 @@ ensure_server_callback(Module, PlainPred) :-
 
 server_halt(To, Reply) :-
     self(Self),
-    To ! '$stop'(Self),
+    make_ref(Ref),
+    To ! '$stop'(Self, Ref),
     receive({
-        reply(Reply) -> true
+        Ref-Reply -> true
     }).
 
 %!  server_stop(+To, -Reply) is det.

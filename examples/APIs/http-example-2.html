@@ -137,7 +137,7 @@
             await fetchJSON(buildGetURL("/toplevel_abort", {
               pid: pid,
               format: "json"
-            }));
+            }), { method: "POST" });
           } catch (error) {
             logLine("cleanup failed: " + error.message, "error");
           }
@@ -148,7 +148,7 @@
             var event = await fetchJSON(buildGetURL("/toplevel_poll", {
               pid: pid,
               format: "json"
-            }));
+            }), { method: "POST" });
 
             if (event.type === "output") {
               addResult(event.data);
@@ -182,7 +182,7 @@
               goal: "echo",
               template: "true",
               format: "json"
-            }));
+            }), { method: "POST" });
 
             while (event.type === "prompt") {
               var response = window.prompt(event.data, "hello(world)");
@@ -194,7 +194,7 @@
                 pid: pid,
                 input: response,
                 format: "json"
-              }));
+              }), { method: "POST" });
 
               event = await pollSession(pid);
             }
