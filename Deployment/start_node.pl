@@ -1,3 +1,5 @@
+#!/usr/bin/env swipl
+
 /** <file> start_node.pl — env-driven boot for a turn-key Web Prolog node
 
 Reads configuration from environment variables, validates it, and
@@ -17,10 +19,10 @@ Secure by default:
 
 Usage:
 
-    swipl Deployment/start_node.pl        # reads env, starts, blocks
-    WP_CHECK=1 swipl Deployment/start_node.pl   # validate config, exit
+    ./Deployment/start_node.pl                  # reads env, starts, blocks
+    WP_CHECK=1 ./Deployment/start_node.pl       # validate config, exit
 
-See Deployment/.env.example for the full variable list.
+The equivalent `swipl Deployment/start_node.pl` form remains available.
 */
 
 :- initialization(main, main).
@@ -231,8 +233,7 @@ graceful_shutdown(Port) :-
     catch(sleep(Grace), _, true),
     catch(http_stop_server(Port, []), _, true),
     format("Drained; stopping.~n", []),
-    flush_output,
-    halt(0).
+    flush_output.
 
 report(Error) :-
     (   message_text(Error, Text)
