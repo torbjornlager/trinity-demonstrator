@@ -71,7 +71,8 @@
         var logNode = document.getElementById("log");
         var program = [
           "echo :-",
-          "    input('Enter a Prolog term (cancel or leave empty to stop).', Something),",
+          "    writeln('Enter a Prolog term (stop to finish).'),",
+          "    read(Something),",
           "    (   Something == stop",
           "    ->  writeln(done)",
           "    ;   writeln(Something),",
@@ -105,14 +106,6 @@
           return new URL(path, window.location.origin);
         }
 
-        function buildGetURL(path, params) {
-          var url = endpoint(path);
-          Object.keys(params).forEach(function(key) {
-            url.searchParams.set(key, params[key]);
-          });
-          return url;
-        }
-
         function readableURL(url) {
           try {
             return decodeURIComponent(String(url));
@@ -122,41 +115,87 @@
         }
 
         async function fetchJSON(url, options) {
-          logLine((options && options.method ? options.method : "GET") + " " + readableURL(url), "request");
+          var requestText = (options && options.method ? options.method : "GET") + " " + readableURL(url);
+          if (options && options.body) {
+            requestText += "\n" + decodeURIComponent(String(options.body).replace(/\+/g, " "));
+          }
+          logLine(requestText, "request");
           var response = await fetch(url, options || {});
-          var json = await response.json();
+          var text = await response.text();
+          var json;
+
+          try {
+            json = text === "" ? {} : JSON.parse(text);
+          } catch (_error) {
+            var invalidJSON = new Error(text || ("HTTP " + response.status));
+            invalidJSON.status = response.status;
+            throw invalidJSON;
+          }
+
           logLine(JSON.stringify(json), "response");
+
+          if (!response.ok) {
+            var requestError = new Error(json.data || json.message || ("HTTP " + response.status));
+            requestError.status = response.status;
+            throw requestError;
+          }
+
           return json;
         }
 
-        async function abortSession(pid) {
+        function postForm(path, params) {
+          return fetchJSON(endpoint(path), {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams(params)
+          });
+        }
+
+        function prologQuotedText(text) {
+          return "'" + String(text)
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "''") + "'";
+        }
+
+        async function cleanupSession(pid) {
           if (!pid) {
             return;
           }
+
           try {
-            await fetchJSON(buildGetURL("/toplevel_abort", {
+            await postForm("/toplevel_halt", {
               pid: pid,
               format: "json"
-            }), { method: "POST" });
-          } catch (error) {
-            logLine("cleanup failed: " + error.message, "error");
+            });
+          } catch (haltError) {
+            logLine("This node has no Halt endpoint; aborting active work and leaving the idle session for server reclamation.", "response");
+            try {
+              await postForm("/toplevel_abort", {
+                pid: pid,
+                format: "json"
+              });
+            } catch (abortError) {
+              logLine("cleanup failed: " + abortError.message, "error");
+            }
           }
         }
 
-        async function pollSession(pid) {
-          while (true) {
-            var event = await fetchJSON(buildGetURL("/toplevel_poll", {
-              pid: pid,
-              format: "json"
-            }), { method: "POST" });
-
+        async function advanceToInteractiveOrFinal(pid, event) {
+          while (event.type === "output" || event.type === "responded") {
             if (event.type === "output") {
               addResult(event.data);
-              continue;
             }
 
-            return event;
+            event = await postForm("/toplevel_poll", {
+              pid: pid,
+              format: "json"
+            });
           }
+
+          return event;
         }
 
         async function runDemo() {
@@ -171,41 +210,44 @@
                 "Content-Type": "application/json"
               },
               body: JSON.stringify({
-                options: "[]",
-                src_text: program
+                options: "[session(true),src_text(" + prologQuotedText(program) + ")]"
               })
             });
             pid = spawned.pid;
 
-            var event = await fetchJSON(buildGetURL("/toplevel_call", {
+            var event = await postForm("/toplevel_call", {
               pid: pid,
               goal: "echo",
               template: "true",
               format: "json"
-            }), { method: "POST" });
+            });
+
+            event = await advanceToInteractiveOrFinal(pid, event);
 
             while (event.type === "prompt") {
-              var response = window.prompt(event.data, "hello(world)");
+              var response = window.prompt(event.data, "hello(world).");
               if (response === null || response.trim() === "") {
-                response = "stop";
+                response = "stop.";
               }
 
-              await fetchJSON(buildGetURL("/toplevel_respond", {
+              event = await postForm("/toplevel_respond", {
                 pid: pid,
                 input: response,
                 format: "json"
-              }), { method: "POST" });
+              });
 
-              event = await pollSession(pid);
+              event = await advanceToInteractiveOrFinal(pid, event);
             }
 
             if (event.type === "success" && Array.isArray(event.data) && event.data.length > 0) {
               addResult("success: " + JSON.stringify(event.data[0]));
+            } else if (event.type !== "success") {
+              addResult(event.type + (event.data ? ": " + event.data : ""));
             }
           } catch (error) {
             logLine("error: " + error.message, "error");
           } finally {
-            await abortSession(pid);
+            await cleanupSession(pid);
             runButton.disabled = false;
           }
         }

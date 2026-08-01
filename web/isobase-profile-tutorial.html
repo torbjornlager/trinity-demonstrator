@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Web Prolog Tutorial — The ISOBASE Profile</title>
-  <meta name="description" content="A brief, profile-focused introduction to the Web Prolog ISOBASE profile.">
+  <meta name="description" content="A guided programming tutorial for self-contained, stateless Web Prolog computations in the ISOBASE profile.">
   <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
   <style>
     :root {
@@ -39,20 +39,25 @@
     code { background: var(--code-bg); border-radius: 4px; padding: .08em .28em; }
     pre { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; padding: 11px 13px; }
     pre code { background: transparent; padding: 0; }
-    nav, .note, .warning { border: 1px solid var(--border); margin: 20px 0; padding: 13px 16px; }
-    nav { background: var(--surface); } nav ul { margin: 0; padding-left: 20px; }
+    nav, .note, .warning, .expected { border: 1px solid var(--border); margin: 20px 0; padding: 13px 16px; }
+    nav, .expected { background: var(--surface); } nav ul { margin: 0; padding-left: 20px; columns: 2; }
     .note { background: var(--info-bg); border-color: var(--info-border); }
     .warning { background: var(--danger-bg); border-color: var(--danger-border); }
     .path { color: var(--muted); font-weight: 600; letter-spacing: .02em; }
     .path strong { color: var(--heading); }
-    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 6px 10px; text-transform: uppercase; }
-    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 7px 11px; text-transform: uppercase; }
+    button.secondary { background: var(--surface); border-color: var(--border); color: var(--ink); }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid var(--border); font: var(--text-size)/1.45 Inter, ui-sans-serif, system-ui, sans-serif; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--surface); }
+    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } nav ul { columns: 1; } }
   </style>
 </head>
 <body>
 <main>
   <h1>Web Prolog tutorial &ndash; the ISOBASE profile</h1>
-  <p class="lede">The final stop on the recommended path. ISOBASE treats each Prolog computation as an independent, bounded request.</p>
+  <p class="lede">The final stop on the recommended path. ISOBASE treats a Prolog computation as an independent, bounded request whose goal, source and application state are explicit.</p>
   <p class="path">ACTOR &rarr; ISOTOPE &rarr; <strong>ISOBASE</strong></p>
 
   <div class="note">
@@ -65,64 +70,113 @@
 
   <nav aria-label="Table of contents">
     <ul>
-      <li><a href="#familiar">Familiar Prolog</a></li>
-      <li><a href="#stateless">The stateless boundary</a></li>
-      <li><a href="#unavailable">What is unavailable</a></li>
+      <li><a href="#model">The ISOBASE mental model</a></li>
+      <li><a href="#program">A self-contained rules service</a></li>
+      <li><a href="#state">Make application state explicit</a></li>
+      <li><a href="#search">Search and paging</a></li>
+      <li><a href="#scope">Three kinds of knowledge</a></li>
+      <li><a href="#boundary">The deliberate boundary</a></li>
       <li><a href="#choice">When to choose ISOBASE</a></li>
     </ul>
   </nav>
 
-  <section id="familiar">
-    <h2>Familiar Prolog</h2>
-    <p>Begin once more with the query used in the ACTOR and ISOTOPE tutorials:</p>
+  <section id="model">
+    <h2>The ISOBASE mental model</h2>
+    <p>Think of an ISOBASE call as a function with relational results:</p>
+    <pre><code>request(goal, temporary_source, application_data)
+    &rarr; solutions | failure | error | timeout</code></pre>
+    <p>The node may use shared knowledge while answering, but it does not give the client a private process or database. Everything needed specifically for the computation must arrive with the request. Begin with the query used throughout the profile path:</p>
     <pre id="isobase-append"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
-    <p><button type="button" data-ask="#isobase-append">Call</button></p>
-    <p>The answers are the same. What changes is the execution contract: asking for another answer means another self-contained stateless call rather than resuming a private toplevel session.</p>
+    <div class="actions"><button type="button" data-ask="#isobase-append">Call</button></div>
+    <div class="expected"><strong>Observe.</strong> The first solution is <code>Xs = [], Ys = [a,b,c]</code>. Further solutions split the same list at later positions. ISOBASE has ordinary nondeterministic Prolog; stateless does not mean deterministic.</div>
   </section>
 
-  <section id="stateless">
-    <h2>The stateless boundary</h2>
-    <p>Every N1 request carries the goal, any temporary source text and the paging options needed for that computation. When the response is returned or the time limit is reached, no client-visible execution context remains.</p>
-    <p>The Examples drawer makes the boundary visible. Actor programs and SXML statecharts are struck out as they were on N2; on N1, examples that need a persistent session, editor loading, I/O or database updates are struck out as well.</p>
+  <section id="program">
+    <h2>A self-contained rules service</h2>
+    <p>ISOBASE can run client-supplied Prolog, provided the source accompanies every request that needs it. Select this small basket program as the temporary source for the tutorial calls:</p>
+    <pre id="isobase-basket-source"><code>valid_item(item(Name, Price)) :-
+    atom(Name),
+    number(Price),
+    Price &gt;= 0.
+
+valid_basket(Items) :-
+    maplist(valid_item, Items).
+
+basket_total([], 0).
+basket_total([item(_, Price)|Items], Total) :-
+    basket_total(Items, Rest),
+    Total is Price + Rest.
+
+step(Items, add(Name, Price), [item(Name, Price)|Items]) :-
+    valid_item(item(Name, Price)).
+step(Items, remove(Name), Rest) :-
+    select(item(Name, _), Items, Rest).</code></pre>
+    <div class="actions"><button type="button" data-request-source="#isobase-basket-source" aria-pressed="false">Use request source</button></div>
+    <p>Now validate and total a complete input value:</p>
+    <pre id="isobase-basket-total"><code>?- Items = [item(tea,4),item(bread,3),item(cheese,8)],
+   valid_basket(Items),
+   basket_total(Items, Total).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isobase-basket-total">Call</button></div>
+    <div class="expected"><strong>Expect.</strong> <code>Total = 15</code>. The rules and data form one self-contained computation. The selected source is sent with the stateless call; it is not installed in a session for later use without being sent again.</div>
   </section>
 
-  <section id="unavailable">
-    <h2>What is unavailable</h2>
+  <section id="state">
+    <h2>Make application state explicit</h2>
+    <p>Stateful applications are still possible; the state belongs to the application rather than an implicit Prolog session. Thread it through the relation as an input and an output:</p>
+    <pre id="isobase-state"><code>?- State0 = [item(tea,4)],
+   step(State0, add(bread,3), State1),
+   step(State1, add(cheese,8), State2),
+   basket_total(State2, Total).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isobase-state">Call</button></div>
+    <div class="expected"><strong>Expect.</strong> <code>State2</code> contains all three items and <code>Total = 15</code>. A web application can store that returned state in a database, cookie or subsequent request. ISOBASE itself retains none of it.</div>
+    <p>This explicit form is often easier to test and replay: the same rules can be applied to a saved state without first reconstructing a server session.</p>
+  </section>
 
-    <h3>No interactive I/O</h3>
-    <p>There is no ongoing conversation to receive output or answer an input prompt, so N1 rejects I/O goals such as:</p>
-    <pre id="isobase-output"><code>?- writeln(hello).</code></pre>
-    <p><button type="button" data-ask="#isobase-output">Call</button></p>
+  <section id="search">
+    <h2>Search and paging without a continuation</h2>
+    <p>Relational code can describe several valid next states:</p>
+    <pre id="isobase-remove"><code>?- step([item(tea,4),item(bread,3),item(cheese,8)],
+        remove(Name), Rest).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isobase-remove">Call</button></div>
+    <p>Use <code>;</code>, the space bar or <strong>Next</strong> to see each removable item. Unlike ISOTOPE, Next does not resume a retained Prolog stack. The client repeats the self-contained goal and source with a larger solution offset.</p>
+    <div class="note"><strong>Programming consequence.</strong> Do not let one result page depend on invisible changes made by an earlier page. Search predicates are clearest when their solutions depend only on explicit request data and shared read-only knowledge.</div>
+  </section>
 
-    <h3>No dynamic session database</h3>
-    <p>A database update would have no private session in which to survive. Both assertion and retraction fall outside the profile:</p>
+  <section id="scope">
+    <h2>Three kinds of knowledge</h2>
+    <table aria-label="ISOBASE knowledge lifetimes"><thead><tr><th>Knowledge</th><th>Lifetime and role</th></tr></thead><tbody>
+      <tr><td>Shared node database</td><td>Maintained by the node owner and visible to authorized calls. It may change independently of the client.</td></tr>
+      <tr><td>Temporary request source</td><td>Predicates sent with the current call, such as the basket program. They disappear at the request boundary.</td></tr>
+      <tr><td>Application data</td><td>Terms supplied in the goal and returned in solutions. The application decides whether and where to retain them.</td></tr>
+    </tbody></table>
+    <p>“Stateless” describes the client-visible execution boundary. It does not promise mathematical purity: time, randomness, changing shared knowledge or external services can still make replay produce a different answer. Retries and caching are safe only when the application semantics permit them.</p>
+  </section>
+
+  <section id="boundary">
+    <h2>The deliberate boundary</h2>
+    <p>Try one representative session operation:</p>
     <pre id="isobase-assert"><code>?- assertz(saved(isobase)).</code></pre>
-    <p><button type="button" data-ask="#isobase-assert">Call</button></p>
-    <pre id="isobase-retract"><code>?- retract(saved(X)).</code></pre>
-    <p><button type="button" data-ask="#isobase-retract">Call</button></p>
-
+    <div class="actions"><button type="button" data-ask="#isobase-assert">Call</button></div>
+    <div class="warning"><strong>Expect a profile violation.</strong> Dynamic updates, interactive input and output, independent actors, mailboxes and client-addressable Abort all require a retained execution context and are outside ISOBASE.</div>
     <h3>Timeout instead of Abort</h3>
-    <p>Start this non-terminating goal and observe that the workbench has no <strong>Abort</strong> button for N1:</p>
+    <p>The following goal deliberately does not terminate. N1 has no Abort button because there is no retained pid or separate control channel to address:</p>
     <pre id="isobase-timeout"><code>?- repeat, fail.</code></pre>
-    <p><button type="button" data-ask="#isobase-timeout">Call</button></p>
-    <div class="warning">
-      A stateless HTTP call has no separate control channel through which the
-      client can address and abort the running computation. N1 terminates it at
-      the server-enforced request timeout and reports the timeout as the result.
-    </div>
+    <div class="actions"><button type="button" data-ask="#isobase-timeout">Run timeout exercise</button></div>
+    <p>The node ends it at its configured request limit. Cancelling a browser request may stop the browser waiting, but it is not a remote Abort command.</p>
   </section>
 
   <section id="choice">
     <h2>When to choose ISOBASE</h2>
-    <p>ISOBASE's main advantages are:</p>
+    <p>Choose ISOBASE when the computation is naturally described by explicit inputs, temporary rules and relational results. Its main advantages are:</p>
     <ul>
       <li>a small, self-contained request/response contract;</li>
       <li>no client session state to retain or recover;</li>
       <li>straightforward replay, caching and load balancing; and</li>
       <li>clear server-enforced time and resource bounds.</li>
     </ul>
-    <p>It is a good fit for search, validation, transformation, inference and other function-like services whose result depends entirely on the request and shared read-only knowledge.</p>
-    <p>The price is deliberate: no private state between calls, interactive I/O, client Abort, independent actors or push communication. When one of those is essential, use ISOTOPE or ACTOR. When it is not, ISOBASE is the smallest and clearest Web Prolog contract.</p>
+    <p>It is a good fit for search, validation, transformation, parsing, rules evaluation and inference. The profile also includes the stateless remote-programming predicates <code>rpc/2-3</code>, <code>promise/3-4</code> and <code>yield/2-3</code>.</p>
+    <p>Move to ISOTOPE when several calls need a private database, a retained search, interactive I/O or addressable Abort. Move to ACTOR when independently running processes must initiate messages or supervise one another.</p>
+    <div class="expected"><strong>You should now be able to explain:</strong> why temporary source is still useful on a stateless node; how to thread application state through a relation; why Next can work without a continuation pid; and why stateless transport is not the same thing as pure computation.</div>
     <div class="note">
       <strong>The recommended profile path is complete.</strong> To see exactly
       how the browser expresses these independent computations over HTTP, finish
@@ -168,6 +222,17 @@
         var api = bridge();
         var query = node ? node.textContent.replace(/^\s*\?-\s*/, "").trim() : "";
         if (api && typeof api.askExample === "function") api.askExample(query, button.getAttribute("data-ask"));
+      });
+    });
+    document.querySelectorAll("[data-request-source]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var selector = button.getAttribute("data-request-source");
+        var node = document.querySelector(selector);
+        var api = bridge();
+        if (node && api && typeof api.setRequestSource === "function" && api.setRequestSource(node.textContent, selector)) {
+          button.setAttribute("aria-pressed", "true");
+          button.textContent = "Request source selected";
+        }
       });
     });
     var api = bridge();

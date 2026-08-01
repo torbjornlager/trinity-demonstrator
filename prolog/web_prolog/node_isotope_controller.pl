@@ -2,7 +2,7 @@
     isotope_spawn_event/5,
     isotope_call_event/11,
     isotope_respond_event/3,
-    parse_isotope_wait_request/4
+    parse_isotope_wait_request/5
 ]).
 
 /** <module> ISOTOPE Controller Helpers
@@ -49,17 +49,21 @@ Build endpoint events and parse shared ISOTOPE wait-request parameters.
 :- use_module(library(http/http_parameters)).
 
 
-%!  parse_isotope_wait_request(+Request, -Pid, -Format, -Timeout) is det.
+%!  parse_isotope_wait_request(+Request, -Pid, -Format, -Timeout, -Limit) is det.
 %
 %   Parse common wait parameters used by `/toplevel_next` and `/toplevel_poll`.
-%   The returned Timeout is already capped by node owner timeout policy.
-parse_isotope_wait_request(Request, Pid, Format, Timeout) :-
+%   The returned Timeout is already capped by node owner timeout policy. Limit
+%   is optional and is used only by `/toplevel_next`. Keeping all declarations
+%   in one http_parameters/2 call is required for form-encoded POST bodies,
+%   whose input stream may only be consumed once.
+parse_isotope_wait_request(Request, Pid, Format, Timeout, Limit) :-
     http_parameters(Request, [
         pid(Pid0, [atom]),
         format(Format, [atom, default(json)]),
-        timeout(RequestedTimeout0, [number, optional(true)])
+        timeout(RequestedTimeout0, [number, optional(true)]),
+        limit(Limit, [integer, optional(true)])
     ]),
-    parse_pid_or_throw(Pid0, node:parse_isotope_wait_request/4,
+    parse_pid_or_throw(Pid0, node:parse_isotope_wait_request/5,
                        'pid must be an integer, atom name, or Id@Node term', Pid),
     normalize_requested_timeout(RequestedTimeout0, RequestedTimeout),
     node:effective_timeout(RequestedTimeout, Timeout).

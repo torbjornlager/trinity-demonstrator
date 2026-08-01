@@ -130,7 +130,7 @@
             }
             sendJSON({
               command: "toplevel_spawn",
-              options: "[]"
+              options: "[session(true)]"
             });
           };
 
@@ -162,13 +162,13 @@
                 });
               } else {
                 sendJSON({
-                  command: "toplevel_abort",
+                  command: "toplevel_halt",
                   pid: sessionPid
                 });
               }
               return;
             }
-            if (event.type === "abort" || event.type === "down") {
+            if (event.type === "halted" || event.type === "down") {
               runButton.disabled = false;
               closeSocket();
               return;

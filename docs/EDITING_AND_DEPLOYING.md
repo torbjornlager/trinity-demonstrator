@@ -17,6 +17,7 @@ Do not edit files inside running containers such as:
 - `/app/web/isobase-profile-tutorial.html`
 - `/app/web/isotope-profile-tutorial.html`
 - `/app/web/actor-profile-tutorial.html`
+- `/app/web/statechart-behaviour-tutorial.html`
 - `/app/Deployment/shared_db_common.pl`
 - `/app/Deployment/shared_db_n1.pl`
 - `/app/Deployment/shared_db_n2.pl`
@@ -34,6 +35,7 @@ Profile tutorial source files:
 - [`isobase-profile-tutorial.html`](../web/isobase-profile-tutorial.html) for N1
 - [`isotope-profile-tutorial.html`](../web/isotope-profile-tutorial.html) for N2
 - [`actor-profile-tutorial.html`](../web/actor-profile-tutorial.html) for N3, N4, N5, and SWI-WASM
+- [`statechart-behaviour-tutorial.html`](../web/statechart-behaviour-tutorial.html) for statechart actors on ACTOR runtimes
 
 Recommended pattern:
 
@@ -59,6 +61,7 @@ Verification URLs:
 - [n2 tutorial](https://n2.elfenbenstornet.se/isotope-profile-tutorial)
 - [n3 tutorial](https://n3.elfenbenstornet.se/actor-profile-tutorial)
 - [n4 tutorial](https://n4.elfenbenstornet.se/actor-profile-tutorial)
+- [statechart behaviour](https://n3.elfenbenstornet.se/statechart-behaviour-tutorial)
 
 ## Shared Database Workflow
 

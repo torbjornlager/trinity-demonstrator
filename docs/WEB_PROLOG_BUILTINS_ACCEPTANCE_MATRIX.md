@@ -61,7 +61,8 @@ Primary basis:
 | `nl/0`, `write/1`, `writeq/1`, `write_term/2`, `writeln/1`, `write_canonical/1`, `print/1`, `display/1`, `format/1-2` | no | yes | yes | These are actor-local prelude overrides, not ambient stream I/O. Profile policy treats them as side effects and rejects them on `/call`. Stream-target arities such as `nl/1`, `writeln/2`, `print/2`, and `format/3` remain blacklisted. |
 | `time/1` | yes | yes | yes | The local prelude implementation emits a timing-tagged output event and recursively validates the timed goal against profile and sandbox policy. |
 | `listing/0` | no | yes | yes | Exposed through the local actor I/O prelude as private-module listing, not the ambient system `listing/0`. |
-| `output/1-2`, `input/2-3`, `respond/2` | no | yes | yes | Actor/session I/O requires at least `isotope`. |
+| `read/1` | no | yes | yes | Session toplevel input uses the standard predicate; the actor I/O prelude translates it to a prompt event. |
+| `output/1-2`, `input/2-3`, `respond/2` | no | no | yes | These are lower-level actor I/O primitives. ISOTOPE clients use standard output predicates and `read/1` instead. |
 | `self/1`, `spawn/1-3`, `actors/1`, `exit/1-2`, `cancel/1` | no | no | yes | Actor lifecycle is `actor`-profile only. |
 | `send/2-3`, `!/2`, `receive/1-2`, `monitor/2`, `demonitor/1-2`, `flush/0` | no | no | yes | Actor messaging is `actor`-profile only. |
 | `register/2`, `whereis/2`, `unregister/1` | no | no | yes | Ordinary client naming is `actor`-profile only and connection/interaction scoped. |

@@ -97,14 +97,6 @@
           return new URL(path, window.location.origin);
         }
 
-        function buildGetURL(path, params) {
-          var url = endpoint(path);
-          Object.keys(params).forEach(function(key) {
-            url.searchParams.set(key, params[key]);
-          });
-          return url;
-        }
-
         function readableURL(url) {
           try {
             return decodeURIComponent(String(url));
@@ -114,11 +106,43 @@
         }
 
         async function fetchJSON(url, options) {
-          logLine((options && options.method ? options.method : "GET") + " " + readableURL(url), "request");
+          var requestText = (options && options.method ? options.method : "GET") + " " + readableURL(url);
+          if (options && options.body) {
+            requestText += "\n" + decodeURIComponent(String(options.body).replace(/\+/g, " "));
+          }
+          logLine(requestText, "request");
           var response = await fetch(url, options || {});
-          var json = await response.json();
+          var text = await response.text();
+          var json;
+
+          try {
+            json = text === "" ? {} : JSON.parse(text);
+          } catch (_error) {
+            var invalidJSON = new Error(text || ("HTTP " + response.status));
+            invalidJSON.status = response.status;
+            throw invalidJSON;
+          }
+
           logLine(JSON.stringify(json), "response");
+
+          if (!response.ok) {
+            var requestError = new Error(json.data || json.message || ("HTTP " + response.status));
+            requestError.status = response.status;
+            throw requestError;
+          }
+
           return json;
+        }
+
+        function postForm(path, params) {
+          return fetchJSON(endpoint(path), {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams(params)
+          });
         }
 
         async function cleanupSession(pid) {
@@ -126,12 +150,20 @@
             return;
           }
           try {
-            await fetchJSON(buildGetURL("/toplevel_abort", {
+            await postForm("/toplevel_halt", {
               pid: pid,
               format: "json"
-            }), { method: "POST" });
-          } catch (error) {
-            logLine("cleanup failed: " + error.message, "error");
+            });
+          } catch (haltError) {
+            logLine("This node has no Halt endpoint; aborting active work and leaving the idle session for server reclamation.", "response");
+            try {
+              await postForm("/toplevel_abort", {
+                pid: pid,
+                format: "json"
+              });
+            } catch (abortError) {
+              logLine("cleanup failed: " + abortError.message, "error");
+            }
           }
         }
 
@@ -146,18 +178,18 @@
                 "Content-Type": "application/json"
               },
               body: JSON.stringify({
-                options: "[]"
+                options: "[session(true)]"
               })
             });
             pid = spawned.pid;
 
-            var reply = await fetchJSON(buildGetURL("/toplevel_call", {
+            var reply = await postForm("/toplevel_call", {
               pid: pid,
               goal: "member(X,[a,b,c])",
               template: "X",
               limit: "1",
               format: "json"
-            }), { method: "POST" });
+            });
 
             while (reply.type === "success") {
               reply.data.forEach(function(row) {
@@ -166,10 +198,10 @@
               if (!reply.more) {
                 break;
               }
-              reply = await fetchJSON(buildGetURL("/toplevel_next", {
+              reply = await postForm("/toplevel_next", {
                 pid: pid,
                 format: "json"
-              }), { method: "POST" });
+              });
             }
           } catch (error) {
             logLine("error: " + error.message, "error");

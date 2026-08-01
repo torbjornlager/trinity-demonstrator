@@ -417,6 +417,9 @@ request_options_for_url(URL, Options0, Options) :-
 read_json_post(URL, Body, JSON) :-
     http_post(URL, json(Body), JSON, [json_object(dict)]).
 
+read_json_form_post(URL, Form, JSON) :-
+    http_post(URL, form(Form), JSON, [json_object(dict)]).
+
 read_json_post_headers(URL, Headers, Body, JSON) :-
     request_header_options(Headers, HeaderOptions),
     http_post(URL, json(Body), JSON, [json_object(dict)|HeaderOptions]).
@@ -828,6 +831,8 @@ test(node_portal_and_example_routes_served) :-
             read_text(DemonstratorURL, DemonstratorBody),
             format(atom(ActorTutorialURL), '~w/actor-profile-tutorial', [URI]),
             read_text(ActorTutorialURL, ActorTutorialBody),
+            format(atom(StatechartTutorialURL), '~w/statechart-behaviour-tutorial', [URI]),
+            read_text(StatechartTutorialURL, StatechartTutorialBody),
             format(atom(IsobaseTutorialURL), '~w/isobase-profile-tutorial', [URI]),
             read_text(IsobaseTutorialURL, IsobaseTutorialBody),
             format(atom(IsotopeTutorialURL), '~w/isotope-profile-tutorial', [URI]),
@@ -877,12 +882,21 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(ActorTutorialBody, _, _, _, 'browser-based <strong>SWI-WASM</strong> ACTOR node')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="recommended-path"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, '/actor-api-tutorial')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, '/statechart-behaviour-tutorial')),
+            assertion(\+ sub_string(ActorTutorialBody, _, _, _, 'id="sc-pr-spawn"')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'the ISOBASE profile')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'id="isobase-basket-source"')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'data-request-source="#isobase-basket-source"')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'button.textContent = "Request source selected"')),
+            assertion(\+ sub_string(IsobaseTutorialBody, _, _, _, 'data-load="#isobase-basket-source"')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Make application state explicit')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Timeout instead of Abort')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, '/isobase-api-tutorial')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Select <strong>N1</strong>')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, 'the ISOTOPE profile')),
-            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'What ISOTOPE removes')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'id="isotope-basket-source"')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'Interactive input and output')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'Where the actor boundary lies')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, '/isotope-api-tutorial')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, 'Select <strong>N2</strong>')),
             assertion(OldWorkbenchStatus == 404),
@@ -911,7 +925,23 @@ test(node_portal_and_example_routes_served) :-
                       ActorEntries),
             assertion(\+ memberchk(_{name:"game.xml", url:"/examples/statecharts/game.xml", kind:"statechart"},
                                    StatechartEntries)),
-            assertion(sub_string(PortalBody, _, _, _, '/actor-profile-tutorial'))
+            assertion(sub_string(PortalBody, _, _, _, '/actor-profile-tutorial')),
+            assertion(sub_string(PortalBody, _, _, _, '/statechart-behaviour-tutorial')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'the statechart behaviour')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="sc-pause-spawn"')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="sc-pr-diagram"')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="sc-sp-diagram"')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'data-query="$Pid ! d."')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'data-query="$Pid ! g."')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="sc-em-diagram"')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="sc-emotions-halt"')),
+            assertion(\+ sub_string(StatechartTutorialBody, _, _, _, 'Halt current chart')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'api.onStatechartTrace = handleStatechartTrace')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="sc-toplevel-spawn"')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'statechart_halt($Pid, Reply, 1).')),
+            assertion(\+ sub_string(StatechartTutorialBody, _, _, _, 'statechart_halt($Pid, Reply).')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="more-examples"')),
+            assertion(\+ sub_string(StatechartTutorialBody, _, _, _, 'data-load-example'))
         )).
 
 test(node_api_tutorial_routes_served) :-
@@ -923,6 +953,10 @@ test(node_api_tutorial_routes_served) :-
             read_text(IsotopeURL, IsotopeBody),
             format(atom(ActorURL), '~w/actor-api-tutorial', [URI]),
             read_text(ActorURL, ActorBody),
+            format(atom(PromptDemoURL), '~w/examples/APIs/http-example-2.html', [URI]),
+            read_text(PromptDemoURL, PromptDemoBody),
+            format(atom(PagingDemoURL), '~w/examples/APIs/http_example-1.html', [URI]),
+            read_text(PagingDemoURL, PagingDemoBody),
             assertion(sub_string(IsobaseBody, _, _, _, 'The ISOBASE API')),
             assertion(sub_string(IsotopeBody, _, _, _, 'The ISOTOPE API')),
             assertion(sub_string(ActorBody, _, _, _, 'The ACTOR API')),
@@ -930,7 +964,23 @@ test(node_api_tutorial_routes_served) :-
             assertion(sub_string(IsotopeBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(ActorBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(IsobaseBody, _, _, _, 'GET /call?goal=')),
+            assertion(sub_string(IsobaseBody, _, _, _, 'Prepare Logger')),
+            assertion(sub_string(IsobaseBody, _, _, _, 'The complete <code>goal</code> appears again')),
             assertion(sub_string(IsotopeBody, _, _, _, 'POST /toplevel_next')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'POST /toplevel_halt')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'data-protocol-action="abort"')),
+            assertion(sub_string(IsotopeBody, _, _, _, 'read(Term), writeln(Term)')),
+            assertion(\+ sub_string(IsotopeBody, _, _, _, "input('Enter a Prolog term'")),
+            assertion(sub_string(PromptDemoBody, _, _, _, 'advanceToInteractiveOrFinal')),
+            assertion(sub_string(PromptDemoBody, _, _, _, 'window.prompt(event.data, "hello(world).")')),
+            assertion(sub_string(PromptDemoBody, _, _, _, 'response = "stop."')),
+            assertion(sub_string(PromptDemoBody, _, _, _, 'postForm("/toplevel_abort"')),
+            assertion(sub_string(PromptDemoBody, _, _, _, 'requestText += "\\n"')),
+            assertion(sub_string(PagingDemoBody, _, _, _, 'requestText += "\\n"')),
+            assertion(\+ sub_string(PromptDemoBody, _, _, _, 'requestText += " body="')),
+            assertion(\+ sub_string(PagingDemoBody, _, _, _, 'requestText += " body="')),
+            assertion(sub_string(ActorBody, _, _, _, 'data-run-actor-demo')),
+            assertion(sub_string(ActorBody, _, _, _, 'recordProtocolTraffic')),
             assertion(sub_string(ActorBody, _, _, _, 'STATEFUL WORKER')),
             assertion(sub_string(ActorBody, _, _, _, 'JS OBJECT'))
         )).
@@ -4877,22 +4927,45 @@ test(isotope_next_returns_following_solution,
                 Pid = SpawnJSON.pid
             ),
             (
-                format(atom(CallURL),
-                       '~w/toplevel_call?pid=~w&goal=member(X,[a,b])&template=X&limit=1&format=json',
-                       [URI, Pid]),
-                read_json_answer(CallURL, First),
+                format(atom(CallURL), '~w/toplevel_call', [URI]),
+                read_json_form_post(CallURL,
+                                    [ pid=Pid,
+                                      goal='member(X,[a,b])',
+                                      template='X',
+                                      limit=1,
+                                      format=json
+                                    ],
+                                    First),
                 Type1 = First.type,
                 Data1 = First.data,
                 More1 = First.more,
-                format(atom(NextURL),
-                       '~w/toplevel_next?pid=~w&format=json',
-                       [URI, Pid]),
-                read_json_answer(NextURL, Second),
+                format(atom(NextURL), '~w/toplevel_next', [URI]),
+                read_json_form_post(NextURL,
+                                    [pid=Pid, format=json],
+                                    Second),
                 Type2 = Second.type,
                 Data2 = Second.data,
                 More2 = Second.more
             ),
             kill_isotope_session(Pid)
+        )).
+
+test(isotope_spawn_accepts_form_post_body,
+     true((Type == "spawned", integer(Pid)))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            true,
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_form_post(SpawnURL,
+                                    [ options='[session(true)]',
+                                      format=json
+                                    ],
+                                    SpawnJSON),
+                Type = SpawnJSON.type,
+                Pid = SpawnJSON.pid
+            ),
+            ( nonvar(Pid) -> kill_isotope_session(Pid) ; true )
         )).
 
 test(isotope_call_writeln_emits_output_event,
@@ -5580,15 +5653,15 @@ test(isotope_read_respond_then_pull_success,
                 PromptType = PromptJSON.type,
                 PromptPID = PromptJSON.pid,
                 PromptData = PromptJSON.data,
-                format(atom(RespondURL),
-                       '~w/toplevel_respond?pid=~w&input=ok.&format=json',
-                       [URI, Pid]),
-                read_json_answer(RespondURL, RespondJSON),
+                format(atom(RespondURL), '~w/toplevel_respond', [URI]),
+                read_json_form_post(RespondURL,
+                                    [pid=Pid, input='ok.', format=json],
+                                    RespondJSON),
                 RespondType = RespondJSON.type,
-                format(atom(PullURL),
-                       '~w/toplevel_poll?pid=~w&format=json',
-                       [URI, Pid]),
-                read_json_answer(PullURL, PullJSON),
+                format(atom(PullURL), '~w/toplevel_poll', [URI]),
+                read_json_form_post(PullURL,
+                                    [pid=Pid, format=json],
+                                    PullJSON),
                 PollType = PullJSON.type,
                 PollPID = PullJSON.pid,
                 PollData = PullJSON.data,

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Web Prolog Tutorial — The ISOTOPE Profile</title>
-  <meta name="description" content="A brief, profile-focused introduction to the Web Prolog ISOTOPE profile.">
+  <meta name="description" content="A guided programming tutorial for persistent private Web Prolog toplevel sessions in the ISOTOPE profile.">
   <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
   <style>
     :root {
@@ -39,20 +39,25 @@
     code { background: var(--code-bg); border-radius: 4px; padding: .08em .28em; }
     pre { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; padding: 11px 13px; }
     pre code { background: transparent; padding: 0; }
-    nav, .note, .warning { border: 1px solid var(--border); margin: 20px 0; padding: 13px 16px; }
-    nav { background: var(--surface); } nav ul { margin: 0; padding-left: 20px; }
+    nav, .note, .warning, .expected { border: 1px solid var(--border); margin: 20px 0; padding: 13px 16px; }
+    nav, .expected { background: var(--surface); } nav ul { margin: 0; padding-left: 20px; columns: 2; }
     .note { background: var(--info-bg); border-color: var(--info-border); }
     .warning { background: var(--danger-bg); border-color: var(--danger-border); }
     .path { color: var(--muted); font-weight: 600; letter-spacing: .02em; }
     .path strong { color: var(--heading); }
-    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 6px 10px; text-transform: uppercase; }
-    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 7px 11px; text-transform: uppercase; }
+    button.secondary { background: var(--surface); border-color: var(--border); color: var(--ink); }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid var(--border); font: var(--text-size)/1.45 Inter, ui-sans-serif, system-ui, sans-serif; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--surface); }
+    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } nav ul { columns: 1; } }
   </style>
 </head>
 <body>
 <main>
   <h1>Web Prolog tutorial &ndash; the ISOTOPE profile</h1>
-  <p class="lede">The second stop on the recommended path. ISOTOPE keeps a persistent Prolog toplevel but leaves the independent actor system behind.</p>
+  <p class="lede">The second stop on the recommended path. ISOTOPE gives each client a persistent private Prolog toplevel: calls can share code, facts, answer continuations and interactive I/O without exposing an actor system.</p>
   <p class="path">ACTOR &rarr; <strong>ISOTOPE</strong> &rarr; ISOBASE</p>
 
   <div class="note">
@@ -65,54 +70,112 @@
 
   <nav aria-label="Table of contents">
     <ul>
-      <li><a href="#familiar">Familiar Prolog</a></li>
-      <li><a href="#session">What ISOTOPE keeps</a></li>
-      <li><a href="#actors">What ISOTOPE removes</a></li>
+      <li><a href="#model">The ISOTOPE mental model</a></li>
+      <li><a href="#application">Build a private basket</a></li>
+      <li><a href="#continuation">Continuation versus database state</a></li>
+      <li><a href="#io">Interactive input and output</a></li>
+      <li><a href="#control">Stop, Abort and session lifetime</a></li>
+      <li><a href="#boundary">Where the actor boundary lies</a></li>
       <li><a href="#choice">When to choose ISOTOPE</a></li>
     </ul>
   </nav>
 
-  <section id="familiar">
-    <h2>Familiar Prolog</h2>
-    <p>The programming language has not changed. Start with the same relational query used in the ACTOR tutorial:</p>
+  <section id="model">
+    <h2>The ISOTOPE mental model</h2>
+    <p>N2 creates one private toplevel for the browser session and gives it a pid internally. The portal reuses that pid for later HTTP requests. From the programmer's point of view it behaves like a private, long-lived Prolog shell:</p>
+    <table aria-label="ISOTOPE retained state"><thead><tr><th>Retained state</th><th>What it means</th></tr></thead><tbody>
+      <tr><td>Loaded predicates and dynamic facts</td><td>Separate calls can build on private knowledge.</td></tr>
+      <tr><td>Current answer continuation</td><td>Next resumes the pending search instead of rerunning it from the beginning.</td></tr>
+      <tr><td>Output and prompts</td><td>A computation can converse with the same client over several HTTP exchanges.</td></tr>
+    </tbody></table>
+    <p>Start with the relational query used throughout the profile path:</p>
     <pre id="isotope-append"><code>?- append(Xs,Ys,[a,b,c]).</code></pre>
-    <p><button type="button" data-ask="#isotope-append">Call</button></p>
-    <p>Use <code>;</code>, the space bar or <strong>Next</strong> for further answers. The difference between profiles is how the computation is hosted and controlled, not how <code>append/3</code> behaves.</p>
+    <div class="actions"><button type="button" data-ask="#isotope-append">Call</button></div>
+    <p>Use <code>;</code>, the space bar or <strong>Next</strong> for further answers. The logical answers are unchanged; what changes is that the search itself has an addressable lifetime.</p>
   </section>
 
-  <section id="session">
-    <h2>What ISOTOPE keeps</h2>
-    <p>N2 creates a private toplevel actor for the browser session. Calls made through that toplevel share state and an answer continuation. Output, input and Abort also have an ongoing session to which they can belong.</p>
+  <section id="application">
+    <h2>Build a private basket across several calls</h2>
+    <p>Load a small program into the session. Its dynamic predicate will hold this client's basket:</p>
+    <pre id="isotope-basket-source"><code>:- dynamic basket_item/2.
 
-    <h3>Session-local state</h3>
-    <p>Make a fact, then ask for it in a separate query:</p>
-    <pre id="isotope-assert"><code>?- assertz(saved(isotope)).</code></pre>
-    <p><button type="button" data-ask="#isotope-assert">Call</button></p>
-    <pre id="isotope-read"><code>?- saved(What).</code></pre>
-    <p><button type="button" data-ask="#isotope-read">Call</button></p>
-    <p>The second call can see the first call's update because both run in the same private session. Other clients do not share it.</p>
+basket_clear :-
+    retractall(basket_item(_, _)).
 
-    <h3>I/O and control</h3>
-    <pre id="isotope-output"><code>?- writeln('Hello from N2').</code></pre>
-    <p><button type="button" data-ask="#isotope-output">Call</button></p>
-    <p>Output appears while the goal runs. A non-terminating goal can be interrupted with the red <strong>Abort</strong> button because the client has a persistent toplevel to address.</p>
+basket_add(Name, Price) :-
+    atom(Name), number(Price), Price &gt;= 0,
+    assertz(basket_item(Name, Price)).
+
+basket_remove(Name) :-
+    retract(basket_item(Name, _)).
+
+basket_total(Total) :-
+    findall(Price, basket_item(_, Price), Prices),
+    prices_total(Prices, Total).
+
+prices_total([], 0).
+prices_total([Price|Prices], Total) :-
+    prices_total(Prices, Rest),
+    Total is Price + Rest.</code></pre>
+    <div class="actions"><button type="button" data-load="#isotope-basket-source">Load source</button></div>
+    <p>Initialize it, then make three independent calls:</p>
+    <pre id="isotope-clear"><code>?- basket_clear.</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-clear">1. Clear basket</button></div>
+    <pre id="isotope-add-tea"><code>?- basket_add(tea, 4).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-add-tea">2. Add tea</button></div>
+    <pre id="isotope-add-more"><code>?- basket_add(bread, 3), basket_add(cheese, 8).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-add-more">3. Add two items</button></div>
+    <pre id="isotope-total"><code>?- basket_total(Total).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-total">4. Calculate total</button></div>
+    <div class="expected"><strong>Expect.</strong> <code>Total = 15</code>. The fourth request can see updates made by the preceding requests because they addressed the same private toplevel. A different client gets a different session and does not share these facts.</div>
   </section>
 
-  <section id="actors">
-    <h2>What ISOTOPE removes</h2>
-    <p>ISOTOPE has a session actor internally, but application programs cannot create or address independent actors. In the Examples drawer, actor programs and SXML statecharts are therefore struck out: they are visible for comparison, but N2 cannot run them.</p>
-    <p>These ACTOR queries illustrate the boundary:</p>
-    <pre id="isotope-self"><code>?- self(Pid).</code></pre>
-    <p><button type="button" data-ask="#isotope-self">Call</button></p>
-    <pre id="isotope-spawn"><code>?- spawn(writeln(hello), Pid).</code></pre>
-    <p><button type="button" data-ask="#isotope-spawn">Call</button></p>
-    <pre id="isotope-receive"><code>?- receive({Message -&gt; true}).</code></pre>
-    <p><button type="button" data-ask="#isotope-receive">Call</button></p>
-    <div class="warning">
-      N2 reports that these actor operations are unavailable in the ISOTOPE
-      profile. There is no application-visible pid or mailbox, no actor spawn,
-      messaging, monitoring, linking, server behaviour or statechart actor.
+  <section id="continuation">
+    <h2>Continuation state is not database state</h2>
+    <p>Ask for basket entries one at a time:</p>
+    <pre id="isotope-items"><code>?- basket_item(Name, Price).</code></pre>
+    <div class="actions">
+      <button type="button" data-ask="#isotope-items">Start search</button>
+      <button class="secondary" type="button" data-action="next">Next answer</button>
+      <button class="secondary" type="button" data-action="stop">Stop search</button>
     </div>
+    <p><strong>Next</strong> resumes the retained search. <strong>Stop</strong> discards only that continuation. Prove the distinction by stopping before all answers have been shown and asking for the total again:</p>
+    <pre id="isotope-total-after-stop"><code>?- basket_total(Total).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-total-after-stop">Check retained database</button></div>
+    <div class="expected"><strong>Expect.</strong> The total remains <code>15</code>. At most one answer continuation is current in a toplevel; starting another call replaces pending search state, but it does not erase loaded code or dynamic facts.</div>
+  </section>
+
+  <section id="io">
+    <h2>Interactive input and output</h2>
+    <p>A retained session gives input and output somewhere to go. First produce output:</p>
+    <pre id="isotope-output"><code>?- basket_total(Total), format('Basket total: ~w~n', [Total]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-output">Write total</button></div>
+    <p>Now let the running goal ask the client for a term:</p>
+    <pre id="isotope-input"><code>?- read(Item), basket_add(Item, 1).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-input">Prompt for item</button></div>
+    <div class="expected"><strong>At the <code>|:</code> prompt</strong>, enter a complete Prolog term such as <code>coffee.</code> The original computation waits, receives the term, adds it, and then succeeds. ISOBASE has no retained conversation in which this prompt could live.</div>
+  </section>
+
+  <section id="control">
+    <h2>Stop, Abort and session lifetime</h2>
+    <table aria-label="ISOTOPE control semantics"><thead><tr><th>Action</th><th>Ends</th><th>Survives</th></tr></thead><tbody>
+      <tr><td>Stop</td><td>The pending answer continuation</td><td>Private code, facts and future calls</td></tr>
+      <tr><td>Abort</td><td>The active or waiting computation</td><td>The toplevel can accept another call</td></tr>
+      <tr><td>Halt or reclamation</td><td>The complete private toplevel</td><td>No state addressed by its old pid</td></tr>
+    </tbody></table>
+    <p>Start a deliberately non-terminating computation, then interrupt it:</p>
+    <pre id="isotope-loop"><code>?- repeat, fail.</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-loop">Start loop</button><button class="secondary" type="button" data-action="abort">Abort</button></div>
+    <p>The server timeout may win if it is configured very short. After either outcome, ask for the basket total again to confirm that the session remains usable.</p>
+    <div class="note"><strong>Session hygiene.</strong> Private sessions consume server resources. A client should halt an abandoned session when the protocol supports it; otherwise the node eventually reclaims it. See the API tutorial for the complete lifecycle.</div>
+  </section>
+
+  <section id="boundary">
+    <h2>Where the actor boundary lies</h2>
+    <p>The session is implemented by an actor internally, but the ISOTOPE language does not expose independent processes, pids or mailboxes. Try one representative ACTOR operation:</p>
+    <pre id="isotope-spawn"><code>?- spawn(writeln(hello), Pid).</code></pre>
+    <div class="actions"><button type="button" data-ask="#isotope-spawn">Call</button></div>
+    <div class="warning"><strong>Expect a profile violation.</strong> Application-visible actor spawn, send, receive, monitoring, linking, server behaviours and statechart actors require ACTOR. The struck-out actor and SXML examples in the drawer make the same boundary visible.</div>
   </section>
 
   <section id="choice">
@@ -124,8 +187,9 @@
       <li>the ability to abort a running computation; and</li>
       <li>ordinary HTTP infrastructure without a persistent WebSocket.</li>
     </ul>
-    <p>It suits interactive query services, private workspaces, conversational tools, configuration flows and other applications that need memory, I/O or cancellable work across several calls, but do not need independently running processes or server-initiated messages.</p>
+    <p>It suits interactive query services, private workspaces, shopping or configuration flows, notebooks and conversational tools that need memory, I/O or cancellable work across several calls, but do not need independently running processes or server-initiated messages.</p>
     <p>Compared with ACTOR, its HTTP request/response contract is simpler. Compared with ISOBASE, it requires the server to retain sessions, the client to manage their pids, and polling to retrieve events. That can still be unnecessary machinery for independent, function-like queries.</p>
+    <div class="expected"><strong>You should now be able to explain:</strong> what belongs to a private toplevel; why stopping a search does not clear its database; how input can span HTTP exchanges; and why a session is still not an application-visible actor system.</div>
     <div class="note">
       <strong>Continue the recommended path.</strong> Select <strong>N1</strong>
       and open <strong>The ISOBASE profile</strong> tutorial. It keeps ordinary
@@ -173,6 +237,22 @@
         var api = bridge();
         var query = node ? node.textContent.replace(/^\s*\?-\s*/, "").trim() : "";
         if (api && typeof api.askExample === "function") api.askExample(query, button.getAttribute("data-ask"));
+      });
+    });
+    document.querySelectorAll("[data-load]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var node = document.querySelector(button.getAttribute("data-load"));
+        var api = bridge();
+        if (node && api && typeof api.consultSource === "function") api.consultSource(node.textContent, button.getAttribute("data-load"));
+      });
+    });
+    document.querySelectorAll("[data-action]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var api = bridge();
+        var action = button.getAttribute("data-action");
+        if (action === "next" && api && typeof api.nextAnswer === "function") api.nextAnswer();
+        if (action === "stop" && api && typeof api.stopAnswer === "function") api.stopAnswer();
+        if (action === "abort" && api && typeof api.abortComputation === "function") api.abortComputation();
       });
     });
     var api = bridge();

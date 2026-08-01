@@ -168,7 +168,7 @@ Design notes:
     isotope_spawn_event/5,
     isotope_call_event/11,
     isotope_respond_event/3,
-    parse_isotope_wait_request/4
+    parse_isotope_wait_request/5
 ]).
 :- use_module(node_engine, [
     compute_answer/5,
@@ -248,6 +248,7 @@ HTTP endpoint layout:
 :- http_handler(root('isobase-profile-tutorial'), node_isobase_profile_tutorial_page, []).
 :- http_handler(root('isotope-profile-tutorial'), node_isotope_profile_tutorial_page, []).
 :- http_handler(root('actor-profile-tutorial'), node_actor_profile_tutorial_page, []).
+:- http_handler(root('statechart-behaviour-tutorial'), node_statechart_behaviour_tutorial_page, []).
 :- http_handler(root('isobase-api-tutorial'), node_isobase_api_tutorial_page, []).
 :- http_handler(root('isotope-api-tutorial'), node_isotope_api_tutorial_page, []).
 :- http_handler(root('actor-api-tutorial'), node_actor_api_tutorial_page, []).
@@ -502,16 +503,24 @@ node_controller_isotope_spawn_1(Request) :-
     request_principal(Request, Principal),
     http_parameters(Request, [
         format(Format, [atom, default(json)])
-    ]),
+    ], [form_data(FormData)]),
+    isotope_spawn_parse_request(Request, FormData, ParseRequest),
     principal_id(Principal, PrincipalId),
     execute_and_respond_logged(
         Request,
         Principal,
         Format,
         _{route:"toplevel_spawn", action:"toplevel_spawn"},
-        isotope_spawn_authorized_event(Request, Principal, PrincipalId),
+        isotope_spawn_authorized_event(ParseRequest, Principal, PrincipalId),
         plain_error_mapper
     ).
+
+isotope_spawn_parse_request(Request, FormData, [search(FormData)|Request]) :-
+    memberchk(content_type(ContentType), Request),
+    atom(ContentType),
+    sub_atom(ContentType, 0, _, _, 'application/x-www-form-urlencoded'),
+    !.
+isotope_spawn_parse_request(Request, _, Request).
 
 
 %!  node_controller_isotope_call(+Request) is det.
@@ -556,10 +565,7 @@ node_controller_isotope_next(Request) :-
 
 node_controller_isotope_next_1(Request) :-
     request_principal(Request, Principal),
-    parse_isotope_wait_request(Request, Pid, Format, Timeout),
-    http_parameters(Request, [
-        limit(Limit0, [integer, optional(true)])
-    ]),
+    parse_isotope_wait_request(Request, Pid, Format, Timeout, Limit0),
     (   var(Limit0)
     ->  LimitSpec = inherit,
         LogContext = _{route:"toplevel_next", action:"toplevel_next", pid:Pid,
@@ -587,7 +593,7 @@ node_controller_isotope_poll(Request) :-
 
 node_controller_isotope_poll_1(Request) :-
     request_principal(Request, Principal),
-    parse_isotope_wait_request(Request, Pid, Format, Timeout),
+    parse_isotope_wait_request(Request, Pid, Format, Timeout, _Limit),
     execute_and_respond_logged(
         Request,
         Principal,
@@ -715,17 +721,25 @@ node_controller_isotope_respond_1(Request) :-
     request_principal(Request, Principal),
     http_parameters(Request, [
         pid(Pid0, [atom]),
+        input(InputAtom, [atom]),
         format(Format, [atom, default(json)])
     ]),
+    check_term_text_size(input, InputAtom),
     parse_pid_or_throw(Pid0, node:parse_request_pid/2,
                        'pid must be an integer, atom name, or Id@Node term', Pid),
-    isotope_respond_log_context(Pid, Request, LogContext),
+    text_size(InputAtom, InputChars),
+    LogContext = _{
+        route:"toplevel_respond",
+        action:"toplevel_respond",
+        pid:Pid,
+        input_chars:InputChars
+    },
     execute_and_respond_logged(
         Request,
         Principal,
         Format,
         LogContext,
-        isotope_respond_request_event(Request, Principal),
+        isotope_respond_authorized_event(Principal, Pid, InputAtom),
         pid_error_mapper(Pid)
     ).
 
@@ -792,16 +806,6 @@ plain_error_mapper(Error, error(Error)).
 %
 %   Wrap controller exception and include the ISOTOPE session pid context.
 pid_error_mapper(Pid, Error, error(Pid, Error)).
-
-isotope_respond_request_event(Request, Principal, Event) :-
-    http_parameters(Request, [
-        pid(Pid0, [atom]),
-        input(InputAtom, [atom])
-    ]),
-    check_term_text_size(input, InputAtom),
-    parse_pid_or_throw(Pid0, node:parse_request_pid/2,
-                       'pid must be an integer, atom name, or Id@Node term', Pid),
-    isotope_respond_authorized_event(Principal, Pid, InputAtom, Event).
 
 %!  isobase_event(+Principal, +GoalAtom, +TemplateAtom0, +Offset, +Limit, +Format,
 %!                +LoadText, +Once0, +RequestedTimeout0, -Answer) is det.
@@ -1012,19 +1016,6 @@ call_request_log_context(Route0, GoalAtom, TemplateAtom0, Offset, Limit,
         once:Once0,
         requested_timeout:RequestedTimeout,
         load_text_chars:LoadTextChars
-    }.
-
-
-isotope_respond_log_context(Pid, Request, Context) :-
-    http_parameters(Request, [
-        input(InputAtom, [atom])
-    ]),
-    text_size(InputAtom, InputChars),
-    Context = _{
-        route:"toplevel_respond",
-        action:"toplevel_respond",
-        pid:Pid,
-        input_chars:InputChars
     }.
 
 
@@ -1345,6 +1336,10 @@ node_isotope_profile_tutorial_page(Request) :-
 
 node_actor_profile_tutorial_page(Request) :-
     node_actor_profile_tutorial_file(File),
+    reply_uncached_file(File, Request).
+
+node_statechart_behaviour_tutorial_page(Request) :-
+    node_statechart_behaviour_tutorial_file(File),
     reply_uncached_file(File, Request).
 
 node_isobase_api_tutorial_page(Request) :-
@@ -2033,6 +2028,11 @@ node_actor_profile_tutorial_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
     directory_file_path(Dir, '../../web/actor-profile-tutorial.html', File).
+
+node_statechart_behaviour_tutorial_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, '../../web/statechart-behaviour-tutorial.html', File).
 
 node_isobase_api_tutorial_file(File) :-
     module_property(node, file(ThisFile)),

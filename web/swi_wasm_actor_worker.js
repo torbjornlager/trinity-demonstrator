@@ -923,8 +923,11 @@
       "        down(Pid, Ref, _Reason) ->",
       "            Reply = killed",
       "    }, [timeout(Timeout), on_timeout((",
+      // actorExit resolves after the coordinator has terminated the Worker and
+      // emitted down/3. Waiting for that notification again can miss it and
+      // leave the shell parked forever.
       "            exit(Pid, kill),",
-      "            receive({down(Pid, Ref, _) -> Reply = killed})",
+      "            Reply = killed",
       "        ))]).",
       "",
       "collect_spawn_source(Options, Source) :-",

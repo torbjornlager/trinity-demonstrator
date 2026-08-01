@@ -78,6 +78,14 @@ const actorTutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "actor-profile-tutorial.html"),
   "utf8"
 );
+const isobaseProfileTutorialSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "isobase-profile-tutorial.html"),
+  "utf8"
+);
+const statechartBehaviourTutorialSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "statechart-behaviour-tutorial.html"),
+  "utf8"
+);
 
 let failures = 0;
 function ok(condition, label) {
@@ -148,6 +156,9 @@ const pidDisplayHelpers = Function(
 const makeBrowserPromiseRef = embeddedWorkbenchMethod(
   "makeBrowserPromiseRef", "isSwiWasmUnboundVariable"
 );
+const editorSessionLoadedMessage = embeddedWorkbenchMethod(
+  "editorSessionLoadedMessage", "currentEditorSourceDirty"
+);
 const swiWasmValueRenderer = {
   swiWasmStructuredCompound: embeddedWorkbenchMethod(
     "swiWasmStructuredCompound", "cleanupSwiWasm2ShellEntry"
@@ -185,6 +196,12 @@ const replaceIsotopeSession = embeddedWorkbenchMethod(
 );
 const replaceSwiWasm2Shell = embeddedWorkbenchMethod(
   "replaceSwiWasm2Shell", "sendSwiWasm2Call"
+);
+const loadTutorialProgramIntoCurrentSession = embeddedWorkbenchMethod(
+  "loadTutorialProgramIntoCurrentSession", "currentTutorialSessionPid"
+);
+const loadExampleProgramIntoCurrentSession = embeddedWorkbenchMethod(
+  "loadExampleProgramIntoCurrentSession", "loadTutorialProgramIntoCurrentSession"
 );
 const sendSwiWasm2Call = embeddedWorkbenchMethod(
   "sendSwiWasm2Call", "runSwiWasm2Query"
@@ -426,9 +443,23 @@ ok(includes('"02 grammar.pl": "stateless"') &&
     stripCommentLines: text => text
   };
   ok(currentLoadText.call(context) === "asynch_test_1(ok)." &&
+     currentLoadText.call({
+       ...context,
+       workspaceTab: "tutorial",
+       transportMode: "stateless",
+       tutorialRequestSource: "basket_total([], 0)."
+     }) === "basket_total([], 0)." &&
      currentLoadText.call({ ...context, nodeAnnouncedProfile: "relation" }) === "",
-     "ISOBASE calls include active editor source while RELATION calls remain source-free");
+     "ISOBASE calls include editor or tutorial request source while RELATION remains source-free");
 }
+ok(includes('setRequestSource: function(source, id)') &&
+   includes('handleTutorialRequestSource: function(source, id)') &&
+   isobaseProfileTutorialSource.includes('data-request-source="#isobase-basket-source"') &&
+   isobaseProfileTutorialSource.includes('aria-pressed="false"') &&
+   isobaseProfileTutorialSource.includes('typeof api.setRequestSource === "function"') &&
+   isobaseProfileTutorialSource.includes('button.textContent = "Request source selected"') &&
+   !isobaseProfileTutorialSource.includes('data-load="#isobase-basket-source"'),
+   "the ISOBASE profile queues temporary request source without consulting a session");
 ok(includes(':href="profileTutorial.path"') &&
    includes('{{ profileTutorial.label }}') &&
    includes('path: "/isobase-profile-tutorial"') &&
@@ -445,6 +476,10 @@ ok(includes(':href="profileTutorial.path"') &&
    includes('apiLabel: "The semi-stateful HTTP API"') &&
    includes('apiPath: "/actor-api-tutorial"') &&
    includes('apiLabel: "The stateful WebSocket API"') &&
+   includes(':href="profileTutorial.behaviourPath"') &&
+   includes('{{ profileTutorial.behaviourLabel }}') &&
+   includes('behaviourPath: "/statechart-behaviour-tutorial"') &&
+   includes('behaviourLabel: "The statechart behaviour"') &&
    !includes('href="/wp-tutorial"') &&
    !includes('>Web Prolog Tutorial</a>'),
    "the Tutorials drawer exposes profile and API tutorials for each profile");
@@ -526,6 +561,12 @@ ok(includes('visibleLogKinds: ["info", "trace", "transport"]') &&
    includes('var filterKind = entry.kind === "trace" || entry.kind === "transport"') &&
    includes('window.localStorage.setItem("wb.visibleLogKindsVersion", "2")'),
    "Logger groups lifecycle, warning, error, timing, and UI events under Info");
+ok(includes(':class="[entry.kind, entry.direction, { active: isProtocolLogHighlighted(entry.id) }]"') &&
+   includes('prepareProtocolLogger: function(options)') &&
+   includes('beginProtocolStep: function()') &&
+   includes('recordTutorialProtocolTraffic: function(payload, direction, scope)') &&
+   includes('protocolLogHighlightFromId: null'),
+   "API tutorials can isolate, mirror, and highlight their live Logger traffic");
 ok(!includes("syncTracePreferenceToLiveSessions") &&
    !includes("isTraceLoggingEnabled") &&
    includes('this.log("trace", traceText, "statechart")') &&
@@ -650,8 +691,9 @@ ok(prettyJsonText.call(protocolLogRenderer, JSON.stringify({
 ok(includes('POST /interaction_log (durable usage log): ') &&
    includes('Interaction log request failed: '),
    "interaction logging is visible, including failed recording attempts");
-ok(includes('replacing ISOTOPE session ') &&
-   includes('replacing ACTOR session ') &&
+ok(includes('? this.replaceIsotopeSession(term, generation, reloadSpec)') &&
+   includes('? this.replaceWsSession(reloadSpec)') &&
+   includes('? this.editorSessionLoadedMessage()') &&
    includes('return this.spawnIsotopeSession(term, generation, loadSpec).then(function(newPid)') &&
    includes('self.haltIsotopeSession(retiringPid).then(function(event)') &&
    includes("the node's idle-session cleanup will reclaim it") &&
@@ -856,6 +898,16 @@ ok(includes('window.localStorage.getItem("wb.swiWasmModel") === "main"') &&
    includes('handleBrowserRuntimeModelChange: function()') &&
    includes('use_module(library(dom))'),
    "one SWI-WASM entry defaults to workers and Settings retains the DOM-capable main model");
+ok(!includes("% Loading SWI-WASM worker toplevel actor...") &&
+   includes("if (this.swiWasm2ShellReady) {\n                this.terminal.set_prompt(this.basePrompt());\n              } else {\n                this.pauseTerm(this.terminal);"),
+   "SWI-WASM Worker startup stays quiet until the toplevel prompt is ready");
+ok(editorSessionLoadedMessage.call({
+     currentEditorSourceLabel: function() { return "<scratch-buffer>"; }
+   }) === "% Spawned new session and loaded <scratch-buffer>" &&
+   !includes("Editor source changed; replacing") &&
+   includes("var loadedSessionMessage = this.editorSessionLoadedMessage();") &&
+   includes("self.echoTerminalSystemInfo(term, loadedSessionMessage);"),
+   "automatic editor reloads report the completed toplevel load without exposing the replaced session");
 ok(includes('aria-label="About SWI-WASM execution models"') &&
    includes('for="swiWasmExecutionModel"') &&
    includes('id="swiWasmExecutionModel"') &&
@@ -942,6 +994,27 @@ ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
    actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
+ok(actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
+   !actorTutorialSource.includes('id="sc-pr-spawn"') &&
+   statechartBehaviourTutorialSource.includes('id="sc-pause-spawn"') &&
+   statechartBehaviourTutorialSource.includes('id="sc-pr-diagram"') &&
+   statechartBehaviourTutorialSource.includes('data-query="$Pid ! d."') &&
+   statechartBehaviourTutorialSource.includes('data-query="$Pid ! g."') &&
+   statechartBehaviourTutorialSource.includes('id="sc-emotions-spawn"') &&
+   statechartBehaviourTutorialSource.includes('id="sc-em-diagram"') &&
+   statechartBehaviourTutorialSource.includes('id="sc-emotions-halt"') &&
+   !statechartBehaviourTutorialSource.includes('Halt current chart') &&
+   statechartBehaviourTutorialSource.includes('id="sc-gcd-spawn"') &&
+   statechartBehaviourTutorialSource.includes('id="sc-toplevel-spawn"') &&
+   statechartBehaviourTutorialSource.includes('statechart_halt($Pid, Reply, 1).') &&
+   !statechartBehaviourTutorialSource.includes('statechart_halt($Pid, Reply).') &&
+   statechartBehaviourTutorialSource.includes('id="more-examples"') &&
+   statechartBehaviourTutorialSource.includes('04 clock.xml') &&
+   statechartBehaviourTutorialSource.includes('14 deferred-events.xml') &&
+   !statechartBehaviourTutorialSource.includes('data-load-example') &&
+   statechartBehaviourTutorialSource.includes('function handleStatechartTrace(text)') &&
+   statechartBehaviourTutorialSource.includes('api.onStatechartTrace = handleStatechartTrace'),
+   "statechart labs and animated diagrams live in the dedicated behaviour tutorial");
 ok(sharedDbSource.includes('echo_actor :-') &&
    sharedDbSource.includes('receive({') &&
    sharedDbSource.includes('From ! echo(Msg)') &&
@@ -1064,7 +1137,7 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260729-spawn-source') &&
+   includes('/swi_wasm_actor_worker.js?v=20260731-statechart-halt') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
@@ -1098,8 +1171,9 @@ ok(includes('statechart_spawn/2, statechart_halt/2, statechart_halt/3,') &&
    "the main-thread SWI-WASM bridge implements statechart_halt/2-3");
 ok(workerSource.includes('"    monitor(Pid, Ref),"') &&
    workerSource.includes('"            exit(Pid, kill),"') &&
-   workerSource.includes('"            receive({down(Pid, Ref, _) -> Reply = killed})"'),
-   "statechart_halt/3 force-stops a busy SWI-WASM chart after its timeout");
+   workerSource.includes('"            Reply = killed"') &&
+   !workerSource.includes('"            receive({down(Pid, Ref, _) -> Reply = killed})"'),
+   "statechart_halt/3 returns after force-stopping a busy SWI-WASM chart");
 ok(workerSource.includes('data = typeof args[1] === "string" ? args[1] : formatValue(args[1]);') &&
    workerSource.includes('post("output", { data: data });'),
    "SWI-WASM-2 terminal output renders strings without Prolog quotes");
@@ -1246,6 +1320,163 @@ ok(includes('compound.functor === "=" && args.length === 2') &&
     });
   }).catch(function(error) {
     ok(false, "SWI-WASM replacement lifecycle: " + error.message);
+  }).then(function() {
+    const workerLoadCalls = [];
+    const terminal = {};
+    const workerLoadHarness = {
+      isSwiWasm2Mode: true,
+      isSwiWasmMode: false,
+      terminal: terminal,
+      prologEditor: {
+        setValue: function(sourceText) {
+          workerLoadCalls.push("editor:" + sourceText);
+        }
+      },
+      setCurrentExampleSource: function() {
+        workerLoadCalls.push("example");
+      },
+      selectDock: function(name) {
+        workerLoadCalls.push("dock:" + name);
+      },
+      pauseTerm: function(term) {
+        workerLoadCalls.push(term === terminal ? "pause" : "pause:wrong-term");
+      },
+      stripCommentLines: function() {
+        return "normalized.";
+      },
+      replaceSwiWasm2Shell: function(sourceText) {
+        workerLoadCalls.push("replace:" + sourceText);
+        return Promise.resolve("22");
+      },
+      echoTerminalSystemInfo: function(term, message) {
+        workerLoadCalls.push((term === terminal ? "echo:" : "echo:wrong-term:") + message);
+      },
+      resumeTerm: function(term) {
+        workerLoadCalls.push(term === terminal ? "resume" : "resume:wrong-term");
+      },
+      focusTerminalSoon: function() {
+        workerLoadCalls.push("focus");
+      },
+      log: function() {}
+    };
+    return loadTutorialProgramIntoCurrentSession.call(
+      workerLoadHarness, "tutorial_program."
+    ).then(function(loaded) {
+      ok(loaded === true &&
+         workerLoadCalls.indexOf("pause") < workerLoadCalls.indexOf("replace:normalized.") &&
+         workerLoadCalls.indexOf("replace:normalized.") < workerLoadCalls.indexOf(
+           "echo:% Spawned new session and loaded the tutorial program."
+         ) &&
+         workerLoadCalls.indexOf("echo:% Spawned new session and loaded the tutorial program.") <
+           workerLoadCalls.indexOf("resume"),
+         "tutorial Load replaces the SWI-WASM Worker shell before reporting success");
+    });
+  }).then(function() {
+    const actorLoadCalls = [];
+    const actorLoadHarness = {
+      isSwiWasm2Mode: false,
+      isSwiWasmMode: false,
+      terminal: {},
+      transportMode: "actor",
+      wsPid: 31,
+      transientLoadText: "",
+      prepareTutorialConsultTransport: function() { return true; },
+      selectDock: function() {},
+      loadTutorialSourceIntoWsSession: function(sourceText) {
+        actorLoadCalls.push("replace:" + sourceText);
+        return Promise.resolve(true);
+      },
+      echoTerminalSystemInfo: function(_term, message) {
+        actorLoadCalls.push("echo:" + message);
+      },
+      focusTerminalSoon: function() {},
+      log: function() {}
+    };
+    return loadTutorialProgramIntoCurrentSession.call(
+      actorLoadHarness, "tutorial_program."
+    ).then(function(loaded) {
+      ok(loaded === true &&
+         actorLoadCalls[0] === "replace:tutorial_program." &&
+         actorLoadCalls[1] === "echo:% Spawned new session and loaded the tutorial program.",
+         "tutorial Load reports the same completed lifecycle on remote ACTOR nodes");
+    });
+  }).catch(function(error) {
+    ok(false, "tutorial Load lifecycle: " + error.message);
+  }).then(function() {
+    const exampleLoadCalls = [];
+    const exampleTerminal = {};
+    const exampleLoadHarness = {
+      terminal: exampleTerminal,
+      terminalBusy: false,
+      queryState: "query",
+      isSwiWasm2Mode: true,
+      isSwiWasmMode: false,
+      pauseTerm: function(term) {
+        exampleLoadCalls.push(term === exampleTerminal ? "pause" : "pause:wrong-term");
+      },
+      stripCommentLines: function() { return "normalized_example."; },
+      replaceSwiWasm2Shell: function(sourceText) {
+        exampleLoadCalls.push("replace:" + sourceText);
+        return Promise.resolve("44");
+      },
+      echoTerminalSystemInfo: function(_term, message) {
+        exampleLoadCalls.push("echo:" + message);
+      },
+      resumeTerm: function(term) {
+        exampleLoadCalls.push(term === exampleTerminal ? "resume" : "resume:wrong-term");
+      },
+      focusTerminalSoon: function() {},
+      log: function() {}
+    };
+    return loadExampleProgramIntoCurrentSession.call(
+      exampleLoadHarness, "example_program.", "09 parallel.pl"
+    ).then(function(loaded) {
+      ok(loaded === true &&
+         exampleLoadCalls[0] === "pause" &&
+         exampleLoadCalls[1] === "replace:normalized_example." &&
+         exampleLoadCalls[2] ===
+           "echo:% Spawned new session and loaded 09 parallel.pl." &&
+         exampleLoadCalls[3] === "resume",
+         "Examples selection replaces the SWI-WASM Worker shell before reporting the loaded filename");
+    });
+  }).then(function() {
+    const actorExampleCalls = [];
+    const actorExampleLoadSpec = [];
+    const actorExampleHarness = {
+      terminal: {},
+      terminalBusy: false,
+      queryState: "query",
+      isSwiWasm2Mode: false,
+      isSwiWasmMode: false,
+      transportMode: "actor",
+      wsPid: 55,
+      pauseTerm: function() { actorExampleCalls.push("pause"); },
+      replaceWsSession: function(loadSpec) {
+        actorExampleLoadSpec.push(loadSpec);
+        actorExampleCalls.push("replace");
+        return Promise.resolve(66);
+      },
+      echoTerminalSystemInfo: function(_term, message) {
+        actorExampleCalls.push("echo:" + message);
+      },
+      resumeTerm: function() { actorExampleCalls.push("resume"); },
+      focusTerminalSoon: function() {},
+      log: function() {}
+    };
+    return loadExampleProgramIntoCurrentSession.call(
+      actorExampleHarness, "example_program.", "09 parallel.pl"
+    ).then(function(loaded) {
+      ok(loaded === true &&
+         actorExampleLoadSpec.length === 1 &&
+         actorExampleLoadSpec[0].text === "example_program." &&
+         actorExampleLoadSpec[0].origin === "editor" &&
+         actorExampleCalls[0] === "pause" &&
+         actorExampleCalls[1] === "replace" &&
+         actorExampleCalls[3] === "resume",
+         "Examples selection immediately replaces a remote ACTOR session with editor-origin source");
+    });
+  }).catch(function(error) {
+    ok(false, "Examples selection lifecycle: " + error.message);
   }).then(function() {
     console.log(failures === 0
       ? "\nswi_wasm_rpc_bridge smoke: PASS"

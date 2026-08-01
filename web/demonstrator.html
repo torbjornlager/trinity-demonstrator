@@ -2841,6 +2841,11 @@
                          :href="profileTutorial.apiPath"
                          @click.prevent="openTutorialDocument(profileTutorial.apiPath)">{{ profileTutorial.apiLabel }}</a>
                     </li>
+                    <li v-if="profileTutorial.behaviourPath" class="project-list-item">
+                      <a class="project-link tutorial-project-link"
+                         :href="profileTutorial.behaviourPath"
+                         @click.prevent="openTutorialDocument(profileTutorial.behaviourPath)">{{ profileTutorial.behaviourLabel }}</a>
+                    </li>
                   </ul>
                 </div>
                 <div v-if="showPrologExamples" class="project-group">
@@ -3053,7 +3058,7 @@
                   <div v-for="entry in filteredLogs"
                        :key="entry.id"
                        class="logger-item"
-                       :class="[entry.kind, entry.direction]"
+                       :class="[entry.kind, entry.direction, { active: isProtocolLogHighlighted(entry.id) }]"
                        :data-log-id="entry.id">
                     <div class="logger-meta">
                       <span>{{ entry.time }}</span>
@@ -3311,7 +3316,7 @@
                              @change="handleTerminalHighlightPredicatesChange">
                       <div class="settings-option-text">
                         <div class="settings-option-label">Highlight Web Prolog predicates</div>
-                        <div class="settings-option-note">Show Web Prolog-specific built-in predicate calls and predicate indicators from the manual in bold dark green.</div>
+                        <div class="settings-option-note">Show Web Prolog-specific built-in predicate calls and predicate indicators from the manual in bold green.</div>
                       </div>
                     </label>
                   </div>
@@ -5224,7 +5229,9 @@
             path: "/isobase-profile-tutorial",
             label: "The ISOBASE profile",
             apiPath: "/isobase-api-tutorial",
-            apiLabel: "The stateless HTTP API"
+            apiLabel: "The stateless HTTP API",
+            behaviourPath: "",
+            behaviourLabel: ""
           };
         }
         if (profile === "isotope") {
@@ -5233,7 +5240,9 @@
             path: "/isotope-profile-tutorial",
             label: "The ISOTOPE profile",
             apiPath: "/isotope-api-tutorial",
-            apiLabel: "The semi-stateful HTTP API"
+            apiLabel: "The semi-stateful HTTP API",
+            behaviourPath: "",
+            behaviourLabel: ""
           };
         }
         return {
@@ -5241,7 +5250,9 @@
           path: "/actor-profile-tutorial",
           label: "The ACTOR profile",
           apiPath: "/actor-api-tutorial",
-          apiLabel: "The stateful WebSocket API"
+          apiLabel: "The stateful WebSocket API",
+          behaviourPath: "/statechart-behaviour-tutorial",
+          behaviourLabel: "The statechart behaviour"
         };
       }
 
@@ -5286,6 +5297,7 @@
             queryState: "query",
             queryBuffer: "",
             transientLoadText: "",
+            tutorialRequestSource: "",
             lastBindings: {},
             lastDollarVars: [],
             activeGoal: "",
@@ -5323,6 +5335,7 @@
             wsTutorialLoadReject: null,
             logEntries: [],
             nextLogId: 1,
+	            protocolLogHighlightFromId: null,
 	            deadPids: {},
 	            nodeSelfUrl: "",
 	            nodeAnnouncedProfile: "actor",
@@ -5933,6 +5946,27 @@
               askExample: function(query, id) {
                 self.handleTutorialAsk(query, id);
               },
+              prepareProtocolLogger: function(options) {
+                return self.prepareProtocolLogger(options);
+              },
+              beginProtocolStep: function() {
+                return self.beginProtocolStep();
+              },
+              nextAnswer: function() {
+                self.nextTerminalAction();
+              },
+              stopAnswer: function() {
+                self.stopActivePaging();
+              },
+              abortComputation: function() {
+                self.abortActiveComputation();
+              },
+              protocolContext: function() {
+                return self.protocolLoggerContext();
+              },
+              recordProtocolTraffic: function(payload, direction, scope) {
+                return self.recordTutorialProtocolTraffic(payload, direction, scope);
+              },
               pasteExample: function(query, id) {
                 self.handleTutorialPaste(query, id);
               },
@@ -5944,6 +5978,9 @@
               },
               pasteText: function(text) {
                 self.handleTutorialPaste(text);
+              },
+              setRequestSource: function(source, id) {
+                return self.handleTutorialRequestSource(source, id);
               },
               consultSource: function(source, id) {
                 self.handleTutorialConsult(source, id);
@@ -6106,6 +6143,10 @@
             return this.editorKind === "statechart"
               ? this.statechartSourceLabel
               : this.prologSourceLabel;
+          },
+          editorSessionLoadedMessage: function() {
+            return "% Spawned new session and loaded " +
+              this.currentEditorSourceLabel();
           },
           currentEditorSourceDirty: function() {
             return this.editorKind === "statechart"
@@ -7115,6 +7156,9 @@
               this.wsEditorDirty = true;
               if (this.prologEditor) { this.prologEditor.setValue(entry.text); }
               this.setTerminalExamples(this.extractFileExamples(entry.text));
+              if (entry.kind === "prolog") {
+                this.loadExampleProgramIntoCurrentSession(entry.text, entry.name);
+              }
               return;
             }
             if (!entry.url) { return; }
@@ -7182,16 +7226,111 @@
                 self.focusActiveEditor();
               } else {
                 self.selectDock("terminal");
+                if (kind === "prolog") {
+                  return self.loadExampleProgramIntoCurrentSession(text, label).then(function(loaded) {
+                    if (!loaded) {
+                      self.focusTerminalSoon(true);
+                    }
+                    return loaded;
+                  });
+                }
                 self.focusTerminalSoon(true);
               }
+              return false;
             }).catch(function(error) {
               self.log("error", "Failed to load example file " + label + ": " + error.message, "examples");
               self.selectDock("terminal");
             });
           },
+          loadExampleProgramIntoCurrentSession: function(sourceText, label) {
+            var self = this;
+            var term = this.terminal;
+            var loadSpec = {
+              text: String(sourceText || ""),
+              origin: "editor"
+            };
+            var loadedSessionMessage = "% Spawned new session and loaded " + label + ".";
+            var loadAction;
+            var loadPromise;
+
+            if (!term || this.terminalBusy || this.queryState !== "query") {
+              return Promise.resolve(false);
+            }
+            if (this.isSwiWasm2Mode) {
+              loadAction = function() {
+                return self.replaceSwiWasm2Shell(
+                  self.stripCommentLines(loadSpec.text)
+                );
+              };
+            } else if (this.isSwiWasmMode) {
+              return Promise.resolve(false);
+            } else if (this.transportMode === "isotope") {
+              var generation = this.nextIsotopeGeneration();
+              loadAction = function() {
+                return self.isotopePid !== null
+                  ? self.replaceIsotopeSession(term, generation, loadSpec)
+                  : self.ensureIsotopeSession(term, generation, loadSpec);
+              };
+            } else if (this.transportMode === "actor") {
+              loadAction = function() {
+                return self.wsPid !== null
+                  ? self.replaceWsSession(loadSpec)
+                  : self.ensureWsSession(term, loadSpec);
+              };
+            } else {
+              return Promise.resolve(false);
+            }
+
+            this.pauseTerm(term);
+            try {
+              loadPromise = loadAction();
+            } catch (error) {
+              loadPromise = Promise.reject(error);
+            }
+            return Promise.resolve(loadPromise).then(function() {
+              self.echoTerminalSystemInfo(term, loadedSessionMessage);
+              self.resumeTerm(term);
+              self.focusTerminalSoon(true);
+              return true;
+            }).catch(function(error) {
+              self.log("error", "Example load failed: " + error.message, "examples");
+              term.error(error.message);
+              self.resumeTerm(term);
+              self.focusTerminalSoon(true);
+              return false;
+            });
+          },
           loadTutorialProgramIntoCurrentSession: function(sourceText) {
             var self = this;
-            if (this.isBrowserSwiWasmMode) {
+            var loadedSessionMessage = "% Spawned new session and loaded the tutorial program.";
+            if (this.isSwiWasm2Mode) {
+              if (!this.terminal || !this.prologEditor) {
+                return Promise.resolve(false);
+              }
+              this.prologEditor.setValue(sourceText);
+              this.setCurrentExampleSource({
+                kind: "prolog",
+                name: "<tutorial program>",
+                url: null
+              });
+              this.selectDock("terminal");
+              this.pauseTerm(this.terminal);
+              return this.replaceSwiWasm2Shell(
+                this.stripCommentLines(String(sourceText || ""))
+              ).then(function() {
+                self.echoTerminalSystemInfo(self.terminal, loadedSessionMessage);
+                self.resumeTerm(self.terminal);
+                self.focusTerminalSoon(true);
+                return true;
+              }).catch(function(error) {
+                self.log("error", "Tutorial consult failed: " + error.message, "tutorial");
+                self.terminal.error(error.message);
+                self.resumeTerm(self.terminal);
+                self.focusTerminalSoon(true);
+                return false;
+              });
+            }
+            if (this.isSwiWasmMode) {
               if (!this.terminal || !this.prologEditor) {
                 return Promise.resolve(false);
               }
@@ -7223,7 +7362,7 @@
                   tutorialGeneration,
                   { text: sourceText, origin: "transient" }
                 ).then(function() {
-                  self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
+                  self.echoTerminalSystemInfo(self.terminal, loadedSessionMessage);
                   self.focusTerminalSoon(true);
                   return true;
                 }).catch(function(error) {
@@ -7234,7 +7373,7 @@
                 });
               }
               return this.ensureIsotopeSession(this.terminal, this.currentIsotopeGeneration()).then(function() {
-                self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
+                self.echoTerminalSystemInfo(self.terminal, loadedSessionMessage);
                 self.focusTerminalSoon(true);
                 return true;
               }).catch(function(error) {
@@ -7249,7 +7388,7 @@
               if (this.wsPid !== null) {
                 this.transientLoadText = "";
                 return this.loadTutorialSourceIntoWsSession(sourceText).then(function() {
-                  self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
+                  self.echoTerminalSystemInfo(self.terminal, loadedSessionMessage);
                   self.focusTerminalSoon(true);
                   return true;
                 }).catch(function(error) {
@@ -7260,7 +7399,7 @@
                 });
               }
               return this.ensureWsSession(this.terminal).then(function() {
-                self.echoTerminalSystemInfo(self.terminal, "% Loaded tutorial program.");
+                self.echoTerminalSystemInfo(self.terminal, loadedSessionMessage);
                 self.focusTerminalSoon(true);
                 return true;
               }).catch(function(error) {
@@ -8054,6 +8193,18 @@
               this.terminal.insert(adapted);
             }
           },
+          handleTutorialRequestSource: function(source, id) {
+            var adapted = this.adaptTutorialText(source);
+            this.reportTutorialWarnings(adapted, "request source");
+            this.tutorialRequestSource = adapted;
+            this.log("ui", "Tutorial request source selected" + (id ? " from " + id : "") + ".", "tutorial");
+            this.selectDock("terminal");
+            if (this.terminal) {
+              this.echoTerminalSystemInfo(this.terminal, "% Tutorial source will accompany ISOBASE calls.");
+              this.focusTerminalSoon(true);
+            }
+            return true;
+          },
           handleTutorialConsult: function(source, id, alreadyAdapted) {
             var adapted = alreadyAdapted ? this.tutorialExampleText(source) : this.adaptTutorialText(source);
             this.reportTutorialWarnings(adapted, "consult");
@@ -8407,7 +8558,9 @@
               return "";
             }
             if (this.workspaceTab === "tutorial" && !this.isBrowserSwiWasmMode) {
-              return "";
+              return this.transportMode === "stateless"
+                ? String(this.tutorialRequestSource || "")
+                : "";
             }
             if (this.editorKind !== "prolog") {
               return "";
@@ -9454,7 +9607,6 @@
             this.swiWasm2ShellPid = pid;
             if (this.terminal) {
               this.pauseTerm(this.terminal);
-              this.echoTerminalSystemInfo(this.terminal, "% Loading SWI-WASM worker toplevel actor...");
             }
             try {
               this.spawnSwiWasmWorkerActor(
@@ -9905,7 +10057,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260729-spawn-source";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260731-statechart-halt";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10499,13 +10651,10 @@
               return;
             }
             if (source !== this.swiWasm2LoadedSource) {
-              var oldPid = this.swiWasm2ShellPid;
+              var loadedSessionMessage = this.editorSessionLoadedMessage();
               this.pauseTerm(term);
-              this.echoTerminalSystemInfo(
-                term,
-                "% Editor source changed; replacing SWI-WASM session " + oldPid + "."
-              );
               this.replaceSwiWasm2Shell(source).then(function(pid) {
+                this.echoTerminalSystemInfo(term, loadedSessionMessage);
                 this.sendSwiWasm2Call(term, pid);
               }.bind(this)).catch(function(error) {
                 this.finishError(term, error.message);
@@ -13292,7 +13441,6 @@
                 this.terminal.set_prompt(this.basePrompt());
               } else {
                 this.pauseTerm(this.terminal);
-                this.echoTerminalSystemInfo(this.terminal, "% Loading SWI-WASM worker toplevel actor...");
               }
             }
             this.$nextTick(function() {
@@ -13481,11 +13629,13 @@
           askCurrentIsotope: function(term) {
             var self = this;
             var reloadSpec = null;
+            var loadedSessionMessage = "";
             if ((((this.editorDirty && this.editorAutoloadAppliesToActiveWorkspace())) || this.transientLoadText !== "") &&
                 this.isotopePid !== null) {
               reloadSpec = this.spawnLoadSpec();
-              this.echoTerminalSystemInfo(term, "% " + (reloadSpec.origin === "transient" ? "Loading new source" : "Editor source changed") +
-                "; replacing ISOTOPE session " + this.isotopePid + ".");
+              loadedSessionMessage = reloadSpec.origin === "editor"
+                ? this.editorSessionLoadedMessage()
+                : "% Spawned new session and loaded the requested program.";
             }
             var generation = this.nextIsotopeGeneration();
             this.pauseTerm(term);
@@ -13493,6 +13643,9 @@
               ? this.replaceIsotopeSession(term, generation, reloadSpec)
               : this.ensureIsotopeSession(term, generation);
             sessionPromise.then(function(pid) {
+              if (loadedSessionMessage) {
+                self.echoTerminalSystemInfo(term, loadedSessionMessage);
+              }
               self.runIsotopeCall(term, pid, generation);
             }).catch(function(error) {
               if (reloadSpec && reloadSpec.origin === "transient" && self.transientLoadText === "") {
@@ -14190,17 +14343,22 @@
           askCurrentWs: function(term) {
             var self = this;
             var reloadSpec = null;
+            var loadedSessionMessage = "";
             if ((((this.wsEditorDirty && this.editorAutoloadAppliesToActiveWorkspace())) || this.transientLoadText !== "") &&
                 this.wsPid !== null) {
               reloadSpec = this.spawnLoadSpec();
-              this.echoTerminalSystemInfo(term, "% " + (reloadSpec.origin === "transient" ? "Loading new source" : "Editor source changed") +
-                "; replacing ACTOR session " + this.wsPid + ".");
+              loadedSessionMessage = reloadSpec.origin === "editor"
+                ? this.editorSessionLoadedMessage()
+                : "% Spawned new session and loaded the requested program.";
             }
             this.pauseTerm(term);
             var sessionPromise = reloadSpec
               ? this.replaceWsSession(reloadSpec)
               : this.ensureWsSession(term);
             sessionPromise.then(function(pid) {
+              if (loadedSessionMessage) {
+                self.echoTerminalSystemInfo(term, loadedSessionMessage);
+              }
               var command = {
                 command: "toplevel_call",
                 pid: pid,
@@ -14281,6 +14439,55 @@
           },
           logKindLabel: function(entry) {
             return entry.kind === "transport" ? "API" : entry.kind.toUpperCase();
+          },
+          protocolLoggerContext: function() {
+            var scope = this.transportMode === "actor"
+              ? (this.isSwiWasm2Mode ? "STATEFUL WORKER · JS OBJECT" : "STATEFUL WEBSOCKET")
+              : this.transportMode === "isotope"
+                ? "SEMI-STATEFUL HTTP"
+                : "STATELESS HTTP";
+            return {
+              available: this.loggerEnabledForRuntime,
+              profile: this.nodeAnnouncedProfile,
+              transport: this.transportMode,
+              label: scope
+            };
+          },
+          prepareProtocolLogger: function(options) {
+            var opts = options || {};
+            var context = this.protocolLoggerContext();
+            if (!context.available) {
+              return context;
+            }
+            this.loggerVisible = true;
+            this.visibleLogKinds = ["transport"];
+            this.persistLoggerFilters();
+            this.persistLoggerLayout();
+            if (opts.clear !== false) {
+              this.logEntries = [];
+              this.nextLogId = 1;
+            }
+            this.protocolLogHighlightFromId = null;
+            return this.protocolLoggerContext();
+          },
+          beginProtocolStep: function() {
+            this.protocolLogHighlightFromId = this.nextLogId;
+            return this.protocolLogHighlightFromId;
+          },
+          recordTutorialProtocolTraffic: function(payload, direction, scope) {
+            var message = typeof payload === "string"
+              ? payload
+              : JSON.stringify(this.sortProtocolLogValue(payload || {}), null, 2);
+            return this.log(
+              "transport",
+              message,
+              scope || (this.transportMode === "actor" ? "ws" : this.transportMode === "isotope" ? "isotope" : "http"),
+              direction === "response" ? "response" : "request"
+            );
+          },
+          isProtocolLogHighlighted: function(logId) {
+            return this.protocolLogHighlightFromId !== null &&
+              Number(logId) >= Number(this.protocolLogHighlightFromId);
           },
           logScopeLabel: function(entry) {
             if (entry.kind === "transport") {
@@ -14374,6 +14581,7 @@
           clearLogger: function() {
             this.logEntries = [];
             this.nextLogId = 1;
+            this.protocolLogHighlightFromId = null;
             this.focusTerminalSoon(true);
           },
           clearTerminal: function() {
@@ -14418,6 +14626,7 @@
           },
           openTutorialDocument: function(tutorialPath) {
             var target = tutorialPath || this.defaultTutorialPath();
+            this.tutorialRequestSource = "";
             this.selectWorkspace("tutorial");
             if (window.history && typeof window.history.replaceState === "function") {
               window.history.replaceState(null, document.title || "",
