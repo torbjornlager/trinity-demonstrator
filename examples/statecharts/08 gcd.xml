@@ -1,9 +1,9 @@
 <!--
 
-    Using Euclide's algorithm for computing the
-    Greatest Common Divisor (GCD) for a set of
-    integers.
+    Using Euclide's algorithm for computing the Greatest Common
+    Divisor (GCD) for a set of integers.
 
+    Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.
 
 -->

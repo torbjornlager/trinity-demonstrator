@@ -3,6 +3,7 @@
     to parse the user's input. Also a nice example of how to make use
     of the <history> element.
 
+    Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.
 
 -->

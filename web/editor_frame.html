@@ -245,7 +245,12 @@
 
         var WEB_PROLOG_CODEMIRROR_CALL_PATTERN = new RegExp(
           "^(?:" + WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES
-            .map(function(name) { return escapeRegExp(name); })
+            .map(function(name) {
+              if (name === "monitor") {
+                return "monitor(?!\\(\\s*(?:true|false)\\s*\\))";
+              }
+              return escapeRegExp(name);
+            })
             .join("|") + ")(?=\\()"
         );
         var WEB_PROLOG_CODEMIRROR_INDICATOR_PATTERN = new RegExp(

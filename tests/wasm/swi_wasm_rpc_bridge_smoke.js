@@ -113,7 +113,9 @@ function embeddedWorkbenchMethod(name, nextName) {
   const marker = name + ": function";
   const start = source.indexOf(marker);
   const functionStart = source.indexOf("function", start);
-  const end = source.indexOf("\n          " + nextName + ": function", functionStart);
+  const tail = source.slice(functionStart);
+  const nextBoundary = new RegExp("\\n[\\t ]+" + nextName + ": function").exec(tail);
+  const end = nextBoundary ? functionStart + nextBoundary.index : -1;
   const expression = source.slice(functionStart, end).trim().replace(/,$/, "");
   return Function("return (" + expression + ");")();
 }
@@ -141,6 +143,14 @@ const parseSwiWasmQualifiedServiceAddress = Function(
   qualifiedServiceParserSource +
   "\nreturn parseSwiWasmQualifiedServiceAddress;"
 )();
+const tutorialPredicateRangeSource = source.slice(
+  source.indexOf("var WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_NAMES"),
+  source.indexOf("function highlightWebPrologTutorialPredicates")
+);
+const webPrologTutorialPredicateRanges = Function(
+  tutorialPredicateRangeSource +
+  "\nreturn webPrologTutorialPredicateRanges;"
+)();
 const swiWasmLocalPidHelpers = Function(
   qualifiedServiceParserSource +
   "\nreturn { qualify: qualifySwiWasmLocalPid, localize: localizeSwiWasmPid };"
@@ -158,6 +168,9 @@ const makeBrowserPromiseRef = embeddedWorkbenchMethod(
 );
 const editorSessionLoadedMessage = embeddedWorkbenchMethod(
   "editorSessionLoadedMessage", "currentEditorSourceDirty"
+);
+const showStatechartExamples = embeddedWorkbenchMethod(
+  "showStatechartExamples", "nodeAuthLabel"
 );
 const swiWasmValueRenderer = {
   swiWasmStructuredCompound: embeddedWorkbenchMethod(
@@ -326,6 +339,7 @@ ok(includes("terminalHighlightPredicates: false") &&
    includes("(?:\\/|\\()") &&
    includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN") &&
    includes("WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN") &&
+   includes('return "monitor(?!\\\\(\\\\s*(?:true|false)\\\\s*\\\\))";') &&
    includes('"$1$2" + markup + "!]"') &&
    includes('"server_spawn"') &&
    includes('"server_spawn/3-4"') &&
@@ -357,10 +371,30 @@ ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
    editorIncludes('"flush/0"') &&
    editorIncludes("hasWebPrologSendOperatorLeftOperand") &&
    editorIncludes("hasWebPrologSendOperatorRightOperand") &&
+   editorIncludes('return "monitor(?!\\\\(\\\\s*(?:true|false)\\\\s*\\\\))";') &&
    editorIncludes("editor.addOverlay(webPrologCodeMirrorOverlay)") &&
    editorIncludes("editor.removeOverlay(webPrologCodeMirrorOverlay)") &&
    !editorIncludes('"flush",'),
    "CodeMirror can apply the same Web Prolog predicate highlighting overlay");
+{
+  const tutorialHighlightText = "statechart_spawn(Pid, [monitor(true)]), monitor(Pid, Ref), monitor/2, Pid ! play, append([], [], []), flush. statechart_halt/2-3";
+  const highlightedParts = webPrologTutorialPredicateRanges(tutorialHighlightText)
+    .map(range => tutorialHighlightText.slice(range.start, range.end));
+  ok(JSON.stringify(highlightedParts) === JSON.stringify([
+       "statechart_spawn", "monitor", "monitor/2", "!", "flush", "statechart_halt/2-3"
+     ]) &&
+     includes("highlightWebPrologTutorialPredicates(frame.contentDocument, this.terminalHighlightPredicates)") &&
+     includes('querySelectorAll("code")') &&
+     includes('querySelectorAll("pre")') &&
+     includes('if (!pre.querySelector("code"))') &&
+     includes('span.webprolog-tutorial-predicate') &&
+     includes('id = "webprolog-tutorial-predicate-style"') &&
+     includes("this.syncTutorialPredicateHighlighting();") &&
+     includes("Terminal and tutorials") &&
+     !highlightedParts.includes("monitor(true)") &&
+     !highlightedParts.includes("append"),
+     "tutorial code follows the Web Prolog predicate highlighting preference");
+}
 ok(includes("self.echoSwiWasmOutput(self.terminal, String(text).replace(/\\n$/, \"\"));"),
    "output is streamed to the terminal while a runner is active");
 ok(includes('"flush :-",') &&
@@ -418,10 +452,10 @@ ok(!tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"') &&
 ok(includes('<div class="project-title">Web Prolog code</div>') &&
    includes('<div class="project-title">SXML code</div>') &&
    includes('showPrologExamples: function() {\n            return this.hasWorkspacePane;') &&
-   includes('showStatechartExamples: function() {\n            return this.hasWorkspacePane;') &&
+   includes('showStatechartExamples: function() {\n            return this.hasWorkspacePane && this.effectiveTransportProfile === "actor";') &&
    includes('if (example.kind === "statechart") {\n              return "actor";') &&
    includes(':class="{ \'is-profile-incompatible\': isExampleUnavailable(example) }"'),
-   "the Examples drawer exposes both full code menus and marks profile-incompatible entries");
+   "the Examples drawer reserves its SXML menu for ACTOR profiles");
 ok(includes('"02 grammar.pl": "stateless"') &&
    includes('"11 promise-and-yield.pl": "stateless"') &&
    !actorExample("11 promise-and-yield.pl").includes("writeln(") &&
@@ -500,6 +534,19 @@ ok(includes('workspaceTab: /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash 
    includes('if (this.examplesVisible) {\n              return {\n                gridTemplateColumns:\n                  "36px " +\n                  this.examplesWidthPx + "px "') &&
    !includes('this.nodeAnnouncedProfile + "-examples"'),
    "N1-N5 and SWI-WASM share the Editor and Examples drawer layout");
+ok(showStatechartExamples.call({
+     hasWorkspacePane: true,
+     effectiveTransportProfile: "actor"
+   }) === true &&
+   showStatechartExamples.call({
+     hasWorkspacePane: true,
+     effectiveTransportProfile: "isotope"
+   }) === false &&
+   showStatechartExamples.call({
+     hasWorkspacePane: true,
+     effectiveTransportProfile: "stateless"
+   }) === false,
+   "the Examples drawer hides its entire SXML menu on N1 and N2");
 ok(includes('<p v-if="isBrowserSwiWasmMode" class="wb-header-section-note">\n              <a href="/wasm/shared_db.pl"') &&
    includes('rel="noopener noreferrer">Shared DB</a>') &&
    !includes('rel="noopener noreferrer">{{ currentPortalNodeAddress }}</a>'),
@@ -814,6 +861,7 @@ ok(includes("finalizeSwiWasmWorkerActor: function") &&
     resolveSwiWasmActorTarget: function(pid) { return String(pid); },
     parseSwiWasmRemoteToplevelPid: function() { return null; },
     parseSwiWasmRemoteActorPid: function() { return null; },
+    terminateLinkedSwiWasmChildren: function() {},
     notifySwiWasmActorMonitors: function(pid, reason) {
       notified = { pid, reason };
     },
@@ -854,6 +902,24 @@ ok(swiWasmLocalPidHelpers.qualify("2159438818") === "2159438818@localhost" &&
    includes("'?localhost'?") &&
    manualSource.includes('reserve <code>localhost</code> as the local-node designator'),
    "browser actors expose Id@localhost while coordinator keys remain numeric");
+{
+  const actorListText = embeddedWorkbenchMethod(
+    "swiWasmActorListText", "sendSwiWasmActorMessage"
+  );
+  global.qualifySwiWasmLocalPid = swiWasmLocalPidHelpers.qualify;
+  const listed = actorListText.call({
+    isSwiWasm2Mode: true,
+    swiWasm2ShellPid: "9939553740",
+    swiWasmActorWorkers: {
+      "6135591574": { done: false },
+      "9939553740": { done: false },
+      "7123456789": { done: true }
+    }
+  });
+  delete global.qualifySwiWasmLocalPid;
+  ok(listed === "[9939553740@localhost,6135591574@localhost]",
+     "actors/1 lists the SWI-WASM shell first, independent of numeric pid order");
+}
 ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
      "2159438818@localhost" &&
    pidDisplayHelpers.token("2159438818@localhost", true) === "2159438818" &&
@@ -994,6 +1060,11 @@ ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
    actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
+ok(actorTutorialSource.includes('id="wp-predicate-highlighting-note"') &&
+   actorTutorialSource.includes('Settings &rarr; Terminal') &&
+   actorTutorialSource.includes('Highlight Web Prolog predicates') &&
+   actorTutorialSource.includes('monitor(true)</code> do not'),
+   "the ACTOR profile tutorial explains Web Prolog predicate highlighting at its first actor call");
 ok(actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
    !actorTutorialSource.includes('id="sc-pr-spawn"') &&
    statechartBehaviourTutorialSource.includes('id="sc-pause-spawn"') &&
@@ -1137,16 +1208,67 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260731-statechart-halt') &&
+   includes('/swi_wasm_actor_worker.js?v=20260801-linked-children') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
    includes('this.sendSwiWasmActorMessage('),
    "SWI-WASM statechart terminal output is delivered to the spawning actor mailbox");
 ok(includes("spawnSwiWasmWorkerActorReady") &&
-   includes('result = this.spawnSwiWasmWorkerActorReady(message.goal') &&
+   includes('result = this.spawnSwiWasmWorkerActorReady(') &&
+   includes('message.goal || "true"') &&
    includes("await(SpawnPromise, SpawnedText)"),
    "SWI-WASM worker spawns resolve only after the child worker is ready");
+ok(workerSource.includes('option(link(Link), Options, true)') &&
+   workerSource.includes('actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText, #LinkText)') &&
+   includes('option(link(Link), Options, true)') &&
+   includes('swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText, #LinkText)') &&
+   includes('parentPid: pid') &&
+   includes('linked: message.link !== false'),
+   "both SWI-WASM models preserve default link(true) and explicit link(false) at spawn");
+{
+  const terminateLinkedChildren = embeddedWorkbenchMethod(
+    "terminateLinkedSwiWasmChildren", "exitSwiWasmActor"
+  );
+  const exitActor = embeddedWorkbenchMethod(
+    "exitSwiWasmActor", "abortSwiWasmActor"
+  );
+  const terminated = [];
+  function worker(pid) {
+    return {
+      postMessage: function(message) {
+        terminated.push(pid + ":" + message.reason);
+      },
+      terminate: function() {
+        terminated.push(pid + ":terminated");
+      }
+    };
+  }
+  const controller = {
+    swiWasmActorWorkers: {
+      linked: { worker: worker("linked"), done: false, parentPid: "parent", linked: true },
+      grandchild: { worker: worker("grandchild"), done: false, parentPid: "linked", linked: true },
+      unlinked: { worker: worker("unlinked"), done: false, parentPid: "parent", linked: false }
+    },
+    terminateLinkedSwiWasmChildren: terminateLinkedChildren,
+    exitSwiWasmActor: exitActor,
+    resolveSwiWasmActorTarget: function(pid) { return String(pid); },
+    parseSwiWasmRemoteToplevelPid: function() { return null; },
+    parseSwiWasmRemoteActorPid: function() { return null; },
+    notifySwiWasmActorMonitors: function() {},
+    log: function() {}
+  };
+  terminateLinkedChildren.call(controller, "parent");
+  ok(controller.swiWasmActorWorkers.linked.done === true &&
+     controller.swiWasmActorWorkers.linked.reason === "kill" &&
+     controller.swiWasmActorWorkers.grandchild.done === true &&
+     controller.swiWasmActorWorkers.grandchild.reason === "kill" &&
+     controller.swiWasmActorWorkers.unlinked.done === false &&
+     terminated.includes("linked:terminated") &&
+     terminated.includes("grandchild:terminated") &&
+     !terminated.includes("unlinked:terminated"),
+     "a terminating SWI-WASM parent recursively kills linked children but preserves link(false) children");
+}
 ok(workerSource.includes('adapted.replace(/self\\(statechart\\)\\./g') &&
    workerSource.includes('"[target(" + qualifyLocalPid(selfPidText) + ")|Options]"') &&
    includes('"statechart_actor",') &&

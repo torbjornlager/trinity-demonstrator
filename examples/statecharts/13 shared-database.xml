@@ -7,6 +7,9 @@
     predicate with the same name in that database.  The eventless guard also
     calls the shared predicate shared_transition_enabled/0.
 
+    Run the chart from the Examples menu.
+    Keep the Logger open and SXML trace selected.
+
 -->
 
 <statechart datamodel="web-prolog" initial="start">

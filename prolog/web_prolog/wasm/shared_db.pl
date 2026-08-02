@@ -46,6 +46,12 @@ count_actor(Count0) :-
     }).
 
 
+authorized(alice). 
+owns(alice, printer2). 
+online(printer2).
+
+
+
 % Shared database used by example 13 shared-database.xml.
 
 shared_fact(browser_shared_db).

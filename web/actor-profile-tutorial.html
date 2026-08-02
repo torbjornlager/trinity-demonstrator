@@ -9,322 +9,9 @@
     <meta name="description" content="A guided tutorial for actor processes, messaging, lifecycle, remote calls and reusable behaviours in Web Prolog.">
     <meta name="author" content="Torbjörn Lager">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap">
+    <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+    <link rel="stylesheet" href="/vendor/tutorial-common.css">
 
-    <style>
-        :root {
-            color-scheme: light;
-            --tutorial-bg: #ffffff;
-            --tutorial-ink: #111111;
-            --tutorial-muted: #444444;
-            --tutorial-heading: darkgreen;
-            --tutorial-link: darkgreen;
-            --tutorial-surface: #f8f8f8;
-            --tutorial-border: #d8d8d8;
-            --tutorial-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-            --tutorial-code-bg: rgba(15, 23, 42, 0.05);
-            --tutorial-code-border: rgba(148, 163, 184, 0.22);
-            --tutorial-info-bg: #edf9ef;
-            --tutorial-info-border: #b7dec0;
-            --tutorial-danger-bg: #fdf0f0;
-            --tutorial-danger-border: #e6b8b8;
-            --tutorial-button-bg: #ffffff;
-            --tutorial-button-ink: #1f2937;
-            --tutorial-button-line: #d4d4d4;
-            --tutorial-button-primary-bg: #4b88c7;
-            --tutorial-button-primary-ink: #ffffff;
-            --tutorial-button-primary-line: #3f76ad;
-            --tutorial-button-load-bg: #d8eafa;
-            --tutorial-button-load-ink: #17466f;
-            --tutorial-button-load-line: #a9cceb;
-            --mono-font: "IBM Plex Mono", "Menlo", "Consolas", monospace;
-            --mono-size: 13px;
-            --mono-weight: 400;
-            --mono-line-height: 1.45;
-            --tutorial-text-size: 14px;
-            --tutorial-title-size: 25px;
-            --tutorial-h1-size: 21px;
-            --tutorial-h2-size: 17px;
-            --tutorial-h3-size: 13px;
-        }
-
-        :root[data-theme="dark"] {
-            color-scheme: dark;
-            --tutorial-bg: #0f141a;
-            --tutorial-ink: #e5edf5;
-            --tutorial-muted: #a8b6c5;
-            --tutorial-heading: #8fd782;
-            --tutorial-link: #9cc8ff;
-            --tutorial-surface: #161d24;
-            --tutorial-border: #34414e;
-            --tutorial-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
-            --tutorial-code-bg: rgba(255, 255, 255, 0.05);
-            --tutorial-code-border: rgba(148, 163, 184, 0.18);
-            --tutorial-info-bg: #112319;
-            --tutorial-info-border: #2f6d45;
-            --tutorial-danger-bg: #2a1518;
-            --tutorial-danger-border: #7e434d;
-            --tutorial-button-bg: #151c23;
-            --tutorial-button-ink: #e5edf5;
-            --tutorial-button-line: #32404d;
-            --tutorial-button-primary-bg: #4b88c7;
-            --tutorial-button-primary-ink: #ffffff;
-            --tutorial-button-primary-line: #3f76ad;
-            --tutorial-button-load-bg: #254968;
-            --tutorial-button-load-ink: #e5f2ff;
-            --tutorial-button-load-line: #3b6f9c;
-        }
-
-        body {
-            margin: 0;
-            background: var(--tutorial-bg);
-            color: var(--tutorial-ink);
-        }
-
-        #tutorial {
-            margin: 50px;
-            padding: 16px;
-            display: block;
-        }
-
-        h1,
-        h2,
-        h3 {
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-        }
-
-        h1 { font-size: var(--tutorial-h1-size); color: var(--tutorial-heading); margin: 56px 0 24px 0; }
-        h2 { font-size: var(--tutorial-h2-size); margin-top: 46px; color: var(--tutorial-heading); }
-        h3 { font-size: var(--tutorial-h3-size); margin-top: 30px; color: var(--tutorial-heading); }
-
-        .tutorial-main-title {
-            font-size: var(--tutorial-title-size);
-            margin: 0 0 24px 0;
-        }
-
-        p,
-        li,
-        blockquote p {
-            line-height: 1.18;
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-            font-size: var(--tutorial-text-size);
-        }
-
-        pre,
-        code {
-            font-family: var(--mono-font);
-            font-size: var(--mono-size);
-            font-weight: var(--mono-weight);
-            line-height: var(--mono-line-height);
-        }
-
-        code {
-            background: var(--tutorial-code-bg);
-            border: 1px solid var(--tutorial-code-border);
-            border-radius: 4px;
-            padding: 0.08em 0.28em;
-        }
-
-        pre {
-            background: var(--tutorial-surface);
-            border: 1px solid var(--tutorial-border);
-            padding: 10px 12px;
-            overflow-x: auto;
-        }
-
-        pre code {
-            background: transparent;
-            border: 0;
-            padding: 0;
-            border-radius: 0;
-        }
-
-        .alert {
-            margin: 16px 0;
-            padding: 12px 14px;
-            border: 1px solid var(--tutorial-border);
-            box-shadow: var(--tutorial-shadow);
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-            font-size: var(--tutorial-text-size);
-        }
-
-        .alert p:last-child {
-            margin-bottom: 0;
-        }
-
-        .alert-info {
-            background: var(--tutorial-info-bg);
-            border-color: var(--tutorial-info-border);
-        }
-
-        .alert-danger {
-            background: var(--tutorial-danger-bg);
-            border-color: var(--tutorial-danger-border);
-        }
-
-        .tutorial-toc {
-            margin: 22px 0 30px 0;
-            padding: 14px 16px;
-            border: 1px solid var(--tutorial-border);
-            background: var(--tutorial-surface);
-        }
-
-        .tutorial-toc h2 {
-            margin: 0 0 12px 0;
-        }
-
-        .tutorial-toc ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .tutorial-toc li {
-            margin: 4px 0;
-        }
-
-        .tutorial-toc li.toc-h2 {
-            padding-left: 14px;
-        }
-
-        .tutorial-toc li.toc-h3 {
-            padding-left: 28px;
-        }
-
-        .tutorial-toc a {
-            text-decoration: none;
-        }
-
-        ul {
-            margin-top: 8px;
-        }
-
-        a {
-            color: var(--tutorial-link);
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        table {
-            color: var(--tutorial-ink);
-        }
-
-        .ask-buttons {
-            margin: 12px 0;
-        }
-
-        .btn {
-            border: 1px solid var(--tutorial-button-line);
-            border-radius: 6px;
-            background: var(--tutorial-button-bg);
-            color: var(--tutorial-button-ink);
-            min-height: 21px;
-            padding: 0 8px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            line-height: 1;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: var(--tutorial-button-primary-bg);
-            color: var(--tutorial-button-primary-ink);
-            border-color: var(--tutorial-button-primary-line);
-        }
-
-        .btn-load {
-            background: var(--tutorial-button-load-bg);
-            color: var(--tutorial-button-load-ink);
-            border-color: var(--tutorial-button-load-line);
-        }
-
-        .btn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-        }
-
-        em {
-            font-weight: bold;
-            font-style: normal;
-        }
-
-        blockquote {
-            margin-top: 12px;
-        }
-
-        .profile-path {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) 34px minmax(0, 1fr);
-            align-items: stretch;
-            gap: 8px;
-            margin: 22px 0;
-        }
-
-        .profile-path-step {
-            border: 1px solid var(--tutorial-border);
-            background: var(--tutorial-surface);
-            padding: 14px;
-        }
-
-        .profile-path-step.current {
-            border-color: var(--tutorial-info-border);
-            background: var(--tutorial-info-bg);
-        }
-
-        .profile-path-step strong,
-        .profile-path-step span,
-        .profile-path-step small {
-            display: block;
-        }
-
-        .profile-path-step span {
-            margin: 7px 0;
-        }
-
-        .profile-path-step small {
-            color: var(--tutorial-muted);
-            line-height: 1.35;
-        }
-
-        .profile-path-arrow {
-            align-self: center;
-            color: var(--tutorial-muted);
-            font: 24px/1 "Inter", ui-sans-serif, system-ui, sans-serif;
-            text-align: center;
-        }
-
-        .profile-path-caption {
-            color: var(--tutorial-muted);
-            margin-top: -8px;
-        }
-
-        @media (max-width: 780px) {
-            #tutorial {
-                margin: 18px;
-                padding: 8px;
-            }
-
-            .profile-path {
-                grid-template-columns: minmax(0, 1fr);
-            }
-
-            .profile-path-arrow {
-                transform: rotate(90deg);
-            }
-        }
-    </style>
 </head>
 <body>
 <div id="tutorial">
@@ -345,7 +32,7 @@
   <strong>Recommended starting point.</strong> Run this tutorial on the
   browser-based <strong>SWI-WASM</strong> ACTOR node. Nothing is installed on
   your computer and the complete actor system runs locally in a Web Worker.
-  The remote ACTOR nodes <code>n3</code> and <code>n4</code> work too.
+  The remote ACTOR nodes <code>N3</code> and <code>N4</code> work too.
 </div>
 
 <p>
@@ -360,11 +47,12 @@
 
 <p>
    The middle of the tutorial takes the same primitives across the wire.
+   Spawning an actor with the node option puts it on another node and gives you
+   back a pid you can talk to as if it were local.
    Toplevels become long-running session actors that you can drive with calling
    goals, templates, paging, and explicit output and input. <code>rpc/2-3</code>
    runs goals on a remote node; a later example builds explicit proof terms on
-   top of that facility. Spawning an actor with the node option puts it on
-   another node and gives you back a pid you can talk to as if it were local.
+   top of that facility.
 </p>
 
 <p> 
@@ -404,7 +92,7 @@
 <figure aria-labelledby="profile-path-caption">
   <div class="profile-path">
     <div class="profile-path-step current">
-      <strong>1. SWI-WASM &middot; ACTOR</strong>
+      <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
       <span>Actors, mailboxes, monitoring, links and statecharts</span>
       <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
     </div>
@@ -527,11 +215,6 @@ father_child(mike, tom).
 </button>
 </p>
 
-<div class="alert alert-info">
-  <strong>Tip!</strong> The family program, like many other programs in this tutorial, can  
-  also be accessed from the list of Web Prolog source code in the Examples drawer. Clicking
-  on a file name will place the code in the editor and allow you to edit and run it.
-</div>
 
 <h2>Parsing with a DCG</h2>
 
@@ -596,7 +279,13 @@ p(p(with)) --&gt; [with].
 </p>
 
 <div class="alert alert-info">
-  <strong>Tip!</strong> We are now moving on to non-standard concurrency
+  <strong>Tip!</strong> The grammar, like many other programs in this tutorial, can
+  also be accessed from the list of Web Prolog source code in the Examples drawer. Clicking
+  on a file name will place the code in the editor and allow you to edit and run it.
+</div>
+
+<div class="alert alert-info">
+  <strong>Info:</strong> We are now moving on to non-standard concurrency
   features. If you would like more exercises involving standard Prolog, we
   recommend <a href="https://swish.swi-prolog.org/" target="_blank" rel="noopener noreferrer">SWISH</a>,
   which contains many more examples, including examples of other Prolog
@@ -607,7 +296,6 @@ p(p(with)) --&gt; [with].
 
 <section id="tutorial-message-passing-concurrency">
 <h1>Message-passing concurrency</h1>
-
 
 <p>
     Web Prolog extends Prolog with Erlang-style message-passing concurrency.
@@ -622,6 +310,19 @@ p(p(with)) --&gt; [with].
   <code>$Pid</code>, which stand for the most recent bindings of those
   variables. If you want to inspect the WebSocket traffic, open the Logger
   and tick <code>API</code>.
+</div>
+
+<div class="alert alert-info" id="wp-predicate-highlighting-note">
+  <strong>Reading Web Prolog code.</strong> Bold green names identify Web
+  Prolog-specific predicate calls and predicate indicators from the manual.
+  In the first exercise below, <code>self</code> in <code>self(Self)</code> and
+  the indicator <code>self/1</code> receive that emphasis; ordinary Prolog
+  predicates and option terms such as <code>monitor(true)</code> do not. To turn
+  the emphasis off in tutorials and the Terminal, open
+  <strong>Settings &rarr; Terminal</strong> and clear
+  <strong>Highlight Web Prolog predicates</strong>. Highlighting in the
+  Examples editor is controlled separately by
+  <strong>Settings &rarr; Code coloring &rarr; Web Prolog code</strong>.
 </div>
 
 <h2>Your shell has a pid</h2>
@@ -869,14 +570,62 @@ p(p(with)) --&gt; [with].
 </button>
 </p>
 
+<h2>An actor can choose its own exit reason</h2>
+
+<p>
+    A monitored actor can stop itself with <code>exit/1</code>. The reason
+    ends up in the <code>down/3</code> message:
+</p>
+
+<pre id="mpc-exit-self">?- spawn(exit(my_reason), Pid, [monitor(true)]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="mpc-exit-self-flush">?- flush.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Sending to a dead pid is just a no-op, so monitors are the usual way to
+    learn that an actor has gone away.
+</p>
+
+
+<h2>Receive can do more than one thing</h2>
+
+<p>
+    A receive call can have several clauses. The first matching clause wins,
+    and unmatched messages are left in the mailbox for later.
+</p>
+
+<pre id="mpc-receive-clauses">?- self(Self),
+   Self ! goodbye(bob),
+   receive({
+       hello(Name) -&gt;
+           format("Hello, ~w!~n", [Name]) ;
+       goodbye(Name) -&gt;
+           format("Goodbye, ~w!~n", [Name])
+   }).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-receive-clauses&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
 
 
 <h2>Selective receive</h2>
 
 <p>
-    <code>receive/1</code> does not have to take the oldest message. It scans
-    the mailbox for the first message that matches one of its receive clauses 
-    and leaves the others in place. This example insists on handling
+    This example insists on handling
     <code>hello</code> before <code>goodbye</code> even if
     <code>goodbye</code> arrives first.
 </p>
@@ -917,27 +666,6 @@ wait_goodbye :-
     Erlang-style message passing.
 </p>
 
-<h2>Receive can do more than one thing</h2>
-
-<p>
-    A receive call can have several clauses. The first matching clause wins,
-    and unmatched messages are left in the mailbox for later.
-</p>
-
-<pre id="mpc-receive-clauses">?- self(Self),
-   Self ! goodbye(bob),
-   receive({
-       hello(Name) -&gt;
-           format("Hello, ~w!~n", [Name]) ;
-       goodbye(Name) -&gt;
-           format("Goodbye, ~w!~n", [Name])
-   }).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-receive-clauses&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
 
 <h2>Guards and timeouts</h2>
 
@@ -984,7 +712,7 @@ wait_goodbye :-
 
 <p>
     A Web Prolog receive guard is a logical query, not merely a Boolean test.
-    This actor receives a user and a file, then consults its private knowledge
+    This actor receives a user and a file, then consults the shared knowledge
     base to derive a suitable printer:
 </p>
 
@@ -998,8 +726,7 @@ wait_goodbye :-
               ) -&gt;
                ReplyTo ! routed(File0, Printer0)
        }),
-       Pid,
-       [src_text("authorized(alice). owns(alice, printer2). online(printer2).")]
+       Pid
    ),
    Pid ! print(alice, report_pdf, Self),
    receive({routed(File, Printer) -&gt; true}).
@@ -1019,6 +746,73 @@ wait_goodbye :-
     message. That derived binding remains available in the receive body,
     which sends it back in <code>routed/2</code>. Receiving has enriched the
     message by inference.
+</p>
+
+<h2>A simple priority queue</h2>
+
+<p>
+    This example, borrowed from Fred Hébert's book
+    <a target="_blank" href="https://learnyousomeerlang.com/">Learn You Some Erlang for Great Good!</a>, uses guards plus
+    zero-timeout receives to sort "important" messages before normal ones.
+    First load the predicates into your current session:
+</p>
+
+<pre id="mpc-priority-source">important(Messages) :-
+    receive({
+        Priority-Message if Priority &gt; 10 -&gt;
+            Messages = [Message|MoreMessages],
+            important(MoreMessages)
+    }, [
+        timeout(0),
+        on_timeout(normal(Messages))
+    ]).
+
+normal(Messages) :-
+    receive({
+        _-Message -&gt;
+            Messages = [Message|MoreMessages],
+            normal(MoreMessages)
+    }, [
+        timeout(0),
+        on_timeout(Messages = [])
+    ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#mpc-priority-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<p>
+    Now send four messages to yourself:
+</p>
+
+<pre id="mpc-priority-send">?- self(S),
+   S ! 15-high,
+   S ! 7-low,
+   S ! 1-low,
+   S ! 17-high.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-priority-send&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Then ask the queue to collect them in priority order:
+</p>
+
+<pre id="mpc-priority-run">?- important(Messages).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-priority-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The result should be <code>Messages = [high,high,low,low]</code>. This
+    works only because unmatched messages are deferred rather than discarded.
 </p>
 
 
@@ -1070,6 +864,30 @@ wait_goodbye :-
   atomically with process creation and avoids the race where the child exits
   before a later call to <code>monitor/2</code> has been set up.
 </div>
+
+<h2>See which actors are running</h2>
+
+<p>
+    <code>actors/1</code> returns a snapshot of the actors visible from your
+    current session. Spawn a waiting actor, take a snapshot, and then ask the
+    actor to stop:
+</p>
+
+<pre id="mpc-visible-actors">?- spawn(receive({stop -&gt; true}), Pid),
+   actors(Alive),
+   Pid ! stop.
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-visible-actors&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    The shell pid is always the first element of <code>Alive</code>, followed
+    here by <code>Pid</code>. The list is a snapshot: the waiting actor stops
+    after receiving <code>stop</code>.
+</p>
 
 <h2>Linking controls child lifetime</h2>
 
@@ -1137,100 +955,7 @@ wait_goodbye :-
 </button>
 </p>
 
-<h2>An actor can choose its own exit reason</h2>
 
-<p>
-    A monitored actor can stop itself with <code>exit/1</code>. The reason
-    ends up in the <code>down/3</code> message:
-</p>
-
-<pre id="mpc-exit-self">?- spawn(exit(my_reason), Pid, [monitor(true)]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="mpc-exit-self-flush">?- flush.
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-exit-self-flush&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    Sending to a dead pid is just a no-op, so monitors are the usual way to
-    learn that an actor has gone away.
-</p>
-
-<h2>A small priority queue</h2>
-
-<p>
-    This example, borrowed from Fred Hébert's book
-    <a target="_blank" href="https://learnyousomeerlang.com/">Learn You Some Erlang for Great Good!</a>, uses guards plus
-    zero-timeout receives to sort "important" messages before normal ones.
-    First load the predicates into your current session:
-</p>
-
-<pre id="mpc-priority-source">important(Messages) :-
-    receive({
-        Priority-Message if Priority &gt; 10 -&gt;
-            Messages = [Message|MoreMessages],
-            important(MoreMessages)
-    }, [
-        timeout(0),
-        on_timeout(normal(Messages))
-    ]).
-
-normal(Messages) :-
-    receive({
-        _-Message -&gt;
-            Messages = [Message|MoreMessages],
-            normal(MoreMessages)
-    }, [
-        timeout(0),
-        on_timeout(Messages = [])
-    ]).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="consult(&quot;#mpc-priority-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
-</p>
-
-<p>
-    Now send four messages to yourself:
-</p>
-
-<pre id="mpc-priority-send">?- self(S),
-   S ! 15-high,
-   S ! 7-low,
-   S ! 1-low,
-   S ! 17-high.
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-priority-send&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    Then ask the queue to collect them in priority order:
-</p>
-
-<pre id="mpc-priority-run">?- important(Messages).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#mpc-priority-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    The result should be <code>Messages = [high,high,low,low]</code>. This
-    works only because unmatched messages are deferred rather than discarded.
-</p>
 </section>
 
 <section id="tutorial-private-and-shared-knowledge">
@@ -2802,7 +2527,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <section id="statechart-behaviour-handoff">
 <h1>The statechart behaviour</h1>
-<p>Statechart actors now have a focused tutorial of their own. Continue with <a href="/statechart-behaviour-tutorial"><strong>The statechart behaviour</strong></a> for runnable labs on hierarchy, history, parallel regions, Prolog transition actions, time, deferred events and invoked actors.</p>
+<p>Statechart actors have a focused tutorial of their own. Continue with <a href="/statechart-behaviour-tutorial"><strong>The statechart behaviour</strong></a> for runnable labs on hierarchy, history, parallel regions, Prolog transition actions, time, deferred events and invoked actors.</p>
 </section>
 
 <section id="choosing-the-actor-profile">

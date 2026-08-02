@@ -105,8 +105,15 @@ async function main() {
   const spawnReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "spawn";
   }).pop();
-  ok(!!spawnReq && spawnReq.pid === "4200000000",
-     "spawn request preserves target pid");
+  ok(!!spawnReq && spawnReq.pid === "4200000000" && spawnReq.link === true,
+     "spawn request preserves target pid and defaults link to true");
+  S.actorSpawnWithPid("4300000000", "true", "", "", "false");
+  const unlinkedSpawnReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "spawn";
+  }).pop();
+  ok(!!unlinkedSpawnReq && unlinkedSpawnReq.pid === "4300000000" &&
+     unlinkedSpawnReq.link === false,
+     "spawn request preserves an explicit link(false)");
 
   // 8. Remote work is delegated to the JavaScript node controller.  The
   // worker keeps the same spawn vocabulary without owning a WebSocket.

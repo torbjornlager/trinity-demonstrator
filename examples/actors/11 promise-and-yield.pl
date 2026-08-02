@@ -29,7 +29,6 @@ asynch_test_3(Answer1, Answer2) :-
     yield(Ref2, Answer2).
 
 
-
 asynch_test_4(Answer1, Answer2) :-
 	promise('https://n3.elfenbenstornet.se', (p(X),sleep(0.2)), Ref1, [
         template(X),

@@ -837,6 +837,8 @@ test(node_portal_and_example_routes_served) :-
             read_text(IsobaseTutorialURL, IsobaseTutorialBody),
             format(atom(IsotopeTutorialURL), '~w/isotope-profile-tutorial', [URI]),
             read_text(IsotopeTutorialURL, IsotopeTutorialBody),
+            format(atom(TutorialCSSURL), '~w/vendor/tutorial-common.css', [URI]),
+            read_text(TutorialCSSURL, TutorialCSSBody),
             format(atom(OldWorkbenchURL), '~w/workbench', [URI]),
             read_text_status(OldWorkbenchURL, OldWorkbenchStatus, _OldWorkbenchBody),
             format(atom(EditorFrameURL), '~w/editor_frame?id=editor&mode=prolog', [URI]),
@@ -870,6 +872,10 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(PortalBody, _, _, _, 'The ISOTOPE profile')),
             assertion(sub_string(PortalBody, _, _, _, 'The ACTOR profile')),
             assertion(sub_string(DemonstratorBody, _, _, _, 'Book manuscript')),
+            assertion(sub_string(DemonstratorBody, _, _, _, 'in the Terminal and tutorials')),
+            assertion(sub_string(DemonstratorBody, _, _, _, 'function highlightWebPrologTutorialPredicates')),
+            assertion(sub_string(DemonstratorBody, _, _, _, 'querySelectorAll("pre")')),
+            assertion(sub_string(DemonstratorBody, _, _, _, 'this.syncTutorialPredicateHighlighting();')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="tutorial-private-and-shared-knowledge"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'discounted_price(Price)')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="epa-published-counter"')),
@@ -879,12 +885,26 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="rpc-promise-timeout"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="rpc-promise-poll"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'on_timeout(Answer = timeout)')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="mpc-visible-actors"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'actors(Alive),\n   Pid ! stop')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'spawn(spawn(receive({})))')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="mpc-link-default-actors">?- actors(Alive)')),
+            assertion(\+ sub_string(ActorTutorialBody, _, _, _, 'child_ready(Child)')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'browser-based <strong>SWI-WASM</strong> ACTOR node')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="recommended-path"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, '/vendor/tutorial-common.css')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'id="wp-predicate-highlighting-note"')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'Settings &rarr; Terminal')),
+            assertion(sub_string(ActorTutorialBody, _, _, _, 'monitor(true)</code> do not')),
             assertion(sub_string(ActorTutorialBody, _, _, _, '/actor-api-tutorial')),
             assertion(sub_string(ActorTutorialBody, _, _, _, '/statechart-behaviour-tutorial')),
             assertion(\+ sub_string(ActorTutorialBody, _, _, _, 'id="sc-pr-spawn"')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'the ISOBASE profile')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'id="recommended-path"')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, '<div class="profile-path-step current">\n        <strong>3. N1 &middot; ISOBASE</strong>')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, '/actor-api-tutorial')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, '/isotope-api-tutorial')),
+            assertion(sub_string(IsobaseTutorialBody, _, _, _, '/vendor/tutorial-common.css')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'id="isobase-basket-source"')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'data-request-source="#isobase-basket-source"')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'button.textContent = "Request source selected"')),
@@ -894,6 +914,11 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(IsobaseTutorialBody, _, _, _, '/isobase-api-tutorial')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Select <strong>N1</strong>')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, 'the ISOTOPE profile')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, 'id="recommended-path"')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, '<div class="profile-path-step current">\n        <strong>2. N2 &middot; ISOTOPE</strong>')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, '/actor-api-tutorial')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, '/isobase-api-tutorial')),
+            assertion(sub_string(IsotopeTutorialBody, _, _, _, '/vendor/tutorial-common.css')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, 'id="isotope-basket-source"')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, 'Interactive input and output')),
             assertion(sub_string(IsotopeTutorialBody, _, _, _, 'Where the actor boundary lies')),
@@ -941,7 +966,12 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(StatechartTutorialBody, _, _, _, 'statechart_halt($Pid, Reply, 1).')),
             assertion(\+ sub_string(StatechartTutorialBody, _, _, _, 'statechart_halt($Pid, Reply).')),
             assertion(sub_string(StatechartTutorialBody, _, _, _, 'id="more-examples"')),
-            assertion(\+ sub_string(StatechartTutorialBody, _, _, _, 'data-load-example'))
+            assertion(\+ sub_string(StatechartTutorialBody, _, _, _, 'data-load-example')),
+            assertion(sub_string(StatechartTutorialBody, _, _, _, '/vendor/tutorial-common.css')),
+            assertion(sub_string(TutorialCSSBody, _, _, _, '--tutorial-button-load-bg: #d8eafa')),
+            assertion(sub_string(TutorialCSSBody, _, _, _, 'button[data-ask]')),
+            assertion(sub_string(TutorialCSSBody, _, _, _, 'button[data-load]')),
+            assertion(sub_string(TutorialCSSBody, _, _, _, 'button[data-request-source]'))
         )).
 
 test(node_api_tutorial_routes_served) :-
@@ -960,11 +990,14 @@ test(node_api_tutorial_routes_served) :-
             assertion(sub_string(IsobaseBody, _, _, _, 'The ISOBASE API')),
             assertion(sub_string(IsotopeBody, _, _, _, 'The ISOTOPE API')),
             assertion(sub_string(ActorBody, _, _, _, 'The ACTOR API')),
+            assertion(sub_string(IsobaseBody, _, _, _, '/vendor/tutorial-common.css')),
+            assertion(sub_string(IsotopeBody, _, _, _, '/vendor/tutorial-common.css')),
+            assertion(sub_string(ActorBody, _, _, _, '/vendor/tutorial-common.css')),
             assertion(sub_string(IsobaseBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(IsotopeBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(ActorBody, _, _, _, 'append(Xs,Ys,[a,b,c])')),
             assertion(sub_string(IsobaseBody, _, _, _, 'GET /call?goal=')),
-            assertion(sub_string(IsobaseBody, _, _, _, 'Prepare Logger')),
+            assertion(sub_string(IsobaseBody, _, _, _, 'Open Logger')),
             assertion(sub_string(IsobaseBody, _, _, _, 'The complete <code>goal</code> appears again')),
             assertion(sub_string(IsotopeBody, _, _, _, 'POST /toplevel_next')),
             assertion(sub_string(IsotopeBody, _, _, _, 'POST /toplevel_halt')),
@@ -6482,6 +6515,43 @@ test(public_actor_client_actors_list_is_namespace_scoped,
                 )
             ),
             catch(exit(OwnerPid, kill), _, true)
+        )
+    ).
+
+test(public_actor_default_link_removes_nested_child,
+     true(LocalVisiblePid == ToplevelPid)) :-
+    with_node_server_options(
+        [profile(actor), sandbox(off)],
+        URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{command:toplevel_spawn,
+                                      options:"[session(true)]"}),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"spawn(spawn(receive({})))",
+                    template:"true"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [_]),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"sleep(0.2), actors(Pids)",
+                    template:"Pids"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"], [Reply]),
+                get_dict(data, Reply, [Row]),
+                get_dict('Pids', Row, VisiblePids0),
+                pid_list_value(VisiblePids0, [VisiblePid]),
+                pid_local(VisiblePid, LocalVisiblePid)
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
         )
     ).
 

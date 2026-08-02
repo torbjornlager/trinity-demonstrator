@@ -23,3 +23,9 @@ count_actor(Count0) :-
         stop ->
             true
     }).
+
+
+
+authorized(alice). 
+owns(alice, printer2). 
+online(printer2).

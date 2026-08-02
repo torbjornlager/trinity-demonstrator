@@ -3316,7 +3316,7 @@
                              @change="handleTerminalHighlightPredicatesChange">
                       <div class="settings-option-text">
                         <div class="settings-option-label">Highlight Web Prolog predicates</div>
-                        <div class="settings-option-note">Show Web Prolog-specific built-in predicate calls and predicate indicators from the manual in bold green.</div>
+                        <div class="settings-option-note">Show Web Prolog-specific built-in predicate calls and predicate indicators from the manual in bold green in the Terminal and tutorials. Web Prolog code coloring applies the same emphasis in the Examples editor.</div>
                       </div>
                     </label>
                   </div>
@@ -4000,6 +4000,9 @@
       var WEB_PROLOG_TERMINAL_HIGHLIGHT_CALL_PATTERN = new RegExp(
         "\\b(" + WEB_PROLOG_TERMINAL_HIGHLIGHT_PREDICATE_NAMES
           .map(function(name) {
+            if (name === "monitor") {
+              return "monitor(?!\\(\\s*(?:true|false)\\s*\\))";
+            }
             return escapeRegExp(name);
           })
           .join("|") + ")(?=\\()",
@@ -4039,6 +4042,142 @@
           .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN, "$1$2" + markup + "!]")
           .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_BARE_PATTERN, markup + "$1]")
           .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_CALL_PATTERN, markup + "$1]");
+      }
+
+      function webPrologTutorialPredicateRanges(text) {
+        var ranges = [];
+        function collect(pattern, startForMatch, lengthForMatch) {
+          var flags = pattern.flags.indexOf("g") >= 0 ? pattern.flags : pattern.flags + "g";
+          var matcher = new RegExp(pattern.source, flags);
+          var match;
+          while ((match = matcher.exec(text)) !== null) {
+            var start = startForMatch(match);
+            var length = lengthForMatch(match);
+            if (length > 0) {
+              ranges.push({ start: start, end: start + length });
+            }
+            if (match[0] === "") {
+              matcher.lastIndex += 1;
+            }
+          }
+        }
+        collect(
+          WEB_PROLOG_TERMINAL_HIGHLIGHT_INDICATOR_PATTERN,
+          function(match) { return match.index + match[1].length; },
+          function(match) { return match[2].length; }
+        );
+        collect(
+          WEB_PROLOG_TERMINAL_HIGHLIGHT_CALL_PATTERN,
+          function(match) { return match.index; },
+          function(match) { return match[1].length; }
+        );
+        collect(
+          WEB_PROLOG_TERMINAL_HIGHLIGHT_BARE_PATTERN,
+          function(match) { return match.index; },
+          function(match) { return match[1].length; }
+        );
+        collect(
+          WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN,
+          function(match) { return match.index + match[1].length; },
+          function() { return 1; }
+        );
+        collect(
+          WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN,
+          function(match) { return match.index + match[1].length + match[2].length; },
+          function() { return 1; }
+        );
+        ranges.sort(function(left, right) {
+          return left.start - right.start || right.end - left.end;
+        });
+        var nonOverlapping = [];
+        ranges.forEach(function(range) {
+          var previous = nonOverlapping.length ? nonOverlapping[nonOverlapping.length - 1] : null;
+          if (!previous || range.start >= previous.end) {
+            nonOverlapping.push(range);
+          }
+        });
+        return nonOverlapping;
+      }
+
+      function highlightWebPrologTutorialPredicates(doc, enabled) {
+        var codeContainers = [];
+        var style;
+        var highlighted;
+        if (!doc || !doc.documentElement) {
+          return;
+        }
+        highlighted = doc.querySelectorAll("span.webprolog-tutorial-predicate");
+        Array.prototype.forEach.call(highlighted, function(span) {
+          var parent = span.parentNode;
+          if (!parent) {
+            return;
+          }
+          parent.replaceChild(doc.createTextNode(span.textContent || ""), span);
+          parent.normalize();
+        });
+        if (!enabled) {
+          return;
+        }
+        style = doc.getElementById("webprolog-tutorial-predicate-style");
+        if (!style) {
+          style = doc.createElement("style");
+          style.id = "webprolog-tutorial-predicate-style";
+          style.textContent =
+            ":root { --tutorial-wp-predicate: #006400; }" +
+            ":root[data-theme=\"dark\"] { --tutorial-wp-predicate: #8fd782; }" +
+            ".webprolog-tutorial-predicate {" +
+              "color: var(--tutorial-wp-predicate) !important;" +
+              "font-weight: 700 !important;" +
+            "}";
+          (doc.head || doc.documentElement).appendChild(style);
+        }
+        Array.prototype.forEach.call(doc.querySelectorAll("code"), function(code) {
+          codeContainers.push(code);
+        });
+        Array.prototype.forEach.call(doc.querySelectorAll("pre"), function(pre) {
+          if (!pre.querySelector("code")) {
+            codeContainers.push(pre);
+          }
+        });
+        codeContainers.forEach(function(code) {
+          var textNodes = [];
+          function collectTextNodes(node) {
+            Array.prototype.forEach.call(node.childNodes || [], function(child) {
+              if (child.nodeType === 3) {
+                textNodes.push(child);
+              } else if (child.nodeType === 1 &&
+                         !(child.classList && child.classList.contains("webprolog-tutorial-predicate"))) {
+                collectTextNodes(child);
+              }
+            });
+          }
+          collectTextNodes(code);
+          textNodes.forEach(function(textNode) {
+            var text = textNode.nodeValue || "";
+            var ranges = webPrologTutorialPredicateRanges(text);
+            var fragment;
+            var cursor = 0;
+            if (!ranges.length || !textNode.parentNode) {
+              return;
+            }
+            fragment = doc.createDocumentFragment();
+            ranges.forEach(function(range) {
+              var span;
+              if (range.start > cursor) {
+                fragment.appendChild(doc.createTextNode(text.slice(cursor, range.start)));
+              }
+              span = doc.createElement("span");
+              span.className = "webprolog-tutorial-predicate";
+              span.textContent = text.slice(range.start, range.end);
+              fragment.appendChild(span);
+              cursor = range.end;
+            });
+            if (cursor < text.length) {
+              fragment.appendChild(doc.createTextNode(text.slice(cursor)));
+            }
+            textNode.parentNode.replaceChild(fragment, textNode);
+          });
+        });
       }
 
       function installTerminalUrlLinkFormatter() {
@@ -5709,7 +5848,7 @@
             return this.hasWorkspacePane;
           },
           showStatechartExamples: function() {
-            return this.hasWorkspacePane;
+            return this.hasWorkspacePane && this.effectiveTransportProfile === "actor";
           },
 	          nodeAuthLabel: function() {
 	            if (this.nodeAnnouncedAuthMode === "private") {
@@ -6922,6 +7061,18 @@
               }, options), window.location.origin);
             } catch (error) {
             }
+            this.syncTutorialPredicateHighlighting();
+          },
+          syncTutorialPredicateHighlighting: function() {
+            var frame = this.$refs.tutorialFrame;
+            if (!frame || !frame.contentDocument) {
+              return;
+            }
+            try {
+              highlightWebPrologTutorialPredicates(frame.contentDocument, this.terminalHighlightPredicates);
+            } catch (error) {
+              this.log("warn", "Tutorial predicate highlighting failed: " + error.message);
+            }
           },
           navigateTutorialFrameInPlace: function(anchor, tutorialPath) {
             var frame = this.$refs.tutorialFrame;
@@ -7058,6 +7209,7 @@
           handleTerminalHighlightPredicatesChange: function() {
             this.persistTerminalPredicateHighlightSettings();
             this.applyTerminalRuntimeSettings();
+            this.syncTutorialPredicateHighlighting();
             this.focusTerminalSoon(true);
           },
           handleCodeColoringChange: function() {
@@ -9895,8 +10047,18 @@
             window.swiWasmActorReservePid = function() {
               return self.reserveSwiWasmWorkerActorPid();
             };
-            window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText, nameText) {
-              return self.spawnSwiWasmWorkerActorReady(goalText, extraSourceText, pidText, nameText);
+            window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText, nameText, linkText) {
+              return self.spawnSwiWasmWorkerActorReady(
+                goalText,
+                extraSourceText,
+                pidText,
+                nameText,
+                "actor",
+                {
+                  parentPid: "main",
+                  linked: String(linkText === undefined ? "true" : linkText) !== "false"
+                }
+              );
             };
             window.swiWasmActorSend = function(pidText, messageText) {
               var from = self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main";
@@ -10057,7 +10219,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260731-statechart-halt";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260801-linked-children";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10077,6 +10239,7 @@
               parentPid: startFields && startFields.parentPid
                 ? String(startFields.parentPid)
                 : "",
+              linked: !(startFields && startFields.linked === false),
               readyPromise: null,
               resolveReady: null,
               rejectReady: null
@@ -10871,6 +11034,7 @@
               } else if (!entry.reason && message.reason) {
                 entry.reason = message.reason;
               }
+              this.terminateLinkedSwiWasmChildren(pid);
               if (message.output && this.terminal) {
                 this.echoSwiWasmOutput(this.terminal, String(message.output).replace(/\n$/, ""));
               }
@@ -10904,6 +11068,7 @@
                 }
                 this.notifySwiWasmActorMonitors(pid, entry.reason);
               }
+              this.terminateLinkedSwiWasmChildren(pid);
               if (entry.role === "shell_toplevel") {
                 this.logSwiWasmWorkerTraffic(message, "response");
               }
@@ -10936,7 +11101,17 @@
                 result = this.reserveSwiWasmActorRef();
                 break;
               case "spawn":
-                result = this.spawnSwiWasmWorkerActorReady(message.goal || "true", message.source || "", message.pid || "", message.name || "");
+                result = this.spawnSwiWasmWorkerActorReady(
+                  message.goal || "true",
+                  message.source || "",
+                  message.pid || "",
+                  message.name || "",
+                  "actor",
+                  {
+                    parentPid: pid,
+                    linked: message.link !== false && String(message.link) !== "false"
+                  }
+                );
                 break;
               case "statechart_spawn":
                 result = this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid);
@@ -11089,10 +11264,16 @@
             return localizeSwiWasmPid(pid);
           },
           swiWasmActorListText: function() {
-            var pids = this.isSwiWasm2Mode ? [] : [qualifySwiWasmLocalPid("main")];
+            var shellPid = this.isSwiWasm2Mode ? String(this.swiWasm2ShellPid || "") : "main";
+            var pids = [];
+            if (!this.isSwiWasm2Mode ||
+                (this.swiWasmActorWorkers[shellPid] &&
+                 !this.swiWasmActorWorkers[shellPid].done)) {
+              pids.push(qualifySwiWasmLocalPid(shellPid));
+            }
             Object.keys(this.swiWasmActorWorkers || {}).sort().forEach(function(pid) {
               var entry = this.swiWasmActorWorkers[pid];
-              if (entry && !entry.done) {
+              if (pid !== shellPid && entry && !entry.done) {
                 pids.push(qualifySwiWasmLocalPid(pid));
               }
             }.bind(this));
@@ -11309,6 +11490,16 @@
               });
             });
           },
+          terminateLinkedSwiWasmChildren: function(parentPid) {
+            var parent = String(parentPid);
+            Object.keys(this.swiWasmActorWorkers || {}).forEach(function(pid) {
+              var child = this.swiWasmActorWorkers[pid];
+              if (child && child.worker && !child.done && child.linked &&
+                  String(child.parentPid || "") === parent) {
+                this.exitSwiWasmActor(pid, "kill");
+              }
+            }.bind(this));
+          },
           exitSwiWasmActor: function(pidText, reasonText) {
             var pid = this.resolveSwiWasmActorTarget(pidText);
             var reason = String(reasonText || "true");
@@ -11334,6 +11525,7 @@
             }
             entry.done = true;
             entry.reason = reason;
+            this.terminateLinkedSwiWasmChildren(pid);
             try {
               entry.worker.postMessage({ command: "terminate", reason: reason });
               entry.worker.terminate();
@@ -11396,6 +11588,7 @@
             } else if (!entry.reason && reason) {
               entry.reason = reason;
             }
+            this.terminateLinkedSwiWasmChildren(pid);
             if (pid !== "main" && entry.worker) {
               try { entry.worker.terminate(); } catch (_reapError) {}
             }
@@ -11732,7 +11925,9 @@
               "        term_string(Goal, GoalText),",
               "        collect_spawn_source(Options, ExtraSource),",
               "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
-              "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
+              "        option(link(Link), Options, true),",
+              "        term_string(Link, LinkText),",
+              "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText, #LinkText),",
               "        await(SpawnPromise, SpawnedText),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), spawn/3)) ; SpawnedText == PidText )",
               "    ;   collect_remote_spawn_source(Goal, Options, ExtraSource),",

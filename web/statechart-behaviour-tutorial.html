@@ -6,58 +6,20 @@
   <title>Web Prolog Tutorial — The Statechart Behaviour</title>
   <meta name="description" content="A guided introduction to hierarchical, concurrent statechart actors in Web Prolog.">
   <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <link rel="stylesheet" href="/vendor/tutorial-common.css">
   <style>
     :root {
-      color-scheme: light;
-      --bg: #fff; --ink: #111; --muted: #4b5563; --heading: darkgreen;
-      --tutorial-bg: var(--bg); --tutorial-muted: var(--muted);
-      --link: darkgreen; --surface: #f8f8f8; --border: #d8d8d8;
-      --info-bg: #edf9ef; --info-border: #b7dec0;
-      --warn-bg: #fff7e6; --warn-border: #e2b65c;
-      --code-bg: rgba(15,23,42,.05); --button: #4b88c7; --button-border: #3f76ad;
       --tutorial-diagram-ink: #000; --tutorial-diagram-line: #555;
       --tutorial-diagram-highlight: #e07b00; --tutorial-diagram-active-fill: #fef08a;
-      --mono-font: "IBM Plex Mono", Menlo, Consolas, monospace;
-      --mono-size: 13px; --mono-weight: 400; --mono-line-height: 1.45;
-      --text-size: 14px; --title-size: 25px; --h2-size: 18px; --h3-size: 15px;
     }
     :root[data-theme="dark"] {
-      color-scheme: dark;
-      --bg: #0f141a; --ink: #e5edf5; --muted: #a8b6c5; --heading: #8fd782;
-      --link: #9cc8ff; --surface: #161d24; --border: #34414e;
-      --info-bg: #112319; --info-border: #2f6d45;
-      --warn-bg: #2a2110; --warn-border: #80652e;
-      --code-bg: rgba(255,255,255,.05);
       --tutorial-diagram-ink: #e5edf5; --tutorial-diagram-line: #94a3b8;
       --tutorial-diagram-highlight: #f3b55b; --tutorial-diagram-active-fill: #4d4312;
     }
-    body { margin: 0; background: var(--bg); color: var(--ink); }
-    main { margin: 50px; padding: 16px; max-width: 880px; }
-    h1, h2, h3 { color: var(--heading); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-    h1 { font-size: var(--title-size); margin: 0 0 18px; }
-    h2 { font-size: var(--h2-size); margin: 44px 0 15px; }
-    h3 { font-size: var(--h3-size); margin: 28px 0 10px; }
-    p, li, th, td { font: var(--text-size)/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
-    .lede { color: var(--muted); font-size: calc(var(--text-size) + 1px); }
-    a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
-    code, pre { font: var(--mono-weight) var(--mono-size)/var(--mono-line-height) var(--mono-font); }
-    code { background: var(--code-bg); border-radius: 4px; padding: .08em .28em; }
-    pre { background: var(--surface); border: 1px solid var(--border); overflow-x: auto; padding: 12px 14px; white-space: pre-wrap; }
-    pre code { background: transparent; padding: 0; }
-    nav, .note, .warning, .expected, .flow { border: 1px solid var(--border); margin: 20px 0; padding: 14px 17px; }
-    nav, .expected, .flow { background: var(--surface); }
-    nav ul { margin: 0; padding-left: 20px; columns: 2; }
-    .note { background: var(--info-bg); border-color: var(--info-border); }
-    .warning { background: var(--warn-bg); border-color: var(--warn-border); }
+    main { max-width: 880px; }
     .flow { font-family: var(--mono-font); line-height: 1.8; text-align: center; }
     figure svg { display: block; max-width: 100%; height: auto; background: transparent; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-    button { background: var(--button); border: 1px solid var(--button-border); border-radius: 6px; color: #fff; cursor: pointer; font: 700 10px/1 Inter, sans-serif; letter-spacing: .04em; padding: 7px 11px; text-transform: uppercase; }
-    button.secondary { background: var(--surface); border-color: var(--border); color: var(--ink); }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
-    th { background: var(--surface); }
-    @media (max-width: 700px) { main { margin: 18px; padding: 8px; } nav ul { columns: 1; } .flow { text-align: left; } }
+    @media (max-width: 780px) { .flow { text-align: left; } }
   </style>
 </head>
 <body>

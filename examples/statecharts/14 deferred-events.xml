@@ -7,8 +7,8 @@
     changes the active state to ready, where both commands are re-offered
     before a newer external event is accepted.
 
-    Keep the Logger open and SXML trace selected to see the deferred/1
-    and reoffered/1 trace events.
+    Run the chart and send it events from the Examples menu.
+    Keep the Logger open and SXML trace selected.
 
 -->
 

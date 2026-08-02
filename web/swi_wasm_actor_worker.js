@@ -293,12 +293,13 @@
     return actorRequest("reserve_pid", {});
   }
 
-  function actorSpawnWithPid(targetPidText, goalText, sourceText, nameText) {
+  function actorSpawnWithPid(targetPidText, goalText, sourceText, nameText, linkText) {
     return actorRequest("spawn", {
       pid: String(targetPidText || ""),
       goal: String(goalText || "true"),
       source: String(sourceText || ""),
-      name: String(nameText || "")
+      name: String(nameText || ""),
+      link: String(linkText === undefined ? "true" : linkText) !== "false"
     });
   }
 
@@ -796,7 +797,9 @@
       "        Pid = LocalPid@localhost,",
       "        term_string(Goal, GoalText),",
       "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
-      "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText),",
+      "        option(link(Link), Options, true),",
+      "        term_string(Link, LinkText),",
+      "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText, #LinkText),",
       "        await(Promise, SpawnedText),",
       "        SpawnedText == PidText",
       "    ;   collect_spawn_source(Options, ExtraSource),",

@@ -1,9 +1,9 @@
 <!--
 
-    A clock - ticking once a second - and a
-    state parallel to it that is listening.
+    A clock ticking - and a state parallel to it that is listening.
 
-    Keep the Logger open and Statechart Trace selected.
+    Run the chart from the Examples menu.
+    Keep the Logger open and SXML trace selected.
 
 -->
 
