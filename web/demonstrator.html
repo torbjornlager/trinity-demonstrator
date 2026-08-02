@@ -977,7 +977,8 @@
 
       .terminal-profile-button,
       .terminal-history-button,
-      .terminal-examples-button {
+      .terminal-examples-button,
+      .terminal-actor-button {
         min-width: 64px;
         max-width: 96px;
         width: auto;
@@ -997,9 +998,16 @@
 
       .terminal-profile-button:disabled,
       .terminal-history-button:disabled,
-      .terminal-examples-button:disabled {
+      .terminal-examples-button:disabled,
+      .terminal-actor-button:disabled {
         opacity: 0.45;
         cursor: not-allowed;
+      }
+
+      .terminal-actor-button {
+        min-width: 0;
+        padding-right: 8px;
+        padding-left: 8px;
       }
 
       .terminal-profile-button svg,
@@ -2973,6 +2981,22 @@
                               @click="chooseExampleQuery(example)">{{ example.label }}</button>
                     </div>
                   </div>
+                  <button v-if="effectiveTransportProfile === 'actor'"
+                          class="terminal-actor-button"
+                          type="button"
+                          tabindex="-1"
+                          @mousedown.prevent
+                          @click="runActorEditorGoal('flush.')"
+                          :disabled="!canSubmitNewQuery"
+                          title="Call flush/0 in the Editor session">Flush</button>
+                  <button v-if="effectiveTransportProfile === 'actor'"
+                          class="terminal-actor-button"
+                          type="button"
+                          tabindex="-1"
+                          @mousedown.prevent
+                          @click="runActorEditorGoal('actors(Actors).')"
+                          :disabled="!canSubmitNewQuery"
+                          title="Call actors/1 in the Editor session">Actors</button>
                 </div>
                 <div class="terminal-actionbar">
                   <div v-if="nodeAnnouncedProfile === 'workbench'" class="terminal-profile">
@@ -6814,6 +6838,12 @@
               return;
             }
             this.submitWorkbenchCommand(query, query);
+          },
+          runActorEditorGoal: function(command) {
+            if (this.effectiveTransportProfile !== "actor") {
+              return false;
+            }
+            return this.submitWorkbenchCommand(command, command);
           },
           extractFileExamples: function(text) {
             var block = null;
