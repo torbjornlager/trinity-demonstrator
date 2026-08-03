@@ -321,7 +321,7 @@ p(p(with)) --&gt; [with].
   the emphasis off in tutorials and the Terminal, open
   <strong>Settings &rarr; Terminal</strong> and clear
   <strong>Highlight Web Prolog predicates</strong>. Highlighting in the
-  Examples editor is controlled separately by
+  Editor is controlled separately by
   <strong>Settings &rarr; Code coloring &rarr; Web Prolog code</strong>.
 </div>
 
@@ -742,7 +742,7 @@ wait_goodbye :-
     <code>Printer = printer2</code>. The message pattern binds
     <code>User</code> and <code>File0</code>. The guard then proves that the
     user is authorised, owns an online printer, and binds
-    <code>Printer0</code> to <code>printer2</code>&mdash;a value absent from the
+    <code>Printer0</code> to <code>printer2</code> &mdash; a value absent from the
     message. That derived binding remains available in the receive body,
     which sends it back in <code>routed/2</code>. Receiving has enriched the
     message by inference.
@@ -1031,8 +1031,7 @@ price(Item, Price) :-
 </p>
 
 <p>
-    The result includes <code>Price = 90.0</code>. The precise form of the
-    process identifier bound to <code>Self</code> is implementation dependent.
+    The result includes <code>Price = 90.0</code>.
 </p>
 
 <p>
@@ -1120,9 +1119,7 @@ price(Item, Price) :-
 <h1>Programming with actors</h1>
 
 <p>
-    The following examples make one point clear: Web Prolog actors do not just borrow
-    Erlang's vocabulary. If you program them in the Erlang style, they behave
-    that way too.
+    Let's try some Erlang-style concurrent programming in Web Prolog.
 </p>
 
 <h2>A count server</h2>
