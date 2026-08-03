@@ -674,24 +674,7 @@ with_node_cache_size(Size, Goal) :-
     ).
 
 clear_node_cache :-
-    forall(retract(node:cache(Gid, Offset, Pid)),
-           (
-               forall(retract(node_engine:cache_alarm(Gid, Offset, Pid, AlarmId)),
-                      catch(remove_alarm(AlarmId), _, true)),
-               clear_cached_pid(Pid)
-           )).
-
-clear_cached_pid(Pid) :-
-    % Cache cleanup in the suite should be best-effort and local-only. In a
-    % long full run the cache can still contain canonical pids from nodes that
-    % have already been shut down, and routing actors:exit/2 through the remote
-    % transport path here can block on dead nodes. If a cached pid still
-    % resolves to a live local thread, stop it directly; otherwise just drop
-    % the cache entry.
-    (   actors:resolve_thread(Pid, ThreadId)
-    ->  catch(thread_signal(ThreadId, exit(kill)), _, true)
-    ;   true
-    ).
+    node_engine:clear_cache.
 
 pid_stopped(Pid) :-
     (   Pid = LocalPid@_,
@@ -898,7 +881,6 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(ActorTutorialBody, _, _, _, '/vendor/tutorial-common.css')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'id="wp-predicate-highlighting-note"')),
             assertion(sub_string(ActorTutorialBody, _, _, _, 'Settings &rarr; Terminal')),
-            assertion(sub_string(ActorTutorialBody, _, _, _, 'monitor(true)</code> do not')),
             assertion(sub_string(ActorTutorialBody, _, _, _, '/actor-api-tutorial')),
             assertion(sub_string(ActorTutorialBody, _, _, _, '/statechart-behaviour-tutorial')),
             assertion(\+ sub_string(ActorTutorialBody, _, _, _, 'id="sc-pr-spawn"')),

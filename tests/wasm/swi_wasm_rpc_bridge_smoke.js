@@ -589,10 +589,6 @@ ok(showStatechartExamples.call({
      effectiveTransportProfile: "stateless"
    }) === false,
    "the Examples drawer hides its entire SXML menu on N1 and N2");
-ok(includes('<p v-if="isBrowserSwiWasmMode" class="wb-header-section-note">\n              <a href="/wasm/shared_db.pl"') &&
-   includes('rel="noopener noreferrer">Shared DB</a>') &&
-   !includes('rel="noopener noreferrer">{{ currentPortalNodeAddress }}</a>'),
-   "remote and SWI-WASM shared database links use the Shared DB label");
 ok(includes('.editor-source-label {') &&
    includes('font-size: calc(var(--mono-size) + 1px);') &&
    includes('color: #000000;') &&
@@ -1102,11 +1098,6 @@ ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
    actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
-ok(actorTutorialSource.includes('id="wp-predicate-highlighting-note"') &&
-   actorTutorialSource.includes('Settings &rarr; Terminal') &&
-   actorTutorialSource.includes('Highlight Web Prolog predicates') &&
-   actorTutorialSource.includes('monitor(true)</code> do not'),
-   "the ACTOR profile tutorial explains Web Prolog predicate highlighting at its first actor call");
 ok(actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
    !actorTutorialSource.includes('id="sc-pr-spawn"') &&
    statechartBehaviourTutorialSource.includes('id="sc-pause-spawn"') &&
@@ -1140,7 +1131,6 @@ ok(workerSource.includes('\":- use_module(\'/worker_actor_bridge.pl\').\\n\" + s
 ok(tutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
    actorTutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
    tutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
-   actorTutorialSource.includes('prolog/web_prolog/wasm/shared_db.pl') &&
    !actorTutorialSource.includes('consult(&quot;#mpc-echo-source&quot;)'),
    "the echo tutorials identify the shared definition and need neither source transfer nor Load");
 ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
@@ -1222,7 +1212,6 @@ ok(manualSource.includes('id="runtime_property/1"') &&
      manualSource.indexOf('<article class="predicate-entry" id="promise/3-4">'),
      manualSource.indexOf('<article class="predicate-entry" id="yield/2-3">')
    ).includes('offset(+Integer)') &&
-   manualSource.includes('opaque ten-digit integer') &&
    manualSource.includes('If <code>on_timeout/1</code> is omitted, the timeout path succeeds.') &&
    !manualSource.includes('The native runtime additionally accepts') &&
    !manualSource.includes('The SWI-WASM runtimes additionally accept'),

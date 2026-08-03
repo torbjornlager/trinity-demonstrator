@@ -885,9 +885,19 @@ normal(Messages) :-
 
 <p>
     The shell pid is always the first element of <code>Alive</code>, followed
-    here by <code>Pid</code>. The list is a snapshot: the waiting actor stops
-    after receiving <code>stop</code>.
+    by those of child actors. The list is a snapshot: the waiting actor stops
+    after receiving <code>stop</code>. Check that it's now gone:
 </p>
+
+<pre id="mpc-visible-actors2">?- actors(Alive).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#mpc-visible-actors2&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+
 
 <h2>Linking controls child lifetime</h2>
 
@@ -1109,15 +1119,8 @@ price(Item, Price) :-
 <section id="tutorial-erlang-style-programming-examples">
 <h1>Programming with actors</h1>
 
-<blockquote>
-  <p>
-    I would prefer multi-threading in Prolog to look as much as possible like Erlang.
-  </p>
-  <p><em>Richard O'Keefe</em></p>
-</blockquote>
-
 <p>
-    These examples make one point clear: Web Prolog actors do not just borrow
+    The following examples make one point clear: Web Prolog actors do not just borrow
     Erlang's vocabulary. If you program them in the Erlang style, they behave
     that way too.
 </p>

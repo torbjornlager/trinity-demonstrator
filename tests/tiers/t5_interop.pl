@@ -396,7 +396,23 @@ test(call_json_failure) :-
     both_nodes_agree('/call?goal=fail', _, _).
 
 test(call_json_existence_error) :-
-    both_nodes_agree('/call?goal=unknown_pred_xyz_77', _, _).
+    node_url(LegacyURL),
+    t5_local_url(NewURL),
+    Path = '/call?goal=unknown_pred_xyz_77',
+    fetch_raw(LegacyURL, Path, LegacyStatus, LegacyBody),
+    fetch_raw(NewURL, Path, NewStatus, NewBody),
+    atom_json_dict(LegacyBody, Legacy, []),
+    atom_json_dict(NewBody, New, []),
+    (   LegacyStatus == NewStatus,
+        Legacy.type == New.type,
+        Legacy.data == New.data,
+        \+ get_dict(details, Legacy, _),
+        New.details == "error(existence_error(procedure,unknown_pred_xyz_77/0),_)"
+    ->  true
+    ;   throw(golden_mismatch(Path,
+                              legacy(LegacyStatus, Legacy),
+                              new(NewStatus, New)))
+    ).
 
 test(call_parse_error) :-
     both_nodes_agree('/call?goal=foo(&format=prolog', _, _).

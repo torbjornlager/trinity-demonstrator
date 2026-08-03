@@ -3,7 +3,9 @@
     compute_answer/6,
     compute_answer/7,
     compute_answer/8,
-    cache/3
+    cache/3,
+    clear_cache/0,
+    clear_node_cache/1
 ]).
 
 /** <module> Stateless Node Query Engine
@@ -17,16 +19,20 @@ Core `/call` answer computation and continuation cache management.
 :- use_module(node_runtime_state, [current_node_port/1]).
 
 :- use_module(library(settings)).
-:- use_module(library(time), [alarm/4, remove_alarm/1]).
+:- use_module(library(time), [alarm/4, install_alarm/1, remove_alarm/1]).
 
 :- dynamic cache/3.
 :- dynamic cache_alarm/4.
+:- dynamic managed_cache_alarm/2.
 
 %!  cache(?Gid, ?Offset, ?Pid) is nondet.
 %
 %   Dynamic continuation cache for stateless `/call` paging. Every entry has
 %   a matching `cache_alarm/4`; an unused entry is removed and its actor is
-%   stopped after the node's `cache_ttl`.
+%   stopped after the node's `cache_ttl`. `cache_alarm/4` stores an ordinary
+%   integer timer reference. The SWI alarm blob itself remains owned by the
+%   long-lived cache timer thread, so an HTTP worker can terminate without
+%   invalidating cache metadata retained by the node.
 %   `Gid` is a goal/template/load-text hash, `Offset` is the next slice offset,
 %   and `Pid` is the toplevel actor that still owns remaining solutions.
 
@@ -149,16 +155,45 @@ node_cache_key(NodeKey) :-
 %   Retract one cache entry (oldest first under current insertion order).
 cache_retract(Gid, N, Pid) :-
     with_mutex(node_engine_cache,
-               cache_take(Gid, N, Pid, AlarmId)),
-    cancel_cache_alarm(AlarmId).
+               cache_take(Gid, N, Pid, TimerRef)),
+    cancel_cache_alarm(TimerRef).
 
 
-cache_take(Gid, N, Pid, AlarmId) :-
+cache_take(Gid, N, Pid, TimerRef) :-
     once(retract(cache(Gid, N, Pid))),
-    (   retract(cache_alarm(Gid, N, Pid, AlarmId0))
-    ->  AlarmId = AlarmId0
-    ;   AlarmId = none
+    (   retract(cache_alarm(Gid, N, Pid, TimerRef0))
+    ->  TimerRef = TimerRef0
+    ;   TimerRef = none
     ).
+
+
+%!  clear_cache is det.
+%!  clear_node_cache(+Port:integer) is det.
+%
+%   Remove cached continuations and stop their actors. The node-scoped form
+%   leaves entries belonging to other nodes in the same SWI process intact.
+clear_cache :-
+    clear_cache_matching(all).
+
+clear_node_cache(Port) :-
+    clear_cache_matching(node(node_port(Port))).
+
+clear_cache_matching(Scope) :-
+    with_mutex(node_engine_cache,
+               cache_take_all(Scope, Entries)),
+    maplist(dispose_cache_entry, Entries).
+
+cache_take_all(Scope, Entries) :-
+    (   cache_take_matching(Scope, Pid, TimerRef)
+    ->  Entries = [cache_entry(Pid, TimerRef)|Rest],
+        cache_take_all(Scope, Rest)
+    ;   Entries = []
+    ).
+
+cache_take_matching(all, Pid, TimerRef) :-
+    cache_take(_, _, Pid, TimerRef).
+cache_take_matching(node(NodeKey), Pid, TimerRef) :-
+    cache_take(node_cache(NodeKey, _), _, Pid, TimerRef).
 
 
 %!  cache_update(+Gid, +N, +Pid) is det.
@@ -169,15 +204,21 @@ cache_take(Gid, N, Pid, AlarmId) :-
 cache_update(Gid, N, Pid) :-
     node:effective_cache_ttl(CacheTTL),
     node:effective_cache_size(Size),
+    next_cache_timer_ref(TimerRef),
     with_mutex(node_engine_cache,
-               cache_insert(Gid, N, Pid, CacheTTL, Size, Evicted)),
+               cache_insert(Gid, N, Pid, TimerRef, Size, Evicted)),
+    catch(schedule_cache_alarm(TimerRef, CacheTTL, Gid, N, Pid),
+          Error,
+          ( rollback_cache_insert(Gid, N, Pid, TimerRef),
+            dispose_cache_entry(Evicted),
+            throw(Error)
+          )),
     dispose_cache_entry(Evicted).
 
 
-cache_insert(Gid, N, Pid, CacheTTL, Size, Evicted) :-
-    alarm(CacheTTL, cache_expire(Gid, N, Pid), AlarmId, [remove(true)]),
+cache_insert(Gid, N, Pid, TimerRef, Size, Evicted) :-
     assertz(cache(Gid, N, Pid)),
-    assertz(cache_alarm(Gid, N, Pid, AlarmId)),
+    assertz(cache_alarm(Gid, N, Pid, TimerRef)),
     cache_node_key(Gid, NodeKey),
     aggregate_all(count, cache(node_cache(NodeKey, _), _, _), NC),
     (   NC > Size
@@ -185,6 +226,14 @@ cache_insert(Gid, N, Pid, CacheTTL, Size, Evicted) :-
         Evicted = cache_entry(EvictedPid, EvictedAlarm)
     ;   Evicted = none
     ).
+
+
+rollback_cache_insert(Gid, N, Pid, TimerRef) :-
+    with_mutex(node_engine_cache,
+               ( retractall(cache(Gid, N, Pid)),
+                 retractall(cache_alarm(Gid, N, Pid, TimerRef))
+               )),
+    stop_cached_toplevel(Pid).
 
 
 cache_node_key(node_cache(NodeKey, _), NodeKey).
@@ -211,15 +260,90 @@ cache_expire(Gid, N, Pid) :-
 
 dispose_cache_entry(none) :-
     !.
-dispose_cache_entry(cache_entry(Pid, AlarmId)) :-
-    cancel_cache_alarm(AlarmId),
+dispose_cache_entry(cache_entry(Pid, TimerRef)) :-
+    cancel_cache_alarm(TimerRef),
     stop_cached_toplevel(Pid).
 
 
 cancel_cache_alarm(none) :-
     !.
-cancel_cache_alarm(AlarmId) :-
-    catch(remove_alarm(AlarmId), _, true).
+cancel_cache_alarm(TimerRef) :-
+    cache_timer_request(cancel(TimerRef), _).
+
+
+%  SWI alarms belong to the thread that creates them and are silently removed
+%  when that thread terminates. HTTP request workers are therefore the wrong
+%  owners for continuation timers: cache entries outlive individual requests,
+%  and a later remove_alarm/1 on a worker's retired alarm blob can crash the
+%  process. Keep every native alarm in one process-lifetime manager and expose
+%  only integer references to request threads.
+next_cache_timer_ref(TimerRef) :-
+    flag(node_engine_cache_timer_ref, TimerRef, TimerRef + 1).
+
+schedule_cache_alarm(TimerRef, CacheTTL, Gid, N, Pid) :-
+    cache_timer_request(schedule(TimerRef, CacheTTL, Gid, N, Pid), Reply),
+    (   Reply == scheduled
+    ->  true
+    ;   Reply = error(Error),
+        throw(Error)
+    ).
+
+cache_timer_request(Request, Reply) :-
+    ensure_cache_timer_manager,
+    cache_timer_alias(Alias),
+    setup_call_cleanup(
+        message_queue_create(ReplyQueue),
+        ( thread_send_message(Alias, cache_timer_request(ReplyQueue, Request)),
+          thread_get_message(ReplyQueue, Reply)
+        ),
+        message_queue_destroy(ReplyQueue)
+    ).
+
+ensure_cache_timer_manager :-
+    cache_timer_alias(Alias),
+    (   thread_property(_, alias(Alias))
+    ->  true
+    ;   with_mutex(node_engine_cache_timer_start,
+            (   thread_property(_, alias(Alias))
+            ->  true
+            ;   thread_create(cache_timer_loop, _,
+                              [alias(Alias), detached(true)])
+            ))
+    ).
+
+cache_timer_alias(node_engine_cache_timer).
+
+cache_timer_loop :-
+    thread_get_message(cache_timer_request(ReplyQueue, Request)),
+    cache_timer_handle(Request, Reply),
+    catch(thread_send_message(ReplyQueue, Reply), _, true),
+    cache_timer_loop.
+
+cache_timer_handle(schedule(TimerRef, CacheTTL, Gid, N, Pid), Reply) :-
+    catch(
+        ( alarm(CacheTTL,
+                cache_timer_expired(TimerRef, Gid, N, Pid),
+                AlarmId,
+                [install(false), remove(true)]),
+          assertz(managed_cache_alarm(TimerRef, AlarmId)),
+          install_alarm(AlarmId),
+          Reply = scheduled
+        ),
+        Error,
+        ( ( nonvar(AlarmId) -> catch(remove_alarm(AlarmId), _, true) ; true ),
+          retractall(managed_cache_alarm(TimerRef, _)),
+          Reply = error(Error)
+        )
+    ).
+cache_timer_handle(cancel(TimerRef), cancelled) :-
+    (   retract(managed_cache_alarm(TimerRef, AlarmId))
+    ->  catch(remove_alarm(AlarmId), _, true)
+    ;   true
+    ).
+
+cache_timer_expired(TimerRef, Gid, N, Pid) :-
+    retractall(managed_cache_alarm(TimerRef, _)),
+    cache_expire(Gid, N, Pid).
 
 
 stop_cached_toplevel(Pid) :-
