@@ -544,6 +544,19 @@ test(down_reason_survives_thread_death, Reason == custom_reason) :-
        on_timeout(fail)
    ]).
 
+test(down_exception_elides_context_and_private_actor_module) :-
+   Error = error(existence_error(procedure, actor_1234567890:test/0),
+                 context(system:call/1, private_context)),
+   spawn(throw(Error), Pid, [monitor(true), link(false)]),
+   receive({
+       down(Pid, _, Reason) -> true
+   }, [
+       timeout(1),
+       on_timeout(fail)
+   ]),
+   Reason = exception(error(existence_error(procedure, test/0), Context)),
+   assertion(var(Context)).
+
 test(pids_are_never_reused, Result == all_distinct) :-
    findall(Pid,
            ( between(1, 20, _),

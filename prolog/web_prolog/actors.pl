@@ -614,14 +614,34 @@ stop(Pid, Parent) :-
 %   guard caused the lookup to fall through to noproc when the thread
 %   had already been cleaned up.
 down_reason(Pid, Reason) :-
-    retract(exit_reason(Pid, Reason)),
+    retract(exit_reason(Pid, Reason0)),
+    monitor_reason(Reason0, Reason),
     !.
 down_reason(Pid, Reason) :-
     pid_thread(Pid, ThreadId),
     is_thread(ThreadId),
-    thread_property(ThreadId, status(Reason)),
+    thread_property(ThreadId, status(Reason0)),
+    monitor_reason(Reason0, Reason),
     !.
 down_reason(_, noproc).
+
+%!  monitor_reason(+Reason0, -Reason) is det.
+%
+%   Monitor notifications cross an actor boundary and may ultimately cross a
+%   public node boundary.  Preserve the formal exception classification while
+%   eliding implementation context and private actor-module qualification.
+monitor_reason(exception(error(Formal0, _)),
+               exception(error(Formal, _))) :-
+    !,
+    monitor_formal_error(Formal0, Formal).
+monitor_reason(Reason, Reason).
+
+monitor_formal_error(existence_error(procedure, Module:PI),
+                     existence_error(procedure, PI)) :-
+    atom(Module),
+    sub_atom(Module, 0, _, _, 'actor_'),
+    !.
+monitor_formal_error(Formal, Formal).
 
 
 %!  actors(-Pids) is det.

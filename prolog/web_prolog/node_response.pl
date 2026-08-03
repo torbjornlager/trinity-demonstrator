@@ -62,11 +62,13 @@ answer_to_json(success(Pid, Bindings0, More),
     json_pid_value(Pid, JsonPid),
     maplist(bindings_to_json_strings, Bindings0, Bindings).
 answer_to_json(error(Pid, ErrorTerm),
-               json{type:error, pid:JsonPid, data:ErrorString}) :-
+               JSON) :-
     json_pid_value(Pid, JsonPid),
-    error_to_json_string(ErrorTerm, ErrorString).
-answer_to_json(error(ErrorTerm), json{type:error, data:ErrorString}) :-
-    error_to_json_string(ErrorTerm, ErrorString).
+    error_to_json_dict(ErrorTerm,
+                       json{type:error, pid:JsonPid},
+                       JSON).
+answer_to_json(error(ErrorTerm), JSON) :-
+    error_to_json_dict(ErrorTerm, json{type:error}, JSON).
 answer_to_json(failure, json{type:failure}).
 answer_to_json(failure(Pid), json{type:failure, pid:JsonPid}) :-
     json_pid_value(Pid, JsonPid).
@@ -119,12 +121,19 @@ answer_to_json(down(Pid, Ref, Reason),
                json{type:down, ref:JsonRef, pid:JsonPid, reason:ReasonString}) :-
     json_pid_value(Ref, JsonRef),
     json_pid_value(Pid, JsonPid),
-    term_to_json_string(Reason, ReasonString).
+    down_reason_to_json_string(Reason, ReasonString).
 %  Legacy 2-arity form: kept as a fallback during transition.  Any new
 %  producer should emit down/3 with a sentinel Ref (e.g. Ref = Pid, the
 %  same convention monitor(true) uses -- see manual.html:210 / actor.pl).
 answer_to_json(down(Pid, Reason), json{type:down, pid:JsonPid, reason:ReasonString}) :-
     json_pid_value(Pid, JsonPid),
+    down_reason_to_json_string(Reason, ReasonString).
+
+down_reason_to_json_string(exception(Error0), ReasonString) :-
+    !,
+    public_exception_term(Error0, Error),
+    term_to_json_string(exception(Error), ReasonString).
+down_reason_to_json_string(Reason, ReasonString) :-
     term_to_json_string(Reason, ReasonString).
 
 
@@ -157,6 +166,48 @@ json_pid_value_canonical(Id@Node0, JSONPid) :-
     ).
 json_pid_value_canonical(Pid, Pid).
 
+
+%!  error_to_json_dict(+ErrorTerm, +JSON0:dict, -JSON:dict) is det.
+%
+%   The concise string is the compatibility representation used by existing
+%   JSON clients.  For a Prolog-oriented diagnostic display,
+%   error_to_json_dict/3 also exposes a sanitised exception term as
+%   presentation-only `details` text.  Its implementation context is elided;
+%   Prolog-format responses retain the actual exception term.
+error_to_json_dict(ErrorTerm, JSON0, JSON) :-
+    error_to_json_string(ErrorTerm, ErrorString),
+    put_dict(data, JSON0, ErrorString, JSON1),
+    (   exception_display_string(ErrorTerm, ErrorString, DetailedString)
+    ->  put_dict(details, JSON1, DetailedString, JSON)
+    ;   JSON = JSON1
+    ).
+
+exception_display_string(remote_error(_), _, _) :-
+    !,
+    fail.
+exception_display_string(error(Formal0, _), ErrorString, DetailedString) :-
+    !,
+    public_exception_term(error(Formal0, _), Error),
+    term_to_json_string(Error, DetailedString),
+    DetailedString \== ErrorString.
+exception_display_string(ErrorTerm, ErrorString, DetailedString) :-
+    term_to_json_string(ErrorTerm, DetailedString),
+    DetailedString \== ErrorString.
+
+display_formal_error(existence_error(procedure, Module:PI),
+                     existence_error(procedure, PI)) :-
+    private_actor_module(Module),
+    !.
+display_formal_error(Formal, Formal).
+
+public_exception_term(error(Formal0, _), error(Formal, _)) :-
+    !,
+    display_formal_error(Formal0, Formal).
+public_exception_term(Error, Error).
+
+private_actor_module(Module) :-
+    atom(Module),
+    sub_atom(Module, 0, _, _, 'actor_').
 
 %!  error_to_json_string(+ErrorTerm, -ErrorString) is det.
 error_to_json_string(ErrorTerm, ErrorString) :-

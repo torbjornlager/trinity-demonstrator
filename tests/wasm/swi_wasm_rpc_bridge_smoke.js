@@ -120,6 +120,14 @@ function embeddedWorkbenchMethod(name, nextName) {
   return Function("return (" + expression + ");")();
 }
 
+const errorDisplayHelpers = Function(
+  source.slice(
+    source.indexOf("function splitTopLevelArgs"),
+    source.indexOf("function summarizeStructuredError")
+  ) + "\nreturn { exceptionDisplayTerm, sanitizeDownReasonTerm, humanizePrologErrorTerm };"
+)();
+const exceptionDisplayTerm = errorDisplayHelpers.exceptionDisplayTerm;
+
 const editorRewriteSource = source.slice(
   source.indexOf("function scanQuotedText"),
   source.indexOf("function renderOutputData")
@@ -520,6 +528,40 @@ ok(includes(':href="profileTutorial.path"') &&
 ok(includes('<div class="settings-option-label">SXML code</div>') &&
    !includes('<div class="settings-option-label">Statechart XML</div>'),
    "Settings calls Statechart XML coloring SXML code");
+ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
+   includes('v-model="errorMessageDetail"') &&
+   includes('true-value="exception"') &&
+   includes('false-value="short"') &&
+   !includes('errorMessageDetailOptions') &&
+   includes('window.localStorage.getItem("wb.errorMessageDetail")') &&
+   includes('window.localStorage.setItem("wb.errorMessageDetail", this.errorMessageDetail)') &&
+   includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
+   includes('this.errorMessageDetail === "exception"') &&
+   includes('function exceptionDisplayTerm(text)') &&
+   includes('/swi_wasm_actor_worker.js?v=20260803-exception-display'),
+   "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
+ok(exceptionDisplayTerm(
+     "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
+   ) === "error(existence_error(procedure,q/1),_)" &&
+   exceptionDisplayTerm(
+     "exception(error(existence_error(procedure,actor_8159673805:test/0),context(system:call/1,_15166)))"
+   ) === "error(existence_error(procedure,test/0),_)",
+   "exception-term display elides context and private actor-module qualification");
+ok(errorDisplayHelpers.sanitizeDownReasonTerm(
+     "exception(error(existence_error(procedure,actor_8159673805:test/0),context(system:call/1,_15166)))"
+   ) === "exception(error(existence_error(procedure,test/0),_))" &&
+   errorDisplayHelpers.humanizePrologErrorTerm(
+     "error(existence_error(procedure,actor_8159673805:test/0),context(system:call/1,_15166))"
+   ) === "Unknown procedure: test/0" &&
+   includes("return normalizeErrorText(m[1]);") &&
+   includes("var safeReason = sanitizeDownReasonTerm(reasonText || \"true\")"),
+   "down reasons are sanitised before display or browser-mailbox delivery");
+ok(workerSource.includes("function actorToplevelEvent(value, text, details)") &&
+   workerSource.includes("errorPayload.details = String(details)") &&
+   workerSource.includes("exception_display_text(error(Formal0, _), Text) :- !,") &&
+   workerSource.includes("variable_names(['_'=Context])") &&
+   workerSource.includes('actorToplevelEvent(#Message, #Text, #Details).'),
+   "SWI-WASM supplies a context-elided exception term while preserving concise error data");
 ok(includes("var EXAMPLES_PREFERRED_WIDTH_PX = 260;") &&
    includes("examplesWidthPx: EXAMPLES_PREFERRED_WIDTH_PX") &&
    includes("this.examplesWidthPx = EXAMPLES_PREFERRED_WIDTH_PX") &&
@@ -990,7 +1032,7 @@ ok(includes('"swi_wasm_actor_bridge:ptcp(" + qualifySwiWasmLocalPid(pid) + ",ter
    includes('"shell_toplevel"') &&
    includes('message.type === "success"') &&
    workerSource.includes('message.command === "toplevel_call"') &&
-   workerSource.includes('actorToplevelEvent(#Message, #Text)') &&
+   workerSource.includes('actorToplevelEvent(#Message, #Text, #Details)') &&
    workerSource.includes('flush_output(user_output)') &&
    includes('this.requestSwiWasmActorInput(String(message.data || ""))'),
    "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
@@ -1208,7 +1250,7 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260801-linked-children') &&
+   includes('/swi_wasm_actor_worker.js?v=20260803-exception-display') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&

@@ -3291,6 +3291,17 @@
                   <div class="settings-option settings-stacked-card">
                     <label class="settings-option settings-check-row">
                       <input type="checkbox"
+                             v-model="errorMessageDetail"
+                             true-value="exception"
+                             false-value="short"
+                             @change="persistErrorMessageDetail">
+                      <div class="settings-option-text">
+                        <div class="settings-option-label">Show exception terms</div>
+                        <div class="settings-option-note">Show context-elided Prolog exception terms instead of concise diagnostics.</div>
+                      </div>
+                    </label>
+                    <label class="settings-option settings-check-row">
+                      <input type="checkbox"
                              v-model="hideLocalNodeInPid"
                              @change="persistPidDisplayPreference">
                       <div class="settings-option-text">
@@ -4926,15 +4937,22 @@
         return parts.join(",\n") + " ";
       }
 
-      function describeJsonError(json) {
+      function describeJsonError(json, exceptionTerm) {
         if (json && typeof json === "object" && json.type === "error") {
+          if (exceptionTerm && Object.prototype.hasOwnProperty.call(json, "details")) {
+            return String(json.details || json.data || "unknown error");
+          }
           return String(json.data || "unknown error");
         }
         return JSON.stringify(json, null, 2);
       }
 
-      function describeDownReason(reason) {
-        var s = String(reason || "terminated");
+      function describeDownReason(reason, exceptionTerm) {
+        var s = sanitizeDownReasonTerm(reason);
+        var m;
+        if (exceptionTerm) {
+          return exceptionDisplayTerm(s);
+        }
         var xmlErrors = [];
         var re = /(\d+)-'([^']+)'/g;
         var xmlMatch;
@@ -4950,9 +4968,9 @@
         if (contextMatch) {
           return contextMatch[1];
         }
-        var m = s.match(/^exception\((.+)\)$/);
+        m = s.match(/^exception\((.+)\)$/);
         if (m) {
-          return m[1];
+          return normalizeErrorText(m[1]);
         }
         return s;
       }
@@ -5072,7 +5090,7 @@
         args = unwrapPrologCompound(value, "existence_error");
         if (args && args.length >= 2) {
           if (args[0] === "procedure") {
-            return "Unknown procedure: " + args[1];
+            return "Unknown procedure: " + stripPrivateActorModuleIndicator(args[1]);
           }
           return "Existence error: " + humanizeErrorToken(args[0]) + " " + args[1];
         }
@@ -5119,6 +5137,37 @@
         }
         if (args && args.length >= 1) {
           return "System error: " + args[0];
+        }
+        return value;
+      }
+
+      function exceptionDisplayTerm(text) {
+        var value = stripRuntimeErrorScaffolding(text);
+        var args = unwrapPrologCompound(value, "exception");
+        var formal;
+        if (args && args.length >= 1) {
+          value = args[0];
+        }
+        args = unwrapPrologCompound(value, "error");
+        if (!args || args.length < 1) {
+          return value;
+        }
+        formal = args[0].replace(
+          /^existence_error\(procedure,actor_[A-Za-z0-9_]+:([^()]+\/\d+)\)$/,
+          "existence_error(procedure,$1)"
+        );
+        return "error(" + formal + ",_)";
+      }
+
+      function stripPrivateActorModuleIndicator(text) {
+        return String(text || "").replace(/^actor_[A-Za-z0-9_]+:/, "");
+      }
+
+      function sanitizeDownReasonTerm(text) {
+        var value = String(text || "terminated").trim();
+        var args = unwrapPrologCompound(value, "exception");
+        if (args && args.length >= 1) {
+          return "exception(" + exceptionDisplayTerm(args[0]) + ")";
         }
         return value;
       }
@@ -5512,6 +5561,7 @@
             terminalExtraQueryNewline: false,
             terminalConvertLinks: true,
             terminalHighlightPredicates: false,
+            errorMessageDetail: "short",
             browserRuntimeModel: storedBrowserRuntimeModel(),
             browserRuntimeModelOptions: [
               { id: "swi-worker", label: "Worker actors (default)", value: "worker" },
@@ -6009,6 +6059,7 @@
           this.restoreTerminalSpacingSettings();
           this.restoreTerminalLinkSettings();
           this.restoreTerminalPredicateHighlightSettings();
+          this.restoreErrorMessageDetail();
           this.restoreCodeColoringSettings();
           this.fetchPortalVersion();
           if (this.isSwiWasmMode) {
@@ -6228,6 +6279,17 @@
           },
           persistTerminalPredicateHighlightSettings: function() {
             window.localStorage.setItem("wb.terminalHighlightPredicates", this.terminalHighlightPredicates ? "1" : "0");
+          },
+          restoreErrorMessageDetail: function() {
+            var stored = window.localStorage.getItem("wb.errorMessageDetail");
+            this.errorMessageDetail = (stored === "exception" || stored === "complete")
+              ? "exception"
+              : "short";
+          },
+          persistErrorMessageDetail: function() {
+            this.errorMessageDetail = this.errorMessageDetail === "exception" ? "exception" : "short";
+            window.localStorage.setItem("wb.errorMessageDetail", this.errorMessageDetail);
+            this.focusTerminalSoon(true);
           },
           restoreThemeSettings: function() {
             this.themeMode = storedPortalTheme();
@@ -7681,7 +7743,10 @@
             return text;
           },
 	          formatErrorDisplay: function(message) {
-	            var text = normalizeErrorText(this.formatDisplayText(message));
+	            var rawText = this.formatDisplayText(message).trim();
+	            var text = this.errorMessageDetail === "exception"
+	              ? exceptionDisplayTerm(rawText || "unknown error")
+	              : normalizeErrorText(rawText);
 	            var authHint;
 	            if (text.indexOf("Authentication required") === -1) {
 	              return text;
@@ -10249,7 +10314,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260801-linked-children";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260803-exception-display";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -11507,7 +11572,8 @@
             this.clearSwiWasmActorNamesForPid(pid);
           },
           deliverSwiWasmActorDown: function(watcherText, refText, pidText, reasonText) {
-            var message = "down(" + qualifySwiWasmLocalPid(pidText) + "," + refText + "," + String(reasonText || "true") + ")";
+            var safeReason = sanitizeDownReasonTerm(reasonText || "true");
+            var message = "down(" + qualifySwiWasmLocalPid(pidText) + "," + refText + "," + safeReason + ")";
             this.sendSwiWasmActorMessage(watcherText, message);
           },
           clearSwiWasmActorNamesForPid: function(pidText) {
@@ -13775,7 +13841,7 @@
                   self.finishFailure(term);
                 }
               } else if (json.type === "error") {
-                var errorText = describeJsonError(json);
+                var errorText = describeJsonError(json, self.errorMessageDetail === "exception");
                 var errorEntry = self.recordSessionEvent("error", errorText, "stateless", "stateless");
                 if (errorEntry) {
                   errorEntry.logId = self.finishError(term, errorText);
@@ -13830,7 +13896,7 @@
                 throw new Error("stale isotope session");
               }
               if (event.type === "error" && event.data) {
-                throw new Error("Session load failed: " + describeJsonError(event));
+                throw new Error("Session load failed: " + describeJsonError(event, self.errorMessageDetail === "exception"));
               }
               if (event.type !== "spawned" || !event.pid) {
                 throw new Error("Failed to spawn ISOTOPE session.");
@@ -13995,7 +14061,7 @@
               return;
             }
             if (event.type === "error") {
-              var isotopeErrorText = describeJsonError(event);
+              var isotopeErrorText = describeJsonError(event, this.errorMessageDetail === "exception");
               var isotopeErrorEntry = this.recordSessionEvent("error", isotopeErrorText, "isotope", event.pid || this.isotopePid);
               if (isotopeErrorEntry) {
                 isotopeErrorEntry.logId = this.finishError(term, isotopeErrorText);
@@ -14217,7 +14283,9 @@
               this.wsTutorialLoadText = "";
               this.wsTutorialLoadResolve = null;
               this.wsTutorialLoadReject = null;
-              reject(new Error(event.type === "error" ? describeJsonError(event) : "Tutorial load " + event.type + "."));
+              reject(new Error(event.type === "error"
+                ? describeJsonError(event, this.errorMessageDetail === "exception")
+                : "Tutorial load " + event.type + "."));
               return true;
             }
             if (event.type === "down") {
@@ -14539,7 +14607,7 @@
               } else {
                 var reason = String(event.reason || "terminated");
                 if (reason !== "true" && reason !== "normal") {
-                  var readable = describeDownReason(reason);
+                  var readable = describeDownReason(reason, this.errorMessageDetail === "exception");
                   var childDownText = "Actor " + event.pid + " exited: " + readable;
                   this.log("error", childDownText, "actor");
                   term.error(childDownText);
@@ -14549,7 +14617,7 @@
               return;
             }
             if (event.type === "error") {
-              var wsErrorText = describeJsonError(event);
+              var wsErrorText = describeJsonError(event, this.errorMessageDetail === "exception");
               this.recordSessionEvent("error", wsErrorText, "actor", event.pid || this.wsPid);
               if (this.wsSpawnReject) {
                 if (this.wsSpawnTimer) { clearTimeout(this.wsSpawnTimer); this.wsSpawnTimer = null; }

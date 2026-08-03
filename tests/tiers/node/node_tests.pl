@@ -4080,6 +4080,25 @@ test(answer_to_json_sanitizes_prolog_stack_context,
     answer_to_json(error(Error), JSON),
     Data = JSON.data.
 
+test(answer_to_json_keeps_concise_error_and_adds_sanitized_exception_term) :-
+    Error = error(existence_error(procedure, actor_1234567890:q/1),
+                  context(system:catch/3, _)),
+    answer_to_json(error(Error), JSON),
+    assertion(JSON.data == "Unknown procedure: q/1"),
+    assertion(JSON.details == "error(existence_error(procedure,q/1),_)"),
+    assertion(\+ get_dict(term, JSON, _)),
+    assertion(\+ sub_string(JSON.details, _, _, _, "actor_1234567890")),
+    assertion(\+ sub_string(JSON.details, _, _, _, "catch/3")).
+
+test(answer_to_json_elides_exception_context_in_down_reason) :-
+    Reason = exception(error(
+        existence_error(procedure, actor_1234567890:test/0),
+        context(system:call/1, private_context)
+    )),
+    answer_to_json(down(42, 43, Reason), JSON),
+    assertion(JSON.reason ==
+              "exception(error(existence_error(procedure,test/0),_))").
+
 test(answer_to_json_simplifies_shell_command_sandbox_error,
      true(Data == "Unknown procedure: ls/0")) :-
     Error = error(permission_error(call, sandboxed, ls),
@@ -4089,11 +4108,13 @@ test(answer_to_json_simplifies_shell_command_sandbox_error,
 
 test(answer_to_json_formats_name_is_in_use_error) :-
     answer_to_json(error(name_is_in_use(echo_actor)), JSON),
-    JSON = json{type:error, data:"Name is in use."}.
+    JSON = json{type:error, data:"Name is in use.",
+                details:"name_is_in_use(echo_actor)"}.
 
 test(answer_to_json_formats_process_already_has_name_error) :-
     answer_to_json(error(process_already_has_a_name(42)), JSON),
-    JSON = json{type:error, data:"Name is in use."}.
+    JSON = json{type:error, data:"Name is in use.",
+                details:"process_already_has_a_name(42)"}.
 
 test(rewrite_source_text_if_needed_noops_when_blacklist_disabled,
      true(Source == "q :- saved(G), G.")) :-
@@ -4392,8 +4413,8 @@ test(ws_actor_toplevel_monitor_notification_visible_to_flush) :-
         )).
 
 test(ws_actor_spawn_does_not_inherit_session_assertions,
-     true((sub_string(Seen, _, _, _, "existence_error(procedure"),
-           sub_string(Seen, _, _, _, ":p/1")))) :-
+     true((sub_string(Seen, _, _, _, "existence_error(procedure,p/1)"),
+           \+ sub_string(Seen, _, _, _, "actor_")))) :-
     with_node_server_options([profile(actor), auth(dev)], URI,
         setup_call_cleanup(
             ws_open(URI, WS),
@@ -4537,8 +4558,8 @@ test(ws_tutorial_spawn_source_supports_supervised_server_upgrade,
         )).
 
 test(ws_remote_actor_requires_load_predicates_for_session_code,
-     true((sub_string(Seen, _, _, _, "existence_error(procedure"),
-           sub_string(Seen, _, _, _, ":p/1"),
+     true((sub_string(Seen, _, _, _, "existence_error(procedure,p/1)"),
+           \+ sub_string(Seen, _, _, _, "actor_"),
            Value == "a",
            Reason == "true"))) :-
     with_node_server(URI1,

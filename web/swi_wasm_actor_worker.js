@@ -586,11 +586,12 @@
     });
   }
 
-  function actorToplevelEvent(value, text) {
+  function actorToplevelEvent(value, text, details) {
     var eventValue = value;
     var compound;
     var args;
     var data;
+    var errorPayload;
     try {
       eventValue = JSON.parse(JSON.stringify(value));
     } catch (_) {
@@ -611,7 +612,11 @@
     } else if (compound.functor === "failure") {
       post("failure", {});
     } else if (compound.functor === "error") {
-      post("error", { data: String(text || formatValue(args[1])) });
+      errorPayload = { data: String(text || formatValue(args[1])) };
+      if (details && String(details) !== errorPayload.data) {
+        errorPayload.details = String(details);
+      }
+      post("error", errorPayload);
     } else if (compound.functor === "output" || compound.functor === "terminal_output") {
       data = typeof args[1] === "string" ? args[1] : formatValue(args[1]);
       post("output", { data: data });
@@ -1102,15 +1107,25 @@
       "",
       "Pid ! Message :- send(Pid, Message).",
       "",
-      "toplevel_event_text(error(_, Error), Text) :- !, term_string(Error, Text).",
-      "toplevel_event_text(Message, Text) :- term_string(Message, Text).",
+      "toplevel_event_text(error(_, Error), Text, Details) :- !,",
+      "    term_string(Error, Text),",
+      "    exception_display_text(Error, Details).",
+      "toplevel_event_text(Message, Text, Text) :- term_string(Message, Text).",
+      "exception_display_text(error(Formal0, _), Text) :- !,",
+      "    display_formal_error(Formal0, Formal),",
+      "    Term = error(Formal, Context),",
+      "    term_string(Term, Text, [quoted(true), variable_names(['_'=Context])]).",
+      "exception_display_text(Error, Text) :- term_string(Error, Text).",
+      "display_formal_error(existence_error(procedure, Module:PI), existence_error(procedure, PI)) :-",
+      "    atom(Module), sub_atom(Module, 0, _, _, 'actor_'), !.",
+      "display_formal_error(Formal, Formal).",
       "",
       "send(terminal, Message) :-",
       "    shell_toplevel_role, !,",
       "    catch(flush_output(user_output), _, true),",
       "    catch(flush_output(user_error), _, true),",
-      "    toplevel_event_text(Message, Text),",
-      "    _ := actorToplevelEvent(#Message, #Text).",
+      "    toplevel_event_text(Message, Text, Details),",
+      "    _ := actorToplevelEvent(#Message, #Text, #Details).",
       "",
       "send(Pid, Message) :-",
       "    must_be_transportable_term(Message),",

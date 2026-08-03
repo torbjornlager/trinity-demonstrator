@@ -217,6 +217,17 @@ async function main() {
      JSON.stringify(["type", "pid", "data", "more"]),
      "toplevel success fields are emitted in the book's response order");
 
+  S.actorToplevelEvent({
+    $t: "t",
+    error: ["invalid_shell", { $t: "t", existence_error: ["procedure", "q/1"] }]
+  }, "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_))",
+  "error(existence_error(procedure,q/1),_)");
+  const errorEvent = S._posted.filter(function(m) { return m.type === "error"; }).pop();
+  ok(!!errorEvent &&
+     errorEvent.data === "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_))" &&
+     errorEvent.details === "error(existence_error(procedure,q/1),_)",
+     "toplevel errors preserve raw data and add a context-elided exception term");
+
   // 10. Worker-side rpc/2-3 uses the same controller request channel as
   // remote actor transport; the Worker does not own browser HTTP policy.
   const rpcP = S.actorRpc("'https://n1.example'", "path(a,X)", "v(X)", 0, 10,
