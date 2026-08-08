@@ -15,7 +15,7 @@
         :- dynamic int/1.
     </datamodel>
     <state id="init">
-        <go on="input(List)" to="run">
+        <go on="integers(List)" to="run">
             forall(member(X, List), asserta(int(X)))
         </go>
     </state>
@@ -39,7 +39,7 @@
        src_text(<editor>)
    ]).
 
-?- $Pid ! input([25, 10, 15, 30]).
+?- $Pid ! integers([25, 10, 15, 30]).
 
 ?- statechart_halt($Pid, Reply, 1).
 
