@@ -313,6 +313,52 @@ test(cross_node_send_round_trip,
         )).
 
 
+%  All sends issued through one remote addressing channel share the
+%  connection send mutex.  The collector records arrival order in reverse;
+%  five sequential sends must therefore produce [5,4,3,2,1].
+test(cross_node_send_preserves_single_channel_fifo,
+     [setup(flush_mailbox), Result == ok]) :-
+    with_test_nodes(
+        [node_spec(b, [profile(actor), auth(open)])],
+        (   remote_only_actor_url(URLB),
+            self(Self),
+            spawn(collector(Self, 5, []), Pid, [
+                node(URLB),
+                monitor(true),
+                src_text("
+collector(Parent, 0, Acc) :-
+    send(Parent, sequence(Acc)).
+collector(Parent, N, Acc) :-
+    N > 0,
+    receive({item(X) -> true}),
+    N1 is N - 1,
+    collector(Parent, N1, [X|Acc]).
+")
+            ]),
+            forall(between(1, 5, N), send(Pid, item(N))),
+            receive({
+                sequence(Sequence) ->
+                    assertion(Sequence == [5,4,3,2,1])
+            }, [timeout(5), on_timeout(fail)]),
+            receive({ down(Pid, _, true) -> true },
+                    [timeout(5), on_timeout(fail)]),
+            Result = ok
+        )).
+
+
+%  A qualified name is a public-service address, not a namespace probe.
+%  Sending to an absent service on a live node is therefore a silent no-op.
+test(absent_remote_service_send_is_non_revealing,
+     [setup(flush_mailbox), Result == ok]) :-
+    with_test_nodes(
+        [node_spec(b, [profile(actor), auth(open)])],
+        (   remote_only_actor_url(URLB),
+            catch(send(definitely_absent_service@URLB, probe), Error, true),
+            assertion(var(Error)),
+            Result = ok
+        )).
+
+
 setup_node_b_with_humans(URLB) :-
     %  Inject facts into node B's shared DB by loading a small
     %  source text at startup.

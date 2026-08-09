@@ -64,6 +64,7 @@ actor profile. Model and runtime facts live in `statechart_actor`.
     invoke/1,
     call_chart_goal/1
 ]).
+:- use_module(control_guard, []).
 
 
 %!  interpret(+File) is det.
@@ -288,7 +289,8 @@ dedup([H|Rest], Seen, Deduped) :-
 evaluate_condition(Condition) :-
     catch(once(call_chart_goal(Condition)),
           Error,
-          ( enqueue_internal_event(error(Error)),
+          ( control_guard:rethrow_reserved(Error),
+            enqueue_internal_event(error(Error)),
             fail
           )).
 
@@ -367,7 +369,8 @@ trace_microstep(EnabledTransitions) :-
     debug(statechart_actor(info), '   Microstep exit ~p enter ~p', [ExitSet, EntrySet]).
 
 trace_emit(Event) :-
-    catch(statechart_actor:emit_trace(Event), _, true).
+    catch(statechart_actor:emit_trace(Event), Error,
+          (control_guard:rethrow_reserved(Error), true)).
 
 exit_states(EnabledTransitions) :-
     statechart_actor:configuration(Configuration),

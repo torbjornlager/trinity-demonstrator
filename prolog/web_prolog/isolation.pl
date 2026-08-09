@@ -47,7 +47,9 @@ actor-coupled.
     the distribution layer adds the `@`/2 operator.
   - prepare_goal(+Module, +Goal0, -Goal): rewrite the start goal just
     before execution (the node layer's public-profile guard).  First
-    solution wins; default identity.
+    solution wins; default identity.  The result then passes through
+    control_guard so actor termination and PTCP controls cannot be caught
+    by application recovery.
   - prepare_source_options(+SourceModule, +Options0, -Options):
     caller-supplied load options pass through here before loading (the
     node layer's sandbox vetting of src_text/src_uri).  First
@@ -57,9 +59,8 @@ actor-coupled.
     guards).  All solutions are collected.
   - rewrite_source_text(+Module, +Source0, -Source): rewrite source
     text before it is loaded (blacklist guard).  First solution wins;
-    default identity.
-  - source_text_guard_active: when true, src_uri fetches the source as
-    text (so rewrite_source_text/3 applies) instead of streaming it.
+    default identity.  The result then receives the same control_guard
+    rewrite as a directly submitted goal.
   - shared_database_module(-SharedModule): the node layer names the
     module holding the shared database; actor modules import it and
     empty dynamic shadows of its predicates are repaired after load.
@@ -86,10 +87,10 @@ actor-coupled.
     predicates_to_source/3,
     text_to_string/2,
     uri_atom/2,
-    open_source_uri/2,
     uri_to_source/2,
     append_source_text/3
 ]).
+:- use_module(control_guard, []).
 
 :- multifile
     prepare_module/3,
@@ -97,7 +98,6 @@ actor-coupled.
     prepare_source_options/3,
     extra_prelude_text/2,
     rewrite_source_text/3,
-    source_text_guard_active/0,
     shared_database_module/1.
 
 :- meta_predicate
@@ -157,9 +157,10 @@ execute_in_module(Module, Plain, Runner) :-
 %   just spawn-time start goals.
 prepared_goal(Module, Goal0, Goal) :-
     (   prepare_goal(Module, Goal0, Goal1)
-    ->  Goal = Goal1
-    ;   Goal = Goal0
-    ).
+    ->  true
+    ;   Goal1 = Goal0
+    ),
+    control_guard:rewrite_goal(Module, Goal1, Goal).
 
 %!  normalize_goal_module(+GoalModule0, +PlainGoal, -GoalModule) is det.
 %
@@ -453,10 +454,11 @@ load_source(Module, src_uri(URI), SourceId) :-
 %!  load_source_text(+Src, +Module, +SourceId) is det.
 load_source_text(Src, Module, SourceId) :-
     text_to_string(Src, Source0),
-    (   rewrite_source_text(Module, Source0, Source)
+    (   rewrite_source_text(Module, Source0, Source1)
     ->  true
-    ;   Source = Source0
+    ;   Source1 = Source0
     ),
+    control_guard:rewrite_source_text(Module, Source1, Source),
     setup_call_cleanup(
         open_chars_stream(Source, Stream),
         load_files(Module:SourceId,
@@ -470,18 +472,12 @@ load_source_text(Src, Module, SourceId) :-
 %!  load_source_uri(+URI0, +Module, +SourceId) is det.
 load_source_uri(URI0, Module, SourceId) :-
     uri_atom(URI0, URI),
-    (   source_text_guard_active
-    ->  uri_to_source(URI, Source0),
-        load_source_text(Source0, Module, SourceId)
-    ;   setup_call_cleanup(
-            open_source_uri(URI, Stream),
-            load_files(Module:SourceId,
-                       [ stream(Stream),
-                         module(Module),
-                         silent(true)
-                       ]),
-            close(Stream))
-    ).
+    %  All Web Prolog source must cross the control rewrite boundary.  The
+    %  old streaming fast path was safe only while source rewriting was a
+    %  blacklist-mode policy concern; it would let src_uri catches bypass
+    %  actor termination and PTCP abort protection.
+    uri_to_source(URI, Source0),
+    load_source_text(Source0, Module, SourceId).
 
 
 %!  load_option_text(+GoalModule, +Option, -Text) is semidet.

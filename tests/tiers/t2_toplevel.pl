@@ -679,6 +679,72 @@ test(time_limit_reports_swi_term_and_keeps_session_alive) :-
        down(Pid, _, cleanup) -> true
    }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]).
 
+test(abort_bypasses_runtime_constructed_catch_runs_cleanup_and_restarts) :-
+   self(Self),
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       src_text("
+guarded(Parent) :-
+    Goal = catch(
+        (send(Parent, started), sleep(60)),
+        _,
+        (send(Parent, application_recovered), repeat)),
+    setup_call_cleanup(true, call(Goal), send(Parent, cleaned)).
+")
+   ]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, guarded(Self), [template(true)]),
+         receive({ started -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         toplevel_abort(Pid),
+         receive({ cleaned -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         receive({
+             application_recovered -> throw(abort_was_caught)
+         }, [timeout(0), on_timeout(true)]),
+         %  Abort is an interruption, not termination: the privileged PTCP
+         %  boundary consumes it and the same session accepts another goal.
+         toplevel_call(Pid, true, [template(true)]),
+         receive({ success(Pid, [true], false) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))])
+       ),
+       catch(exit(Pid, test_cleanup), _, true)),
+   receive({ down(Pid, _, test_cleanup) -> true },
+           [timeout(2), on_timeout(throw(shell_receive_timeout))]).
+
+test(time_limit_bypasses_application_catch_and_keeps_session_alive) :-
+   self(Self),
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       time_limit(0.05),
+       idle_limit(2),
+       src_text("
+guarded_timeout(Parent) :-
+    catch((send(Parent, timeout_started), sleep(60)),
+          _,
+          (send(Parent, timeout_recovered), repeat)).
+")
+   ]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, guarded_timeout(Self), [template(true)]),
+         receive({ timeout_started -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         receive({ error(Pid, time_limit_exceeded) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         receive({ timeout_recovered -> throw(time_limit_was_caught) },
+                 [timeout(0), on_timeout(true)]),
+         toplevel_call(Pid, true, [template(true)]),
+         receive({ success(Pid, [true], false) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))])
+       ),
+       catch(exit(Pid, test_cleanup), _, true)),
+   receive({ down(Pid, _, test_cleanup) -> true },
+           [timeout(2), on_timeout(throw(shell_receive_timeout))]).
+
 test(time_limit_is_suspended_while_waiting_in_state_3) :-
    toplevel_spawn(Pid, [
        session(true),

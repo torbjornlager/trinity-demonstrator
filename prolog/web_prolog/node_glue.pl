@@ -31,8 +31,7 @@ inline.
 ]).
 :- use_module(public_goal_guard, [
     rewrite_goal_if_needed/3,
-    rewrite_source_text_if_needed/3,
-    blacklist_guard_active/0
+    rewrite_source_text_if_needed/3
 ]).
 :- use_module(node_sandbox, []).
 :- use_module(node_session, []).
@@ -241,10 +240,6 @@ isolation:extra_prelude_text(_Options, Text) :-
 :- multifile isolation:rewrite_source_text/3.
 isolation:rewrite_source_text(Module, Source0, Source) :-
     rewrite_source_text_if_needed(Module, Source0, Source).
-
-:- multifile isolation:source_text_guard_active/0.
-isolation:source_text_guard_active :-
-    blacklist_guard_active.
 
 %  Shared database module (was import_node_shared_db +
 %  restore_shadowed_shared_db_imports reading node_runtime_state).

@@ -80,6 +80,46 @@ test(error_is_fast, [timeout(2)]) :-
           true).
 
 
+%% 9a. With several faults, scheduling rather than list position selects
+%%     the observable outcome.  The delayed left-hand error must not win
+%%     merely because it is leftmost, as sequential conjunction would.
+test(first_observed_exception_wins,
+     [throws(fast_worker_error), timeout(2)]) :-
+    parallel([
+        (sleep(0.20), throw(slow_left_error)),
+        (sleep(0.02), throw(fast_worker_error))
+    ]).
+
+
+%% 9b. Failure and exception race under the same rule.  Here failure is
+%%     deliberately observed first, so parallel/1 fails before the later
+%%     exception can determine the result.
+test(first_observed_failure_wins, [fail, timeout(2)]) :-
+    parallel([
+        (sleep(0.02), fail),
+        (sleep(0.20), throw(late_worker_error))
+    ]).
+
+
+%% 9c. Reversing the timings reverses the selected abnormal outcome.
+test(first_observed_exception_beats_later_failure,
+     [throws(early_worker_error), timeout(2)]) :-
+    parallel([
+        (sleep(0.20), fail),
+        (sleep(0.02), throw(early_worker_error))
+    ]).
+
+
+%% 9d. Framework workers execute rewritten goal terms too.  A catch-all in a
+%%     slow sibling cannot consume the cleanup exit after another worker
+%%     fails, so fail-fast cleanup still completes.
+test(worker_catch_cannot_block_fail_fast_cleanup, [fail, timeout(2)]) :-
+    parallel([
+        (sleep(0.10), fail),
+        catch(sleep(60), _, repeat)
+    ]).
+
+
 %% 10. All goals may be deterministic builtins.
 test(builtins_only) :-
     parallel([succ(2, X), plus(3, 4, Y), atom_length(hello, Z)]),

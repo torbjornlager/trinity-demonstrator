@@ -52,6 +52,15 @@ Primary basis:
 `true/0`, `fail/0`, `call/1`, `!/0`, `(',')/2`, `(;)/2`,
 `(->)/2`, `catch/3`, `throw/1`.
 
+Web Prolog `catch/3` has ordinary ISO catcher-unification and recovery
+semantics for application exceptions. Runtime control transfers are reserved:
+actor termination (`unwind(abort)`), PTCP abort, and PTCP execution-time
+expiry bypass application recovery. Cleanup installed by
+`setup_call_cleanup/3`, `setup_call_catcher_cleanup/4`, or `call_cleanup/2`
+still runs while the control transfer unwinds. The rule also applies to
+catches in loaded source, dynamically constructed `call/1-8` goals, and
+dynamically asserted clause bodies.
+
 ## 8.2 Term Unification
 
 `(=)/2`, `unify_with_occurs_check/2`, `(\=)/2`, `subsumes_term/2`.
@@ -191,7 +200,10 @@ an internal owner/bootstrap helper; it is not a standard client predicate.
 Clients address a published service as `Name@Node`. Publication and
 advertisement are distinct: `register_service/2` makes the address live, while
 an owner-maintained relation such as `service/2` may advertise all published
-services or only a selected subset.
+services or only a selected subset. Sending to an absent qualified service is
+a silent no-op, so the send operation cannot be used to enumerate a node's
+published namespace. A local send to an absent ordinary registered name keeps
+its documented `existence_error(actor_name, Name)` behavior.
 
 ### Private Database Loading
 
@@ -266,6 +278,12 @@ event may be postponed again.
 
 `parallel/1`, `first_solution/2`, `first_solution/3`.
 
+`parallel/1` has the value semantics of deterministic independent
+conjunction when every worker succeeds. If several workers fail or throw, the
+first abnormal `down/3` observed by the caller determines the outcome;
+multiple-fault selection is therefore scheduling-dependent rather than
+left-to-right. Remaining workers are terminated before the result is returned.
+
 ### Node Control
 
 `node/1`, `node/2`.
@@ -306,8 +324,19 @@ does not perform state conversion.
 
 `toplevel_abort/1` is deliberately host-specific: it maps the actor pid to its
 SWI-Prolog thread and uses `thread_signal/2` to throw the internal abort signal.
-This is an implementation-level escape hatch, not an operation expressible in
-the actor messaging primitives alone.
+The protected catch boundary lets cleanup run but prevents application
+recovery from consuming that signal. The PTCP loop then consumes it outside
+the running goal and returns the same session actor to state **s1**. Actor
+termination follows a different path: `exit/1-2` records the exit reason and
+raises SWI-Prolog's fatal `unwind(abort)`, which is never consumed by PTCP.
+Thus abort is a recoverable protocol interruption, while termination ends the
+actor. Neither operation is an ordinary mailbox message.
+
+Protection is applied to parsed goals and source and again at runtime-created
+call boundaries. This includes `call/1-8`, dynamic assertion, receive bodies,
+framework callbacks, and closures passed through loaded predicates declared
+with `meta_predicate/1`; indirect invocation does not expose native unfiltered
+`catch/3` semantics.
 
 ---
 

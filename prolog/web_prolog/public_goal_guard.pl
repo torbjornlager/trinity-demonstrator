@@ -13,6 +13,7 @@ opaque meta-call positions for public blacklist sandbox mode.
 
 :- use_module(library(lists)).
 :- use_module(node_execution_context, [current_public_execution_profile/1]).
+:- use_module(control_guard, []).
 
 
 %!  blacklist_guard_active is semidet.
@@ -237,10 +238,11 @@ rewrite_goal_(Module, assertz(Clause0, Ref),
 runtime_execute_goal(Module, Goal0) :-
     (   blacklist_guard_profile(Profile)
     ->  runtime_sandbox_check(Profile, Module, Goal0),
-        rewrite_goal(Module, Goal0, Goal),
-        runtime_call_goal(Module, Goal)
-    ;   runtime_call_goal(Module, Goal0)
-    ).
+        rewrite_goal(Module, Goal0, GuardedGoal0)
+    ;   GuardedGoal0 = Goal0
+    ),
+    control_guard:rewrite_goal(Module, GuardedGoal0, GuardedGoal),
+    runtime_call_goal(Module, GuardedGoal).
 
 
 runtime_execute_closure(Module, Closure0, ExtraArgs) :-
@@ -251,19 +253,23 @@ runtime_execute_closure(Module, Closure0, ExtraArgs) :-
 runtime_assert_clause(Functor, Module, Clause0) :-
     (   blacklist_guard_profile(Profile)
     ->  runtime_sandbox_check_dynamic_clause(Profile, Module, Clause0),
-        rewrite_asserted_clause(Module, Clause0, Clause),
-        runtime_call_assert(Functor, Module, Clause)
-    ;   runtime_call_assert(Functor, Module, Clause0)
-    ).
+        rewrite_asserted_clause(Module, Clause0, GuardedClause0)
+    ;   GuardedClause0 = Clause0
+    ),
+    control_guard:rewrite_asserted_clause(Module, GuardedClause0,
+                                          GuardedClause),
+    runtime_call_assert(Functor, Module, GuardedClause).
 
 
 runtime_assert_clause(Functor, Module, Clause0, Ref) :-
     (   blacklist_guard_profile(Profile)
     ->  runtime_sandbox_check_dynamic_clause(Profile, Module, Clause0),
-        rewrite_asserted_clause(Module, Clause0, Clause),
-        runtime_call_assert(Functor, Module, Clause, Ref)
-    ;   runtime_call_assert(Functor, Module, Clause0, Ref)
-    ).
+        rewrite_asserted_clause(Module, Clause0, GuardedClause0)
+    ;   GuardedClause0 = Clause0
+    ),
+    control_guard:rewrite_asserted_clause(Module, GuardedClause0,
+                                          GuardedClause),
+    runtime_call_assert(Functor, Module, GuardedClause, Ref).
 
 
 blacklist_guard_profile(Profile) :-

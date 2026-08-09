@@ -289,6 +289,7 @@ LAYERS = {
     _WP + "source_utils.pl": 1,
     _WP + "actor_io_support.pl": 1,
     _WP + "actor_io_template.pl": 1,
+    _WP + "control_guard.pl": 1,
     _WP + "isolation.pl": 1,
     _WP + "worker_cleanup.pl": 1,
     # layer 2 — toplevels and behaviours

@@ -106,6 +106,20 @@ test(src_text, Msg == hello_from_text) :-
        on_timeout(fail)
    ]).
 
+test(src_text_operator_directive_affects_following_terms,
+     Term == likes(alice, bob)) :-
+   self(Self),
+   spawn(run(Self), _Pid, [
+       link(false),
+       src_text("
+:- op(500, xfx, likes).
+run(Parent) :-
+    Term = (alice likes bob),
+    send(Parent, term(Term)).
+")
+   ]),
+   receive({ term(Term) -> true }, [timeout(1), on_timeout(fail)]).
+
 test(src_predicates, Value == a) :-
    self(Self),
    spawn(user:run(Self), _Pid, [
@@ -276,6 +290,139 @@ test(consult_load_list_extends_private_db, Msg == extended) :-
        timeout(1),
        on_timeout(fail)
    ]).
+
+test(actor_exit_bypasses_application_catch_and_runs_cleanup) :-
+   self(Self),
+   setup_call_cleanup(
+       spawn(run(Self), Pid, [
+           link(false),
+           monitor(true),
+           src_text("
+run(Parent) :-
+    setup_call_cleanup(
+        send(Parent, ready),
+        catch(sleep(60), _, (send(Parent, application_recovered), repeat)),
+        send(Parent, cleaned)).
+")
+       ]),
+       ( receive({ ready -> true }, [timeout(1), on_timeout(fail)]),
+         exit(Pid, killed_by_test),
+         receive({ cleaned -> true }, [timeout(1), on_timeout(fail)]),
+         receive({
+             application_recovered -> throw(exit_was_caught);
+             down(Pid, _, killed_by_test) -> true
+         }, [timeout(1), on_timeout(fail)])
+       ),
+       catch(exit(Pid, test_cleanup), _, true)).
+
+test(actor_exit_bypasses_catch_inside_receive_body) :-
+   self(Self),
+   setup_call_cleanup(
+       spawn(run(Self), Pid, [
+           link(false),
+           monitor(true),
+           src_text("
+run(Parent) :-
+    send(Parent, receive_ready),
+    setup_call_cleanup(
+        true,
+        receive({go ->
+            catch((send(Parent, receive_body), sleep(60)),
+                  _,
+                  (send(Parent, receive_recovered), repeat))}),
+        send(Parent, receive_cleaned)).
+")
+       ]),
+       ( receive({ receive_ready -> true },
+                 [timeout(1), on_timeout(fail)]),
+         send(Pid, go),
+         receive({ receive_body -> true },
+                 [timeout(1), on_timeout(fail)]),
+         exit(Pid, receive_kill),
+         receive({ receive_cleaned -> true },
+                 [timeout(1), on_timeout(fail)]),
+         receive({
+             receive_recovered -> throw(receive_exit_was_caught);
+             down(Pid, _, receive_kill) -> true
+         }, [timeout(1), on_timeout(fail)])
+       ),
+       catch(exit(Pid, test_cleanup), _, true)).
+
+test(actor_exit_bypasses_catch_called_through_loaded_meta_predicate) :-
+   self(Self),
+   setup_call_cleanup(
+       spawn(run(Self), Pid, [
+           link(false),
+           monitor(true),
+           src_text("
+run(Parent) :-
+    setup_call_cleanup(
+        send(Parent, meta_ready),
+        maplist(call,
+                [catch(sleep(60), _,
+                       (send(Parent, meta_recovered), repeat))]),
+        send(Parent, meta_cleaned)).
+")
+       ]),
+       ( receive({ meta_ready -> true },
+                 [timeout(1), on_timeout(fail)]),
+         exit(Pid, meta_kill),
+         receive({ meta_cleaned -> true },
+                 [timeout(1), on_timeout(fail)]),
+         receive({
+             meta_recovered -> throw(meta_exit_was_caught);
+             down(Pid, _, meta_kill) -> true
+         }, [timeout(1), on_timeout(fail)])
+       ),
+       catch(exit(Pid, test_cleanup), _, true)).
+
+test(src_uri_and_dynamic_assert_cannot_restore_exit_recovery) :-
+   self(Self),
+   setup_call_cleanup(
+       ( tmp_file_stream(text, File, Stream),
+         format(Stream, "~s", ["
+run(Parent) :-
+    assertz((dynamic_wait :-
+        catch((send(Parent, dynamic_ready), sleep(60)),
+              _,
+              (send(Parent, dynamic_recovered), repeat)))),
+    setup_call_cleanup(true, dynamic_wait, send(Parent, dynamic_cleaned)).
+"]),
+         close(Stream),
+         atom_concat('file://', File, URI)
+       ),
+       setup_call_cleanup(
+           spawn(run(Self), Pid, [
+               link(false),
+               monitor(true),
+               src_uri(URI)
+           ]),
+           ( receive({ dynamic_ready -> true },
+                     [timeout(1), on_timeout(fail)]),
+             exit(Pid, dynamic_kill),
+             receive({ dynamic_cleaned -> true },
+                     [timeout(1), on_timeout(fail)]),
+             receive({
+                 dynamic_recovered -> throw(dynamic_exit_was_caught);
+                 down(Pid, _, dynamic_kill) -> true
+             }, [timeout(1), on_timeout(fail)])
+           ),
+           catch(exit(Pid, test_cleanup), _, true)),
+       catch(delete_file(File), _, true)).
+
+test(ordinary_exception_still_uses_application_recovery) :-
+   self(Self),
+   spawn(run(Self), Pid, [
+       link(false),
+       monitor(true),
+       src_text("
+run(Parent) :-
+    catch(throw(application_error), application_error,
+          send(Parent, recovered)).
+")
+   ]),
+   receive({ recovered -> true }, [timeout(1), on_timeout(fail)]),
+   receive({ down(Pid, _, true) -> true }, [timeout(1), on_timeout(fail)]).
 
 :- end_tests(t1_isolation).
 

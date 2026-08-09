@@ -80,4 +80,28 @@ test(remove_one_link, [setup(reset_controller)]) :-
     remove_remote_link(parent1, rpid1),
     take_remote_children_for_parent(parent1, [rpid2]).
 
+test(connection_drop_reports_loss_and_clears_node_state,
+     [setup(reset_controller), cleanup(reset_controller)]) :-
+    self(Self),
+    Node = 'http://lost.example',
+    OtherNode = 'http://other.example',
+    LostPid = 101@Node,
+    OtherPid = 202@OtherNode,
+    add_remote_monitor(Self, LostPid, lost_ref),
+    add_remote_monitor(Self, OtherPid, other_ref),
+    register_remote_target(LostPid, Self),
+    register_remote_target(OtherPid, Self),
+    add_remote_link(Self, LostPid),
+    add_remote_link(Self, OtherPid),
+    distribution:remote_ws_connection_closed(Node),
+    receive({
+        down(LostPid, lost_ref, connection_closed) -> true
+    }, [timeout(1), on_timeout(fail)]),
+    assertion(\+ node_controller:remote_monitor_(_, LostPid, _)),
+    assertion(\+ node_controller:remote_target_(LostPid, _)),
+    assertion(\+ node_controller:remote_link_(_, LostPid)),
+    assertion(node_controller:remote_monitor_(Self, OtherPid, other_ref)),
+    assertion(node_controller:remote_target_(OtherPid, Self)),
+    assertion(node_controller:remote_link_(Self, OtherPid)).
+
 :- end_tests(node_controller).

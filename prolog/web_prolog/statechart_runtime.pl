@@ -57,6 +57,7 @@ statechart actor interpreter. The runtime state itself lives in
 :- use_module(library(option)).
 :- use_module(library(debug)).
 :- use_module(isolation, [execution_source_module/2]).
+:- use_module(control_guard, []).
 
 :- meta_predicate with_internal_queue(0).
 
@@ -386,7 +387,8 @@ check_chart_goal(Goal) :-
 call_chart_goal(Goal) :-
     chart_goal_module(Module),
     forall(hook_check_chart_goal(Module, Goal), true),
-    call(Module:Goal).
+    control_guard:rewrite_goal(Module, Goal, ProtectedGoal),
+    call(Module:ProtectedGoal).
 
 chart_goal_module(Module) :-
     execution_source_module(statechart_actor, Module).
@@ -395,7 +397,8 @@ script(Goal) :-
     emit_trace(execution(Goal)),
     (   catch(once(call_chart_goal(Goal)),
               Error,
-              ( enqueue_internal_event(error(Error)),
+              ( control_guard:rethrow_reserved(Error),
+                enqueue_internal_event(error(Error)),
                 true
               ))
     ->  true
@@ -405,4 +408,5 @@ script(Goal) :-
 
 
 emit_trace(Event) :-
-    catch(statechart_actor:emit_trace(Event), _, true).
+    catch(statechart_actor:emit_trace(Event), Error,
+          (control_guard:rethrow_reserved(Error), true)).

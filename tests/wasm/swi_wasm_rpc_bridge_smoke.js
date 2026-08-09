@@ -124,7 +124,7 @@ const errorDisplayHelpers = Function(
   source.slice(
     source.indexOf("function splitTopLevelArgs"),
     source.indexOf("function summarizeStructuredError")
-  ) + "\nreturn { exceptionDisplayTerm, sanitizeDownReasonTerm, humanizePrologErrorTerm };"
+  ) + "\nreturn { exceptionDisplayTerm, sanitizeDownReasonTerm, humanizePrologErrorTerm, prologTermKindDescription };"
 )();
 const exceptionDisplayTerm = errorDisplayHelpers.exceptionDisplayTerm;
 
@@ -567,6 +567,13 @@ ok(errorDisplayHelpers.sanitizeDownReasonTerm(
    includes("return normalizeErrorText(m[1]);") &&
    includes("var safeReason = sanitizeDownReasonTerm(reasonText || \"true\")"),
    "down reasons are sanitised before display or browser-mailbox delivery");
+ok(errorDisplayHelpers.humanizePrologErrorTerm(
+     "error(type_error(float,a),context(system:(is)/2,_))"
+   ) === "Type error: float expected, found a (an atom)" &&
+   errorDisplayHelpers.prologTermKindDescription("42") === "an integer" &&
+   errorDisplayHelpers.prologTermKindDescription("[a]") === "a list" &&
+   errorDisplayHelpers.prologTermKindDescription("point(1,2)") === "a compound term",
+   "SWI-WASM type errors use the native node's concise value-and-kind wording");
 ok(workerSource.includes("function actorToplevelEvent(value, text, details)") &&
    workerSource.includes("errorPayload.details = String(details)") &&
    workerSource.includes("exception_display_text(error(Formal0, _), Text) :- !,") &&

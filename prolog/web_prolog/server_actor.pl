@@ -42,6 +42,7 @@ Message protocol (internal):
     actor_module/2,
     load_options_text/3
 ]).
+:- use_module(control_guard, []).
 
 :- meta_predicate
        server_spawn(:, +, -),
@@ -316,12 +317,18 @@ install_upgrade_terms([Term|Terms], Module) :-
 install_upgrade_terms(Term, Module) :-
     install_upgrade_term(Term, Module).
 
-install_upgrade_term((:- Directive), Module) :-
+install_upgrade_term((:- Directive0), Module) :-
     !,
+    control_guard:rewrite_goal(Module, Directive0, Directive),
     call(Module:Directive).
-install_upgrade_term((?- Goal), Module) :-
+install_upgrade_term((?- Goal0), Module) :-
     !,
+    control_guard:rewrite_goal(Module, Goal0, Goal),
     call(Module:Goal).
+install_upgrade_term((Head :- Body0), Module) :-
+    !,
+    control_guard:rewrite_goal(Module, Body0, Body),
+    assertz(Module:(Head :- Body)).
 install_upgrade_term(Clause, Module) :-
     assertz(Module:Clause).
 

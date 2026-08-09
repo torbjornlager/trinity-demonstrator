@@ -885,6 +885,17 @@ and (for sends) return as a normal cross-node failure.  Re-opening
 the connection on a subsequent spawn will create a fresh state;
 old pids on the remote are gone.
 
+The peer enforces the other half of this rule. Every actor created by an
+inbound WebSocket is owned by that connection, and server-side WS cleanup
+terminates all such actors when the connection closes. The connection is
+therefore the transport realization of the remote containment boundary:
+once loss is detected as a close or transport error, the caller reports
+`connection_closed` while the host tears down the connection-owned subtree.
+This is fail-closed—an interrupted connection may kill useful work, but does
+not intentionally leave detached remote work. It does not promise that an
+arbitrary silent network partition will be detected before the underlying
+WebSocket/TCP stack declares the connection lost.
+
 ---
 
 ## 8. Local-actor cleanup integration
@@ -1031,7 +1042,10 @@ testable; see §12.
 8. **Per-(sender, receiver) FIFO.**  Multiple sends from one local
    actor to one remote pid arrive at the remote mailbox in the order
    they were issued.  (Sends from different local actors are not
-   ordered relative to each other.)
+   ordered relative to each other.) This is a mailbox-message guarantee,
+   not a guarantee that a later exit or PTCP interruption waits for the
+   target to process earlier messages. Protocols needing that relation must
+   use an acknowledgement before initiating termination.
 
 ---
 

@@ -94,11 +94,14 @@ I/O.
 
 ### 2. Isolation
 
-[`isolation.pl`](../prolog/web_prolog/isolation.pl) is freestanding (it depends
-on module machinery, not on actors). It owns per-actor module preparation and
-source loading, exposing `with_source/2` plus its own hooks
-(`prepare_module`, `prepare_goal`, `approve_source`) that the node layer fills
-in with sandbox policy. The actor core invokes it only through
+[`isolation.pl`](../prolog/web_prolog/isolation.pl) owns per-actor module
+preparation and source loading. It imports the layer-0 actor API for actor I/O
+and private-database support, and the layer-1
+[`control_guard.pl`](../prolog/web_prolog/control_guard.pl) rewriter ensures
+that Web Prolog `catch/3` cannot consume actor termination or PTCP control
+transfers. Node policy extends preparation through hooks such as
+`prepare_module`, `prepare_goal`, and `rewrite_source_text`; the actor core
+invokes isolation only through
 [`composition.pl`](../prolog/web_prolog/composition.pl).
 
 ### 3. Reusable actor behaviours

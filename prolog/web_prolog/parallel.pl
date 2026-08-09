@@ -9,6 +9,9 @@
 Runs a list of goals concurrently — one monitored actor per goal — and
 succeeds once all of them have succeeded. It fails fast: as soon as any
 goal fails, the remaining actors are torn down and `parallel/1` fails.
+If several workers fail or throw, the first abnormal `down/3` observed by
+the caller determines the result.  Thus multiple faults are intentionally
+scheduling-dependent rather than selected by goal-list position.
 Built directly on the layer-0 actor primitives.
 
 @see server_actor.pl, supervisor_actor.pl and statechart_actor.pl for
@@ -25,6 +28,7 @@ Built directly on the layer-0 actor primitives.
     receive/1
 ]).
 :- use_module(worker_cleanup, [tidy_up_all/1]).
+:- use_module(control_guard, []).
 
 :- multifile isolation:prepare_module/3.
 
@@ -44,7 +48,8 @@ parallel(QualifiedGoals) :-
     maplist(par_yield(Pids), Pids, Goals).
 
 
-qualify_goal(Module, Goal, Module:Goal).
+qualify_goal(Module, Goal0, Module:Goal) :-
+    control_guard:rewrite_goal(Module, Goal0, Goal).
 
 
 par_solve(Goal, Pid) :-

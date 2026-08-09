@@ -23,6 +23,7 @@ leaving result or monitor messages in the caller's mailbox.
     receive/1
 ]).
 :- use_module(worker_cleanup, [tidy_up_all/1]).
+:- use_module(control_guard, []).
 
 :- multifile isolation:prepare_module/3.
 
@@ -78,7 +79,8 @@ valid_first_solution_option(Option) :-
                         'expected on_fail/1 or on_error/1'))).
 
 
-qualify_goal(Module, Goal, Module:Goal).
+qualify_goal(Module, Goal0, Module:Goal) :-
+    control_guard:rewrite_goal(Module, Goal0, Goal).
 
 
 first_solve(Solution, Goal, Pid) :-

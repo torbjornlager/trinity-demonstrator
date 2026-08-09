@@ -24,6 +24,7 @@ into dedicated helper modules to keep the public actor module compact.
 :- use_module(library(debug)).
 :- use_module(library(option)).
 :- use_module(actor_io_support, [actor_io_prelude_text/1]).
+:- use_module(control_guard, []).
 :- use_module(statechart_model, [statechart_spawn_source/3]).
 :- use_module(statechart_runtime, [
     raise/1,
@@ -201,7 +202,8 @@ interpret_example(Name0) :-
 
 emit_trace(Event) :-
     (   trace_hook(Goal)
-    ->  catch(call(Goal, Event), _, true)
+    ->  catch(call(Goal, Event), Error,
+              (control_guard:rethrow_reserved(Error), true))
     ;   true
     ),
     terminal_output(statechart_trace(Event)).
