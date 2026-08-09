@@ -64,13 +64,38 @@ Current authentication mode (read-only). Change via startup options.
 
 Legacy config values `on`, `demo`, and `strict` are still accepted and normalize to **WHITELIST SANDBOX**.
 
-#### **Timeout** (seconds)
+#### **Request Timeout** (seconds)
 
-Hard upper bound on goal execution time. Clients can request lower timeouts; the effective timeout is the **minimum** of requested and owner timeout.
+Maximum time an HTTP execution request waits for its next result. For a
+stateless `/call`, expiry returns `error(timeout)` and retires the ephemeral
+computation. For an ISOTOPE session endpoint, expiry returns a non-destructive
+`timeout` event without aborting the goal or terminating the session. Clients
+can request shorter waits; the effective timeout is the **minimum** of the
+requested and owner values.
 
-- Default: 2 seconds
+- Default: 1 second
 - Typical range: 1–30 seconds
-- Use case: Prevent runaway computations from consuming resources
+- Use case: Bound HTTP request latency independently of PTCP lifecycle policy
+
+#### **Time Limit** (seconds)
+
+Hard upper bound on goal execution while a PTCP session is working in state
+**s2**. Expiry reports `time_limit_exceeded`; the current goal is abandoned,
+but the session actor remains alive and returns to state **s1**.
+
+- Default: 300 seconds
+- A client may request a tighter limit but cannot weaken the owner's ceiling
+- Enter `infinite` to disable the node ceiling
+
+#### **Idle Limit** (seconds)
+
+Maximum inactivity while a PTCP session waits in state **s1** or **s3**.
+Expiry terminates the session normally and releases its capacity; monitored
+clients observe a normal `down` event.
+
+- Default: 300 seconds
+- Waiting in **s3** does not consume the running time limit
+- Enter `infinite` to disable the node ceiling
 
 #### **Cache Size**
 

@@ -16,6 +16,7 @@ Parse and normalize spawn options for ISOTOPE endpoints.
     sandbox_prepare_source_options/4
 ]).
 :- use_module(node_auth, [require_source_options_access/2]).
+:- use_module(node_session_limits, [apply_node_ptcp_limits/2]).
 
 :- use_module(library(error)).
 :- use_module(library(http/http_json)).
@@ -39,7 +40,8 @@ isotope_spawn_options(Request, Principal, EffectiveProfile, SpawnOptions, Initia
     sandbox_prepare_source_options(EffectiveProfile, node_isotope_controller,
                                    SpawnOptions0, PreparedSpawnOptions),
     infer_initial_load_text(PreparedSpawnOptions, ExplicitLoadText, InitialLoadText),
-    enforce_session_option(PreparedSpawnOptions, SpawnOptions).
+    enforce_session_option(PreparedSpawnOptions, SessionOptions),
+    apply_node_ptcp_limits(SessionOptions, SpawnOptions).
 
 
 %!  spawn_options_from_query(+Request, -SpawnOptions, -LoadText, -TraceEnabled) is det.

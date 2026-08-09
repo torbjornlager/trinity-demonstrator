@@ -205,7 +205,9 @@ Design notes:
 :- use_module(library(http/http_host), []).
 :- setting(cache_size, integer, 100, 'Max number of cache entries').
 :- setting(cache_ttl,  number,  300, 'Maximum lifetime of an unused cached continuation in seconds').
-:- setting(timeout,    number,  1,   'Timeout in seconds').
+:- setting(timeout,    number,  1,   'Maximum time to wait for an HTTP execution or session event').
+:- setting(time_limit, number,  300, 'Maximum PTCP execution time in state s2').
+:- setting(idle_limit, number,  300, 'Maximum PTCP inactivity in states s1 and s3').
 :- setting(sandbox,   atom,    blacklist, 'Sandbox policy: off, whitelist, or blacklist (on/demo/strict accepted as aliases for whitelist)').
 
 :- dynamic node_shared_source/1.
@@ -851,6 +853,8 @@ isobase_event(Principal, GoalAtom, TemplateAtom0, Offset, Limit, Format, LoadTex
 %     - principal(+PrincipalId, +Capabilities)
 %     - principal(+PrincipalId, +Capabilities, +Profile)  % rejected
 %     - timeout(+Seconds)
+%     - time_limit(+SecondsOrInfinite)
+%     - idle_limit(+SecondsOrInfinite)
 %     - cache_size(+Entries)
 %     - cache_ttl(+Seconds)
 %     - max_inflight_calls(+Count)
@@ -893,7 +897,9 @@ node(Port, Options0) :-
     extract_resource_ceiling(max_actors, Options2, MaxActors, Options3),
     extract_resource_ceiling(max_interaction_log_bytes, Options3, MaxLogBytes, Options4),
     extract_plain_option(cache_ttl, default, Options4, CacheTTL0, Options4a),
-    extract_plain_option(max_interaction_log_backups, 5, Options4a, MaxLogBackups, Options),
+    extract_plain_option(time_limit, default, Options4a, TimeLimit0, Options4b),
+    extract_plain_option(idle_limit, default, Options4b, IdleLimit0, Options4c),
+    extract_plain_option(max_interaction_log_backups, 5, Options4c, MaxLogBackups, Options),
     extract_plain_option(ws_allowed_origins, [], Options, WSAllowedOrigins0, Options5a),
     extract_tutorial_sections(Options5a, TutorialSections, Options5),
     node_options(Options5, SharedDB, SandboxMode, Profile, AuthMode,
@@ -909,6 +915,10 @@ node(Port, Options0) :-
     normalize_relation_patterns(RelationPatterns0, RelationPatterns),
     resolve_node_setting(timeout, normalize_timeout,
                          Timeout0, Timeout),
+    resolve_node_setting(time_limit, normalize_time_limit,
+                         TimeLimit0, TimeLimit),
+    resolve_node_setting(idle_limit, normalize_idle_limit,
+                         IdleLimit0, IdleLimit),
     resolve_node_setting(cache_size, normalize_cache_size,
                          CacheSize0, CacheSize),
     resolve_node_setting(cache_ttl, normalize_cache_ttl,
@@ -966,6 +976,8 @@ node(Port, Options0) :-
         profile:Profile,
         auth:AuthMode,
         timeout:Timeout,
+        time_limit:TimeLimit,
+        idle_limit:IdleLimit,
         cache_size:CacheSize,
         cache_ttl:CacheTTL,
         max_inflight_calls:MaxInflightCalls,
@@ -1249,6 +1261,24 @@ normalize_cache_ttl(CacheTTL0, CacheTTL) :-
     ;   throw(error(domain_error(node_cache_ttl, CacheTTL0),
                     context(node:normalize_cache_ttl/2,
                             'cache_ttl must be a positive number of seconds')))
+    ).
+
+normalize_time_limit(Limit0, Limit) :-
+    normalize_session_lifecycle_limit(time_limit, Limit0, Limit).
+
+normalize_idle_limit(Limit0, Limit) :-
+    normalize_session_lifecycle_limit(idle_limit, Limit0, Limit).
+
+normalize_session_lifecycle_limit(Kind, Limit0, Limit) :-
+    (   Limit0 == infinite
+    ->  Limit = infinite
+    ;   must_be(number, Limit0),
+        (   Limit0 > 0
+        ->  Limit = Limit0
+        ;   throw(error(domain_error(Kind, Limit0),
+                        context(node:node/2,
+                                'session lifecycle limits must be positive seconds or infinite')))
+        )
     ).
 
 shared_db_runtime_module(Port, SharedDBModule) :-

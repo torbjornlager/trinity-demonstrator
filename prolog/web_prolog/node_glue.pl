@@ -36,6 +36,7 @@ inline.
 ]).
 :- use_module(node_sandbox, []).
 :- use_module(node_session, []).
+:- use_module(node_session_limits, [apply_node_ptcp_limits/2]).
 :- use_module(node_ws, []).
 :- use_module(node_log, [log_event/1]).
 
@@ -168,6 +169,18 @@ toplevel_actors:hook_inference_limit(Limit) :-
     current_node_value(max_call_inferences, Limit),
     integer(Limit),
     Limit > 0.
+
+%  A public ACTOR goal may call toplevel_spawn/2 directly. Apply the same
+%  owner lifecycle ceilings used by the HTTP and WebSocket spawn endpoints,
+%  so nesting cannot bypass node policy.
+:- multifile toplevel_actors:hook_ptcp_limits/4.
+toplevel_actors:hook_ptcp_limits(TimeLimit0, IdleLimit0,
+                                 TimeLimit, IdleLimit) :-
+    current_public_execution_profile(_),
+    apply_node_ptcp_limits(
+        [time_limit(TimeLimit0), idle_limit(IdleLimit0)],
+        [time_limit(TimeLimit), idle_limit(IdleLimit)]
+    ).
 
 %  The WS-context inheritance triple (was current_predicate-guarded
 %  calls into node_ws from actor.pl's spawn_local).

@@ -361,14 +361,15 @@ ok(includes("terminalHighlightPredicates: false") &&
    includes("highlightWebPrologTerminalPredicates(part)") &&
    includes("window.webPrologTerminalHighlightPredicates !== true") &&
    includes("this.terminalHighlightPredicates") &&
-   includes("webPrologTerminalPredicateHighlightColor") &&
-   includes("theme === \"dark\" ? \"#8fd782\" : \"#006400\"") &&
-   includes("[[b;\" + webPrologTerminalPredicateHighlightColor() + \";]") &&
+   includes("--terminal-wp-predicate: #006400") &&
+   includes("--terminal-wp-predicate: #8fd782") &&
+   includes("[[b;;;terminal-wp-predicate]") &&
+   includes(".terminal .terminal-wp-predicate") &&
    includes('span[style*="font-weight: bold"]') &&
    includes('span[data-text][style*="font-weight: bold"]') &&
    includes("font-weight: 700 !important") &&
-   !includes("[[b;var(--terminal-predicate-highlight);]"),
-   "terminal can highlight manual-listed Web Prolog predicate calls and indicators in bold dark green");
+   !includes("webPrologTerminalPredicateHighlightColor"),
+   "terminal highlights manual-listed Web Prolog predicates in the theme-aware colour");
 ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
    editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_INDICATORS") &&
    editorIncludes("cm-wp-builtin") &&
@@ -538,7 +539,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20260803-exception-display'),
+   includes('/swi_wasm_actor_worker.js?v=20260808-ptcp-lifecycle'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -816,7 +817,7 @@ ok(includes("server_upgrade(To, Pred0, Options) :- collect_spawn_source(Options,
 ok(includes("collect_remote_spawn_source(Goal, Options, Source)") &&
    includes("default_remote_spawn_source(echo_actor") &&
    includes("option(session(Session), Options, true)") &&
-   includes("swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText)"),
+   includes("swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText, #TimeLimitText, #IdleLimitText)"),
    "SWI-WASM bridge keeps stale remote echo/toplevel tutorial commands working");
 ok(includes('self.routeSwiWasmActorMessage("remote", message.target, message.message);') &&
    !includes("self.sendSwiWasmActorMessage(message.target, message.message, \"remote\");"),
@@ -1032,6 +1033,17 @@ ok(includes('"swi_wasm_actor_bridge:ptcp(" + qualifySwiWasmLocalPid(pid) + ",ter
    workerSource.includes('flush_output(user_output)') &&
    includes('this.requestSwiWasmActorInput(String(message.data || ""))'),
    "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
+ok(workerSource.includes('option(time_limit(TimeLimit0), Options, infinite)') &&
+   workerSource.includes('option(idle_limit(IdleLimit0), Options, infinite)') &&
+   workerSource.includes('actorArmTimeLimit(#TimeLimit, #TargetText, #PidText)') &&
+   workerSource.includes("on_timeout(throw('$ptcp_idle_limit'))") &&
+   workerSource.includes('data: "Time limit exceeded"') &&
+   workerSource.includes('details: "time_limit_exceeded"') &&
+   workerSource.includes('return /(?:^|:)ptcp\\(/.test(currentGoalText);') &&
+   includes('Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit)') &&
+   includes('message.timeLimit || "infinite"') &&
+   includes('message.idleLimit || "infinite"'),
+   "SWI-WASM toplevels separate s2 time limits from s1/s3 idle limits");
 ok(workerSource.includes('"    await(Promise, PidText),",\n      "    term_string(Pid, PidText).') &&
    includes('"    PidText := swiWasmActorWhereis(#Kind, #NameText),",\n              "    term_string(Pid, PidText).'),
    "whereis/2 binds an absent local name to undefined like a remote node");
@@ -1239,7 +1251,7 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260803-exception-display') &&
+   includes('/swi_wasm_actor_worker.js?v=20260808-ptcp-lifecycle') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&

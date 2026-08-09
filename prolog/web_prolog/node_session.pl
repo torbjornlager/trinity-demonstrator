@@ -28,7 +28,7 @@ Session lifecycle and queue/message normalization for node ISOTOPE endpoints.
 */
 
 :- use_module(actor_api, [actor_module/2, exit/2]).
-:- use_module(toplevel_actors, [toplevel_call/3, toplevel_abort/1]).
+:- use_module(toplevel_actors, [toplevel_call/3]).
 :- use_module(rpc, [text_to_string/2]).
 :- use_module(pid_utils, [canonical_pid/2, local_node_url/1]).
 :- use_module(isolation, [load_source_text/3]).
@@ -53,6 +53,25 @@ Session lifecycle and queue/message normalization for node ISOTOPE endpoints.
 
 :- meta_predicate with_isotope_session_public_execution_profile(+, 0).
 
+:- multifile actors:hook_stop/1.
+
+
+%  Notify an HTTP ISOTOPE queue when a session ends by itself (notably after
+%  idle_limit/1), and release its capacity immediately. The queue/ownership
+%  rows remain just long enough for the client to retrieve the `down` event;
+%  session_message_event/3 then performs the full cleanup. Explicit
+%  administrative halt cleans the rows before the asynchronous stop arrives.
+actors:hook_stop(Pid0) :-
+    session_pid_key(Pid0, Pid),
+    isotope_session(Pid, Queue),
+    (   actors:exit_reason(Pid0, Reason0)
+    ->  Reason = Reason0
+    ;   Reason = true
+    ),
+    catch(thread_send_message(Queue, down(Pid, Pid, Reason)), _, true),
+    ignore(catch(finish_activity(isotope_session, Pid, Reason), _, true)),
+    forget_isotope_session_owner(Pid).
+
 
 %!  rewrite_isotope_goal(+Goal0, -Goal) is det.
 %
@@ -64,10 +83,18 @@ rewrite_isotope_goal(Var, Var) :-
     !.
 rewrite_isotope_goal(read(Term), input('|:', Term)) :-
     !.
-rewrite_isotope_goal(actors:input(Prompt, Term), input(Prompt, Term)) :-
+%  Compare the qualifier by identity before destructuring input/2-3. A clause
+%  head written as actors:input(...) would also unify with a data term M:G
+%  whose arguments are still variables (for example writeln(N:Pid)).
+rewrite_isotope_goal(Module:Input, input(Prompt, Term)) :-
+    Module == actors,
+    nonvar(Input),
+    Input = input(Prompt, Term),
     !.
-rewrite_isotope_goal(actors:input(Prompt, Term, Options),
-                     input(Prompt, Term, Options)) :-
+rewrite_isotope_goal(Module:Input, input(Prompt, Term, Options)) :-
+    Module == actors,
+    nonvar(Input),
+    Input = input(Prompt, Term, Options),
     !.
 rewrite_isotope_goal(Module:Goal0, Module:Goal) :-
     atom(Module),
@@ -260,14 +287,14 @@ ensure_isotope_ready(Pid, Queue, Timeout) :-
 %!  wait_for_session_event(+Pid, +Queue, +Timeout, -Event) is det.
 %
 %   Wait for a message from the session queue and map it to the external JSON
-%   event vocabulary. On timeout, abort remote computation and return
-%   `timeout(Pid)`.
+%   event vocabulary. A wait timeout is a non-destructive transport outcome:
+%   return `timeout(Pid)` and leave PTCP execution/lifecycle enforcement to
+%   the actor's separate `time_limit` and `idle_limit`.
 wait_for_session_event(Pid, Queue, Timeout, Event) :-
     session_pid_key(Pid, SessionPid),
     (   thread_get_message(Queue, Message, [timeout(Timeout)])
     ->  session_message_event(SessionPid, Message, Event)
-    ;   catch(toplevel_abort(SessionPid), _, true),
-        Event = timeout(SessionPid)
+    ;   Event = timeout(SessionPid)
     ).
 
 
@@ -283,7 +310,7 @@ session_message_event(Pid, terminal_output(Pid, Data), terminal_output(Pid, Data
 session_message_event(Pid, prompt(Pid, Prompt), prompt(Pid, Prompt)) :-
     remember_pending_prompt(Pid, Prompt).
 session_message_event(Pid, '$abort_goal', abort(Pid)).
-session_message_event(Pid, down(Pid, _, _), abort(Pid)) :-
+session_message_event(Pid, down(Pid, Ref, Reason), down(Pid, Ref, Reason)) :-
     cleanup_isotope_session(Pid).
 session_message_event(Pid, Message, error(Pid, Unexpected)) :-
     Unexpected = error(unexpected_session_message(Message),

@@ -657,6 +657,80 @@ test(toplevel_call_does_not_share_goal_variables_with_caller,
     receive({ down(Pid, _, _) -> true }),
     Result = ok.
 
+test(time_limit_reports_swi_term_and_keeps_session_alive) :-
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       time_limit(0.05),
+       idle_limit(2)
+   ]),
+   toplevel_call(Pid, sleep(0.2), [template(true)]),
+   receive({
+       error(Pid, time_limit_exceeded) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]),
+   %  The running time limit aborts only the current goal.  The same actor
+   %  must have returned to s1 and accept a subsequent call.
+   toplevel_call(Pid, true, [template(true)]),
+   receive({
+       success(Pid, [true], false) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]),
+   catch(exit(Pid, cleanup), _, true),
+   receive({
+       down(Pid, _, cleanup) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]).
+
+test(time_limit_is_suspended_while_waiting_in_state_3) :-
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       time_limit(0.05),
+       idle_limit(2)
+   ]),
+   toplevel_call(Pid, member(X, [a,b]), [template(X), limit(1)]),
+   receive({
+       success(Pid, [a], true) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]),
+   %  This exceeds time_limit/1 but not idle_limit/1.  A running timer that
+   %  leaked into s3 would incorrectly abort the suspended continuation.
+   sleep(0.15),
+   toplevel_next(Pid),
+   receive({
+       success(Pid, [b], false) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]),
+   catch(exit(Pid, cleanup), _, true),
+   receive({
+       down(Pid, _, cleanup) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]).
+
+test(idle_limit_terminates_session_normally_in_state_1) :-
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       idle_limit(0.05)
+   ]),
+   receive({
+       down(Pid, _, true) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]).
+
+test(idle_limit_terminates_session_normally_in_state_3) :-
+   toplevel_spawn(Pid, [
+       session(true),
+       monitor(true),
+       idle_limit(0.05)
+   ]),
+   toplevel_call(Pid, member(X, [a,b]), [template(X), limit(1)]),
+   receive({
+       success(Pid, [a], true) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]),
+   receive({
+       down(Pid, _, true) -> true
+   }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]).
+
+test(ptcp_limits_must_be_positive_or_infinite,
+     true(Error = error(domain_error(time_limit, 0), _))) :-
+   catch(toplevel_spawn(_Pid, [time_limit(0)]), Error, true),
+   nonvar(Error).
+
 :- end_tests(t2_toplevels).
 
 

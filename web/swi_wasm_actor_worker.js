@@ -13,6 +13,10 @@
   var Module = null;
   var exitReason = null;
   var abortRequested = false;
+  var ptcpTimeLimitRequested = false;
+  var ptcpTimeLimitTimer = null;
+  var ptcpTimeLimitTargetText = "";
+  var ptcpTimeLimitPidText = "";
   var currentGoalText = "";
   var inheritedSource = "";
   var behaviourSource = "";
@@ -311,11 +315,14 @@
     });
   }
 
-  function actorRemoteToplevelSpawn(nodeText, sourceText, sessionText) {
+  function actorRemoteToplevelSpawn(nodeText, sourceText, sessionText,
+                                    timeLimitText, idleLimitText) {
     return actorRequest("remote_toplevel_spawn", {
       node: String(nodeText || ""),
       source: String(sourceText || ""),
-      session: String(sessionText || "false")
+      session: String(sessionText || "false"),
+      timeLimit: String(timeLimitText || "infinite"),
+      idleLimit: String(idleLimitText || "infinite")
     });
   }
 
@@ -475,6 +482,65 @@
       return true;
     }
     return false;
+  }
+
+  function actorArmTimeLimit(seconds, targetText, pidText) {
+    var delay = Number(seconds);
+    actorDisarmTimeLimit();
+    if (!isFinite(delay) || delay <= 0) {
+      return false;
+    }
+    ptcpTimeLimitTargetText = String(targetText || "");
+    ptcpTimeLimitPidText = String(pidText || selfPidText);
+    ptcpTimeLimitTimer = setTimeout(function() {
+      ptcpTimeLimitTimer = null;
+      ptcpTimeLimitRequested = true;
+      abortCurrentGoal();
+    }, delay * 1000);
+    return true;
+  }
+
+  function actorDisarmTimeLimit() {
+    if (ptcpTimeLimitTimer !== null) {
+      clearTimeout(ptcpTimeLimitTimer);
+      ptcpTimeLimitTimer = null;
+    }
+    return true;
+  }
+
+  function isPtcpGoal() {
+    return /(?:^|:)ptcp\(/.test(currentGoalText);
+  }
+
+  function sendPtcpTimeLimitError() {
+    var targetText = ptcpTimeLimitTargetText;
+    var pidText = ptcpTimeLimitPidText || selfPidText;
+    var messageText = "error(" + pidText + ",time_limit_exceeded)";
+    ptcpTimeLimitTargetText = "";
+    ptcpTimeLimitPidText = "";
+    if (workerRole === "shell_toplevel" && localizePid(targetText) === "terminal") {
+      post("error", {
+        data: "Time limit exceeded",
+        details: "time_limit_exceeded"
+      });
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(actorSend(targetText, messageText)).catch(function(error) {
+      post("error", { error: "PTCP time-limit delivery failed: " + String(error) });
+      return false;
+    });
+  }
+
+  function restartAbortedPtcp(error) {
+    var timedOut = ptcpTimeLimitRequested;
+    actorDisarmTimeLimit();
+    ptcpTimeLimitRequested = false;
+    abortRequested = false;
+    exitReason = null;
+    return (timedOut ? sendPtcpTimeLimitError() : Promise.resolve(true)).then(function() {
+      post("aborted", error === undefined ? {} : { error: String(error) });
+      return runGoal(currentGoalText);
+    });
   }
 
   function actorTerminalOutput(text, termText) {
@@ -662,6 +728,8 @@
   self.actorDemonitor = actorDemonitor;
   self.actorExit = actorExit;
   self.actorAbort = actorAbort;
+  self.actorArmTimeLimit = actorArmTimeLimit;
+  self.actorDisarmTimeLimit = actorDisarmTimeLimit;
   self.actorTerminalOutput = actorTerminalOutput;
   self.actorToplevelEvent = actorToplevelEvent;
   self.actorSetDoneReason = actorSetDoneReason;
@@ -1240,6 +1308,10 @@
       "toplevel_spawn(Pid, Options) :-",
       "    option(node(Node), Options, localhost),",
       "    option(session(Session), Options, false),",
+      "    option(time_limit(TimeLimit0), Options, infinite),",
+      "    option(idle_limit(IdleLimit0), Options, infinite),",
+      "    normalize_ptcp_limit(time_limit, TimeLimit0, TimeLimit),",
+      "    normalize_ptcp_limit(idle_limit, IdleLimit0, IdleLimit),",
       "    collect_spawn_source(Options, ExtraSource),",
       "    (   Node == localhost",
       "    ->  self(Self),",
@@ -1248,13 +1320,16 @@
       "        await(PidPromise, PidText),",
       "        term_string(LocalPid, PidText),",
       "        Pid = LocalPid@localhost,",
-      "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
+      "        Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit),",
+      "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Lifecycle), GoalText),",
       "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
       "        await(Promise, SpawnedText),",
       "        SpawnedText == PidText",
       "    ;   term_string(Node, NodeText),",
       "        term_string(Session, SessionText),",
-      "        Promise := actorRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText),",
+      "        term_string(TimeLimit, TimeLimitText),",
+      "        term_string(IdleLimit, IdleLimitText),",
+      "        Promise := actorRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText, #TimeLimitText, #IdleLimitText),",
       "        await(Promise, PidText),",
       "        term_string(Pid, PidText)",
       "    ),",
@@ -1267,28 +1342,41 @@
       "    ;   true",
       "    ).",
       "",
-      "ptcp(Pid, Target, Session) :-",
-      "    catch(state_1(Pid, Target, Session), '$abort_goal', ptcp(Pid, Target, Session)).",
+      "normalize_ptcp_limit(_, infinite, infinite) :- !.",
+      "normalize_ptcp_limit(Kind, Limit0, Limit) :-",
+      "    must_be(number, Limit0),",
+      "    ( Limit0 > 0 -> Limit = Limit0 ; throw(error(domain_error(Kind, Limit0), toplevel_spawn/2)) ).",
       "",
-      "state_1(Pid, Target0, Session) :-",
-      "    receive({",
+      "ptcp(Pid, Target, SessionOrLifecycle) :-",
+      "    ptcp_lifecycle(SessionOrLifecycle, Session, TimeLimit, IdleLimit),",
+      "    catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit), '$ptcp_idle_limit', true).",
+      "",
+      "ptcp_lifecycle(ptcp_options(Session, TimeLimit, IdleLimit), Session, TimeLimit, IdleLimit) :- !.",
+      "ptcp_lifecycle(Session, Session, infinite, infinite).",
+      "",
+      "state_1(Pid, Target0, Session, TimeLimit, IdleLimit) :-",
+      "    receive_idle({",
       "        '$call_text'(GoalText, Limit0, Offset, Once) ->",
       "            term_string(PlainGoal, GoalText, [variable_names(Bindings)]),",
       "            Goal = user:PlainGoal,",
       "            dict_create(Template, bindings, Bindings),",
       "            Options = [template(Template), limit(Limit0), offset(Offset), once(Once)],",
-      "            toplevel_run_call(Goal, Options, Target0, Pid) ;",
+      "            toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) ;",
       "        '$call'(Goal, Options) ->",
-      "            toplevel_run_call(Goal, Options, Target0, Pid) ;",
+      "            toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) ;",
       "        '$reload' ->",
       "            catch(load_private_source('/worker_user_code.pl'), Error, send(Target0, error(Pid, Error)))",
-      "        }),",
+      "        }, IdleLimit),",
       "    (   Session == false",
       "    ->  true",
-      "    ;   state_1(Pid, Target0, Session)",
+      "    ;   state_1(Pid, Target0, Session, TimeLimit, IdleLimit)",
       "    ).",
       "",
-      "toplevel_run_call(Goal, Options, Target0, Pid) :-",
+      "receive_idle(Clauses, infinite) :- !, receive(Clauses).",
+      "receive_idle(Clauses, IdleLimit) :-",
+      "    receive(Clauses, [timeout(IdleLimit), on_timeout(throw('$ptcp_idle_limit'))]).",
+      "",
+      "toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) :-",
       "            option(template(Template0), Options, Goal),",
       "            strip_module(Template0, _, Template),",
       "            option(offset(Offset), Options, 0),",
@@ -1297,13 +1385,24 @@
       "            option(target(Target1), Options, Target0),",
       "            Limit = count(Limit0),",
       "            Target = target(Target1),",
+      "            arm_time_limit(TimeLimit, Target1, Pid),",
       "            state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),",
+      "            disarm_time_limit(TimeLimit),",
       "            arg(1, Target, Out),",
       "            send(Out, Answer),",
       "            (   arg(3, Answer, true)",
-      "            ->  state_3(Limit, Target)",
+      "            ->  state_3(Limit, Target, IdleLimit, TimeLimit, Pid)",
       "            ;   true",
       "            ).",
+      "",
+      "arm_time_limit(infinite, _, _) :- !.",
+      "arm_time_limit(TimeLimit, Target, Pid) :-",
+      "    term_string(Target, TargetText),",
+      "    term_string(Pid, PidText),",
+      "    true := actorArmTimeLimit(#TimeLimit, #TargetText, #PidText).",
+      "",
+      "disarm_time_limit(infinite) :- !.",
+      "disarm_time_limit(_) :- true := actorDisarmTimeLimit().",
       "",
       "state_2(Goal0, Template, Offset, Limit, Once, TargetBox, Pid, Answer) :-",
       "    strip_module(Goal0, GoalModule, PlainGoal),",
@@ -1317,8 +1416,8 @@
       "    apply_once_answer(Once, Answer0, Answer1),",
       "    add_pid(Answer1, Pid, Answer).",
       "",
-      "state_3(Limit, Target) :-",
-      "    receive({",
+      "state_3(Limit, Target, IdleLimit, TimeLimit, Pid) :-",
+      "    receive_idle({",
       "        '$next'(Options2) ->",
       "            (   option(limit(NewLimit), Options2)",
       "            ->  nb_setarg(1, Limit, NewLimit)",
@@ -1328,9 +1427,11 @@
       "            ->  nb_setarg(1, Target, NewTarget)",
       "            ;   true",
       "            ),",
+      "            arg(1, Target, ActiveTarget),",
+      "            arm_time_limit(TimeLimit, ActiveTarget, Pid),",
       "            fail ;",
       "        '$stop' -> true",
-      "    }).",
+      "    }, IdleLimit).",
       "",
       "answer(Goal, Template, Offset, Limit, Answer) :-",
       "    catch(call_cleanup(slice(Goal, Template, Offset, Limit, Slice), Det = true), Error, true),",
@@ -1574,21 +1675,17 @@
       { heartbeat: 10000 }
     ).then(function() {
       flushOutput(true);
-      if (abortRequested && /^ptcp\(/.test(currentGoalText)) {
-        abortRequested = false;
-        exitReason = null;
-        post("aborted", {});
-        return runGoal(currentGoalText);
+      if (abortRequested && isPtcpGoal()) {
+        return restartAbortedPtcp();
       }
+      actorDisarmTimeLimit();
       post("done", { reason: exitReason || "true" });
     }).catch(function(error) {
       flushOutput(true);
-      if (abortRequested && /^ptcp\(/.test(currentGoalText)) {
-        abortRequested = false;
-        exitReason = null;
-        post("aborted", { error: String(error) });
-        return runGoal(currentGoalText);
+      if (abortRequested && isPtcpGoal()) {
+        return restartAbortedPtcp(error);
       }
+      actorDisarmTimeLimit();
       post("error", { error: String(error) });
     });
   }

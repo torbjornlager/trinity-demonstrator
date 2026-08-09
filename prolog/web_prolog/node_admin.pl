@@ -114,6 +114,11 @@ as startup configuration across node restarts.
     admin_terminate_isotope_session/1,
     admin_terminate_isotope_session/2
 ]).
+:- use_module(node_session_limits, [
+    current_node_time_limit/1,
+    current_node_idle_limit/1
+]).
+:- use_module(toplevel_actors, [normalize_ptcp_limit/3]).
 :- use_module(node_ws, [
     current_ws_actor_infos/1,
     admin_terminate_ws_actor/1,
@@ -503,6 +508,8 @@ current_admin_config(json{
     auth:Auth,
     sandbox:Sandbox,
     timeout:Timeout,
+    time_limit:TimeLimit,
+    idle_limit:IdleLimit,
     cache_size:CacheSize,
     cache_ttl:CacheTTL,
     max_inflight_calls:MaxInflightCalls,
@@ -528,6 +535,8 @@ current_admin_config(json{
     auth_mode(Auth),
     sandbox_mode(Sandbox),
     current_runtime_timeout(Timeout),
+    current_node_time_limit(TimeLimit),
+    current_node_idle_limit(IdleLimit),
     current_runtime_cache_size(CacheSize),
     current_runtime_cache_ttl(CacheTTL),
     current_max_inflight_calls(MaxInflightCalls),
@@ -611,6 +620,8 @@ public_execution_surface_changed(Updates) :-
     ;   get_dict(auth, Updates, _)
     ;   get_dict(sandbox, Updates, _)
     ;   get_dict(builtin_family_policy, Updates, _)
+    ;   get_dict(time_limit, Updates, _)
+    ;   get_dict(idle_limit, Updates, _)
     ).
 
 
@@ -653,6 +664,12 @@ admin_config_update_pair(Dict, sandbox, Sandbox) :-
 admin_config_update_pair(Dict, timeout, Timeout) :-
     get_dict(timeout, Dict, Timeout0),
     normalize_timeout_value(Timeout0, Timeout).
+admin_config_update_pair(Dict, time_limit, TimeLimit) :-
+    get_dict(time_limit, Dict, TimeLimit0),
+    normalize_ptcp_limit_value(time_limit, TimeLimit0, TimeLimit).
+admin_config_update_pair(Dict, idle_limit, IdleLimit) :-
+    get_dict(idle_limit, Dict, IdleLimit0),
+    normalize_ptcp_limit_value(idle_limit, IdleLimit0, IdleLimit).
 admin_config_update_pair(Dict, cache_size, CacheSize) :-
     get_dict(cache_size, Dict, CacheSize0),
     normalize_cache_size_value(CacheSize0, CacheSize).
@@ -733,6 +750,13 @@ normalize_sandbox_value(Sandbox0, Sandbox) :-
 normalize_timeout_value(Timeout0, Timeout) :-
     text_to_number(Timeout0, TimeoutNumber),
     normalize_timeout(TimeoutNumber, Timeout).
+
+normalize_ptcp_limit_value(Kind, Limit0, Limit) :-
+    (   text_lower_atom(Limit0, infinite)
+    ->  Limit = infinite
+    ;   text_to_number(Limit0, LimitNumber),
+        normalize_ptcp_limit(Kind, LimitNumber, Limit)
+    ).
 
 
 normalize_cache_size_value(CacheSize0, CacheSize) :-

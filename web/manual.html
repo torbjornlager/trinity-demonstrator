@@ -467,7 +467,10 @@ toplevel_spawn(-Pid, +Options) is det.</pre>
         <li><code>session(+Boolean)</code><br>If set to <code>false</code>, the toplevel actor terminates after having run a goal to completion. If <code>true</code>, further interaction is expected. Default is <code>false</code> in the actor API.</li>
         <li><code>target(+Pid)</code><br>Send all answer terms to <code>Pid</code>. Default is the pid of the parent.</li>
         <li><code>name(+Name)</code><br>Register the toplevel actor under <code>Name</code> in the local ordinary-name namespace.</li>
+        <li><code>time_limit(+SecondsOrInfinite)</code><br>Bounds each continuous period spent executing a goal in PTCP state <strong>s2</strong>. On expiry the target receives <code>error(Pid, time_limit_exceeded)</code> and a session toplevel returns to <strong>s1</strong>, ready for another call. Time spent waiting for a continuation in <strong>s3</strong> does not count; the running time limit starts again when a continuation resumes. Default is <code>infinite</code> in the actor API; a public node may impose a finite ceiling.</li>
+        <li><code>idle_limit(+SecondsOrInfinite)</code><br>Bounds inactivity while a session toplevel waits for a call in state <strong>s1</strong> or a continuation in state <strong>s3</strong>. On expiry the actor terminates normally, so a monitor observes <code>down(Pid, Ref, true)</code>. Default is <code>infinite</code> in the actor API; a public node may impose a finite ceiling.</li>
     </ul>
+    <p>Both finite lifecycle limits must be positive numbers of seconds. A public client may request tighter values, but cannot weaken the node owner's ceilings. These limits are distinct from an ISOTOPE session HTTP request's <code>timeout</code>, which only bounds how long that request waits for the next queued event and does not abort the goal or terminate the session.</p>
 </article>
 
 <article class="predicate-entry" id="toplevel_call/2-3">

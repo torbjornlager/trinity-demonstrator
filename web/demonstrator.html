@@ -59,6 +59,7 @@
         --terminal-overlay: rgba(255, 255, 255, 0.56);
         --terminal-info-ink: rgba(107, 114, 128, 0.96);
         --terminal-override-ink: #1d6fa8;
+        --terminal-wp-predicate: #006400;
         --terminal-cursor-bg: rgba(24, 21, 19, 0.98);
         --terminal-cursor-fg: rgba(255, 255, 255, 0.98);
         --terminal-cursor-idle: rgba(24, 21, 19, 0.98);
@@ -156,6 +157,7 @@
         --terminal-overlay: transparent;
         --terminal-info-ink: rgba(158, 175, 193, 0.96);
         --terminal-override-ink: #67b8ff;
+        --terminal-wp-predicate: #8fd782;
         --terminal-cursor-bg: rgba(236, 243, 249, 0.98);
         --terminal-cursor-fg: rgba(11, 15, 19, 0.98);
         --terminal-cursor-idle: rgba(236, 243, 249, 0.98);
@@ -1173,6 +1175,11 @@
         color: var(--terminal-override-ink) !important;
       }
 
+      .terminal .terminal-wp-predicate {
+        --color: var(--terminal-wp-predicate);
+        color: var(--terminal-wp-predicate) !important;
+      }
+
       .terminal::before {
         content: "";
         position: absolute;
@@ -1375,7 +1382,7 @@
       }
 
       .logger-item {
-        border-left: 4px solid var(--muted);
+        border-left: 8px solid var(--muted);
         background: var(--logger-item-bg);
         box-shadow: var(--elevated-shadow);
         padding: 10px 12px;
@@ -3460,7 +3467,7 @@
                       </label>
                       <label class="admin-field">
                         <span class="admin-field-label-row">
-                          <span class="admin-field-label">Timeout</span>
+                          <span class="admin-field-label">Request Timeout</span>
                           <button class="admin-config-help-button"
                                   type="button"
                                   :data-help="adminConfigHelpText('timeout')"
@@ -3472,6 +3479,36 @@
                                min="0.001"
                                step="0.001"
                                v-model.number="adminConfigDraft.timeout">
+                      </label>
+                      <label class="admin-field">
+                        <span class="admin-field-label-row">
+                          <span class="admin-field-label">Time Limit</span>
+                          <button class="admin-config-help-button"
+                                  type="button"
+                                  :data-help="adminConfigHelpText('time_limit')"
+                                  aria-label="Help for Time Limit"
+                                  @click.stop>?</button>
+                        </span>
+                        <input class="wb-input"
+                               type="text"
+                               inputmode="decimal"
+                               placeholder="seconds or infinite"
+                               v-model.number="adminConfigDraft.time_limit">
+                      </label>
+                      <label class="admin-field">
+                        <span class="admin-field-label-row">
+                          <span class="admin-field-label">Idle Limit</span>
+                          <button class="admin-config-help-button"
+                                  type="button"
+                                  :data-help="adminConfigHelpText('idle_limit')"
+                                  aria-label="Help for Idle Limit"
+                                  @click.stop>?</button>
+                        </span>
+                        <input class="wb-input"
+                               type="text"
+                               inputmode="decimal"
+                               placeholder="seconds or infinite"
+                               v-model.number="adminConfigDraft.idle_limit">
                       </label>
                       <label class="admin-field">
                         <span class="admin-field-label-row">
@@ -4059,18 +4096,13 @@
       var WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN = /(^|[^\w/-])!(?=\()/g;
       var WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_OPERATOR_PATTERN = /(^|[^\s])(\s+)!(?=\s*[^\s,;.)\]])/g;
 
-      function webPrologTerminalPredicateHighlightColor() {
-        var theme = document.documentElement.getAttribute("data-theme");
-        return theme === "dark" ? "#8fd782" : "#006400";
-      }
-
       function webPrologTerminalTimingColor() {
         var theme = document.documentElement.getAttribute("data-theme");
         return theme === "dark" ? "#7ae2a1" : "#15803d";
       }
 
       function highlightWebPrologTerminalPredicates(text) {
-        var markup = "[[b;" + webPrologTerminalPredicateHighlightColor() + ";]";
+        var markup = "[[b;;;terminal-wp-predicate]";
         return String(text || "")
           .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_INDICATOR_PATTERN, "$1" + markup + "$2]")
           .replace(WEB_PROLOG_TERMINAL_HIGHLIGHT_SEND_FUNCTOR_PATTERN, "$1" + markup + "!]")
@@ -4272,7 +4304,9 @@
         profile: "Sets the node capability ceiling. RELATION offers only /call, ISOBASE adds stateless execution and RPC, ISOTOPE adds semi-stateful HTTP toplevel sessions, and ACTOR enables the full actor runtime and WebSocket API.",
         auth: "Controls the authentication boundary. OPEN accepts unauthenticated requests, DEV trusts local development identity, and PRIVATE requires authenticated principals from the node policy.",
         sandbox: "Chooses the language sandbox policy. NO SANDBOX disables checks, WHITELIST keeps the current SWI-Prolog safe-goal policy, and BLACKLIST applies an initial deny-list over risky runtime and ISO predicates.",
-        timeout: "Hard upper bound, in seconds, for one goal execution. If a client requests a lower timeout, the effective timeout is the smaller of the two.",
+        timeout: "Maximum time, in seconds, that an HTTP execution request waits for its next result. For /call, expiry retires the ephemeral computation; for a PTCP session endpoint it returns a non-destructive timeout event.",
+        time_limit: "Hard upper bound, in seconds, on PTCP execution while the session is working in state s2. Expiry reports time_limit_exceeded and returns the live session to s1.",
+        idle_limit: "Maximum inactivity, in seconds, while a PTCP session waits in s1 or s3. Expiry terminates the session normally.",
         cache_size: "Maximum number of cached /call result slices for identical stateless requests. Larger values reduce recomputation; smaller values reduce memory use.",
         cache_ttl: "Maximum idle lifetime, in seconds, of a cached /call continuation. Expiry stops the suspended toplevel so an abandoned enumeration cannot retain it indefinitely.",
         max_inflight_calls: "Maximum number of simultaneous /call requests on this node. Use it to cap parallel stateless load.",
@@ -5619,7 +5653,9 @@
               profile: "actor",
               auth: "open",
               sandbox: "blacklist",
-              timeout: 2,
+              timeout: 1,
+              time_limit: 300,
+              idle_limit: 300,
               cache_size: 100,
               cache_ttl: 300,
               max_inflight_calls: 4,
@@ -8092,13 +8128,19 @@
               .replace(/\\/g, "\\\\")
               .replace(/'/g, "''") + "'";
           },
-          toplevelSpawnOptionsText: function(sourceText, session) {
+          toplevelSpawnOptionsText: function(sourceText, session, lifecycle) {
             var options = [];
             if (session !== false) {
               options.push("session(true)");
             }
             if (String(sourceText || "") !== "") {
               options.push("src_text(" + this.prologQuotedText(sourceText) + ")");
+            }
+            if (lifecycle && String(lifecycle.timeLimit || "infinite") !== "infinite") {
+              options.push("time_limit(" + Number(lifecycle.timeLimit) + ")");
+            }
+            if (lifecycle && String(lifecycle.idleLimit || "infinite") !== "infinite") {
+              options.push("idle_limit(" + Number(lifecycle.idleLimit) + ")");
             }
             return "[" + options.join(",") + "]";
           },
@@ -8979,6 +9021,8 @@
               auth: source.auth,
               sandbox: source.sandbox,
               timeout: source.timeout,
+              time_limit: source.time_limit,
+              idle_limit: source.idle_limit,
               cache_size: source.cache_size,
               cache_ttl: source.cache_ttl,
               max_inflight_calls: source.max_inflight_calls,
@@ -9007,6 +9051,8 @@
               profile: source.profile,
               auth: source.auth,
               sandbox: source.sandbox,
+              time_limit: source.time_limit,
+              idle_limit: source.idle_limit,
               builtin_families: this.adminBuiltinFamilyUpdates(source.builtin_families)
             });
           },
@@ -9022,7 +9068,9 @@
               sandbox: json && typeof json.sandbox === "string"
                 ? this.normalizeAnnouncedSandboxMode(json.sandbox)
                 : "blacklist",
-              timeout: json && typeof json.timeout === "number" ? json.timeout : 2,
+              timeout: json && typeof json.timeout === "number" ? json.timeout : 1,
+              time_limit: json && (typeof json.time_limit === "number" || json.time_limit === "infinite") ? json.time_limit : 300,
+              idle_limit: json && (typeof json.idle_limit === "number" || json.idle_limit === "infinite") ? json.idle_limit : 300,
               cache_size: json && typeof json.cache_size === "number" ? json.cache_size : 100,
               cache_ttl: json && typeof json.cache_ttl === "number" ? json.cache_ttl : 300,
               max_inflight_calls: json && typeof json.max_inflight_calls === "number"
@@ -10165,8 +10213,11 @@
             window.swiWasmLoadUriSource = function(uriText) {
               return self.loadSwiWasmUriSource(uriText);
             };
-            window.swiWasmRemoteToplevelSpawn = function(nodeText, sourceText, sessionText) {
-              return self.spawnSwiWasmRemoteToplevel(nodeText, sourceText, sessionText);
+            window.swiWasmRemoteToplevelSpawn = function(nodeText, sourceText, sessionText,
+                                                         timeLimitText, idleLimitText) {
+              return self.spawnSwiWasmRemoteToplevel(
+                nodeText, sourceText, sessionText, "", timeLimitText, idleLimitText
+              );
             };
             window.swiWasmRemoteToplevelCall = function(pidText, goalText, templateText, limit, offset, once) {
               return self.callSwiWasmRemoteToplevel(pidText, goalText, templateText, limit, offset, once);
@@ -10314,7 +10365,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260803-exception-display";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260808-ptcp-lifecycle";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10738,7 +10789,8 @@
               });
             });
           },
-          spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText, targetPid) {
+          spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText, targetPid,
+                                               timeLimitText, idleLimitText) {
             var self = this;
             var node = this.swiWasmRemoteNodeUrl(nodeText);
             var source = String(sourceText || "");
@@ -10749,7 +10801,10 @@
                 try {
                   entry.socket.send(JSON.stringify({
                     command: "toplevel_spawn",
-                    options: self.toplevelSpawnOptionsText(source, session)
+                    options: self.toplevelSpawnOptionsText(source, session, {
+                      timeLimit: timeLimitText || "infinite",
+                      idleLimit: idleLimitText || "infinite"
+                    })
                   }));
                 } catch (error) {
                   entry.pendingSpawns.pop();
@@ -11215,7 +11270,10 @@
                 result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "");
                 break;
               case "remote_toplevel_spawn":
-                result = this.spawnSwiWasmRemoteToplevel(message.node || "", message.source || "", message.session || "false", pid);
+                result = this.spawnSwiWasmRemoteToplevel(
+                  message.node || "", message.source || "", message.session || "false", pid,
+                  message.timeLimit || "infinite", message.idleLimit || "infinite"
+                );
                 break;
               case "rpc":
                 result = this.requestSwiWasmWorkerRpc(message);
@@ -12321,6 +12379,10 @@
               "toplevel_spawn(Pid, Options) :-",
               "    collect_spawn_source(Options, ExtraSource),",
               "    option(node(Node), Options, localhost),",
+              "    option(time_limit(TimeLimit0), Options, infinite),",
+              "    option(idle_limit(IdleLimit0), Options, infinite),",
+              "    normalize_ptcp_limit(time_limit, TimeLimit0, TimeLimit),",
+              "    normalize_ptcp_limit(idle_limit, IdleLimit0, IdleLimit),",
               "    (   Node == localhost",
               "    ->  self(Self),",
               "        option(session(Session), Options, false),",
@@ -12328,14 +12390,17 @@
               "        PidText := swiWasmActorReservePid(),",
               "        term_string(LocalPid, PidText),",
               "        Pid = LocalPid@localhost,",
-              "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Session), GoalText),",
+              "        Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit),",
+              "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Lifecycle), GoalText),",
               "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
               "        await(SpawnPromise, SpawnedText),",
               "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; SpawnedText == PidText )",
               "    ;   term_string(Node, NodeText),",
               "        option(session(Session), Options, true),",
               "        term_string(Session, SessionText),",
-              "        Promise := swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText),",
+              "        term_string(TimeLimit, TimeLimitText),",
+              "        term_string(IdleLimit, IdleLimitText),",
+              "        Promise := swiWasmRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText, #TimeLimitText, #IdleLimitText),",
               "        await(Promise, RemotePidText),",
               "        term_string(Pid, RemotePidText)",
               "    ),",
@@ -12347,6 +12412,11 @@
               "    ->  register(Name, Pid)",
               "    ;   true",
               "    ).",
+              "",
+              "normalize_ptcp_limit(_, infinite, infinite) :- !.",
+              "normalize_ptcp_limit(Kind, Limit0, Limit) :-",
+              "    must_be(number, Limit0),",
+              "    ( Limit0 > 0 -> Limit = Limit0 ; throw(error(domain_error(Kind, Limit0), toplevel_spawn/2)) ).",
               "",
               "ptcp(Pid, Target, Session) :-",
               "    catch(state_1(Pid, Target, Session), '$abort_goal', ptcp(Pid, Target, Session)).",

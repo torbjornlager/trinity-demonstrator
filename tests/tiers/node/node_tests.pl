@@ -1515,7 +1515,9 @@ test(admin_config_compacts_predicate_indicator_series,
         )).
 
 test(admin_config_updates_limits_only_target_node,
-     true((UpdatedCallLimit == 1,
+     true((UpdatedTimeLimit == 7,
+           UpdatedIdleLimit == 8,
+           UpdatedCallLimit == 1,
            UpdatedSessionLimit == 2,
            UpdatedWSLimit == 3,
            UpdatedTermLimit == 111,
@@ -1526,6 +1528,8 @@ test(admin_config_updates_limits_only_target_node,
            UpdatedCallRate == 11,
            UpdatedSpawnRate == 12,
            UpdatedWSRate == 13,
+           OtherTimeLimit == 300,
+           OtherIdleLimit == 300,
            OtherCallLimit == 4,
            OtherTermLimit == 32768))) :-
     with_node_server_options([auth(private), owner("owner")], URI1,
@@ -1537,6 +1541,8 @@ test(admin_config_updates_limits_only_target_node,
                     ConfigURL1,
                     Headers,
                     json{
+                        time_limit:7,
+                        idle_limit:8,
                         max_inflight_calls:1,
                         max_sessions_per_principal:2,
                         max_ws_actors_per_principal:3,
@@ -1551,6 +1557,8 @@ test(admin_config_updates_limits_only_target_node,
                     },
                     UpdatedJSON
                 ),
+                UpdatedTimeLimit = UpdatedJSON.get(time_limit),
+                UpdatedIdleLimit = UpdatedJSON.get(idle_limit),
                 UpdatedCallLimit = UpdatedJSON.get(max_inflight_calls),
                 UpdatedSessionLimit = UpdatedJSON.get(max_sessions_per_principal),
                 UpdatedWSLimit = UpdatedJSON.get(max_ws_actors_per_principal),
@@ -1565,9 +1573,27 @@ test(admin_config_updates_limits_only_target_node,
 
                 admin_config_url(URI2, ConfigURL2),
                 read_json_answer_headers(ConfigURL2, Headers, OtherJSON),
+                OtherTimeLimit = OtherJSON.get(time_limit),
+                OtherIdleLimit = OtherJSON.get(idle_limit),
                 OtherCallLimit = OtherJSON.get(max_inflight_calls),
                 OtherTermLimit = OtherJSON.get(max_term_text_bytes)
             ))).
+
+test(admin_config_accepts_infinite_ptcp_limits,
+     true((TimeLimit == "infinite", IdleLimit == "infinite"))) :-
+    with_node_server_options([auth(private), owner("owner")], URI,
+        (
+            principal_headers("owner", Headers),
+            admin_config_url(URI, ConfigURL),
+            read_json_post_headers(
+                ConfigURL,
+                Headers,
+                json{time_limit:"infinite", idle_limit:"infinite"},
+                UpdatedJSON
+            ),
+            TimeLimit = UpdatedJSON.get(time_limit),
+            IdleLimit = UpdatedJSON.get(idle_limit)
+        )).
 
 test(admin_config_rejects_oversized_json_body,
      true((Status == 413,
@@ -2886,6 +2912,78 @@ test(ws_toplevel_spawn_session_true_keeps_toplevel_alive,
             catch(ws_close(WS, 1000, "done"), _, true)
         )).
 
+test(ws_toplevel_time_limit_uses_owner_ceiling_and_keeps_session_alive,
+     true((TimeoutType == "error",
+           TimeoutData == "Time limit exceeded",
+           TimeoutDetails == "time_limit_exceeded",
+           RecoveryType == "success"))) :-
+    with_node_server_options([auth(open), time_limit(0.05), idle_limit(2)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                %  A public client cannot weaken the node-owner ceilings.
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true),time_limit(infinite),idle_limit(infinite)]"
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, ToplevelPid),
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"sleep(0.2)",
+                    template:"true"
+                }),
+                ws_receive_json_first_of(WS, ["error"], TimeoutReply),
+                TimeoutType = TimeoutReply.type,
+                TimeoutData = TimeoutReply.data,
+                TimeoutDetails = TimeoutReply.details,
+
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"true",
+                    template:"true"
+                }),
+                ws_receive_json_first_of(WS, ["success"], RecoveryReply),
+                RecoveryType = RecoveryReply.type
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
+
+test(public_nested_toplevel_cannot_weaken_owner_time_limit) :-
+    start_node_server([time_limit(0.05), idle_limit(2)], Port, _URI),
+    setup_call_cleanup(
+        true,
+        with_node_port_context(Port,
+            with_public_execution_profile(actor,
+                (
+                    toplevel_spawn(Pid, [
+                        session(true),
+                        monitor(true),
+                        time_limit(infinite),
+                        idle_limit(infinite)
+                    ]),
+                    toplevel_call(Pid, sleep(0.2), [template(true)]),
+                    receive({
+                        error(Pid, time_limit_exceeded) -> true
+                    }, [
+                        timeout(2),
+                        on_timeout(throw(nested_toplevel_time_limit_timeout))
+                    ]),
+                    catch(exit(Pid, cleanup), _, true),
+                    receive({
+                        down(Pid, _, cleanup) -> true
+                    }, [
+                        timeout(2),
+                        on_timeout(throw(nested_toplevel_cleanup_timeout))
+                    ])
+                )
+            )),
+        stop_node_server(Port)
+    ).
+
 test(ws_toplevel_call_rejects_src_text_field,
      true((Type == "error", OriginalSourceType == "success"))) :-
     with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
@@ -4001,6 +4099,13 @@ test(answer_to_json_keeps_io_provenance_off_wire) :-
     once(answer_to_json(terminal_io_output(42, "Ping received pong.\n"), JSON)),
     JSON = json{type:output, pid:42, data:"Ping received pong."}.
 
+test(isotope_goal_rewrite_preserves_variable_colon_data) :-
+    Goal = (between(1, 20, N), writeln(N:Pid)),
+    node_session:rewrite_isotope_goal(Goal, Rewritten),
+    assertion(Rewritten == Goal),
+    assertion(var(N)),
+    assertion(var(Pid)).
+
 test(ws_relay_suppresses_io_at_internal_transport_origin) :-
     Principal = principal{
         id:"node:https://n1.example",
@@ -4051,6 +4156,29 @@ test(ws_browser_io_output_uses_book_shape) :-
                     pid-ToplevelPid,
                     type-"output"
                 ])
+            ),
+            catch(ws_close(WS, 1000, "done"), _, true)
+        )).
+
+test(ws_browser_io_output_preserves_variable_colon_term) :-
+    with_node_server_options([auth(open), profile(actor), sandbox(off)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:"[session(true)]"
+                }),
+                ws_receive_json_first_of(WS, ["spawned"], Spawned),
+                ToplevelPid = Spawned.pid,
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:ToplevelPid,
+                    goal:"between(1,1,N), Pid=2, writeln(N:Pid)",
+                    options:"[limit(1)]"
+                }),
+                ws_receive_json_first_of(WS, ["output"], Output),
+                assertion(Output.data == "1:2")
             ),
             catch(ws_close(WS, 1000, "done"), _, true)
         )).
@@ -4776,6 +4904,85 @@ test(isotope_spawn_returns_pid,
             ),
             true,
             kill_isotope_session(Pid)
+        )).
+
+test(isotope_time_limit_uses_swi_error_and_keeps_session_alive,
+     true((TimeoutType == "error", TimeoutPID == Pid,
+           TimeoutData == "Time limit exceeded", TimeoutDetails == "time_limit_exceeded",
+           RecoveryType == "success", RecoveryPID == Pid))) :-
+    with_node_server_options([time_limit(0.05), idle_limit(2), timeout(1)], URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                %  The owner limit remains authoritative even when a public
+                %  client asks for an unbounded session.
+                read_json_post(SpawnURL,
+                               _{options:"[time_limit(infinite),idle_limit(infinite)]"},
+                               SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                isotope_call_url(URI, Pid, 'sleep(0.2)', '', TimeoutURL),
+                read_json_answer(TimeoutURL, TimeoutJSON),
+                TimeoutType = TimeoutJSON.type,
+                TimeoutPID = TimeoutJSON.pid,
+                TimeoutData = TimeoutJSON.data,
+                TimeoutDetails = TimeoutJSON.details,
+                isotope_call_url(URI, Pid, 'true', '', RecoveryURL),
+                read_json_answer(RecoveryURL, RecoveryJSON),
+                RecoveryType = RecoveryJSON.type,
+                RecoveryPID = RecoveryJSON.pid
+            ),
+            catch(kill_isotope_session(Pid), _, true)
+        )).
+
+test(isotope_wait_timeout_does_not_abort_running_goal,
+     true((FirstType == "timeout", FirstPID == Pid,
+           SecondType == "success", SecondPID == Pid))) :-
+    with_node_server_options([time_limit(1), idle_limit(2), timeout(1)], URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=sleep(0.1)&limit=1&timeout=0.01&format=json',
+                       [URI, Pid]),
+                read_json_answer(CallURL, FirstJSON),
+                FirstType = FirstJSON.type,
+                FirstPID = FirstJSON.pid,
+                sleep(0.15),
+                format(atom(PollURL),
+                       '~w/toplevel_poll?pid=~w&timeout=1&format=json',
+                       [URI, Pid]),
+                read_json_answer(PollURL, SecondJSON),
+                SecondType = SecondJSON.type,
+                SecondPID = SecondJSON.pid
+            ),
+            catch(kill_isotope_session(Pid), _, true)
+        )).
+
+test(isotope_idle_limit_emits_down_and_reclaims_session,
+     true((Type == "down", PID == Pid, Reason == "true", SessionGone == true))) :-
+    with_node_server_options([time_limit(2), idle_limit(0.05), timeout(1)], URI,
+        (
+            format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+            read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+            Pid = SpawnJSON.pid,
+            sleep(0.15),
+            format(atom(PollURL),
+                   '~w/toplevel_poll?pid=~w&timeout=1&format=json',
+                   [URI, Pid]),
+            read_json_answer(PollURL, DownJSON),
+            Type = DownJSON.type,
+            PID = DownJSON.pid,
+            Reason = DownJSON.reason,
+            (   catch(node:isotope_session_queue(Pid, _), _, fail)
+            ->  SessionGone = false
+            ;   SessionGone = true
+            )
         )).
 
 test(private_isotope_session_rejects_other_principal,

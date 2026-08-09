@@ -264,6 +264,13 @@ public_runtime_support_goal(actor, Goal) :-
     functor(Goal, Name, Arity),
     public_runtime_support_goal_pi(Name/Arity).
 
+%  PTCP is trusted framework code. Its client goal is checked separately by
+%  prepared_goal/3 when a '$call' message enters state s2. In particular, do
+%  not ask library(sandbox) to unfold the mutually recursive lifecycle loop.
+public_runtime_support_goal(toplevel_actors, Goal) :-
+    callable(Goal),
+    functor(Goal, ptcp, 3).
+
 %  Statechart interpreter entry goals spawned by statechart_spawn/2.
 %  They are framework code, not client code; the chart's own embedded
 %  goals are sandbox-checked separately at execution (hook_check_chart_goal/2),

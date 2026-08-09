@@ -282,8 +282,8 @@ actor_naming_error_string(process_already_has_a_name(_), "Name is in use.").
 
 timeout_error_string(timeout, "Timeout exceeded").
 timeout_error_string(error(timeout, _), "Timeout exceeded").
-timeout_error_string(time_limit_exceeded, "Timeout exceeded").
-timeout_error_string(error(time_limit_exceeded, _), "Timeout exceeded").
+timeout_error_string(time_limit_exceeded, "Time limit exceeded").
+timeout_error_string(error(time_limit_exceeded, _), "Time limit exceeded").
 
 authorization_error_string(error(authorization_error(PrincipalId, execution), _),
                            ErrorString) :-

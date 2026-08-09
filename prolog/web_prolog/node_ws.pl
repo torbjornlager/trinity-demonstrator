@@ -96,6 +96,7 @@ Architecture per connection:
     check_source_text_size/2,
     check_ws_frame_size/1
 ]).
+:- use_module(node_session_limits, [apply_node_ptcp_limits/2]).
 :- use_module(node_rate_limits, [enforce_ws_command_rate_limit/2]).
 :- use_module(node_runtime_state, [
     node_request_port/2,
@@ -942,12 +943,13 @@ ws_parse_options_value(Value, Options) :-
 ws_build_toplevel_options(Queue, UserOptions, SpawnOptions) :-
     make_id(Ref),
     exclude(ws_reserved_option, UserOptions, FilteredOptions),
+    apply_node_ptcp_limits(FilteredOptions, LimitedOptions),
     SpawnOptions = [
         target(Queue),
         link(false),
         monitor_target(Queue),
         monitor_ref(Ref)
-        | FilteredOptions
+        | LimitedOptions
     ].
 
 %!  ws_build_bare_options(+Queue, +UserOptions, -SpawnOptions) is det.

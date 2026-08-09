@@ -181,12 +181,19 @@ retains the slice `limit` established by `/toplevel_call`. The ACTOR
 WebSocket and stateful SWI-WASM Worker commands use the same continuation
 rule.
 
+PTCP lifecycle policy uses three separate limits. `time_limit` runs only while
+the actor executes a goal in state **s2**; expiry reports
+`time_limit_exceeded` and returns a session actor to **s1**. `idle_limit` runs
+only while the actor waits in **s1** or **s3**; expiry ends the actor normally.
+For PTCP session endpoints, the HTTP `timeout` parameter merely bounds how long
+a call or poll request waits for the next queued event and is non-destructive.
+
 When editor source changes, the portal first spawns and validates the
 replacement session, switches subsequent calls to its pid, and only then
 retires the predecessor. A failed replacement therefore leaves the working
 session intact. Retirement is best-effort for compatibility with an older
 node process that does not yet expose `/toplevel_halt`; such a predecessor is
-eventually reclaimed by the node's idle-session cleanup.
+eventually reclaimed by the node's PTCP idle limit.
 
 [`node_session.pl`](../prolog/web_prolog/node_session.pl) holds the
 session-specific logic (queue bookkeeping, readiness handshake, initial
