@@ -60,15 +60,10 @@
    callback predicate in a generic supervised process that supports synchronous
    request/reply, hot code swapping, and automatic recovery from crashes.
    Statechart actors layer hierarchical state machines on top of the same actor
-   model; they now have a separate
+   model; they have a separate
    <a href="/statechart-behaviour-tutorial">statechart behaviour tutorial</a>.
 </p>
 
-<p>
-    If you are reading this inside the portal, use the terminal to the right.
-    Queries must end with a full stop. If a query has more than one answer,
-    press <code>;</code> or the space bar for more, or use the green Next button.
-</p>
 
 <div class="alert alert-info">
   <strong>Tip!</strong> The portal also has a Logger panel to the right of the
@@ -173,7 +168,7 @@
 </p>
 
 <p>
-    This second query has several answers. Again, press <code>;</code> or the space bar for more, or use the green Next button.
+    This second query has several answers. Press <code>;</code> or the space bar for more, or use the green Next button.
 </p>
 
 <h2>A small family program</h2>
@@ -313,16 +308,14 @@ p(p(with)) --&gt; [with].
 </div>
 
 <div class="alert alert-info" id="wp-predicate-highlighting-note">
-  <strong>Reading Web Prolog code.</strong> Bold green names identify Web
+  <strong>Tip!</strong> Bold green names identify Web
   Prolog-specific predicate calls and predicate indicators from the manual.
   In the first exercise below, <code>self</code> in <code>self(Self)</code> and
   the indicator <code>self/1</code> receive that emphasis; ordinary Prolog
   predicates do not. To turn
-  the emphasis off in tutorials and the Terminal, open
-  <strong>Settings &rarr; Terminal</strong> and clear
-  <strong>Highlight Web Prolog predicates</strong>. Highlighting in the
-  Editor is controlled separately by
-  <strong>Settings &rarr; Code coloring &rarr; Web Prolog code</strong>.
+  the emphasis off, open
+  <strong>Settings &rarr; Terminal</strong> and clear the
+  <strong>Highlight Web Prolog predicates</strong> checkbox. 
 </div>
 
 <h2>Your shell has a pid</h2>
@@ -410,8 +403,7 @@ p(p(with)) --&gt; [with].
 
 <p>
     An actor is capable of spawning other actors and then talking to them.
-    This node hosts a tiny echo actor. Its definition is shared node code,
-    shown here for reference rather than code to load into the shell.
+    This node hosts a tiny echo actor. Its definition is shared node code:
 </p>
 
 <pre id="mpc-echo-source">echo_actor :-
@@ -423,8 +415,7 @@ p(p(with)) --&gt; [with].
 </pre>
 
 <p>
-    Because every actor on the node can call predicates in that node's shared
-    database, no source-transfer option is needed:
+    Let's spawn it:
 </p>
 
 <pre id="mpc-spawn-echo">?- spawn(echo_actor, Pid).

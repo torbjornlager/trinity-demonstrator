@@ -335,7 +335,7 @@ ok(includes('return "Welcome to [[b;;]Web Prolog]!\\n" +') &&
    includes("initialNodeInfoReady = this.fetchNodeInfo()") &&
    includes("initialNodeInfoReady.then(function()"),
    "terminal greeting identifies the announced profile and links to SWI-Prolog");
-ok(includes("terminalHighlightPredicates: false") &&
+ok(includes("terminalHighlightPredicates: true") &&
    includes("Highlight Web Prolog predicates") &&
    includes("built-in predicate calls and predicate indicators") &&
    includes("wb.terminalHighlightPredicates") &&
@@ -370,6 +370,16 @@ ok(includes("terminalHighlightPredicates: false") &&
    includes("font-weight: 700 !important") &&
    !includes("webPrologTerminalPredicateHighlightColor"),
    "terminal highlights manual-listed Web Prolog predicates in the theme-aware colour");
+ok(includes('@click="resetSettingsToDefaults"') &&
+   includes(">Restore defaults</button>") &&
+   includes("resetSettingsToDefaults: function()") &&
+   includes('this.browserRuntimeModel = "worker"') &&
+   includes('this.themeMode = "light"') &&
+   includes('this.terminalHighlightPredicates = true') &&
+   includes("this.applyThemeSettings()") &&
+   includes("this.applyTerminalRuntimeSettings()") &&
+   includes('this.log("ui", "Settings restored to defaults.")'),
+   "Settings can restore their persisted defaults and update the live interface");
 ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
    editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_INDICATORS") &&
    editorIncludes("cm-wp-builtin") &&

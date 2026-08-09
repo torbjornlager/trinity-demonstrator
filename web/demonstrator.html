@@ -3363,6 +3363,11 @@
                     </label>
                   </div>
                 </div>
+                <div class="settings-actions">
+                  <button class="wb-button subtle"
+                          type="button"
+                          @click="resetSettingsToDefaults">Restore defaults</button>
+                </div>
               </div>
               <div v-else class="admin-panel">
                 <div v-if="adminStatusMessage"
@@ -5594,7 +5599,7 @@
             showTerminalSystemInfo: true,
             terminalExtraQueryNewline: false,
             terminalConvertLinks: true,
-            terminalHighlightPredicates: false,
+            terminalHighlightPredicates: true,
             errorMessageDetail: "short",
             browserRuntimeModel: storedBrowserRuntimeModel(),
             browserRuntimeModelOptions: [
@@ -7361,6 +7366,50 @@
             this.persistTypographySettings();
             this.applyTypographySettings();
             this.refreshPanels();
+          },
+          resetSettingsToDefaults: function() {
+            var runtimeModelChanged = this.browserRuntimeModel !== "worker";
+
+            this.browserRuntimeModel = "worker";
+            this.monoFontFamily = "\"IBM Plex Mono\", \"Menlo\", \"Consolas\", monospace";
+            this.monoFontSize = 13;
+            this.monoFontWeight = 400;
+            this.introSuppressFuture = false;
+            this.themeMode = "light";
+            this.webPrologCodeColoring = "none";
+            this.sxmlCodeColoring = "none";
+            this.errorMessageDetail = "short";
+            this.hideLocalNodeInPid = true;
+            this.showTerminalGreeting = true;
+            this.showTerminalSystemInfo = true;
+            this.terminalExtraQueryNewline = false;
+            this.terminalConvertLinks = true;
+            this.terminalHighlightPredicates = true;
+
+            window.localStorage.setItem("wb.swiWasmModel", this.browserRuntimeModel);
+            this.persistTypographySettings();
+            persistPortalIntroDismissed(false);
+            this.persistThemeSettings();
+            this.persistCodeColoringSettings();
+            this.persistErrorMessageDetail();
+            this.persistPidDisplayPreference();
+            this.persistTerminalStartupSettings();
+            this.persistTerminalSystemInfoSettings();
+            this.persistTerminalSpacingSettings();
+            this.persistTerminalLinkSettings();
+            this.persistTerminalPredicateHighlightSettings();
+            this.applyThemeSettings();
+            this.applyTypographySettings();
+            this.applyTerminalRuntimeSettings();
+            this.syncEditorMode(this.editorKind);
+            this.syncTutorialPredicateHighlighting();
+            this.refreshPanels();
+            this.focusTerminalSoon(true);
+            this.log("ui", "Settings restored to defaults.");
+
+            if (runtimeModelChanged && this.isBrowserSwiWasmMode) {
+              this.handleBrowserRuntimeModelChange();
+            }
           },
           currentEditorText: function() {
             return this.prologEditor ? this.prologEditor.getValue() : this.prologText;
