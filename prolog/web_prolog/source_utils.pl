@@ -27,6 +27,9 @@ hooks:
     the node's own base URL for resolving node-relative URIs such as
     `statecharts/game.xml`.  Without it, relative URIs resolve only as
     local files.
+  - restore_serialized_term/3 (multifile): the isolation composition layer
+    reconstructs user-level clauses from runtime-instrumented listings used
+    by src_predicates/1.
 */
 
 :- use_module(library(error)).
@@ -36,7 +39,8 @@ hooks:
 
 :- multifile
     load_uri_allowed_origins/1,
-    self_base_url/1.
+    self_base_url/1,
+    restore_serialized_term/3.
 
 %!  terms_to_source(+Terms:list, -Source:string) is det.
 %
@@ -55,14 +59,49 @@ terms_to_source(Terms, Source) :-
 %   using `listing/1`, producing textual source.
 predicates_to_source(Module, PIs, Source) :-
     must_be(list, PIs),
-    with_output_to(string(Source),
-                   maplist(listing2(Module), PIs)).
+    with_output_to(string(ListedSource),
+                   maplist(listing2(Module), PIs)),
+    restore_serialized_source(Module, ListedSource, Source).
 
 %!  listing2(+Module:atom, +PI:callable) is det.
 %
 %   Helper used by predicates_to_source/3.
 listing2(Module, PI) :-
     system:listing(Module:PI).
+
+
+%  listing/1 decompiles the clauses currently stored in the database.  Actor
+%  clauses have passed through runtime guard rewriters by then, so copying the
+%  listing verbatim would leak private control_guard/public_goal_guard calls
+%  (and their old actor module) into src_predicates/1.  Give the composition
+%  layer a chance to reconstruct each listed term as user-level source.
+
+restore_serialized_source(Module, Source0, Source) :-
+    setup_call_cleanup(
+        open_string(Source0, In),
+        read_serialized_terms(Module, In, Terms),
+        close(In)
+    ),
+    with_output_to(string(Source),
+                   forall(member(Term, Terms),
+                          write_term(Term, [
+                              quoted(true),
+                              fullstop(true),
+                              nl(true),
+                              module(Module)
+                          ]))).
+
+read_serialized_terms(Module, In, Terms) :-
+    read_term(In, Term0, [module(Module)]),
+    (   Term0 == end_of_file
+    ->  Terms = []
+    ;   (   restore_serialized_term(Module, Term0, Term)
+        ->  true
+        ;   Term = Term0
+        ),
+        Terms = [Term|Rest],
+        read_serialized_terms(Module, In, Rest)
+    ).
 
 %!  text_to_string(+TextLike, -Text:string) is det.
 %

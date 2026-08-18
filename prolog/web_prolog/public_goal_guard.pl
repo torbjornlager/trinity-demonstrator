@@ -2,7 +2,8 @@
     blacklist_guard_active/0,
     rewrite_goal_if_needed/3,
     rewrite_source_text_if_needed/3,
-    rewrite_source_text/3
+    rewrite_source_text/3,
+    restore_goal/3
 ]).
 
 /** <module> Public Blacklist Goal Rewriting
@@ -201,6 +202,144 @@ rewrite_goal_(Module, assertz(Clause0),
               public_goal_guard:'$sandbox_assertz'(Module, Clause0)).
 rewrite_goal_(Module, assertz(Clause0, Ref),
               public_goal_guard:'$sandbox_assertz'(Module, Clause0, Ref)).
+
+
+%!  restore_goal(+Module, +Goal0, -Goal) is det.
+%
+%   Inverse of the blacklist guard rewrite for src_predicates/1 source
+%   reconstruction.  The reconstructed goal crosses the sandbox and rewrite
+%   boundaries again in the destination actor.
+
+restore_goal(Module, Goal0, Goal) :-
+    restore_goal_(Module, Goal0, Goal),
+    !.
+restore_goal(_, Goal, Goal).
+
+restore_goal_(Module, (A0, B0), (A, B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, (A0 ; B0), (A ; B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, (A0 -> B0), (A -> B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, (A0 *-> B0), (A *-> B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, Guarded, Goal) :-
+    restore_sandbox_call(Module, Guarded, Goal).
+restore_goal_(Module, Guarded, Goal) :-
+    restore_sandbox_assert(Module, Guarded, Goal).
+restore_goal_(_Module, QualifiedModule:Goal0, QualifiedModule:Goal) :-
+    atom(QualifiedModule),
+    restore_goal(QualifiedModule, Goal0, Goal).
+restore_goal_(Module, catch(Goal0, Catcher, Recover0),
+              catch(Goal, Catcher, Recover)) :-
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Recover0, Recover).
+restore_goal_(Module, setup_call_cleanup(Setup0, Goal0, Cleanup0),
+              setup_call_cleanup(Setup, Goal, Cleanup)) :-
+    restore_goal(Module, Setup0, Setup),
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Cleanup0, Cleanup).
+restore_goal_(Module, setup_call_catcher_cleanup(Setup0, Goal0, Catcher, Cleanup0),
+              setup_call_catcher_cleanup(Setup, Goal, Catcher, Cleanup)) :-
+    restore_goal(Module, Setup0, Setup),
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Cleanup0, Cleanup).
+restore_goal_(Module, call_cleanup(Goal0, Cleanup0),
+              call_cleanup(Goal, Cleanup)) :-
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Cleanup0, Cleanup).
+restore_goal_(Module, Vars^Goal0, Vars^Goal) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, \+ Goal0, \+ Goal) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, once(Goal0), once(Goal)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, ignore(Goal0), ignore(Goal)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, time(Goal0), time(Goal)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, forall(Generate0, Test0), forall(Generate, Test)) :-
+    restore_goal(Module, Generate0, Generate),
+    restore_goal(Module, Test0, Test).
+restore_goal_(Module, findall(Template, Goal0, Bag),
+              findall(Template, Goal, Bag)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, findnsols(Count, Template, Goal0, Bag),
+              findnsols(Count, Template, Goal, Bag)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, findnsols(Count, Template, Goal0, Bag, Tail),
+              findnsols(Count, Template, Goal, Bag, Tail)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, setof(Template, Goal0, Set),
+              setof(Template, Goal, Set)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, bagof(Template, Goal0, Bag),
+              bagof(Template, Goal, Bag)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate(Spec, Goal0, Result),
+              aggregate(Spec, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate(Spec, Template, Goal0, Result),
+              aggregate(Spec, Template, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate_all(Spec, Goal0, Result),
+              aggregate_all(Spec, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate_all(Spec, Template, Goal0, Result),
+              aggregate_all(Spec, Template, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, Goal0, Goal) :-
+    callable(Goal0),
+    functor(Goal0, Name, Arity),
+    functor(Skeleton, Name, Arity),
+    predicate_property(Module:Skeleton, meta_predicate(MetaSpec)),
+    Goal0 =.. [Name|Args0],
+    MetaSpec =.. [_|Modes],
+    restore_meta_arguments(Modes, Module, Args0, Args),
+    Goal =.. [Name|Args].
+
+restore_sandbox_call(Module, Guarded, Goal) :-
+    Guarded = public_goal_guard:Call,
+    Call =.. ['$sandbox_call', _StoredModule, Closure|ExtraArgs],
+    restore_goal(Module, Closure, RestoredClosure),
+    Goal =.. [call, RestoredClosure|ExtraArgs].
+
+restore_sandbox_assert(Module, Guarded, Goal) :-
+    Guarded = public_goal_guard:Call,
+    Call =.. [GuardName, _StoredModule, Clause0|Rest],
+    sandbox_assert_name(GuardName, Name),
+    restore_asserted_clause(Module, Clause0, Clause),
+    Goal =.. [Name, Clause|Rest].
+
+sandbox_assert_name('$sandbox_assert', assert).
+sandbox_assert_name('$sandbox_asserta', asserta).
+sandbox_assert_name('$sandbox_assertz', assertz).
+
+restore_asserted_clause(Module, (Head :- Body0), (Head :- Body)) :-
+    !,
+    restore_goal(Module, Body0, Body).
+restore_asserted_clause(_, Clause, Clause).
+
+restore_meta_arguments([], _, [], []).
+restore_meta_arguments([Mode|Modes], Module, [Arg0|Args0], [Arg|Args]) :-
+    restore_meta_argument(Mode, Module, Arg0, Arg),
+    restore_meta_arguments(Modes, Module, Args0, Args).
+
+restore_meta_argument(0, Module, Goal0, Goal) :-
+    !,
+    restore_goal(Module, Goal0, Goal).
+restore_meta_argument(Extra, _Module,
+                      public_goal_guard:'$sandbox_call'(_StoredModule, Closure),
+                      Closure) :-
+    (   integer(Extra), Extra > 0
+    ;   Extra == (//)
+    ),
+    !.
+restore_meta_argument(_, _, Arg, Arg).
 
 
 '$sandbox_call'(Module, Goal0) :-

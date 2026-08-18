@@ -315,6 +315,13 @@ run(Parent) :-
        ),
        catch(exit(Pid, test_cleanup), _, true)).
 
+test(control_guard_preserves_variable_receive_head, Msg == hello) :-
+   control_guard:rewrite_goal(test_t1_receive,
+                              receive({Msg -> true}), GuardedReceive),
+   self(Self),
+   send(Self, hello),
+   call(GuardedReceive).
+
 test(actor_exit_bypasses_catch_inside_receive_body) :-
    self(Self),
    setup_call_cleanup(

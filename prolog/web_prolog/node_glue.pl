@@ -241,6 +241,13 @@ isolation:extra_prelude_text(_Options, Text) :-
 isolation:rewrite_source_text(Module, Source0, Source) :-
     rewrite_source_text_if_needed(Module, Source0, Source).
 
+%  src_predicates/1 serializes compiled clauses.  Remove the node-layer
+%  blacklist wrappers after isolation has removed the universal control
+%  wrappers, so the destination actor validates and guards user-level source.
+:- multifile isolation:restore_source_goal/3.
+isolation:restore_source_goal(Module, Goal0, Goal) :-
+    public_goal_guard:restore_goal(Module, Goal0, Goal).
+
 %  Shared database module (was import_node_shared_db +
 %  restore_shadowed_shared_db_imports reading node_runtime_state).
 :- multifile isolation:shared_database_module/1.

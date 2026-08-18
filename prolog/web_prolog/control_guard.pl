@@ -1,5 +1,6 @@
 :- module(control_guard, [
     rewrite_goal/3,          % +Module, +Goal0, -Goal
+    restore_goal/3,          % +Module, +Goal0, -Goal
     rewrite_source_text/3,   % +Module, +Source0, -Source
     rewrite_asserted_clause/3,% +Module, +Clause0, -Clause
     reserved_control/1,      % +Exception
@@ -197,6 +198,192 @@ rewrite_meta_argument(//, Module, Closure,
 rewrite_meta_argument(_, _, Arg, Arg).
 
 
+%!  restore_goal(+Module, +Goal0, -Goal) is det.
+%
+%   Reconstruct the user-level goal represented by a compiled, guarded goal.
+%   This is the inverse boundary used by src_predicates/1: copied predicates
+%   must be validated and rewritten afresh for their destination module.
+
+restore_goal(Module, Goal0, Goal) :-
+    restore_goal_(Module, Goal0, Goal),
+    !.
+restore_goal(_, Goal, Goal).
+
+restore_goal_(Module, (A0, B0), (A, B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, (A0 ; B0), (A ; B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, (A0 -> B0), (A -> B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module, (A0 *-> B0), (A *-> B)) :-
+    restore_goal(Module, A0, A),
+    restore_goal(Module, B0, B).
+restore_goal_(Module,
+              control_guard:'$catch'(_StoredModule, Goal0, Catcher, Recover0),
+              catch(Goal, Catcher, Recover)) :-
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Recover0, Recover).
+restore_goal_(Module, control_guard:'$receive'(_StoredModule, Clauses0),
+              receive(Clauses)) :-
+    restore_receive_clauses(Module, Clauses0, Clauses).
+restore_goal_(Module,
+              control_guard:'$receive'(_StoredModule, Clauses0, Options0),
+              receive(Clauses, Options)) :-
+    restore_receive_clauses(Module, Clauses0, Clauses),
+    restore_receive_options(Module, Options0, Options).
+restore_goal_(Module, Guarded, Goal) :-
+    restore_call_goal(Module, Guarded, Goal).
+restore_goal_(Module, Guarded, Goal) :-
+    restore_assert_goal(Module, Guarded, Goal).
+restore_goal_(_Module, QualifiedModule:Goal0, QualifiedModule:Goal) :-
+    atom(QualifiedModule),
+    restore_goal(QualifiedModule, Goal0, Goal).
+restore_goal_(Module, catch(Goal0, Catcher, Recover0),
+              catch(Goal, Catcher, Recover)) :-
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Recover0, Recover).
+restore_goal_(Module, setup_call_cleanup(Setup0, Goal0, Cleanup0),
+              setup_call_cleanup(Setup, Goal, Cleanup)) :-
+    restore_goal(Module, Setup0, Setup),
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Cleanup0, Cleanup).
+restore_goal_(Module, setup_call_catcher_cleanup(Setup0, Goal0, Catcher, Cleanup0),
+              setup_call_catcher_cleanup(Setup, Goal, Catcher, Cleanup)) :-
+    restore_goal(Module, Setup0, Setup),
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Cleanup0, Cleanup).
+restore_goal_(Module, call_cleanup(Goal0, Cleanup0),
+              call_cleanup(Goal, Cleanup)) :-
+    restore_goal(Module, Goal0, Goal),
+    restore_goal(Module, Cleanup0, Cleanup).
+restore_goal_(Module, Vars^Goal0, Vars^Goal) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, \+ Goal0, \+ Goal) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, once(Goal0), once(Goal)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, ignore(Goal0), ignore(Goal)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, time(Goal0), time(Goal)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, forall(Generate0, Test0), forall(Generate, Test)) :-
+    restore_goal(Module, Generate0, Generate),
+    restore_goal(Module, Test0, Test).
+restore_goal_(Module, findall(Template, Goal0, Bag),
+              findall(Template, Goal, Bag)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, findnsols(Count, Template, Goal0, Bag),
+              findnsols(Count, Template, Goal, Bag)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, findnsols(Count, Template, Goal0, Bag, Tail),
+              findnsols(Count, Template, Goal, Bag, Tail)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, setof(Template, Goal0, Set),
+              setof(Template, Goal, Set)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, bagof(Template, Goal0, Bag),
+              bagof(Template, Goal, Bag)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate(Spec, Goal0, Result),
+              aggregate(Spec, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate(Spec, Template, Goal0, Result),
+              aggregate(Spec, Template, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate_all(Spec, Goal0, Result),
+              aggregate_all(Spec, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, aggregate_all(Spec, Template, Goal0, Result),
+              aggregate_all(Spec, Template, Goal, Result)) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, Goal0, Goal) :-
+    callable(Goal0),
+    functor(Goal0, Name, Arity),
+    functor(Skeleton, Name, Arity),
+    predicate_property(Module:Skeleton, meta_predicate(MetaSpec)),
+    Goal0 =.. [Name|Args0],
+    MetaSpec =.. [_|Modes],
+    restore_meta_arguments(Modes, Module, Args0, Args),
+    Goal =.. [Name|Args].
+
+restore_call_goal(Module, Guarded, Goal) :-
+    Guarded = control_guard:Call,
+    Call =.. ['$call', _StoredModule, Closure|ExtraArgs],
+    restore_goal(Module, Closure, RestoredClosure),
+    Goal =.. [call, RestoredClosure|ExtraArgs].
+
+restore_assert_goal(Module, Guarded, Goal) :-
+    Guarded = control_guard:Call,
+    Call =.. [GuardName, _StoredModule, Clause0|Rest],
+    control_assert_name(GuardName, Name),
+    restore_asserted_clause_goal(Module, Clause0, Clause),
+    Goal =.. [Name, Clause|Rest].
+
+control_assert_name('$assert', assert).
+control_assert_name('$asserta', asserta).
+control_assert_name('$assertz', assertz).
+
+restore_asserted_clause_goal(Module, (Head :- Body0), (Head :- Body)) :-
+    !,
+    restore_goal(Module, Body0, Body).
+restore_asserted_clause_goal(_, Clause, Clause).
+
+restore_meta_arguments([], _, [], []).
+restore_meta_arguments([Mode|Modes], Module, [Arg0|Args0], [Arg|Args]) :-
+    restore_meta_argument(Mode, Module, Arg0, Arg),
+    restore_meta_arguments(Modes, Module, Args0, Args).
+
+restore_meta_argument(0, Module, Goal0, Goal) :-
+    !,
+    restore_goal(Module, Goal0, Goal).
+restore_meta_argument(Extra, _Module,
+                      control_guard:'$call'(_StoredModule, Closure), Closure) :-
+    (   integer(Extra), Extra > 0
+    ;   Extra == (//)
+    ),
+    !.
+restore_meta_argument(_, _, Arg, Arg).
+
+restore_receive_clauses(_, Var, Var) :-
+    var(Var),
+    !.
+restore_receive_clauses(Module, (Clause0 ; Clauses0),
+                        (Clause ; Clauses)) :-
+    !,
+    restore_receive_clauses(Module, Clause0, Clause),
+    restore_receive_clauses(Module, Clauses0, Clauses).
+restore_receive_clauses(Module, (Head0 -> Body0), (Head -> Body)) :-
+    !,
+    restore_receive_head(Module, Head0, Head),
+    restore_goal(Module, Body0, Body).
+restore_receive_clauses(_, Clauses, Clauses).
+
+restore_receive_head(_, Head, Head) :-
+    var(Head),
+    !.
+restore_receive_head(Module, if(Pattern, Guard0), if(Pattern, Guard)) :-
+    !,
+    restore_goal(Module, Guard0, Guard).
+restore_receive_head(_, Head, Head).
+
+restore_receive_options(_, Var, Var) :-
+    var(Var),
+    !.
+restore_receive_options(Module, Options0, Options) :-
+    is_list(Options0),
+    !,
+    maplist(restore_receive_option(Module), Options0, Options).
+restore_receive_options(_, Options, Options).
+
+restore_receive_option(Module, on_timeout(Goal0), on_timeout(Goal)) :-
+    !,
+    restore_goal(Module, Goal0, Goal).
+restore_receive_option(_, Option, Option).
+
+
 %!  '$catch'(+Module, +Goal, +Catcher, +Recover) is nondet.
 %
 %   Native catch with a reserved-control filter in its recovery boundary.
@@ -266,6 +453,9 @@ rewrite_receive_clauses(Module, (Head0 -> Body0), (Head -> Body)) :-
     rewrite_goal(Module, Body0, Body).
 rewrite_receive_clauses(_, Clauses, Clauses).
 
+rewrite_receive_head(_, Head, Head) :-
+    var(Head),
+    !.
 rewrite_receive_head(Module, if(Pattern, Guard0), if(Pattern, Guard)) :-
     !,
     rewrite_goal(Module, Guard0, Guard).

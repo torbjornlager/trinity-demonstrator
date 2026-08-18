@@ -61,6 +61,10 @@ actor-coupled.
     text before it is loaded (blacklist guard).  First solution wins;
     default identity.  The result then receives the same control_guard
     rewrite as a directly submitted goal.
+  - restore_source_goal(+Module, +Goal0, -Goal): undo composition-layer
+    goal wrappers while reconstructing src_predicates/1 source.  First
+    solution wins; default identity after the universal control wrappers
+    have been removed.
   - shared_database_module(-SharedModule): the node layer names the
     module holding the shared database; actor modules import it and
     empty dynamic shadows of its predicates are repaired after load.
@@ -98,7 +102,18 @@ actor-coupled.
     prepare_source_options/3,
     extra_prelude_text/2,
     rewrite_source_text/3,
+    restore_source_goal/3,
     shared_database_module/1.
+
+:- multifile source_utils:restore_serialized_term/3.
+
+source_utils:restore_serialized_term(Module, (Head :- Body0),
+                                     (Head :- Body)) :-
+    control_guard:restore_goal(Module, Body0, Body1),
+    (   restore_source_goal(Module, Body1, Body)
+    ->  true
+    ;   Body = Body1
+    ).
 
 :- meta_predicate
     spawn_body(+, :, +, 0, 1, 1),

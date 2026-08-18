@@ -3775,6 +3775,31 @@ test(sandbox_prepare_public_spawn_honors_source_module,
             member(src_text(SourceText), Prepared)
         )).
 
+test(sandbox_prepare_public_spawn_reconstructs_guarded_src_predicates) :-
+    setup_call_cleanup(
+        (   control_guard:rewrite_goal(
+                test_node,
+                receive({ '$call'(_Template, Goal) -> call(Goal) }),
+                GuardedBody
+            ),
+            assertz(test_node:(guarded_src_predicate :- GuardedBody))
+        ),
+        with_sandbox_mode(blacklist,
+            (   sandbox_prepare_public_spawn(
+                    actor,
+                    test_node,
+                    guarded_src_predicate,
+                    [src_predicates([guarded_src_predicate/0])],
+                    Prepared
+                ),
+                member(src_text(SourceText), Prepared),
+                assertion(sub_string(SourceText, _, _, _, "receive")),
+                assertion(\+ sub_string(SourceText, _, _, _, "control_guard")),
+                assertion(\+ sub_string(SourceText, _, _, _, "actor_"))
+            )),
+        retractall(test_node:guarded_src_predicate)
+    ).
+
 test(sandbox_check_source_text_blacklist_allows_spawn_with_load_predicates_defined_in_same_source) :-
     Source = "pong :- receive({finished -> true}).\nping_pong :- spawn(pong, _, [src_predicates([pong/0])]).\n",
     with_sandbox_mode(blacklist,

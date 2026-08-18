@@ -119,6 +119,21 @@ test(session_exposes_actor_primitives) :-
        down(Pid, _, kill) -> true
    }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
 
+test(session_receive_variable_head, Msg == hello) :-
+   setup_call_cleanup(
+       toplevel_spawn(Pid, [session(true)]),
+       ( toplevel_call(Pid,
+                       ( self(Self),
+                         send(Self, hello),
+                         receive({Msg0 -> true})
+                       ),
+                       [template(Msg0)]),
+         receive({
+             success(Pid, [Msg], false) -> true
+         }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ])
+       ),
+       catch(exit(Pid, test_cleanup), _, true)).
+
 test(session_spawn_monitor_receive_down) :-
    toplevel_spawn(Pid, [
        session(true),
