@@ -2653,33 +2653,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 
 <p>
     The machine starts in <code>s1</code>. Use the Examples menu to send
-    events one at a time and watch the diagram respond:
+    events one at a time and watch the diagram respond.
 </p>
-
-<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
-  <tbody>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! play</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">advances <code>s1</code> &rarr; <code>s2</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! reset</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">steps back <code>s2</code> &rarr; <code>s1</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! pause</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">saves current substate in <strong>H</strong>, enters <code>interrupted</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! resume</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">restores <strong>H</strong> &mdash; returns to the substate active at pause time</td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! stop</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">drives the machine to <code>final</code> and terminates the actor</td>
-    </tr>
-  </tbody>
-</table>
 
 <div class="alert alert-info">
   <strong>Tip!</strong> Enable the SXML trace filter in the Logger
@@ -3209,17 +3184,6 @@ fridge2(_Other,      List, error(unknown_request), List).
 </figure>
 
 <p>
-    The machine starts in <code>s0</code>, follows its initial transition into
-    <code>s1</code>, and then follows <code>s1</code>'s initial transition into
-    <code>s11</code>. If you send <code>c</code> while the active leaf is
-    <code>s11</code>, there is no <code>c</code> transition on
-    <code>s11</code>, so the interpreter looks at the parent
-    <code>s1</code> and takes <code>s1</code> &rarr; <code>s2</code>. Entering
-    <code>s2</code> then follows nested initial transitions down to
-    <code>s211</code>.
-</p>
-
-<p>
     Spawn the chart and keep the Logger open with the SXML trace filter
     selected. The trace shows the same process as text: the current
     configuration, the external event, exits, transitions, and entries.
@@ -3235,45 +3199,9 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    Use the Examples menu to send events one at a time:
+    Use the Examples menu to send events one at a time.
 </p>
 
-<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
-  <tbody>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! a</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">loops on <code>s1</code> and re-enters its initial leaf <code>s11</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! b</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">targets <code>s11</code> from <code>s1</code>, or <code>s211</code> from <code>s21</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! c</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves between the two large sibling regions <code>s1</code> and <code>s2</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">resets outward to <code>s0</code>, or from <code>s211</code> to <code>s21</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">uses the outer <code>s0</code> transition to enter <code>s211</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">crosses between <code>s1</code>, <code>s11</code>, and <code>s211</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! g</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">shows leaf-level precedence from <code>s11</code> or <code>s211</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! h</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">takes <code>s211</code> to final state <code>f</code> and terminates the actor</td>
-    </tr>
-  </tbody>
-</table>
 
 <h2>NPC emotions</h2>
 
@@ -3415,25 +3343,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    Use the Examples menu to send the three events:
+    Use the Examples menu to send the three events.
 </p>
-
-<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
-  <tbody>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves to <code>fear</code>, <code>surprise</code>, and <code>fleeing</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>fear</code> back to <code>anger</code> and <code>fleeing</code> back to <code>attacking</code></td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>surprise</code> back to <code>anticipation</code></td>
-    </tr>
-  </tbody>
-</table>
 
 
 
@@ -3537,22 +3448,6 @@ fridge2(_Other,      List, error(unknown_request), List).
     transition.
 </p>
 
-<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
-  <tbody>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([red]).</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as color, advances to the <code>size</code> state</td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([a, big, box]).</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as size, reaches the final state</td>
-    </tr>
-    <tr>
-      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([hello]).</code></td>
-      <td style="padding: 3px 0; color: var(--tutorial-muted);">does not parse; the agent says "I did not understand" and re-asks the current question</td>
-    </tr>
-  </tbody>
-</table>
 
 <p>
     Three pieces of statechart machinery do the work. First, the
