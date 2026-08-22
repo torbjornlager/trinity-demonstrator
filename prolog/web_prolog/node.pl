@@ -1368,9 +1368,12 @@ node_actor_profile_tutorial_page(Request) :-
     node_actor_profile_tutorial_file(File),
     reply_uncached_file(File, Request).
 
+% Keep old bookmarks working after the statechart lesson returned to the
+% ACTOR tutorial.
 node_statechart_behaviour_tutorial_page(Request) :-
-    node_statechart_behaviour_tutorial_file(File),
-    reply_uncached_file(File, Request).
+    http_redirect(moved,
+                  '/actor-profile-tutorial#programming-with-statecharts',
+                  Request).
 
 node_isobase_api_tutorial_page(Request) :-
     node_isobase_api_tutorial_file(File),
@@ -2058,11 +2061,6 @@ node_actor_profile_tutorial_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
     directory_file_path(Dir, '../../web/actor-profile-tutorial.html', File).
-
-node_statechart_behaviour_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/statechart-behaviour-tutorial.html', File).
 
 node_isobase_api_tutorial_file(File) :-
     module_property(node, file(ThisFile)),

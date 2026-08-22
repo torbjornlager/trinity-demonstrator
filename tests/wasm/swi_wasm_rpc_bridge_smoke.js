@@ -531,8 +531,7 @@ ok(includes(':href="profileTutorial.path"') &&
    includes('apiLabel: "The stateful WebSocket API"') &&
    includes(':href="profileTutorial.behaviourPath"') &&
    includes('{{ profileTutorial.behaviourLabel }}') &&
-   includes('behaviourPath: "/statechart-behaviour-tutorial"') &&
-   includes('behaviourLabel: "The statechart behaviour"') &&
+   !includes('behaviourPath: "/statechart-behaviour-tutorial"') &&
    !includes('href="/wp-tutorial"') &&
    !includes('>Web Prolog Tutorial</a>'),
    "the Tutorials drawer exposes profile and API tutorials for each profile");
@@ -1127,8 +1126,20 @@ ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
    actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
-ok(actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
-   !actorTutorialSource.includes('id="sc-pr-spawn"') &&
+ok(!actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
+   actorTutorialSource.includes('id="tutorial-programming-with-statecharts"') &&
+   actorTutorialSource.includes('id="sc-pr-spawn"') &&
+   actorTutorialSource.includes('id="sc-spaghetti-spawn"') &&
+   actorTutorialSource.includes('id="sc-sp-diagram"') &&
+   actorTutorialSource.includes('id="sc-emotions-spawn"') &&
+   actorTutorialSource.includes('id="sc-em-diagram"') &&
+   actorTutorialSource.includes('id="sc-dialog-spawn"') &&
+   actorTutorialSource.includes('id="sc-gcd-spawn"') &&
+   actorTutorialSource.includes('id="sc-spawn-toplevel-spawn"') &&
+   actorTutorialSource.includes('function scSpawnDialog(exampleId)') &&
+   actorTutorialSource.includes('var SC_CHARTS =') &&
+   actorTutorialSource.includes('function _scRender(diagram, activeStates, transitionIds)') &&
+   actorTutorialSource.includes('bridge.onStatechartTrace = function(text)') &&
    statechartBehaviourTutorialSource.includes('id="sc-pause-spawn"') &&
    statechartBehaviourTutorialSource.includes('id="sc-pr-diagram"') &&
    statechartBehaviourTutorialSource.includes('data-query="$Pid ! d."') &&
@@ -1147,7 +1158,7 @@ ok(actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
    !statechartBehaviourTutorialSource.includes('data-load-example') &&
    statechartBehaviourTutorialSource.includes('function handleStatechartTrace(text)') &&
    statechartBehaviourTutorialSource.includes('api.onStatechartTrace = handleStatechartTrace'),
-   "statechart labs and animated diagrams live in the dedicated behaviour tutorial");
+   "statechart programming is integrated into the ACTOR profile tutorial");
 ok(sharedDbSource.includes('echo_actor :-') &&
    sharedDbSource.includes('receive({') &&
    sharedDbSource.includes('From ! echo(Msg)') &&

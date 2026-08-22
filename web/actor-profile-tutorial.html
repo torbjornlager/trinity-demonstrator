@@ -59,9 +59,7 @@
    The last part introduces higher-level patterns. The server behaviour wraps a
    callback predicate in a generic supervised process that supports synchronous
    request/reply, hot code swapping, and automatic recovery from crashes.
-   Statechart actors layer hierarchical state machines on top of the same actor
-   model; they have a separate
-   <a href="/statechart-behaviour-tutorial">statechart behaviour tutorial</a>.
+   The final section layers hierarchical state machines on top of the same actor model.
 </p>
 
 
@@ -127,7 +125,7 @@
   <tbody>
     <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Core actor programming</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Message passing, lifecycle, selective receive, monitoring, linking, then Programming with actors</td></tr>
     <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Remote and distributed work</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Toplevels, <code>rpc</code>, promises, proof trees, and The concurrent Prolog Web</td></tr>
-    <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Reusable behaviours</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">The server behaviour, then <a href="/statechart-behaviour-tutorial">The statechart behaviour</a></td></tr>
+    <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Reusable behaviours</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">The server behaviour, then <a href="#programming-with-statecharts">Programming with statecharts</a></td></tr>
   </tbody>
 </table>
 
@@ -2516,9 +2514,1159 @@ fridge2(_Other,      List, error(unknown_request), List).
 </section>
 
 
-<section id="statechart-behaviour-handoff">
-<h1>The statechart behaviour</h1>
-<p>Statechart actors have a focused tutorial of their own. Continue with <a href="/statechart-behaviour-tutorial"><strong>The statechart behaviour</strong></a> for runnable labs on hierarchy, history, parallel regions, Prolog transition actions, time, deferred events and invoked actors.</p>
+<section id="tutorial-programming-with-statecharts" data-tutorial-sections="statecharts">
+<h1>Programming with statecharts</h1>
+
+<p>
+    Statechart actors bring the full power of hierarchical state machines to
+    Web Prolog actors. A statechart is described in a small XML dialect and
+    interpreted at run time: spawning a statechart actor produces an ordinary
+    actor pid, and the statechart reacts to events &mdash; ordinary Web Prolog
+    messages &mdash; by moving between states, running entry and exit actions,
+    and delegating to history states so that a machine can resume exactly where
+    it left off.
+</p>
+
+<h2>Pause and resume</h2>
+
+<p>
+    A classic problem in reactive systems is <em>pause and resume</em>:
+    suspending a running process while preserving its internal state, and
+    later continuing from the same point. The statechart below models a small
+    game with two substates (<code>s1</code> and <code>s2</code>) that can be
+    paused at any moment and resumed from the exact substate in which they were
+    interrupted.
+</p>
+
+<p>
+    The diagram shows the structure. The outer <code>game</code> state has two
+    children: <code>play</code> (the running game, itself containing
+    <code>s1</code> and <code>s2</code>) and <code>interrupted</code>. The
+    history node&nbsp;<strong>H</strong> inside <code>play</code> records which
+    substate was active at the moment of a pause, so that a resume transition
+    can return to it directly.
+</p>
+
+<figure style="margin: 1.5em 0;">
+<svg id="sc-pr-diagram" width="100%" viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+    <style>
+      .th { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 500; fill: var(--tutorial-diagram-ink); }
+      .t  { font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: 400; fill: var(--tutorial-diagram-ink); }
+      .ts { font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: 400; fill: var(--tutorial-diagram-ink); }
+    </style>
+    <marker id="sc-arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--tutorial-diagram-line)"/>
+    </marker>
+    <marker id="sc-arr-hi" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--tutorial-diagram-highlight)"/>
+    </marker>
+  </defs>
+
+  <!-- outer state: game -->
+  <rect x="4" y="10" rx="24" ry="24" width="620" height="260" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1"/>
+  <line x1="4" y1="40" x2="624" y2="40" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="314" y="25" text-anchor="middle" dominant-baseline="central">game</text>
+
+  <!-- composite state: play -->
+  <rect x="60" y="56" rx="20" ry="20" width="320" height="200" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="60" y1="86" x2="380" y2="86" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="220" y="71" text-anchor="middle" dominant-baseline="central">play</text>
+
+  <!-- state: interrupted -->
+  <rect id="sc-state-interrupted" x="495" y="56" rx="20" ry="20" width="120" height="200" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="495" y1="86" x2="615" y2="86" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="555" y="71" text-anchor="middle" dominant-baseline="central">interrupted</text>
+
+  <!-- initial marker for game -->
+  <circle cx="26" cy="56" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M33 56 C42 54, 50 55, 62 64" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" marker-end="url(#sc-arr)"/>
+
+  <!-- initial marker for play -->
+  <circle cx="96" cy="136" r="6" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M102 136 C110 134, 116 135, 126 141" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" marker-end="url(#sc-arr)"/>
+
+  <!-- state: s1 -->
+  <rect id="sc-state-s1" x="124" y="136" rx="16" ry="16" width="72" height="96" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="124" y1="164" x2="196" y2="164" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="t" x="160" y="148" text-anchor="middle" dominant-baseline="central">s1</text>
+
+  <!-- state: s2 -->
+  <rect id="sc-state-s2" x="288" y="136" rx="16" ry="16" width="72" height="96" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="288" y1="164" x2="360" y2="164" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="t" x="324" y="148" text-anchor="middle" dominant-baseline="central">s2</text>
+
+  <!-- history marker H -->
+  <circle cx="242" cy="118" r="16" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="242" y="118" text-anchor="middle" dominant-baseline="central">H</text>
+
+  <!-- play transition: s1 → s2 -->
+  <line id="sc-trans-play" x1="196" y1="192" x2="286" y2="192" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="242" y="184" text-anchor="middle">play</text>
+
+  <!-- reset transition: s2 → s1 -->
+  <line id="sc-trans-reset" x1="288" y1="214" x2="198" y2="214" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="242" y="230" text-anchor="middle">reset</text>
+
+  <!-- pause transition: play → interrupted -->
+  <line id="sc-trans-pause" x1="380" y1="210" x2="493" y2="210" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="437" y="228" text-anchor="middle">pause</text>
+
+  <!-- resume transition: interrupted → history -->
+  <path id="sc-trans-resume" d="M495 122 C445 104, 365 96, 260 116" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="420" y="125" text-anchor="middle">resume</text>
+
+  <!-- stop transition: game → final -->
+  <line id="sc-trans-stop" x1="624" y1="140" x2="662" y2="140" stroke="var(--tutorial-diagram-line)" stroke-width="1.5" fill="none" marker-end="url(#sc-arr)"/>
+  <text class="ts" x="642" y="130" text-anchor="middle">stop</text>
+
+  <!-- final state (bull's eye) -->
+  <circle id="sc-state-final" cx="678" cy="140" r="14" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <circle cx="678" cy="140" r="7" fill="var(--tutorial-diagram-ink)"/>
+</svg>
+<p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em; ">
+  Statechart for a pausable game. The <strong>H</strong> node is a history
+  state: resuming transitions to the last active substate of
+  <code>play</code> rather than to its declared initial state.
+  The diagram updates live as transitions fire.
+</p>
+</figure>
+
+<p>
+    Spawn the statechart as an actor. <code>src_uri</code> fetches the XML
+    for the interpreter. Transition traces are published automatically,
+    so the diagram updates as events fire and the same events appear in
+    the Logger when its <strong>SXML trace</strong> filter is selected.
+    <code>Pid</code> is bound to the actor's pid. Spawning also populates
+    the <strong>Examples</strong> menu (the button below the terminal input)
+    with all five event queries:
+</p>
+
+<pre id="sc-pr-spawn">?- statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/01%20pause-and-resume.xml')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawn(&quot;#sc-pr-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The machine starts in <code>s1</code>. Use the Examples menu to send
+    events one at a time and watch the diagram respond:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! play</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">advances <code>s1</code> &rarr; <code>s2</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! reset</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">steps back <code>s2</code> &rarr; <code>s1</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! pause</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">saves current substate in <strong>H</strong>, enters <code>interrupted</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! resume</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">restores <strong>H</strong> &mdash; returns to the substate active at pause time</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! stop</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">drives the machine to <code>final</code> and terminates the actor</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="alert alert-info">
+  <strong>Tip!</strong> Enable the SXML trace filter in the Logger
+  to watch every state entry, exit, and transition in real time.
+</div>
+
+<p>
+    The XML source is reproduced here for reference:
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="game"&gt;
+    &lt;state id="game" initial="play"&gt;
+        &lt;state id="play"&gt;
+            &lt;initial&gt;
+                &lt;go to="s1" /&gt;
+            &lt;/initial&gt;
+            &lt;history id="h"&gt;
+                &lt;go to="s1" /&gt;
+            &lt;/history&gt;
+            &lt;state id="s1"&gt;
+                &lt;go to="s2" on="play" /&gt;
+            &lt;/state&gt;
+            &lt;state id="s2"&gt;
+                &lt;go to="s1" on="reset" /&gt;
+            &lt;/state&gt;
+            &lt;go to="interrupted" on="pause" /&gt;
+        &lt;/state&gt;
+        &lt;state id="interrupted"&gt;
+            &lt;go to="h" on="resume" /&gt;
+        &lt;/state&gt;
+        &lt;go to="final" on="stop" /&gt;
+    &lt;/state&gt;
+    &lt;final id="final" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<h2>Reading a spaghetti statechart</h2>
+
+<p>
+    Real statecharts can look tangled at first. The visual trick is to read
+    them from the outside in: identify the active leaf state, then walk outward
+    through its parent states until you find a transition whose event matches
+    the message you send. The first enabled transition determines the next
+    state.
+</p>
+
+<figure style="margin: 1.5em 0;">
+<svg id="sc-sp-diagram" width="100%" viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg">
+  <style>
+      #sc-sp-diagram .th { font-size: 17px; }
+      #sc-sp-diagram .ts { font-size: 16px; font-weight: 500;
+        paint-order: stroke; stroke: var(--tutorial-bg);
+        stroke-width: 3.5px; stroke-linejoin: round; }
+    </style>
+  <defs
+     id="defs2">
+    <marker
+       id="sp-arr"
+       markerWidth="9"
+       markerHeight="9"
+       refX="8.4"
+       refY="4.5"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L9,4.5 L0,9 Z"
+         fill="var(--tutorial-diagram-line)"
+         id="path1" />
+    </marker>
+    <marker
+       id="sp-arr-hi"
+       markerWidth="9"
+       markerHeight="9"
+       refX="8.4"
+       refY="4.5"
+       orient="auto"
+       markerUnits="strokeWidth">
+      <path
+         d="M0,0 L9,4.5 L0,9 Z"
+         fill="var(--tutorial-diagram-highlight)"
+         id="path2" />
+    </marker>
+  </defs>
+  <!-- outer state: s0 -->
+  <rect
+     x="10.002732"
+     y="55.002731"
+     rx="24.263376"
+     ry="23.999687"
+     width="727.90125"
+     height="419.99454"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1"
+     id="rect2" />
+  <line
+     x1="10"
+     y1="85"
+     x2="730"
+     y2="85"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line2" />
+  <text
+     class="th"
+     x="370"
+     y="72"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text2">s0</text>
+  <!-- top entry into s0 -->
+  <circle
+     cx="30"
+     cy="35"
+     r="7"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle2" />
+  <!-- s0 initial → s1 -->
+  <!-- composite state: s1 -->
+  <rect
+     x="55.45126"
+     y="119.99671"
+     rx="17.529602"
+     ry="18.000473"
+     width="277.55203"
+     height="250.00658"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="rect4" />
+  <line
+     x1="55.454544"
+     y1="150"
+     x2="333"
+     y2="150"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line4" />
+  <text
+     class="th"
+     x="190"
+     y="137"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text4">s1</text>
+  <!-- s1 initial → s11 -->
+  <circle
+     cx="130"
+     cy="168"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle4" />
+  <path
+     d="m 130,170 c 9,8 14,16 19,29"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path5" />
+  <!-- leaf state: s11 -->
+  <rect
+     id="sp-state-s11"
+     x="105"
+     y="200"
+     rx="14"
+     ry="14"
+     width="150"
+     height="110"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5" />
+  <line
+     x1="105"
+     y1="230"
+     x2="255"
+     y2="230"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line5" />
+  <text
+     class="th"
+     x="180"
+     y="215"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text5">s11</text>
+  <!-- composite state: s2 -->
+  <rect
+     x="400"
+     y="100"
+     rx="18"
+     ry="18"
+     width="320"
+     height="350"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="rect5" />
+  <line
+     x1="400"
+     y1="130"
+     x2="720"
+     y2="130"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line6" />
+  <text
+     class="th"
+     x="560"
+     y="117"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text6">s2</text>
+  <!-- s2 initial → s21 -->
+  <circle
+     cx="455"
+     cy="150"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle6" />
+  <circle
+     cx="45.106983"
+     cy="102.52763"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle6-1" />
+  <path
+     d="M461 152 C468 158, 472 162, 475 167"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path6" />
+  <path
+     d="m 49.861132,106.20502 c 7,6 11,10 14,15"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path6-3" />
+  <path
+     d="m 34.899144,40.315524 c 7,6 11,10 14,15"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path6-3-2" />
+  <!-- composite state: s21 -->
+  <rect
+     x="440"
+     y="168"
+     rx="16"
+     ry="16"
+     width="250"
+     height="250"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="rect6" />
+  <line
+     x1="440"
+     y1="198"
+     x2="690"
+     y2="198"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line7" />
+  <text
+     class="th"
+     x="565"
+     y="185"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text7">s21</text>
+  <!-- s21 initial → s211 -->
+  <circle
+     cx="505"
+     cy="218"
+     r="6"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle7" />
+  <path
+     d="M511 220 C516 228, 518 236, 519 244"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.5"
+     marker-end="url(#sp-arr)"
+     id="path7" />
+  <!-- leaf state: s211 -->
+  <rect
+     id="sp-state-s211"
+     x="500"
+     y="245"
+     rx="14"
+     ry="14"
+     width="165"
+     height="120"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5" />
+  <line
+     x1="500"
+     y1="275"
+     x2="665"
+     y2="275"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5"
+     id="line8" />
+  <text
+     class="th"
+     x="582"
+     y="262"
+     text-anchor="middle"
+     dominant-baseline="central"
+     id="text8">s211</text>
+  <!-- final state f (bull's eye) -->
+  <circle
+     id="sp-state-f"
+     cx="785"
+     cy="280"
+     r="14"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="0.5" />
+  <circle
+     cx="785"
+     cy="280"
+     r="7"
+     fill="var(--tutorial-diagram-ink)"
+     id="circle8" />
+  <!-- transitions -->
+  <path
+     id="sp-trans-a"
+     d="M 55.059102,326.04898 C 13.8126,320.56879 14.455951,360.07871 55.47728,351.73043"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="37.682213"
+     y="343"
+     text-anchor="middle"
+     id="text9">a</text>
+  <line
+     id="sp-trans-b1"
+     x1="150"
+     y1="369"
+     x2="150"
+     y2="311"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="138"
+     y="345"
+     text-anchor="middle"
+     id="text10">b</text>
+  <path
+     id="sp-trans-c1"
+     d="M333 172 C362 150, 378 149, 400 160"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="367"
+     y="145"
+     text-anchor="middle"
+     id="text11">c</text>
+  <path
+     id="sp-trans-c2"
+     d="M400 190 C378 211, 362 212, 335 200"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="367"
+     y="200"
+     text-anchor="middle"
+     id="text12">c</text>
+  <line
+     id="sp-trans-d1"
+     x1="54.544109"
+     y1="245"
+     x2="11.567878"
+     y2="245"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="39.565636"
+     y="236.97668"
+     text-anchor="middle"
+     id="text13">d</text>
+  <line
+     id="sp-trans-g1"
+     x1="332.7496"
+     y1="263.63559"
+     x2="439.35205"
+     y2="263.63559"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="382"
+     y="252"
+     text-anchor="middle"
+     id="text14">g</text>
+  <line
+     id="sp-trans-f1"
+     x1="333"
+     y1="296"
+     x2="500"
+     y2="297"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="418"
+     y="289"
+     text-anchor="middle"
+     id="text15">f</text>
+  <path
+     id="sp-trans-f2"
+     d="M 400,318 C 340,313 298,308 255,302"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="322"
+     y="335"
+     text-anchor="middle"
+     id="text16"
+     style="white-space:pre;inline-size:13.5975"
+     xml:space="preserve"><tspan
+       x="322"
+       y="335"
+       id="tspan1">f</tspan></text>
+  <line
+     id="sp-trans-b2"
+     x1="600"
+     y1="417.97668"
+     x2="600"
+     y2="366.03952"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="587.30304"
+     y="397.95337"
+     text-anchor="middle"
+     id="text17">b</text>
+  <line
+     id="sp-trans-d2"
+     x1="548"
+     y1="364.68219"
+     x2="548"
+     y2="416.84137"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="535"
+     y="392"
+     text-anchor="middle"
+     id="text18">d</text>
+  <line
+     id="sp-trans-h"
+     x1="665"
+     y1="281"
+     x2="770"
+     y2="280"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     fill="none"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="706.77545"
+     y="271.97668"
+     text-anchor="middle"
+     id="text19">h</text>
+  <path
+     id="sp-trans-e"
+     d="m 737.02102,401.90074 c -29.72482,-14.44143 -52.0184,-28.88287 -73.07349,-43.3243"
+     fill="none"
+     stroke="var(--tutorial-diagram-line)"
+     stroke-width="1.7"
+     marker-end="url(#sp-arr)" />
+  <text
+     class="ts"
+     x="705.36444"
+     y="376.03802"
+     text-anchor="middle"
+     id="text20">e</text>
+  <text
+     class="ts"
+     x="699.94318"
+     y="329.87991"
+     text-anchor="middle"
+     id="text21">g</text>
+  <!-- g: s211 -> s0 (re-added; adjust route to taste) -->
+  <path id="sp-trans-g2" d="M665 320 C695 316, 715 312, 736.8 304.7" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#sp-arr)"/>
+</svg>
+  <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
+    Spaghetti statechart. The diagram highlights the active leaf state and the
+    transition that fired as you send events.
+  </p>
+</figure>
+
+<p>
+    The machine starts in <code>s0</code>, follows its initial transition into
+    <code>s1</code>, and then follows <code>s1</code>'s initial transition into
+    <code>s11</code>. If you send <code>c</code> while the active leaf is
+    <code>s11</code>, there is no <code>c</code> transition on
+    <code>s11</code>, so the interpreter looks at the parent
+    <code>s1</code> and takes <code>s1</code> &rarr; <code>s2</code>. Entering
+    <code>s2</code> then follows nested initial transitions down to
+    <code>s211</code>.
+</p>
+
+<p>
+    Spawn the chart and keep the Logger open with the SXML trace filter
+    selected. The trace shows the same process as text: the current
+    configuration, the external event, exits, transitions, and entries.
+</p>
+
+<pre id="sc-spaghetti-spawn">?- statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/02%20spaghetti.xml')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnSpaghetti(&quot;#sc-spaghetti-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Use the Examples menu to send events one at a time:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! a</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">loops on <code>s1</code> and re-enters its initial leaf <code>s11</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! b</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">targets <code>s11</code> from <code>s1</code>, or <code>s211</code> from <code>s21</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! c</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves between the two large sibling regions <code>s1</code> and <code>s2</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">resets outward to <code>s0</code>, or from <code>s211</code> to <code>s21</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">uses the outer <code>s0</code> transition to enter <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">crosses between <code>s1</code>, <code>s11</code>, and <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! g</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">shows leaf-level precedence from <code>s11</code> or <code>s211</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! h</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">takes <code>s211</code> to final state <code>f</code> and terminates the actor</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>NPC emotions</h2>
+
+<p>
+    Parallel states let one actor be in several independent states at the same
+    time. This toy non-player character has two emotion dimensions and one
+    behavior mode. At any moment it has one active state in the
+    anger/fear dimension, one in the anticipation/surprise dimension, and one
+    in behavior.
+</p>
+
+<figure style="margin: 1.5em 0;">
+<svg id="sc-em-diagram" width="100%" viewBox="0 0 720 565" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <defs>
+    <style>
+      #sc-em-diagram .th { font-size: 15px; }
+      #sc-em-diagram .ts { font-size: 14px; font-weight: 500;
+        paint-order: stroke; stroke: var(--tutorial-bg);
+        stroke-width: 3.5px; stroke-linejoin: round; }
+    </style>
+    <marker id="em-arr" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="var(--tutorial-diagram-line)"/>
+    </marker>
+    <marker id="em-arr-hi" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="var(--tutorial-diagram-highlight)"/>
+    </marker>
+  </defs>
+  <!-- outer parallel region: agent -->
+  <rect x="10" y="18" rx="22" ry="22" width="700" height="525" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1"/>
+  <line x1="10" y1="46" x2="710" y2="46" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="360" y="32" text-anchor="middle" dominant-baseline="central">agent</text>
+
+  <!-- parallel split between emotions and behavior -->
+  <line x1="20" y1="370" x2="700" y2="370" stroke="var(--tutorial-diagram-line)" stroke-width="1" stroke-dasharray="7 5"/>
+
+  <!-- parallel region: emotions -->
+  <rect x="30" y="62" rx="18" ry="18" width="660" height="295" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="30" y1="90" x2="690" y2="90" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="360" y="76" text-anchor="middle" dominant-baseline="central">emotions</text>
+
+  <!-- parallel split between the two emotion dimensions -->
+  <line x1="360" y1="108" x2="360" y2="343" stroke="var(--tutorial-diagram-line)" stroke-width="1" stroke-dasharray="7 5"/>
+
+  <!-- region: AF-dimension -->
+  <rect x="45" y="105" rx="16" ry="16" width="300" height="240" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="45" y1="133" x2="345" y2="133" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="195" y="119" text-anchor="middle" dominant-baseline="central">AF-dimension</text>
+
+  <!-- AF initial → anger -->
+  <circle cx="67" cy="150" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M73 152 C80 153, 88 154.5, 94 158" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#em-arr)"/>
+
+  <rect id="em-state-anger" x="95" y="150" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="95" y1="180" x2="295" y2="180" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="195" y="165" text-anchor="middle" dominant-baseline="central">anger</text>
+
+  <rect id="em-state-fear" x="95" y="265" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="95" y1="295" x2="295" y2="295" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="195" y="280" text-anchor="middle" dominant-baseline="central">fear</text>
+
+  <line id="em-trans-af-e" x1="165" y1="210" x2="165" y2="263" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="152" y="240" text-anchor="middle">e</text>
+  <line id="em-trans-af-d" x1="225" y1="265" x2="225" y2="212" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="238" y="240" text-anchor="middle">d</text>
+
+  <!-- region: AS-dimension -->
+  <rect x="375" y="105" rx="16" ry="16" width="300" height="240" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="375" y1="133" x2="675" y2="133" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="525" y="119" text-anchor="middle" dominant-baseline="central">AS-dimension</text>
+
+  <!-- AS initial → anticipation -->
+  <circle cx="397" cy="150" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M403 152 C410 153, 418 154.5, 424 158" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#em-arr)"/>
+
+  <rect id="em-state-anticipation" x="425" y="150" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="425" y1="180" x2="625" y2="180" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="525" y="165" text-anchor="middle" dominant-baseline="central">anticipation</text>
+
+  <rect id="em-state-surprise" x="425" y="265" rx="14" ry="14" width="200" height="60" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="425" y1="295" x2="625" y2="295" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="525" y="280" text-anchor="middle" dominant-baseline="central">surprise</text>
+
+  <line id="em-trans-as-e" x1="495" y1="210" x2="495" y2="263" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="482" y="240" text-anchor="middle">e</text>
+  <line id="em-trans-as-f" x1="555" y1="265" x2="555" y2="212" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="568" y="240" text-anchor="middle">f</text>
+
+  <!-- region: behavior -->
+  <rect x="30" y="382" rx="18" ry="18" width="660" height="150" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="30" y1="410" x2="690" y2="410" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="360" y="396" text-anchor="middle" dominant-baseline="central">behavior</text>
+
+  <!-- behavior initial → attacking -->
+  <circle cx="79" cy="432" r="7" fill="var(--tutorial-diagram-ink)"/>
+  <path d="M85 434 C95 435, 103 436.5, 109 440" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" marker-end="url(#em-arr)"/>
+
+  <rect id="em-state-attacking" x="110" y="430" rx="14" ry="14" width="180" height="65" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="110" y1="460" x2="290" y2="460" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="200" y="445" text-anchor="middle" dominant-baseline="central">attacking</text>
+
+  <rect id="em-state-fleeing" x="430" y="430" rx="14" ry="14" width="180" height="65" fill="none" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <line x1="430" y1="460" x2="610" y2="460" stroke="var(--tutorial-diagram-line)" stroke-width="0.5"/>
+  <text class="th" x="520" y="445" text-anchor="middle" dominant-baseline="central">fleeing</text>
+
+  <line id="em-trans-beh-e" x1="290" y1="452" x2="428" y2="452" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="360" y="444" text-anchor="middle">e</text>
+  <line id="em-trans-beh-d" x1="430" y1="475" x2="292" y2="475" stroke="var(--tutorial-diagram-line)" stroke-width="1.7" fill="none" marker-end="url(#em-arr)"/>
+  <text class="ts" x="360" y="490" text-anchor="middle">d</text>
+</svg>
+  <p style="font-size: 0.8em; color: var(--tutorial-muted); margin-top: 0.4em;">
+    Orthogonal regions: two emotion dimensions plus one behavior mode. The
+    diagram highlights every active leaf; a shared event lights up its
+    transition in each region at once.
+  </p>
+</figure>
+
+<p>
+    The point of orthogonality is that related but independent dimensions do
+    not have to be flattened into one large state name. Without parallel
+    regions, combinations such as <code>anger_anticipation_attacking</code> and
+    <code>fear_surprise_fleeing</code> would have to be encoded as separate
+    states, and the number of combinations would grow quickly.
+</p>
+
+<p>
+    Here, event <code>e</code> can be read as an explosion. Because all three
+    regions are active, the same event is observed in each region: anger becomes
+    fear, anticipation becomes surprise, and attacking becomes fleeing in one
+    coordinated step.
+</p>
+
+<pre id="sc-emotions-spawn">?- statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/03%20emotions.xml')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnEmotions(&quot;#sc-emotions-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Use the Examples menu to send the three events:
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! e</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves to <code>fear</code>, <code>surprise</code>, and <code>fleeing</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! d</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>fear</code> back to <code>anger</code> and <code>fleeing</code> back to <code>attacking</code></td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! f</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">moves <code>surprise</code> back to <code>anticipation</code></td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+<h2>Computing the GCD</h2>
+
+<p>
+    The time is ripe to introduce Web Prolog as a scripting language inside
+    statecharts. Executable Web Prolog code in transition bodies and guards
+    increases their power significantly: a chart can update data, run
+    relations, produce output, and still keep the surrounding control logic
+    explicit.
+</p>
+
+<p>
+    The statechart below applies Euclid's algorithm to find the greatest common
+    divisor of a list of integers. The machine has two states:
+    <code>init</code> waits for a single <code>integers/1</code> event carrying
+    the list, then <code>run</code> iterates &mdash; repeatedly replacing
+    the larger of any two values with their difference &mdash; until only
+    one value remains and the result is printed.
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="init"&gt;
+    &lt;datamodel&gt;
+        :- dynamic int/1.
+    &lt;/datamodel&gt;
+    &lt;state id="init"&gt;
+        &lt;go on="integers(List)" to="run"&gt;
+            forall(member(X, List), asserta(int(X)))
+        &lt;/go&gt;
+    &lt;/state&gt;
+    &lt;state id="run"&gt;
+        &lt;go if="int(X), int(Y), X &gt; Y"&gt;
+            Z is X-Y,
+            retract(int(X)),
+            assert(int(Z))
+        &lt;/go&gt;
+        &lt;go to="stop" if="int(X)"&gt;
+            writeln(X)
+        &lt;/go&gt;
+    &lt;/state&gt;
+    &lt;final id="stop" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<p>
+    Spawn the machine. The Examples menu will be loaded with a sample query:
+</p>
+
+<pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/08%20gcd.xml')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnGcd(&quot;#sc-gcd-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    Now send the input list:
+</p>
+
+<pre id="sc-gcd-input">?- $Pid ! integers([25, 10, 15, 30]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#sc-gcd-input&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    The GCD <code>5</code> is computed and written to the terminal, and the
+    machine has moved to its final state.
+</p>
+
+<h2>A dialogue governor</h2>
+
+<p>
+    Statecharts are a good fit for dialogue control: a conversation has
+    turn-taking, confirmations, repair after misunderstandings, and an
+    overall flow that is easier to read as a hierarchy of states than as
+    branching <code>receive/1-2</code> code. This example is a small
+    conversational agent that asks the user for the color and size of a
+    box. Unrecognized input falls back to a history state, which re-enters
+    the most recently active substate and re-asks its question.
+</p>
+
+<pre id="sc-dialog-spawn">?- statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/11%20boxshop-1.xml')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnDialog(&quot;#sc-dialog-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    On entering the <code>color</code> state the machine asks "What color do
+    you want?". Use the Examples menu to reply. An adjective alone
+    (<code>[red]</code>, <code>[blue]</code>) or a full noun phrase
+    (<code>[a, red, box]</code>) parses; anything else triggers the repair
+    transition.
+</p>
+
+<table style="border-collapse: collapse; margin: 0.75em 0 1em 0; font-size: 0.92em;">
+  <tbody>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([red]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as color, advances to the <code>size</code> state</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([a, big, box]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">parses as size, reaches the final state</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 1em 3px 0; white-space: nowrap;"><code>$Pid ! input([hello]).</code></td>
+      <td style="padding: 3px 0; color: var(--tutorial-muted);">does not parse; the agent says "I did not understand" and re-asks the current question</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+    Three pieces of statechart machinery do the work. First, the
+    <code>&lt;datamodel&gt;</code> holds a small DCG and two dynamic
+    predicates (<code>color/1</code> and <code>size/1</code>) that act as
+    extracted-fact slots. Second, transitions use
+    <code>if="phrase(np(color(C)), Input)"</code> to call the DCG as a
+    guard: the transition only fires when the input parses as the expected
+    structure, and Prolog variables bound by the parse are in scope in the
+    transition body. Third, the <code>&lt;history&gt;</code> state and the
+    outer fallback <code>&lt;go to="h" on="input(Input)"&gt;</code> together
+    implement local repair: any unparseable input is caught, the agent
+    apologises, and the history state restores whichever question was
+    pending, so the conversation continues from where it broke down instead
+    of restarting.
+</p>
+
+<p>
+    The whole pattern &mdash; explicit states for turn-taking, DCG parsing
+    as a transition guard, and a history-based repair loop &mdash; is a
+    compact illustration of why statecharts are well suited to user-facing
+    agents. The same skeleton scales to richer dialogues by adding more
+    states and richer grammars.
+</p>
+
+<h2>Process invocation and communication</h2>
+
+<p>
+    Statecharts become more useful once they can spawn other processes and
+    communicate with them. In Web Prolog, the invoked processes are simply
+    actors: toplevels, other statechart actors, or services running on local or
+    remote nodes.
+</p>
+
+<p>
+    This final example spawns a child toplevel, submits a query to it, prints
+    each answer as it arrives, and terminates when the last answer has been
+    received. The spawned toplevel is initialized with a small program:
+    <code>q(X) :- p(X)</code> and four facts, <code>p(a)</code> through
+    <code>p(d)</code>.
+</p>
+
+<pre id="sc-spawn-toplevel-spawn">?- statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/10%20spawn-toplevel.xml')
+   ]).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="scSpawnWithoutDiagram(&quot;#sc-spawn-toplevel-spawn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    When the surrounding state becomes active, the <code>&lt;spawn&gt;</code>
+    element creates the child toplevel. The generated
+    <code>spawned(Pid)</code> event reports the pid of that child actor, and
+    the transition from <code>ask</code> to <code>collect</code> calls
+    <code>toplevel_call/3</code> with <code>limit(1)</code>.
+</p>
+
+<pre>&lt;statechart datamodel="web-prolog" initial="spawn-ask-collect"&gt;
+    &lt;state id="spawn-ask-collect" initial="ask"&gt;
+        &lt;spawn type="toplevel" exit="false"&gt;
+            q(X) :- p(X).
+            p(a). p(b). p(c). p(d).
+        &lt;/spawn&gt;
+        &lt;state id="ask"&gt;
+            &lt;go to="collect" on="spawned(Pid)"&gt;
+                toplevel_call(Pid, q(X), [
+                    limit(1)
+                ])
+            &lt;/go&gt;
+        &lt;/state&gt;
+        &lt;state id="collect"&gt;
+            &lt;go to="collect" on="success(Pid, Data, true)"&gt;
+                writeln(Data),
+                toplevel_next(Pid)
+            &lt;/go&gt;
+            &lt;go to="final" on="success(_, Data, false)"&gt;
+                writeln(Data)
+            &lt;/go&gt;
+        &lt;/state&gt;
+    &lt;/state&gt;
+    &lt;final id="final" /&gt;
+&lt;/statechart&gt;
+</pre>
+
+<p>
+    Each answer arrives as <code>success(Pid, Data, More)</code>. While
+    <code>More</code> is <code>true</code>, the chart prints the current
+    answer and asks the child toplevel for the next one with
+    <code>toplevel_next/1</code>. When <code>More</code> is
+    <code>false</code>, the last answer has arrived and the machine enters its
+    final state.
+</p>
+
+<p>
+    Variables bound by the <code>on</code> pattern, and by any
+    <code>if</code> guard, are in scope in the executable content of the same
+    <code>&lt;go&gt;</code> element. The intent of <code>&lt;spawn&gt;</code>
+    is also ownership: the helper process belongs to the control state that
+    created it, so leaving that state can clean up the invoked actor without
+    ad hoc shutdown code.
+</p>
+
+
+<p>
+    The examples above are just a starting point. More statecharts are
+    available in the <strong>Examples drawer</strong>; click the arrow to open
+    it and select any file from the <em>Statecharts</em> section. Loading a
+    file opens it in the editor and populates the terminal's Examples menu
+    with its built-in queries, ready to run.
+</p>
+
+
 </section>
 
 <section id="choosing-the-actor-profile">
@@ -2532,7 +3680,7 @@ fridge2(_Other,      List, error(unknown_request), List).
   <li>independent processes with private mailboxes;</li>
   <li>server-initiated push over a persistent connection;</li>
   <li>monitoring, linking and supervision for explicit failure handling; and</li>
-  <li>reusable server and <a href="/statechart-behaviour-tutorial">statechart</a> behaviours built on the same actor model.</li>
+  <li>reusable server and statechart behaviours built on the same actor model.</li>
 </ul>
 
 <p>
@@ -2547,13 +3695,6 @@ fridge2(_Other,      List, error(unknown_request), List).
     designed and operated. For a request/response application whose calls only
     need a private Prolog session, ACTOR may be more machinery than necessary.
 </p>
-
-<div class="alert alert-info">
-  <strong>Explore the statechart behaviour.</strong> The separate
-  <a href="/statechart-behaviour-tutorial">statechart tutorial</a> develops
-  hierarchy, history, parallel regions, Prolog transition code and invoked
-  processes without making this already substantial core tutorial longer.
-</div>
 
 <div class="alert alert-info">
   <strong>Continue the recommended path.</strong> Select <strong>N2</strong>
@@ -2603,6 +3744,15 @@ fridge2(_Other,      List, error(unknown_request), List).
         var next = normalizeTutorialTheme(theme);
         document.documentElement.setAttribute("data-theme", next);
         document.documentElement.style.colorScheme = next;
+        refreshTutorialThemeSensitiveArtwork();
+    }
+    function tutorialThemeValue(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+    function refreshTutorialThemeSensitiveArtwork() {
+        if (typeof _scRefreshDiagramTheme === "function") {
+            _scRefreshDiagramTheme();
+        }
     }
     /**
      * Normalize parent/storage appearance settings into the CSS values used
@@ -2842,6 +3992,9 @@ fridge2(_Other,      List, error(unknown_request), List).
             } else {
                 restoreTutorialAppearanceFromStorage();
             }
+            if (bridge) {
+                bridge.onStatechartTrace = function(text) { _scHandleTrace(text); };
+            }
         } catch (e) {
             console.warn("Tutorial bridge bootstrap failed:", e);
         }
@@ -2928,6 +4081,237 @@ fridge2(_Other,      List, error(unknown_request), List).
 
     tutorialBootstrapBridge();
 
+    // ── Statechart spawn: populate Examples menu then submit query ───────────
+    function scSpawn(exampleId) {
+        _scSelectChart("pause");
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! play.',   query: '$Pid ! play.'   },
+                { label: '$Pid ! reset.',  query: '$Pid ! reset.'  },
+                { label: '$Pid ! pause.',  query: '$Pid ! pause.'  },
+                { label: '$Pid ! resume.', query: '$Pid ! resume.' },
+                { label: '$Pid ! stop.',   query: '$Pid ! stop.'   }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnGcd(exampleId) {
+        _scSelectChart(null);
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! integers([25, 10, 15, 30]).', query: '$Pid ! integers([25, 10, 15, 30]).' },
+                { label: '$Pid ! integers([12, 8, 4]).',       query: '$Pid ! integers([12, 8, 4]).'       }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnSpaghetti(exampleId) {
+        _scSelectChart("spaghetti");
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! a.', query: '$Pid ! a.' },
+                { label: '$Pid ! b.', query: '$Pid ! b.' },
+                { label: '$Pid ! c.', query: '$Pid ! c.' },
+                { label: '$Pid ! d.', query: '$Pid ! d.' },
+                { label: '$Pid ! e.', query: '$Pid ! e.' },
+                { label: '$Pid ! f.', query: '$Pid ! f.' },
+                { label: '$Pid ! g.', query: '$Pid ! g.' },
+                { label: '$Pid ! h.', query: '$Pid ! h.' }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnEmotions(exampleId) {
+        _scSelectChart("emotions");
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! e.', query: '$Pid ! e.' },
+                { label: '$Pid ! d.', query: '$Pid ! d.' },
+                { label: '$Pid ! f.', query: '$Pid ! f.' }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnDialog(exampleId) {
+        _scSelectChart(null);
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                { label: '$Pid ! input([red]).',           query: '$Pid ! input([red]).'           },
+                { label: '$Pid ! input([blue]).',          query: '$Pid ! input([blue]).'          },
+                { label: '$Pid ! input([a, red, box]).',   query: '$Pid ! input([a, red, box]).'   },
+                { label: '$Pid ! input([big]).',           query: '$Pid ! input([big]).'           },
+                { label: '$Pid ! input([small]).',         query: '$Pid ! input([small]).'         },
+                { label: '$Pid ! input([a, big, box]).',   query: '$Pid ! input([a, big, box]).'   },
+                { label: '$Pid ! input([a, small, box]).', query: '$Pid ! input([a, small, box]).' },
+                { label: '$Pid ! input([hello]).',         query: '$Pid ! input([hello]).'         }
+            ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnWithoutDiagram(exampleId) {
+        _scSelectChart(null);
+        pasteAndAskExample(exampleId);
+    }
+
+    // Statechart diagram animation ----------------------------------------
+    // Trace events select active leaves and the transition or transitions
+    // that produced the latest configuration.
+
+    var _scCurrentChart = null;
+    var _scLastEvent = null;
+
+    var SC_CHARTS = {
+      pause: {
+        svg: "sc-pr-diagram",
+        statePrefix: "sc-state-", transPrefix: "sc-trans-",
+        arrow: "sc-arr", highlightArrow: "sc-arr-hi",
+        baseWidth: "1.5", highlightWidth: "2",
+        states: ["s1", "s2", "interrupted", "final"],
+        transitions: ["play", "reset", "pause", "resume", "stop"],
+        resolve: function (configuration) {
+          var active = this.states.filter(function (state) { return configuration.indexOf(state) >= 0; });
+          var byEvent = { play: "play", reset: "reset", pause: "pause", resume: "resume", stop: "stop" };
+          var transition = _scLastEvent ? byEvent[_scLastEvent] : null;
+          return { active: active, transitions: transition ? [transition] : [] };
+        }
+      },
+      spaghetti: {
+        svg: "sc-sp-diagram",
+        statePrefix: "sp-state-", transPrefix: "sp-trans-",
+        arrow: "sp-arr", highlightArrow: "sp-arr-hi",
+        baseWidth: "1.7", highlightWidth: "2.4",
+        states: ["s11", "s211", "f"],
+        transitions: ["a", "b1", "b2", "c1", "c2", "d1", "d2", "e", "f1", "f2", "g1", "g2", "h"],
+        previous: null,
+        resolve: function (configuration) {
+          var active = this.states.filter(function (state) { return configuration.indexOf(state) >= 0; });
+          var leaf = active.length ? active[0] : null;
+          var region = this.previous === "s11" ? "left" : this.previous === "s211" ? "right" : null;
+          var byEventAndRegion = {
+            "a@left": "a",
+            "b@left": "b1", "b@right": "b2",
+            "c@left": "c1", "c@right": "c2",
+            "d@left": "d1", "d@right": "d2",
+            "e@left": "e", "e@right": "e",
+            "f@left": "f1", "f@right": "f2",
+            "g@left": "g1", "g@right": "g2",
+            "h@right": "h"
+          };
+          var transition = _scLastEvent ? byEventAndRegion[_scLastEvent + "@" + region] : null;
+          this.previous = leaf;
+          return { active: active, transitions: transition ? [transition] : [] };
+        }
+      },
+      emotions: {
+        svg: "sc-em-diagram",
+        statePrefix: "em-state-", transPrefix: "em-trans-",
+        arrow: "em-arr", highlightArrow: "em-arr-hi",
+        baseWidth: "1.7", highlightWidth: "2.4",
+        states: ["anger", "fear", "anticipation", "surprise", "attacking", "fleeing"],
+        transitions: ["af-e", "af-d", "as-e", "as-f", "beh-e", "beh-d"],
+        resolve: function (configuration) {
+          var active = this.states.filter(function (state) { return configuration.indexOf(state) >= 0; });
+          var byEvent = { e: ["af-e", "as-e", "beh-e"], d: ["af-d", "beh-d"], f: ["as-f"] };
+          return { active: active, transitions: _scLastEvent ? (byEvent[_scLastEvent] || []) : [] };
+        }
+      }
+    };
+
+    function _scSplitArgs(text) {
+      var args = [];
+      var depth = 0;
+      var start = 0;
+      var index;
+      for (index = 0; index < text.length; index += 1) {
+        if (text[index] === "(" || text[index] === "[") depth += 1;
+        else if (text[index] === ")" || text[index] === "]") depth -= 1;
+        else if (text[index] === "," && depth === 0) {
+          args.push(text.slice(start, index).trim());
+          start = index + 1;
+        }
+      }
+      args.push(text.slice(start).trim());
+      return args;
+    }
+    function _scParseTerm(text) {
+      var match = String(text).match(/^([a-z_][A-Za-z0-9_]*)\(([\s\S]*)\)$/);
+      return match ? { name: match[1], args: _scSplitArgs(match[2]) } : null;
+    }
+    function _scParseList(text) {
+      var match = String(text).trim().match(/^\[([\s\S]*)\]$/);
+      return match && match[1].trim() ? _scSplitArgs(match[1].trim()) : [];
+    }
+    function _scRender(diagram, activeStates, transitionIds) {
+      diagram.activeStates = activeStates.slice();
+      diagram.transitionIds = transitionIds.slice();
+      var svg = document.getElementById(diagram.svg);
+      var lineColor;
+      if (!svg) return;
+      lineColor = tutorialThemeValue("--tutorial-diagram-line");
+      diagram.states.forEach(function (id) {
+        var element = document.getElementById(diagram.statePrefix + id);
+        if (element) element.setAttribute("fill", "none");
+      });
+      diagram.transitions.forEach(function (id) {
+        var element = document.getElementById(diagram.transPrefix + id);
+        if (element) {
+          element.setAttribute("stroke", lineColor);
+          element.setAttribute("stroke-width", diagram.baseWidth);
+          element.setAttribute("marker-end", "url(#" + diagram.arrow + ")");
+        }
+      });
+      activeStates.forEach(function (id) {
+        var element = document.getElementById(diagram.statePrefix + id);
+        if (element) element.setAttribute("fill", tutorialThemeValue("--tutorial-diagram-active-fill"));
+      });
+      transitionIds.forEach(function (id) {
+        var element = document.getElementById(diagram.transPrefix + id);
+        if (element) {
+          element.setAttribute("stroke", tutorialThemeValue("--tutorial-diagram-highlight"));
+          element.setAttribute("stroke-width", diagram.highlightWidth);
+          element.setAttribute("marker-end", "url(#" + diagram.highlightArrow + ")");
+        }
+      });
+    }
+    function _scHandleTrace(text) {
+      var parsed = _scParseTerm(text);
+      var diagram;
+      var resolved;
+      if (!parsed) return;
+      if (parsed.name === "external_event" && parsed.args.length) {
+        _scLastEvent = parsed.args[0].trim();
+        return;
+      }
+      if (parsed.name === "configuration" && parsed.args.length) {
+        diagram = _scCurrentChart ? SC_CHARTS[_scCurrentChart] : null;
+        if (diagram) {
+          resolved = diagram.resolve(_scParseList(parsed.args[0]));
+          _scRender(diagram, resolved.active, resolved.transitions);
+        }
+        _scLastEvent = null;
+      }
+    }
+    function _scSelectChart(name) {
+      _scCurrentChart = SC_CHARTS[name] ? name : null;
+      _scLastEvent = null;
+      if (SC_CHARTS.spaghetti) SC_CHARTS.spaghetti.previous = null;
+    }
+    function _scRefreshDiagramTheme() {
+        var diagram = _scCurrentChart ? SC_CHARTS[_scCurrentChart] : null;
+        if (diagram) {
+            _scRender(diagram, diagram.activeStates || [], diagram.transitionIds || []);
+        }
+    }
 </script>
 </body>
 </html>

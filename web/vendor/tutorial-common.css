@@ -25,6 +25,10 @@
   --tutorial-button-load-bg: #d8eafa;
   --tutorial-button-load-ink: #17466f;
   --tutorial-button-load-line: #a9cceb;
+  --tutorial-diagram-ink: #000;
+  --tutorial-diagram-line: #555;
+  --tutorial-diagram-highlight: #e07b00;
+  --tutorial-diagram-active-fill: #fef08a;
   --mono-font: "IBM Plex Mono", Menlo, Consolas, monospace;
   --mono-size: 13px;
   --mono-weight: 400;
@@ -95,6 +99,10 @@
   --tutorial-button-load-bg: #254968;
   --tutorial-button-load-ink: #e5f2ff;
   --tutorial-button-load-line: #3b6f9c;
+  --tutorial-diagram-ink: #e5edf5;
+  --tutorial-diagram-line: #94a3b8;
+  --tutorial-diagram-highlight: #f3b55b;
+  --tutorial-diagram-active-fill: #4d4312;
 }
 
 body {
@@ -420,6 +428,12 @@ th {
 .profile-path-caption {
   margin-top: -8px;
   color: var(--muted);
+}
+
+#sc-pr-diagram {
+  display: block;
+  box-sizing: border-box;
+  background: transparent;
 }
 
 @media (max-width: 780px) {
