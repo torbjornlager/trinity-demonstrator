@@ -429,15 +429,14 @@ toplevel_halt(Pid) :-
 %
 %   Terminate a toplevel and wait until its termination has been observed.
 %   The private monitor is distinct from any spawn-time monitor already owned
-%   by the caller; Reply retains the historical value `true`.
-toplevel_halt(Pid, Reply) :-
-    monitor(Pid, Ref),
+%   by the caller; the second argument retains the historical value `true`.
+toplevel_halt(Pid, true) :-
     setup_call_cleanup(
-        true,
+        monitor(Pid, Ref),
         (   toplevel_halt(Pid),
             receive({
                 down(Pid, Ref, _) ->
-                    Reply = true
+                    true
             })
         ),
         demonitor(Ref, [flush])

@@ -1080,13 +1080,15 @@ ok(workerSource.includes(':- module(swi_wasm_actor_bridge, [') &&
    "SWI-WASM-2 keeps module-private runtime predicates separate from reloadable user source");
 ok(workerSource.includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
    workerSource.includes('"toplevel_halt(Pid) :- exit(Pid, true)."') &&
+   workerSource.includes('"toplevel_halt(Pid, true) :-"') &&
    workerSource.includes('"    monitor(Pid, Ref),"') &&
-   workerSource.includes('"    receive({down(Pid, Ref, _) -> Reply = true}),"') &&
+   workerSource.includes('"    receive({down(Pid, Ref, _) -> true}),"') &&
    !workerSource.includes('"        (   toplevel_halt(Pid),"') &&
    !workerSource.includes("'$halt'(From)") &&
    includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
    includes('"toplevel_halt(Pid) :- exit(Pid, true)."') &&
-   includes('"    receive({down(Pid, Ref, _) -> Reply = true}),"') &&
+   includes('"toplevel_halt(Pid, true) :-"') &&
+   includes('"    receive({down(Pid, Ref, _) -> true}),"') &&
    !includes('"        (   toplevel_halt(Pid),"') &&
    !includes("'$halt'(From)"),
    "both SWI-WASM bridges halt through runtime exit without awaiting in cleanup");
