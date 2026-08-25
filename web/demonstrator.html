@@ -7883,10 +7883,25 @@
 	            return text;
 	          },
           protocolLogFieldOrder: function(value) {
+            var responseFields = {
+              success: ["type", "pid", "data", "more"],
+              error: ["type", "pid", "data", "details"],
+              failure: ["type", "pid"],
+              output: ["type", "pid", "data", "kind"],
+              statechart_trace: ["type", "pid", "data"],
+              prompt: ["type", "pid", "data"],
+              timeout: ["type", "pid"],
+              spawned: ["type", "pid"],
+              stop: ["type", "pid"],
+              abort: ["type", "pid"],
+              responded: ["type", "pid"],
+              halted: ["type", "pid", "reply"],
+              down: ["type", "pid", "ref", "reason"]
+            };
             var preferred = Object.prototype.hasOwnProperty.call(value || {}, "command")
               ? ["command", "pid", "goal", "options"]
               : Object.prototype.hasOwnProperty.call(value || {}, "type")
-                ? ["type", "pid", "data", "more"]
+                ? (responseFields[value.type] || ["type", "pid", "data", "more"])
                 : [];
             var keys = [];
             preferred.forEach(function(key) {

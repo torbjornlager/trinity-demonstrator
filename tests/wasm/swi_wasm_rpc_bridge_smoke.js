@@ -78,6 +78,10 @@ const actorTutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "actor-profile-tutorial.html"),
   "utf8"
 );
+const tutorialCommonCssSource = fs.readFileSync(
+  path.join(__dirname, "..", "..", "web", "vendor", "tutorial-common.css"),
+  "utf8"
+);
 const isobaseProfileTutorialSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "isobase-profile-tutorial.html"),
   "utf8"
@@ -770,6 +774,48 @@ ok(prettyJsonText.call(protocolLogRenderer, JSON.stringify({
      "}"
    ].join("\n"),
    "JSON responses follow the book's type, pid, data, more field order");
+ok(prettyJsonText.call(protocolLogRenderer, JSON.stringify({
+     type: "down",
+     pid: 4468409738,
+     reason: "true",
+     ref: 4468409738
+   })) === [
+     "{",
+     '  "type": "down",',
+     '  "pid": 4468409738,',
+     '  "ref": 4468409738,',
+     '  "reason": "true"',
+     "}"
+   ].join("\n"),
+   "Logger prints down fields in down(Pid, Ref, Reason) order");
+{
+  const responseOrderCases = [
+    [{ more: false, data: [], type: "success" }, ["type", "data", "more"]],
+    [{ more: false, data: [], pid: 1, type: "success" }, ["type", "pid", "data", "more"]],
+    [{ details: "error(x,_)", data: "x", type: "error" }, ["type", "data", "details"]],
+    [{ details: "error(x,_)", data: "x", pid: 1, type: "error" }, ["type", "pid", "data", "details"]],
+    [{ type: "failure" }, ["type"]],
+    [{ pid: 1, type: "failure" }, ["type", "pid"]],
+    [{ data: "hello", pid: 1, type: "output" }, ["type", "pid", "data"]],
+    [{ kind: "timing", data: "0.1 sec", pid: 1, type: "output" }, ["type", "pid", "data", "kind"]],
+    [{ data: "configuration([s])", pid: 1, type: "statechart_trace" }, ["type", "pid", "data"]],
+    [{ data: "|:", pid: 1, type: "prompt" }, ["type", "pid", "data"]],
+    [{ pid: 1, type: "timeout" }, ["type", "pid"]],
+    [{ pid: 1, type: "spawned" }, ["type", "pid"]],
+    [{ pid: 1, type: "stop" }, ["type", "pid"]],
+    [{ pid: 1, type: "abort" }, ["type", "pid"]],
+    [{ pid: 1, type: "responded" }, ["type", "pid"]],
+    [{ reply: "true", pid: 1, type: "halted" }, ["type", "pid", "reply"]],
+    [{ reason: "true", pid: 1, type: "down" }, ["type", "pid", "reason"]],
+    [{ reason: "true", ref: 2, pid: 1, type: "down" }, ["type", "pid", "ref", "reason"]]
+  ];
+  ok(responseOrderCases.every(function(entry) {
+       return JSON.stringify(Object.keys(
+         sortProtocolLogValue.call(protocolLogRenderer, entry[0])
+       )) === JSON.stringify(entry[1]);
+     }),
+     "every canonical response follows its corresponding Prolog term field order");
+}
 {
   const previousWebSocket = global.WebSocket;
   let sentText = null;
@@ -1128,6 +1174,12 @@ ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
    actorTutorialSource.includes('Prices = [widget-100, gadget-250, gizmo-400]'),
    "the ACTOR profile tutorial demonstrates node-side private/shared shadowing");
+ok(actorTutorialSource.includes('function installTutorialHeadingLinks(headings)') &&
+   actorTutorialSource.includes('button.className = "heading-link"') &&
+   actorTutorialSource.includes('button.textContent = "#"') &&
+   actorTutorialSource.includes('installTutorialHeadingLinks(headings);') &&
+   tutorialCommonCssSource.includes('.heading-link'),
+   "the ACTOR profile tutorial exposes copyable heading permalinks");
 ok(!actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
    actorTutorialSource.includes('id="tutorial-programming-with-statecharts"') &&
    actorTutorialSource.includes('id="sc-pr-spawn"') &&

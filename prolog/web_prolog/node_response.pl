@@ -118,9 +118,9 @@ answer_to_json(halted(Pid, Reply),
 %  Standard 3-arity down/3 (per manual.html:210/231).  Ref is serialized
 %  so the browser can correlate with the monitor it installed.
 answer_to_json(down(Pid, Ref, Reason),
-               json{type:down, ref:JsonRef, pid:JsonPid, reason:ReasonString}) :-
-    json_pid_value(Ref, JsonRef),
+               json{type:down, pid:JsonPid, ref:JsonRef, reason:ReasonString}) :-
     json_pid_value(Pid, JsonPid),
+    json_pid_value(Ref, JsonRef),
     down_reason_to_json_string(Reason, ReasonString).
 %  Legacy 2-arity form: kept as a fallback during transition.  Any new
 %  producer should emit down/3 with a sentinel Ref (e.g. Ref = Pid, the

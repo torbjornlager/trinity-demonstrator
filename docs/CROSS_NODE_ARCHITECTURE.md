@@ -361,7 +361,7 @@ arguments.
 | `spawned` | `pid` | spawn queue |
 | `halted` | `pid`, `reply` | spawn queue (reply parsed back to a term) |
 | `error` (no `pid`) | `data` | spawn queue as `spawn_error` |
-| `down` | `ref`, `pid`, `reason` | local monitors via controller |
+| `down` | `pid`, `ref`, `reason` | local monitors via controller |
 | `success` | `pid`, `data`, `more` | controller target |
 | `failure` | `pid` | controller target |
 | `error` (with `pid`) | `pid`, `data` | controller target |

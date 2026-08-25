@@ -249,6 +249,30 @@ nav ul {
   padding-left: 28px;
 }
 
+.heading-link {
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  cursor: pointer;
+  font: inherit;
+  font-size: .78em;
+  margin-left: 8px;
+  opacity: .55;
+  padding: 0 2px;
+  vertical-align: baseline;
+}
+
+h1:hover .heading-link,
+h2:hover .heading-link,
+h3:hover .heading-link,
+.heading-link:focus {
+  opacity: 1;
+}
+
+.heading-link.copied {
+  opacity: 1;
+}
+
 .alert,
 .note,
 .warning,
