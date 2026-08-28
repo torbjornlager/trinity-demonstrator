@@ -362,12 +362,41 @@ test(shared_database_visible_and_datamodel_shadows,
     start_text(Text),
     once(statechart_wasm:seen(browser_shared_db, statechart_datamodel)).
 
+test(reserved_control_from_condition_is_rethrown,
+     [throws('$abort_goal'), cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"a\">",
+        "  <state id=\"a\"><go to=\"b\" if=\"throw('$abort_goal')\"/></state>",
+        "  <state id=\"b\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text).
+
+test(reserved_control_from_action_is_rethrown,
+     [throws('$ptcp_time_limit'), cleanup(statechart_stop)]) :-
+    join_lines([
+        "<statechart initial=\"a\">",
+        "  <state id=\"a\"><go to=\"b\" on=\"go\">throw('$ptcp_time_limit')</go></state>",
+        "  <state id=\"b\"/>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    statechart_send(go).
+
+test(reserved_control_from_trace_hook_is_rethrown,
+     [throws('$abort_goal'), cleanup(clear_trace_hook)]) :-
+    set_trace_hook(test_statechart_wasm:throw_reserved_trace),
+    statechart_wasm:emit_trace(probe).
+
 :- end_tests(statechart_wasm_unit).
 
 
 collect_trace(Event) :-
     nb_getval(trace_collected, L),
     nb_setval(trace_collected, [Event|L]).
+
+throw_reserved_trace(_) :-
+    throw('$abort_goal').
 
 
 join_lines(Lines, Text) :-
@@ -450,10 +479,10 @@ test(spaghetti_h_reaches_top_final, [cleanup(statechart_stop)]) :-
     \+ statechart_running.
 
 % 08 gcd.xml — datamodel + eventless transitions with conditions.
-test(gcd_input_runs_to_completion, [cleanup(statechart_stop)]) :-
+test(gcd_integers_runs_to_completion, [cleanup(statechart_stop)]) :-
     start_example('08 gcd.xml'),
     assertion(statechart_in(init)),
-    statechart_send(input([25, 10, 15, 30])),
+    statechart_send(integers([25, 10, 15, 30])),
     % The 'run' state's eventless transitions chew through the list,
     % then move to the final 'stop'.
     \+ statechart_running,

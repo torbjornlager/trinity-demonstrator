@@ -552,7 +552,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20260808-ptcp-lifecycle'),
+   includes('/swi_wasm_actor_worker.js?v=20260828-parallel-template'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -1213,6 +1213,13 @@ ok(!actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
    statechartBehaviourTutorialSource.includes('function handleStatechartTrace(text)') &&
    statechartBehaviourTutorialSource.includes('api.onStatechartTrace = handleStatechartTrace'),
    "statechart programming is integrated into the ACTOR profile tutorial");
+ok(tutorialSource.includes('$Pid ! integers([25, 10, 15, 30]).') &&
+   tutorialSource.includes('$Pid ! integers([12, 8, 4]).') &&
+   !tutorialSource.includes('$Pid ! input([25, 10, 15, 30]).') &&
+   swiWasmTutorialSource.includes('$Pid ! integers([25, 10, 15, 30]).') &&
+   swiWasmTutorialSource.includes('$Pid ! integers([12, 8, 4]).') &&
+   !swiWasmTutorialSource.includes('$Pid ! input([25, 10, 15, 30]).'),
+   "GCD statechart tutorials send the integers/1 event expected by the chart");
 ok(sharedDbSource.includes('echo_actor :-') &&
    sharedDbSource.includes('receive({') &&
    sharedDbSource.includes('From ! echo(Msg)') &&
@@ -1312,13 +1319,27 @@ ok(manualSource.includes('id="runtime_property/1"') &&
    "the HTML manual presents one common browser/native programming contract");
 ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
    workerSource.includes('parallel(QualifiedGoals) :-') &&
+   workerSource.includes('maplist(goal_template, Goals, Templates)') &&
+   workerSource.includes('goal_template(Goal, Template) :- term_variables(Goal, Template).') &&
+   workerSource.includes('maplist(par_solve, Goals, Templates, Pids)') &&
+   workerSource.includes('spawn((call(Goal), send(Self, Pid-Template)), Pid, [monitor(true)])') &&
+   workerSource.includes('Pid-Answer ->') &&
+   workerSource.includes('( Template = Answer') &&
+   !workerSource.includes('send(Self, Pid-Goal)') &&
    workerSource.includes('first_solution_(Solution, QualifiedGoals, Options) :-') &&
    workerSource.includes('option(on_fail(OnFail), Options, continue)') &&
    workerSource.includes('option(on_error(OnError), Options, stop)') &&
    includes('parallel/1, first_solution/2, first_solution/3') &&
    includes('parallel(QualifiedGoals) :-') &&
+   includes('maplist(goal_template, Goals, Templates)') &&
+   includes('goal_template(Goal, Template) :- term_variables(Goal, Template).') &&
+   includes('maplist(par_solve, Goals, Templates, Pids)') &&
+   includes('spawn((call(Goal), send(Self, Pid-Template)), Pid, [monitor(true)])') &&
+   includes('Pid-Answer ->') &&
+   includes('( Template = Answer') &&
+   !includes('send(Self, Pid-Goal)') &&
    includes('first_solution_(Solution, QualifiedGoals, Options) :-'),
-   "both SWI-WASM models provide the actor-based predicate generics");
+   "both SWI-WASM models pack parallel results and provide the actor-based predicate generics");
 ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    !workerSource.includes('statechart_spawn(Pid) :-') &&
    !workerSource.includes('statechart_spawn/1,') &&
@@ -1333,7 +1354,7 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260808-ptcp-lifecycle') &&
+   includes('/swi_wasm_actor_worker.js?v=20260828-parallel-template') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&

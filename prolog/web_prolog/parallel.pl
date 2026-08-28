@@ -9,6 +9,9 @@
 Runs a list of goals concurrently — one monitored actor per goal — and
 succeeds once all of them have succeeded. It fails fast: as soon as any
 goal fails, the remaining actors are torn down and `parallel/1` fails.
+Workers return only their goal-variable templates, avoiding a copy of each
+complete instantiated goal. Compatible bindings shared between goals are
+combined; incompatible bindings make the conjunction fail.
 If several workers fail or throw, the first abnormal `down/3` observed by
 the caller determines the result.  Thus multiple faults are intentionally
 scheduling-dependent rather than selected by goal-list position.
@@ -44,34 +47,44 @@ parallel(QualifiedGoals) :-
     strip_module(QualifiedGoals, Module, Goals0),
     must_be(list, Goals0),
     maplist(qualify_goal(Module), Goals0, Goals),
-    maplist(par_solve, Goals, Pids),
-    maplist(par_yield(Pids), Pids, Goals).
+    maplist(goal_template, Goals, Templates),
+    maplist(par_solve, Goals, Templates, Pids),
+    maplist(par_yield(Pids), Pids, Templates).
 
 
 qualify_goal(Module, Goal0, Module:Goal) :-
     control_guard:rewrite_goal(Module, Goal0, Goal).
 
 
-par_solve(Goal, Pid) :-
+goal_template(Goal, Template) :-
+    term_variables(Goal, Template).
+
+
+par_solve(Goal, Template, Pid) :-
     self(Self),
-    spawn(par_worker(Self, Pid, Goal), Pid, [
+    spawn(par_worker(Self, Pid, Goal, Template), Pid, [
         monitor(true)
     ]).
 
 
 %  Private framework entry point.  The public node sandbox validates Goal
 %  through parallel/1's safe_meta declaration before this worker is spawned.
-par_worker(Self, Pid, Goal) :-
+par_worker(Self, Pid, Goal, Template) :-
     call(Goal),
-    send(Self, Pid-Goal).
+    send(Self, Pid-Template).
 
-par_yield(Pids, Pid, Goal) :-
+par_yield(Pids, Pid, Template) :-
     receive({
-        Pid-Goal ->
-            receive({
-                down(Pid, _, true) ->
-                    true
-            }) ;
+        Pid-Answer ->
+            (   Template = Answer
+            ->  receive({
+                    down(Pid, _, true) ->
+                        true
+                })
+            ;   tidy_up_all(Pids),
+                !,
+                fail
+            ) ;
         down(FailedPid, _, false)
                 if memberchk(FailedPid, Pids) ->
             tidy_up_all(Pids),

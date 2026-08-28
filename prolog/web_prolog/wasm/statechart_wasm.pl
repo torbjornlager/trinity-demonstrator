@@ -68,6 +68,19 @@ instance; calling `statechart_start/1` twice resets state.
 :- op(990, xfx, :=).
 :- op(100, fx,  #).
 
+% Keep actor/PTCP control transfers out of chart-level recovery paths.  This
+% mirrors control_guard:rethrow_reserved/1 without pulling the native actor
+% guard and its source-rewriting machinery into the small browser runtime.
+reserved_control('$abort_goal').
+reserved_control('$ptcp_time_limit').
+reserved_control(unwind(abort)).
+
+rethrow_reserved(Error) :-
+    (   reserved_control(Error)
+    ->  throw(Error)
+    ;   true
+    ).
+
 % Model facts (mirrors statechart_actor's layout, but owned here).
 :- dynamic
         state/2,
@@ -405,7 +418,8 @@ clear_trace_hook :-
 
 emit_trace(Event) :-
     (   trace_hook(Goal)
-    ->  catch(call(Goal, Event), _, true)
+    ->  catch(call(Goal, Event), Error,
+              (rethrow_reserved(Error), true))
     ;   true
     ).
 

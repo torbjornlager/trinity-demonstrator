@@ -311,7 +311,8 @@ dedup([H|Rest], Seen, Deduped) :-
 evaluate_condition(Condition) :-
     catch(once(call_chart_goal(Condition)),
           Error,
-          ( enqueue_internal_event(error(Error)),
+          ( statechart_wasm:rethrow_reserved(Error),
+            enqueue_internal_event(error(Error)),
             fail
           )).
 
@@ -385,7 +386,8 @@ trace_microstep(EnabledTransitions) :-
     trace_emit(microstep(ExitSet, EntrySet)).
 
 trace_emit(Event) :-
-    catch(statechart_wasm:emit_trace(Event), _, true).
+    catch(statechart_wasm:emit_trace(Event), Error,
+          (statechart_wasm:rethrow_reserved(Error), true)).
 
 exit_states(EnabledTransitions) :-
     statechart_wasm:configuration(Configuration),

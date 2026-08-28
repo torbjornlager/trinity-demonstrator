@@ -322,6 +322,10 @@ test(control_guard_preserves_variable_receive_head, Msg == hello) :-
    send(Self, hello),
    call(GuardedReceive).
 
+test(control_guard_restores_variable_goal_without_recursing) :-
+   control_guard:restore_goal(test_t1_restore, Goal, Restored),
+   assertion(Goal == Restored).
+
 test(actor_exit_bypasses_catch_inside_receive_body) :-
    self(Self),
    setup_call_cleanup(

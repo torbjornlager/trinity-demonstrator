@@ -47,6 +47,7 @@ def runtime_shared_region(path: Path) -> str:
 
 
 def normalise(text: str, desktop: bool) -> str:
+    text = text.replace("statechart_wasm:rethrow_reserved", "control_guard:rethrow_reserved")
     text = text.replace("statechart_wasm_exec", "statechart_exec")
     text = text.replace("statechart_wasm", "statechart_actor")
 

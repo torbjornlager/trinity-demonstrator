@@ -209,6 +209,9 @@ restore_goal(Module, Goal0, Goal) :-
     !.
 restore_goal(_, Goal, Goal).
 
+restore_goal_(_, Var, Var) :-
+    var(Var),
+    !.
 restore_goal_(Module, (A0, B0), (A, B)) :-
     restore_goal(Module, A0, A),
     restore_goal(Module, B0, B).

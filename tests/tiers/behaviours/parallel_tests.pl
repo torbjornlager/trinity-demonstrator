@@ -30,6 +30,13 @@ test(empty_list) :-
     parallel([]).
 
 
+test(goal_template_packs_variables_once,
+     true(Template == [X, Y])) :-
+    parallel:goal_template(
+        user:sample(ground, X, [large, ground, input], Y, X),
+        Template).
+
+
 %% 2. Single goal: bindings returned.
 test(single_goal) :-
     parallel([X = hello]),
@@ -41,6 +48,32 @@ test(two_goals) :-
     parallel([X = a, Y = b]),
     X == a,
     Y == b.
+
+
+%% 3a. Compatible bindings shared by independent workers are combined.
+test(shared_compatible_bindings) :-
+    parallel([X = a, X = a]),
+    X == a.
+
+
+%% 3b. Incompatible bindings are consumed and make the conjunction fail;
+%%     they must not leave parallel/1 waiting for an unmatchable result.
+test(shared_incompatible_bindings, [fail, timeout(2)]) :-
+    parallel([X = a, X = b]).
+
+
+test(shared_incompatible_bindings_leave_mailbox_empty, [timeout(2)]) :-
+    flush_parallel_mailbox,
+    forall(between(1, 50, _),
+           \+ parallel([X = a, X = b])),
+    sleep(0.05),
+    receive({
+        down(Pid, Ref, Reason) ->
+            throw(leaked_parallel_down(Ref, Pid, Reason));
+        Pid-Result ->
+            throw(leaked_parallel_result(Pid, Result))
+    }, [timeout(0)]),
+    flush_parallel_mailbox.
 
 
 %% 4. List of goals: all bindings returned.

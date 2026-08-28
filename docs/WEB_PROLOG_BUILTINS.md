@@ -279,10 +279,12 @@ event may be postponed again.
 `parallel/1`, `first_solution/2`, `first_solution/3`.
 
 `parallel/1` has the value semantics of deterministic independent
-conjunction when every worker succeeds. If several workers fail or throw, the
-first abnormal `down/3` observed by the caller determines the outcome;
-multiple-fault selection is therefore scheduling-dependent rather than
-left-to-right. Remaining workers are terminated before the result is returned.
+conjunction when every worker succeeds: compatible bindings are combined and
+incompatible bindings make the conjunction fail. If several workers fail or
+throw, the first abnormal `down/3` observed by the caller determines the
+outcome; multiple-fault selection is therefore scheduling-dependent rather
+than left-to-right. Remaining workers are terminated before the result is
+returned.
 
 ### Node Control
 

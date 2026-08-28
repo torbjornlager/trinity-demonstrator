@@ -425,7 +425,8 @@ script(Goal) :-
     emit_trace(execution(Goal)),
     (   catch(once(call_chart_goal(Goal)),
               Error,
-              ( enqueue_internal_event(error(Error)),
+              ( statechart_wasm:rethrow_reserved(Error),
+                enqueue_internal_event(error(Error)),
                 true
               ))
     ->  true
@@ -434,4 +435,5 @@ script(Goal) :-
 
 
 emit_trace(Event) :-
-    catch(statechart_wasm:emit_trace(Event), _, true).
+    catch(statechart_wasm:emit_trace(Event), Error,
+          (statechart_wasm:rethrow_reserved(Error), true)).

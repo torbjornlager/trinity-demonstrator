@@ -4276,6 +4276,10 @@ test(rewrite_goal_if_needed_wraps_time_meta_goal,
             rewrite_goal_if_needed(test_module, time(Goal), Rewritten)
         )).
 
+test(public_goal_guard_restores_variable_goal_without_recursing) :-
+    public_goal_guard:restore_goal(test_module, Goal, Restored),
+    assertion(Goal == Restored).
+
 test(parse_call_context_json_hides_helper_bindings_behind_anon_assignment,
      true(Template = json{'E':_})) :-
     GoalAtom = '_Tmp=(X=a,throw(oops)),catch(call(_Tmp),E,true)',
@@ -4620,7 +4624,7 @@ test(ws_tutorial_spawn_source_supports_supervised_server_upgrade,
      true((Stored == "ok", Taken == "ok(eggs)", Bad == "error(unknown_request)"))) :-
     Fridge = "fridge(store(F),L,ok,[F|L]). fridge(take(F),L,ok(F),R):-select(F,L,R),!. fridge(take(_),L,not_found,L). fridge(_,_,_,_):-fail.",
     Fridge2 = "fridge2(store(F),L,ok,[F|L]). fridge2(take(F),L,ok(F),R):-select(F,L,R),!. fridge2(take(_),L,not_found,L). fridge2(_,L,error(unknown_request),L).",
-    string_concat(Fridge, Fridge2, FridgeSource),
+    format(string(FridgeSource), "~s~n~s", [Fridge, Fridge2]),
     format(string(SpawnOptions),
            "[session(true),src_text(~q)]",
            [FridgeSource]),
@@ -7684,7 +7688,7 @@ test(sandbox_on_ws_toplevel_call_allows_computed_nested_spawn_load_list,
                     goal:GoalText,
                     template:"true"
                 }),
-                ws_receive_json(WS, Reply),
+                ws_receive_json_until_expected_types(WS, ["success"], [Reply]),
                 get_dict(type, Reply, Type)
             ),
             catch(ws_close(WS, 1000, done), _, true)

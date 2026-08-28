@@ -284,7 +284,7 @@ public_runtime_support_goal(statechart_actor, Goal) :-
 %  client goals have already been exposed to library(sandbox) by safe_meta.
 public_runtime_support_goal(parallel, Goal) :-
     callable(Goal),
-    functor(Goal, par_worker, 3).
+    functor(Goal, par_worker, 4).
 public_runtime_support_goal(first_solution, Goal) :-
     callable(Goal),
     functor(Goal, first_worker, 4).

@@ -3153,7 +3153,7 @@ fridge2(_Other,      List, error(unknown_request), List).
     Now send the input list: 
 </p>
 
-<pre id="sc-gcd-input">?- $Pid ! input([25, 10, 15, 30]).
+<pre id="sc-gcd-input">?- $Pid ! integers([25, 10, 15, 30]).
 </pre>
 
 <p class="ask-buttons">
@@ -3939,8 +3939,8 @@ fridge2(_Other,      List, error(unknown_request), List).
         var bridge = tutorialBridge();
         if (bridge && typeof bridge.setTerminalExamples === 'function') {
             bridge.setTerminalExamples([
-                { label: '$Pid ! input([25, 10, 15, 30]).', query: '$Pid ! input([25, 10, 15, 30]).' },
-                { label: '$Pid ! input([12, 8, 4]).',       query: '$Pid ! input([12, 8, 4]).'       }
+                { label: '$Pid ! integers([25, 10, 15, 30]).', query: '$Pid ! integers([25, 10, 15, 30]).' },
+                { label: '$Pid ! integers([12, 8, 4]).',       query: '$Pid ! integers([12, 8, 4]).'       }
             ]);
         }
         pasteAndAskExample(exampleId);
