@@ -44,8 +44,6 @@ the queue so a later yield can collect the pending answer. Manual
 :- use_module(library(debug)).
 :- use_module(source_utils, [uri_atom/2]).
 
-:- debug.
-
 %!  runtime_property(?Property) is nondet.
 %
 %   Describe host properties outside the portable Web Prolog profile

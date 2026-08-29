@@ -196,7 +196,8 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
   `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that calls n4
 - actor-common contents (shared with n4):
   `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
-  `count_actor/1`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`
+  `count_actor/1`, and the native `ping_pong/0-1` and
+  `ping_pong_benchmark/2` predicates
 - shared DB file:
   [`shared_db_n3.pl`](shared_db_n3.pl)
 - local-only admin surface:
@@ -212,8 +213,8 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
   `deployment_node(n4).` plus `human(plato)` / `human(aristotle)`
 - actor-common contents (shared with n3):
   `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
-  `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`,
-  `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`
+  `count_actor/1`, and the native `ping_pong/0-1` and
+  `ping_pong_benchmark/2` predicates
 - shared DB file:
   [`shared_db_n4.pl`](shared_db_n4.pl)
 - local-only admin surface:
@@ -400,7 +401,10 @@ Each deployment node now loads:
 The current deployment split is:
 
 - `shared_db_common.pl`: family-tree relations
-- `shared_db_actor_common.pl`: actor predicates (`echo_actor/0`, `count_actor/1`, `alarm/0`, `fridge/1`, `fridge/4`, `fridge2/4`, `store/3`, `take/3`, `ping/2`, `pong/0`, `ping_pong/0`) plus the public service directory; loaded only by `n3` and `n4`
+- `shared_db_actor_common.pl`: actor predicates (`echo_actor/0`,
+  `count_actor/1`, and the native `ping_pong/0-1` and
+  `ping_pong_benchmark/2` predicates) plus the public service directory;
+  loaded only by `n3` and `n4`
 - `shared_db_n1.pl`: `deployment_node(n1).` plus `human(plato)` / `human(aristotle)` (used by `n2`'s rpc chain)
 - `shared_db_n2.pl`: isotope-friendly derived predicates over the common base
 - `shared_db_n3.pl`: `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that the distributed proof tree pulls through to `n4`
