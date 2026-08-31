@@ -77,6 +77,7 @@ Architecture per connection:
     principal_id/2,
     principal_from_id/2,
     principal_has_capability/2,
+    require_capability/2,
     require_route_access/2,
     require_ws_command_access/2,
     require_source_text_access/2,
@@ -126,6 +127,12 @@ Architecture per connection:
     expand_dollar_vars/3,
     capture_answer_bindings/1,
     session_bindings/2
+]).
+:- use_module(distribution, [
+    is_io_endpoint/1,
+    deliver_io_endpoint/2,
+    respond_io_prompt/3,
+    forget_io_endpoints_for_target/1
 ]).
 
 :- http_handler(root(ws), ws_handler, [spawn([]), id(ws)]).
@@ -388,12 +395,11 @@ ws_relay_loop_1(NodePort, WebSocket, Queue, Principal) :-
 
 %!  ws_relay_message_allowed(+Principal, +Message) is semidet.
 %
-%   Prolog terminal I/O belongs to the WebSocket that owns the local
-%   toplevel lineage.  A node-to-node connection therefore suppresses it at
-%   the originating relay, while its terminal_io_output/2 provenance remains
-%   available through the relay decision.  Browser connections receive the
-%   canonical output JSON shape; no private provenance marker crosses the
-%   public protocol boundary.
+%   Generic Prolog terminal I/O is not allowed to escape through a
+%   node-to-node relay.  An authorized remote descendant instead uses its
+%   inherited distributed I/O endpoint; that private route delivers the
+%   canonical terminal message directly to the owning browser queue.  No
+%   private provenance marker crosses the public protocol boundary.
 ws_relay_message_allowed(Principal, terminal_io_output(_, _)) :-
     !,
     \+ principal_has_capability(Principal, internal_transport).
@@ -511,6 +517,8 @@ ws_action(toplevel_spawn, Dict, Queue, Principal) :-
     ws_action_toplevel_spawn(Dict, Queue, Principal).
 ws_action(transport_hello, Dict, Queue, _Principal) :-
     ws_action_transport_hello(Dict, Queue).
+ws_action(io_request, Dict, Queue, Principal) :-
+    ws_action_io_request(Dict, Queue, Principal).
 ws_action(toplevel_call, Dict, Queue, Principal) :-
     ws_action_toplevel_call(Dict, Queue, Principal).
 ws_action(toplevel_next, Dict, Queue, Principal) :-
@@ -573,7 +581,9 @@ ws_action_toplevel_spawn(Dict, Queue, Principal) :-
     reserve_ws_actor_capacity(Principal, Reservation),
     catch(
         (
-            ws_build_toplevel_options(Queue, PreparedOptions, SpawnOptions),
+            ws_spawn_io_target(Dict, Queue, Principal, IoTarget),
+            ws_build_toplevel_options(Queue, IoTarget, PreparedOptions,
+                                      SpawnOptions),
             with_public_execution_profile(
                 EffectiveProfile,
                 toplevel_spawn(Pid, SpawnOptions)
@@ -739,10 +749,14 @@ ws_action_set_trace(Dict, Queue, Principal) :-
 ws_action_toplevel_respond(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_respond),
     ws_get_pid(Dict, Pid),
-    ws_require_owned_session(Queue, Principal, Pid),
     ws_get_term_string(Dict, input, InputString),
     ws_read_term(input, InputString, Input),
-    with_isotope_session_public_execution_profile(Pid, respond(Pid, Input)),
+    (   respond_io_prompt(Queue, Pid, Input)
+    ->  true
+    ;   ws_require_owned_session(Queue, Principal, Pid),
+        with_isotope_session_public_execution_profile(Pid,
+                                                      respond(Pid, Input))
+    ),
     thread_send_message(Queue, responded(Pid)).
 
 
@@ -773,7 +787,9 @@ ws_action_spawn(Dict, Queue, Principal) :-
     reserve_ws_actor_capacity(Principal, Reservation),
     catch(
         (
-            ws_build_bare_options(Queue, PreparedOptions, BareOptions),
+            ws_spawn_io_target(Dict, Queue, Principal, IoTarget),
+            ws_build_bare_options(Queue, IoTarget, PreparedOptions,
+                                  BareOptions),
             with_public_execution_profile(
                 EffectiveProfile,
                 spawn(SpawnGoal, Pid, BareOptions)
@@ -794,6 +810,19 @@ ws_shared_actor_goal(Goal0, GoalModule, PlainGoal, SpawnGoal) :-
     strip_module(Goal0, _Caller, PlainGoal),
     current_node_value(shared_db_module, GoalModule),
     SpawnGoal = GoalModule:PlainGoal.
+
+%!  ws_action_io_request(+Dict, +Queue, +Principal) is det.
+%
+%   Deliver an inherited terminal message at its home node.  This private
+%   command is accepted only over an authenticated node transport; endpoint
+%   tokens never grant public WebSocket clients a forwarding primitive.
+
+ws_action_io_request(Dict, _Queue, Principal) :-
+    require_capability(Principal, internal_transport),
+    ws_get_string(Dict, token, Token),
+    ws_get_term_string(Dict, message, MessageString),
+    ws_read_term(message, MessageString, Message),
+    ignore(deliver_io_endpoint(Token, Message)).
 
 %!  ws_action_send(+Dict, +Queue, +Principal) is det.
 %
@@ -941,11 +970,15 @@ ws_parse_options_value(Value, Options) :-
 %   Shared DB and actor I/O are provided by the actor module
 %   import/setup path.
 ws_build_toplevel_options(Queue, UserOptions, SpawnOptions) :-
+    ws_build_toplevel_options(Queue, Queue, UserOptions, SpawnOptions).
+
+ws_build_toplevel_options(Queue, IoTarget, UserOptions, SpawnOptions) :-
     make_id(Ref),
     exclude(ws_reserved_option, UserOptions, FilteredOptions),
     apply_node_ptcp_limits(FilteredOptions, LimitedOptions),
     SpawnOptions = [
         target(Queue),
+        io_target(IoTarget),
         link(false),
         monitor_target(Queue),
         monitor_ref(Ref)
@@ -954,10 +987,14 @@ ws_build_toplevel_options(Queue, UserOptions, SpawnOptions) :-
 
 %!  ws_build_bare_options(+Queue, +UserOptions, -SpawnOptions) is det.
 ws_build_bare_options(Queue, UserOptions, SpawnOptions) :-
+    ws_build_bare_options(Queue, Queue, UserOptions, SpawnOptions).
+
+ws_build_bare_options(Queue, IoTarget, UserOptions, SpawnOptions) :-
     make_id(Ref),
     exclude(ws_reserved_option, UserOptions, FilteredOptions),
     SpawnOptions = [
         target(Queue),
+        io_target(IoTarget),
         link(false),
         monitor_target(Queue),
         monitor_ref(Ref)
@@ -971,7 +1008,25 @@ ws_build_bare_options(Queue, UserOptions, SpawnOptions) :-
 %  caller's reply channel; link is fixed false because the WS layer
 %  uses its own monitor for cleanup).
 ws_reserved_option(target(_)).
+ws_reserved_option(io_target(_)).
 ws_reserved_option(link(_)).
+
+ws_spawn_io_target(Dict, _Queue, Principal, IoTarget) :-
+    get_dict(io_target, Dict, _),
+    !,
+    require_capability(Principal, internal_transport),
+    ws_get_term_string(Dict, io_target, IoTargetString),
+    ws_read_term(io_target, IoTargetString, Candidate),
+    (   is_io_endpoint(Candidate)
+    ->  IoTarget = Candidate
+    ;   throw(error(domain_error(distributed_io_endpoint, Candidate),
+                    context(node_ws:ws_spawn_io_target/4,
+                            'io_target must be an inherited terminal endpoint')))
+    ).
+ws_spawn_io_target(_Dict, _Queue, Principal, '$io_sink'(distributed)) :-
+    principal_has_capability(Principal, internal_transport),
+    !.
+ws_spawn_io_target(_Dict, Queue, _Principal, Queue).
 
 
                 /*******************************
@@ -989,6 +1044,7 @@ ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
         retract(ws_actor(Queue, Pid)),
         ws_kill_actor(Pid)
     ),
+    forget_io_endpoints_for_target(Queue),
     catch(thread_send_message(Queue, '$ws_close'), _, true),
     catch(thread_join(RelayThread, _), _, true),
     retractall(ws_connection_meta(Queue, _)),

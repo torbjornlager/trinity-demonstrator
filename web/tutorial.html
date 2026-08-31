@@ -2435,10 +2435,11 @@ ping_pong_remote :-
 </p>
 
 <p>
-    You should only see the pinger's output rendered immediately in the
-    terminal. That is expected: terminal output is only forwarded directly from
-    actors on the local session lineage, not from actors running on the remote
-    node.
+    You should see output from both the pinger and the ponger. The remote
+    ponger inherits the terminal capability of this toplevel, much like an
+    Erlang process inherits its group leader. Only that opaque I/O capability
+    is forwarded; query answers and ordinary actor messages retain their own
+    targets.
 </p>
 
 <h2>Remote toplevels</h2>

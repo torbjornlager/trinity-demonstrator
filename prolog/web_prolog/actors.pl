@@ -28,6 +28,7 @@
      terminal_output/2,      % +Term, +Options
      receive/1,              % +ReceiveClauses
      receive/2,              % +ReceiveClauses, +Options
+     current_io_target/1,    % -Target
      with_io_target/2,       % +Target, :Goal
      flush/0,                %
      make_ref/1,             % -Ref
@@ -541,7 +542,9 @@ start_goal_runner(Options, Goal) :-
     run_start_goal(Goal, Options).
 
 run_start_goal(Goal, Options) :-
-    (   option(target(Target), Options)
+    (   option(io_target(Target), Options)
+    ->  with_io_target(Target, call(Goal))
+    ;   option(target(Target), Options)
     ->  with_io_target(Target, call(Goal))
     ;   call(Goal)
     ).
@@ -1154,6 +1157,16 @@ respond(Pid, Term) :-
 with_io_target(Target, Goal) :-
     asserta(io_target(Target), Ref),
     call_cleanup(Goal, erase(Ref)).
+
+%!  current_io_target(-Target) is semidet.
+%
+%   True for the terminal target inherited by the current actor.  This is an
+%   internal capability-discovery operation used by the distribution layer;
+%   actor_api deliberately does not re-export it to public actor programs.
+
+current_io_target(Target) :-
+    io_target(Target),
+    !.
 
 default_io_target(_Fallback, Target) :-
     io_target(Target),

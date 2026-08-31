@@ -56,6 +56,7 @@ rewrite_goal_if_needed/3.
     self/1,
     send/2,
     receive/1,
+    receive/2,
     monitor/2,
     demonitor/2,
     exit/2,
@@ -114,8 +115,9 @@ local_toplevel_spawn(Pid, SourceModule, Options) :-
     effective_ptcp_limits(RequestedTimeLimit, RequestedIdleLimit,
                           TimeLimit, IdleLimit),
     option(target(Target), Options, Self),
+    option(io_target(DefaultIoTarget), Options, follow_result_target),
     exclude(is_toplevel_spawn_opt, Options, SpawnOptions),
-    Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit),
+    Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit, DefaultIoTarget),
     spawn(ptcp(Pid, Target, Lifecycle), Pid,
           [source_module(SourceModule)|SpawnOptions]),
     maybe_register_toplevel_name(Options, Pid).
@@ -132,6 +134,7 @@ is_toplevel_spawn_opt(name(_)).
 is_toplevel_spawn_opt(session(_)).
 is_toplevel_spawn_opt(time_limit(_)).
 is_toplevel_spawn_opt(idle_limit(_)).
+is_toplevel_spawn_opt(io_target(_)).
 
 maybe_register_toplevel_name(Options, Pid) :-
     (   option(name(Name), Options)
@@ -149,22 +152,31 @@ maybe_register_toplevel_name(Options, Pid) :-
 %   normally (and therefore produces a normal `down` reason when monitored).
 
 ptcp(Pid, Target, SessionOrLifecycle) :-
-    ptcp_lifecycle(SessionOrLifecycle, Session, TimeLimit, IdleLimit),
-    catch(ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit),
+    ptcp_lifecycle(SessionOrLifecycle, Session, TimeLimit, IdleLimit,
+                   DefaultIoTarget),
+    catch(ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
+                       DefaultIoTarget),
           '$ptcp_idle_limit',
           true).
 
-ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit) :-
-    catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit),
+ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
+    catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit,
+                  DefaultIoTarget),
           '$abort_goal',
-          ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit)).
+          ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
+                       DefaultIoTarget)).
 
-ptcp_lifecycle(ptcp_options(Session, TimeLimit0, IdleLimit0),
-               Session, TimeLimit, IdleLimit) :-
+ptcp_lifecycle(ptcp_options(Session, TimeLimit0, IdleLimit0, DefaultIoTarget),
+               Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
     !,
     normalize_ptcp_limit(time_limit, TimeLimit0, TimeLimit),
     normalize_ptcp_limit(idle_limit, IdleLimit0, IdleLimit).
-ptcp_lifecycle(Session, Session, infinite, infinite).
+ptcp_lifecycle(ptcp_options(Session, TimeLimit0, IdleLimit0),
+               Session, TimeLimit, IdleLimit, follow_result_target) :-
+    !,
+    normalize_ptcp_limit(time_limit, TimeLimit0, TimeLimit),
+    normalize_ptcp_limit(idle_limit, IdleLimit0, IdleLimit).
+ptcp_lifecycle(Session, Session, infinite, infinite, follow_result_target).
 
 
 %!  normalize_ptcp_limit(+Kind, +Limit0, -Limit) is det.
@@ -183,7 +195,8 @@ normalize_ptcp_limit(Kind, Limit0, Limit) :-
                             'PTCP limits must be positive seconds or infinite')))
     ).
 
-%!  state_1(+Pid, +DefaultTarget, +SessionMode) is det.
+%!  state_1(+Pid, +DefaultTarget, +SessionMode, +TimeLimit, +IdleLimit,
+%!          +DefaultIoTarget) is det.
 %
 %   Idle/dispatch state:
 %
@@ -195,7 +208,7 @@ normalize_ptcp_limit(Kind, Limit0, Limit) :-
 %   Monitor notifications from child actors remain in the toplevel mailbox.
 %   This lets shell tools such as `receive/1` and `flush/0` inspect them.
 
-state_1(Pid, Target0, Session, TimeLimit, IdleLimit) :-
+state_1(Pid, Target0, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
     receive_idle({
         '$call'(Goal, Options) ->
             option(template(Template0), Options, Goal),
@@ -204,30 +217,39 @@ state_1(Pid, Target0, Session, TimeLimit, IdleLimit) :-
             option(limit(Limit0), Options, 10 000 000 000),
             option(once(Once), Options, false),
             option(target(Target1), Options, Target0),
+            call_io_target(Options, DefaultIoTarget, Target1, IoTarget),
             Limit = count(Limit0),
             Target = target(Target1),
-            run_call(Goal, Template, Offset, Limit, Once, Target, Pid,
+            run_call(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
                      TimeLimit, IdleLimit)
         }, IdleLimit),
     (   Session == false
     ->  true
-    ;   state_1(Pid, Target0, Session, TimeLimit, IdleLimit)
+    ;   state_1(Pid, Target0, Session, TimeLimit, IdleLimit, DefaultIoTarget)
     ).
 
+call_io_target(Options, _DefaultIoTarget, _ResultTarget, IoTarget) :-
+    option(io_target(IoTarget), Options),
+    !.
+call_io_target(_Options, follow_result_target, ResultTarget, ResultTarget) :-
+    !.
+call_io_target(_Options, DefaultIoTarget, _ResultTarget, DefaultIoTarget).
 
-%!  run_call(+Goal, +Template, +Offset, +Limit, +Once, +TargetBox, +Pid,
-%!           +TimeLimit, +IdleLimit) is det.
+
+%!  run_call(+Goal, +Template, +Offset, +Limit, +Once, +TargetBox,
+%!           +IoTarget, +Pid, +TimeLimit, +IdleLimit) is det.
 %
 %   Run a pageable call with a reusable alarm. The alarm is armed while the
 %   query is computing in s2, disarmed while its choice point is suspended in
 %   s3, and rearmed immediately before `next` resumes that choice point.
 
-run_call(Goal, Template, Offset, Limit, Once, Target, Pid,
+run_call(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
          TimeLimit, IdleLimit) :-
     setup_call_cleanup(
         create_time_limit_alarm(TimeLimit, Alarm),
         catch(
-            run_call_answers(Goal, Template, Offset, Limit, Once, Target, Pid,
+            run_call_answers(Goal, Template, Offset, Limit, Once, Target,
+                             IoTarget, Pid,
                              TimeLimit, IdleLimit, Alarm),
             '$ptcp_time_limit',
             send_time_limit_error(Target, Pid)
@@ -235,10 +257,10 @@ run_call(Goal, Template, Offset, Limit, Once, Target, Pid,
         remove_time_limit_alarm(Alarm)
     ).
 
-run_call_answers(Goal, Template, Offset, Limit, Once, Target, Pid,
+run_call_answers(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
                  TimeLimit, IdleLimit, Alarm) :-
     arm_time_limit_alarm(Alarm, TimeLimit),
-    state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),
+    state_2(Goal, Template, Offset, Limit, Once, IoTarget, Pid, Answer),
     disarm_time_limit_alarm(Alarm),
     arg(1, Target, Out),
     send(Out, Answer),
@@ -281,16 +303,16 @@ receive_idle(Clauses, IdleLimit) :-
         on_timeout(throw('$ptcp_idle_limit'))
     ]).
 
-%!  state_2(+Goal, +Template, +Offset, +Limit, +Once, +TargetBox, +Pid, -Answer) is det.
+%!  state_2(+Goal, +Template, +Offset, +Limit, +Once, +IoTarget, +Pid,
+%!          -Answer) is det.
 %
 %   Execute one query slice in the actor module and package answer with pid.
 
-state_2(Goal0, Template, Offset, Limit, Once, TargetBox, Pid, Answer) :-
+state_2(Goal0, Template, Offset, Limit, Once, IoTarget, Pid, Answer) :-
     strip_module(Goal0, _, PlainGoal),
     actor_module(Pid, Module),
     prepared_goal(Module, PlainGoal, RewrittenGoal),
-    arg(1, TargetBox, Target),
-    with_io_target(Target,
+    with_io_target(IoTarget,
         (   Once == true
         ->  once(answer(Module:RewrittenGoal, Template, Offset, Limit, Answer0))
         ;   answer(Module:RewrittenGoal, Template, Offset, Limit, Answer0)

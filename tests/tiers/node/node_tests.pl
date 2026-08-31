@@ -2544,6 +2544,211 @@ test(private_ws_remote_echo_actor_roundtrip_between_nodes,
                 catch(ws_close(WS, 1000, done), _, true)
             ))).
 
+test(private_ws_remote_actor_inherits_browser_terminal,
+     true((OutputData == "remote_hello",
+           OutputPid \== ToplevelPid,
+           SuccessType == "success"))) :-
+    alice_full_principal_option(AlicePolicy),
+    with_node_server_options([auth(private), AlicePolicy], URI1,
+        with_node_server_options([auth(private), AlicePolicy], URI2,
+            setup_call_cleanup(
+                (
+                    principal_headers("alice", Headers),
+                    ws_open_headers(URI1, Headers, WS)
+                ),
+                (
+                    ws_send_json(WS, json{
+                        command:toplevel_spawn,
+                        options:"[session(true)]"
+                    }),
+                    ws_receive_json(WS, Spawned),
+                    get_dict(pid, Spawned, ToplevelPid),
+
+                    format(string(SpawnGoal),
+                           "spawn(run, Remote, [node('~w'), src_text(\"run :- writeln(remote_hello).\"), monitor(true)])",
+                           [URI2]),
+                    ws_send_json(WS, json{
+                        command:toplevel_call,
+                        pid:ToplevelPid,
+                        goal:SpawnGoal,
+                        template:"Remote"
+                    }),
+                    ws_receive_json_until_expected_types(
+                        WS, ["output", "success"], Replies),
+                    once((member(Output, Replies),
+                          Output.type == "output")),
+                    OutputData = Output.data,
+                    OutputPid = Output.pid,
+                    once((member(Success, Replies),
+                          Success.type == "success")),
+                    SuccessType = Success.type
+                ),
+                catch(ws_close(WS, 1000, done), _, true)
+            ))).
+
+test(private_ws_remote_actor_terminal_input_roundtrip,
+     true((PromptData == "question",
+           OutputData == "got(answer)",
+           RespondedPid == PromptPid))) :-
+    alice_full_principal_option(AlicePolicy),
+    with_node_server_options([auth(private), AlicePolicy], URI1,
+        with_node_server_options([auth(private), AlicePolicy], URI2,
+            setup_call_cleanup(
+                (
+                    principal_headers("alice", Headers),
+                    ws_open_headers(URI1, Headers, WS)
+                ),
+                (
+                    ws_send_json(WS, json{
+                        command:toplevel_spawn,
+                        options:"[session(true)]"
+                    }),
+                    ws_receive_json(WS, Spawned),
+                    ToplevelPid = Spawned.pid,
+                    format(string(SpawnGoal),
+                           "spawn(run, Remote, [node('~w'), src_text(\"run :- input(question, Answer), writeln(got(Answer)).\"), monitor(true)])",
+                           [URI2]),
+                    ws_send_json(WS, json{
+                        command:toplevel_call,
+                        pid:ToplevelPid,
+                        goal:SpawnGoal,
+                        template:"Remote"
+                    }),
+                    ws_receive_json_until_expected_types(
+                        WS, ["prompt", "success"], FirstReplies),
+                    once((member(Prompt, FirstReplies),
+                          Prompt.type == "prompt")),
+                    PromptPid = Prompt.pid,
+                    PromptData = Prompt.data,
+                    ws_send_json(WS, json{
+                        command:toplevel_respond,
+                        pid:PromptPid,
+                        input:"answer"
+                    }),
+                    ws_receive_json_until_expected_types(
+                        WS, ["responded", "output"], SecondReplies),
+                    once((member(Responded, SecondReplies),
+                          Responded.type == "responded")),
+                    RespondedPid = Responded.pid,
+                    once((member(Output, SecondReplies),
+                          Output.type == "output")),
+                    OutputData = Output.data
+                ),
+                catch(ws_close(WS, 1000, done), _, true)
+            ))).
+
+test(private_ws_remote_toplevel_inherits_browser_terminal,
+     true((OutputData == "remote_toplevel",
+           OutputPid \== ToplevelPid))) :-
+    alice_full_principal_option(AlicePolicy),
+    with_node_server_options([auth(private), AlicePolicy], URI1,
+        with_node_server_options([auth(private), AlicePolicy], URI2,
+            setup_call_cleanup(
+                (
+                    principal_headers("alice", Headers),
+                    ws_open_headers(URI1, Headers, WS)
+                ),
+                (
+                    ws_send_json(WS, json{
+                        command:toplevel_spawn,
+                        options:"[session(true)]"
+                    }),
+                    ws_receive_json(WS, Spawned),
+                    ToplevelPid = Spawned.pid,
+                    format(string(CallGoal),
+                           "toplevel_spawn(Remote, [node('~w')]), toplevel_call(Remote, writeln(remote_toplevel), [template(true)])",
+                           [URI2]),
+                    ws_send_json(WS, json{
+                        command:toplevel_call,
+                        pid:ToplevelPid,
+                        goal:CallGoal,
+                        template:"Remote"
+                    }),
+                    ws_receive_json_until_expected_types(
+                        WS, ["output", "success"], Replies),
+                    once((member(Output, Replies),
+                          Output.type == "output")),
+                    OutputData = Output.data,
+                    OutputPid = Output.pid
+                ),
+                catch(ws_close(WS, 1000, done), _, true)
+            ))).
+
+test(distributed_io_endpoint_is_inherited_unchanged,
+     true(Inherited == Endpoint)) :-
+    Endpoint = '$io_endpoint'(test_token)@'https://home.example',
+    actors:with_io_target(
+        Endpoint,
+        distribution:inherited_io_endpoint(Inherited)
+    ).
+
+test(public_ws_cannot_forge_distributed_io_endpoint,
+     true(Error = error(authorization_error(_, capability(internal_transport)), _))) :-
+    test_execution_principal("browser", Principal),
+    catch(node_ws:ws_spawn_io_target(
+              json{io_target:"'$io_endpoint'(forged)@'https://n1.example'"},
+              browser_queue,
+              Principal,
+              _),
+          Error,
+          true).
+
+test(internal_spawn_without_endpoint_cannot_mint_terminal_authority,
+     true(IoTarget == '$io_sink'(distributed))) :-
+    Principal = principal{
+        id:"node:https://peer.example",
+        capabilities:[execute, internal_transport],
+        unknown:false
+    },
+    node_ws:ws_spawn_io_target(json{}, internal_queue, Principal, IoTarget),
+    actors:with_io_target(
+        IoTarget,
+        assertion(\+ distribution:inherited_io_endpoint(_))
+    ).
+
+test(distributed_io_prompt_authorization_is_queue_scoped_and_one_shot) :-
+    self(Self),
+    setup_call_cleanup(
+        assertz(distribution:pending_io_prompt(test_token,
+                                               owning_browser_queue,
+                                               Self)),
+        (
+            assertion(\+ distribution:respond_io_prompt(
+                              other_browser_queue, Self, denied)),
+            assertion(distribution:respond_io_prompt(
+                          owning_browser_queue, Self, accepted)),
+            receive({
+                '$input'(distributed_io, accepted) -> true
+            }, [timeout(1), on_timeout(fail)]),
+            assertion(\+ distribution:respond_io_prompt(
+                              owning_browser_queue, Self, replay))
+        ),
+        retractall(distribution:pending_io_prompt(test_token, _, _))
+    ).
+
+test(distributed_io_endpoint_cleanup_revokes_prompts_and_delivery) :-
+    setup_call_cleanup(
+        (
+            assertz(distribution:io_endpoint_target(test_token,
+                                                     browser_queue)),
+            assertz(distribution:pending_io_prompt(test_token,
+                                                    browser_queue,
+                                                    remote_pid))
+        ),
+        (
+            distribution:forget_io_endpoints_for_target(browser_queue),
+            assertion(\+ distribution:io_endpoint_target(test_token, _)),
+            assertion(\+ distribution:pending_io_prompt(test_token, _, _)),
+            assertion(\+ distribution:deliver_io_endpoint(
+                              test_token,
+                              terminal_output(remote_pid, hello)))
+        ),
+        (
+            retractall(distribution:io_endpoint_target(test_token, _)),
+            retractall(distribution:pending_io_prompt(test_token, _, _))
+        )
+    ).
+
 test(dev_request_principal_uses_local_config,
      true((PrincipalId == "carol",
            Capabilities == [execute],

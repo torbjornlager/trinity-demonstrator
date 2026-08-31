@@ -5,6 +5,10 @@
      register_remote_pid/2,   % +CompoundPid, +Target
      flush_pending_for_pid/2, % +NodeURL, +RemotePid
      remote_drop_connection/1,% +NodeURL
+     is_io_endpoint/1,        % @Endpoint
+     deliver_io_endpoint/2,  % +Token, +Message
+     respond_io_prompt/3,    % +Queue, +Pid, +Input
+     forget_io_endpoints_for_target/1, % +Target
      op(200, xfx, @)
    ]).
 
@@ -42,7 +46,8 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
     self/1,
     send/2,
     spawn/3,
-    canonical_pid/2
+    canonical_pid/2,
+    current_io_target/1
 ]).
 :- use_module(pid_utils, [
     localhost_node/1,
@@ -69,6 +74,8 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
 
 :- dynamic ws_connection/4.
 :- dynamic ws_pending_event/3.
+:- dynamic io_endpoint_target/2.
+:- dynamic pending_io_prompt/3.
 
 best_effort(Goal) :-
     catch(Goal, _, true).
@@ -183,11 +190,12 @@ spawn_remote(Goal, RemotePid@NodeURL, Node0, Options) :-
     term_to_wire_atom(PlainGoal, GoalAtom),
     remote_spawn_options(Options, SourceModule, RemoteOptions),
     term_to_wire_atom(RemoteOptions, RemoteOptionsAtom),
-    remote_request_spawn(NodeURL, json{
+    add_inherited_io_endpoint(json{
         command: spawn,
         goal: GoalAtom,
         options: RemoteOptionsAtom
-    }, RemotePid),
+    }, SpawnCommand),
+    remote_request_spawn(NodeURL, SpawnCommand, RemotePid),
     CompoundPid = RemotePid@NodeURL,
     %  No per-pid proxy actor.  Set up monitor and link FIRST, then
     %  register_remote_pid (which sets the controller's target row --
@@ -234,6 +242,125 @@ local_only_spawn_option(monitor_target(_)).
 local_only_spawn_option(monitor_ref(_)).
 local_only_spawn_option(source_module(_)).
 local_only_spawn_option(isolation_io(_)).
+local_only_spawn_option(io_target(_)).
+
+
+                /*******************************
+                *     DISTRIBUTED TERMINAL I/O *
+                *******************************/
+
+%!  is_io_endpoint(@Endpoint) is semidet.
+%
+%   True when Endpoint is the opaque, globally-routable terminal capability
+%   inherited by remote descendants.  The random token is a bearer secret;
+%   the wire command that can exercise it is additionally restricted to an
+%   authenticated node-to-node transport.
+
+is_io_endpoint('$io_endpoint'(Token)@HomeNode) :-
+    atom(Token),
+    atom(HomeNode).
+
+add_inherited_io_endpoint(Command0, Command) :-
+    inherited_io_endpoint(Endpoint),
+    !,
+    term_to_wire_atom(Endpoint, EndpointAtom),
+    put_dict(io_target, Command0, EndpointAtom, Command).
+add_inherited_io_endpoint(Command, Command).
+
+inherited_io_endpoint(Endpoint) :-
+    current_io_target(Target),
+    Target \== '$io_sink'(distributed),
+    (   is_io_endpoint(Target)
+    ->  Endpoint = Target
+    ;   self_node_url(HomeNode),
+        io_endpoint_for_target(Target, Token),
+        Endpoint = '$io_endpoint'(Token)@HomeNode
+    ).
+
+io_endpoint_for_target(Target, Token) :-
+    with_mutex(distributed_io_endpoints,
+        (   io_endpoint_target(Existing, Target)
+        ->  Token = Existing
+        ;   fresh_io_endpoint_token(Token),
+            assertz(io_endpoint_target(Token, Target))
+        )).
+
+fresh_io_endpoint_token(Token) :-
+    repeat,
+    crypto_n_random_bytes(16, Bytes),
+    crypto_data_hash(Bytes, Candidate, [algorithm(sha256)]),
+    \+ io_endpoint_target(Candidate, _),
+    !,
+    Token = Candidate.
+
+%  This hook precedes the generic Id@Node and Name@Node clauses below.  It
+%  transports only terminal protocol messages, so possession of an endpoint
+%  cannot be turned into an arbitrary actor-send capability.
+actors:hook_send('$io_endpoint'(Token)@HomeNode, Message) :-
+    !,
+    route_io_endpoint(Token, HomeNode, Message).
+actors:hook_send('$io_sink'(distributed), _Message) :-
+    !.
+
+route_io_endpoint(Token, HomeNode, Message) :-
+    io_protocol_message(Message),
+    (   local_node_url(HomeNode)
+    ->  deliver_io_endpoint(Token, Message)
+    ;   term_to_wire_atom(Message, MessageAtom),
+        best_effort(remote_send_command(HomeNode, json{
+            command: io_request,
+            token: Token,
+            message: MessageAtom
+        }))
+    ),
+    !.
+route_io_endpoint(_, _, _).
+
+io_protocol_message(terminal_output(_, _)).
+io_protocol_message(terminal_io_output(_, _)).
+io_protocol_message(prompt(_, _)).
+
+%!  deliver_io_endpoint(+Token, +Message) is semidet.
+%
+%   Deliver one validated terminal message at the endpoint's home node.  A
+%   prompt also installs a one-shot, connection-scoped authorization for the
+%   browser's subsequent toplevel_respond command.
+
+deliver_io_endpoint(Token, Message) :-
+    atom(Token),
+    io_protocol_message(Message),
+    io_endpoint_target(Token, Target),
+    remember_pending_io_prompt(Token, Target, Message),
+    send(Target, Message).
+
+remember_pending_io_prompt(Token, Queue, prompt(Pid, _)) :-
+    best_effort_fail(message_queue_property(Queue, size(_))),
+    !,
+    with_mutex(distributed_io_prompts,
+        ( retractall(pending_io_prompt(Token, Queue, Pid)),
+          assertz(pending_io_prompt(Token, Queue, Pid))
+        )).
+remember_pending_io_prompt(_, _, _).
+
+%!  respond_io_prompt(+Queue, +Pid, +Input) is semidet.
+%
+%   Consume exactly one prompt authorization owned by Queue and route its
+%   response to the remote prompting actor.
+
+respond_io_prompt(Queue, Pid, Input) :-
+    with_mutex(distributed_io_prompts,
+        retract(pending_io_prompt(_Token, Queue, Pid))),
+    !,
+    send(Pid, '$input'(distributed_io, Input)).
+
+forget_io_endpoints_for_target(Target) :-
+    with_mutex(distributed_io_endpoints,
+        findall(Token, retract(io_endpoint_target(Token, Target)), Tokens)),
+    with_mutex(distributed_io_prompts,
+        ( forall(member(Token, Tokens),
+                 retractall(pending_io_prompt(Token, _, _))),
+          retractall(pending_io_prompt(_, Target, _))
+        )).
 
 
 %  Cross-node sends go directly over the per-node WebSocket.  If the
@@ -308,7 +435,8 @@ actors:hook_demonitor(Ref) :-
     node_controller:remove_remote_monitor_by_ref(Ref).
 
 actors:hook_stop(GlobalPid) :-
-    node_controller:take_remote_children_for_parent(GlobalPid, _Drained).
+    node_controller:take_remote_children_for_parent(GlobalPid, _Drained),
+    forget_io_endpoints_for_target(GlobalPid).
 
 
 %!  safe_remote_kill_send(+Node, +Pid, +ReasonAtom, +Command) is det.
@@ -368,10 +496,11 @@ toplevel_actors:hook_toplevel_spawn(RemotePid@NodeURL, SourceModule, Options) :-
     option(target(Target), Options, Self),
     remote_toplevel_spawn_options(Options, SourceModule, RemoteOptions),
     term_to_wire_atom(RemoteOptions, RemoteOptionsAtom),
-    remote_request_spawn(NodeURL, json{
+    add_inherited_io_endpoint(json{
         command: toplevel_spawn,
         options: RemoteOptionsAtom
-    }, RemotePid),
+    }, SpawnCommand),
+    remote_request_spawn(NodeURL, SpawnCommand, RemotePid),
     CompoundPid = RemotePid@NodeURL,
     %  Install monitor + link first, then register the target (the
     %  readiness marker for inbound dispatch), then flush.  See
@@ -406,6 +535,7 @@ remote_toplevel_local_option(monitor(_)).
 remote_toplevel_local_option(target(_)).
 remote_toplevel_local_option(source_module(_)).
 remote_toplevel_local_option(name(_)).
+remote_toplevel_local_option(io_target(_)).
 
 maybe_register_toplevel_name(Options, Pid) :-
     (   option(name(Name), Options)

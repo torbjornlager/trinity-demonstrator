@@ -436,11 +436,12 @@ spawn_remote(Goal, RemotePid@NodeURL, Node0, Options) :-
     term_to_wire_atom(PlainGoal, GoalAtom),
     remote_spawn_options(Options, SourceModule, RemoteOptions),
     term_to_wire_atom(RemoteOptions, RemoteOptionsAtom),
-    remote_request_spawn(NodeURL, json{
+    add_inherited_io_endpoint(json{
         command: spawn,
         goal: GoalAtom,
         options: RemoteOptionsAtom
-    }, RemotePid),
+    }, SpawnCommand),
+    remote_request_spawn(NodeURL, SpawnCommand, RemotePid),
     CompoundPid = RemotePid@NodeURL,
     option(monitor(Monitor), Options, false),
     (   Monitor == true
@@ -695,7 +696,7 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
         best_effort(thread_send_message(SpawnQueue, spawn_error(ErrorData)))
 
-    ;   %  4. remote I/O output -- dropped (capability scoping)
+    ;   %  4. legacy/generic remote I/O output -- dropped
         remote_event_pid(Dict, _),
         ws_json_is_io_output(Dict)
     ->  true
@@ -818,7 +819,7 @@ Down events are intercepted earlier by the dispatch decision tree
 and delivered via the controller; the per-pid forward path never
 sees them.
 
-### 6.5 I/O suppression rule
+### 6.5 Inherited distributed terminal capability
 
 The runtime represents output from a Prolog I/O sink (for example,
 `writeln/1`) internally as `terminal_io_output(Pid, Data)`.  That
@@ -829,14 +830,27 @@ the book's canonical shape:
 { "type": "output", "pid": 56120932, "data": "hello" }
 ```
 
-For a node-to-node WebSocket (a principal with the
-`internal_transport` capability), the originating relay drops
-`terminal_io_output/2` before JSON serialization.  This implements the
-terminal capability rule without adding a private member to the public
-wire protocol: a terminal is attached to one particular toplevel actor,
-and I/O from actors outside that toplevel's local descendant lineage
-does not surface in its mailbox.  Explicit actor `output/1` events still
-pass through normally.
+An actor spawned from a terminal lineage inherits an opaque endpoint of
+the form `'$io_endpoint'(Token)@HomeNode`.  This is the distributed
+counterpart of an Erlang group leader: descendants inherit the same endpoint
+even when they are spawned on another node, and terminal output is routed
+directly to its home node. Query-result targets remain separate, so forwarding
+terminal I/O cannot capture PTCP answers, monitor events, or arbitrary actor
+messages.
+
+The token is random and acts as a bearer capability.  Only an authenticated
+node-to-node principal with `internal_transport` may attach it to a spawn or
+invoke the private `io_request` command.  The endpoint accepts only
+`terminal_output/2`, `terminal_io_output/2`, and `prompt/2`. Prompt replies are
+authorized for the owning browser queue exactly once. Closing the browser
+connection revokes its endpoints and pending prompts.
+
+The ordinary node-to-node relay still drops unattributed
+`terminal_io_output/2`.  Thus a detached remote actor with no inherited
+terminal receives an explicit non-forwarding sink and cannot mint authority
+for a later remote descendant. A remote descendant of the initiating toplevel
+writes to that toplevel's terminal. Explicit actor `output/1` events continue
+to pass through the ordinary event route.
 
 The receiver continues to recognize the former `source: "io"` member
 only as a compatibility measure for an older peer; conforming nodes do
@@ -1036,8 +1050,10 @@ testable; see §12.
    and no `remote_target_/2` or `remote_link_/2` rows for pids on
    `NodeURL` remain.
 
-7. **I/O scoping.**  Terminal output emitted by an actor on a remote
-   node never appears in a local toplevel's mailbox.
+7. **I/O scoping.**  A remote descendant may render terminal I/O only through
+   the opaque endpoint inherited from its initiating toplevel. Detached remote
+   actors have no such authority; forged public endpoints are rejected, and
+   endpoint cleanup follows the browser connection lifecycle.
 
 8. **Per-(sender, receiver) FIFO.**  Multiple sends from one local
    actor to one remote pid arrive at the remote mailbox in the order
