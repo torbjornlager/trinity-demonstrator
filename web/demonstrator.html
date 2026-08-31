@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <script>(function(){function c(n){var p=n+"=",a=String(document.cookie||"").split(/;\s*/),i;for(i=0;i<a.length;i+=1){if(a[i].indexOf(p)===0){return decodeURIComponent(a[i].slice(p.length));}}return"";}var tc=c("wp_theme_mode"),tl=localStorage.getItem("wb.themeMode"),t=(tc==="dark"||tc==="light")?tc:tl;if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);document.documentElement.style.colorScheme=t;localStorage.setItem("wb.themeMode",t);}var f=localStorage.getItem("wb.fontSizeMode");if(f)document.documentElement.setAttribute("data-fontsize",f);})();</script>
+    <script>(function(){function c(n){var p=n+"=",a=String(document.cookie||"").split(/;\s*/),i;for(i=0;i<a.length;i+=1){if(a[i].indexOf(p)===0){return decodeURIComponent(a[i].slice(p.length));}}return"";}var tc=c("wp_theme_mode"),tl=localStorage.getItem("wb.themeMode"),p=(tc==="system"||tc==="dark"||tc==="light")?tc:tl,t=p==="dark"?"dark":p==="light"?"light":typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);document.documentElement.style.colorScheme=t;if(p==="system"||p==="dark"||p==="light")localStorage.setItem("wb.themeMode",p);var f=localStorage.getItem("wb.fontSizeMode");if(f)document.documentElement.setAttribute("data-fontsize",f);})();</script>
     <meta charset="utf-8">
     <title>The Prolog Trinity demonstrator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1807,8 +1807,8 @@
       }
 
       .settings-display-theme .wb-select {
-        width: 66px;
-        min-width: 66px;
+        width: 76px;
+        min-width: 76px;
       }
 
       .settings-stacked-card {
@@ -4015,6 +4015,9 @@
       var PORTAL_INTRO_STORAGE_KEY = "wp.portalIntroDismissed";
       var PORTAL_INTRO_COOKIE_NAME = "wp_portal_intro_dismissed";
       var PORTAL_THEME_COOKIE_NAME = "wp_theme_mode";
+      var portalSystemThemeMediaQuery = typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
       var PORTAL_REPOSITORY_URL = "https://github.com/torbjornlager/book-poc";
       var PORTAL_BOOK_MANUSCRIPT_URL = "https://trinity.elfenbenstornet.se/book.html";
       var EXAMPLES_PREFERRED_WIDTH_PX = 260;
@@ -4856,7 +4859,17 @@
       }
 
       function normalizePortalTheme(theme) {
-        return theme === "dark" ? "dark" : "light";
+        return theme === "dark" || theme === "light" ? theme : "system";
+      }
+
+      function resolvedPortalTheme(theme) {
+        var preference = normalizePortalTheme(theme);
+        if (preference !== "system") {
+          return preference;
+        }
+        return portalSystemThemeMediaQuery && portalSystemThemeMediaQuery.matches
+          ? "dark"
+          : "light";
       }
 
       function writeCookie(name, value, options) {
@@ -4888,15 +4901,15 @@
 
       function storedPortalTheme() {
         var stored = readCookie(PORTAL_THEME_COOKIE_NAME);
-        if (stored === "dark" || stored === "light") {
+        if (stored === "system" || stored === "dark" || stored === "light") {
           window.localStorage.setItem("wb.themeMode", stored);
           return stored;
         }
         stored = window.localStorage.getItem("wb.themeMode");
-        if (stored === "dark" || stored === "light") {
+        if (stored === "system" || stored === "dark" || stored === "light") {
           return stored;
         }
-        return "light";
+        return "system";
       }
 
       function persistPortalIntroDismissed(hidden) {
@@ -5642,11 +5655,12 @@
               { id: "swi-worker", label: "Worker actors (default)", value: "worker" },
               { id: "swi-main", label: "Main thread + DOM", value: "main" }
             ],
-            themeMode: "light",
+            themeMode: "system",
             webPrologCodeColoring: "none",
             sxmlCodeColoring: "none",
             tutorialFrameLoaded: false,
             themeOptions: [
+              { id: "system", label: "System", value: "system" },
               { id: "light", label: "Light", value: "light" },
               { id: "dark", label: "Dark", value: "dark" }
             ],
@@ -6168,6 +6182,13 @@
           window.addEventListener("pointerup", this.stopSplitDrag);
           window.addEventListener("resize", this.handleWindowResize);
           window.addEventListener("focus", this.handleWindowFocus);
+          if (portalSystemThemeMediaQuery) {
+            if (typeof portalSystemThemeMediaQuery.addEventListener === "function") {
+              portalSystemThemeMediaQuery.addEventListener("change", this.handleSystemThemeChange);
+            } else if (typeof portalSystemThemeMediaQuery.addListener === "function") {
+              portalSystemThemeMediaQuery.addListener(this.handleSystemThemeChange);
+            }
+          }
           this.$nextTick(function() {
             this.handleWindowResize();
           }.bind(this));
@@ -6194,6 +6215,13 @@
           window.removeEventListener("pointerup", this.stopSplitDrag);
           window.removeEventListener("resize", this.handleWindowResize);
           window.removeEventListener("focus", this.handleWindowFocus);
+          if (portalSystemThemeMediaQuery) {
+            if (typeof portalSystemThemeMediaQuery.removeEventListener === "function") {
+              portalSystemThemeMediaQuery.removeEventListener("change", this.handleSystemThemeChange);
+            } else if (typeof portalSystemThemeMediaQuery.removeListener === "function") {
+              portalSystemThemeMediaQuery.removeListener(this.handleSystemThemeChange);
+            }
+          }
         },
         methods: {
           requiredRuntimeWidth: function() {
@@ -7084,7 +7112,7 @@
           },
           editorAppearanceOptions: function() {
             return {
-              theme: this.themeMode,
+              theme: resolvedPortalTheme(this.themeMode),
               fontFamily: this.monoFontFamily,
               fontSize: this.monoFontSize,
               fontWeight: this.monoFontWeight,
@@ -7093,7 +7121,7 @@
           },
           tutorialAppearanceOptions: function() {
             return {
-              theme: this.themeMode,
+              theme: resolvedPortalTheme(this.themeMode),
               fontFamily: this.monoFontFamily,
               fontSize: this.monoFontSize,
               fontWeight: this.monoFontWeight,
@@ -7288,20 +7316,22 @@
           },
           syncManualTheme: function() {
             var frame = this.$refs.manualFrame;
+            var theme = resolvedPortalTheme(this.themeMode);
             if (!frame || !frame.contentWindow) {
               return;
             }
             try {
               frame.contentWindow.postMessage({
                 type: "webprolog-theme",
-                theme: this.themeMode
+                theme: theme
               }, window.location.origin);
             } catch (error) {
             }
           },
           applyThemeSettings: function() {
-            document.documentElement.setAttribute("data-theme", this.themeMode);
-            document.documentElement.style.colorScheme = this.themeMode === "dark" ? "dark" : "light";
+            var theme = resolvedPortalTheme(this.themeMode);
+            document.documentElement.setAttribute("data-theme", theme);
+            document.documentElement.style.colorScheme = theme;
             this.syncEditorAppearance();
             this.syncTutorialAppearance();
             this.syncManualTheme();
@@ -7359,10 +7389,15 @@
             this.syncTerminalAppearance();
           },
           handleThemeChange: function() {
-            if (this.themeMode !== "dark") {
-              this.themeMode = "light";
-            }
+            this.themeMode = normalizePortalTheme(this.themeMode);
             this.persistThemeSettings();
+            this.applyThemeSettings();
+            this.refreshPanels();
+          },
+          handleSystemThemeChange: function() {
+            if (this.themeMode !== "system") {
+              return;
+            }
             this.applyThemeSettings();
             this.refreshPanels();
           },
@@ -7411,7 +7446,7 @@
             this.monoFontSize = 13;
             this.monoFontWeight = 400;
             this.introSuppressFuture = false;
-            this.themeMode = "light";
+            this.themeMode = "system";
             this.webPrologCodeColoring = "none";
             this.sxmlCodeColoring = "none";
             this.errorMessageDetail = "short";

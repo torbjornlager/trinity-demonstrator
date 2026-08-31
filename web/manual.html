@@ -20,15 +20,19 @@
                 return "";
             }
             function applyTheme(theme) {
-                var next = theme === "dark" ? "dark" : "light";
+                var next = theme === "dark" || (theme !== "light" &&
+                    typeof window.matchMedia === "function" &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches)
+                    ? "dark"
+                    : "light";
                 document.documentElement.setAttribute("data-theme", next);
                 document.documentElement.style.colorScheme = next;
             }
             var cookieTheme = readCookie("wp_theme_mode");
-            var initialTheme = (cookieTheme === "dark" || cookieTheme === "light")
+            var initialTheme = (cookieTheme === "system" || cookieTheme === "dark" || cookieTheme === "light")
                 ? cookieTheme
                 : window.localStorage.getItem("wb.themeMode");
-            if (initialTheme === "dark" || initialTheme === "light") {
+            if (initialTheme === "system" || initialTheme === "dark" || initialTheme === "light") {
                 window.localStorage.setItem("wb.themeMode", initialTheme);
             }
             applyTheme(initialTheme);

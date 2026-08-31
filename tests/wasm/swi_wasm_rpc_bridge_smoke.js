@@ -378,7 +378,11 @@ ok(includes('@click="resetSettingsToDefaults"') &&
    includes(">Restore defaults</button>") &&
    includes("resetSettingsToDefaults: function()") &&
    includes('this.browserRuntimeModel = "worker"') &&
-   includes('this.themeMode = "light"') &&
+   includes('{ id: "system", label: "System", value: "system" }') &&
+   includes("width: 76px") &&
+   includes('this.themeMode = "system"') &&
+   includes('window.matchMedia("(prefers-color-scheme: dark)")') &&
+   includes("this.handleSystemThemeChange") &&
    includes('this.terminalHighlightPredicates = true') &&
    includes("this.applyThemeSettings()") &&
    includes("this.applyTerminalRuntimeSettings()") &&
