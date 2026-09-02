@@ -1,4 +1,4 @@
-<statechart datamodel="web-prolog" initial="Play">
+<statechart version="0.2" initial="Play">
     <state id="Play" initial="Inner">
         <history id="H" type="deep">
             <go to="S1"/>

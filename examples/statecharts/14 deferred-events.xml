@@ -12,7 +12,7 @@
 
 -->
 
-<statechart datamodel="web-prolog" initial="initialising">
+<statechart version="0.2" initial="initialising">
     <state id="initialising">
         <onentry>
             writeln('Initialising...')

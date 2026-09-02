@@ -7,9 +7,7 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="agent">
+<statechart version="0.2" initial="agent">
     <parallel id="agent">
         <parallel id="emotions">
             <state id="AF-dimension" initial="anger">

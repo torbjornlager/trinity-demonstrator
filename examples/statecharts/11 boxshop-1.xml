@@ -8,9 +8,7 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="start">
+<statechart version="0.2" initial="start">
     <datamodel>
         :- dynamic color/1, size/1.
             

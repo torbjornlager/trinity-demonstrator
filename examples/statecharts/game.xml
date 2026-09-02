@@ -1,4 +1,4 @@
-<statechart datamodel="web-prolog" initial="s1">
+<statechart version="0.2" initial="s1">
     <state id="s1">
         <onentry>
             output('IDLE')

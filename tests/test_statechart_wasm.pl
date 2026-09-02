@@ -64,15 +64,45 @@ cleanup_statechart_shared_db :-
 
 % A bare-minimum chart: one state, no transitions.
 test(minimal_chart, [cleanup(statechart_stop)]) :-
-    start_text("<statechart initial=\"s\"><state id=\"s\"/></statechart>"),
+    start_text("<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>"),
     config(C),
     memberchk(s, C),
     assertion(statechart_running).
 
+test(rejects_initial_element,
+     [ throws(error(domain_error(sxml_element, initial), _)),
+       cleanup(statechart_stop)
+     ]) :-
+    start_text("<statechart version=\"0.2\" initial=\"s\"><initial><go to=\"s\"/></initial><state id=\"s\"/></statechart>").
+
+test(requires_root_initial_attribute,
+     [ throws(error(existence_error(attribute, initial), _)),
+       cleanup(statechart_stop)
+     ]) :-
+    start_text("<statechart version=\"0.2\"><state id=\"s\"/></statechart>").
+
+test(requires_version_attribute,
+     [ throws(error(existence_error(attribute, version), _)),
+       cleanup(statechart_stop)
+     ]) :-
+    start_text("<statechart initial=\"s\"><state id=\"s\"/></statechart>").
+
+test(rejects_unsupported_version,
+     [ throws(error(domain_error(statechart_version, '0.1'), _)),
+       cleanup(statechart_stop)
+     ]) :-
+    start_text("<statechart version=\"0.1\" initial=\"s\"><state id=\"s\"/></statechart>").
+
+test(requires_compound_state_initial_attribute,
+     [ throws(error(existence_error(attribute, initial), _)),
+       cleanup(statechart_stop)
+     ]) :-
+    start_text("<statechart version=\"0.2\" initial=\"outer\"><state id=\"outer\"><state id=\"inner\"/></state></statechart>").
+
 % External event drives a single transition.
 test(simple_transition, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" on=\"go\"/></state>",
         "  <state id=\"b\"/>",
         "</statechart>"
@@ -87,7 +117,7 @@ test(simple_transition, [cleanup(statechart_stop)]) :-
 % Eventless transition guarded by condition fires automatically.
 test(eventless_with_condition, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <datamodel>:- dynamic(ready/0).\nready.\n</datamodel>",
         "  <state id=\"a\"><go to=\"b\" if=\"ready\"/></state>",
         "  <state id=\"b\"/>",
@@ -99,7 +129,7 @@ test(eventless_with_condition, [cleanup(statechart_stop)]) :-
 % raise/1 from <onentry> enqueues an internal event.
 test(internal_event_via_raise, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\">",
         "    <onentry>raise(go)</onentry>",
         "    <go to=\"b\" on=\"go\"/>",
@@ -118,7 +148,7 @@ test(after_transition_zero_delay,
     nb_setval(trace_collected, []),
     set_trace_hook(test_statechart_wasm:collect_trace),
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" after=\"0\"/></state>",
         "  <state id=\"b\"/>",
         "</statechart>"
@@ -137,7 +167,7 @@ test(after_transition_rejects_on,
                                  on_and_after), _))
      ]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" on=\"go\" after=\"1\"/></state>",
         "  <state id=\"b\"/>",
         "</statechart>"
@@ -149,7 +179,7 @@ test(deferred_events_are_reoffered_fifo,
     nb_setval(trace_collected, []),
     set_trace_hook(test_statechart_wasm:collect_trace),
     join_lines([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "  <datamodel>:- dynamic(seen/1).</datamodel>",
         "  <state id=\"waiting\">",
         "    <defer on=\"command(_)\"/>",
@@ -173,7 +203,7 @@ test(deferred_events_are_reoffered_fifo,
 
 test(enabled_transition_precedes_deferral, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"ready\">",
+        "<statechart version=\"0.2\" initial=\"ready\">",
         "  <datamodel>:- dynamic(seen/1).</datamodel>",
         "  <state id=\"ready\">",
         "    <defer on=\"command(_)\"/>",
@@ -188,7 +218,7 @@ test(enabled_transition_precedes_deferral, [cleanup(statechart_stop)]) :-
 
 test(defer_guard_uses_pattern_bindings, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "  <datamodel>:- dynamic(seen/1).</datamodel>",
         "  <state id=\"waiting\">",
         "    <defer on=\"command(C)\" if=\"C == later\"/>",
@@ -209,7 +239,7 @@ test(defer_guard_uses_pattern_bindings, [cleanup(statechart_stop)]) :-
 
 test(deferred_event_can_be_deferred_again, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"first\">",
+        "<statechart version=\"0.2\" initial=\"first\">",
         "  <datamodel>:- dynamic(seen/1).</datamodel>",
         "  <state id=\"first\">",
         "    <defer on=\"command(_)\"/>",
@@ -238,7 +268,7 @@ test(deferred_event_can_be_deferred_again, [cleanup(statechart_stop)]) :-
 test(reoffered_event_without_new_defer_is_discarded,
      [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "  <state id=\"waiting\">",
         "    <defer on=\"command(_)\"/>",
         "    <go to=\"ready\" on=\"advance\"/>",
@@ -255,7 +285,7 @@ test(reoffered_event_without_new_defer_is_discarded,
 
 test(ancestor_can_defer_for_active_descendant, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"device\">",
+        "<statechart version=\"0.2\" initial=\"device\">",
         "  <datamodel>:- dynamic(seen/1).</datamodel>",
         "  <state id=\"device\" initial=\"cold\">",
         "    <defer on=\"command(_)\"/>",
@@ -275,7 +305,7 @@ test(ancestor_can_defer_for_active_descendant, [cleanup(statechart_stop)]) :-
 % Reaching the top-level <final> stops the interpreter.
 test(top_level_final_stops_interpreter, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"done\" on=\"end\"/></state>",
         "  <final id=\"done\"/>",
         "</statechart>"
@@ -301,7 +331,7 @@ test(trace_hook_receives_events, [cleanup((clear_trace_hook, statechart_stop))])
     nb_setval(trace_collected, []),
     set_trace_hook(test_statechart_wasm:collect_trace),
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" on=\"go\"/></state>",
         "  <state id=\"b\"/>",
         "</statechart>"
@@ -313,10 +343,26 @@ test(trace_hook_receives_events, [cleanup((clear_trace_hook, statechart_stop))])
     assertion(memberchk(external_event(go), Events)),
     assertion(memberchk(transition(_, [b], _, _), Events)).
 
+test(trace_false_suppresses_hook_events,
+     [cleanup((set_trace_enabled(true), clear_trace_hook, statechart_stop))]) :-
+    nb_setval(trace_collected, []),
+    set_trace_hook(test_statechart_wasm:collect_trace),
+    set_trace_enabled(false),
+    statechart_start(text('<statechart version="0.2" initial="a"><state id="a"/></statechart>'), ''),
+    nb_getval(trace_collected, Events),
+    assertion(Events == []).
+
+test(supplemental_source_is_visible_to_chart_scripts,
+     [cleanup(statechart_stop)]) :-
+    statechart_start(
+        text('<statechart version="0.2" initial="a"><datamodel>:- dynamic(supplement_seen/1).</datamodel><state id="a"><onentry>support_value(X),assertz(supplement_seen(X))</onentry></state></statechart>'),
+        'support_value(ok).'),
+    assertion(statechart_wasm:supplement_seen(ok)).
+
 % Datamodel clauses are visible to <go if=...> conditions and actions.
 test(datamodel_dynamic_facts_visible, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <datamodel>:- dynamic(n/1).\nn(0).\n</datamodel>",
         "  <state id=\"a\">",
         "    <go to=\"a\" on=\"inc\">",
@@ -339,7 +385,7 @@ test(shared_database_visible_and_datamodel_shadows,
        cleanup(cleanup_statechart_shared_db)
      ]) :-
     join_lines([
-        "<statechart initial=\"start\">",
+        "<statechart version=\"0.2\" initial=\"start\">",
         "  <datamodel>",
         "    :- dynamic seen/2.",
         "    local_label(statechart_datamodel).",
@@ -365,7 +411,7 @@ test(shared_database_visible_and_datamodel_shadows,
 test(reserved_control_from_condition_is_rethrown,
      [throws('$abort_goal'), cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" if=\"throw('$abort_goal')\"/></state>",
         "  <state id=\"b\"/>",
         "</statechart>"
@@ -375,7 +421,7 @@ test(reserved_control_from_condition_is_rethrown,
 test(reserved_control_from_action_is_rethrown,
      [throws('$ptcp_time_limit'), cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" on=\"go\">throw('$ptcp_time_limit')</go></state>",
         "  <state id=\"b\"/>",
         "</statechart>"
@@ -548,8 +594,15 @@ setup_mock_bridge :-
     retractall(mock_call(_)),
     assertz((swi_wasm_actor_bridge:toplevel_spawn(worker_actor(1), Opts) :-
                 test_statechart_wasm:record_mock_call(toplevel_spawn(Opts)))),
-    assertz((swi_wasm_actor_bridge:spawn(Goal, worker_actor(1), _Opts) :-
-                test_statechart_wasm:record_mock_call(spawn(Goal)))),
+    assertz((swi_wasm_actor_bridge:spawn(Goal, worker_actor(1), Opts) :-
+                test_statechart_wasm:record_mock_call(spawn(Goal)),
+                test_statechart_wasm:record_mock_call(spawn_options(Goal, Opts)))),
+    assertz((swi_wasm_actor_bridge:server_spawn(Callback, State, worker_actor(1), Opts) :-
+                test_statechart_wasm:record_mock_call(server_spawn(Callback, State, Opts)))),
+    assertz((swi_wasm_actor_bridge:supervisor_spawn(Children, worker_actor(1), Opts) :-
+                test_statechart_wasm:record_mock_call(supervisor_spawn(Children, Opts)))),
+    assertz((swi_wasm_actor_bridge:statechart_spawn(worker_actor(1), Opts) :-
+                test_statechart_wasm:record_mock_call(statechart_spawn(Opts)))),
     assertz((swi_wasm_actor_bridge:register(Name, Pid) :-
                 test_statechart_wasm:record_mock_call(register(Name, Pid)))),
     assertz((swi_wasm_actor_bridge:send(To, Msg) :-
@@ -564,7 +617,9 @@ setup_mock_bridge :-
                 test_statechart_wasm:record_mock_call(exit(Pid, Reason)))).
 
 teardown_mock_bridge :-
-    forall(member(PI, [toplevel_spawn/2, spawn/3, register/2, send/2, send/3,
+    forall(member(PI, [toplevel_spawn/2, spawn/3, server_spawn/4,
+                       supervisor_spawn/3, statechart_spawn/2,
+                       register/2, send/2, send/3,
                        toplevel_call/3, toplevel_next/1, exit/2]),
            catch(abolish(swi_wasm_actor_bridge:PI), _, true)),
     retractall(mock_call(_)),
@@ -580,9 +635,9 @@ teardown_mock_bridge :-
 test(toplevel_spawn_drives_chart,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     join_lines([
-        "<statechart initial=\"sac\">",
+        "<statechart version=\"0.2\" initial=\"sac\">",
         "  <state id=\"sac\" initial=\"ask\">",
-        "    <spawn type=\"toplevel\" exit=\"false\">",
+        "    <spawn type=\"toplevel\">",
         "      q(X) :- p(X).  p(a). p(b).",
         "    </spawn>",
         "    <state id=\"ask\">",
@@ -610,6 +665,13 @@ test(toplevel_spawn_drives_chart,
     statechart_send(success(worker_actor(1), b, false)),
     \+ statechart_running.
 
+test(toplevel_spawn_preserves_explicit_target,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" target="collector"/></state></statechart>'),
+    once(mock_call(toplevel_spawn(Options))),
+    assertion(memberchk(target(collector), Options)),
+    assertion(\+ memberchk(target(statechart), Options)).
+
 % <spawn type="actor" goal="..."> (cf. examples/statecharts/09 spawn-actor.xml):
 % invoke spawns the actor, spawned(Pid) registers it, <onentry> sends it a
 % ping addressed to `statechart` (self/1), and the actor's pong reply --
@@ -617,7 +679,7 @@ test(toplevel_spawn_drives_chart,
 test(actor_spawn_register_ping_pong,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     join_lines([
-        "<statechart initial=\"p\">",
+        "<statechart version=\"0.2\" initial=\"p\">",
         "  <state id=\"p\" initial=\"init\">",
         "    <spawn type=\"actor\" goal=\"ponger\">ponger :- true.</spawn>",
         "    <state id=\"init\">",
@@ -641,13 +703,82 @@ test(actor_spawn_register_ping_pong,
     statechart_send(pong),
     \+ statechart_running.
 
+test(actor_spawn_parses_typed_goal_and_options,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    join_lines([
+        "<statechart version=\"0.2\" initial=\"run\">",
+        "  <state id=\"run\">",
+        "    <spawn type=\"actor\" goal=\"worker(1)\" options=\"[monitor(true), link(false), src_uri('common.pl')]\">",
+        "      worker(_) :- true.",
+        "    </spawn>",
+        "  </state>",
+        "</statechart>"
+    ], Text),
+    start_text(Text),
+    assertion(mock_call(spawn(worker(1)))),
+    assertion(mock_call(spawn_options(worker(1), Options))),
+    assertion(memberchk(monitor(true), Options)),
+    assertion(memberchk(link(false), Options)),
+    assertion(memberchk(src_uri('common.pl'), Options)),
+    assertion(memberchk(src_text(_), Options)).
+
+test(spawn_rejects_unknown_type,
+     [ setup(setup_mock_bridge),
+       cleanup(teardown_mock_bridge),
+       throws(error(domain_error(statechart_spawn_type, daemon), _))
+     ]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="daemon"/></state></statechart>').
+
+test(spawn_rejects_load_source_alias,
+     [ setup(setup_mock_bridge),
+       cleanup(teardown_mock_bridge),
+       throws(error(domain_error(statechart_spawn_option(actor), load_text(source)), _))
+     ]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="actor" goal="worker" options="[load_text(source)]"/></state></statechart>').
+
+test(server_spawn_dispatches_operands_and_remaining_options,
+    [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="server" callback="counter" state="0" options="[monitor(true)]">counter(inc,N,N1,N1):-N1 is N+1.</spawn></state></statechart>'),
+    once(mock_call(server_spawn(counter, 0, Options))),
+    assertion(memberchk(monitor(true), Options)),
+    assertion(memberchk(src_text(_), Options)).
+
+test(supervisor_spawn_dispatches_children_and_remaining_options,
+    [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="supervisor" children="[]" options="[strategy(one_for_all),intensity(2),period(5)]"/></state></statechart>'),
+    once(mock_call(supervisor_spawn([], Options))),
+    assertion(Options == [strategy(one_for_all), intensity(2), period(5)]).
+
+test(nested_statechart_spawn_dispatches_source_options,
+    [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="statechart"><![CDATA[<statechart version="0.2" initial="child"><state id="child"/></statechart>]]></spawn></state></statechart>'),
+    once(mock_call(statechart_spawn(Options))),
+    assertion(memberchk(src_text(_), Options)).
+
+test(nested_statechart_accepts_supplemental_sources_and_controls,
+    [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="statechart" options="[src_list([helper(ok)]),src_predicates([parent_helper/1]),node(localhost),io_target(collector),trace(false)]"><![CDATA[<statechart version="0.2" initial="child"><state id="child"/></statechart>]]></spawn></state></statechart>'),
+    once(mock_call(statechart_spawn(Options))),
+    assertion(memberchk(src_list([helper(ok)]), Options)),
+    assertion(memberchk(src_predicates([parent_helper/1]), Options)),
+    assertion(memberchk(node(localhost), Options)),
+    assertion(memberchk(io_target(collector), Options)),
+    assertion(memberchk(trace(false), Options)).
+
+test(spawn_rejects_unknown_option,
+     [ setup(setup_mock_bridge),
+       cleanup(teardown_mock_bridge),
+       throws(error(domain_error(statechart_spawn_option(toplevel), exit(false)), _))
+     ]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" exit="false"/></state></statechart>').
+
 % Cancellation on state exit (SCXML <invoke> contract): when the state
 % owning a <spawn> is exited, its child is terminated.  The desktop runtime
 % does `exit(Pid, stop)`; the WASM port routes that to the bridge.
 test(child_cancelled_on_state_exit,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     join_lines([
-        "<statechart initial=\"sup\">",
+        "<statechart version=\"0.2\" initial=\"sup\">",
         "  <state id=\"sup\" initial=\"run\">",
         "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
         "    <state id=\"run\"><go to=\"stopped\" on=\"quit\"/></state>",
@@ -684,7 +815,7 @@ test(chart_script_reaches_full_actor_api,
 % coordinator routes to `statechart` and confirm the chart transitions.
 test(chart_reacts_to_child_down, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "  <state id=\"waiting\">",
         "    <go to=\"done\" on=\"down(_Pid, _Ref, _Reason)\"/>",
         "  </state>",
@@ -703,7 +834,7 @@ test(chart_reacts_to_child_down, [cleanup(statechart_stop)]) :-
 % matches remote-pid events.
 test(chart_handles_remote_pid_events, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"a\">",
+        "<statechart version=\"0.2\" initial=\"a\">",
         "  <state id=\"a\"><go to=\"b\" on=\"success(_@_, _, false)\"/></state>",
         "  <state id=\"b\"><go to=\"done\" on=\"down(_@_, _, _)\"/></state>",
         "  <final id=\"done\"/>",
@@ -720,7 +851,7 @@ test(chart_handles_remote_pid_events, [cleanup(statechart_stop)]) :-
 test(child_terminated_on_stop,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     join_lines([
-        "<statechart initial=\"run\">",
+        "<statechart version=\"0.2\" initial=\"run\">",
         "  <state id=\"run\">",
         "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
         "  </state>",
@@ -737,7 +868,7 @@ test(child_terminated_on_stop,
 test(child_terminated_on_replacement_start,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     join_lines([
-        "<statechart initial=\"run\">",
+        "<statechart version=\"0.2\" initial=\"run\">",
         "  <state id=\"run\">",
         "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
         "  </state>",
@@ -745,14 +876,14 @@ test(child_terminated_on_replacement_start,
     ], Text1),
     start_text(Text1),
     assertion(mock_call(spawn(worker))),
-    start_text("<statechart initial=\"x\"><state id=\"x\"/></statechart>"),
+    start_text("<statechart version=\"0.2\" initial=\"x\"><state id=\"x\"/></statechart>"),
     assertion(mock_call(exit(worker_actor(1), stop))).
 
 % A <datamodel>'s predicates are abolished on the next chart, so one
 % chart's data/rules do not leak into the next.
 test(datamodel_isolated_across_charts, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"s\">",
+        "<statechart version=\"0.2\" initial=\"s\">",
         "  <datamodel>:- dynamic(leaked/1).\nleaked(old).\n</datamodel>",
         "  <state id=\"s\"/>",
         "</statechart>"
@@ -760,7 +891,7 @@ test(datamodel_isolated_across_charts, [cleanup(statechart_stop)]) :-
     start_text(Chart1),
     assertion(statechart_wasm:leaked(old)),
     join_lines([
-        "<statechart initial=\"s\">",
+        "<statechart version=\"0.2\" initial=\"s\">",
         "  <datamodel>:- dynamic(leaked/1).\nleaked(new).\n</datamodel>",
         "  <state id=\"s\"/>",
         "</statechart>"
@@ -773,14 +904,14 @@ test(datamodel_isolated_across_charts, [cleanup(statechart_stop)]) :-
 % -- not just a plain fact -- is also abolished on the next chart.
 test(datamodel_directive_predicates_isolated, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"s\">",
+        "<statechart version=\"0.2\" initial=\"s\">",
         "  <datamodel>:- dynamic(leaked/1).\n:- assertz(leaked(old)).\n</datamodel>",
         "  <state id=\"s\"/>",
         "</statechart>"
     ], Chart1),
     start_text(Chart1),
     assertion(statechart_wasm:leaked(old)),
-    start_text("<statechart initial=\"s\"><state id=\"s\"/></statechart>"),
+    start_text("<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>"),
     assertion(\+ current_predicate(statechart_wasm:leaked/1)).
 
 % A spawned child is cancelled exactly once: a transition that exits its
@@ -789,7 +920,7 @@ test(datamodel_directive_predicates_isolated, [cleanup(statechart_stop)]) :-
 test(invoked_child_cancelled_once,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
     join_lines([
-        "<statechart initial=\"sup\">",
+        "<statechart version=\"0.2\" initial=\"sup\">",
         "  <state id=\"sup\" initial=\"run\">",
         "    <spawn type=\"actor\" goal=\"worker\">worker :- true.</spawn>",
         "    <state id=\"run\"><go to=\"stopped\" on=\"quit\"/></state>",
@@ -808,7 +939,7 @@ test(invoked_child_cancelled_once,
 % the child.  Guards the desktop/no-runtime path.
 test(spawn_without_bridge_is_a_noop, [cleanup(statechart_stop)]) :-
     join_lines([
-        "<statechart initial=\"s\">",
+        "<statechart version=\"0.2\" initial=\"s\">",
         "  <state id=\"s\">",
         "    <spawn type=\"actor\" goal=\"child\">child :- true.</spawn>",
         "  </state>",

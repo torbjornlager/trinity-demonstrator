@@ -1,4 +1,4 @@
-<statechart datamodel="web-prolog" initial="Start">
+<statechart version="0.2" initial="Start">
     <parallel id="Start">
         <state id="Left"/>
         <state id="Right"/>

@@ -7,11 +7,9 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="Pingpong">
+<statechart version="0.2" initial="Pingpong">
     <state id="Pingpong" initial="Init">
-        <spawn type="actor" goal="ponger">
+        <spawn type="actor" goal="ponger" options="[monitor(true)]">
             ponger :-
                 receive({
                     ping(Pid) ->

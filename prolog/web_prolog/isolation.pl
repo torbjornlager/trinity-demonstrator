@@ -420,18 +420,13 @@ normalize_source_option(Option0, GoalModule, SourceOption) :-
 
 %!  canonical_source_option(+Option, -CanonicalOption) is semidet.
 %
-%   Recognise canonical src_* source options and the deprecated load_*
-%   spellings accepted at compatibility boundaries.  This is deliberately
-%   a shallow rewrite: callers that need to retain src_list/src_predicates
-%   for policy or size diagnostics can canonicalise before materialising.
+%   Recognise canonical src_* source options.  This is deliberately a shallow
+%   rewrite: callers that need to retain src_list/src_predicates for policy or
+%   size diagnostics can canonicalise before materialising.
 canonical_source_option(src_text(Text), src_text(Text)).
 canonical_source_option(src_uri(URI), src_uri(URI)).
 canonical_source_option(src_list(Terms), src_list(Terms)).
 canonical_source_option(src_predicates(PIs), src_predicates(PIs)).
-canonical_source_option(load_text(Text), src_text(Text)).
-canonical_source_option(load_uri(URI), src_uri(URI)).
-canonical_source_option(load_list(Terms), src_list(Terms)).
-canonical_source_option(load_predicates(PIs), src_predicates(PIs)).
 
 
 normalize_canonical_source_option(src_text(Text0), _, src_text(Text)) :-

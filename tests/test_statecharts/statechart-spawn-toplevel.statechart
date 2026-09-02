@@ -1,4 +1,4 @@
-<statechart datamodel="web-prolog" initial="spawn-ask-collect">
+<statechart version="0.2" initial="spawn-ask-collect">
     <state id="spawn-ask-collect" initial="ask">
         <spawn type="toplevel">
             q(X) :- p(X).

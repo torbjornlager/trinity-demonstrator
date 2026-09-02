@@ -283,14 +283,31 @@ async function main() {
 
   // 11. Statechart creation is coordinated from JS so src_uri and Worker
   // placement stay node-controller responsibilities.
-  const chartP = S.actorStatechartSpawn("uri", "/examples/chart.xml");
+  const chartP = S.actorStatechartSpawn(
+    "uri", "/examples/chart.xml", "helper(ok).", "inner", "false",
+    "collector", "false"
+  );
   const chartReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "statechart_spawn";
   }).pop();
-  ok(!!chartReq && chartReq.source === "/examples/chart.xml" && !("trace" in chartReq),
+  ok(!!chartReq && chartReq.source === "/examples/chart.xml" &&
+     chartReq.supportSource === "helper(ok)." && chartReq.name === "inner" &&
+     chartReq.link === false && chartReq.ioTarget === "collector" &&
+     chartReq.trace === false,
      "statechart spawn is delegated to the node controller");
   S.onmessage({ data: { command: "reply", id: chartReq.id, ok: true, result: "5500000000" } });
   ok((await chartP) === "5500000000", "statechart spawn returns its Worker pid");
+
+  const inheritedChartP = S.actorStatechartSpawn(
+    "text", "<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>", "", "", "true", "", "true"
+  );
+  const inheritedChartReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "statechart_spawn";
+  }).pop();
+  ok(typeof inheritedChartReq.ioTarget === "string" && inheritedChartReq.ioTarget.length > 0,
+     "nested statechart output defaults to its spawning actor");
+  S.onmessage({ data: { command: "reply", id: inheritedChartReq.id, ok: true, result: "5600000000" } });
+  await inheritedChartP;
 
   // 12. Deliberate terminal output from a statechart remains a Prolog term
   // for the coordinator to place in the spawning shell's actor mailbox.

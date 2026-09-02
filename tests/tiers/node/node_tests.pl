@@ -323,8 +323,8 @@ test(expand_dollar_vars_expands_top_level_code,
     expand_dollar_vars("$Pid ! hello", ['Pid'-123], Text).
 
 test(expand_dollar_vars_leaves_quoted_xml_comment_text_unchanged,
-     true(Text == "statechart_spawn(Pid, [src_text(\"<!-- $Pid -->\\n<statechart/>\")])")) :-
-    expand_dollar_vars("statechart_spawn(Pid, [src_text(\"<!-- $Pid -->\n<statechart/>\")])",
+     true(Text == "statechart_spawn(Pid, [src_text(\"<!-- $Pid -->\\n<statechart version=\\\"0.2\\\" initial=\\\"s\\\"><state id=\\\"s\\\"/></statechart>\")])")) :-
+    expand_dollar_vars("statechart_spawn(Pid, [src_text(\"<!-- $Pid -->\n<statechart version=\\\"0.2\\\" initial=\\\"s\\\"><state id=\\\"s\\\"/></statechart>\")])",
                        ['Pid'-123],
                        Text).
 
@@ -7424,7 +7424,7 @@ test(isotope_call_rejects_statechart_spawn_on_http_isotope_session,
             get_dict(pid, Spawned, SessionPid),
 
             atomics_to_string([
-                "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+                "<statechart version=\"0.2\" initial=\"Idle\">\n",
                 "  <state id=\"Idle\">\n",
                 "    <onentry>output('IDLE')</onentry>\n",
                 "  </state>\n",

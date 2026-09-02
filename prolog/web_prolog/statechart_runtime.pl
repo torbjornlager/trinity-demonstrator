@@ -53,6 +53,8 @@ statechart actor interpreter. The runtime state itself lives in
 
 :- use_module(actors).
 :- use_module(toplevel_actors).
+:- use_module(server_actor, [server_spawn/4]).
+:- use_module(supervisor_actor, [supervisor_spawn/3]).
 
 :- use_module(library(option)).
 :- use_module(library(debug)).
@@ -69,7 +71,6 @@ clean :-
     retractall(statechart_actor:state(_, _)),
     retractall(statechart_actor:to_be_invoked(_, _, _)),
     retractall(statechart_actor:initial(_)),
-    retractall(statechart_actor:initial(_, _)),
     retractall(statechart_actor:transition(_, _, _, _, _)),
     retractall(statechart_actor:after_transition(_, _, _, _, _, _)),
     retractall(statechart_actor:defer(_, _, _)),
@@ -110,8 +111,6 @@ root_state(Root) :-
 
 initial_state(Root, Initial) :-
     (   statechart_actor:initial(Initial)
-    ->  true
-    ;   statechart_actor:transition(init(Root), '', true, [Initial|_], _)
     ->  true
     ;   throw(error(missing_initial_state(Root), _))
     ).
@@ -351,6 +350,62 @@ invoke(State) :-
     assertz(statechart_actor:invoked(State, Pid)),
     enqueue_internal_event(spawned(Pid)),
     fail.
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, server, Options0),
+    select_option(callback(Callback), Options0, Options1),
+    select_option(state(ServerState), Options1, Options),
+    server_spawn(Callback, ServerState, Pid, Options),
+    emit_trace(invoked(server, Pid, State)),
+    debug(statechart_actor(invoke), '      Invoked: server ~p at ~p', [Pid, State]),
+    assertz(statechart_actor:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, supervisor, Options0),
+    select_option(children(Children), Options0, Options),
+    supervisor_spawn(Children, Pid, Options),
+    emit_trace(invoked(supervisor, Pid, State)),
+    debug(statechart_actor(invoke), '      Invoked: supervisor ~p at ~p', [Pid, State]),
+    assertz(statechart_actor:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, statechart, Options),
+    execution_source_module(statechart_actor, SourceModule),
+    statechart_actor:statechart_spawn(Pid, SourceModule:Options),
+    emit_trace(invoked(statechart, Pid, State)),
+    debug(statechart_actor(invoke), '      Invoked: statechart ~p at ~p', [Pid, State]),
+    assertz(statechart_actor:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, actor, Options),
+    \+ option(goal(_), Options),
+    throw(error(existence_error(option, goal),
+                context(statechart_runtime:invoke/1,
+                        '<spawn type="actor"> requires goal/1'))).
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, server, Options),
+    (   \+ option(callback(_), Options)
+    ->  Missing = callback
+    ;   \+ option(state(_), Options),
+        Missing = state
+    ),
+    throw(error(existence_error(option, Missing),
+                context(statechart_runtime:invoke/1,
+                        '<spawn type="server"> requires callback/1 and state/1'))).
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, supervisor, Options),
+    \+ option(children(_), Options),
+    throw(error(existence_error(option, children),
+                context(statechart_runtime:invoke/1,
+                        '<spawn type="supervisor"> requires children/1'))).
+invoke(State) :-
+    statechart_actor:to_be_invoked(State, Type, _),
+    \+ memberchk(Type, [actor, toplevel, server, supervisor, statechart]),
+    throw(error(domain_error(statechart_spawn_type, Type),
+                context(statechart_runtime:invoke/1,
+                        'supported spawn types are actor, toplevel, server, supervisor, and statechart'))).
 invoke(_).
 
 raise(Event) :-

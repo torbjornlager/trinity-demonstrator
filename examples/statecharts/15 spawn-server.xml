@@ -1,0 +1,46 @@
+<!--
+This example gives the compound state ServerOwner its own stateful server.
+The body of <spawn> defines the counter/4 callback, while state="0" supplies
+the server's initial state.  name(counter_server) lets the chart address the
+child without retaining its pid, and monitor(true) reports its termination.
+
+Once spawned(Pid) arrives, the chart requests increment.  counter/4 changes
+the stored state from 0 to 1 and returns 1 as Reply, which the Call state
+prints before raising done.  Reaching Final exits ServerOwner, so the invoked
+server is cleaned up with the state that owns it.
+-->
+
+<statechart version="0.2" initial="ServerOwner">
+    <state id="ServerOwner" initial="Start">
+        <spawn type="server"
+               callback="counter"
+               state="0"
+               options="[name(counter_server), monitor(true)]">
+            counter(increment, Old, New, New) :-
+                New is Old + 1.
+        </spawn>
+        <state id="Start">
+            <go to="Call" on="spawned(_)" />
+        </state>
+        <state id="Call">
+            <onentry>
+                server_request(counter_server, increment, Reply),
+                writeln(reply(Reply)),
+                raise(done)
+            </onentry>
+            <go to="Final" on="done" />
+        </state>
+    </state>
+    <final id="Final" />
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

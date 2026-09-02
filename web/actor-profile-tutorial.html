@@ -2672,12 +2672,9 @@ fridge2(_Other,      List, error(unknown_request), List).
     The XML source is reproduced here for reference:
 </p>
 
-<pre>&lt;statechart datamodel="web-prolog" initial="game"&gt;
+<pre>&lt;statechart version="0.2" initial="game"&gt;
     &lt;state id="game" initial="play"&gt;
-        &lt;state id="play"&gt;
-            &lt;initial&gt;
-                &lt;go to="s1" /&gt;
-            &lt;/initial&gt;
+        &lt;state id="play" initial="s1"&gt;
             &lt;history id="h"&gt;
                 &lt;go to="s1" /&gt;
             &lt;/history&gt;
@@ -3374,7 +3371,7 @@ fridge2(_Other,      List, error(unknown_request), List).
     one value remains and the result is printed.
 </p>
 
-<pre>&lt;statechart datamodel="web-prolog" initial="init"&gt;
+<pre>&lt;statechart version="0.2" initial="init"&gt;
     &lt;datamodel&gt;
         :- dynamic int/1.
     &lt;/datamodel&gt;
@@ -3514,9 +3511,9 @@ fridge2(_Other,      List, error(unknown_request), List).
     <code>toplevel_call/3</code> with <code>limit(1)</code>.
 </p>
 
-<pre>&lt;statechart datamodel="web-prolog" initial="spawn-ask-collect"&gt;
+<pre>&lt;statechart version="0.2" initial="spawn-ask-collect"&gt;
     &lt;state id="spawn-ask-collect" initial="ask"&gt;
-        &lt;spawn type="toplevel" exit="false"&gt;
+        &lt;spawn type="toplevel" options="[time_limit(30)]"&gt;
             q(X) :- p(X).
             p(a). p(b). p(c). p(d).
         &lt;/spawn&gt;

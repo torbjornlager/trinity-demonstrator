@@ -7,9 +7,7 @@
     
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="s">
+<statechart version="0.2" initial="s">
     <datamodel>
         p(a,b). 
         p(b,c). 

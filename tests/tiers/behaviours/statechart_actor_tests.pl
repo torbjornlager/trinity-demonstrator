@@ -8,6 +8,7 @@
 
 :- use_module(library(plunit)).
 :- use_module('../../../prolog/web_prolog/statechart_actor.pl').
+:- use_module('../../../prolog/web_prolog/composition.pl', []).
 :- use_module('../../../prolog/web_prolog/actors.pl', [
     spawn/2,
     spawn/3,
@@ -16,6 +17,7 @@
     send/2,
     receive/1,
     receive/2,
+    register/2,
     whereis/2,
     unregister/1,
     exit/2
@@ -53,26 +55,160 @@ test(api_exposes_only_source_aware_spawn) :-
     predicate_property(statechart_actor:in(_), exported),
     \+ current_predicate(statechart_actor:statechart_spawn/1).
 
+test(statechart_spawn_rejects_load_source_alias,
+     [throws(error(existence_error(option, src_uri_or_src_text), _))]) :-
+    statechart_model:statechart_spawn_source([load_text(ignored)], _, _).
+
 test(parse_simple_root, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     parse_statechart_fixture('test_statecharts/statechart-simple.statechart'),
     statechart_actor:state(statechart_actor, null),
     statechart_actor:initial(s1).
 
-test(parse_initial_element, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
-    parse_statechart_fixture('test_statecharts/statechart-initial-element.statechart'),
-    statechart_actor:state(Root, null),
-    statechart_actor:transition(init(Root), '', true, [Initial|_], _),
-    Initial == s1.
+test(rejects_initial_element,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(sxml_element, initial), _))
+     ]) :-
+    parse_statechart_fixture('test_statecharts/statechart-initial-element.statechart').
+
+test(requires_root_initial_attribute,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(existence_error(attribute, initial), _))
+    ]) :-
+    statechart_model:statechart_actor_parse_text(
+        "<statechart version=\"0.2\"><state id=\"s\"/></statechart>").
+
+test(requires_version_attribute,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(existence_error(attribute, version), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        "<statechart initial=\"s\"><state id=\"s\"/></statechart>").
+
+test(rejects_unsupported_version,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_version, '0.1'), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        "<statechart version=\"0.1\" initial=\"s\"><state id=\"s\"/></statechart>").
+
+test(requires_compound_state_initial_attribute,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(existence_error(attribute, initial), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        "<statechart version=\"0.2\" initial=\"outer\"><state id=\"outer\"><state id=\"inner\"/></state></statechart>").
 
 test(parse_spawn, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     parse_statechart_fixture('test_statecharts/statechart-spawn-toplevel.statechart'),
     statechart_actor:to_be_invoked('spawn-ask-collect', toplevel, Options),
-    memberchk(src_list(_), Options).
+    memberchk(src_text(_), Options).
+
+test(parse_spawn_typed_goal_options_and_source,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"s\"><state id=\"s\">",
+        "<spawn type=\"actor\" goal=\"worker(1)\" ",
+        "options=\"[monitor(true), link(false), src_uri('common.pl')]\">",
+        "worker(_) :- true.",
+        "</spawn></state></statechart>"
+    ], Text),
+    statechart_model:statechart_actor_parse_text(Text),
+    statechart_actor:to_be_invoked(s, actor, Options),
+    assertion(memberchk(goal(worker(1)), Options)),
+    assertion(memberchk(monitor(true), Options)),
+    assertion(memberchk(link(false), Options)),
+    assertion(memberchk(src_uri('common.pl'), Options)),
+    assertion(memberchk(src_text('worker(_) :- true.'), Options)).
+
+test(parse_spawn_direct_attributes_are_typed,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"s\"><state id=\"s\">",
+        "<spawn type=\"toplevel\" session=\"true\" time_limit=\"5\"/>",
+        "</state></statechart>"
+    ], Text),
+    statechart_model:statechart_actor_parse_text(Text),
+    statechart_actor:to_be_invoked(s, toplevel, Options),
+    assertion(memberchk(session(true), Options)),
+    assertion(memberchk(time_limit(5), Options)).
+
+test(parse_spawn_rejects_unknown_type,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_spawn_type, daemon), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="daemon"/></state></statechart>').
+
+test(parse_spawn_server_operands_and_options,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="server" callback="counter" state="0" options="[name(counting)]">counter(inc,N,N1,N1):-N1 is N+1.</spawn></state></statechart>'),
+    statechart_actor:to_be_invoked(s, server, Options),
+    assertion(memberchk(callback(counter), Options)),
+    assertion(memberchk(state(0), Options)),
+    assertion(memberchk(name(counting), Options)),
+    assertion(memberchk(src_text(_), Options)).
+
+test(parse_spawn_supervisor_operands_and_options,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="supervisor" children="[child(worker,[start(true),restart(temporary)])]" strategy="one_for_all" intensity="3" period="10"/></state></statechart>'),
+    statechart_actor:to_be_invoked(s, supervisor, Options),
+    assertion(memberchk(children([child(worker, _)]), Options)),
+    assertion(memberchk(strategy(one_for_all), Options)),
+    assertion(memberchk(intensity(3), Options)),
+    assertion(memberchk(period(10), Options)).
+
+test(parse_spawn_nested_statechart_requires_exactly_one_source,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="statechart" src_uri="\'child.xml\'" options="[monitor(true)]"/></state></statechart>'),
+    statechart_actor:to_be_invoked(s, statechart, Options),
+    assertion(memberchk(src_uri('child.xml'), Options)),
+    assertion(memberchk(monitor(true), Options)).
+
+test(parse_spawn_nested_statechart_rejects_missing_source,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(existence_error(option, src_uri_or_src_text), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="statechart"/></state></statechart>').
+
+test(parse_spawn_actor_requires_goal,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(existence_error(attribute, goal), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="actor"/></state></statechart>').
+
+test(parse_spawn_rejects_unknown_option,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_spawn_option(toplevel), exit(false)), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" exit="false"/></state></statechart>').
+
+test(parse_spawn_options_must_be_ground_list,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_spawn_option(actor), monitor(_)), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="actor" goal="worker" options="[monitor(X)]"/></state></statechart>').
 
 test(parse_after_transition,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "<state id=\"waiting\"><go to=\"done\" after=\"0.25\"/></state>",
         "<state id=\"done\"/>",
         "</statechart>"
@@ -88,7 +224,7 @@ test(parse_after_rejects_on,
                                  on_and_after), _))
      ]) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "<state id=\"waiting\">",
         "<go to=\"done\" on=\"go\" after=\"1\"/>",
         "</state>",
@@ -97,10 +233,18 @@ test(parse_after_rejects_on,
     ], Text),
     statechart_model:statechart_actor_parse_text(Text).
 
+test(parse_spawn_rejects_load_source_alias,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_spawn_option(actor), load_text(source)), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="actor" goal="worker" options="[load_text(source)]"/></state></statechart>').
+
 test(parse_defer,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">",
+        "<statechart version=\"0.2\" initial=\"waiting\">",
         "<state id=\"waiting\">",
         "<defer on=\"command(C)\" if=\"C == later\"/>",
         "</state>",
@@ -176,6 +320,126 @@ test(runtime_spawn_toplevel_finishes, [setup(start_statechart_actor('test_statec
                                                  current_predicate(actors:make_ref/1)))]) :-
     await_down(Pid, 3.0).
 
+test(runtime_spawn_toplevel_supports_explicit_target) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"run\">",
+        "<state id=\"run\">",
+        "<spawn type=\"toplevel\" target=\"statechart_spawn_test_target\" options=\"[monitor(true)]\"/>",
+        "<go on=\"spawned(Pid)\">",
+        "toplevel_call(Pid,true,[template(true),limit(1)])",
+        "</go>",
+        "</state>",
+        "</statechart>"
+    ], Text),
+    self(Self),
+    setup_call_cleanup(
+        register(statechart_spawn_test_target, Self),
+        setup_call_cleanup(
+            statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+            receive({
+                success(_ToplevelPid, [true], false) -> true
+            }, [timeout(2), on_timeout(fail)]),
+            catch(exit(Pid, stop), _, true)
+        ),
+        catch(unregister(statechart_spawn_test_target), _, true)
+    ).
+
+test(runtime_spawn_actor_accepts_compound_goal_and_raw_source) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"run\">\n",
+        "  <state id=\"run\">\n",
+        "    <spawn type=\"actor\" goal=\"worker(1)\" options=\"[link(false)]\">\n",
+        "      :- op(500, xfx, likes).\n",
+        "      worker(1) :- alice likes bob.\n",
+        "      alice likes bob.\n",
+        "    </spawn>\n",
+        "    <go to=\"done\" on=\"spawned(_)\"/>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        await_down(Pid, 2.0),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_spawn_server_supports_callback_state_and_source) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"server_owner\">\n",
+        "  <state id=\"server_owner\" initial=\"run\">\n",
+        "    <spawn type=\"server\" callback=\"counter\" state=\"0\" options=\"[name(spawn_counter)]\">\n",
+        "      counter(inc, N, N1, N1) :- N1 is N+1.\n",
+        "    </spawn>\n",
+        "    <state id=\"run\"><go to=\"check\" on=\"spawned(_)\"/></state>\n",
+        "    <state id=\"check\">\n",
+        "      <onentry>server_request(spawn_counter, inc, 1), raise(ok)</onentry>\n",
+        "      <go to=\"done\" on=\"ok\"/>\n",
+        "    </state>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        await_down(Pid, 2.0),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_spawn_supervisor_supports_children_and_policy) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"supervisor_owner\">\n",
+        "  <state id=\"supervisor_owner\" initial=\"run\">\n",
+        "    <spawn type=\"supervisor\" children=\"[]\" options=\"[name(spawn_supervisor),strategy(one_for_all),intensity(2),period(5)]\"/>\n",
+        "    <state id=\"run\"><go to=\"check\" on=\"spawned(_)\"/></state>\n",
+        "    <state id=\"check\">\n",
+        "      <onentry>supervisor_count_children(spawn_supervisor, [specs-0,active-0,supervisors-0,workers-0]), raise(ok)</onentry>\n",
+        "      <go to=\"done\" on=\"ok\"/>\n",
+        "    </state>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text(Text), monitor(true)]),
+        await_down(Pid, 2.0),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_spawn_nested_statechart_with_extended_options) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"nested_owner\">\n",
+        "  <state id=\"nested_owner\" initial=\"run\">\n",
+        "    <spawn type=\"statechart\" options=\"[monitor(true),node(localhost),io_target(main),trace(false),src_list([spawn_support_list(from_list)]),src_predicates([spawn_support_predicate/1])]\"><![CDATA[\n",
+        "      <statechart version=\"0.2\" initial=\"waiting\">\n",
+        "        <state id=\"waiting\">\n",
+        "          <onentry>spawn_support_list(A),spawn_support_predicate(B),writeln(child_io(A,B)),raise(finish)</onentry>\n",
+        "          <go to=\"done\" on=\"finish\"/>\n",
+        "        </state>\n",
+        "        <final id=\"done\"/>\n",
+        "      </statechart>\n",
+        "    ]]></spawn>\n",
+        "    <state id=\"run\"><go to=\"done\" on=\"down(_, _, _)\"/></state>\n",
+        "  </state>\n",
+        "  <final id=\"done\"/>\n",
+        "</statechart>"
+    ], Text),
+    setup_call_cleanup(
+        statechart_spawn(Pid, [
+            src_text(Text),
+            src_list([spawn_support_predicate(from_predicates)]),
+            monitor(true)
+        ]),
+        (
+            receive({
+                terminal_io_output(_ChildPid,
+                                   child_io(from_list, from_predicates)) -> true
+            }, [timeout(2), on_timeout(fail)]),
+            await_down(Pid, 2.0)
+        ),
+        catch(exit(Pid, stop), _, true)
+    ).
+
 test(runtime_statechart_spawn_load_uri_relative_game) :-
     statechart_tests_directory(TestsDir),
     file_directory_name(TestsDir, RepoDir),
@@ -199,7 +463,7 @@ test(runtime_statechart_spawn_load_uri_relative_game) :-
 
 test(runtime_statechart_spawn_from_toplevel_load_text) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>output('IDLE')</onentry>\n",
         "    <go to=\"Running\" on=\"play\"/>\n",
@@ -238,7 +502,7 @@ test(runtime_statechart_spawn_from_toplevel_load_text) :-
 
 test(runtime_statechart_spawn_name_registers_pid) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>output('IDLE')</onentry>\n",
         "  </state>\n",
@@ -263,7 +527,7 @@ test(runtime_statechart_spawn_name_registers_pid) :-
 
 test(runtime_statechart_halt_reply_and_shutdown) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "  </state>\n",
         "</statechart>\n"
@@ -280,7 +544,7 @@ test(runtime_statechart_halt_reply_and_shutdown) :-
 
 test(runtime_statechart_halt_timeout_defaults_reply_true) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>sleep(2)</onentry>\n",
         "  </state>\n",
@@ -300,7 +564,7 @@ test(runtime_statechart_halt_timeout_defaults_reply_true) :-
 
 test(runtime_statechart_halt_timeout_honors_custom_on_timeout) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>sleep(2)</onentry>\n",
         "  </state>\n",
@@ -320,7 +584,7 @@ test(runtime_statechart_halt_timeout_honors_custom_on_timeout) :-
 
 test(runtime_statechart_writeln_uses_actor_io_path) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>writeln('IDLE')</onentry>\n",
         "  </state>\n",
@@ -347,7 +611,7 @@ test(runtime_statechart_writeln_uses_actor_io_path) :-
 
 test(runtime_statechart_automatically_emits_terminal_trace_messages) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>output('IDLE')</onentry>\n",
         "    <go to=\"Running\" on=\"play\"/>\n",
@@ -370,7 +634,7 @@ test(runtime_statechart_automatically_emits_terminal_trace_messages) :-
 
 test(runtime_statechart_trace_routes_through_client_session_automatically) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n",
+        "<statechart version=\"0.2\" initial=\"Idle\">\n",
         "  <state id=\"Idle\">\n",
         "    <onentry>output('IDLE')</onentry>\n",
         "    <go to=\"Running\" on=\"play\"/>\n",
@@ -399,14 +663,42 @@ test(runtime_statechart_trace_routes_through_client_session_automatically) :-
               true)
     ).
 
-test(runtime_statechart_trace_spawn_option_is_removed,
-     [throws(error(domain_error(statechart_spawn_option, trace(true)), _))]) :-
-    statechart_spawn(_Pid,
-                     [src_text("<statechart/>"), trace(true)]).
+test(runtime_statechart_trace_false_suppresses_trace) :-
+    setup_call_cleanup(
+        statechart_spawn(Pid, [src_text("<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>"),
+                               trace(false), monitor(true)]),
+        \+ receive({
+               terminal_output(Pid, statechart_trace(_)) -> true
+           }, [timeout(0.1), on_timeout(fail)]),
+        catch(exit(Pid, stop), _, true)
+    ).
+
+test(runtime_statechart_supplemental_list_and_predicate_sources,
+     [ setup(assertz(plunit_statechart_profile_runtime:spawn_support_predicate(from_predicates))),
+       cleanup(retractall(plunit_statechart_profile_runtime:spawn_support_predicate(_)))
+     ]) :-
+    atomics_to_string([
+        "<statechart version=\"0.2\" initial=\"run\">",
+        "<state id=\"run\"><onentry>",
+        "spawn_support_list(A),spawn_support_predicate(B),",
+        "output(support(A,B)),raise(done)",
+        "</onentry><go to=\"final\" on=\"done\"/></state>",
+        "<final id=\"final\"/></statechart>"
+    ], Text),
+    statechart_spawn(Pid, [
+        src_text(Text),
+        src_list([spawn_support_list(from_list)]),
+        src_predicates([spawn_support_predicate/1]),
+        monitor(true)
+    ]),
+    receive({
+        output(Pid, support(from_list, from_predicates)) -> true
+    }, [timeout(2), on_timeout(fail)]),
+    await_down(Pid, 2.0).
 
 test(runtime_statechart_raise_onentry_triggers_internal_transition) :-
     atomics_to_string([
-        "<statechart datamodel=\"web-prolog\" initial=\"Start\">\n",
+        "<statechart version=\"0.2\" initial=\"Start\">\n",
         "  <parallel id=\"Start\">\n",
         "    <state id=\"Pinger\">\n",
         "      <onentry>raise(hello)</onentry>\n",
@@ -430,7 +722,7 @@ test(runtime_statechart_raise_onentry_triggers_internal_transition) :-
 
 test(runtime_after_transition_fires) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">\n",
+        "<statechart version=\"0.2\" initial=\"waiting\">\n",
         "  <state id=\"waiting\">\n",
         "    <go to=\"done\" after=\"0.02\"/>\n",
         "  </state>\n",
@@ -445,7 +737,7 @@ test(runtime_after_transition_fires) :-
 
 test(runtime_after_transition_cancelled_on_exit) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">\n",
+        "<statechart version=\"0.2\" initial=\"waiting\">\n",
         "  <state id=\"waiting\">\n",
         "    <go to=\"timed_out\" after=\"0.10\"/>\n",
         "    <go to=\"left\" on=\"leave\"/>\n",
@@ -473,7 +765,7 @@ test(runtime_after_transition_cancelled_on_exit) :-
 
 test(runtime_deferred_event_reoffered_after_state_change) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">\n",
+        "<statechart version=\"0.2\" initial=\"waiting\">\n",
         "  <state id=\"waiting\">\n",
         "    <defer on=\"finish\"/>\n",
         "    <go to=\"ready\" on=\"start\"/>\n",
@@ -496,7 +788,7 @@ test(runtime_deferred_event_reoffered_after_state_change) :-
 
 test(runtime_enabled_transition_precedes_deferral) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">\n",
+        "<statechart version=\"0.2\" initial=\"waiting\">\n",
         "  <state id=\"waiting\">\n",
         "    <defer on=\"finish\"/>\n",
         "    <go to=\"done\" on=\"finish\"/>\n",
@@ -668,7 +960,7 @@ test(trace_golden_parallel_compatible, [setup(enable_trace_capture),
 test(after_reentry_ignores_stale_firing,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     atomics_to_string([
-        "<statechart initial=\"waiting\">\n",
+        "<statechart version=\"0.2\" initial=\"waiting\">\n",
         "  <state id=\"waiting\">\n",
         "    <go to=\"timed_out\" after=\"100\"/>\n",
         "    <go to=\"away\" on=\"leave\"/>\n",

@@ -191,10 +191,6 @@ rpc_internal_option(src_text(_)).
 rpc_internal_option(src_list(_)).
 rpc_internal_option(src_uri(_)).
 rpc_internal_option(src_predicates(_)).
-rpc_internal_option(load_text(_)).
-rpc_internal_option(load_list(_)).
-rpc_internal_option(load_uri(_)).
-rpc_internal_option(load_predicates(_)).
 rpc_internal_option(once(_)).
 
 %!  append_optional_param(+Search0, +Key, +Value, -Search) is det.

@@ -7,17 +7,9 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="s0">
-    <state id="s0">
-        <initial>
-            <go to="s1" />
-        </initial>
-        <state id="s1">
-            <initial>
-                <go to="s11" />
-            </initial>
+<statechart version="0.2" initial="s0">
+    <state id="s0" initial="s1">
+        <state id="s1" initial="s11">
             <state id="s11">
                 <go to="s211" on="g" />
             </state>
@@ -27,14 +19,8 @@
             <go to="s0" on="d" />
             <go to="s211" on="f" />
         </state>
-        <state id="s2">
-            <initial>
-                <go to="s21" />
-            </initial>
-            <state id="s21">
-                <initial>
-                    <go to="s211" />
-                </initial>
+        <state id="s2" initial="s21">
+            <state id="s21" initial="s211">
                 <state id="s211">
                     <go to="s21" on="d" />
                     <go to="s0" on="g" />

@@ -10,7 +10,7 @@
         src_uri/src_predicates options (adapted from the
         demonstrator's actor_tests.pl, pid-shape-agnostic);
       - the actor I/O prelude routing (writeln -> terminal_io_output);
-      - source-option compatibility and spawn-time source preparation;
+      - canonical source options and spawn-time source preparation;
       - isolation hook contracts: prepare_module/3 extension and
         prepare_goal/3 rewriting.
 */
@@ -258,17 +258,6 @@ run(Parent) :-
    receive({
        overridden -> Msg = overridden
    }, [
-       timeout(1),
-       on_timeout(fail)
-   ]).
-
-test(load_text_is_a_compatibility_alias, Msg == legacy_source_loaded) :-
-   self(Self),
-   spawn(run(Self), _Pid, [
-       load_text("run(Parent) :- send(Parent, legacy_source_loaded)."),
-       link(false)
-   ]),
-   receive({ legacy_source_loaded -> Msg = legacy_source_loaded }, [
        timeout(1),
        on_timeout(fail)
    ]).
@@ -827,65 +816,10 @@ remove_pid(Pid, [Other|Rest], [Other|Rest1]) :-
    cleanup(ensure_mailbox_empty)
 ]).
 
-test(load_list_alias, Result == true) :-
-   self(Self),
-   spawn(run(Self), Pid, [
-       monitor(true),
-       load_list([
-           run(Parent) :-
-               Parent ! ready
-       ])
-   ]),
-   receive({
-       ready -> true
-   }, [
-       timeout(1),
-       on_timeout(fail)
-   ]),
-   receive({
-       down(Pid, _, true) -> true
-   }),
-   Result = true.
-
-test(load_text_alias, Result == true) :-
-   self(Self),
-   spawn(run(Self), Pid, [
-       monitor(true),
-       load_text("run(Parent) :- Parent ! ready.")
-   ]),
-   receive({
-       ready -> true
-   }, [
-       timeout(1),
-       on_timeout(fail)
-   ]),
-   receive({
-       down(Pid, _, true) -> true
-   }),
-   Result = true.
-
-test(load_predicates_alias, Result == true) :-
-   self(Self),
-   spawn(user:run(Self), Pid, [
-       monitor(true),
-       load_predicates([actor_test_p/1]),
-       src_list([
-           (run(Parent) :-
-               actor_test_p(Value),
-               send(Parent, Value),
-               !)
-       ])
-   ]),
-   receive({
-       a -> true
-   }, [
-       timeout(1),
-       on_timeout(fail)
-   ]),
-   receive({
-       down(Pid, _, true) -> true
-   }),
-   Result = true.
+test(load_aliases_are_not_source_options) :-
+   forall(member(Option, [load_text(x), load_uri(x), load_list([]),
+                          load_predicates([])]),
+          \+ canonical_source_option(Option, _)).
 
 test(isolation_load_list, Sorted == [a,b]) :-
    self(Self),
@@ -943,31 +877,6 @@ test(listing_actor_private_by_pid_targets_selected_actor_db) :-
        )
    ),
    !.
-
-test(load_uri_alias_path, Result == true) :-
-   self(Self),
-   setup_call_cleanup(
-       ( tmp_file_stream(text, File, Stream),
-         format(Stream, 'run(Parent) :- Parent ! ready.~n', []),
-         close(Stream)
-       ),
-       ( spawn(run(Self), Pid, [
-             monitor(true),
-             load_uri(File)
-         ]),
-         receive({
-             ready -> true
-         }, [
-             timeout(1),
-             on_timeout(fail)
-         ]),
-         receive({
-             down(Pid, _, true) -> true
-         }),
-         Result = true
-       ),
-       catch(delete_file(File), _, true)
-   ).
 
 test(load_uri_file_scheme_shorthand, Result == true) :-
    self(Self),

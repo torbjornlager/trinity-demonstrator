@@ -556,7 +556,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20260828-parallel-template'),
+   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-output-v3'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -621,12 +621,12 @@ ok(includes('.editor-source-label {') &&
    "editor scratch-buffer and filename labels are larger and theme-aware");
 const expandedEditorCommand = rewriteEditorLoadTextAware(
   "statechart_spawn(Pid, [src_text(<editor>)]).",
-  "src_text('<statechart/>')"
+  "src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>')"
 );
 ok(expandedEditorCommand.count === 1 &&
    expandedEditorCommand.invalidCount === 0 &&
    expandedEditorCommand.text ===
-     "statechart_spawn(Pid, [src_text('<statechart/>')]).",
+     "statechart_spawn(Pid, [src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>')]).",
    "src_text(<editor>) expands as one explicit UI placeholder");
 const ignoredEditorText = rewriteEditorLoadTextAware(
   "writeln('src_text(<editor>)'), % src_text(<editor>)\n/* <editor> */ true.",
@@ -865,7 +865,8 @@ ok([
   "04 clock.xml", "05 pingpong.xml", "06 parallel.xml",
   "07 closure.xml", "08 gcd.xml", "09 spawn-actor.xml",
   "10 spawn-toplevel.xml", "11 boxshop-1.xml", "12 boxshop-2.xml",
-  "14 deferred-events.xml"
+  "14 deferred-events.xml", "15 spawn-server.xml",
+  "16 spawn-supervisor.xml", "17 spawn-statechart.xml"
 ].every(function(name) {
   const text = statechartExample(name);
   return text.includes(
@@ -1348,7 +1349,8 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    !workerSource.includes('statechart_spawn(Pid) :-') &&
    !workerSource.includes('statechart_spawn/1,') &&
    workerSource.includes('statechart_wasm:set_trace_hook(user:statechart_trace_hook)') &&
-   !workerSource.includes('message.statechartTrace') &&
+   workerSource.includes('message.statechartTrace === false') &&
+   workerSource.includes('statechart_wasm:set_trace_enabled(') &&
    !includes('statechart_spawn(Pid) :-') &&
    !includes('statechart_spawn/1,') &&
    includes('statechart_wasm:set_trace_hook(') &&
@@ -1358,12 +1360,31 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260828-parallel-template') &&
+   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-output-v3') &&
    includes('parentPid: startFields && startFields.parentPid') &&
-   includes('this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid)') &&
+   includes('message.sourceKind, message.source, pid, message.name') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
    includes('this.sendSwiWasmActorMessage('),
    "SWI-WASM statechart terminal output is delivered to the spawning actor mailbox");
+ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+   workerSource.includes('install_spawn_monitor(Pid, Options)') &&
+   workerSource.includes('collect_statechart_support_source(Options, SupportSource)') &&
+   workerSource.includes('( member(Term, Terms), clause_source_text(Term, ClauseText) )') &&
+   workerSource.includes('retractall(swi_wasm_actor_bridge:io_target(_))') &&
+   workerSource.includes('assertz(swi_wasm_actor_bridge:io_target(Target))') &&
+   workerSource.includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
+   includes('window.swiWasmStatechartSpawnWorker') &&
+   includes('statechart_wasm:statechart_running') &&
+   includes('swiWasmStatechartSpawnWorker(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+   includes('statechart_wasm:statechart_start(text(XML), SupportSource)') &&
+   includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
+   includes('var inheritedIoTarget = String(ioTargetText || "")') &&
+   includes('parentEntry && parentEntry.role === "statechart_actor"') &&
+   includes('ioTarget: inheritedIoTarget') &&
+   includes('terminalParent.role === "shell_toplevel"') &&
+   includes('this.echoSwiWasmOutput(this.terminal, String(message.term || "true"))') &&
+   includes('linked: linked !== false'),
+   "nested statecharts preserve lifecycle, node, I/O, trace, and supplemental-source options");
 ok(includes("spawnSwiWasmWorkerActorReady") &&
    includes('result = this.spawnSwiWasmWorkerActorReady(') &&
    includes('message.goal || "true"') &&

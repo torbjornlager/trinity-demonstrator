@@ -4001,7 +4001,7 @@
     <script>
       var DEFAULT_PROLOG = "";
 
-      var DEFAULT_STATECHART = "<statechart datamodel=\"web-prolog\" initial=\"Idle\">\n"
+      var DEFAULT_STATECHART = "<statechart version=\"0.2\" initial=\"Idle\">\n"
                              + "  <state id=\"Idle\">\n"
                              + "    <onentry>output('IDLE')</onentry>\n"
                              + "    <go to=\"Running\" on=\"play\"/>\n"
@@ -10338,6 +10338,16 @@
                 }
               );
             };
+            window.swiWasmStatechartSpawnWorker = function(sourceKind, sourceText, supportSourceText,
+                                                            nameText, linkText,
+                                                            ioTargetText, traceText) {
+              return self.spawnSwiWasmStatechartActor(
+                sourceKind, sourceText, "statechart", nameText,
+                String(linkText === undefined ? "true" : linkText) !== "false",
+                supportSourceText, ioTargetText,
+                String(traceText === undefined ? "true" : traceText) !== "false"
+              );
+            };
             window.swiWasmActorSend = function(pidText, messageText) {
               var from = self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main";
               return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, from));
@@ -10500,7 +10510,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260828-parallel-template";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260902-statechart-output-v3";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10632,16 +10642,35 @@
               return response.text();
             });
           },
-          spawnSwiWasmStatechartActor: function(sourceKind, sourceText, parentPid) {
+          spawnSwiWasmStatechartActor: function(sourceKind, sourceText, parentPid,
+                                                nameText, linked, supportSourceText,
+                                                ioTargetText, traceEnabled) {
             var self = this;
             var parent = String(parentPid || (this.isSwiWasm2Mode ? this.swiWasm2ShellPid : "main"));
+            var parentEntry = this.swiWasmActorWorkers[parent];
+            var inheritedIoTarget = String(ioTargetText || "");
+            // output/1 defaults to the parent actor.  A nested statechart
+            // therefore inherits its owning chart as I/O target, while a
+            // chart spawned directly by the shell keeps direct terminal I/O.
+            if (!inheritedIoTarget &&
+                (parent === "statechart" ||
+                 (parentEntry && parentEntry.role === "statechart_actor"))) {
+              inheritedIoTarget = parent;
+            }
             var sourcePromise = String(sourceKind) === "text"
               ? Promise.resolve(String(sourceText || ""))
               : this.loadSwiWasmAssetSource(sourceText);
             return sourcePromise.then(function(xml) {
               return self.spawnSwiWasmWorkerActorReady(
-                "statechart_actor_loop", " ", "", "", "statechart_actor",
-                { statechartXml: xml, parentPid: parent }
+                "statechart_actor_loop", " ", "", String(nameText || ""), "statechart_actor",
+                {
+                  statechartXml: xml,
+                  statechartSupportSource: String(supportSourceText || ""),
+                  statechartTrace: traceEnabled !== false,
+                  ioTarget: inheritedIoTarget,
+                  parentPid: parent,
+                  linked: linked !== false
+                }
               );
             });
           },
@@ -11247,12 +11276,17 @@
             }
             if (message.type === "terminal_output") {
               if (entry.role === "statechart_actor" && entry.parentPid) {
-                this.sendSwiWasmActorMessage(
-                  entry.parentPid,
-                  "terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +
-                    String(message.term || "true") + ")",
-                  pid
-                );
+                var terminalParent = this.swiWasmActorWorkers[String(entry.parentPid)];
+                if (terminalParent && terminalParent.role === "shell_toplevel" && this.terminal) {
+                  this.echoSwiWasmOutput(this.terminal, String(message.term || "true"));
+                } else {
+                  this.sendSwiWasmActorMessage(
+                    entry.parentPid,
+                    "terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +
+                      String(message.term || "true") + ")",
+                    pid
+                  );
+                }
               }
               return;
             }
@@ -11399,7 +11433,12 @@
                 );
                 break;
               case "statechart_spawn":
-                result = this.spawnSwiWasmStatechartActor(message.sourceKind, message.source, pid);
+                result = this.spawnSwiWasmStatechartActor(
+                  message.sourceKind, message.source, pid, message.name,
+                  message.link !== false && String(message.link) !== "false",
+                  message.supportSource, message.ioTarget,
+                  message.trace !== false && String(message.trace) !== "false"
+                );
                 break;
               case "remote_spawn":
                 result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "");
@@ -11986,7 +12025,7 @@
               "    wasm_behaviour_source(Behaviour),",
               "    ( callback_source_option(Options, Pred/Arity) -> CallbackOptions = [] ; CallbackOptions = [src_predicates([Pred/Arity])] ),",
               "    append([src_text(Behaviour)|CallbackOptions], Options, SpawnOptions).",
-              "callback_source_option(Options, PI) :- (member(src_predicates(PIs), Options); member(load_predicates(PIs), Options)), memberchk(PI, PIs).",
+              "callback_source_option(Options, PI) :- member(src_predicates(PIs), Options), memberchk(PI, PIs).",
               "",
               "wasm_behaviour_source(Source) :- Source := swiWasmBehaviourSource().",
               "",
@@ -12354,10 +12393,6 @@
               "    term_string(URI, URIText),",
               "    Promise := swiWasmLoadUriSource(#URIText),",
               "    await(Promise, Text).",
-              "spawn_source_option(load_text(Text), Source) :- spawn_source_option(src_text(Text), Source).",
-              "spawn_source_option(load_list(Terms), Source) :- spawn_source_option(src_list(Terms), Source).",
-              "spawn_source_option(load_uri(URI), Source) :- spawn_source_option(src_uri(URI), Source).",
-              "spawn_source_option(load_predicates(PIs), Source) :- spawn_source_option(src_predicates(PIs), Source).",
               "",
               "clause_source_text(Clause, Text) :-",
               "    copy_term(Clause, Copy),",
@@ -12683,13 +12718,31 @@
               "    Aborted == true.",
               "",
               "statechart_spawn(Pid, Options) :-",
-              "    ( member(TraceOption, Options), TraceOption = trace(_)",
-              "    -> throw(error(domain_error(statechart_spawn_option, TraceOption), statechart_spawn/2))",
-              "    ; true",
-              "    ),",
-              "    statechart_spawn_source(Options, XML),",
-              "    statechart_wasm:statechart_start(text(XML)),",
-              "    Pid = statechart.",
+              "    statechart_spawn_source(Options, SourceKind, Source),",
+              "    collect_statechart_support_source(Options, SupportSource),",
+              "    option(trace(Trace), Options, true), term_string(Trace, TraceText),",
+              "    option(node(Node), Options, localhost),",
+              "    (   Node \== localhost",
+              "    ->  statechart_remote_goal(SourceKind, Source, Trace, Options, Goal),",
+              "        term_string(Goal, GoalText), term_string(Node, NodeText),",
+              "        Promise := swiWasmActorRemoteSpawn(#NodeText, #GoalText, #SupportSource),",
+              "        await(Promise, PidText), term_string(Pid, PidText),",
+              "        maybe_register_toplevel_name(Options, Pid),",
+              "        install_spawn_monitor(Pid, Options)",
+              "    ;   statechart_wasm:statechart_running",
+              "    ->  ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
+              "        option(link(Link), Options, true), term_string(Link, LinkText),",
+              "        ( option(io_target(IoTarget), Options) -> term_string(IoTarget, IoTargetText) ; IoTargetText = \"\" ),",
+              "        Promise := swiWasmStatechartSpawnWorker(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText),",
+              "        await(Promise, PidText), term_string(Pid, PidText),",
+              "        install_spawn_monitor(Pid, Options)",
+              "    ;   statechart_local_xml(SourceKind, Source, XML),",
+              "        configure_statechart_io_target(Options),",
+              "        statechart_wasm:set_trace_enabled(Trace),",
+              "        statechart_wasm:statechart_start(text(XML), SupportSource),",
+              "        Pid = statechart,",
+              "        maybe_register_toplevel_name(Options, Pid)",
+              "    ).",
               "",
               "statechart_halt(Pid, Reply) :- statechart_halt(Pid, Reply, 5).",
               "statechart_halt(statechart, Reply, _Timeout) :-",
@@ -12699,20 +12752,52 @@
               "statechart_halt(Pid, _, _) :-",
               "    throw(error(existence_error(statechart, Pid), statechart_halt/3)).",
               "",
-              "statechart_spawn_source(Options, XML) :-",
-              "    (member(src_text(XML), Options); member(load_text(XML), Options)),",
+              "statechart_spawn_source(Options, text, XML) :-",
+              "    member(src_text(XML), Options),",
               "    !.",
-              "statechart_spawn_source(Options, XML) :-",
-              "    (member(src_uri(URI), Options); member(load_uri(URI), Options)),",
-              "    !,",
+              "statechart_spawn_source(Options, uri, URI) :-",
+              "    member(src_uri(URI), Options),",
+              "    !.",
+              "statechart_spawn_source(_, _, _) :-",
+              "    throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2)).",
+              "",
+              "statechart_local_xml(text, XML, XML).",
+              "statechart_local_xml(uri, URI, XML) :-",
               "    URIText := swiResolveAssetUrl(#URI),",
               "    XML := swiRpcGet(#URIText),",
               "    (   XML = null",
               "    ->  throw(error(existence_error(source_sink, URI), statechart_spawn/2))",
               "    ;   true",
               "    ).",
-              "statechart_spawn_source(_, _) :-",
-              "    throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2)).",
+              "",
+              "statechart_remote_goal(text, Source, Trace, Options, Goal) :-",
+              "    statechart_remote_goal_io(statechart_actor:interpret_text_trace(Trace, Source), Options, Goal).",
+              "statechart_remote_goal(uri, Source, Trace, Options, Goal) :-",
+              "    statechart_remote_goal_io(statechart_actor:interpret_trace(Trace, Source), Options, Goal).",
+              "statechart_remote_goal_io(Goal0, Options, Goal) :-",
+              "    ( option(io_target(Target), Options) -> Goal = actors:with_io_target(Target, Goal0) ; Goal = Goal0 ).",
+              "",
+              "configure_statechart_io_target(Options) :-",
+              "    retractall(io_target(_)),",
+              "    ( option(io_target(Target), Options) -> assertz(io_target(Target)) ; true ).",
+              "",
+              "collect_statechart_support_source(Options, Source) :-",
+              "    findall(Text, (member(Option, Options), statechart_support_source_option(Option, Text)), Texts),",
+              "    atomic_list_concat(Texts, '\\n', Source).",
+              "statechart_support_source_option(src_list(Terms), Text) :- spawn_source_option(src_list(Terms), Text).",
+              "statechart_support_source_option(src_predicates(Indicators), Text) :- statechart_predicates_source(Indicators, Text).",
+              "statechart_predicates_source(Indicators, Text) :-",
+              "    findall(ClauseText,",
+              "            ( member(Name/Arity, Indicators), functor(Head, Name, Arity),",
+              "              statechart_source_clause(Head, Body),",
+              "              (Body == true -> Clause = Head ; Clause = (Head :- Body)),",
+              "              clause_source_text(Clause, ClauseText) ),",
+              "            ClauseTexts),",
+              "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+              "statechart_source_clause(Head, Body) :-",
+              "    catch(predicate_property(statechart_wasm:Head, number_of_clauses(Count)), _, fail), Count > 0, !,",
+              "    statechart_wasm:clause(Head, Body).",
+              "statechart_source_clause(Head, Body) :- catch(user:clause(Head, Body), _, fail).",
               "",
               "output(Term) :- output(Term, []).",
               "",
@@ -13012,24 +13097,24 @@
               "    findall(Part, rpc_load_part(Opts, Part), Parts).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    (member(src_text(T), Opts); member(load_text(T), Opts)),",
+              "    member(src_text(T), Opts),",
               "    (atom(T) -> atom_string(T,S) ; string(T) -> S=T ; term_string(T,S)),",
               "    Text := swiEnsureFinalFullStop(#S).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    (member(src_list(Terms), Opts); member(load_list(Terms), Opts)),",
+              "    member(src_list(Terms), Opts),",
               "    maplist([Term,A]>>(term_to_atom(Term,TA),atom_concat(TA,'.',A)), Terms, Atoms),",
               "    atomic_list_concat(Atoms,'\\n',Text).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    (member(src_uri(URI), Opts); member(load_uri(URI), Opts)),",
+              "    member(src_uri(URI), Opts),",
               "    term_string(URI, URIText),",
               "    ResolvedURI := swiResolveRpcLoadUri(#URIText),",
               "    Text := swiRpcGet(#ResolvedURI),",
               "    (Text = null -> throw(rpc_error(fetch_failed)) ; true).",
               "",
               "rpc_load_part(Opts, Text) :-",
-              "    (member(src_predicates(Inds), Opts); member(load_predicates(Inds), Opts)),",
+              "    member(src_predicates(Inds), Opts),",
               "    findall(CT, (member(N/A, Inds), rpc_clause_text(N,A,CT)), CTs),",
               "    atomic_list_concat(CTs,'\\n',Text).",
               "",

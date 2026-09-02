@@ -7,14 +7,9 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="game">
+<statechart version="0.2" initial="game">
     <state id="game" initial="play">
-        <state id="play">
-            <initial>
-                <go to="s1" />
-            </initial>
+        <state id="play" initial="s1">
             <history id="h">
                 <go to="s1" />
             </history>

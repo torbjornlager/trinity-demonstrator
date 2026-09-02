@@ -656,8 +656,6 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
 ws_reject_toplevel_call_source(Dict) :-
     (   get_dict(src_text, Dict, Value)
     ->  domain_error(toplevel_call_field, src_text(Value))
-    ;   get_dict(load_text, Dict, Value)
-    ->  domain_error(toplevel_call_field, load_text(Value))
     ;   true
     ).
 
@@ -1552,8 +1550,6 @@ ws_get_term_string_or(Dict, Key, Default, Value) :-
 ws_get_load_text_or(Dict, src_text, Default, Value) :-
     !,
     (   get_dict(src_text, Dict, Value0)
-    ->  atom_string(Value, Value0)
-    ;   get_dict(load_text, Dict, Value0)
     ->  atom_string(Value, Value0)
     ;   Value = Default
     ),

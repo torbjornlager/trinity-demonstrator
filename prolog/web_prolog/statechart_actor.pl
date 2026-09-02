@@ -20,6 +20,8 @@ into dedicated helper modules to keep the public actor module compact.
 
 :- use_module(actors).
 :- use_module(toplevel_actors).
+:- use_module(server_actor).
+:- use_module(supervisor_actor).
 
 :- use_module(library(debug)).
 :- use_module(library(option)).
@@ -41,14 +43,24 @@ into dedicated helper modules to keep the public actor module compact.
 %  import_statechart_api/1 did during module preparation.
 :- multifile isolation:prepare_module/3.
 isolation:prepare_module(Module, _GoalModule, _Options) :-
-    add_import_module(Module, statechart_actor, start).
+    add_import_module(Module, statechart_actor, start),
+    % Spawned server and supervisor children are useful only if chart
+    % scripts can also address their behaviour APIs.  Keep the native
+    % chart namespace aligned with the WASM bridge's delegated API.
+    add_import_module(Module, server_actor, start),
+    add_import_module(Module, supervisor_actor, start).
 
 :- op(800, xfx, !).
 :- op(200, xfx, @).
 :- op(1000, xfy, if).
 
+:- meta_predicate statechart_spawn(-, :).
+
 /* Profile deviations (Web Prolog statechart-actor profile)
    - Root element is <statechart>.
+   - The root requires version="0.2". Root and compound <state> elements use
+     the initial attribute; the <initial> element and implicit first-child
+     defaults are not supported.
    - Transitions are written as <go> with attributes on/after/if/to.
      The after value is a non-negative delay in seconds.
    - <defer on="Pattern" if="Guard"/> postpones unmatched events while
@@ -65,7 +77,6 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
         history/3,
         final/2,
         initial/1,
-        initial/2,
         transition/5,
         after_transition/6,
         defer/3,
@@ -87,6 +98,7 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
         after_timer/3.
 
 :- thread_local trace_hook/1.
+:- thread_local trace_disabled/0.
 
 % Debugging topics exist, but are disabled by default.
 :- nodebug(statechart_actor(_)).
@@ -103,17 +115,57 @@ inject_statechart_io_prelude :-
 %
 %   Spawn a statechart interpreter actor.
 %
-%   Exactly one source option must be supplied:
+%   Exactly one XML source option must be supplied:
 %
 %     - `src_uri(URI)`  or
 %     - `src_text(Text)`
-statechart_spawn(Pid, Options0) :-
+%
+%   `src_list/1` and `src_predicates/1` are supplemental Prolog sources
+%   loaded into the statechart actor's private module.
+statechart_spawn(Pid, OptionsSpec) :-
+    strip_module(OptionsSpec, SourceModule, Options0),
     exclude(is_statechart_spawn_local_option, Options0, Options1),
-    statechart_spawn_source(Options1, SourceGoal, SpawnOptions),
+    select_option(trace(Trace), Options1, Options2, true),
+    validate_statechart_trace(Trace),
+    statechart_spawn_source(Options2, SourceGoal0, SpawnOptions0),
+    traced_statechart_source_goal(Trace, SourceGoal0, SourceGoal),
+    ensure_statechart_source_module(SourceModule, SpawnOptions0, SpawnOptions),
     spawn(SourceGoal, Pid, SpawnOptions),
     maybe_register_statechart_name(Options0, Pid).
 
 is_statechart_spawn_local_option(name(_)).
+
+ensure_statechart_source_module(_, Options, Options) :-
+    option(source_module(_), Options),
+    !.
+ensure_statechart_source_module(Module, Options, [source_module(Module)|Options]).
+
+validate_statechart_trace(true) :- !.
+validate_statechart_trace(false) :- !.
+validate_statechart_trace(Trace) :-
+    throw(error(domain_error(boolean, Trace),
+                context(statechart_actor:statechart_spawn/2,
+                        'trace must be true or false'))).
+
+traced_statechart_source_goal(Trace, statechart_actor:interpret(Source),
+                              statechart_actor:interpret_trace(Trace, Source)).
+traced_statechart_source_goal(Trace, statechart_actor:interpret_text(Text),
+                              statechart_actor:interpret_text_trace(Trace, Text)).
+
+interpret_trace(Trace, Source) :-
+    configure_trace(Trace),
+    interpret(Source).
+
+interpret_text_trace(Trace, Text) :-
+    configure_trace(Trace),
+    interpret_text(Text).
+
+configure_trace(Trace) :-
+    retractall(trace_disabled),
+    (   Trace == false
+    ->  assertz(trace_disabled)
+    ;   true
+    ).
 
 maybe_register_statechart_name(Options, Pid) :-
     (   option(name(Name), Options)
@@ -201,12 +253,15 @@ interpret_example(Name0) :-
 
 
 emit_trace(Event) :-
+    \+ trace_disabled,
+    !,
     (   trace_hook(Goal)
     ->  catch(call(Goal, Event), Error,
               (control_guard:rethrow_reserved(Error), true))
     ;   true
     ),
     terminal_output(statechart_trace(Event)).
+emit_trace(_).
 
 
 %!  interpret_parsed(-Root) is det.

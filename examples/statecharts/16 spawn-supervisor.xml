@@ -1,0 +1,43 @@
+<!--
+This example starts a supervisor whose static child is a worker running
+sleep(60).  The child is temporary, so it is never restarted after it exits;
+the one_for_all strategy is nevertheless shown together with a restart
+intensity of at most two restarts in five seconds.
+
+The supervisor is registered as example_supervisor.  After spawned(Pid), the
+chart asks that name for its current child counts and prints the result.  It
+then raises done and enters Final.  Leaving SupervisorOwner terminates the
+invoked supervisor and its still-running worker as part of normal state
+lifecycle cleanup.
+-->
+
+<statechart version="0.2" initial="SupervisorOwner">
+    <state id="SupervisorOwner" initial="Start">
+        <spawn type="supervisor"
+               children="[child(worker, [start(sleep(60)), restart(temporary)])]"
+               options="[name(example_supervisor), strategy(one_for_all), intensity(2), period(5)]" />
+        <state id="Start">
+            <go to="Inspect" on="spawned(_)" />
+        </state>
+        <state id="Inspect">
+            <onentry>
+                supervisor_count_children(example_supervisor, Counts),
+                writeln(Counts),
+                raise(done)
+            </onentry>
+            <go to="Final" on="done" />
+        </state>
+    </state>
+    <final id="Final" />
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

@@ -1,5 +1,6 @@
 :- module(statechart_wasm, [
     statechart_start/1,
+    statechart_start/2,
     statechart_stop/0,
     statechart_send/1,
     statechart_running/0,
@@ -8,7 +9,8 @@
     statechart_halt_reason/1,
     emit_trace/1,
     set_trace_hook/1,
-    clear_trace_hook/0
+    clear_trace_hook/0,
+    set_trace_enabled/1
 ]).
 
 /** <module> Statechart Interpreter Facade (SWI-WASM port)
@@ -24,10 +26,10 @@ Unlike the desktop statechart actor:
     is synchronous and runs to quiescence before returning.  The chart is
     addressed as the pid `statechart`: a spawned child's replies route back
     in as external events rather than being read from a mailbox.
-  - `<spawn>` IS executed: invoke/1 spawns a browser worker actor/toplevel
-    through swi_wasm_actor_bridge (locally or on a remote node) and the chart
-    drives it with the full actor/toplevel API (Pid ! Msg, toplevel_call,
-    monitor, ...).  Children are cancelled when their owning state exits.
+  - `<spawn>` IS executed: invoke/1 spawns browser worker actors, toplevels,
+    servers, supervisors, and nested statecharts through
+    swi_wasm_actor_bridge. The chart drives them with the corresponding actor
+    APIs, and children are cancelled when their owning state exits.
   - I/O (write, writeln, format) goes to the default user_output
     stream, which the WASM runtime captures via its on_output callback.
 
@@ -89,7 +91,6 @@ rethrow_reserved(Error) :-
         history/3,
         final/2,
         initial/1,
-        initial/2,
         transition/5,
         after_transition/6,
         defer/3,
@@ -111,6 +112,7 @@ rethrow_reserved(Error) :-
         after_timer/3,
         num/1,
         last_halt_reason/1,
+        trace_disabled/0,
         % Indicators of predicates a <datamodel> asserted, so clean/0 can
         % abolish them and not leak one chart's data/rules into the next.
         datamodel_predicate/1.
@@ -154,30 +156,44 @@ rethrow_reserved(Error) :-
 %
 %   Any previously-installed chart is discarded first.
 
-statechart_start(text(Text)) :-
+statechart_start(Source) :-
+    set_trace_enabled(true),
+    statechart_start(Source, '').
+
+statechart_start(text(Text), SupplementalSource) :-
     !,
     cancel_delayed_events,
     runtime_clean,
     import_shared_database,
     retractall(last_halt_reason(_)),
     statechart_wasm_parse_text(Text),
+    load_supplemental_source(SupplementalSource),
     start_parsed(_Root),
     record_natural_halt_reason,
     flush_user_streams.
-statechart_start(stream(Stream)) :-
+statechart_start(stream(Stream), SupplementalSource) :-
     !,
     cancel_delayed_events,
     runtime_clean,
     import_shared_database,
     retractall(last_halt_reason(_)),
     statechart_wasm_model:statechart_wasm_parse_stream(Stream),
+    load_supplemental_source(SupplementalSource),
     start_parsed(_Root),
     record_natural_halt_reason,
     flush_user_streams.
-statechart_start(Source) :-
+statechart_start(Source, _) :-
     throw(error(domain_error(statechart_source, Source),
-                context(statechart_start/1,
+                context(statechart_start/2,
                         'expected text(Text) or stream(Stream)'))).
+
+load_supplemental_source(Source) :-
+    (   Source == ''
+    ;   Source == ""
+    ),
+    !.
+load_supplemental_source(Source) :-
+    statechart_wasm_model:load_datamodel(Source).
 
 
 % Each browser runtime loads its own node database as wasm_shared_db and
@@ -410,6 +426,18 @@ set_trace_hook(Goal) :-
 clear_trace_hook :-
     retractall(trace_hook(_)).
 
+set_trace_enabled(true) :-
+    !,
+    retractall(trace_disabled).
+set_trace_enabled(false) :-
+    !,
+    retractall(trace_disabled),
+    assertz(trace_disabled).
+set_trace_enabled(Value) :-
+    throw(error(domain_error(boolean, Value),
+                context(statechart_wasm:set_trace_enabled/1,
+                        'trace must be true or false'))).
+
 
 %!  emit_trace(+Event) is det.
 %
@@ -417,11 +445,14 @@ clear_trace_hook :-
 %   Forwards to the installed trace hook, if any.
 
 emit_trace(Event) :-
+    \+ trace_disabled,
+    !,
     (   trace_hook(Goal)
     ->  catch(call(Goal, Event), Error,
               (rethrow_reserved(Error), true))
     ;   true
     ).
+emit_trace(_).
 
 
 % Charts may emit output via writeln/format/print etc.  In the SWI-WASM

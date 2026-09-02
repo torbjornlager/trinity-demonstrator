@@ -290,10 +290,6 @@ server_source_option(src_text(_)).
 server_source_option(src_list(_)).
 server_source_option(src_predicates(_)).
 server_source_option(src_uri(_)).
-server_source_option(load_text(_)).
-server_source_option(load_list(_)).
-server_source_option(load_predicates(_)).
-server_source_option(load_uri(_)).
 
 
 %% -------------------------------------------------------------------

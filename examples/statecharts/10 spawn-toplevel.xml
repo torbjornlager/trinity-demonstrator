@@ -7,11 +7,9 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="spawn-ask-collect">
+<statechart version="0.2" initial="spawn-ask-collect">
     <state id="spawn-ask-collect" initial="ask">
-        <spawn type="toplevel" exit="false">
+        <spawn type="toplevel" options="[time_limit(30)]">
             q(X) :- p(X).
             p(a). p(b). p(c). p(d).
         </spawn>

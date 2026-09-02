@@ -55,7 +55,7 @@ Differences from the desktop `statechart_runtime`:
 
   - The internal event queue is a list held in a dynamic fact instead of
     a SWI message queue (no threads in WASM).
-  - `invoke/1` spawns browser worker actors/toplevels through
+  - `invoke/1` spawns browser worker actors and behaviours through
     swi_wasm_actor_bridge (a no-op only when that bridge is absent);
     cancel_invoked_child/1 terminates them when their owning state exits.
   - No dependency on `actor` or `toplevel_actor`; the bridge is reached
@@ -63,6 +63,7 @@ Differences from the desktop `statechart_runtime`:
 */
 
 :- use_module(library(lists)).
+:- use_module(library(option), [select_option/3]).
 
 
 %!  clean is det.
@@ -82,7 +83,6 @@ clean :-
     retractall(statechart_wasm:state(_, _)),
     retractall(statechart_wasm:to_be_invoked(_, _, _)),
     retractall(statechart_wasm:initial(_)),
-    retractall(statechart_wasm:initial(_, _)),
     retractall(statechart_wasm:transition(_, _, _, _, _)),
     retractall(statechart_wasm:after_transition(_, _, _, _, _, _)),
     retractall(statechart_wasm:defer(_, _, _)),
@@ -111,8 +111,6 @@ root_state(Root) :-
 
 initial_state(Root, Initial) :-
     (   statechart_wasm:initial(Initial)
-    ->  true
-    ;   statechart_wasm:transition(init(Root), '', true, [Initial|_], _)
     ->  true
     ;   throw(error(missing_initial_state(Root), _))
     ).
@@ -353,7 +351,7 @@ has_descendant_in_set(State, States) :-
 
 %   Execute deferred <spawn> elements for State.  The desktop engine
 %   spawns inside the node's actor system; the WASM port spawns browser
-%   worker actors / toplevels through swi_wasm_actor_bridge and addresses
+%   worker actors and behaviours through swi_wasm_actor_bridge and addresses
 %   the chart itself as the pid `statechart` (so worker replies route back
 %   in as external events -- see send(statechart, _) in the bridge and
 %   routeSwiWasmActorMessage in the coordinator).  spawned(Pid) is
@@ -367,11 +365,13 @@ has_descendant_in_set(State, States) :-
 invoke(State) :-
     statechart_wasm:to_be_invoked(State, toplevel, Options),
     current_predicate(swi_wasm_actor_bridge:toplevel_spawn/2),
-    swi_wasm_actor_bridge:toplevel_spawn(Pid, [target(statechart)|Options]),
+    ensure_toplevel_target(Options, EffectiveOptions),
+    swi_wasm_actor_bridge:toplevel_spawn(Pid, EffectiveOptions),
     emit_trace(invoked(toplevel, Pid, State)),
     assertz(statechart_wasm:invoked(State, Pid)),
     enqueue_internal_event(spawned(Pid)),
     fail.
+
 invoke(State) :-
     statechart_wasm:to_be_invoked(State, actor, Options),
     current_predicate(swi_wasm_actor_bridge:spawn/3),
@@ -381,7 +381,68 @@ invoke(State) :-
     assertz(statechart_wasm:invoked(State, Pid)),
     enqueue_internal_event(spawned(Pid)),
     fail.
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, server, Options0),
+    current_predicate(swi_wasm_actor_bridge:server_spawn/4),
+    select_option(callback(Callback), Options0, Options1),
+    select_option(state(ServerState), Options1, Options),
+    swi_wasm_actor_bridge:server_spawn(Callback, ServerState, Pid, Options),
+    emit_trace(invoked(server, Pid, State)),
+    assertz(statechart_wasm:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, supervisor, Options0),
+    current_predicate(swi_wasm_actor_bridge:supervisor_spawn/3),
+    select_option(children(Children), Options0, Options),
+    swi_wasm_actor_bridge:supervisor_spawn(Children, Pid, Options),
+    emit_trace(invoked(supervisor, Pid, State)),
+    assertz(statechart_wasm:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, statechart, Options),
+    current_predicate(swi_wasm_actor_bridge:statechart_spawn/2),
+    swi_wasm_actor_bridge:statechart_spawn(Pid, Options),
+    emit_trace(invoked(statechart, Pid, State)),
+    assertz(statechart_wasm:invoked(State, Pid)),
+    enqueue_internal_event(spawned(Pid)),
+    fail.
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, actor, Options),
+    \+ memberchk(goal(_), Options),
+    throw(error(existence_error(option, goal),
+                context(statechart_wasm_runtime:invoke/1,
+                        '<spawn type="actor"> requires goal/1'))).
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, server, Options),
+    (   \+ memberchk(callback(_), Options)
+    ->  Missing = callback
+    ;   \+ memberchk(state(_), Options),
+        Missing = state
+    ),
+    throw(error(existence_error(option, Missing),
+                context(statechart_wasm_runtime:invoke/1,
+                        '<spawn type="server"> requires callback/1 and state/1'))).
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, supervisor, Options),
+    \+ memberchk(children(_), Options),
+    throw(error(existence_error(option, children),
+                context(statechart_wasm_runtime:invoke/1,
+                        '<spawn type="supervisor"> requires children/1'))).
+invoke(State) :-
+    statechart_wasm:to_be_invoked(State, Type, _),
+    \+ memberchk(Type, [actor, toplevel, server, supervisor, statechart]),
+    throw(error(domain_error(statechart_spawn_type, Type),
+                context(statechart_wasm_runtime:invoke/1,
+                        'supported spawn types are actor, toplevel, server, supervisor, and statechart'))).
 invoke(_State).
+
+ensure_toplevel_target(Options, Options) :-
+    memberchk(target(_), Options),
+    !.
+ensure_toplevel_target(Options, [target(Target)|Options]) :-
+    statechart_wasm:self(Target).
 
 %   Cancel a child spawned by <spawn> when its owning state exits -- the
 %   SCXML invoke-cancellation contract.  The desktop runtime exits the

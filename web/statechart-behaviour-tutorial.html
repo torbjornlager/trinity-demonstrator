@@ -60,8 +60,9 @@
   <section id="pause">
     <h2>Lab 1: hierarchy and history</h2>
     <p>The pause-and-resume chart contains a <code>play</code> state with nested states <code>s1</code> and <code>s2</code>, plus an <code>interrupted</code> sibling. Pausing leaves <code>play</code>; resuming enters its history target and returns to whichever nested state was active.</p>
+    <p>Every compound state names its default child with the <code>initial</code> attribute. SXML does not infer an initial state from the first child.</p>
     <pre><code>&lt;state id="game" initial="play"&gt;
-    &lt;state id="play"&gt;
+    &lt;state id="play" initial="s1"&gt;
         &lt;history id="h"&gt;
             &lt;go to="s1"/&gt;
         &lt;/history&gt;
@@ -823,7 +824,7 @@
     the larger of any two values with their difference &mdash; until only
     one value remains and the result is printed.
 </p>
-    <pre><code>&lt;statechart datamodel="web-prolog" initial="init"&gt;
+    <pre><code>&lt;statechart version="0.2" initial="init"&gt;
     &lt;datamodel&gt;
         :- dynamic int/1.
     &lt;/datamodel&gt;
@@ -872,9 +873,9 @@
         <code>p(d)</code>.
     </p>
     
-    <pre><code>&lt;statechart datamodel="web-prolog" initial="spawn-ask-collect"&gt;
+    <pre><code>&lt;statechart version="0.2" initial="spawn-ask-collect"&gt;
     &lt;state id="spawn-ask-collect" initial="ask"&gt;
-        &lt;spawn type="toplevel" exit="false"&gt;
+        &lt;spawn type="toplevel" options="[time_limit(30)]"&gt;
             q(X) :- p(X).
             p(a). p(b). p(c). p(d).
         &lt;/spawn&gt;

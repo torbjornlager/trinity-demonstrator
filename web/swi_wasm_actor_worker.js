@@ -186,7 +186,7 @@
   }
 
   function toplevelCallHasSourceOption(optionsText) {
-    return /(?:^|[,\[])\s*(?:src_text|load_text)\s*\(/.test(String(optionsText || "[]"));
+    return /(?:^|[,\[])\s*src_text\s*\(/.test(String(optionsText || "[]"));
   }
 
   function actorReceive(timeoutSeconds) {
@@ -409,10 +409,18 @@
     });
   }
 
-  function actorStatechartSpawn(sourceKind, sourceText) {
+  function actorStatechartSpawn(sourceKind, sourceText, supportSourceText,
+                                nameText, linkText, ioTargetText, traceText) {
     return actorRequest("statechart_spawn", {
       sourceKind: String(sourceKind || ""),
-      source: String(sourceText || "")
+      source: String(sourceText || ""),
+      supportSource: String(supportSourceText || ""),
+      name: String(nameText || ""),
+      link: String(linkText === undefined ? "true" : linkText) !== "false",
+      // Match native output/1: absent an explicit target, a nested actor sends
+      // output to the actor that spawned it.
+      ioTarget: String(ioTargetText || qualifyLocalPid(selfPidText)),
+      trace: String(traceText === undefined ? "true" : traceText) !== "false"
     });
   }
 
@@ -973,26 +981,62 @@
       "canonical_source_option(src_list(Terms), src_list(Terms)).",
       "canonical_source_option(src_uri(URI), src_uri(URI)).",
       "canonical_source_option(src_predicates(PIs), src_predicates(PIs)).",
-      "canonical_source_option(load_text(Text), src_text(Text)).",
-      "canonical_source_option(load_list(Terms), src_list(Terms)).",
-      "canonical_source_option(load_uri(URI), src_uri(URI)).",
-      "canonical_source_option(load_predicates(PIs), src_predicates(PIs)).",
       "source_option_member(Canonical, Options) :-",
       "    member(Option, Options),",
       "    canonical_source_option(Option, Canonical).",
       "",
       "statechart_spawn(Pid, Options) :-",
-      "    ( member(TraceOption, Options), TraceOption = trace(_)",
-      "    -> throw(error(domain_error(statechart_spawn_option, TraceOption), statechart_spawn/2))",
-      "    ; true",
-      "    ),",
       "    ( source_option_member(src_text(Source), Options) -> SourceKind = text",
       "    ; source_option_member(src_uri(Source), Options) -> SourceKind = uri",
       "    ; throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2))",
       "    ),",
-      "    Promise := actorStatechartSpawn(#SourceKind, #Source),",
-      "    await(Promise, PidText),",
-      "    term_string(Pid, PidText).",
+      "    collect_statechart_support_source(Options, SupportSource),",
+      "    ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
+      "    option(link(Link), Options, true), term_string(Link, LinkText),",
+      "    ( option(io_target(IoTarget), Options) -> term_string(IoTarget, IoTargetText) ; IoTargetText = \"\" ),",
+      "    option(trace(Trace), Options, true), term_string(Trace, TraceText),",
+      "    option(node(Node), Options, localhost),",
+      "    (   Node == localhost",
+      "    ->  Promise := actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText),",
+      "        await(Promise, PidText), term_string(Pid, PidText)",
+      "    ;   statechart_remote_goal(SourceKind, Source, Trace, Options, Goal),",
+      "        term_string(Goal, GoalText), term_string(Node, NodeText),",
+      "        Promise := actorRemoteSpawn(#NodeText, #GoalText, #SupportSource),",
+      "        await(Promise, PidText), term_string(Pid, PidText),",
+      "        maybe_register_toplevel_name(Options, Pid)",
+      "    ),",
+      "    install_spawn_monitor(Pid, Options).",
+      "",
+      "statechart_remote_goal(text, Source, Trace, Options, Goal) :-",
+      "    statechart_remote_goal_io(statechart_actor:interpret_text_trace(Trace, Source), Options, Goal).",
+      "statechart_remote_goal(uri, Source, Trace, Options, Goal) :-",
+      "    statechart_remote_goal_io(statechart_actor:interpret_trace(Trace, Source), Options, Goal).",
+      "statechart_remote_goal_io(Goal0, Options, Goal) :-",
+      "    ( option(io_target(Target), Options) -> Goal = actors:with_io_target(Target, Goal0) ; Goal = Goal0 ).",
+      "",
+      "collect_statechart_support_source(Options, Source) :-",
+      "    findall(Text, (member(Option, Options), statechart_support_source_option(Option, Text)), Texts),",
+      "    atomic_list_concat(Texts, '\\n', Source).",
+      "statechart_support_source_option(Option, Text) :-",
+      "    canonical_source_option(Option, Canonical),",
+      "    statechart_support_source_text(Canonical, Text).",
+      "statechart_support_source_text(src_list(Terms), Text) :-",
+      "    findall(ClauseText,",
+      "            ( member(Term, Terms), clause_source_text(Term, ClauseText) ),",
+      "            ClauseTexts),",
+      "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "statechart_support_source_text(src_predicates(Indicators), Text) :-",
+      "    findall(ClauseText,",
+      "            ( member(Name/Arity, Indicators), functor(Head, Name, Arity),",
+      "              statechart_source_clause(Head, Body),",
+      "              (Body == true -> Clause = Head ; Clause = (Head :- Body)),",
+      "              clause_source_text(Clause, ClauseText) ),",
+      "            ClauseTexts),",
+      "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "statechart_source_clause(Head, Body) :-",
+      "    catch(predicate_property(statechart_wasm:Head, number_of_clauses(Count)), _, fail), Count > 0, !,",
+      "    statechart_wasm:clause(Head, Body).",
+      "statechart_source_clause(Head, Body) :- catch(user:clause(Head, Body), _, fail).",
       "",
       "statechart_halt(Pid, Reply) :- statechart_halt(Pid, Reply, 5).",
       "statechart_halt(Pid, Reply, Timeout) :-",
@@ -1728,7 +1772,8 @@
         "statechart_trace_hook(Event) :- term_to_atom(Event, Text), _ := wasmStatechartTrace(#Text).",
         "statechart_actor_loop :-",
         "    read_file_to_string('/statechart.xml', XML, []),",
-        "    statechart_wasm:statechart_start(text(XML)),",
+        "    statechart_wasm:set_trace_enabled(" + (message.statechartTrace === false ? "false" : "true") + "),",
+        "    statechart_wasm:statechart_start(text(XML), " + JSON.stringify(String(message.statechartSupportSource || "")) + "),",
         "    statechart_actor_wait.",
         "statechart_actor_wait :-",
         "    ( statechart_wasm:statechart_running ->",
@@ -1745,6 +1790,18 @@
       ].join("\n"), "/worker_statechart_actor.pl");
       Prolog.query("statechart_wasm:set_trace_hook(user:statechart_trace_hook)").once();
     });
+  }
+
+  function installInitialIoTarget(message) {
+    var ioTarget = String(message.ioTarget || "");
+    if (!ioTarget) return;
+    if (!Prolog.query(
+      "term_string(Target," + JSON.stringify(ioTarget) + ")," +
+      "retractall(swi_wasm_actor_bridge:io_target(_))," +
+      "assertz(swi_wasm_actor_bridge:io_target(Target))"
+    ).once()) {
+      throw new Error("invalid io_target for worker actor");
+    }
   }
 
   function start(message) {
@@ -1776,6 +1833,7 @@
       installActorPredicates();
       return installSharedDatabase().then(function() {
         consultSource(inheritedSource, "/worker_user_code.pl");
+        installInitialIoTarget(message);
         return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then(function() {
           post(workerRole === "shell_toplevel" ? "spawned" : "ready", {});
           return runGoal(message.goal || workerConfiguration.goal || "true");

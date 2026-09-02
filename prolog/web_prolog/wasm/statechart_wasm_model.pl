@@ -25,9 +25,9 @@ Differences from the desktop `statechart_model`:
 :- use_module(library(lists)).
 :- use_module(library(sgml)).
 
-%   Web-Prolog operators used inside <spawn> bodies and <go>/<onentry>
-%   scripts (e.g. `Pid ! pong`, `Id@Node`, library(wasm)'s `:=`/`#`).
-%   read_term/3 and atom_to_term/3 below need these visible at parse
+%   Web-Prolog operators used inside typed <spawn> attributes/options and
+%   <go>/<onentry> scripts (e.g. `Pid ! pong`, `Id@Node`, library(wasm)'s
+%   `:=`/`#`).  atom_to_term/3 below needs these visible at parse
 %   time.  A module-local `:- op` is NOT honoured by read_term/3 called
 %   from this module, so declare them in `user` (global), matching how
 %   the operators are globally available in the desktop node where the
@@ -105,16 +105,34 @@ model_generate([_|Rest], Parent) :-
     model_generate(Rest, Parent).
 
 
+validate_statechart_version(Attrs) :-
+    (   option(version(Version), Attrs)
+    ->  (   Version == '0.2'
+        ->  true
+        ;   throw(error(domain_error(statechart_version, Version),
+                        context(statechart_wasm_model:model_generate_node/5,
+                                'the supported SXML version is 0.2')))
+        )
+    ;   throw(error(existence_error(attribute, version),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<statechart> requires a version attribute')))
+    ).
+
 model_generate_node(statechart, Attrs, _Children, Parent, ID) :-
+    validate_statechart_version(Attrs),
+    (   option(initial(InitID), Attrs)
+    ->  true
+    ;   throw(error(existence_error(attribute, initial),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<statechart> requires an initial attribute')))
+    ),
     option(id(ID), Attrs, statechart_wasm),
     gennum(N),
     model_assert(n(N, ID)),
     model_assert(state(ID, Parent)),
-    (   option(initial(InitID), Attrs)
-    ->  model_assert(initial(InitID))
-    ;   true
-    ).
-model_generate_node(state, Attrs, _Children, Parent, ID) :-
+    model_assert(initial(InitID)).
+model_generate_node(state, Attrs, Children, Parent, ID) :-
+    validate_state_initial(Attrs, Children),
     option(id(ID), Attrs),
     gennum(N),
     model_assert(n(N, ID)),
@@ -128,15 +146,20 @@ model_generate_node(parallel, Attrs, _Children, Parent, ID) :-
     gennum(N),
     model_assert(n(N, ID)),
     model_assert(parallel(ID, Parent)).
+%  `type` plus the type-specific operands describe the invocation itself.
+%  `options` is a ground Prolog list; remaining attributes are compatibility
+%  sugar for unary options.  Body text becomes one src_text fragment without
+%  being reparsed and serialised by the statechart model.
 model_generate_node(spawn, Attrs, Children, Parent, _ID) :-
     select_option(type(Type), Attrs, Attrs1, toplevel),
-    maplist(attr_to_option, Attrs1, Options),
+    validate_spawn_type(Type),
+    spawn_element_options(Type, Attrs1, Options0),
     (   children_text(Children, Src)
-    ->  load_text_terms(Src, Terms),
-        Options1 = [src_list(Terms)|Options]
-    ;   Options1 = Options
+    ->  Options = [src_text(Src)|Options0]
+    ;   Options = Options0
     ),
-    model_assert(to_be_invoked(Parent, Type, Options1)).
+    validate_spawn_options(Type, Options),
+    model_assert(to_be_invoked(Parent, Type, Options)).
 model_generate_node(history, Attrs, _Children, Parent, ID) :-
     option(id(ID), Attrs),
     option(type(Type), Attrs, shallow),
@@ -169,8 +192,10 @@ model_generate_node(final, Attrs, _Children, Parent, ID) :-
     gennum(N),
     model_assert(n(N, ID)),
     model_assert(final(ID, Parent)).
-model_generate_node(initial, _Attrs, _Children, Parent, init(Parent)) :-
-    model_assert(initial(init(Parent), Parent)).
+model_generate_node(initial, _Attrs, _Children, _Parent, _ID) :-
+    throw(error(domain_error(sxml_element, initial),
+                context(statechart_wasm_model:model_generate_node/5,
+                        'the <initial> element is not supported; use the initial attribute on its parent'))).
 model_generate_node(onentry, _Attrs, Children, Parent, _ID) :-
     children_to_actions(Children, Actions, []),
     model_assert(onentry(Parent, Actions)).
@@ -186,6 +211,21 @@ model_generate_node(datamodel, _Attrs, Children, _Parent, _ID) :-
 
 model_assert(Fact) :-
     assertz(statechart_wasm:Fact).
+
+
+has_state_child(Children) :-
+    member(element(Name, _Attrs, _Grandchildren), Children),
+    memberchk(Name, [state, parallel, final]),
+    !.
+
+validate_state_initial(Attrs, Children) :-
+    (   has_state_child(Children),
+        \+ option(initial(_), Attrs)
+    ->  throw(error(existence_error(attribute, initial),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            'a compound <state> requires an initial attribute')))
+    ;   true
+    ).
 
 
 transition_trigger(Attrs, Parent, after(Key, Delay), []) :-
@@ -253,9 +293,218 @@ my_atom_to_term_2('', '', []) :-
 my_atom_to_term_2(Atom, Term, Bindings) :-
     atom_to_term(Atom, Term, Bindings).
 
-attr_to_option(A=V, Term) :-
+spawn_element_options(Type, Attrs0, Options) :-
+    select_option(options(OptionsText), Attrs0, Attrs1, []),
+    parse_spawn_options(OptionsText, ListedOptions),
+    spawn_required_options(Type, Attrs1, Attrs2, RequiredOptions),
+    maplist(attr_to_typed_option, Attrs2, AttributeOptions),
+    append([RequiredOptions, AttributeOptions, ListedOptions], Options).
+
+parse_spawn_options([], []) :-
+    !.
+parse_spawn_options(Text, Options) :-
+    catch(atom_to_term(Text, Term, _Bindings), _, fail),
+    !,
+    (   is_list(Term)
+    ->  Options = Term
+    ;   throw(error(type_error(list, Term),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            'the options attribute must be a Prolog list')))
+    ).
+parse_spawn_options(Text, _) :-
+    throw(error(syntax_error(spawn_options(Text)),
+                context(statechart_wasm_model:model_generate_node/5,
+                        'the options attribute must contain a valid Prolog term'))).
+
+spawn_required_options(actor, Attrs0, Attrs, [goal(Goal)]) :-
+    (   select_option(goal(GoalText), Attrs0, Attrs)
+    ->  typed_attribute_value(GoalText, Goal),
+        (   callable(Goal)
+        ->  true
+        ;   throw(error(type_error(callable, Goal),
+                        context(statechart_wasm_model:model_generate_node/5,
+                                'the goal attribute must be callable')))
+        )
+    ;   throw(error(existence_error(attribute, goal),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<spawn type="actor"> requires a goal attribute')))
+    ).
+spawn_required_options(toplevel, Attrs, Attrs, []).
+spawn_required_options(server, Attrs0, Attrs, [callback(Callback), state(State)]) :-
+    (   select_option(callback(CallbackText), Attrs0, Attrs1)
+    ->  typed_attribute_value(CallbackText, Callback),
+        (   callable(Callback)
+        ->  true
+        ;   throw(error(type_error(callable, Callback),
+                        context(statechart_wasm_model:model_generate_node/5,
+                                'the callback attribute must be callable')))
+        )
+    ;   throw(error(existence_error(attribute, callback),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<spawn type="server"> requires a callback attribute')))
+    ),
+    (   select_option(state(StateText), Attrs1, Attrs)
+    ->  typed_attribute_value(StateText, State)
+    ;   throw(error(existence_error(attribute, state),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<spawn type="server"> requires a state attribute')))
+    ).
+spawn_required_options(supervisor, Attrs0, Attrs, [children(Children)]) :-
+    (   select_option(children(ChildrenText), Attrs0, Attrs)
+    ->  typed_attribute_value(ChildrenText, Children),
+        (   is_list(Children)
+        ->  true
+        ;   throw(error(type_error(list, Children),
+                        context(statechart_wasm_model:model_generate_node/5,
+                                'the children attribute must be a Prolog list')))
+        )
+    ;   throw(error(existence_error(attribute, children),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<spawn type="supervisor"> requires a children attribute')))
+    ).
+spawn_required_options(statechart, Attrs, Attrs, []).
+
+attr_to_typed_option(A=V, Term) :-
+    typed_attribute_value(V, Value),
     functor(Term, A, 1),
-    arg(1, Term, V).
+    arg(1, Term, Value).
+
+typed_attribute_value(Value0, Value) :-
+    atom(Value0),
+    catch(atom_to_term(Value0, Parsed, _Bindings), _, fail),
+    !,
+    Value = Parsed.
+typed_attribute_value(Value, Value).
+
+validate_spawn_type(actor) :- !.
+validate_spawn_type(toplevel) :- !.
+validate_spawn_type(server) :- !.
+validate_spawn_type(supervisor) :- !.
+validate_spawn_type(statechart) :- !.
+validate_spawn_type(Type) :-
+    throw(error(domain_error(statechart_spawn_type, Type),
+                context(statechart_wasm_model:model_generate_node/5,
+                        'supported spawn types are actor, toplevel, server, supervisor, and statechart'))).
+
+validate_spawn_options(Type, Options) :-
+    maplist(validate_spawn_option(Type), Options),
+    reject_duplicate_spawn_options(Options),
+    validate_spawn_source_contract(Type, Options).
+
+validate_spawn_option(actor, goal(Goal)) :-
+    ground(Goal),
+    callable(Goal),
+    !.
+validate_spawn_option(server, callback(Callback)) :-
+    ground(Callback),
+    callable(Callback),
+    !.
+validate_spawn_option(server, state(State)) :- ground(State), !.
+validate_spawn_option(supervisor, children(Children)) :-
+    ground(Children),
+    is_list(Children),
+    !.
+validate_spawn_option(Type, Option) :-
+    ground(Option),
+    allowed_spawn_option(Type, Option),
+    !.
+validate_spawn_option(Type, Option) :-
+    throw(error(domain_error(statechart_spawn_option(Type), Option),
+                context(statechart_wasm_model:model_generate_node/5,
+                        'unsupported or invalid option for this spawn type'))).
+
+allowed_spawn_option(_, monitor(Bool)) :- boolean_value(Bool).
+allowed_spawn_option(_, link(Bool)) :- boolean_value(Bool).
+allowed_spawn_option(_, node(_)).
+allowed_spawn_option(_, io_target(_)).
+allowed_spawn_option(Type, src_text(Text)) :- source_text_type(Type), text_value(Text).
+allowed_spawn_option(Type, src_uri(URI)) :- source_text_type(Type), text_value(URI).
+allowed_spawn_option(Type, src_list(Terms)) :- supplemental_source_type(Type), is_list(Terms).
+allowed_spawn_option(Type, src_predicates(PIs)) :- supplemental_source_type(Type), predicate_indicators(PIs).
+allowed_spawn_option(actor, target(_)).
+allowed_spawn_option(toplevel, target(_)).
+allowed_spawn_option(toplevel, session(Bool)) :- boolean_value(Bool).
+allowed_spawn_option(toplevel, time_limit(Limit)) :- spawn_limit(Limit).
+allowed_spawn_option(toplevel, idle_limit(Limit)) :- spawn_limit(Limit).
+allowed_spawn_option(toplevel, name(Name)) :- atomic(Name).
+allowed_spawn_option(server, name(Name)) :- atomic(Name).
+allowed_spawn_option(supervisor, strategy(Strategy)) :-
+    memberchk(Strategy, [one_for_one, one_for_all, rest_for_one]).
+allowed_spawn_option(supervisor, intensity(Intensity)) :-
+    integer(Intensity), Intensity > 0.
+allowed_spawn_option(supervisor, period(Period)) :-
+    number(Period), Period > 0.
+allowed_spawn_option(supervisor, name(Name)) :- atomic(Name).
+allowed_spawn_option(statechart, name(Name)) :- atomic(Name).
+allowed_spawn_option(statechart, trace(Bool)) :- boolean_value(Bool).
+
+source_text_type(Type) :- prolog_source_type(Type), !.
+source_text_type(statechart).
+
+prolog_source_type(actor).
+prolog_source_type(toplevel).
+prolog_source_type(server).
+prolog_source_type(supervisor).
+
+supplemental_source_type(Type) :- prolog_source_type(Type), !.
+supplemental_source_type(statechart).
+
+boolean_value(true).
+boolean_value(false).
+
+text_value(Value) :- atom(Value), !.
+text_value(Value) :- string(Value).
+
+spawn_limit(infinite) :- !.
+spawn_limit(Limit) :- number(Limit), Limit > 0.
+
+predicate_indicators(PIs) :-
+    is_list(PIs),
+    maplist(predicate_indicator, PIs).
+
+predicate_indicator(Name/Arity) :-
+    atom(Name),
+    integer(Arity),
+    Arity >= 0.
+
+validate_spawn_source_contract(statechart, Options) :-
+    !,
+    include(statechart_source_option, Options, Sources),
+    (   Sources = [_]
+    ->  true
+    ;   Sources == []
+    ->  throw(error(existence_error(option, src_uri_or_src_text),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<spawn type="statechart"> requires one src_uri/1 or src_text/1 source')))
+    ;   throw(error(domain_error(single_statechart_source_option, Sources),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            '<spawn type="statechart"> accepts exactly one source')))
+    ).
+validate_spawn_source_contract(_, _).
+
+statechart_source_option(src_text(_)).
+statechart_source_option(src_uri(_)).
+
+reject_duplicate_spawn_options(Options) :-
+    reject_duplicate_spawn_options(Options, []).
+
+reject_duplicate_spawn_options([], _).
+reject_duplicate_spawn_options([Option|Options], Seen) :-
+    functor(Option, Name, _),
+    (   repeatable_source_option(Name)
+    ->  Seen1 = Seen
+    ;   memberchk(Name, Seen)
+    ->  throw(error(permission_error(duplicate, spawn_option, Name),
+                    context(statechart_wasm_model:model_generate_node/5,
+                            'a spawn option may be specified only once')))
+    ;   Seen1 = [Name|Seen]
+    ),
+    reject_duplicate_spawn_options(Options, Seen1).
+
+repeatable_source_option(src_text).
+repeatable_source_option(src_uri).
+repeatable_source_option(src_list).
+repeatable_source_option(src_predicates).
 
 unify_bindings(Bs1, Bs2, Bs3) :-
     unify_bindings(Bs2, Bs1, Bs3, Bs1).
@@ -284,21 +533,6 @@ children_text(Children, Text) :-
             Atoms),
     Atoms \= [],
     atomic_list_concat(Atoms, '\n', Text).
-
-load_text_terms(Text, Terms) :-
-    setup_call_cleanup(
-        open_string(Text, Stream),
-        read_terms(Stream, Terms),
-        close(Stream)).
-
-read_terms(Stream, Terms) :-
-    read_term(Stream, Term, []),
-    (   Term == end_of_file
-    ->  Terms = []
-    ;   Terms = [Term|Rest],
-        read_terms(Stream, Rest)
-    ).
-
 
 %!  load_datamodel(+Text) is det.
 %

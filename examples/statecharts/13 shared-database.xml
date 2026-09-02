@@ -12,7 +12,7 @@
 
 -->
 
-<statechart datamodel="web-prolog" initial="start">
+<statechart version="0.2" initial="start">
     <datamodel> 
         local_label(statechart_datamodel).
         

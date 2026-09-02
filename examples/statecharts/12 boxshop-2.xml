@@ -6,9 +6,7 @@
 
 -->
 
-<statechart
-       datamodel="web-prolog"
-       initial="form">
+<statechart version="0.2" initial="form">
     <state id="form" initial="selectFormItem">
         <datamodel>
             :- dynamic 

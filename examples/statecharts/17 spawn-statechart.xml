@@ -1,0 +1,51 @@
+<!--
+This example invokes a second statechart as a child of NestedOwner.  Its XML
+document is carried inline in CDATA, while src_list loads the supplemental
+Prolog fact child_value(ok) into the child's private module.  The child is
+named inner_chart and monitored; trace(false) suppresses only its own trace,
+leaving the outer chart's lifecycle trace visible.
+
+The child reads child_value(ok) on entry and sends output(nested(ok)) to its
+parent.  This arrives as output(ChildPid, nested(ok)); the outer chart matches
+that message and prints nested(ok).  It also receives spawned(Pid), sends that
+pid the finish event, and waits for the canonical monitored notification
+down(Pid, Ref, Reason) before the outer chart enters Final.
+-->
+
+<statechart version="0.2" initial="NestedOwner">
+    <state id="NestedOwner" initial="Start">
+        <spawn type="statechart"
+               options="[monitor(true), name(inner_chart), trace(false), src_list([child_value(ok)])]"><![CDATA[
+            <statechart version="0.2" initial="Waiting">
+                <state id="Waiting">
+                    <onentry>child_value(Value), output(nested(Value))</onentry>
+                    <go to="Finished" on="finish" />
+                </state>
+                <final id="Finished" />
+            </statechart>
+        ]]></spawn>
+        <state id="Start">
+            <go to="WaitingForChild" on="spawned(Pid)">
+                send(Pid, finish)
+            </go>
+        </state>
+        <state id="WaitingForChild">
+            <go on="output(_, nested(Value))">
+                writeln(nested(Value))
+            </go>
+            <go to="Final" on="down(_, _, _)" />
+        </state>
+    </state>
+    <final id="Final" />
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

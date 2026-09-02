@@ -38,11 +38,14 @@ http_parse_call_request(Request, ExtraSpecs,
                         GoalAtom, TemplateAtom0, Offset, Limit, Format,
                         LoadText, Once0, RequestedTimeout0) :-
     call_parameter_specs(GoalAtom, TemplateAtom0, Offset, Limit, Format,
-                         SrcText0, LegacyLoadText0,
+                         SrcText0,
                          Once0, RequestedTimeout0, BaseSpecs),
     append(ExtraSpecs, BaseSpecs, Specs),
     http_parameters(Request, Specs),
-    preferred_source_text(SrcText0, LegacyLoadText0, LoadText),
+    (   nonvar(SrcText0)
+    ->  LoadText = SrcText0
+    ;   LoadText = ''
+    ),
     check_term_text_size(goal, GoalAtom),
     (   nonvar(TemplateAtom0)
     ->  check_term_text_size(template, TemplateAtom0)
@@ -51,10 +54,10 @@ http_parse_call_request(Request, ExtraSpecs,
     check_source_text_size(src_text, LoadText).
 
 %!  call_parameter_specs(-GoalAtom, -TemplateAtom0, -Offset, -Limit, -Format,
-%!                       -SrcText, -LegacyLoadText, -Once0,
+%!                       -SrcText, -Once0,
 %!                       -RequestedTimeout0, -Specs) is det.
 call_parameter_specs(GoalAtom, TemplateAtom0, Offset, Limit, Format, SrcText,
-                     LegacyLoadText, Once0, RequestedTimeout0, Specs) :-
+                     Once0, RequestedTimeout0, Specs) :-
     Specs = [
         goal(GoalAtom, [atom]),
         template(TemplateAtom0, [optional(true)]),
@@ -62,18 +65,9 @@ call_parameter_specs(GoalAtom, TemplateAtom0, Offset, Limit, Format, SrcText,
         limit(Limit, [integer, default(10 000 000 000)]),
         format(Format, [atom, default(json)]),
         src_text(SrcText, [optional(true)]),
-        load_text(LegacyLoadText, [optional(true)]),
         once(Once0, [atom, default(false)]),
         timeout(RequestedTimeout0, [number, optional(true)])
     ].
-
-preferred_source_text(SrcText, _, SrcText) :-
-    nonvar(SrcText),
-    !.
-preferred_source_text(_, LegacyLoadText, LegacyLoadText) :-
-    nonvar(LegacyLoadText),
-    !.
-preferred_source_text(_, _, '').
 
 %!  parse_call_context(+GoalAtom, +TemplateAtom0, +Format, +Once0,
 %!                     +RequestedTimeout0, -Goal, -Template, -Once,

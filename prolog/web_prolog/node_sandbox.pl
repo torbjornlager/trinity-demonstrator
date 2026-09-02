@@ -294,6 +294,8 @@ public_runtime_support_goal_pi(send_with_delay/3).
 
 statechart_runtime_support_goal_pi(interpret/1).
 statechart_runtime_support_goal_pi(interpret_text/1).
+statechart_runtime_support_goal_pi(interpret_trace/2).
+statechart_runtime_support_goal_pi(interpret_text_trace/2).
 
 
 %!  sandbox_check_goal_with_source(+Profile, +GoalModule, +Goal, +SourceText) is det.
@@ -1122,7 +1124,11 @@ sandbox:safe_primitive(rpc:runtime_property(_)).
 %  (interpret/1 and interpret_text/1) are exempted from spawn
 %  re-validation by public_runtime_support_goal/2 below, so they remain
 %  reachable only THROUGH statechart_spawn, never as a direct client goal.
-sandbox:safe_primitive(statechart_actor:statechart_spawn(_, _)).
+% statechart_spawn/2 is meta only so src_predicates can be copied from the
+% caller's private module.  Its qualified options are data, not a goal to be
+% called here; the spawned interpreter and chart goals are checked by the
+% runtime hooks described above.
+sandbox:safe_meta(statechart_actor:statechart_spawn(_, _), []).
 sandbox:safe_primitive(statechart_actor:statechart_halt(_, _)).
 sandbox:safe_primitive(statechart_actor:statechart_halt(_, _, _)).
 sandbox:safe_primitive(statechart_runtime:raise(_)).
