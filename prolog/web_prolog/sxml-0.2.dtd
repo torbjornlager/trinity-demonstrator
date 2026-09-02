@@ -1,0 +1,73 @@
+<!-- SXML 0.2 document grammar.
+
+     The demonstrator supplies this DTD to the XML parser; documents do not
+     need a DOCTYPE declaration.  Constraints involving Prolog terms or
+     relationships in the state hierarchy are checked by the semantic
+     validator after DTD validation.
+-->
+
+<!ELEMENT statechart (datamodel|state|parallel|final)*>
+<!ATTLIST statechart
+          version CDATA #REQUIRED
+          initial IDREF #REQUIRED
+          id      ID    #IMPLIED>
+
+<!ELEMENT state (onentry|onexit|go|defer|spawn|datamodel|history|state|parallel|final)*>
+<!ATTLIST state
+          id      ID    #REQUIRED
+          initial IDREF #IMPLIED>
+
+<!ELEMENT parallel (onentry|onexit|go|defer|spawn|datamodel|history|state|parallel|final)*>
+<!ATTLIST parallel
+          id ID #REQUIRED>
+
+<!ELEMENT final (onentry?)>
+<!ATTLIST final
+          id ID #REQUIRED>
+
+<!ELEMENT history (go)>
+<!ATTLIST history
+          id   ID    #REQUIRED
+          type CDATA "shallow">
+
+<!ELEMENT go (#PCDATA)>
+<!ATTLIST go
+          to    IDREFS #IMPLIED
+          on    CDATA  #IMPLIED
+          if    CDATA  #IMPLIED
+          after CDATA  #IMPLIED>
+
+<!ELEMENT onentry (#PCDATA)>
+<!ELEMENT onexit (#PCDATA)>
+<!ELEMENT datamodel (#PCDATA)>
+
+<!ELEMENT defer EMPTY>
+<!ATTLIST defer
+          on CDATA #REQUIRED
+          if CDATA #IMPLIED>
+
+<!ELEMENT spawn (#PCDATA)>
+<!ATTLIST spawn
+          type           CDATA "toplevel"
+          options        CDATA #IMPLIED
+          goal           CDATA #IMPLIED
+          callback       CDATA #IMPLIED
+          state          CDATA #IMPLIED
+          children       CDATA #IMPLIED
+          monitor        CDATA #IMPLIED
+          link           CDATA #IMPLIED
+          node           CDATA #IMPLIED
+          io_target      CDATA #IMPLIED
+          target         CDATA #IMPLIED
+          session        CDATA #IMPLIED
+          time_limit     CDATA #IMPLIED
+          idle_limit     CDATA #IMPLIED
+          name           CDATA #IMPLIED
+          trace          CDATA #IMPLIED
+          strategy       CDATA #IMPLIED
+          intensity      CDATA #IMPLIED
+          period         CDATA #IMPLIED
+          src_text       CDATA #IMPLIED
+          src_uri        CDATA #IMPLIED
+          src_list       CDATA #IMPLIED
+          src_predicates CDATA #IMPLIED>

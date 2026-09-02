@@ -67,7 +67,7 @@ test(parse_simple_root, [setup(statechart_actor:clean), cleanup(statechart_actor
 test(rejects_initial_element,
      [ setup(statechart_actor:clean),
        cleanup(statechart_actor:clean),
-       throws(error(domain_error(sxml_element, initial), _))
+       throws(error(sxml_validation_error(_), _))
      ]) :-
     parse_statechart_fixture('test_statecharts/statechart-initial-element.statechart').
 
@@ -192,7 +192,7 @@ test(parse_spawn_actor_requires_goal,
 test(parse_spawn_rejects_unknown_option,
      [ setup(statechart_actor:clean),
        cleanup(statechart_actor:clean),
-       throws(error(domain_error(statechart_spawn_option(toplevel), exit(false)), _))
+       throws(error(sxml_validation_error(_), _))
      ]) :-
     statechart_model:statechart_actor_parse_text(
         '<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" exit="false"/></state></statechart>').
@@ -216,6 +216,12 @@ test(parse_after_transition,
     statechart_model:statechart_actor_parse_text(Text),
     statechart_actor:after_transition(waiting, _Key, 0.25,
                                       true, [done], []).
+
+test(parse_space_separated_targets,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"><go to="a   b" on="split"/></state><state id="a"/><state id="b"/></statechart>',
+    statechart_model:statechart_actor_parse_text(Text),
+    assertion(statechart_actor:transition(s, split, true, [a, b], [])).
 
 test(parse_after_rejects_on,
      [ setup(statechart_actor:clean),
@@ -252,6 +258,82 @@ test(parse_defer,
     ], Text),
     statechart_model:statechart_actor_parse_text(Text),
     statechart_actor:defer(waiting, command(C), C==later).
+
+test(parse_rejects_invalid_embedded_prolog,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(syntax_error(_), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><go if="broken("/></state></statechart>').
+
+test(parse_rejects_invalid_typed_spawn_attribute,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(syntax_error(_), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="actor" goal="broken("/></state></statechart>').
+
+test(validation_api_is_side_effect_free,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"/></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics == []),
+    assertion(\+ statechart_actor:state(_, _)).
+
+test(validation_rejects_unknown_element) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"><mispelt/></state></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics = [diagnostic(error, _, _)|_]).
+
+test(validation_rejects_unknown_attribute) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s" bogus="true"/></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics = [diagnostic(warning, _, _)|_]).
+
+test(validation_rejects_misplaced_element) :-
+    Text = '<statechart version="0.2" initial="s"><go to="s"/><state id="s"/></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics \== []).
+
+test(validation_rejects_duplicate_identifiers) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"/><final id="s"/></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics = [diagnostic(error, unknown,
+                                        error(sxml_semantic_error(duplicate_identifier, s), _))]).
+
+test(validation_rejects_unknown_transition_target) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"><go to="missing"/></state></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics = [diagnostic(error, unknown,
+                                        error(sxml_semantic_error(unknown_identifier, missing), _))]).
+
+test(validation_requires_initial_to_be_direct_child) :-
+    Text = '<statechart version="0.2" initial="nested"><state id="outer"><state id="nested"/></state></statechart>',
+    statechart_model:statechart_validate_text(Text, Diagnostics),
+    assertion(Diagnostics = [diagnostic(error, unknown,
+                                        error(sxml_semantic_error(initial_not_direct_child, nested), _))]).
+
+test(distributable_dtd_matches_embedded_schema) :-
+    module_property(sxml_schema, file(SchemaModule)),
+    file_directory_name(SchemaModule, WasmDir),
+    file_directory_name(WasmDir, WebPrologDir),
+    directory_file_path(WebPrologDir, 'sxml-0.2.dtd', DTDFile),
+    read_file_to_codes(DTDFile, FileText, []),
+    sxml_schema:sxml_dtd_text(EmbeddedText),
+    assertion(FileText == EmbeddedText).
+
+test(all_demonstrator_examples_validate) :-
+    statechart_tests_directory(TestsDir),
+    file_directory_name(TestsDir, RepositoryDir),
+    directory_file_path(RepositoryDir, 'examples/statecharts/*.xml', Pattern),
+    expand_file_name(Pattern, Files),
+    assertion(Files \== []),
+    forall(member(File, Files),
+           ( statechart_model:statechart_validate(File, Diagnostics),
+             assertion(Diagnostics == [])
+           )).
 
 :- end_tests(statechart_profile).
 

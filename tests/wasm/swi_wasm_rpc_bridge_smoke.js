@@ -453,6 +453,10 @@ ok(includes('String(pidText) === "statechart"') &&
    includes("current_predicate(statechart_wasm:statechart_send/1)") &&
    includes('Module.FS.writeFile("/swi_wasm_actor_bridge.pl", self.swiWasmRpcProlog())'),
    "<spawn> in WASM charts: bridge loaded for charts, send(statechart) routes from workers (via sendSwiWasmActorMessage), replies become chart events");
+ok(includes('"sxml_schema.pl"') &&
+   workerSource.includes('"sxml_schema.pl"') &&
+   nodeSource.includes("wasm_module_file_name('sxml_schema.pl')."),
+   "both SWI-WASM statechart loaders install the SXML schema module");
 ok(includes("window.swiWasmStatechartMonitor = function(pidText, refText)") &&
    includes('self.monitorSwiWasmActor("statechart"') &&
    includes('if (pid === "statechart")'),

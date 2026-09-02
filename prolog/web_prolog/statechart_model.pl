@@ -1,6 +1,8 @@
 :- module(statechart_model, [
     statechart_actor_parse/1,
     statechart_actor_parse_text/1,
+    statechart_validate/2,
+    statechart_validate_text/2,
     statechart_spawn_source/3
 ]).
 
@@ -13,7 +15,11 @@ The generated model facts are asserted into `statechart_actor`.
 :- use_module(library(option)).
 :- use_module(library(apply)).
 :- use_module(library(lists), [append/2]).
-:- use_module(library(sgml)).
+:- use_module(wasm/sxml_schema, [
+    load_sxml_structure/2,
+    sxml_validate_stream/2,
+    sxml_validate_text/2
+]).
 :- use_module(source_utils, [
     uri_atom/2,
     open_source_uri/2
@@ -39,44 +45,27 @@ statechart_actor_parse_text(Text) :-
     model_generate(ListOfContent, null).
 
 
-:- thread_local xml_parse_message/3.
-
-%!  load_xml_capturing_errors(+Stream, -Content) is det.
-%
-%   Parse XML from Stream, intercepting SGML warnings and errors via
-%   thread_message_hook so they do not escape to stderr.  If any
-%   error-level messages were emitted, throw them as a structured
-%   exception so that the caller (and ultimately the monitor/down
-%   notification) receives a human-readable description.
 load_xml_capturing_errors(Stream, Content) :-
-    asserta((user:thread_message_hook(sgml(_Parser, _File, Line, Msg), Kind, _) :-
-        (Kind == error ; Kind == warning),
-        assertz(statechart_model:xml_parse_message(Kind, Line, Msg))), Ref),
-    catch(
-        load_structure(Stream, Content, [
-            dialect(xml),
-            space(remove)
-        ]),
-        Error,
-        (   erase(Ref),
-            retractall(xml_parse_message(_, _, _)),
-            throw(Error)
-        )
-    ),
-    erase(Ref),
-    collect_xml_errors(Errors),
-    retractall(xml_parse_message(_, _, _)),
-    (   Errors == []
-    ->  true
-    ;   throw(error(xml_parse_error(Errors),
-                    context(statechart_model:load_xml_capturing_errors/2,
-                            Errors)))
-    ).
+    load_sxml_structure(Stream, Content).
 
-collect_xml_errors(Errors) :-
-    findall(Line-Msg,
-            xml_parse_message(error, Line, Msg),
-            Errors).
+
+%!  statechart_validate(+Source, -Diagnostics) is det.
+%
+%   Validate an SXML source without creating a model or executing its
+%   datamodel.  Diagnostics is [] when the document is structurally valid.
+statechart_validate(Source0, Diagnostics) :-
+    uri_atom(Source0, Source),
+    setup_call_cleanup(
+        open_source_uri(Source, Stream),
+        sxml_validate_stream(Stream, Diagnostics),
+        close(Stream)).
+
+
+%!  statechart_validate_text(+Text, -Diagnostics) is det.
+%
+%   Text counterpart of statechart_validate/2.
+statechart_validate_text(Text, Diagnostics) :-
+    sxml_validate_text(Text, Diagnostics).
 
 
 %!  statechart_spawn_source(+Options0, -SourceGoal, -SpawnOptions) is det.
@@ -179,7 +168,7 @@ model_generate_node(go, Attrs, Children, Parent, _ID) :-
     my_atom_to_term(CondAtom, Cond, Bindings1),
     unify_bindings(Bindings0, Bindings1, Bindings2),
     (   option(to(Targets), Attrs)
-    ->  atomic_list_concat(TargetList, ' ', Targets)
+    ->  transition_targets(Targets, TargetList)
     ;   TargetList = []
     ),
     children_to_actions(Children, Actions, Bindings2),
@@ -215,6 +204,13 @@ model_generate_node(datamodel, _Attrs, Children, _Parent, _ID) :-
     (   children_text(Children, Text)
     ->  statechart_actor:load_datamodel(Text)
     ;   true
+    ).
+
+
+transition_targets(Targets, TargetList) :-
+    (   is_list(Targets)
+    ->  TargetList = Targets
+    ;   atomic_list_concat(TargetList, ' ', Targets)
     ).
 
 
@@ -291,11 +287,7 @@ child_to_action(Children, Action, Bindings) :-
     Action = script(Expr).
 
 my_atom_to_term(Atom, Term, Bindings) :-
-    catch(my_atom_to_term_2(Atom, Term, Bindings),
-          Error,
-          ( print_message(error, Error),
-            fail
-          )).
+    my_atom_to_term_2(Atom, Term, Bindings).
 
 my_atom_to_term_2('', '', []) :-
     !.
@@ -380,8 +372,8 @@ attr_to_typed_option(A=V, Term) :-
 
 typed_attribute_value(Value0, Value) :-
     atom(Value0),
-    catch(atom_to_term(Value0, Parsed, _Bindings), _, fail),
     !,
+    atom_to_term(Value0, Parsed, _Bindings),
     Value = Parsed.
 typed_attribute_value(Value, Value).
 

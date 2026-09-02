@@ -1,6 +1,7 @@
 :- module(statechart_wasm_model, [
     statechart_wasm_parse_text/1,
-    statechart_wasm_parse_stream/1
+    statechart_wasm_parse_stream/1,
+    statechart_wasm_validate_text/2
 ]).
 
 /** <module> Statechart Model Parsing (SWI-WASM port)
@@ -23,7 +24,10 @@ Differences from the desktop `statechart_model`:
 :- use_module(library(option)).
 :- use_module(library(apply)).
 :- use_module(library(lists)).
-:- use_module(library(sgml)).
+:- use_module(sxml_schema, [
+    load_sxml_structure/2,
+    sxml_validate_text/2
+]).
 
 %   Web-Prolog operators used inside typed <spawn> attributes/options and
 %   <go>/<onentry> scripts (e.g. `Pid ! pong`, `Id@Node`, library(wasm)'s
@@ -62,37 +66,15 @@ statechart_wasm_parse_stream(Stream) :-
     model_generate(ListOfContent, null).
 
 
-:- thread_local xml_parse_message/3.
-
 load_xml_capturing_errors(Stream, Content) :-
-    asserta((user:thread_message_hook(sgml(_Parser, _File, Line, Msg), Kind, _) :-
-        (Kind == error ; Kind == warning),
-        assertz(statechart_wasm_model:xml_parse_message(Kind, Line, Msg))), Ref),
-    catch(
-        load_structure(Stream, Content, [
-            dialect(xml),
-            space(remove)
-        ]),
-        Error,
-        (   erase(Ref),
-            retractall(xml_parse_message(_, _, _)),
-            throw(Error)
-        )
-    ),
-    erase(Ref),
-    collect_xml_errors(Errors),
-    retractall(xml_parse_message(_, _, _)),
-    (   Errors == []
-    ->  true
-    ;   throw(error(xml_parse_error(Errors),
-                    context(statechart_wasm_model:load_xml_capturing_errors/2,
-                            Errors)))
-    ).
+    load_sxml_structure(Stream, Content).
 
-collect_xml_errors(Errors) :-
-    findall(Line-Msg,
-            xml_parse_message(error, Line, Msg),
-            Errors).
+
+%!  statechart_wasm_validate_text(+Text, -Diagnostics) is det.
+%
+%   Validate without modifying the singleton browser statechart model.
+statechart_wasm_validate_text(Text, Diagnostics) :-
+    sxml_validate_text(Text, Diagnostics).
 
 
 model_generate([], _).
@@ -170,7 +152,7 @@ model_generate_node(go, Attrs, Children, Parent, _ID) :-
     my_atom_to_term(CondAtom, Cond, Bindings1),
     unify_bindings(Bindings0, Bindings1, Bindings2),
     (   option(to(Targets), Attrs)
-    ->  atomic_list_concat(TargetList, ' ', Targets)
+    ->  transition_targets(Targets, TargetList)
     ;   TargetList = []
     ),
     children_to_actions(Children, Actions, Bindings2),
@@ -206,6 +188,13 @@ model_generate_node(datamodel, _Attrs, Children, _Parent, _ID) :-
     (   children_text(Children, Text)
     ->  load_datamodel(Text)
     ;   true
+    ).
+
+
+transition_targets(Targets, TargetList) :-
+    (   is_list(Targets)
+    ->  TargetList = Targets
+    ;   atomic_list_concat(TargetList, ' ', Targets)
     ).
 
 
@@ -282,11 +271,7 @@ child_to_action(Children, Action, Bindings) :-
     Action = script(Expr).
 
 my_atom_to_term(Atom, Term, Bindings) :-
-    catch(my_atom_to_term_2(Atom, Term, Bindings),
-          Error,
-          ( print_message(error, Error),
-            fail
-          )).
+    my_atom_to_term_2(Atom, Term, Bindings).
 
 my_atom_to_term_2('', '', []) :-
     !.
@@ -371,8 +356,8 @@ attr_to_typed_option(A=V, Term) :-
 
 typed_attribute_value(Value0, Value) :-
     atom(Value0),
-    catch(atom_to_term(Value0, Parsed, _Bindings), _, fail),
     !,
+    atom_to_term(Value0, Parsed, _Bindings),
     Value = Parsed.
 typed_attribute_value(Value, Value).
 

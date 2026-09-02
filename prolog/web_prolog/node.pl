@@ -279,6 +279,7 @@ HTTP endpoint layout:
 :- http_handler(root(vendor), node_vendor_page, [prefix]).
 :- http_handler(root(examples), node_examples_page, [prefix]).
 :- http_handler(root(statecharts), node_statecharts_page, [prefix]).
+:- http_handler(root('sxml-0.2.dtd'), node_sxml_dtd_page, []).
 :- http_handler(root(wasm), node_wasm_modules_page, [prefix]).
 
 %!  node_controller_root(+Request) is det.
@@ -1987,6 +1988,13 @@ node_statecharts_page(Request) :-
     safe_asset_file(Dir, RelPath, File),
     http_reply_file(File, [unsafe(true), mime_type('text/xml; charset=UTF-8')], Request).
 
+%!  node_sxml_dtd_page(+Request) is det.
+%
+%   Serve the versioned SXML grammar for editors and external validators.
+node_sxml_dtd_page(Request) :-
+    node_sxml_dtd_file(File),
+    http_reply_file(File, [unsafe(true), mime_type('application/xml-dtd')], Request).
+
 %!  node_wasm_modules_page(+Request) is det.
 %
 %   Serve the allowlisted SWI-WASM Prolog sources.
@@ -2012,6 +2020,7 @@ node_wasm_module_file(RelPath, File) :-
 %   True iff RelPath names one of the Prolog sources SWI-WASM loads from
 %   /wasm/.
 wasm_module_file_name('shared_db.pl').
+wasm_module_file_name('sxml_schema.pl').
 wasm_module_file_name('statechart_wasm.pl').
 wasm_module_file_name('statechart_wasm_model.pl').
 wasm_module_file_name('statechart_wasm_exec.pl').
@@ -2148,6 +2157,14 @@ node_wasm_modules_dir(Dir) :-
 node_wasm_modules_dir(Dir) :-
     working_directory(Cwd, Cwd),
     directory_file_path(Cwd, 'prolog/web_prolog/wasm', Dir).
+
+%!  node_sxml_dtd_file(-File) is det.
+%
+%   Resolve the distributable SXML grammar beside node.pl.
+node_sxml_dtd_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, 'sxml-0.2.dtd', File).
 
 %!  example_directory_entries(+Dir, +BaseURL, +Kind, -Entries) is det.
 %

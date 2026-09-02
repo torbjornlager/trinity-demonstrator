@@ -69,8 +69,20 @@ test(minimal_chart, [cleanup(statechart_stop)]) :-
     memberchk(s, C),
     assertion(statechart_running).
 
+test(validation_api_matches_runtime_schema) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s" unexpected="x"/></statechart>',
+    statechart_wasm_model:statechart_wasm_validate_text(Text, Diagnostics),
+    assertion(Diagnostics = [diagnostic(warning, _, _)|_]),
+    assertion(\+ statechart_running).
+
+test(rejects_invalid_embedded_prolog,
+     [ throws(error(syntax_error(_), _)),
+       cleanup(statechart_stop)
+     ]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><go if="broken("/></state></statechart>').
+
 test(rejects_initial_element,
-     [ throws(error(domain_error(sxml_element, initial), _)),
+     [ throws(error(sxml_validation_error(_), _)),
        cleanup(statechart_stop)
      ]) :-
     start_text("<statechart version=\"0.2\" initial=\"s\"><initial><go to=\"s\"/></initial><state id=\"s\"/></statechart>").
@@ -768,7 +780,7 @@ test(nested_statechart_accepts_supplemental_sources_and_controls,
 test(spawn_rejects_unknown_option,
      [ setup(setup_mock_bridge),
        cleanup(teardown_mock_bridge),
-       throws(error(domain_error(statechart_spawn_option(toplevel), exit(false)), _))
+       throws(error(sxml_validation_error(_), _))
      ]) :-
     start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" exit="false"/></state></statechart>').
 

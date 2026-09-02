@@ -13131,9 +13131,10 @@
           // ---- WASM-port statechart integration -----------------------
           //
           // The in-browser SWI-Prolog can run the headless statechart
-          // interpreter served from prolog/web_prolog/wasm/.  We fetch the four
-          // modules once per session, write them into the virtual FS,
-          // and consult statechart_wasm.pl.  Subsequent Run clicks call
+          // interpreter served from prolog/web_prolog/wasm/.  We fetch the
+          // schema and four runtime modules once per session, write them into
+          // the virtual filesystem, and consult statechart_wasm.pl.  Subsequent
+          // Run clicks call
           // statechart_start(text(XML)); user events go through normal
           // queries like statechart_send(play).
           preloadSwiWasmStatechart: function(Prolog, Module) {
@@ -13146,6 +13147,7 @@
               return Promise.resolve(false);
             }
             var names = [
+              "sxml_schema.pl",
               "statechart_wasm_runtime.pl",
               "statechart_wasm_model.pl",
               "statechart_wasm_exec.pl",

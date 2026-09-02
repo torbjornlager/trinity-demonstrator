@@ -59,10 +59,11 @@ behaviours.
 | [parallel.pl](parallel.pl) | Parallel conjunction: run goals concurrently, fail fast. |
 | [first_solution.pl](first_solution.pl) | Race alternative goals and return the first successful solution. |
 | [statechart_model.pl](statechart_model.pl) | Statechart model parsing. |
+| [sxml-0.2.dtd](sxml-0.2.dtd) | Versioned XML grammar supplied to the SXML parser. |
 | [statechart_runtime.pl](statechart_runtime.pl) | Statechart runtime helpers. |
 | [statechart_exec.pl](statechart_exec.pl) | Statechart execution core. |
 | [statechart_actor.pl](statechart_actor.pl) | Statechart actor interpreter. |
-| [wasm/](wasm/) | A self-contained SWI-WASM port of the statechart behaviour (`statechart_wasm{,_model,_runtime,_exec}.pl`) for in-browser actors; imports only `library/` and its own siblings. |
+| [wasm/](wasm/) | A self-contained SWI-WASM port of the statechart behaviour (`statechart_wasm{,_model,_runtime,_exec}.pl`) and its embedded SXML schema for in-browser actors; imports only `library/` and its own siblings. |
 
 ## Layer 3 — distribution
 

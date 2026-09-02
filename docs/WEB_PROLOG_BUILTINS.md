@@ -274,6 +274,14 @@ re-offered oldest first on the internal event queue after a macrostep changes
 the active configuration. Enabled transitions take precedence; a re-offered
 event may be postponed again.
 
+Before a statechart model is constructed, its XML is validated against the
+SXML 0.2 DTD in `prolog/web_prolog/sxml-0.2.dtd`. The parser supplies the DTD,
+so documents do not need a `DOCTYPE` declaration; a running node also serves
+the distributable grammar at `/sxml-0.2.dtd`. A following semantic pass
+checks identifier uniqueness, reference existence, and direct-child initial
+states; Prolog terms, transition combinations, delays, and `<spawn>` contracts
+are checked by the model parser.
+
 ### Parallel Goals
 
 `parallel/1`, `first_solution/2`, `first_solution/3`.

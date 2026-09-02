@@ -1742,6 +1742,7 @@
 
   function installStatechartRuntime(message) {
     var names = [
+      "sxml_schema.pl",
       "statechart_wasm_runtime.pl",
       "statechart_wasm_model.pl",
       "statechart_wasm_exec.pl",
