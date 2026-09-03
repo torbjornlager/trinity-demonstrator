@@ -75,6 +75,14 @@ test(validation_api_matches_runtime_schema) :-
     assertion(Diagnostics = [diagnostic(warning, _, _)|_]),
     assertion(\+ statechart_running).
 
+test(validation_api_reports_missing_spawn_type) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"><spawn/></state></statechart>',
+    statechart_wasm_model:statechart_wasm_validate_text(Text, Diagnostics),
+    assertion(memberchk(diagnostic(error, _,
+                                   error(existence_error(attribute, type), _)),
+                        Diagnostics)),
+    assertion(\+ statechart_running).
+
 test(rejects_invalid_embedded_prolog,
      [ throws(error(syntax_error(_), _)),
        cleanup(statechart_stop)
@@ -679,7 +687,7 @@ test(toplevel_spawn_drives_chart,
 
 test(toplevel_spawn_preserves_explicit_target,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
-    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" target="collector"/></state></statechart>'),
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" options="[target(collector)]"/></state></statechart>'),
     once(mock_call(toplevel_spawn(Options))),
     assertion(memberchk(target(collector), Options)),
     assertion(\+ memberchk(target(statechart), Options)).
@@ -741,6 +749,13 @@ test(spawn_rejects_unknown_type,
      ]) :-
     start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="daemon"/></state></statechart>').
 
+test(spawn_requires_type_attribute,
+     [ setup(setup_mock_bridge),
+       cleanup(teardown_mock_bridge),
+       throws(error(existence_error(attribute, type), _))
+     ]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn/></state></statechart>').
+
 test(spawn_rejects_load_source_alias,
      [ setup(setup_mock_bridge),
        cleanup(teardown_mock_bridge),
@@ -780,9 +795,16 @@ test(nested_statechart_accepts_supplemental_sources_and_controls,
 test(spawn_rejects_unknown_option,
      [ setup(setup_mock_bridge),
        cleanup(teardown_mock_bridge),
+       throws(error(domain_error(statechart_spawn_option(toplevel), exit(false)), _))
+     ]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" options="[exit(false)]"/></state></statechart>').
+
+test(spawn_rejects_direct_option_attribute,
+     [ setup(setup_mock_bridge),
+       cleanup(teardown_mock_bridge),
        throws(error(sxml_validation_error(_), _))
      ]) :-
-    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" exit="false"/></state></statechart>').
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" monitor="true"/></state></statechart>').
 
 % Cancellation on state exit (SCXML <invoke> contract): when the state
 % owning a <spawn> is exited, its child is terminated.  The desktop runtime
@@ -839,7 +861,7 @@ test(chart_reacts_to_child_down, [cleanup(statechart_stop)]) :-
     statechart_send(down(worker_actor(1), ref(1), normal)),
     \+ statechart_running.
 
-% Remote <spawn node="..."> binds Pid = Id@Node; the chart-side handling of
+% Remote <spawn options="[node(...)]"> binds Pid = Id@Node; chart-side handling of
 % spawned/success/down with such pids is the same as local (events are just
 % terms, and @/2 is a declared operator).  The remote invoke + result
 % routing to the chart is JS (browser-verified); here we confirm the chart

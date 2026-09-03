@@ -1,22 +1,22 @@
 # Statechart `<spawn>`
 
-`<spawn>` uses a small set of explicit invocation attributes and a typed
-`options` list. Direct option attributes remain as convenient sugar:
+`<spawn>` uses explicit attributes for its type and required invocation
+operands, and a typed `options` list for every optional setting:
 
 ```xml
 <spawn type="server"
        callback="counter"
        state="0"
-       monitor="true"
-       options="[name(counter_server), link(false)]">
+       options="[name(counter_server), monitor(true), link(false)]">
     counter(inc, N, N1, N1) :- N1 is N + 1.
 </spawn>
 ```
 
-The body is preserved as one `src_text/1` option. Attribute and option values
-are parsed as Prolog terms, and the resulting values must be ground.
+The body is preserved as one `src_text/1` option. Required operand values and
+members of `options` are parsed as Prolog terms and must be ground.
+The `type` attribute is required and must name one of the five types below.
 
-| Type | Required invocation attributes | Type-specific options |
+| Type | Additional required attributes | Type-specific options |
 | --- | --- | --- |
 | `actor` | `goal` | `target` |
 | `toplevel` | none | `session`, `time_limit`, `idle_limit`, `target`, `name` |
@@ -55,7 +55,7 @@ of query results. The chart still receives its local `spawned(Pid)` event.
 For a nested statechart, `trace(false)` suppresses that child's trace without
 changing the containing interpreter's trace setting.
 
-Option names may not be duplicated between direct attributes and the
-`options` list. Multiple Prolog source fragments are the exception and retain
-their declaration order. Every invoked child is owned by the state containing
-the `<spawn>` and is cancelled when that state exits.
+Non-source option names may occur only once in the `options` list. Multiple
+Prolog source fragments are the exception and retain their declaration order.
+Every invoked child is owned by the state containing the `<spawn>` and is
+cancelled when that state exits.

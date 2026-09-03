@@ -145,11 +145,16 @@ model_generate_node(parallel, Attrs, _Children, Parent, ID) :-
     model_assert(n(N, ID)),
     model_assert(parallel(ID, Parent)).
 %  `type` plus the type-specific operands describe the invocation itself.
-%  `options` is a ground Prolog list; remaining attributes are compatibility
-%  sugar for unary options.  Body text becomes one src_text fragment without
-%  being reparsed and serialised by the statechart model.
+%  `options` is a ground Prolog list containing all optional settings.  Body
+%  text becomes one src_text fragment without being reparsed and serialised by
+%  the statechart model.
 model_generate_node(spawn, Attrs, Children, Parent, _ID) :-
-    select_option(type(Type), Attrs, Attrs1, toplevel),
+    (   select_option(type(Type), Attrs, Attrs1)
+    ->  true
+    ;   throw(error(existence_error(attribute, type),
+                    context(statechart_model:model_generate_node/5,
+                            '<spawn> requires a type attribute')))
+    ),
     validate_spawn_type(Type),
     spawn_element_options(Type, Attrs1, Options0),
     (   children_text(Children, Src)
@@ -298,8 +303,8 @@ spawn_element_options(Type, Attrs0, Options) :-
     select_option(options(OptionsText), Attrs0, Attrs1, []),
     parse_spawn_options(OptionsText, ListedOptions),
     spawn_required_options(Type, Attrs1, Attrs2, RequiredOptions),
-    maplist(attr_to_typed_option, Attrs2, AttributeOptions),
-    append([RequiredOptions, AttributeOptions, ListedOptions], Options).
+    reject_remaining_spawn_attributes(Type, Attrs2),
+    append(RequiredOptions, ListedOptions, Options).
 
 parse_spawn_options([], []) :-
     !.
@@ -365,10 +370,11 @@ spawn_required_options(supervisor, Attrs0, Attrs, [children(Children)]) :-
     ).
 spawn_required_options(statechart, Attrs, Attrs, []).
 
-attr_to_typed_option(A=V, Term) :-
-    typed_attribute_value(V, Value),
-    functor(Term, A, 1),
-    arg(1, Term, Value).
+reject_remaining_spawn_attributes(_, []).
+reject_remaining_spawn_attributes(Type, [Name=_|_]) :-
+    throw(error(domain_error(statechart_spawn_attribute(Type), Name),
+                context(statechart_model:model_generate_node/5,
+                        'only required operands may be direct spawn attributes'))).
 
 typed_attribute_value(Value0, Value) :-
     atom(Value0),

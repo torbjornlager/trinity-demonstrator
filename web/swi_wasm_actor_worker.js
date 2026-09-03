@@ -421,6 +421,11 @@
       // output to the actor that spawned it.
       ioTarget: String(ioTargetText || qualifyLocalPid(selfPidText)),
       trace: String(traceText === undefined ? "true" : traceText) !== "false"
+    }).then(function(pid) {
+      return "statechart_spawn_ok(" + JSON.stringify(String(pid)) + ")";
+    }, function(error) {
+      var message = error && error.message ? error.message : String(error || "statechart startup failed");
+      return "statechart_spawn_error(" + JSON.stringify(message) + ")";
     });
   }
 
@@ -998,7 +1003,7 @@
       "    option(node(Node), Options, localhost),",
       "    (   Node == localhost",
       "    ->  Promise := actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText),",
-      "        await(Promise, PidText), term_string(Pid, PidText)",
+      "        await(Promise, ResultText), statechart_spawn_worker_result(ResultText, Pid)",
       "    ;   statechart_remote_goal(SourceKind, Source, Trace, Options, Goal),",
       "        term_string(Goal, GoalText), term_string(Node, NodeText),",
       "        Promise := actorRemoteSpawn(#NodeText, #GoalText, #SupportSource),",
@@ -1006,6 +1011,15 @@
       "        maybe_register_toplevel_name(Options, Pid)",
       "    ),",
       "    install_spawn_monitor(Pid, Options).",
+      "",
+      "statechart_spawn_worker_result(ResultText, Pid) :-",
+      "    term_string(Result, ResultText),",
+      "    (   Result = statechart_spawn_ok(PidText)",
+      "    ->  term_string(Pid, PidText)",
+      "    ;   Result = statechart_spawn_error(Message)",
+      "    ->  throw(error(statechart_startup_error(Message), context(statechart_spawn/2, 'the statechart worker rejected its source')))",
+      "    ;   throw(error(domain_error(statechart_spawn_result, Result), statechart_spawn/2))",
+      "    ).",
       "",
       "statechart_remote_goal(text, Source, Trace, Options, Goal) :-",
       "    statechart_remote_goal_io(statechart_actor:interpret_text_trace(Trace, Source), Options, Goal).",
@@ -1771,11 +1785,11 @@
       consultSource([
         ":- use_module(library(readutil)).",
         "statechart_trace_hook(Event) :- term_to_atom(Event, Text), _ := wasmStatechartTrace(#Text).",
-        "statechart_actor_loop :-",
+        "statechart_actor_start :-",
         "    read_file_to_string('/statechart.xml', XML, []),",
         "    statechart_wasm:set_trace_enabled(" + (message.statechartTrace === false ? "false" : "true") + "),",
-        "    statechart_wasm:statechart_start(text(XML), " + JSON.stringify(String(message.statechartSupportSource || "")) + "),",
-        "    statechart_actor_wait.",
+        "    statechart_wasm:statechart_start(text(XML), " + JSON.stringify(String(message.statechartSupportSource || "")) + ").",
+        "statechart_actor_loop :- statechart_actor_wait.",
         "statechart_actor_wait :-",
         "    ( statechart_wasm:statechart_running ->",
         "        receive({",
@@ -1790,6 +1804,16 @@
         "    )."
       ].join("\n"), "/worker_statechart_actor.pl");
       Prolog.query("statechart_wasm:set_trace_hook(user:statechart_trace_hook)").once();
+      // Do not announce this actor as ready until its SXML has passed DTD and
+      // semantic validation and the initial model has been constructed.  A
+      // startup exception then rejects actorStatechartSpawn/7 in the parent
+      // worker, so statechart_spawn/2 reports the error at the toplevel.
+      var startResult = Prolog.query("user:statechart_actor_start").once();
+      if (!startResult || startResult.error) {
+        throw new Error(startResult && startResult.message
+          ? startResult.message
+          : "statechart startup failed");
+      }
     });
   }
 

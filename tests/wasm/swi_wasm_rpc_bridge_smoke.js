@@ -131,6 +131,7 @@ const errorDisplayHelpers = Function(
   ) + "\nreturn { exceptionDisplayTerm, sanitizeDownReasonTerm, humanizePrologErrorTerm, prologTermKindDescription };"
 )();
 const exceptionDisplayTerm = errorDisplayHelpers.exceptionDisplayTerm;
+const humanizePrologErrorTerm = errorDisplayHelpers.humanizePrologErrorTerm;
 
 const editorRewriteSource = source.slice(
   source.indexOf("function scanQuotedText"),
@@ -560,7 +561,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-output-v3'),
+   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-validation-v7'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -569,6 +570,13 @@ ok(exceptionDisplayTerm(
      "exception(error(existence_error(procedure,actor_8159673805:test/0),context(system:call/1,_15166)))"
    ) === "error(existence_error(procedure,test/0),_)",
    "exception-term display elides context and private actor-module qualification");
+ok(humanizePrologErrorTerm(
+     'error(statechart_startup_error("SXML validation failed: unknown attribute bogus"),context(statechart_spawn/2,_))'
+   ) === "SXML validation failed: unknown attribute bogus" &&
+   humanizePrologErrorTerm(
+     'error(statechart_startup_error("statechart startup failed"),context(statechart_spawn/2,_))'
+   ) === "Statechart startup error: statechart startup failed",
+   "SWI-WASM renders a statechart worker's validation diagnostic at the toplevel");
 ok(errorDisplayHelpers.sanitizeDownReasonTerm(
      "exception(error(existence_error(procedure,actor_8159673805:test/0),context(system:call/1,_15166)))"
    ) === "exception(error(existence_error(procedure,test/0),_))" &&
@@ -1362,15 +1370,25 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
+ok(workerSource.includes('"statechart_actor_start :-",') &&
+   workerSource.includes('"statechart_actor_loop :- statechart_actor_wait.",') &&
+   workerSource.includes('var startResult = Prolog.query("user:statechart_actor_start").once()') &&
+   workerSource.includes('if (!startResult || startResult.error)') &&
+   workerSource.indexOf('var startResult = Prolog.query("user:statechart_actor_start").once()') <
+     workerSource.indexOf('post(workerRole === "shell_toplevel" ? "spawned" : "ready", {})'),
+   "a SWI-WASM statechart validates and starts before its worker announces readiness");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-output-v3') &&
+   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-validation-v7') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('message.sourceKind, message.source, pid, message.name') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
    includes('this.sendSwiWasmActorMessage('),
    "SWI-WASM statechart terminal output is delivered to the spawning actor mailbox");
 ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+   workerSource.includes('statechart_spawn_ok(') &&
+   workerSource.includes('statechart_spawn_error(') &&
+   workerSource.includes('statechart_spawn_worker_result(ResultText, Pid)') &&
    workerSource.includes('install_spawn_monitor(Pid, Options)') &&
    workerSource.includes('collect_statechart_support_source(Options, SupportSource)') &&
    workerSource.includes('( member(Term, Terms), clause_source_text(Term, ClauseText) )') &&
@@ -1378,6 +1396,9 @@ ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSou
    workerSource.includes('assertz(swi_wasm_actor_bridge:io_target(Target))') &&
    workerSource.includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
    includes('window.swiWasmStatechartSpawnWorker') &&
+   includes('validate_statechart_text_source(SourceKind, Source)') &&
+   includes('sxml_schema:sxml_validate_text(XML, Diagnostics)') &&
+   includes('statechart_spawn_worker_result(ResultText, Pid)') &&
    includes('statechart_wasm:statechart_running') &&
    includes('swiWasmStatechartSpawnWorker(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
    includes('statechart_wasm:statechart_start(text(XML), SupportSource)') &&

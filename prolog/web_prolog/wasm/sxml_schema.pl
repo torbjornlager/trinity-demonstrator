@@ -22,6 +22,14 @@ that it is byte-for-byte identical to this source.
 
 :- thread_local sxml_parse_message/3.
 
+:- multifile prolog:error_message//1.
+
+prolog:error_message(sxml_validation_error(
+                         [diagnostic(_Severity, Line, Detail)])) -->
+    [ 'SXML validation failed at line ~w: ~w'-[Line, Detail] ].
+prolog:error_message(sxml_validation_error(Diagnostics)) -->
+    [ 'SXML validation failed: ~p'-[Diagnostics] ].
+
 
 %!  load_sxml_structure(+Stream, -Content) is det.
 %
@@ -216,7 +224,7 @@ validate_elements([element(history, Attrs, Children)|Rest], Identifiers) :-
     validate_elements(Rest, Identifiers).
 validate_elements([element(spawn, Attrs, Children)|Rest], Identifiers) :-
     !,
-    option(type(Type), Attrs, toplevel),
+    required_attribute(type, Attrs, Type, spawn),
     (   memberchk(Type, [actor, toplevel, server, supervisor, statechart])
     ->  true
     ;   semantic_error(statechart_spawn_type, Type,
@@ -352,27 +360,10 @@ sxml_dtd_text(`<!-- SXML 0.2 document grammar.
 
 <!ELEMENT spawn (#PCDATA)>
 <!ATTLIST spawn
-          type           CDATA "toplevel"
+          type           CDATA #REQUIRED
           options        CDATA #IMPLIED
           goal           CDATA #IMPLIED
           callback       CDATA #IMPLIED
           state          CDATA #IMPLIED
-          children       CDATA #IMPLIED
-          monitor        CDATA #IMPLIED
-          link           CDATA #IMPLIED
-          node           CDATA #IMPLIED
-          io_target      CDATA #IMPLIED
-          target         CDATA #IMPLIED
-          session        CDATA #IMPLIED
-          time_limit     CDATA #IMPLIED
-          idle_limit     CDATA #IMPLIED
-          name           CDATA #IMPLIED
-          trace          CDATA #IMPLIED
-          strategy       CDATA #IMPLIED
-          intensity      CDATA #IMPLIED
-          period         CDATA #IMPLIED
-          src_text       CDATA #IMPLIED
-          src_uri        CDATA #IMPLIED
-          src_list       CDATA #IMPLIED
-          src_predicates CDATA #IMPLIED>
+          children       CDATA #IMPLIED>
 `).

@@ -5171,6 +5171,21 @@
         if (args && args.length >= 1) {
           return humanizePrologErrorTerm(args[0]);
         }
+        args = unwrapPrologCompound(value, "statechart_startup_error");
+        if (args && args.length >= 1) {
+          var startupMessage = args[0];
+          if (/^"(?:[^"\\]|\\.)*"$/.test(startupMessage)) {
+            try { startupMessage = JSON.parse(startupMessage); } catch (_error) {}
+          }
+          startupMessage = String(startupMessage)
+            .replace(/^Error:\s*/, "")
+            .replace(/^sxml_schema:load_sxml_structure\/2:\s*/, "")
+            .replace(/\s+\(the document does not conform to the SXML 0\.2 grammar\)$/, "");
+          if (/^SXML validation failed\b/.test(startupMessage)) {
+            return startupMessage;
+          }
+          return "Statechart startup error: " + startupMessage;
+        }
         if (/^Unknown procedure:\s*/.test(value)) {
           return value;
         }
@@ -10346,7 +10361,12 @@
                 String(linkText === undefined ? "true" : linkText) !== "false",
                 supportSourceText, ioTargetText,
                 String(traceText === undefined ? "true" : traceText) !== "false"
-              );
+              ).then(function(pid) {
+                return "statechart_spawn_ok(" + JSON.stringify(String(pid)) + ")";
+              }, function(error) {
+                var message = error && error.message ? error.message : String(error || "statechart startup failed");
+                return "statechart_spawn_error(" + JSON.stringify(message) + ")";
+              });
             };
             window.swiWasmActorSend = function(pidText, messageText) {
               var from = self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main";
@@ -10510,7 +10530,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260902-statechart-output-v3";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260902-statechart-validation-v7";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -12719,6 +12739,7 @@
               "",
               "statechart_spawn(Pid, Options) :-",
               "    statechart_spawn_source(Options, SourceKind, Source),",
+              "    validate_statechart_text_source(SourceKind, Source),",
               "    collect_statechart_support_source(Options, SupportSource),",
               "    option(trace(Trace), Options, true), term_string(Trace, TraceText),",
               "    option(node(Node), Options, localhost),",
@@ -12734,7 +12755,7 @@
               "        option(link(Link), Options, true), term_string(Link, LinkText),",
               "        ( option(io_target(IoTarget), Options) -> term_string(IoTarget, IoTargetText) ; IoTargetText = \"\" ),",
               "        Promise := swiWasmStatechartSpawnWorker(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText),",
-              "        await(Promise, PidText), term_string(Pid, PidText),",
+              "        await(Promise, ResultText), statechart_spawn_worker_result(ResultText, Pid),",
               "        install_spawn_monitor(Pid, Options)",
               "    ;   statechart_local_xml(SourceKind, Source, XML),",
               "        configure_statechart_io_target(Options),",
@@ -12742,6 +12763,24 @@
               "        statechart_wasm:statechart_start(text(XML), SupportSource),",
               "        Pid = statechart,",
               "        maybe_register_toplevel_name(Options, Pid)",
+              "    ).",
+              "",
+              "validate_statechart_text_source(text, XML) :-",
+              "    !,",
+              "    sxml_schema:sxml_validate_text(XML, Diagnostics),",
+              "    (   Diagnostics == []",
+              "    ->  true",
+              "    ;   throw(error(sxml_validation_error(Diagnostics), context(statechart_spawn/2, 'the document does not conform to the SXML 0.2 grammar')))",
+              "    ).",
+              "validate_statechart_text_source(_, _).",
+              "",
+              "statechart_spawn_worker_result(ResultText, Pid) :-",
+              "    term_string(Result, ResultText),",
+              "    (   Result = statechart_spawn_ok(PidText)",
+              "    ->  term_string(Pid, PidText)",
+              "    ;   Result = statechart_spawn_error(Message)",
+              "    ->  throw(error(statechart_startup_error(Message), context(statechart_spawn/2, 'the statechart worker rejected its source')))",
+              "    ;   throw(error(domain_error(statechart_spawn_result, Result), statechart_spawn/2))",
               "    ).",
               "",
               "statechart_halt(Pid, Reply) :- statechart_halt(Pid, Reply, 5).",

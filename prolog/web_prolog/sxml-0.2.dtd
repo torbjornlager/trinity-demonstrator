@@ -48,26 +48,9 @@
 
 <!ELEMENT spawn (#PCDATA)>
 <!ATTLIST spawn
-          type           CDATA "toplevel"
+          type           CDATA #REQUIRED
           options        CDATA #IMPLIED
           goal           CDATA #IMPLIED
           callback       CDATA #IMPLIED
           state          CDATA #IMPLIED
-          children       CDATA #IMPLIED
-          monitor        CDATA #IMPLIED
-          link           CDATA #IMPLIED
-          node           CDATA #IMPLIED
-          io_target      CDATA #IMPLIED
-          target         CDATA #IMPLIED
-          session        CDATA #IMPLIED
-          time_limit     CDATA #IMPLIED
-          idle_limit     CDATA #IMPLIED
-          name           CDATA #IMPLIED
-          trace          CDATA #IMPLIED
-          strategy       CDATA #IMPLIED
-          intensity      CDATA #IMPLIED
-          period         CDATA #IMPLIED
-          src_text       CDATA #IMPLIED
-          src_uri        CDATA #IMPLIED
-          src_list       CDATA #IMPLIED
-          src_predicates CDATA #IMPLIED>
+          children       CDATA #IMPLIED>

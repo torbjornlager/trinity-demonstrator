@@ -125,11 +125,11 @@ test(parse_spawn_typed_goal_options_and_source,
     assertion(memberchk(src_uri('common.pl'), Options)),
     assertion(memberchk(src_text('worker(_) :- true.'), Options)).
 
-test(parse_spawn_direct_attributes_are_typed,
+test(parse_spawn_options_are_typed,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     atomics_to_string([
         "<statechart version=\"0.2\" initial=\"s\"><state id=\"s\">",
-        "<spawn type=\"toplevel\" session=\"true\" time_limit=\"5\"/>",
+        "<spawn type=\"toplevel\" options=\"[session(true), time_limit(5)]\"/>",
         "</state></statechart>"
     ], Text),
     statechart_model:statechart_actor_parse_text(Text),
@@ -145,6 +145,14 @@ test(parse_spawn_rejects_unknown_type,
     statechart_model:statechart_actor_parse_text(
         '<statechart version="0.2" initial="s"><state id="s"><spawn type="daemon"/></state></statechart>').
 
+test(parse_spawn_requires_type_attribute,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
+       throws(error(existence_error(attribute, type), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn/></state></statechart>').
+
 test(parse_spawn_server_operands_and_options,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     statechart_model:statechart_actor_parse_text(
@@ -158,7 +166,7 @@ test(parse_spawn_server_operands_and_options,
 test(parse_spawn_supervisor_operands_and_options,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     statechart_model:statechart_actor_parse_text(
-        '<statechart version="0.2" initial="s"><state id="s"><spawn type="supervisor" children="[child(worker,[start(true),restart(temporary)])]" strategy="one_for_all" intensity="3" period="10"/></state></statechart>'),
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="supervisor" children="[child(worker,[start(true),restart(temporary)])]" options="[strategy(one_for_all),intensity(3),period(10)]"/></state></statechart>'),
     statechart_actor:to_be_invoked(s, supervisor, Options),
     assertion(memberchk(children([child(worker, _)]), Options)),
     assertion(memberchk(strategy(one_for_all), Options)),
@@ -168,7 +176,7 @@ test(parse_spawn_supervisor_operands_and_options,
 test(parse_spawn_nested_statechart_requires_exactly_one_source,
      [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     statechart_model:statechart_actor_parse_text(
-        '<statechart version="0.2" initial="s"><state id="s"><spawn type="statechart" src_uri="\'child.xml\'" options="[monitor(true)]"/></state></statechart>'),
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="statechart" options="[src_uri(\'child.xml\'),monitor(true)]"/></state></statechart>'),
     statechart_actor:to_be_invoked(s, statechart, Options),
     assertion(memberchk(src_uri('child.xml'), Options)),
     assertion(memberchk(monitor(true), Options)).
@@ -192,10 +200,18 @@ test(parse_spawn_actor_requires_goal,
 test(parse_spawn_rejects_unknown_option,
      [ setup(statechart_actor:clean),
        cleanup(statechart_actor:clean),
+       throws(error(domain_error(statechart_spawn_option(toplevel), exit(false)), _))
+     ]) :-
+    statechart_model:statechart_actor_parse_text(
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" options="[exit(false)]"/></state></statechart>').
+
+test(parse_spawn_rejects_direct_option_attribute,
+     [ setup(statechart_actor:clean),
+       cleanup(statechart_actor:clean),
        throws(error(sxml_validation_error(_), _))
      ]) :-
     statechart_model:statechart_actor_parse_text(
-        '<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" exit="false"/></state></statechart>').
+        '<statechart version="0.2" initial="s"><state id="s"><spawn type="toplevel" monitor="true"/></state></statechart>').
 
 test(parse_spawn_options_must_be_ground_list,
      [ setup(statechart_actor:clean),
@@ -286,6 +302,14 @@ test(validation_rejects_unknown_element) :-
     Text = '<statechart version="0.2" initial="s"><state id="s"><mispelt/></state></statechart>',
     statechart_model:statechart_validate_text(Text, Diagnostics),
     assertion(Diagnostics = [diagnostic(error, _, _)|_]).
+
+test(validation_error_has_readable_message) :-
+    Error = error(sxml_validation_error(
+                      [diagnostic(error, 1, 'unknown element <mispelt>')]),
+                  context(sxml_schema:load_sxml_structure/2, _)),
+    message_to_string(Error, Message),
+    assertion(sub_string(Message, _, _, _, "SXML validation failed")),
+    assertion(sub_string(Message, _, _, _, "mispelt")).
 
 test(validation_rejects_unknown_attribute) :-
     Text = '<statechart version="0.2" initial="s"><state id="s" bogus="true"/></statechart>',
@@ -406,7 +430,7 @@ test(runtime_spawn_toplevel_supports_explicit_target) :-
     atomics_to_string([
         "<statechart version=\"0.2\" initial=\"run\">",
         "<state id=\"run\">",
-        "<spawn type=\"toplevel\" target=\"statechart_spawn_test_target\" options=\"[monitor(true)]\"/>",
+        "<spawn type=\"toplevel\" options=\"[target(statechart_spawn_test_target),monitor(true)]\"/>",
         "<go on=\"spawned(Pid)\">",
         "toplevel_call(Pid,true,[template(true),limit(1)])",
         "</go>",

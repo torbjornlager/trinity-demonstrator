@@ -296,7 +296,24 @@ async function main() {
      chartReq.trace === false,
      "statechart spawn is delegated to the node controller");
   S.onmessage({ data: { command: "reply", id: chartReq.id, ok: true, result: "5500000000" } });
-  ok((await chartP) === "5500000000", "statechart spawn returns its Worker pid");
+  ok((await chartP) === 'statechart_spawn_ok("5500000000")',
+     "statechart spawn returns its Worker pid in an explicit startup result");
+
+  const invalidChartP = S.actorStatechartSpawn(
+    "text", "<statechart/>", "", "", "true", "", "true"
+  );
+  const invalidChartReq = S._posted.filter(function(m) {
+    return m.type === "request" && m.action === "statechart_spawn";
+  }).pop();
+  S.onmessage({ data: {
+    command: "reply",
+    id: invalidChartReq.id,
+    ok: false,
+    error: "SXML validation failed: missing version"
+  } });
+  ok((await invalidChartP) ===
+       'statechart_spawn_error("SXML validation failed: missing version")',
+     "statechart startup failures preserve their diagnostic across the Worker boundary");
 
   const inheritedChartP = S.actorStatechartSpawn(
     "text", "<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>", "", "", "true", "", "true"
