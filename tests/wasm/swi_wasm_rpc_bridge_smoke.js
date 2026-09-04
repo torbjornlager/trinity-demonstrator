@@ -489,12 +489,12 @@ ok(includes('<div class="project-title">Web Prolog code</div>') &&
    includes(':class="{ \'is-profile-incompatible\': isExampleUnavailable(example) }"'),
    "the Examples drawer reserves its SXML menu for ACTOR profiles");
 ok(includes('"02 grammar.pl": "stateless"') &&
-   includes('"11 promise-and-yield.pl": "stateless"') &&
-   !actorExample("11 promise-and-yield.pl").includes("writeln(") &&
-   actorExample("11 promise-and-yield.pl").includes("sleep(0.5)") &&
-   actorExample("11 promise-and-yield.pl").includes("timeout(0.1)") &&
-   !actorExample("11 promise-and-yield.pl").includes("sleep(1)") &&
-   !actorExample("11 promise-and-yield.pl").includes("sleep(2)"),
+   includes('"18 promise-and-yield.pl": "stateless"') &&
+   !actorExample("18 promise-and-yield.pl").includes("writeln(") &&
+   actorExample("18 promise-and-yield.pl").includes("sleep(0.5)") &&
+   actorExample("18 promise-and-yield.pl").includes("timeout(0.1)") &&
+   !actorExample("18 promise-and-yield.pl").includes("sleep(1)") &&
+   !actorExample("18 promise-and-yield.pl").includes("sleep(2)"),
    "grammar and promise/yield examples are available on ISOBASE nodes");
 {
   const currentLoadText = embeddedWorkbenchMethod(
@@ -875,9 +875,9 @@ ok(!includes('retractall(swi_wasm_actor_bridge:deferred(_))'),
 ok([
   "01 pause-and-resume.xml", "02 spaghetti.xml", "03 emotions.xml",
   "04 clock.xml", "05 pingpong.xml", "06 parallel.xml",
-  "07 closure.xml", "08 gcd.xml", "09 spawn-actor.xml",
-  "10 spawn-toplevel.xml", "11 boxshop-1.xml", "12 boxshop-2.xml",
-  "14 deferred-events.xml", "15 spawn-server.xml",
+  "08 closure.xml", "09 gcd.xml", "13 spawn-actor.xml",
+  "14 spawn-toplevel.xml", "11 boxshop-1.xml", "12 boxshop-2.xml",
+  "07 deferred-events.xml", "15 spawn-server.xml",
   "16 spawn-supervisor.xml", "17 spawn-statechart.xml"
 ].every(function(name) {
   const text = statechartExample(name);
@@ -1225,7 +1225,7 @@ ok(!actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
    !statechartBehaviourTutorialSource.includes('statechart_halt($Pid, Reply).') &&
    statechartBehaviourTutorialSource.includes('id="more-examples"') &&
    statechartBehaviourTutorialSource.includes('04 clock.xml') &&
-   statechartBehaviourTutorialSource.includes('14 deferred-events.xml') &&
+   statechartBehaviourTutorialSource.includes('07 deferred-events.xml') &&
    !statechartBehaviourTutorialSource.includes('data-load-example') &&
    statechartBehaviourTutorialSource.includes('function handleStatechartTrace(text)') &&
    statechartBehaviourTutorialSource.includes('api.onStatechartTrace = handleStatechartTrace'),
@@ -1263,16 +1263,16 @@ ok(includes('source: String(extraSourceText || "")') &&
    "spawned SWI-WASM actors receive only explicit src_* source");
 ok(actorExample("04 count_server.pl").includes("src_predicates([count_server/1])") &&
    actorExample("05 fridge.pl").includes("src_predicates([fridge/1])") &&
-   actorExample("07 ping-pong.pl").includes("src_predicates([pong/0])") &&
-   actorExample("07 ping-pong.pl").includes("src_predicates([ping/2])") &&
-   actorExample("08 dining_philosophers.pl").includes("src_predicates([doForks/1])") &&
-   actorExample("08 dining_philosophers.pl").includes("doWaiter/4, processWaitList/2, areAvailable/2") &&
-   actorExample("08 dining_philosophers.pl").includes("philosopher/3, sleep/0") &&
-   actorExample("10 simple_toplevel.pl").includes("src_predicates([session/2])"),
+   actorExample("09 ping-pong.pl").includes("src_predicates([pong/0])") &&
+   actorExample("09 ping-pong.pl").includes("src_predicates([ping/2])") &&
+   actorExample("11 dining_philosophers.pl").includes("src_predicates([doForks/1])") &&
+   actorExample("11 dining_philosophers.pl").includes("doWaiter/4, processWaitList/2, areAvailable/2") &&
+   actorExample("11 dining_philosophers.pl").includes("philosopher/3, sleep/0") &&
+   actorExample("15 simple_toplevel.pl").includes("src_predicates([session/2])"),
    "actor examples explicitly transfer editor predicates to spawned workers");
 ok(includes("src_predicates([Pred/Arity])") &&
    !includes("wasm_user_source") &&
-   actorExample("13 fridge_server.pl").includes("src_predicates([fridge/4])") &&
+   actorExample("16 fridge_server.pl").includes("src_predicates([fridge/4])") &&
    actorTutorialSource.includes("start(server(fridge, [initial_state([])]))"),
    "supervised servers transfer callbacks across both actor boundaries");
 ok(includes("numbervars(Copy, 0, _, [singletons(true)])") &&
@@ -1747,13 +1747,13 @@ ok(includes('compound.functor === "=" && args.length === 2') &&
       log: function() {}
     };
     return loadExampleProgramIntoCurrentSession.call(
-      exampleLoadHarness, "example_program.", "09 parallel.pl"
+      exampleLoadHarness, "example_program.", "13 parallel.pl"
     ).then(function(loaded) {
       ok(loaded === true &&
          exampleLoadCalls[0] === "pause" &&
          exampleLoadCalls[1] === "replace:normalized_example." &&
          exampleLoadCalls[2] ===
-           "echo:% Spawned new session and loaded 09 parallel.pl." &&
+           "echo:% Spawned new session and loaded 13 parallel.pl." &&
          exampleLoadCalls[3] === "resume",
          "Examples selection replaces the SWI-WASM Worker shell before reporting the loaded filename");
     });
@@ -1782,7 +1782,7 @@ ok(includes('compound.functor === "=" && args.length === 2') &&
       log: function() {}
     };
     return loadExampleProgramIntoCurrentSession.call(
-      actorExampleHarness, "example_program.", "09 parallel.pl"
+      actorExampleHarness, "example_program.", "13 parallel.pl"
     ).then(function(loaded) {
       ok(loaded === true &&
          actorExampleLoadSpec.length === 1 &&

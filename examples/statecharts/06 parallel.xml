@@ -1,6 +1,14 @@
 <!--
 
-    Another demonstration of parallel states.
+    Parallel completion: waiting for every region to finish.
+
+    Two orthogonal regions, s1 and s2, each step through a chain of
+    states on the event `e` and end in their own final state. A parallel
+    state counts as done only once all of its regions have reached their
+    finals; at that moment the chart raises the completion event done(p),
+    which the outer transition is waiting for before moving on to the
+    top-level final state. Send `e` repeatedly and watch both regions
+    advance in lock-step until done(p) fires.
 
     Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.

@@ -1,7 +1,16 @@
 <!--
-    A simple conversational agent, making  use of a DCG grammar in order
-    to parse the user's input. Also a nice example of how to make use
-    of the <history> element.
+
+    Box shop: a conversational agent parsing input with a DCG.
+
+    A small dialogue agent. Its <datamodel> holds a DCG grammar, and each
+    state uses phrase/2 in a transition guard to parse what the user
+    typed into a colour or a size, storing the result with assert. If the
+    input does not parse, a fall-through transition returns to the
+    history state `h`, which re-enters the question the agent was asking
+    so the user can try again. When both slots are filled the agent
+    reaches its final state and reports the order. It combines guards that
+    run a DCG, a history state for retrying, and onentry actions that
+    prompt.
 
     Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.

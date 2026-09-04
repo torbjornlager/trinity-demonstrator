@@ -847,7 +847,7 @@
 &lt;/statechart&gt;
 </code></pre>
     <pre id="sc-gcd-spawn"><code>?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/08%20gcd.xml')
+       src_uri('/examples/statecharts/09%20gcd.xml')
    ]).</code></pre>
     <div class="actions"><button type="button" data-spawn="#sc-gcd-spawn" data-example-set="gcd">Spawn GCD chart</button></div>
     <pre id="sc-gcd-input"><code>?- $Pid ! integers([25,10,15,30]).</code></pre>
@@ -899,7 +899,7 @@
     &lt;final id="final" /&gt;
 &lt;/statechart&gt;</code></pre>
     <pre id="sc-toplevel-spawn"><code>?- statechart_spawn(Pid, [
-       src_uri('/examples/statecharts/10%20spawn-toplevel.xml')
+       src_uri('/examples/statecharts/14%20spawn-toplevel.xml')
    ]).</code></pre>
    
     <div class="actions"><button type="button" data-spawn="#sc-toplevel-spawn" data-example-set="none">Run invocation chart</button></div>
@@ -947,7 +947,7 @@
   <section id="more-examples">
     <h2>Additional SXML examples</h2>
     <p>This tutorial ends with the core interactive labs. The <strong>SXML code</strong> list in the Examples drawer contains further programs to explore when you are ready to leave the tutorial and work in the editor.</p>
-    <p>Among them, <code>04 clock.xml</code> demonstrates state-scoped timers and <code>14 deferred-events.xml</code> demonstrates deliberate event deferral. The collection also covers ping-pong protocols, parallel regions, closures, actor spawning and shared-database access.</p>
+    <p>Among them, <code>04 clock.xml</code> demonstrates state-scoped timers and <code>07 deferred-events.xml</code> demonstrates deliberate event deferral. The collection also covers ping-pong protocols, parallel regions, closures, actor spawning and shared-database access.</p>
     <div class="expected"><strong>You should now be able to explain:</strong> how a statechart remains an actor; how hierarchy, history and parallel regions change transition selection; how Prolog data and goals participate; and how a chart owns timers, deferred events and invoked processes.</div>
     <p>Return to <a href="/actor-profile-tutorial">The ACTOR profile</a> for message protocols, monitoring, links, toplevels and distributed actors.</p>
   </section>

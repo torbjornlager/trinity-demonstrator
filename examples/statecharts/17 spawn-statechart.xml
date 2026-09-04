@@ -1,15 +1,22 @@
 <!--
-This example invokes a second statechart as a child of NestedOwner.  Its XML
-document is carried inline in CDATA, while src_list loads the supplemental
-Prolog fact child_value(ok) into the child's private module.  The child is
-named inner_chart and monitored; trace(false) suppresses only its own trace,
-leaving the outer chart's lifecycle trace visible.
 
-The child reads child_value(ok) on entry and sends output(nested(ok)) to its
-parent.  This arrives as output(ChildPid, nested(ok)); the outer chart matches
-that message and prints nested(ok).  It also receives spawned(Pid), sends that
-pid the finish event, and waits for the canonical monitored notification
-down(Pid, Ref, Reason) before the outer chart enters Final.
+    Spawning a statechart inside a statechart.
+
+    A statechart can invoke another as a child. NestedOwner spawns an
+    inner chart whose XML document is carried inline in a CDATA section,
+    while src_list loads the extra Prolog fact child_value(ok) into the
+    child's private module. The child is named inner_chart and monitored;
+    trace(false) silences only the child's own trace, leaving the outer
+    chart's lifecycle visible. On entry the child reads child_value(ok)
+    and sends output(nested(ok)) to its parent, which arrives as
+    output(ChildPid, nested(ok)); the outer chart matches that and prints
+    nested(ok). It also receives spawned(Pid), sends that pid the finish
+    event, and waits for the monitored notification down(Pid, Ref, Reason)
+    before entering Final.
+
+    Run the chart from the Examples menu.
+    Keep the Logger open and SXML trace selected.
+
 -->
 
 <statechart version="0.2" initial="NestedOwner">

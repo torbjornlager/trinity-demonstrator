@@ -1,11 +1,15 @@
 <!--
 
-    Postponing commands until the statechart is ready to handle them.
+    Deferred events: postponing what a state cannot yet handle.
 
-    Send two command/1 events while the machine is initialising.  They
-    match <defer> and are kept in arrival order.  Sending initialised
-    changes the active state to ready, where both commands are re-offered
-    before a newer external event is accepted.
+    A state can mark certain events to be kept for later rather than
+    dropped. In the initialising state, command/1 events match <defer>,
+    so any that arrive are held in arrival order instead of being
+    discarded. The initialised event then moves the chart to the ready
+    state, where the deferred commands are re-offered, and handled,
+    before any newer external event is accepted. Send two command/1
+    events first, then initialised, and watch the held commands run in
+    the order they came in.
 
     Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.

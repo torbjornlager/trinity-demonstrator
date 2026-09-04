@@ -1,6 +1,18 @@
 %%  queens(+N, -Queens) is nondet.
 %
-%	@param	Queens is a list of column numbers for placing the queens.
+%   Place N queens on an N x N board so that none attacks another, and
+%   return their column positions. A reminder that Web Prolog is Prolog
+%   first: this program uses no actors at all -- just ordinary clauses,
+%   unification and backtracking search.
+%
+%   The board is built so that the diagonals each queen attacks are
+%   threaded through shared variables (the VR/VC argument lists), letting
+%   the constraints prune inconsistent placements early. Backtracking
+%   then explores placements until a consistent one is found; asking for
+%   further solutions enumerates the rest.
+%
+%	@param	N       - the number of queens, and the size of the board.
+%	@param	Queens  - a list of N column numbers, one per row.
 %	@author Richard A. O'Keefe (The Craft of Prolog)
 
 queens(N, Queens) :-
@@ -31,6 +43,9 @@ queens([C|Cs], Row0, [Col|Solution]) :-
 
 /** <examples>
 
+% One solution to the 8-queens puzzle. Ask for more (press ; or the
+% More button) to enumerate the remaining placements by backtracking.
+
 ?- queens(8, Queens).
-   
+
 */

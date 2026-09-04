@@ -1,7 +1,15 @@
 <!--
 
-    Using Euclide's algorithm for computing the Greatest Common
-    Divisor (GCD) for a set of integers.
+    Greatest common divisor by Euclid's subtractive algorithm.
+
+    A computation expressed as a statechart. The <datamodel> declares a
+    dynamic int/1 relation; the event integers(List) seeds it with a set
+    of numbers. In the `run` state, an eventless transition repeatedly
+    finds two stored numbers where one is larger and replaces the larger
+    by their difference. When no such pair remains, a single value is
+    left: the GCD of the whole set, which the last transition prints.
+    Like the closure example, it drives itself forward with guarded
+    eventless transitions over the Prolog database.
 
     Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.

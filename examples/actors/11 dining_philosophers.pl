@@ -1,11 +1,29 @@
-%%  dining/0
+%%  dining is det.
 %
-%   Spawns five philosopher actors and a waiter to solve 
-%   the Dining Philosophers problem. Ported from an
-%   Erlang program at https://github.com/acmeism/RosettaCodeData/blob/master/Task/Dining-philosophers/
+%   Dijkstra's Dining Philosophers, the textbook stress test for
+%   concurrency, solved with actors. Five philosophers sit around a
+%   table, each needing the two forks beside them to eat; naively
+%   grabbing forks invites deadlock (everyone holds one, waits for the
+%   other) and starvation. This is a larger, more realistic example than
+%   ping-pong: several kinds of actor cooperating through messages.
 %
-%	@param
-%	@author
+%   Deadlock is avoided by introducing arbiters rather than letting
+%   philosophers grab forks directly. A `forks` actor owns the forks and
+%   answers whether a given pair is free; a `waiter` actor serialises
+%   access, seating at most two eaters at once and only when their forks
+%   are available. Each philosopher is its own actor cycling through
+%   think / hungry / eat, asking the waiter for permission and releasing
+%   its forks when done. Registered names (register/2) let the actors
+%   address `forks` and `waiter` without passing pids around. When every
+%   philosopher has finished its lifespan, the waiter dismisses the forks
+%   and the table closes.
+%
+%   Because the fork accounting lives inside a single arbiter actor
+%   rather than in shared, lockable memory, there are no locks anywhere
+%   in the program -- mutual exclusion falls out of message ordering.
+%
+%	@author Ported from a Rosetta Code Erlang program:
+%	        https://github.com/acmeism/RosettaCodeData/blob/master/Task/Dining-philosophers/
 
 
 sleep :-
@@ -132,6 +150,10 @@ dining :-
 
 
 /** <examples>
+
+% Run the whole table. The philosophers narrate their thinking, hunger
+% and eating as the run proceeds; it ends with "Dining room closed." and
+% no philosopher ever deadlocks or starves.
 
 ?- dining.
 

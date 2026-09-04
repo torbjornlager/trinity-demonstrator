@@ -4539,7 +4539,7 @@ test(statechart_executable_content_uses_node_shared_db_and_local_shadow) :-
         setup_call_cleanup(
             statechart_spawn(Pid, [
                 monitor(true),
-                src_uri('statecharts/13%20shared-database.xml')
+                src_uri('statecharts/10%20shared-database.xml')
             ]),
             (
                 await_actor_output(
@@ -4562,7 +4562,7 @@ test(statechart_executable_content_uses_n5_shared_db_overlay) :-
         setup_call_cleanup(
             statechart_spawn(Pid, [
                 monitor(true),
-                src_uri('statecharts/13%20shared-database.xml')
+                src_uri('statecharts/10%20shared-database.xml')
             ]),
             (
                 await_actor_output(

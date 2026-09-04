@@ -1,6 +1,14 @@
 <!--
 
-    A clock ticking - and a state parallel to it that is listening.
+    Clock: internal events broadcast across parallel regions.
+
+    Two regions run in parallel. The Clock region drives itself: on entry
+    it raises an internal `tick`, and every `tick` sleeps a second and
+    raises the next one, so the chart keeps running with no outside
+    input. The Listener region simply reacts to the same `tick` events.
+    It shows two things at once: a self-timed loop built from raise and
+    sleep, and the fact that an internally raised event is delivered to
+    every parallel region, not only the one that raised it.
 
     Run the chart from the Examples menu.
     Keep the Logger open and SXML trace selected.

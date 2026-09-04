@@ -1,6 +1,16 @@
 <!--
 
-    Another conversational agent written in a form-based style.
+    Box shop, form-filling style.
+
+    The same task as boxshop-1, built as a form rather than a scripted
+    dialogue. A central selectFormItem state uses eventless guarded
+    transitions to pick the next unfilled slot (welcome, then colour,
+    then size), visits the state that fills it, and returns. Each
+    question state also has an `after` transition that fires if the user
+    stays silent too long, giving the agent a timeout. When every slot is
+    filled the form is complete and the agent reports the order. It shows
+    the form pattern: a dispatcher of eventless transitions together with
+    timed `after` transitions.
 
     Keep the Logger open and SXML trace selected.
 

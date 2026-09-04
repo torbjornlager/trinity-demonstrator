@@ -1,14 +1,21 @@
 <!--
-This example starts a supervisor whose static child is a worker running
-sleep(60).  The child is temporary, so it is never restarted after it exits;
-the one_for_all strategy is nevertheless shown together with a restart
-intensity of at most two restarts in five seconds.
 
-The supervisor is registered as example_supervisor.  After spawned(Pid), the
-chart asks that name for its current child counts and prints the result.  It
-then raises done and enters Final.  Leaving SupervisorOwner terminates the
-invoked supervisor and its still-running worker as part of normal state
-lifecycle cleanup.
+    Spawning a supervisor from a statechart.
+
+    Another reusable behaviour started through <spawn>: a supervisor that
+    owns and restarts child actors. Its one static child is a worker
+    running sleep(60), declared temporary so it is never restarted once
+    it exits, though the one_for_all strategy and a restart intensity of
+    at most two restarts in five seconds are configured to show the form.
+    The supervisor is registered as example_supervisor; after spawned(Pid)
+    the chart asks that name for its current child counts and prints them,
+    then raises done and enters Final. Leaving SupervisorOwner terminates
+    the supervisor and its still-running worker as ordinary state-exit
+    cleanup.
+
+    Run the chart from the Examples menu.
+    Keep the Logger open and SXML trace selected.
+
 -->
 
 <statechart version="0.2" initial="SupervisorOwner">

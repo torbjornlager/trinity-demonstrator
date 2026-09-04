@@ -1,0 +1,47 @@
+<!--
+
+    Transitive closure with eventless transitions.
+
+    A chart can compute, not only react. The <datamodel> seeds the Prolog
+    facts p(a,b), p(b,c), p(c,d). The single working state has an
+    eventless transition whose guard looks for a missing link (p(X,Y) and
+    p(Y,Z) but not yet p(X,Z)) and whose body asserts it. Needing no
+    event, the chart keeps taking that transition, adding one new edge
+    each time, until the guard can no longer be satisfied. A second
+    guarded transition then collects the finished relation and moves to
+    the final state. It demonstrates eventless (automatic) transitions,
+    guards that run real Prolog queries, and the chart's own logical
+    database used as working memory.
+
+    Run the chart from the Examples menu.
+    Keep the Logger open and SXML trace selected.
+    
+-->
+
+<statechart version="0.2" initial="s">
+    <datamodel>
+        p(a,b). 
+        p(b,c). 
+        p(c,d).
+    </datamodel>
+    <state id="s">
+        <go if="p(X,Y), p(Y,Z), \+p(X,Z)">
+            assert(p(X,Z))
+        </go>
+        <go to="f" if="findall(p(X,Y), p(X,Y), List)">
+            format("Closure: ~w", [List])
+        </go>
+    </state>
+    <final id="f"/>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

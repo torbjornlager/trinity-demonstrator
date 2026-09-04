@@ -52,7 +52,7 @@ online(printer2).
 
 
 
-% Shared database used by example 13 shared-database.xml.
+% Shared database used by example 10 shared-database.xml.
 
 shared_fact(browser_shared_db).
 

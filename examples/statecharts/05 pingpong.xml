@@ -1,6 +1,13 @@
 <!--
 
-    Two parallel states playing pingpong. Pinger has the serve.
+    Ping-pong between two parallel regions.
+
+    The statechart cousin of the ping-pong actor example. Two orthogonal
+    regions, Pinger and Ponger, rally by raising internal events at each
+    other: Pinger serves by raising `ping` on entry; each `ping` prints,
+    waits a second, and raises `pong`; each `pong` prints, waits, and
+    raises `ping` again. The volley is driven entirely by internal events
+    crossing between the two regions, with no external input.
 
     Run the chart from the Examples menu.
     Keep the Logger open and SXML trace selected.

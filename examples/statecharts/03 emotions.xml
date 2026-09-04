@@ -1,6 +1,15 @@
 <!--
 
-    An agent's controller of emotions and behavior.
+    Emotions: orthogonal (parallel) regions reacting together.
+
+    An agent's inner state is split into regions that are all active at
+    once. Two emotion dimensions run in parallel (anger/fear and
+    anticipation/surprise), alongside a behavior region (attacking or
+    fleeing). Because the regions are orthogonal, one event is offered to
+    all of them at the same time: sending `e` can advance every region at
+    once, while `d` and `f` move individual regions back. This is how a
+    statechart captures several independent aspects of one actor without
+    a combinatorial explosion of states.
 
     Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.

@@ -1,6 +1,15 @@
 <!--
 
-    Spaghetti statechart actor.
+    Spaghetti: transition selection in a deeply nested chart.
+
+    A deliberately tangled hierarchy (the classic statechart torture
+    test), with states nested three deep and transitions on the events a
+    through h criss-crossing between levels. Its purpose is to exercise
+    the rules that decide, for a given event, which transition fires and
+    exactly which states are exited and entered on the way. Send the
+    events in different orders and follow the trace as the active
+    configuration moves through the tree; event h reaches the final
+    state f.
 
     Run the chart and send it events from the Examples menu.
     Keep the Logger open and SXML trace selected.

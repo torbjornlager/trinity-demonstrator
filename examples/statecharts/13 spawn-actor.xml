@@ -1,6 +1,15 @@
 <!--
 
-    Demonstrating the <spawn> element.
+    Spawning a plain actor from a statechart.
+
+    The <spawn> element lets a statechart create and oversee an ordinary
+    Web Prolog actor. Here the chart spawns a `ponger` actor, whose code
+    is given inline, and learns its pid through the spawned(Pid) event. It
+    registers that pid under the name `ponger` and then plays ping-pong
+    with it: the Pinger state sends ping and, on each pong reply, waits
+    and sends another. It bridges the two worlds of this demonstrator, a
+    statechart on one side and a bare receive-loop actor on the other,
+    talking by message.
 
     Run the chart from the Examples menu.
     Keep the Logger open and SXML trace selected.

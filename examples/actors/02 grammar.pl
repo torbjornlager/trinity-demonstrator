@@ -1,10 +1,23 @@
-%%  s(+Tree, +List, -Rest)
+%%  s(?Tree)//
 %
-%   A DCG grammar for a fragment of English, producing parse trees.
-%   The example is syntactically ambiguous, so has two parse trees.
+%   A definite clause grammar (DCG) for a small fragment of English that
+%   builds a parse tree as it recognises a sentence. Another pure-Prolog
+%   example -- no actors -- showing off one of Prolog's oldest and most
+%   characteristic tools.
 %
-%	@param	Tree - parse tree for the sentence
-%	@author
+%   Each nonterminal carries a Num feature so that subject and verb must
+%   agree in number, and returns a term recording what it matched, so a
+%   successful parse yields a full parse tree. The grammar is
+%   deliberately ambiguous: "john sees a man with a telescope" has two
+%   readings (who has the telescope?), and both parse trees are produced
+%   on backtracking. Because a DCG is just a relation, the same rules run
+%   backwards to GENERATE sentences when the word list is left unbound.
+%
+%   The two hidden difference-list arguments a DCG threads through every
+%   nonterminal are supplied by phrase/2, so the head reads as s(Tree)//.
+%
+%	@param	Tree - the parse tree built for the recognised sentence.
+%	@author A textbook fragment, in Web Prolog.
 
 s(s(NP,VP)) --> np(NP, Num), vp(VP, Num).
 
@@ -35,8 +48,13 @@ p(p(with)) --> [with].
 
 /** <examples>
 
+% Parse an ambiguous sentence: ask for more solutions to see both
+% readings (the telescope attaches to either "sees" or "man").
+
 ?- phrase(s(Tree), [john,sees,a,man,with,a,telescope]).
 
-?- phrase(s(_),Sentence).
+% Run the same grammar backwards to GENERATE sentences it accepts.
+
+?- phrase(s(_), Sentence).
 
 */

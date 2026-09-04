@@ -472,7 +472,7 @@ join_lines(Lines, Text) :-
 :- begin_tests(statechart_wasm_examples).
 
 test(deferred_commands_are_replayed, [cleanup(statechart_stop)]) :-
-    start_example('14 deferred-events.xml'),
+    start_example('07 deferred-events.xml'),
     statechart_send(command(open)),
     statechart_send(command(close)),
     assertion(statechart_wasm:postponed_queue(
@@ -544,9 +544,9 @@ test(spaghetti_h_reaches_top_final, [cleanup(statechart_stop)]) :-
     statechart_send(h),
     \+ statechart_running.
 
-% 08 gcd.xml — datamodel + eventless transitions with conditions.
+% 09 gcd.xml — datamodel + eventless transitions with conditions.
 test(gcd_integers_runs_to_completion, [cleanup(statechart_stop)]) :-
-    start_example('08 gcd.xml'),
+    start_example('09 gcd.xml'),
     assertion(statechart_in(init)),
     statechart_send(integers([25, 10, 15, 30])),
     % The 'run' state's eventless transitions chew through the list,
@@ -648,7 +648,7 @@ teardown_mock_bridge :-
 
 :- begin_tests(statechart_wasm_spawn).
 
-% <spawn type="toplevel"> (cf. examples/statecharts/10 spawn-toplevel.xml):
+% <spawn type="toplevel"> (cf. examples/statecharts/14 spawn-toplevel.xml):
 % invoke spawns a toplevel addressed to the chart, spawned(Pid) drives a
 % transition that calls toplevel_call, and success(...) replies streamed
 % back as external events drive the chart through to its final state.
@@ -692,7 +692,7 @@ test(toplevel_spawn_preserves_explicit_target,
     assertion(memberchk(target(collector), Options)),
     assertion(\+ memberchk(target(statechart), Options)).
 
-% <spawn type="actor" goal="..."> (cf. examples/statecharts/09 spawn-actor.xml):
+% <spawn type="actor" goal="..."> (cf. examples/statecharts/13 spawn-actor.xml):
 % invoke spawns the actor, spawned(Pid) registers it, <onentry> sends it a
 % ping addressed to `statechart` (self/1), and the actor's pong reply --
 % injected here as an external event -- advances the chart.

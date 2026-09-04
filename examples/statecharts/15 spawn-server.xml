@@ -1,13 +1,21 @@
 <!--
-This example gives the compound state ServerOwner its own stateful server.
-The body of <spawn> defines the counter/4 callback, while state="0" supplies
-the server's initial state.  name(counter_server) lets the chart address the
-child without retaining its pid, and monitor(true) reports its termination.
 
-Once spawned(Pid) arrives, the chart requests increment.  counter/4 changes
-the stored state from 0 to 1 and returns 1 as Reply, which the Call state
-prints before raising done.  Reaching Final exits ServerOwner, so the invoked
-server is cleaned up with the state that owns it.
+    Spawning a generic server from a statechart.
+
+    The <spawn> element can start one of the reusable behaviours, here a
+    stateful server owned by the compound state ServerOwner. The body of
+    <spawn> supplies the counter/4 callback and state="0" its initial
+    state; name(counter_server) lets the chart address the child by name
+    without holding its pid, and monitor(true) reports its termination.
+    Once spawned(Pid) arrives, the Call state sends an increment request:
+    counter/4 changes the stored state from 0 to 1 and returns 1, which
+    the chart prints before raising done. Reaching Final exits
+    ServerOwner, so the server is cleaned up together with the state that
+    owns it.
+
+    Run the chart from the Examples menu.
+    Keep the Logger open and SXML trace selected.
+
 -->
 
 <statechart version="0.2" initial="ServerOwner">

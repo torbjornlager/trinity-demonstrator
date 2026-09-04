@@ -1,6 +1,15 @@
 <!--
 
-    Demonstrating the <spawn> element.
+    Driving a toplevel actor from a statechart.
+
+    Another use of <spawn>: this chart spawns a `toplevel` actor
+    preloaded with a small program (q/1 over the facts p(a) to p(d)) and
+    then drives its backtracking search by message. The `ask` state calls
+    the toplevel for one solution; each success(Pid, Data, true) event
+    prints an answer and asks for the next with toplevel_next, until a
+    success(_, Data, false) event signals the last solution and the chart
+    finishes. It is the statechart-level view of getting answers one at a
+    time from a running goal.
 
     Run the chart from the Examples menu.
     Keep the Logger open and SXML trace selected.

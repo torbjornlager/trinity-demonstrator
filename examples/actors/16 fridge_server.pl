@@ -1,9 +1,17 @@
 %%  fridge_server.pl
 %
-%   A single-node demonstration of the generic server behaviour
-%   (server_actor.pl) supervised by supervisor_actor.pl. All queries
-%   in the <examples> block are intended to be run from one toplevel,
-%   on whichever node the file has been loaded into.
+%   Where the count server and the fridge wrote their receive loops and
+%   client protocols by hand, this example uses REUSABLE BEHAVIOURS: the
+%   generic server (server_actor.pl) supplies the loop and the
+%   synchronous call/reply machinery, and a supervisor (supervisor_actor.pl)
+%   restarts the server if it crashes. You provide only the callback that
+%   maps a request and old state to a response and new state -- the same
+%   role fridge/1 played, now factored out.
+%
+%   A single-node demonstration of that generic server behaviour
+%   supervised by supervisor_actor.pl. All queries in the <examples>
+%   block are intended to be run from one toplevel, on whichever node the
+%   file has been loaded into.
 %
 %   Two callback predicates are provided:
 %
