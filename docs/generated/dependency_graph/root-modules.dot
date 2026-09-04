@@ -68,7 +68,8 @@ digraph dependency_graph {
   n62 [label="prolog/web_prolog/wasm/statechart_wasm_exec.pl"];
   n63 [label="prolog/web_prolog/wasm/statechart_wasm_model.pl"];
   n64 [label="prolog/web_prolog/wasm/statechart_wasm_runtime.pl"];
-  n65 [label="prolog/web_prolog/worker_cleanup.pl"];
+  n65 [label="prolog/web_prolog/wasm/sxml_schema.pl"];
+  n66 [label="prolog/web_prolog/worker_cleanup.pl"];
   n0 -> n14;
   n0 -> n39;
   n4 -> n3;
@@ -82,7 +83,7 @@ digraph dependency_graph {
   n7 -> n59;
   n8 -> n3;
   n8 -> n5;
-  n8 -> n65;
+  n8 -> n66;
   n10 -> n1;
   n10 -> n2;
   n10 -> n3;
@@ -269,6 +270,7 @@ digraph dependency_graph {
   n44 -> n33;
   n45 -> n50;
   n46 -> n0;
+  n46 -> n6;
   n46 -> n7;
   n46 -> n13;
   n46 -> n15;
@@ -290,7 +292,7 @@ digraph dependency_graph {
   n46 -> n60;
   n47 -> n3;
   n47 -> n5;
-  n47 -> n65;
+  n47 -> n66;
   n49 -> n5;
   n49 -> n20;
   n50 -> n3;
@@ -304,18 +306,23 @@ digraph dependency_graph {
   n54 -> n3;
   n54 -> n5;
   n54 -> n10;
+  n54 -> n52;
   n54 -> n55;
   n54 -> n56;
   n54 -> n57;
+  n54 -> n58;
   n54 -> n60;
   n55 -> n3;
   n55 -> n5;
   n55 -> n56;
   n55 -> n57;
   n56 -> n53;
+  n56 -> n65;
   n57 -> n3;
   n57 -> n5;
   n57 -> n10;
+  n57 -> n52;
+  n57 -> n58;
   n57 -> n60;
   n58 -> n3;
   n58 -> n10;
@@ -326,5 +333,6 @@ digraph dependency_graph {
   n61 -> n63;
   n61 -> n64;
   n62 -> n64;
-  n65 -> n3;
+  n63 -> n65;
+  n66 -> n3;
 }
