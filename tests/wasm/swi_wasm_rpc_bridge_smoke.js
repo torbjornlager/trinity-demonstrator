@@ -521,9 +521,8 @@ ok(includes('"02 grammar.pl": "stateless"') &&
 ok(includes('setRequestSource: function(source, id)') &&
    includes('handleTutorialRequestSource: function(source, id)') &&
    isobaseProfileTutorialSource.includes('data-request-source="#isobase-basket-source"') &&
-   isobaseProfileTutorialSource.includes('aria-pressed="false"') &&
    isobaseProfileTutorialSource.includes('typeof api.setRequestSource === "function"') &&
-   isobaseProfileTutorialSource.includes('button.textContent = "Request source selected"') &&
+   includes('% Loaded the tutorial program.') &&
    !isobaseProfileTutorialSource.includes('data-load="#isobase-basket-source"'),
    "the ISOBASE profile queues temporary request source without consulting a session");
 ok(includes(':href="profileTutorial.path"') &&

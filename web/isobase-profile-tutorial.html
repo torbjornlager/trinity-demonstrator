@@ -24,31 +24,6 @@
     contract itself; this page stays with the programming profile.
   </div>
 
-  <h2 id="recommended-path">The recommended tutorial path</h2>
-  <p>The tutorials begin with the complete Erlang-style programming model and then remove facilities when an application does not need them. The optional API tutorial at each stop studies the protocol used by that profile and then returns to the same programming path.</p>
-  <figure aria-labelledby="profile-path-caption">
-    <div class="profile-path">
-      <div class="profile-path-step">
-        <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
-        <span>Actors, mailboxes, monitoring, links and statecharts</span>
-        <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
-      </div>
-      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
-      <div class="profile-path-step">
-        <strong>2. N2 &middot; ISOTOPE</strong>
-        <span>Persistent toplevel state, I/O and Abort, without actors</span>
-        <small>Optional detour: <a href="/isotope-api-tutorial">semi-stateful HTTP API tutorial</a></small>
-      </div>
-      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
-      <div class="profile-path-step current">
-        <strong>3. N1 &middot; ISOBASE</strong>
-        <span>Independent, bounded calls over stateless HTTP</span>
-        <small>Optional detour: <a href="/isobase-api-tutorial">stateless HTTP API tutorial</a></small>
-      </div>
-    </div>
-    <figcaption id="profile-path-caption" class="profile-path-caption">Recommended learning path: ACTOR &rarr; ISOTOPE &rarr; ISOBASE. The profile capability hierarchy runs in the opposite direction.</figcaption>
-  </figure>
-
   <nav aria-label="Table of contents">
     <ul>
       <li><a href="#model">The ISOBASE mental model</a></li>
@@ -58,6 +33,7 @@
       <li><a href="#scope">Three kinds of knowledge</a></li>
       <li><a href="#boundary">The deliberate boundary</a></li>
       <li><a href="#choice">When to choose ISOBASE</a></li>
+      <li><a href="#recommended-path">Where to go next</a></li>
     </ul>
   </nav>
 
@@ -92,7 +68,7 @@ step(Items, add(Name, Price), [item(Name, Price)|Items]) :-
     valid_item(item(Name, Price)).
 step(Items, remove(Name), Rest) :-
     select(item(Name, _), Items, Rest).</code></pre>
-    <div class="actions"><button type="button" data-request-source="#isobase-basket-source" aria-pressed="false">Use request source</button></div>
+    <div class="actions"><button type="button" data-request-source="#isobase-basket-source">Load</button></div>
     <p>Now validate and total a complete input value:</p>
     <pre id="isobase-basket-total"><code>?- Items = [item(tea,4),item(bread,3),item(cheese,8)],
    valid_basket(Items),
@@ -142,7 +118,7 @@ step(Items, remove(Name), Rest) :-
     <h3>Timeout instead of Abort</h3>
     <p>The following goal deliberately does not terminate. N1 has no Abort button because there is no retained pid or separate control channel to address:</p>
     <pre id="isobase-timeout"><code>?- repeat, fail.</code></pre>
-    <div class="actions"><button type="button" data-ask="#isobase-timeout">Run timeout exercise</button></div>
+    <div class="actions"><button type="button" data-ask="#isobase-timeout">Call</button></div>
     <p>The node ends it at its configured request limit. Cancelling a browser request may stop the browser waiting, but it is not a remote Abort command.</p>
   </section>
 
@@ -164,6 +140,31 @@ step(Items, remove(Name), Rest) :-
       with the <a href="/isobase-api-tutorial">ISOBASE API tutorial</a>.
     </div>
   </section>
+
+  <h2 id="recommended-path">Where to go next</h2>
+  <p>The tutorials begin with the complete Erlang-style programming model and then remove facilities when an application does not need them. The optional API tutorial at each stop studies the protocol used by that profile and then returns to the same programming path.</p>
+  <figure aria-labelledby="profile-path-caption">
+    <div class="profile-path">
+      <div class="profile-path-step">
+        <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
+        <span>Actors, mailboxes, monitoring, links and statecharts</span>
+        <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
+      </div>
+      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
+      <div class="profile-path-step">
+        <strong>2. N2 &middot; ISOTOPE</strong>
+        <span>Persistent toplevel state, I/O and Abort, without actors</span>
+        <small>Optional detour: <a href="/isotope-api-tutorial">semi-stateful HTTP API tutorial</a></small>
+      </div>
+      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
+      <div class="profile-path-step current">
+        <strong>3. N1 &middot; ISOBASE</strong>
+        <span>Independent, bounded calls over stateless HTTP</span>
+        <small>Optional detour: <a href="/isobase-api-tutorial">stateless HTTP API tutorial</a></small>
+      </div>
+    </div>
+    <figcaption id="profile-path-caption" class="profile-path-caption">Recommended learning path: ACTOR &rarr; ISOTOPE &rarr; ISOBASE. The profile capability hierarchy runs in the opposite direction.</figcaption>
+  </figure>
 </main>
 <script>
   (function () {
@@ -210,9 +211,8 @@ step(Items, remove(Name), Rest) :-
         var selector = button.getAttribute("data-request-source");
         var node = document.querySelector(selector);
         var api = bridge();
-        if (node && api && typeof api.setRequestSource === "function" && api.setRequestSource(node.textContent, selector)) {
-          button.setAttribute("aria-pressed", "true");
-          button.textContent = "Request source selected";
+        if (node && api && typeof api.setRequestSource === "function") {
+          api.setRequestSource(node.textContent, selector);
         }
       });
     });

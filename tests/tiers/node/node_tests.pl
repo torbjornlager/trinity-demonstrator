@@ -906,7 +906,6 @@ test(node_portal_and_example_routes_served) :-
             assertion(sub_string(IsobaseTutorialBody, _, _, _, '/vendor/tutorial-common.css')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'id="isobase-basket-source"')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'data-request-source="#isobase-basket-source"')),
-            assertion(sub_string(IsobaseTutorialBody, _, _, _, 'button.textContent = "Request source selected"')),
             assertion(\+ sub_string(IsobaseTutorialBody, _, _, _, 'data-load="#isobase-basket-source"')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Make application state explicit')),
             assertion(sub_string(IsobaseTutorialBody, _, _, _, 'Timeout instead of Abort')),

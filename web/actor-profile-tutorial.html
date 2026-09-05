@@ -73,67 +73,11 @@
   <a href="/actor-api-tutorial">ACTOR API tutorial</a> explains that protocol.
 </div>
 
-<h2 id="recommended-path">The recommended tutorial path</h2>
-
-<p>
-    The tutorials begin with the complete Erlang-style programming model and
-    then remove facilities when an application does not need them. The optional
-    API tutorial at each stop studies the protocol used by that profile and then
-    returns to the same programming path.
-</p>
-
-<figure aria-labelledby="profile-path-caption">
-  <div class="profile-path">
-    <div class="profile-path-step current">
-      <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
-      <span>Actors, mailboxes, monitoring, links and statecharts</span>
-      <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
-    </div>
-    <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
-    <div class="profile-path-step">
-      <strong>2. N2 &middot; ISOTOPE</strong>
-      <span>Persistent toplevel state, I/O and Abort, without actors</span>
-      <small>Optional detour: semi-stateful HTTP API tutorial</small>
-    </div>
-    <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
-    <div class="profile-path-step">
-      <strong>3. N1 &middot; ISOBASE</strong>
-      <span>Independent, bounded calls over stateless HTTP</span>
-      <small>Optional detour: stateless HTTP API tutorial</small>
-    </div>
-  </div>
-  <figcaption id="profile-path-caption" class="profile-path-caption">
-    Recommended learning path: ACTOR &rarr; ISOTOPE &rarr; ISOBASE. The profile
-    capability hierarchy runs in the opposite direction.
-  </figcaption>
-</figure>
-
-<h2 id="choose-a-route">Choose a route through this tutorial</h2>
-
-<p>
-    This is a reference-sized tutorial, so it is not necessary to complete
-    every advanced section in one sitting. The shortest useful ACTOR path is:
-    <strong>Your shell has a pid</strong>, <strong>Send a message to
-    yourself</strong>, <strong>Spawn an actor and talk to it</strong>,
-    <strong>Selective receive</strong>, <strong>Guards and timeouts</strong>,
-    <strong>Monitors</strong>, <strong>Linking</strong>, and finally the
-    <strong>count server</strong> or <strong>fridge</strong> application.
-</p>
-
-<table aria-label="ACTOR tutorial routes" style="border-collapse: collapse; width: 100%;">
-  <thead><tr><th style="border: 1px solid var(--tutorial-border); padding: 8px;">Route</th><th style="border: 1px solid var(--tutorial-border); padding: 8px;">Continue with</th></tr></thead>
-  <tbody>
-    <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Core actor programming</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Message passing, lifecycle, selective receive, monitoring, linking, then Programming with actors</td></tr>
-    <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Remote and distributed work</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Toplevels, <code>rpc</code>, promises, proof trees, and The concurrent Prolog Web</td></tr>
-    <tr><td style="border: 1px solid var(--tutorial-border); padding: 8px;">Reusable behaviours</td><td style="border: 1px solid var(--tutorial-border); padding: 8px;">The server behaviour, then <a href="#programming-with-statecharts">Programming with statecharts</a></td></tr>
-  </tbody>
-</table>
-
 <div class="alert alert-info">
   <strong>How to read the exercises.</strong> Run examples in order within a
   section. After each call, compare the result with the following explanation.
   Examples that register names, leave actors waiting, or accumulate mailbox
-  messages include explicit cleanup steps; use them before changing routes.
+  messages include explicit cleanup steps; use them before moving on.
 </div>
 
 <h2>append/3 in two modes</h2>
@@ -3605,6 +3549,41 @@ fridge2(_Other,      List, error(unknown_request), List).
 </div>
 </section>
 
+
+<h1 id="recommended-path">Where to go next</h1>
+
+<p>
+    The tutorials begin with the complete Erlang-style programming model and
+    then remove facilities when an application does not need them. The optional
+    API tutorial at each stop studies the protocol used by that profile and then
+    returns to the same programming path.
+</p>
+
+<figure aria-labelledby="profile-path-caption">
+  <div class="profile-path">
+    <div class="profile-path-step current">
+      <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
+      <span>Actors, mailboxes, monitoring, links and statecharts</span>
+      <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
+    </div>
+    <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
+    <div class="profile-path-step">
+      <strong>2. N2 &middot; ISOTOPE</strong>
+      <span>Persistent toplevel state, I/O and Abort, without actors</span>
+      <small>Optional detour: semi-stateful HTTP API tutorial</small>
+    </div>
+    <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
+    <div class="profile-path-step">
+      <strong>3. N1 &middot; ISOBASE</strong>
+      <span>Independent, bounded calls over stateless HTTP</span>
+      <small>Optional detour: stateless HTTP API tutorial</small>
+    </div>
+  </div>
+  <figcaption id="profile-path-caption" class="profile-path-caption">
+    Recommended learning path: ACTOR &rarr; ISOTOPE &rarr; ISOBASE. The profile
+    capability hierarchy runs in the opposite direction.
+  </figcaption>
+</figure>
 
 </div>
 

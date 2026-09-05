@@ -24,31 +24,6 @@
     <a href="/isotope-api-tutorial">ISOTOPE API tutorial</a>.
   </div>
 
-  <h2 id="recommended-path">The recommended tutorial path</h2>
-  <p>The tutorials begin with the complete Erlang-style programming model and then remove facilities when an application does not need them. The optional API tutorial at each stop studies the protocol used by that profile and then returns to the same programming path.</p>
-  <figure aria-labelledby="profile-path-caption">
-    <div class="profile-path">
-      <div class="profile-path-step">
-        <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
-        <span>Actors, mailboxes, monitoring, links and statecharts</span>
-        <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
-      </div>
-      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
-      <div class="profile-path-step current">
-        <strong>2. N2 &middot; ISOTOPE</strong>
-        <span>Persistent toplevel state, I/O and Abort, without actors</span>
-        <small>Optional detour: <a href="/isotope-api-tutorial">semi-stateful HTTP API tutorial</a></small>
-      </div>
-      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
-      <div class="profile-path-step">
-        <strong>3. N1 &middot; ISOBASE</strong>
-        <span>Independent, bounded calls over stateless HTTP</span>
-        <small>Optional detour: <a href="/isobase-api-tutorial">stateless HTTP API tutorial</a></small>
-      </div>
-    </div>
-    <figcaption id="profile-path-caption" class="profile-path-caption">Recommended learning path: ACTOR &rarr; ISOTOPE &rarr; ISOBASE. The profile capability hierarchy runs in the opposite direction.</figcaption>
-  </figure>
-
   <nav aria-label="Table of contents">
     <ul>
       <li><a href="#model">The ISOTOPE mental model</a></li>
@@ -58,6 +33,7 @@
       <li><a href="#control">Stop, Abort and session lifetime</a></li>
       <li><a href="#boundary">Where the actor boundary lies</a></li>
       <li><a href="#choice">When to choose ISOTOPE</a></li>
+      <li><a href="#recommended-path">Where to go next</a></li>
     </ul>
   </nav>
 
@@ -98,16 +74,16 @@ prices_total([], 0).
 prices_total([Price|Prices], Total) :-
     prices_total(Prices, Rest),
     Total is Price + Rest.</code></pre>
-    <div class="actions"><button type="button" data-load="#isotope-basket-source">Load source</button></div>
+    <div class="actions"><button type="button" data-load="#isotope-basket-source">Load</button></div>
     <p>Initialize it, then make three independent calls:</p>
     <pre id="isotope-clear"><code>?- basket_clear.</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-clear">1. Clear basket</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-clear">Call</button></div>
     <pre id="isotope-add-tea"><code>?- basket_add(tea, 4).</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-add-tea">2. Add tea</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-add-tea">Call</button></div>
     <pre id="isotope-add-more"><code>?- basket_add(bread, 3), basket_add(cheese, 8).</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-add-more">3. Add two items</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-add-more">Call</button></div>
     <pre id="isotope-total"><code>?- basket_total(Total).</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-total">4. Calculate total</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-total">Call</button></div>
     <div class="expected"><strong>Expect.</strong> <code>Total = 15</code>. The fourth request can see updates made by the preceding requests because they addressed the same private toplevel. A different client gets a different session and does not share these facts.</div>
   </section>
 
@@ -116,13 +92,13 @@ prices_total([Price|Prices], Total) :-
     <p>Ask for basket entries one at a time:</p>
     <pre id="isotope-items"><code>?- basket_item(Name, Price).</code></pre>
     <div class="actions">
-      <button type="button" data-ask="#isotope-items">Start search</button>
-      <button class="secondary" type="button" data-action="next">Next answer</button>
-      <button class="secondary" type="button" data-action="stop">Stop search</button>
+      <button type="button" data-ask="#isotope-items">Call</button>
+      <button class="secondary" type="button" data-action="next">Next</button>
+      <button class="secondary" type="button" data-action="stop">Stop</button>
     </div>
     <p><strong>Next</strong> resumes the retained search. <strong>Stop</strong> discards only that continuation. Prove the distinction by stopping before all answers have been shown and asking for the total again:</p>
     <pre id="isotope-total-after-stop"><code>?- basket_total(Total).</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-total-after-stop">Check retained database</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-total-after-stop">Call</button></div>
     <div class="expected"><strong>Expect.</strong> The total remains <code>15</code>. At most one answer continuation is current in a toplevel; starting another call replaces pending search state, but it does not erase loaded code or dynamic facts.</div>
   </section>
 
@@ -130,10 +106,10 @@ prices_total([Price|Prices], Total) :-
     <h2>Interactive input and output</h2>
     <p>A retained session gives input and output somewhere to go. First produce output:</p>
     <pre id="isotope-output"><code>?- basket_total(Total), format('Basket total: ~w~n', [Total]).</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-output">Write total</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-output">Call</button></div>
     <p>Now let the running goal ask the client for a term:</p>
     <pre id="isotope-input"><code>?- read(Item), basket_add(Item, 1).</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-input">Prompt for item</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-input">Call</button></div>
     <div class="expected"><strong>At the <code>|:</code> prompt</strong>, enter a complete Prolog term such as <code>coffee.</code> The original computation waits, receives the term, adds it, and then succeeds. ISOBASE has no retained conversation in which this prompt could live.</div>
   </section>
 
@@ -146,7 +122,7 @@ prices_total([Price|Prices], Total) :-
     </tbody></table>
     <p>Start a deliberately non-terminating computation, then interrupt it:</p>
     <pre id="isotope-loop"><code>?- repeat, fail.</code></pre>
-    <div class="actions"><button type="button" data-ask="#isotope-loop">Start loop</button><button class="secondary" type="button" data-action="abort">Abort</button></div>
+    <div class="actions"><button type="button" data-ask="#isotope-loop">Call</button><button class="secondary" type="button" data-action="abort">Abort</button></div>
     <p>The server timeout may win if it is configured very short. After either outcome, ask for the basket total again to confirm that the session remains usable.</p>
     <div class="note"><strong>Session hygiene.</strong> Private sessions consume server resources. A client should halt an abandoned session when the protocol supports it; otherwise the node eventually reclaims it. See the API tutorial for the complete lifecycle.</div>
   </section>
@@ -179,6 +155,31 @@ prices_total([Price|Prices], Total) :-
       <a href="/isotope-api-tutorial">ISOTOPE API tutorial</a>.
     </div>
   </section>
+
+  <h2 id="recommended-path">Where to go next</h2>
+  <p>The tutorials begin with the complete Erlang-style programming model and then remove facilities when an application does not need them. The optional API tutorial at each stop studies the protocol used by that profile and then returns to the same programming path.</p>
+  <figure aria-labelledby="profile-path-caption">
+    <div class="profile-path">
+      <div class="profile-path-step">
+        <strong>1. SWI-WASM or N3 or N4 &middot; ACTOR</strong>
+        <span>Actors, mailboxes, monitoring, links and statecharts</span>
+        <small>Optional detour: <a href="/actor-api-tutorial">stateful API tutorial</a></small>
+      </div>
+      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
+      <div class="profile-path-step current">
+        <strong>2. N2 &middot; ISOTOPE</strong>
+        <span>Persistent toplevel state, I/O and Abort, without actors</span>
+        <small>Optional detour: <a href="/isotope-api-tutorial">semi-stateful HTTP API tutorial</a></small>
+      </div>
+      <div class="profile-path-arrow" aria-hidden="true">&rarr;</div>
+      <div class="profile-path-step">
+        <strong>3. N1 &middot; ISOBASE</strong>
+        <span>Independent, bounded calls over stateless HTTP</span>
+        <small>Optional detour: <a href="/isobase-api-tutorial">stateless HTTP API tutorial</a></small>
+      </div>
+    </div>
+    <figcaption id="profile-path-caption" class="profile-path-caption">Recommended learning path: ACTOR &rarr; ISOTOPE &rarr; ISOBASE. The profile capability hierarchy runs in the opposite direction.</figcaption>
+  </figure>
 </main>
 <script>
   (function () {
