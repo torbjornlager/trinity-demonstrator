@@ -178,6 +178,68 @@ test(receive11, Result == done) :-
    ]),
    Result = done.
 
+test(receive_specializes_nonground_message) :-
+   self(Self),
+   Self ! offer(SenderVar),
+   receive({offer(coffee) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(SenderVar)).
+
+test(receive_specializes_deferred_message) :-
+   self(Self),
+   Self ! offer(SenderVar),
+   Self ! ready,
+   receive({ready -> true}, [timeout(0), on_timeout(fail)]),
+   receive({offer(tea) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(SenderVar)).
+
+test(receive_can_equate_message_variables) :-
+   self(Self),
+   Self ! pair(A, B),
+   receive({pair(X, X) -> X = shared}, [timeout(0), on_timeout(fail)]),
+   assertion(X == shared),
+   assertion(var(A)),
+   assertion(var(B)),
+   assertion(A \== B).
+
+test(receive_preserves_message_variable_sharing) :-
+   self(Self),
+   Self ! pair(A, A),
+   receive({pair(coffee, tea) -> fail;
+            pair(coffee, X) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(X == coffee),
+   assertion(var(A)).
+
+test(receive_guard_rollback_between_clauses,
+     [forall(member(RejectedGuard, [fail, throw(rejected_guard)]))]) :-
+   self(Self),
+   Self ! offer(SenderVar),
+   receive({offer(coffee) if (Witness = rejected, RejectedGuard) -> fail;
+            offer(tea) if Witness = accepted -> Result = Witness},
+           [timeout(0), on_timeout(fail)]),
+   assertion(Result == accepted),
+   assertion(var(SenderVar)).
+
+test(receive_guard_rollback_preserves_deferred_message) :-
+   self(Self),
+   Self ! offer(SenderVar),
+   Self ! ready,
+   receive({offer(coffee) if fail -> fail;
+            ready -> true}, [timeout(0), on_timeout(fail)]),
+   receive({offer(tea) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(SenderVar)).
+
+test(receive_commits_selection_but_preserves_body_alternatives,
+     Values == [first, second]) :-
+   self(Self),
+   Self ! offer(_),
+   Self ! offer(tea),
+   findall(Value,
+           receive({offer(coffee) -> member(Value, [first, second]);
+                    offer(tea) -> Value = wrong_clause},
+                   [timeout(0), on_timeout(fail)]),
+           Values),
+   receive({offer(tea) -> true}, [timeout(0), on_timeout(fail)]).
+
 :- end_tests(t0_receive).
 
 

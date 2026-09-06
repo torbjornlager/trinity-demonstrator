@@ -127,7 +127,7 @@ source_utils:restore_serialized_term(Module, (Head :- Body0),
 %!  spawn_body(+Pid, :Goal, +Options, :OnReady, :OnPrepError, :Runner) is det.
 %
 %   The child-side start sequence for an isolated actor; the
-%   composition layer forwards `actors:hook_start_body/6` here (the
+%   composition layer forwards `actors:hook_start_body/7` here (the
 %   signatures match argument for argument):
 %
 %     1. create the actor's temporary module,

@@ -141,7 +141,7 @@ As built in Phase 1 (`prolog/web_prolog/actors.pl`):
 | `hook_make_ref(Ref)` | distribution (mints integer) | `ref(N)`, monotonic counter |
 | `hook_canonical_pid(Pid0, Pid)` | distribution (`Id@Node` globalization) | identity |
 | `hook_local_pid(Pid0, Local)` | distribution (`Id@Node` localization) | identity |
-| `hook_start_body(Pid, Goal, Opts, OnReady, OnPrepError, Runner)` | **composition layer only** (a pure forwarder to `isolation:spawn_body/6`) | notify parent, run goal in caller's module. The handshake protocol travels as closures the core constructs — implementations never import or name a layer-0 predicate |
+| `hook_start_body(Pid, Goal, Opts, OnReady, OnPrepError, Runner, Start)` | **composition layer only** (returns an `isolation:spawn_body/6` closure) | Select startup without executing it; the core commits before calling `Start`. Default: notify parent, run goal in caller's module. The handshake protocol travels as closures the core constructs — implementations never import or name a layer-0 predicate |
 | `hook_spawn_options(Goal, Opts0, Opts)` | node layer (sandbox prepare) | identity |
 | `hook_spawn_context(Goal0, Goal)` | node layer (execution-context propagation) | identity |
 | `hook_monitor(W, Pid, Ref)` / `hook_demonitor(Ref)` | distribution (mirror tables) | no-op |
@@ -150,7 +150,7 @@ As built in Phase 1 (`prolog/web_prolog/actors.pl`):
 | `hook_namespace(NS)` | node layer (public execution namespace) | fail ⇒ namespace `global`, no filtering |
 
 Deltas against the original sketch: `hook_goal/3` split into the
-child-side `hook_start_body/4` (so the demonstrator's
+child-side `hook_start_body/7` (so the demonstrator's
 initialized/start_error spawn handshake stays in the core, exactly
 preserved) plus the caller-side `hook_spawn_options/3` and
 `hook_spawn_context/2`; `hook_link/2` proved unnecessary (links mirror
@@ -186,9 +186,11 @@ Declared in **toplevel_actors.pl**:
 
 ### 2.3 Hook composition rules (the part that keeps this sane)
 
-- Every hook has **exactly one call site** in its owning library, wrapped as
-  `( hook(...) -> true ; Default )`.
-- Transformation hooks (`hook_start_body/4`, `prepare_goal/3`) must **never**
+- Every hook has **exactly one call site** in its owning library. Takeover
+  hooks use `( hook(...) -> true ; Default )`. The startup hook instead
+  selects a closure, commits to that selection, and only then executes it;
+  failure of an actor goal must never be interpreted as declining the hook.
+- Transformation hooks (`hook_start_body/7`, `prepare_goal/3`) must **never**
   be composed by multifile clause interleaving — load order would change
   semantics. Each lower layer exports its transformation as an ordinary,
   documented predicate; the **umbrella defines the single chain**, in a fixed
@@ -196,9 +198,10 @@ Declared in **toplevel_actors.pl**:
 
   ```prolog
   %  The handshake closures are built by the core and travel through
-  %  the hook; the composition clause is a pure forwarder.
-  actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner) :-
-      isolation:spawn_body(Pid, Goal, Options, OnReady, OnPrepError, Runner).
+  %  the hook; the composition clause returns work without executing it.
+  actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
+                        isolation:spawn_body(Pid, Goal, Options,
+                                             OnReady, OnPrepError, Runner)).
   ```
 
 - When only `actors.pl` is loaded, no `hook_start_body` clause exists → the
@@ -391,7 +394,7 @@ small hook indirections.
   machinery below layer 3; T0 green.
   *(N.B. the hook names in this bullet are the original sketch; the
   as-built inventory in §2.2 supersedes them — `hook_goal` became
-  `hook_start_body/6` (handshake closures as arguments) +
+  `hook_start_body/7` (handshake closures as arguments) +
   `hook_spawn_options`/`hook_spawn_context`, and
   `hook_setting`/`hook_event` turned out not to be needed in layer 0.
   The hooks live in `prolog/web_prolog/actors.pl`, module `actors`;

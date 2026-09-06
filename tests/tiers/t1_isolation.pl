@@ -22,8 +22,9 @@
 %  The composition glue: every local spawn prepares a private module.
 %  This is the single transformation chain rule from the plan (§2.3):
 %  one clause, defined by the composition layer, never interleaved.
-actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner) :-
-    isolation:spawn_body(Pid, Goal, Options, OnReady, OnPrepError, Runner).
+actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
+                       isolation:spawn_body(Pid, Goal, Options,
+                                            OnReady, OnPrepError, Runner)).
 
 run_tier :-
     layer_honesty,
@@ -77,6 +78,24 @@ actor_test_p(a). actor_test_p(b). actor_test_p(c).
    setup(flush_shell_mailbox),
    cleanup(ensure_mailbox_empty)
 ]).
+
+% Goal failure must not be mistaken for an unclaimed startup hook. Wait
+% for termination before checking the mailbox so both duplicate readiness
+% notifications and repeated application effects are observable.
+test(startup_runs_goal_once,
+     [setup(flush_shell_mailbox), cleanup(flush_shell_mailbox),
+      forall(member(Goal-Reason,
+                    [false-false, true-true, sleep(0.01)-true,
+                     throw(startup_test_error)-exception(startup_test_error)]))]) :-
+   self(Self),
+   spawn((send(Self, startup_test_effect), Goal), Pid,
+         [monitor(true)]),
+   receive({down(Pid, Pid, ActualReason) -> true},
+           [timeout(5), on_timeout(fail)]),
+   assertion(ActualReason == Reason),
+   receive({startup_test_effect -> true},
+           [timeout(1), on_timeout(fail)]),
+   ensure_mailbox_empty.
 
 test(src_list, Msg == ready) :-
    self(Self),

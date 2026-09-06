@@ -35,7 +35,7 @@
      canonical_pid/2,        % +Pid0, -Pid
      transportable_term/1,   % @Term
 
-     % The spawn-handshake protocol travels INSIDE hook_start_body/6
+     % The spawn-handshake protocol travels INSIDE hook_start_body/7
      % as closures, so no callable plumbing API is exported; sibling
      % layers read the few remaining internals (pid_local/2,
      % resolve_thread/2, actor_in_current_namespace/1, is_main_pid/1)
@@ -92,14 +92,15 @@ Takeover-style (semidet; if a clause succeeds the core path is skipped):
   - hook_send(+Pid, +Message): take over delivery (Id@Node, sockets).
   - hook_exit(+Pid, +Reason): take over exit delivery.
   - hook_start_body(+Pid, :Goal, +Options, :OnReady, :OnPrepError,
-    :Runner): take over the child-side start sequence (the
-    composition layer forwards this to isolation, which prepares the
-    actor's module).  The spawn-handshake protocol travels as
-    closures constructed here: implementations call(OnReady) once
-    prepared — or, on a preparation error E, call(OnPrepError, E),
-    then call(OnReady), then rethrow — and run the goal via
-    call(Runner, PreparedGoal).  No callback predicate of this
-    module needs to be named, let alone imported.
+    :Runner, -Start): select a module-qualified closure for the child-side
+    start sequence without executing it. The core commits to the selected
+    closure before calling it, so actor goal failure cannot trigger fallback
+    startup or repeat effects. The composition layer returns an isolation
+    closure that prepares the actor's module. When executed, it calls
+    OnReady once prepared — or, on a preparation error E, calls
+    OnPrepError(E), then OnReady, then rethrows — and runs the goal via
+    call(Runner, PreparedGoal). No callback predicate of this module needs
+    to be named, let alone imported.
   - hook_spawn_options(:Goal, +Options0, -Options): caller-side spawn
     option rewriting (node-layer policy).
   - hook_spawn_context(+Goal0, -Goal): caller-side wrapping of the
@@ -144,7 +145,7 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     hook_spawn/3,
     hook_send/2,
     hook_exit/2,
-    hook_start_body/6,
+    hook_start_body/7,
     hook_spawn_options/3,
     hook_spawn_context/2,
     hook_monitor/3,
@@ -469,7 +470,7 @@ stop_self(Parent) :-
 %     2. install optional link/monitor,
 %     3. run the start body — by default: notify the parent and call
 %        Goal in the caller's module; the isolation glue takes this
-%        over through hook_start_body/4 to prepare a private module
+%        over through hook_start_body/7 to prepare a private module
 %        first (it must reproduce the initialized/start_error
 %        handshake via actor_started/2 and actor_start_failed/3).
 start(Parent, Pid, Goal, Options) :-
@@ -511,11 +512,11 @@ start_body(GlobalPid, Parent, Goal, Options) :-
     OnPrepError = actors:actor_start_failed(Parent, GlobalPid),
     Runner = actors:start_goal_runner(Options),
     (   hook_start_body(GlobalPid, Goal, Options,
-                        OnReady, OnPrepError, Runner)
+                        OnReady, OnPrepError, Runner, Start)
     ->  true
-    ;   call(OnReady),
-        call(Runner, Goal)
-    ).
+    ;   Start = (call(OnReady), call(Runner, Goal))
+    ),
+    call(Start).
 
 %!  actor_started(+Parent, +Pid) is det.
 %!  actor_start_failed(+Parent, +Pid, +Error) is det.
@@ -524,7 +525,7 @@ start_body(GlobalPid, Parent, Goal, Options) :-
 %   `initialized(Pid)` and then peeks for `start_error(Pid, Error)`.
 %   On preparation failure, send start_error *before* initialized so
 %   the parent's zero-timeout peek finds it.  Internal: reach
-%   hook_start_body/6 implementations only as the OnReady/OnPrepError
+%   hook_start_body/7 implementations only as the OnReady/OnPrepError
 %   closures.
 actor_started(Parent, Pid) :-
     send_thread_message(Parent, initialized(Pid)).
@@ -537,7 +538,7 @@ actor_start_failed(Parent, Pid, Error) :-
 %
 %   Run an actor start goal, honoring an optional spawn-time I/O
 %   target.  start_goal_runner/2 is the closure form passed through
-%   hook_start_body/6 (called as call(Runner, Goal)).
+%   hook_start_body/7 (called as call(Runner, Goal)).
 start_goal_runner(Options, Goal) :-
     run_start_goal(Goal, Options).
 
@@ -1181,7 +1182,7 @@ default_io_target(Fallback, Fallback).
 %!  receive(+ReceiveClauses) is nondet.
 %!  receive(+ReceiveClauses, +Options) is nondet.
 %
-%   Erlang-style committed message selection. One invocation consumes at most
+%   Committed message selection by Prolog unification. One invocation consumes at most
 %   one message, but its ordinary Prolog clause body may yield several logical
 %   solutions. Backtracking through that body never selects another message or
 %   clause.
@@ -1226,19 +1227,20 @@ select_body(Clauses, Message, actors, Body) :-
 
 %!  select_body_aux(+Clauses, +Message, +Module, -Body) is semidet.
 %
-%   Match a message against receive clauses, including guarded `if/2` forms.
+%   Unify a message with receive patterns, including guarded `if/2` forms.
+%   A pattern may specialize variables in the receiver's copy of a message.
+%   Failed candidates undo both pattern and guard bindings before trying the
+%   next clause or message. The enclosing receive commits to the first match.
 select_body_aux((Clause ; Clauses), Message, Module, Body) :-
     (   select_body_aux(Clause,  Message, Module, Body)
     ;   select_body_aux(Clauses, Message, Module, Body)
     ).
 select_body_aux((Head -> Body), Message, Module, Body) :-
-    (   subsumes_term(if(Pattern, Guard), Head)
-    ->  if(Pattern, Guard) = Head,
-        subsumes_term(Pattern, Message),
-        Pattern = Message,
+    (   nonvar(Head),
+        Head = if(Pattern, Guard)
+    ->  Pattern = Message,
         best_effort_fail(once(Module:Guard))
-    ;   subsumes_term(Head, Message),
-        Head = Message
+    ;   Head = Message
     ).
 
 

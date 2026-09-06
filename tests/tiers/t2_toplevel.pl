@@ -13,8 +13,9 @@
 :- use_module(library(plunit)).
 
 %  Composition glue (same single chain the umbrella will define).
-actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner) :-
-    isolation:spawn_body(Pid, Goal, Options, OnReady, OnPrepError, Runner).
+actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
+                       isolation:spawn_body(Pid, Goal, Options,
+                                            OnReady, OnPrepError, Runner)).
 
 run_tier :-
     layer_honesty,

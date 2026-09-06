@@ -15,8 +15,9 @@
 :- use_module(library(plunit)).
 
 %  Composition glue (single chain, as the umbrella will define it).
-actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner) :-
-    isolation:spawn_body(Pid, Goal, Options, OnReady, OnPrepError, Runner).
+actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
+                       isolation:spawn_body(Pid, Goal, Options,
+                                            OnReady, OnPrepError, Runner)).
 
 %  The behaviour suites (loaded after the glue so spawns made during
 %  load-time initialization, if any, already isolate properly).
