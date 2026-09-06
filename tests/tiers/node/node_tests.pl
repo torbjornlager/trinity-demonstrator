@@ -501,6 +501,43 @@ ws_receive_json(WebSocket, Dict) :-
     ws_receive(WebSocket, Frame, []),
     atom_json_dict(Frame.data, Dict, []).
 
+% A nested child's lifecycle event may precede the submitting toplevel's
+% answer. Correlate by pid, retain intervening events for tests that inspect
+% them, and never hide termination of the toplevel we are waiting for.
+ws_receive_toplevel_reply(WS, Pid, Reply) :-
+    ws_receive_toplevel_reply(WS, Pid, Reply, _).
+
+ws_receive_toplevel_reply(WS, Pid, Reply, LifecycleEvents) :-
+    call_with_time_limit(5,
+        ws_receive_toplevel_reply_(WS, Pid, 30, Reply, LifecycleEvents)).
+
+ws_receive_toplevel_reply_(_, Pid, 0, _, _) :-
+    !,
+    throw(error(toplevel_reply_event_limit(Pid),
+                context(ws_receive_toplevel_reply/4, 'Too many intervening events'))).
+ws_receive_toplevel_reply_(WS, Pid, Attempts, Reply, LifecycleEvents) :-
+    ws_receive_json(WS, Dict),
+    (   get_dict(pid, Dict, EventPid),
+        get_dict(type, Dict, Type)
+    ->  (   EventPid == Pid
+        ->  (   Type == "down"
+            ->  throw(error(toplevel_terminated(Pid, Dict),
+                            context(ws_receive_toplevel_reply/4,
+                                    'Toplevel terminated before its answer')))
+            ;   memberchk(Type, ["success", "failure", "error"])
+            ->  Reply = Dict,
+                LifecycleEvents = []
+            ;   throw(error(unexpected_toplevel_event(Pid, Dict), _))
+            )
+        ;   Type == "down"
+        ->  LifecycleEvents = [Dict|Rest],
+            Next is Attempts - 1,
+            ws_receive_toplevel_reply_(WS, Pid, Next, Reply, Rest)
+        ;   throw(error(unexpected_toplevel_event(Pid, Dict), _))
+        )
+    ;   throw(error(unexpected_toplevel_event(Pid, Dict), _))
+    ).
+
 ws_receive_json_until_expected_types(WebSocket, ExpectedTypes, Replies) :-
     ws_receive_json_until_expected_types(WebSocket, ExpectedTypes, [], 30, Replies).
 
@@ -4719,11 +4756,49 @@ test(ws_actor_toplevel_nested_spawn_accepts_per_connection_anon,
                     goal:"spawn(true, Child)",
                     format:"json"
                 }),
-                ws_receive_json(WS, Reply),
+                ws_receive_toplevel_reply(WS, ToplevelPid, Reply),
                 get_dict(type, Reply, Type)
             ),
             catch(ws_close(WS, 1000, done), _, true)
         )).
+
+test(ws_toplevel_reply_handles_child_down_before_answer) :-
+    with_node_server_options([profile(actor), auth(open)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            ( ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
+              ws_receive_json(WS, Spawned),
+              Pid = Spawned.pid,
+              % spawn returns after ownership/monitor installation. The child
+              % then exits while its parent deliberately delays the answer.
+              ws_send_json(WS, json{
+                  command:toplevel_call, pid:Pid, format:"json",
+                  goal:"spawn(receive({finish -> true}), Child), Child ! finish, sleep(0.2)"
+              }),
+              ws_receive_toplevel_reply(WS, Pid, Reply, Events),
+              assertion(Reply.type == "success"),
+              assertion(Reply.pid == Pid),
+              Events = [Down],
+              assertion(Down.type == "down"),
+              assertion(Down.pid \== Pid),
+              assertion(Down.reason == "true")
+            ),
+            catch(ws_close(WS, 1000, done), _, true))).
+
+test(ws_toplevel_reply_rejects_target_down,
+     [throws(error(toplevel_terminated(_, _), _))]) :-
+    with_node_server_options([profile(actor), auth(open)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            ( ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
+              ws_receive_json(WS, Spawned),
+              Pid = Spawned.pid,
+              ws_send_json(WS, json{
+                  command:toplevel_call, pid:Pid, goal:"exit(reply_test_exit)"
+              }),
+              ws_receive_toplevel_reply(WS, Pid, _)
+            ),
+            catch(ws_close(WS, 1000, done), _, true))).
 
 test(ws_actor_toplevel_monitor_notification_visible_to_flush) :-
     with_node_server_options([profile(actor), auth(dev)], URI,
@@ -7867,7 +7942,7 @@ test(sandbox_on_ws_toplevel_call_allows_nested_spawn_load_uri,
                             goal:GoalText,
                             template:"true"
                         }),
-                        ws_receive_json(WS, Reply),
+                        ws_receive_toplevel_reply(WS, Pid, Reply),
                         get_dict(type, Reply, Type)
                     ),
                     catch(ws_close(WS, 1000, done), _, true)
@@ -7898,7 +7973,7 @@ test(sandbox_on_ws_toplevel_call_allows_computed_nested_spawn_load_list,
                     goal:GoalText,
                     template:"true"
                 }),
-                ws_receive_json_until_expected_types(WS, ["success"], [Reply]),
+                ws_receive_toplevel_reply(WS, Pid, Reply),
                 get_dict(type, Reply, Type)
             ),
             catch(ws_close(WS, 1000, done), _, true)
