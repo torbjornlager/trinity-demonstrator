@@ -1202,11 +1202,23 @@ receive(Clauses, Options) :-
     ).
 
 receive(Mailbox, Clauses, Options) :-
-    (   thread_get_message(Mailbox, Msg, Options)
+    (   selectchk(timeout(Seconds), Options, Rest),
+        Seconds > 0
+    ->  get_time(Now),
+        Deadline is Now + Seconds,
+        receive_scan(Mailbox, Clauses, [deadline(Deadline)|Rest], Options)
+    ;   receive_scan(Mailbox, Clauses, Options, Options)
+    ).
+
+% Keep one deadline throughout the scan: unrelated arrivals do not restart
+% the wait. Preserve timeout(0), whose queue-inspection semantics differ
+% from an expired deadline. The original options retain the timeout body.
+receive_scan(Mailbox, Clauses, GetOptions, Options) :-
+    (   thread_get_message(Mailbox, Msg, GetOptions)
     ->  (   select_body(Clauses, Msg, Module, Body)
         ->  call(Module:Body)
         ;   assertz(deferred(Msg)),
-            receive(Mailbox, Clauses, Options)
+            receive_scan(Mailbox, Clauses, GetOptions, Options)
         )
     ;   option(on_timeout(Goal), Options, true),
         clauses_module(Clauses, Module),

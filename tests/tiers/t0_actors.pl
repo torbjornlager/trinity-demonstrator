@@ -240,6 +240,52 @@ test(receive_commits_selection_but_preserves_body_alternatives,
            Values),
    receive({offer(tea) -> true}, [timeout(0), on_timeout(fail)]).
 
+test(receive_timeout_not_restarted_by_unmatched_arrivals) :-
+   thread_self(Self),
+   setup_call_cleanup(
+       thread_create(
+           ( forall(between(1, 50, _),
+                    (sleep(0.02), thread_send_message(Self, timeout_noise))),
+             thread_send_message(Self, timeout_late)
+           ), Producer, []),
+       ( get_time(Start),
+         call_with_time_limit(3,
+             receive({timeout_late -> Outcome = late},
+                     [timeout(0.15), on_timeout(Outcome = expired)])),
+         get_time(End),
+         assertion(Outcome == expired),
+         Elapsed is End - Start,
+         assertion(Elapsed < 0.8),
+         % Unmatched arrivals must remain available after the timeout.
+         receive({timeout_noise -> true}, [timeout(0), on_timeout(fail)])
+       ),
+       ( catch(thread_signal(Producer, throw(stop_timeout_test)), _, true),
+         thread_join(Producer, _),
+         flush_shell_mailbox
+       )).
+
+test(receive_zero_timeout_scans_queued_messages,
+     [forall(member(Zero, [0, 0.0]))]) :-
+   self(Self),
+   Self ! timeout_noise,
+   Self ! queued_match,
+   receive({queued_match -> true}, [timeout(Zero), on_timeout(fail)]),
+   receive({timeout_noise -> true}, [timeout(Zero), on_timeout(fail)]).
+
+test(receive_without_timeout_preserves_unmatched_messages) :-
+   self(Self),
+   Self ! timeout_noise,
+   Self ! queued_match,
+   receive({queued_match -> true}),
+   receive({timeout_noise -> true}, [timeout(0), on_timeout(fail)]).
+
+test(receive_timeout_body_keeps_alternatives, Values == [first, second]) :-
+   findall(Value,
+           receive({never_sent -> fail},
+                   [timeout(0.01),
+                    on_timeout(member(Value, [first, second]))]),
+           Values).
+
 :- end_tests(t0_receive).
 
 
