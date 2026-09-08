@@ -1,0 +1,6 @@
+# Optional inference capability on n3 only. Ollama runs natively on the
+# Mac and remains bound to 127.0.0.1:11434. No new container or public port.
+services:
+  wp_n3:
+    environment:
+      WP_MODEL_SERVICE: "yes"

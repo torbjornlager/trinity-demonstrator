@@ -94,6 +94,7 @@ services:
     tmpfs:
       - /tmp:size=128m
     environment:
+      WP_MODEL_SERVICE: ${WP_MODEL_SERVICE:-no}
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl

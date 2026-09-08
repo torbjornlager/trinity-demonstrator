@@ -3501,10 +3501,306 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 
+<h2 id="statechart-service-request">A service-request agent: proposal, confirmation, and review</h2>
+
+<p>
+  Example <strong>18 service-request.xml</strong> turns the book's Chapter 8
+  application into an interactive lab. It runs entirely inside the demonstrator:
+  model and fulfilment replies come from asynchronous helper actors with scripted
+  results. No external model or service desk is contacted. Open the file under
+  <strong>SXML code</strong> to edit the rules and inspect the full chart.
+</p>
+<p>
+  Follow three runs: a permitted request, a conflict requiring review, and a
+  correction that invalidates an earlier reply. The main path is
+  <code>collect → confirm → assess → route → success</code>. A prohibition
+  leads to failure; a conflict, policy gap, or missing field leads to
+  <code>review</code>. A correction returns to collection at a new revision.
+</p>
+
+<h3>Before you start</h3>
+<ul>
+  <li>Select an ACTOR node. Keep <strong>SXML trace</strong> enabled in the
+      Logger to follow state changes alongside the terminal notices.</li>
+  <li>Finish or halt the current chart before beginning another run. Each
+      Start button creates a fresh chart and a new key.</li>
+  <li><code>$Pid</code> and <code>$Key</code> recall terminal bindings from
+      the start query. They are not part of the message sent to the chart.</li>
+  <li>Wait for the stated notice before clicking the next button. Sending a
+      message successfully does not mean the chart has accepted it.</li>
+</ul>
+<p>
+  <strong>Your role in this lab.</strong> The terminal acts as a trusted
+  wrapper, first for requester <code>alice</code> and then for
+  <code>reviewer</code>. The term <code>authenticated(Key, Who, Event)</code>
+  and a claimed identity do not authenticate a person. A real wrapper must
+  derive identity from a verified session, authorize access, and keep its
+  credentials and chart address private. The fresh references used here are
+  for local demonstration, not production bearer credentials.
+</p>
+
+<h3>1. Complete an automatically permitted request</h3>
+<p>Start a fresh chart. The model fixture proposes a laptop costing 700.</p>
+<pre id="sc-sr-start">?- make_ref(Key),
+   statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/18%20service-request.xml')
+   ]),
+   Pid ! start(Key, laptop).
+</pre>
+<p class="ask-buttons">
+  <button onclick="scSpawnServiceRequest('#sc-sr-start')" class="btn btn-xs btn-primary" type="button">Start laptop request</button>
+</p>
+<p>
+  Wait for <code>summary(1,[cost(700),service(laptop)])</code>. Confirm that exact
+  revision and field list, including the canonical order shown in the summary.
+  Dispatch then reports <code>terminal(1, succeeded(ticket_42))</code> and the
+  chart terminates. The model proposes fields; your confirmation authorizes
+  assessment of that particular snapshot.
+</p>
+<pre id="sc-sr-confirm">?- $Pid ! authenticated($Key, alice,
+       confirm(1, [cost(700),service(laptop)])).
+</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample('#sc-sr-confirm')" class="btn btn-xs btn-primary" type="button">Confirm laptop summary</button>
+</p>
+
+<h3>2. Resolve a policy conflict through human review</h3>
+<p>
+  The example deliberately both permits and forbids a VPN request costing 10.
+  Its classifier identifies the conflict before considering either rule alone.
+</p>
+<pre id="sc-sr-vpn">?- make_ref(Key),
+   statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/18%20service-request.xml')
+   ]),
+   Pid ! start(Key, vpn).
+</pre>
+<p class="ask-buttons">
+  <button onclick="scSpawnServiceRequest('#sc-sr-vpn')" class="btn btn-xs btn-primary" type="button">Start VPN request</button>
+</p>
+<p>
+  Wait for <code>summary(1,[cost(10),service(vpn)])</code>, then confirm:
+</p>
+<pre id="sc-sr-confirm-vpn">?- $Pid ! authenticated($Key, alice,
+       confirm(1, [cost(10),service(vpn)])).
+</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample('#sc-sr-confirm-vpn')" class="btn btn-xs btn-primary" type="button">Confirm VPN summary</button>
+</p>
+<p>After <code>human_review(1,...,conflicting)</code>, act as the authorised reviewer:</p>
+<pre id="sc-sr-approve">?- $Pid ! authenticated($Key, reviewer,
+       review(1, [cost(10),service(vpn)], approve)).
+</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample('#sc-sr-approve')" class="btn btn-xs btn-primary" type="button">Approve as reviewer</button>
+</p>
+<p>
+  Changing <code>approve</code> to <code>reject</code> ends with
+  <code>rejected(reviewer)</code>. Changing the principal to <code>alice</code>
+  cannot approve a review: the event is ignored. The explicit sample policy lets
+  a reviewer resolve a conflict or policy gap for a complete request, but never
+  approve missing fields or override a pure prohibition.
+</p>
+
+<h3>3. Correct a request while the old model reply is in flight</h3>
+<p>
+  This query starts a slow proposal, then immediately corrects revision 1.
+  The new laptop summary arrives first as
+  <code>summary(2,[cost(700),service(laptop)])</code>. Leave it unconfirmed
+  until the old result arrives about two seconds after the start:
+  <code>ignored_event</code> shows that the obsolete reply was rejected.
+</p>
+<pre id="sc-sr-race">?- make_ref(Key),
+   statechart_spawn(Pid, [
+       src_uri('/examples/statecharts/18%20service-request.xml')
+   ]),
+   Pid ! start(Key, slow),
+   Pid ! authenticated(Key, alice, correction(1, laptop)).
+</pre>
+<p class="ask-buttons">
+  <button onclick="scSpawnServiceRequest('#sc-sr-race')" class="btn btn-xs btn-primary" type="button">Run correction race</button>
+</p>
+<p>
+  Try an old confirmation. Expect another <code>ignored_event</code> and no
+  <code>dispatch_requested</code> notice:
+</p>
+<pre id="sc-sr-stale">?- $Pid ! authenticated($Key, alice,
+       confirm(1, [cost(1),service(restricted)])).
+</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample('#sc-sr-stale')" class="btn btn-xs btn-primary" type="button">Try stale confirmation</button>
+</p>
+<p>
+  Now confirm revision 2. Expect <code>terminal(2, succeeded(ticket_42))</code>:
+</p>
+<pre id="sc-sr-current">?- $Pid ! authenticated($Key, alice,
+       confirm(2, [cost(700),service(laptop)])).
+</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample('#sc-sr-current')" class="btn btn-xs btn-primary" type="button">Confirm revision 2</button>
+</p>
+
+<h3>4. Explore rejection, incomplete requests, and timeouts</h3>
+<p>Start a fresh chart as above, replacing the scenario in <code>start(Key,Scenario)</code>:</p>
+<table class="table table-bordered">
+  <thead>
+    <tr><th>Scenario</th><th>What to observe</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>restricted</code></td>
+      <td>Confirm <code>[cost(1),service(restricted)]</code>; the policy rejects it.</td>
+    </tr>
+    <tr>
+      <td><code>missing</code></td>
+      <td>Confirm <code>[service(laptop)]</code>; review cannot approve until a correction supplies the missing cost.</td>
+    </tr>
+    <tr>
+      <td><code>training</code></td>
+      <td>Confirm <code>[cost(500),service(training)]</code>; neither rule covers it, so review decides.</td>
+    </tr>
+    <tr>
+      <td><code>invalid</code> / <code>model_error</code></td>
+      <td>Malformed fields or a model error end the workflow before confirmation.</td>
+    </tr>
+    <tr>
+      <td><code>silent</code></td>
+      <td>No model reply: the SXML <code>after="8"</code> transition ends collection.</td>
+    </tr>
+    <tr>
+      <td><code>dispatch_failure</code></td>
+      <td>Confirm the laptop summary; dispatch reports an explicit refusal.</td>
+    </tr>
+    <tr>
+      <td><code>dispatch_timeout</code></td>
+      <td>Confirm the laptop summary; after five seconds the outcome is <code>failed(dispatch_timeout_unknown)</code>.</td>
+    </tr>
+  </tbody>
+</table>
+<p>
+  To exercise the other timers, start <code>laptop</code> and leave its summary
+  unconfirmed, or start <code>vpn</code>, confirm, and leave the review
+  undecided. After 120 seconds in that state, expect
+  <code>failed(confirmation_timeout)</code> or <code>failed(review_timeout)</code>
+  inside the terminal notice. SXML arms each timer on entry and cancels it on
+  exit; stale or unauthorized events do not restart it.
+</p>
+<p>
+  Dispatch freezes the revision, so later corrections are ignored. The outcome
+  <code>failed(dispatch_timeout_unknown)</code> means that the local workflow
+  ended without establishing the external effect. A real backend must durably
+  deduplicate <code>key(Request, Revision)</code> and reconcile status before
+  retrying. This simulation performs no external dispatch or durable storage.
+</p>
+<p>
+  During collection, confirmation, or review, the requester can cancel by
+  sending <code>authenticated($Key, alice, cancel(Revision))</code> to
+  <code>$Pid</code>, substituting the current revision. This reports
+  <code>terminal(Revision, cancelled(requester))</code>. For cleanup at any
+  point, use the halt command below; halting is separate from the application's
+  cancellation path.
+</p>
+<pre id="sc-sr-halt">?- statechart_halt($Pid, Reply, 1).</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample('#sc-sr-halt')" class="btn btn-xs btn-primary" type="button">Halt current chart</button>
+</p>
+
+<h3>5. Read the implementation</h3>
+<p>
+  Open <strong>18 service-request.xml</strong> under <strong>SXML code</strong>.
+  It is self-contained: the <code>&lt;datamodel&gt;</code> contains the Prolog
+  helpers, followed by the states and transitions. Read the states first, then
+  follow their named guards and actions back to the six helper sections.
+</p>
+<table class="table table-bordered">
+  <thead>
+    <tr><th>Chart path</th><th>Helpers to read</th><th>What they establish</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>boot</code> and <code>active</code></td>
+      <td><code>initialize/2</code>, <code>trusted/3</code>,
+          <code>apply_correction/1</code></td>
+      <td>Actor-local request state, simulated ingress, and invalidation of
+          earlier proposals, confirmations, and review decisions.</td>
+    </tr>
+    <tr>
+      <td><code>collect → confirm</code></td>
+      <td><code>begin_model/0</code>, <code>model_reply/3</code>,
+          <code>valid_fields/2</code></td>
+      <td>A fresh correlated operation and a validated, canonical proposal.</td>
+    </tr>
+    <tr>
+      <td><code>confirm → assess</code></td>
+      <td><code>confirmed/4</code>, <code>record_confirmation/3</code></td>
+      <td>The requester confirmed exactly the current revision and fields.</td>
+    </tr>
+    <tr>
+      <td><code>assess</code> and <code>review</code></td>
+      <td><code>classify/2</code>, <code>reviewed/5</code></td>
+      <td>Explicit policy precedence and the reviewer's limited authority.</td>
+    </tr>
+    <tr>
+      <td><code>route → success/failure</code></td>
+      <td><code>begin_dispatch/0</code>, <code>dispatch_reply/3</code>,
+          <code>finish/1</code>, <code>report/0</code></td>
+      <td>A checked acknowledgement or an explicit timeout/invalid-reply
+          outcome, reported before the chart terminates.</td>
+    </tr>
+  </tbody>
+</table>
+<p>
+  <code>Request</code> identifies a whole request, <code>Revision</code>
+  identifies its current proposal and confirmation, and <code>Correlation</code>
+  identifies one asynchronous operation. The private <code>pending/2</code>
+  fact records the expected operation. A correction advances the revision and
+  clears old decisions before starting another model request. An old worker
+  can still send a reply, but its captured values no longer match.
+</p>
+<p>
+  The field schema accepts a ground list with at most two unique keys:
+  <code>service/1</code> is one of <code>laptop</code>, <code>vpn</code>,
+  <code>restricted</code>, or <code>training</code>; <code>cost/1</code> is an
+  integer from 0 to 10,000,000 in fixed local monetary units. Unknown keys,
+  duplicate keys, invalid values, and unbound terms are rejected. A valid
+  partial list still needs correction before it can be approved.
+</p>
+<p>
+  Transition order matters. In <code>assess</code>, the unconditional review
+  transition is last. The unmatched-event transitions use
+  <code>compound(Event)</code> to exclude SXML's eventless sentinel; keep that
+  guard when modifying the chart. Use Prolog block comments inside the
+  datamodel, because SXML normalizes whitespace in executable content.
+</p>
+
+<h3>6. Continue in the editor</h3>
+<p>
+  The tutorial's examples are read-only. For an editing exercise, open
+  <strong>18 service-request.xml</strong> from the Examples drawer under
+  <strong>SXML code</strong>. Its opening comment includes an
+  <strong>EDITING EXERCISE</strong> with steps and expected results.
+</p>
+<p>
+  <code>model_fixture/3</code> chooses a scripted reply and delay.
+  <code>begin_model/0</code> sends it from a linked helper actor;
+  <code>begin_dispatch/0</code> similarly simulates fulfilment. To connect a
+  real service, replace the simulated work while retaining the trusted
+  adapter's captured key, correlation, and revision. Model output must never
+  choose those values or supply identity or approval. The wrapper must display
+  the validated snapshot faithfully before accepting confirmation.
+</p>
+<p>
+  Read <code>terminal(Revision, Result)</code> for application success or
+  failure. Actor termination alone does not distinguish them. Linked workers
+  stop when the chart terminates; this cannot undo an external effect already
+  accepted. The rules express a small stated policy: writing them in Prolog
+  supplies neither commonsense nor complete policy coverage.
+</p>
+
 <p>
     The examples above are just a starting point. More statecharts are
     available in the <strong>Examples drawer</strong>; click the arrow to open
-    it and select any file from the <em>Statecharts</em> section. Loading a
+    it and select any file from the <em>SXML code</em> section. Loading a
     file opens it in the editor and populates the terminal's Examples menu
     with its built-in queries, ready to run.
 </p>
@@ -4106,6 +4402,24 @@ fridge2(_Other,      List, error(unknown_request), List).
                 { label: '$Pid ! input([a, small, box]).', query: '$Pid ! input([a, small, box]).' },
                 { label: '$Pid ! input([hello]).',         query: '$Pid ! input([hello]).'         }
             ]);
+        }
+        pasteAndAskExample(exampleId);
+    }
+
+    function scSpawnServiceRequest(exampleId) {
+        _scSelectChart(null);
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.setTerminalExamples === 'function') {
+            bridge.setTerminalExamples([
+                ['Confirm laptop', '#sc-sr-confirm'],
+                ['Confirm VPN', '#sc-sr-confirm-vpn'],
+                ['Approve VPN as reviewer', '#sc-sr-approve'],
+                ['Try stale confirmation', '#sc-sr-stale'],
+                ['Confirm revision 2', '#sc-sr-current'],
+                ['Halt current chart', '#sc-sr-halt']
+            ].map(function(item) {
+                return { label: item[0], query: tutorialQueryFromExample(item[1]) };
+            }));
         }
         pasteAndAskExample(exampleId);
     }

@@ -615,7 +615,7 @@ stop(Pid, Parent) :-
 %   Derive best available termination reason for monitor notifications.
 %   exit_reason/2 is checked first because it is an application-level
 %   fact that survives thread detach/join; relying on is_thread/1 as a
-%   guard caused the lookup to fall through to noproc when the thread
+%   guard caused the lookup to fall through to no_process when the thread
 %   had already been cleaned up.
 down_reason(Pid, Reason) :-
     retract(exit_reason(Pid, Reason0)),
@@ -627,7 +627,7 @@ down_reason(Pid, Reason) :-
     thread_property(ThreadId, status(Reason0)),
     monitor_reason(Reason0, Reason),
     !.
-down_reason(_, noproc).
+down_reason(_, no_process).
 
 %!  monitor_reason(+Reason0, -Reason) is det.
 %
@@ -723,7 +723,7 @@ monitor(Pid, Ref) :-
 %
 %   Atomically install a monitor for a live local actor or for a target
 %   claimed by a distribution hook.  A pid that is already gone is not
-%   recorded: its watcher receives an immediate noproc notification.
+%   recorded: its watcher receives an immediate no_process notification.
 install_monitor(Self, CanonPid, Ref, installed) :-
     monitor_target_alive(CanonPid),
     !,
@@ -746,7 +746,7 @@ monitor_target_alive(CanonPid) :-
 
 deliver_missing_monitor(installed, _, _, _).
 deliver_missing_monitor(missing, Self, Ref, CanonPid) :-
-    Self ! down(CanonPid, Ref, noproc).
+    Self ! down(CanonPid, Ref, no_process).
 
 demonitor(Ref) :-
     demonitor(Ref, []).

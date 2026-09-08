@@ -1,0 +1,520 @@
+<!--
+SERVICE-REQUEST AGENT: Chapter 8, self-contained editor example
+
+START HERE
+  1. Run the chart using the first query in the terminal's Examples menu.
+  2. Run start(Key, laptop), then wait for summary(1, Fields).
+  3. Confirm exactly [cost(700), service(laptop)] at revision 1.
+     Expect terminal(1, succeeded(ticket_42)). Start a fresh chart for each run.
+
+READING ORDER
+  The states below the datamodel show the workflow:
+    collect -> confirm -> assess -> route -> success
+                            |
+                            +-> review (approve or reject)
+  Errors, rejection, cancellation, and timeout lead to failure.
+  Then follow the named helpers in the datamodel, arranged in six sections:
+    state and ingress; model; validation; correction; policy; dispatch.
+  The ACTOR tutorial's service-request lesson walks through these paths.
+
+TRY NEXT
+  vpn: confirm [cost(10), service(vpn)], then approve as reviewer.
+  slow: immediately correct revision 1 to laptop. Wait for summary(2,...) and
+        the ignored old reply; then try an old confirmation before confirming 2.
+  Other fixtures: restricted, missing, training, invalid, model_error, silent,
+                  dispatch_failure, dispatch_timeout.
+  Scenario atoms select fixtures; this version does not interpret free text.
+
+EDITING EXERCISE
+  1. Finish or halt the current chart. In model_fixture(laptop, ...), change
+     cost(700) to cost(1200). Leave the permit rule's limit of 1000 unchanged.
+  2. Run a fresh chart from this editor using the first Examples-menu query,
+     then run the start(Key, laptop) query. The tutorial's Start buttons load
+     the served file and will not use these editor changes.
+  3. Wait for summary(1, [cost(1200), service(laptop)]). The menu's usual laptop
+     confirmation still names 700, so enter this query in the terminal:
+
+       ?- $Pid ! authenticated($Key, alice,
+              confirm(1, [cost(1200), service(laptop)])).
+
+  4. Expect human_review(1, [cost(1200), service(laptop)],
+                        insufficient(policy_gap)).
+     No rule permits a laptop above 1000, and no rule forbids it. Confirming
+     the proposal therefore leads to review rather than immediate dispatch.
+  5. Resolve the gap as the designated reviewer:
+
+       ?- $Pid ! authenticated($Key, reviewer,
+              review(1, [cost(1200), service(laptop)], approve)).
+
+     Expect terminal(1, succeeded(ticket_42)). Restore the fixture to 700
+     before returning to the tutorial's original laptop exercise.
+
+TRUST AND OUTCOMES
+  The terminal simulates a trusted wrapper. The authenticated term, claimed
+  alice/reviewer identity, and Key are not evidence of real authentication.
+  A real wrapper must derive identity from a verified session, authorize access,
+  and keep credentials and chart addresses private. Fresh references correlate
+  this local demo; they are not production bearer credentials. Model output
+  may propose only validated service/cost fields, never identity or approval.
+
+  Replies come from asynchronous linked actors; no external service is called.
+  SXML supplies the 8-second model, 120-second confirmation/review, and 5-second
+  dispatch timers. Invalid and stale events do not restart them. Corrections
+  are accepted only before dispatch, and invalidate earlier confirmations.
+  A dispatch timeout means the external effect is unknown. A real backend must
+  durably deduplicate key(Request, Revision) and reconcile before retrying.
+-->
+<statechart version="0.2" initial="boot">
+  <datamodel>
+    /* 1. Actor-local state and trusted ingress.
+
+       Each chart has its own isolated database. The helpers below run in that
+       context; spawned adapters capture values in their goals.
+
+       context(Secret, Owner, RequestId)   revision(Number, Scenario)
+       pending(model|dispatch, Correlation)
+       proposal(CanonicalFields)          confirmation(Who, Revision, Fields)
+       assessment(Decision)               review_record(Who, Revision, Choice)
+       outcome(Result)
+
+       demo_observer/1 is a test hook: notices go to that actor when installed,
+       otherwise they are printed in the terminal. Use block comments throughout
+       this datamodel: SXML normalizes whitespace in executable content.
+    */
+
+    :- dynamic context/3, revision/2, pending/2, proposal/1, confirmation/3,
+               assessment/1, review_record/3, outcome/1, demo_observer/1.
+
+    /* initialize(+Secret, +Scenario): start revision 1, owned by alice. */
+    initialize(Secret, Scenario) :-
+        make_ref(Request),
+        assertz(context(Secret, alice, Request)),
+        assertz(revision(1, Scenario)),
+        notify(started(1, Scenario)).
+
+    /* notify(+Event): publish an audit or application-outcome notice. */
+    notify(Event) :-
+        (   demo_observer(Observer)
+        -&gt;  self(Self),
+            send(Observer, notice(Self, Event))
+        ;   writeln(Event)
+        ).
+
+    /* trusted(+Secret, +Principal, +Role): check a simulated wrapper envelope.
+       The chart supplies Role (requester or reviewer). These identity comparisons
+       do not authenticate a person; the terminal is privileged in this lab.
+    */
+    trusted(Secret, Principal, Role) :-
+        context(Key, Owner, _),
+        Secret == Key,
+        (   Role == requester
+        -&gt;  Principal == Owner
+        ;   Principal == reviewer
+        ).
+
+    current(Revision) :-
+        revision(Current, _),
+        Revision == Current.
+
+    /* 2. Asynchronous model simulation.
+
+       model_fixture(+Scenario, -Reply, -DelaySeconds) supplies scripted output.
+       Scenario names replace free-text input in this editor example. Only the
+       trusted adapter captures and attaches the key, correlation, and revision.
+       The silent fixture sends nothing, allowing the chart's timer to expire.
+    */
+    model_fixture(laptop, fields([service(laptop), cost(700)]), 0.1).
+    model_fixture(vpn, fields([service(vpn), cost(10)]), 0.1).
+    model_fixture(restricted, fields([service(restricted), cost(1)]), 0.1).
+    model_fixture(missing, fields([service(laptop)]), 0.1).
+    model_fixture(training, fields([service(training), cost(500)]), 0.1).
+    model_fixture(invalid, fields([cost(-1)]), 0.1).
+    model_fixture(model_error, error(unavailable), 0.1).
+    model_fixture(slow, fields([service(restricted), cost(1)]), 2).
+    model_fixture(silent, silent, 0).
+    model_fixture(dispatch_failure, fields([service(laptop), cost(700)]), 0.1).
+    model_fixture(dispatch_timeout, fields([service(laptop), cost(700)]), 0.1).
+
+    valid_scenario(Scenario) :-
+        ground(Scenario),
+        model_fixture(Scenario, _, _).
+
+    /* begin_model/0: store the fresh correlation before spawning a linked worker.
+       Captured values remain those of this request even after a correction.
+    */
+    begin_model :-
+        context(Key, _, _),
+        revision(Revision, Scenario),
+        make_ref(Correlation),
+        retractall(pending(_, _)),
+        assertz(pending(model, Correlation)),
+        self(Self),
+        model_fixture(Scenario, Reply, Delay),
+        notify(model_requested(Correlation, Revision, Scenario)),
+        (   Reply == silent
+        -&gt;  true
+        ;   spawn(( sleep(Delay),
+                    send(Self, model_result(Key, Correlation, Revision, Reply))
+                  ), _, [link(true)])
+        ).
+
+    /* model_reply(+Secret, +Correlation, +Revision): admit the current operation.
+       Identity checks reject stale values without binding an event into validity.
+    */
+    model_reply(Secret, Correlation, Revision) :-
+        context(Key, _, _),
+        Secret == Key,
+        current(Revision),
+        pending(model, Expected),
+        Correlation == Expected.
+
+    /* 3. Field validation and authoritative confirmation.
+
+       valid_fields(+Fields, -Canonical) accepts a ground list of at most two
+       unique keys, then sorts it for display. Repeated identical fields and
+       different values for the same key are both rejected. A valid partial list
+       remains incomplete: schema validation alone does not permit dispatch.
+    */
+    valid_fields(Fields, Canonical) :-
+        ground(Fields),
+        is_list(Fields),
+        length(Fields, Count),
+        Count =&lt; 2,
+        maplist(valid_field, Fields),
+        sort(Fields, Canonical),
+        length(Canonical, Count),
+        findall(FieldName,
+                (member(Field, Fields), functor(Field, FieldName, 1)), Keys),
+        sort(Keys, Unique),
+        length(Unique, Count).
+
+    valid_field(service(Service)) :-
+        memberchk(Service, [laptop, vpn, restricted, training]).
+    valid_field(cost(Cost)) :-
+        integer(Cost),
+        Cost &gt;= 0,
+        Cost =&lt; 10000000.
+
+    remember(Fields) :-
+        retractall(proposal(_)),
+        assertz(proposal(Fields)).
+
+    show_summary :-
+        revision(Revision, _),
+        proposal(Fields),
+        notify(summary(Revision, Fields)).
+
+    /* confirmed(+Secret, +Who, +Revision, +Fields): require the requester and
+       exactly the displayed canonical snapshot at the current revision.
+    */
+    confirmed(Secret, Who, Revision, Fields) :-
+        trusted(Secret, Who, requester),
+        current(Revision),
+        proposal(Expected),
+        Fields == Expected.
+
+    record_confirmation(Who, Revision, Fields) :-
+        assertz(confirmation(Who, Revision, Fields)),
+        notify(confirmed_by(Who, Revision, Fields)).
+
+    /* 4. Correction invalidates every decision made about the old revision.
+       The active parent state accepts corrections before dispatch. Old linked
+       workers may still reply; their obsolete envelopes cannot advance the chart.
+    */
+    correct(Secret, Who, Revision, Scenario) :-
+        trusted(Secret, Who, requester),
+        current(Revision),
+        valid_scenario(Scenario).
+
+    apply_correction(Scenario) :-
+        retract(revision(Revision, _)),
+        Next is Revision + 1,
+        assertz(revision(Next, Scenario)),
+        retractall(pending(_, _)),
+        retractall(proposal(_)),
+        retractall(confirmation(_, _, _)),
+        retractall(assessment(_)),
+        retractall(review_record(_, _, _)),
+        notify(revised(Next)).
+
+    /* 5. Explicit sample policy and human review.
+       The cuts in classify/2 define precedence: missing fields, conflict,
+       prohibition, permission, then a policy gap. Prolog does not supply missing
+       organisational knowledge or commonsense on behalf of these rules.
+    */
+    complete(Fields) :-
+        memberchk(service(_), Fields),
+        memberchk(cost(_), Fields).
+
+    permit(Fields) :-
+        memberchk(service(Service), Fields),
+        memberchk(Service, [laptop, vpn]),
+        memberchk(cost(Cost), Fields),
+        Cost =&lt; 1000.
+
+    forbid(Fields) :-
+        memberchk(service(restricted), Fields).
+    /* This legacy VPN rule deliberately conflicts with low-cost permission. */
+    forbid(Fields) :-
+        memberchk(service(vpn), Fields).
+
+    classify(Fields, insufficient(missing_fields)) :-
+        \+ complete(Fields), !.
+    classify(Fields, conflicting) :-
+        permit(Fields), forbid(Fields), !.
+    classify(Fields, forbidden) :-
+        forbid(Fields), !.
+    classify(Fields, permitted) :-
+        permit(Fields), !.
+    classify(_, insufficient(policy_gap)).
+
+    assess :-
+        proposal(Fields),
+        revision(Revision, _),
+        confirmation(_, Revision, Fields),
+        classify(Fields, Decision),
+        retractall(assessment(_)),
+        assertz(assessment(Decision)),
+        notify(assessed(Revision, Decision)).
+
+    decision(Decision) :-
+        assessment(Decision).
+
+    show_review :-
+        revision(Revision, _),
+        proposal(Fields),
+        assessment(Decision),
+        notify(human_review(Revision, Fields, Decision)).
+
+    /* reviewed(+Secret, +Who, +Revision, +Fields, +Choice): the designated reviewer
+       may reject, or approve a complete snapshot with a conflict or policy gap.
+       Approval cannot fill missing fields or override a pure prohibition.
+    */
+    reviewed(Secret, Who, Revision, Fields, Choice) :-
+        trusted(Secret, Who, reviewer),
+        current(Revision),
+        proposal(Expected),
+        Fields == Expected,
+        memberchk(Choice, [approve, reject]),
+        (   Choice == reject
+        -&gt;  true
+        ;   complete(Fields),
+            (assessment(conflicting); assessment(insufficient(policy_gap)))
+        ).
+
+    record_review(Who, Revision, Choice) :-
+        assertz(review_record(Who, Revision, Choice)),
+        notify(reviewed_by(Who, Revision, Choice)).
+
+    /* 6. Asynchronous dispatch and terminal reporting.
+
+       begin_dispatch/0 rechecks confirmation and permission before dispatch.
+       key(Request, Revision) identifies the confirmed operation; Correlation
+       identifies this particular wait. The simulation implements no backend
+       deduplication or durable storage. A missing acknowledgement leaves the
+       external outcome unknown, even though the local workflow ends in failure.
+    */
+    begin_dispatch :-
+        revision(Revision, Scenario),
+        proposal(Fields),
+        confirmation(_, Revision, Fields),
+        (assessment(permitted); review_record(reviewer, Revision, approve)),
+        context(Key, Owner, Request),
+        make_ref(Correlation),
+        retractall(pending(_, _)),
+        assertz(pending(dispatch, Correlation)),
+        self(Self),
+        notify(dispatch_requested(Correlation, Revision,
+                                  key(Request, Revision), Owner, Fields)),
+        (   Scenario == dispatch_timeout
+        -&gt;  true
+        ;   (   Scenario == dispatch_failure
+            -&gt;  Reply = error(refused)
+            ;   Reply = ok(ticket_42)
+            ),
+            spawn(( sleep(0.1),
+                    send(Self, dispatch_result(Key, Correlation, Revision, Reply))
+                  ), _, [link(true)])
+        ).
+
+    dispatch_reply(Secret, Correlation, Revision) :-
+        context(Key, _, _),
+        Secret == Key,
+        current(Revision),
+        pending(dispatch, Expected),
+        Correlation == Expected.
+
+    /* finish/1 records the application outcome; both final states call report/0.
+       Normal actor termination alone does not establish application success.
+       Linked workers stop with the chart; stopping cannot undo an external effect.
+    */
+    finish(Result) :-
+        retractall(outcome(_)),
+        assertz(outcome(Result)).
+
+    report :-
+        outcome(Result),
+        revision(Revision, _),
+        notify(terminal(Revision, Result)).
+
+    /* Discarding an event leaves the state active and does not reset its timer. */
+    ignored :-
+        notify(ignored_event).
+  </datamodel>
+
+  <!-- Wait for a ground wrapper key and a known fixture name. -->
+  <state id="boot">
+    <go to="active" on="start(Key, Scenario)" if="ground(Key), valid_scenario(Scenario)">
+      initialize(Key, Scenario)
+    </go>
+  </state>
+
+  <!-- These parent transitions apply in collect, confirm, and review. -->
+  <state id="active" initial="collect">
+    <go to="collect" on="authenticated(Key, Who, correction(Revision, Scenario))"
+        if="correct(Key, Who, Revision, Scenario)">
+      apply_correction(Scenario)
+    </go>
+    <go to="failure" on="authenticated(Key, Who, cancel(Revision))"
+        if="trusted(Key, Who, requester), current(Revision)">
+      finish(cancelled(requester))
+    </go>
+
+    <!-- Start an operation, validate its current reply, or time out. -->
+    <state id="collect">
+      <onentry>
+        begin_model
+      </onentry>
+      <go to="confirm" on="model_result(Key, Correlation, Revision, fields(Fields))"
+          if="model_reply(Key, Correlation, Revision), valid_fields(Fields, Canonical)">
+        remember(Canonical)
+      </go>
+      <go to="failure" on="model_result(Key, Correlation, Revision, error(Code))"
+          if="model_reply(Key, Correlation, Revision), memberchk(Code, [unavailable, refused])">
+        finish(failed(model(Code)))
+      </go>
+      <go to="failure" on="model_result(Key, Correlation, Revision, _)"
+          if="model_reply(Key, Correlation, Revision)">
+        finish(failed(invalid_model_reply))
+      </go>
+      <go to="failure" after="8">
+        finish(failed(model_timeout))
+      </go>
+    </state>
+
+    <!-- Only the requester may confirm the exact current snapshot. -->
+    <state id="confirm">
+      <onentry>
+        show_summary
+      </onentry>
+      <go to="assess" on="authenticated(Key, Who, confirm(Revision, Fields))"
+          if="confirmed(Key, Who, Revision, Fields)">
+        record_confirmation(Who, Revision, Fields)
+      </go>
+      <go to="failure" after="120">
+        finish(failed(confirmation_timeout))
+      </go>
+    </state>
+
+    <!-- Completion transitions are ordered: permitted, forbidden, then review. -->
+    <state id="assess">
+      <onentry>
+        assess
+      </onentry>
+      <go to="route" if="decision(permitted)"/>
+      <go to="failure" if="decision(forbidden)">
+        finish(rejected(policy))
+      </go>
+      <go to="review"/>
+    </state>
+
+    <!-- Reviewer decisions also name the current revision and exact fields. -->
+    <state id="review">
+      <onentry>
+        show_review
+      </onentry>
+      <go to="route" on="authenticated(Key, Who, review(Revision, Fields, approve))"
+          if="reviewed(Key, Who, Revision, Fields, approve)">
+        record_review(Who, Revision, approve)
+      </go>
+      <go to="failure" on="authenticated(Key, Who, review(Revision, Fields, reject))"
+          if="reviewed(Key, Who, Revision, Fields, reject)">
+        record_review(Who, Revision, reject), finish(rejected(reviewer))
+      </go>
+      <go to="failure" after="120">
+        finish(failed(review_timeout))
+      </go>
+    </state>
+    <!-- Keep this fallback last. compound/1 excludes the eventless sentinel. -->
+    <go on="Event" if="compound(Event)">
+      ignored
+    </go>
+  </state>
+
+  <!-- Outside active: dispatch freezes the revision and ignores corrections. -->
+  <state id="route">
+    <onentry>
+      begin_dispatch
+    </onentry>
+    <go to="success" on="dispatch_result(Key, Correlation, Revision, ok(Ticket))"
+        if="dispatch_reply(Key, Correlation, Revision), atom(Ticket)">
+      finish(succeeded(Ticket))
+    </go>
+    <go to="failure" on="dispatch_result(Key, Correlation, Revision, error(Code))"
+        if="dispatch_reply(Key, Correlation, Revision), memberchk(Code, [unavailable, refused])">
+      finish(failed(dispatch(Code)))
+    </go>
+    <go to="failure" on="dispatch_result(Key, Correlation, Revision, _)"
+        if="dispatch_reply(Key, Correlation, Revision)">
+      finish(failed(dispatch_reply_unknown))
+    </go>
+    <go to="failure" after="5">
+      finish(failed(dispatch_timeout_unknown))
+    </go>
+    <!-- Keep this fallback last. compound/1 excludes the eventless sentinel. -->
+    <go on="Event" if="compound(Event)">
+      ignored
+    </go>
+  </state>
+
+  <!-- Both final states publish the application outcome recorded by finish/1. -->
+  <final id="success">
+    <onentry>
+      report
+    </onentry>
+  </final>
+  <final id="failure">
+    <onentry>
+      report
+    </onentry>
+  </final>
+</statechart>
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [src_text(<editor>)]).
+
+?- make_ref(Key), $Pid ! start(Key, laptop).
+
+?- $Pid ! authenticated($Key, alice, confirm(1, [cost(700),service(laptop)])).
+
+?- make_ref(Key), $Pid ! start(Key, vpn).
+
+?- $Pid ! authenticated($Key, alice, confirm(1, [cost(10),service(vpn)])).
+
+?- $Pid ! authenticated($Key, reviewer, review(1, [cost(10),service(vpn)], approve)).
+
+?- make_ref(Key), $Pid ! start(Key, slow),
+   $Pid ! authenticated(Key, alice, correction(1, laptop)).
+
+?- $Pid ! authenticated($Key, alice, confirm(1, [cost(1),service(restricted)])).
+
+?- $Pid ! authenticated($Key, alice, confirm(2, [cost(700),service(laptop)])).
+
+?- make_ref(Key), $Pid ! start(Key, silent).
+
+?- $Pid ! authenticated($Key, alice, cancel(1)).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->

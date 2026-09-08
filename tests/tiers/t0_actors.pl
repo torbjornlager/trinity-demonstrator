@@ -546,7 +546,7 @@ test(demonitor_flush_discards_down, Result == clean) :-
        on_timeout(Result = clean)
    ]).
 
-test(monitor_dead_pid_reports_noproc, Reason == noproc) :-
+test(monitor_dead_pid_reports_no_process, Reason == no_process) :-
    spawn(true, Pid, [monitor(true)]),
    receive({
        down(Pid, Pid, true) -> true
@@ -559,7 +559,7 @@ test(monitor_dead_pid_reports_noproc, Reason == noproc) :-
        down(Pid, Ref, Reason) -> true
    }, [
        timeout(1),
-       on_timeout(throw(missing_noproc_down))
+       on_timeout(throw(missing_no_process_down))
    ]).
 
 test(monitor_termination_race_never_loses_down) :-
@@ -572,7 +572,7 @@ monitor_one_terminating_actor :-
    monitor(Pid, Ref),
    receive({
        down(Pid, Ref, Reason) ->
-           assertion(memberchk(Reason, [true, noproc]))
+           assertion(memberchk(Reason, [true, no_process]))
    }, [
        timeout(1),
        on_timeout(throw(lost_monitor_down(Pid)))

@@ -20,3 +20,12 @@ shared_fact(n3_shared_db).
 local_label(n3_shared_db).
 
 shared_transition_enabled.
+
+% Fixed, owner-installed inference capability. No network primitive is
+% exposed to public source; answers return in the caller's own execution.
+model_answer(Prompt, Result) :-
+    model_service:model_answer(Prompt, Result).
+
+% Bounded multi-turn conversation; history remains owned by the caller.
+model_chat(Messages, Result) :-
+    model_service:model_chat(Messages, Result).

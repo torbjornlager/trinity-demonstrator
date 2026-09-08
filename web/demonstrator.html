@@ -4039,7 +4039,8 @@
         "15 simple_toplevel.pl": "actor",
         "16 fridge_server.pl": "actor",
         "17 rpc.pl": "stateless",
-        "18 promise-and-yield.pl": "stateless"
+        "18 promise-and-yield.pl": "stateless",
+        "19 model-actor.pl": "actor"
       });
 
       window.webPrologTerminalConvertLinks = true;
@@ -11782,14 +11783,14 @@
               // The worker may finish between spawn's ready reply and
               // install_spawn_monitor/2. Its entry is intentionally retained,
               // so a late monitor must observe the recorded reason rather
-              // than losing false/exception as the generic noproc reason.
+              // than losing false/exception as the generic no_process reason.
               this.deliverSwiWasmActorDown(
                 watcher,
                 ref,
                 pid,
                 localEntry && localEntry.done
                   ? (localEntry.reason || "true")
-                  : "noproc"
+                  : "no_process"
               );
               return true;
             }

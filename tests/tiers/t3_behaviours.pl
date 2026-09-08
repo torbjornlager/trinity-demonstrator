@@ -28,6 +28,7 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 :- use_module('behaviours/supervisor_actor_tests.pl', []).
 :- ensure_loaded('behaviours/parallel_tests.pl').
 :- ensure_loaded('behaviours/statechart_actor_tests.pl').
+:- use_module('behaviours/service_request_example_tests.pl', []).
 
 run_tier :-
     layer_honesty,
@@ -37,7 +38,8 @@ run_tier :-
                 first_solution,
                 statechart_profile,
                 statechart_profile_runtime,
-                statechart_profile_semantics
+                statechart_profile_semantics,
+                service_request_example
               ]),
     ensure_mailbox_empty.
 

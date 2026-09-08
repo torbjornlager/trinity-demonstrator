@@ -146,14 +146,14 @@ where `Ref` is the monitor's reference (or `Pid` itself when
 manual.html:210), `Pid` is the canonical pid that died, and
 `Reason` is a Prolog term describing the exit reason. The standard reasons
 are `true` (normal success), `false` (goal failure), `exception(Error)`
-(uncaught exception), and `noproc` (the pid was already gone when monitored);
+(uncaught exception), and `no_process` (the pid was already gone when monitored);
 an explicit `exit/1-2` may supply any other term.
 
 Monitor registration, termination delivery, and `demonitor(Ref, [flush])`
 share one lifecycle transaction across the local and cross-node paths. Thus a
 monitor either receives exactly one `down/3`, or demonitoring removes it before
 delivery; `[flush]` then removes any notification already enqueued for `Ref`.
-Monitoring an already-dead pid produces `down(Pid, Ref, noproc)` immediately.
+Monitoring an already-dead pid produces `down(Pid, Ref, no_process)` immediately.
 
 ---
 
@@ -403,7 +403,7 @@ arbitrary Prolog terms encoded as wire atoms.  Common values:
 | `true` | Natural normal exit (thread returned successfully) |
 | `kill` | Explicit kill from `exit(Pid, kill)` |
 | `connection_closed` | Synthesized when the inter-node WS dropped |
-| `noproc` | Pid was never alive or already gone |
+| `no_process` | Pid was never alive or already gone |
 | any user term | User-supplied via `exit(Pid, MyReason)` |
 
 The wire decoder for reasons tries `term_string/2` first; on

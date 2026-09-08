@@ -957,6 +957,17 @@ ok(includes("finalizeSwiWasmWorkerActor: function") &&
      delivered[0].reason === "false" &&
      controller.swiWasmActorMonitors.length === 0,
      "a monitor installed after a SWI-WASM worker exits receives its recorded failure reason");
+  const missingInstalled = installMonitor.call(
+    controller, "main", "missing", "missing-ref"
+  );
+  ok(missingInstalled === true &&
+     delivered.length === 2 &&
+     delivered[1].watcher === "main" &&
+     delivered[1].ref === "missing-ref" &&
+     delivered[1].pid === "missing" &&
+     delivered[1].reason === "no_process" &&
+     controller.swiWasmActorMonitors.length === 0,
+     "monitoring a missing SWI-WASM actor immediately reports no_process");
 }
 {
   const exitActor = embeddedWorkbenchMethod(

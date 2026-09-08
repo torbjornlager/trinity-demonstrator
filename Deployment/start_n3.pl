@@ -11,6 +11,7 @@
 :- use_module('../examples/services/node_resident_services.pl', [
     start_example_services/2
 ]).
+:- use_module('../examples/services/model_service.pl', [configure_model_service/1]).
 :- use_module(library(web_prolog/node_runtime_state), [
     with_node_port_context/2,
     update_current_node_runtime/1
@@ -24,6 +25,7 @@ start_n3 :-
     start_n3_done,
     !.
 start_n3 :-
+    configure_n3_model_service,
     common_shared_db_path(CommonSharedDBPath),
     actor_common_shared_db_path(ActorCommonSharedDBPath),
     node_overlay_shared_db_path(n3, OverlaySharedDBPath),
@@ -80,6 +82,13 @@ start_n3 :-
                            })),
     start_n3_service_bootstrap,
     assertz(start_n3_done).
+
+% Opt-in owner capability. Docker Desktop can reach this loopback-bound
+% host service without publishing Ollama on the LAN or internet.
+configure_n3_model_service :-
+    ( getenv('WP_MODEL_SERVICE', yes)
+    -> configure_model_service('http://host.docker.internal:11434/api/chat')
+    ; true ).
 
 start_n3_forever :-
     start_n3,

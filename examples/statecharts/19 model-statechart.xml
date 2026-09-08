@@ -1,0 +1,198 @@
+<!--
+Two statecharts, two conversations, one small language model.
+
+Select n3 (ACTOR), load this SXML, and use the Examples-menu queries below.
+Keep the Logger open with SXML trace enabled to watch ready -> thinking -> ready.
+
+This is the statechart counterpart of Web Prolog example 19. Each chart owns
+history/1 in its private datamodel. An ask adds a user turn, thinking invokes
+the protected model_chat/2 capability asynchronously, and only a successful
+reply adds a complete exchange. reset clears only this chart; stop enters the
+final state. A second ask while thinking gets model_error(Ref, busy).
+
+Unlike the receive-loop example, reset and stop can be handled DURING inference.
+Reset cancels the pending request with model_error(Ref, reset), clears history,
+and acknowledges reset(ResetRef). A fresh correlation rejects late results.
+The 45-second SXML timer returns model_error(Ref, timeout) without changing
+history. Cancellation does not free the protected backend slot prematurely.
+
+History retains at most two complete exchanges within 1500 characters. Prompts
+are nonempty strings of at most 500 characters. The service accepts at most
+five alternating user/assistant messages, with 2000 characters in total, and
+fixes the endpoint, model, 1024-token context and 80-token output limit.
+SmolLM2 135M can ramble, hallucinate or forget even when history is supplied.
+Character bounds do not guarantee token counts; Ollama may also truncate.
+
+Wait at least TEN SECONDS between model requests across both charts: n3 allows
+one generation at a time and six starts per minute globally. rate_limited or
+busy means retry later; unavailable requires owner attention. There is no
+shared conversation state in the inference service. Model output is data,
+never executable code. Chart pids belong to your session; keep them private.
+-->
+<statechart version="0.2" initial="active">
+  <datamodel>
+
+    /* Each chart owns these facts in its isolated Prolog datamodel.
+       History contains complete user/assistant exchanges. pending/4 is
+       only the in-flight request; failures never enter history. */
+    :- dynamic history/1, pending/4, worker/1.
+    history([]).
+
+    valid_prompt(Text) :-
+        string(Text), string_length(Text, N), N &gt; 0, N =&lt; 500.
+
+    prepare(From, Ref, Text) :-
+        history(History), append(History, [user(Text)], Messages),
+        make_ref(Token), assertz(pending(Token, From, Ref, Messages)).
+
+    /* Run the blocking capability in a linked adapter so SXML can still
+       process reset, stop and timeout while inference is underway. The
+       protected backend worker retains its slot even if we kill this
+       adapter. Only the chart updates conversation history. */
+    launch_model :-
+        pending(Token, _, _, Messages), self(Self),
+        spawn(( catch(model_chat(Messages, Result), error(_, _),
+                      Result = error(model_unavailable)),
+                send(Self, model_result(Token, Result))
+              ), Pid, [link(true)]),
+        assertz(worker(Pid)).
+
+    stop_worker :-
+        ( retract(worker(Pid)) -&gt; exit(Pid, kill) ; true ).
+
+    current_request(Token) :-
+        pending(Expected, _, _, _), Token == Expected.
+
+    valid_answer(Text) :-
+        string(Text), string_length(Text, N), N =&lt; 4000.
+
+    remember_and_reply(Text) :-
+        retract(pending(_, From, Ref, Messages)),
+        append(Messages, [assistant(Text)], Complete),
+        trim_history(Complete, Kept),
+        retractall(history(_)), assertz(history(Kept)),
+        From ! answer(Ref, Text).
+
+    fail_request(Reason) :-
+        ( retract(pending(_, From, Ref, _))
+        -&gt; From ! model_error(Ref, Reason)
+        ; true ).
+
+    clear_history :- retractall(history(_)), assertz(history([])).
+
+    trim_history(History, Kept) :-
+        length(History, Count), history_size(History, Size),
+        ( Count =&lt; 4, Size =&lt; 1500
+        -&gt; Kept = History
+        ; History = [user(_), assistant(_)|Rest], trim_history(Rest, Kept) ).
+
+    history_size([], 0).
+    history_size([Message|Rest], Size) :-
+        arg(1, Message, Text), string_length(Text, N),
+        history_size(Rest, Tail), Size is N + Tail.
+  </datamodel>
+
+  <!-- Parent transitions remain available while thinking. -->
+  <state id="active" initial="ready">
+    <go to="ready" on="reset(From, Ref)">
+      fail_request(reset), clear_history, From ! reset(Ref)
+    </go>
+    <go to="stopped" on="stop">
+      fail_request(stopped)
+    </go>
+
+    <state id="ready">
+      <go to="thinking" on="ask(From, Ref, Text)" if="valid_prompt(Text)">
+        prepare(From, Ref, Text)
+      </go>
+      <go on="ask(From, Ref, _)">
+        From ! model_error(Ref, invalid_prompt)
+      </go>
+    </state>
+
+    <state id="thinking">
+      <onentry>launch_model</onentry>
+      <onexit>stop_worker</onexit>
+      <go to="ready" on="model_result(Token, answer(Text))"
+          if="current_request(Token), valid_answer(Text)">
+        remember_and_reply(Text)
+      </go>
+      <go to="ready" on="model_result(Token, error(Reason))"
+          if="current_request(Token)">
+        fail_request(Reason)
+      </go>
+      <go to="ready" on="model_result(Token, _)" if="current_request(Token)">
+        fail_request(invalid_model_reply)
+      </go>
+      <go to="ready" after="45">
+        fail_request(timeout)
+      </go>
+      <go on="ask(From, Ref, _)">
+        From ! model_error(Ref, busy)
+      </go>
+      <!-- An old result has no matching guarded transition: it is ignored. -->
+    </state>
+  </state>
+  <final id="stopped"/>
+</statechart>
+
+<!-- <examples>
+
+% Create two independent charts from this editor's source.
+
+?- statechart_spawn(A, [src_text(<editor>)]),
+   statechart_spawn(B, [src_text(<editor>) ]).
+
+% Tell A a name. Sending returns immediately.
+
+?- self(Me), $A ! ask(Me, a1, "My name is Alice. Please remember my name.").
+
+% Poll for its answer; if this fails, try again shortly.
+
+?- receive({answer(a1, Text) -> true ; model_error(a1, Reason) -> true},
+           [timeout(0), on_timeout(fail)]).
+
+% At least ten seconds later, give B a different name.
+
+?- self(Me), $B ! ask(Me, b1, "My name is Bob. Please remember my name.").
+
+?- receive({answer(b1, Text) -> true ; model_error(b1, Reason) -> true},
+           [timeout(0), on_timeout(fail)]).
+
+% At least ten seconds later, ask A to recall its conversation.
+
+?- self(Me), $A ! ask(Me, a2, "What is my name?").
+
+?- receive({answer(a2, Text) -> true ; model_error(a2, Reason) -> true},
+           [timeout(0), on_timeout(fail)]).
+
+% At least ten seconds later, ask B the same question.
+
+?- self(Me), $B ! ask(Me, b2, "What is my name?").
+
+?- receive({answer(b2, Text) -> true ; model_error(b2, Reason) -> true},
+           [timeout(0), on_timeout(fail)]).
+
+% SEND reset before polling for the acknowledgement. Only A is reset.
+% If an ask was in flight, its ref also receives model_error(Ref, reset).
+
+?- self(Me), $A ! reset(Me, reset_a).
+
+?- receive({reset(reset_a) -> true}, [timeout(0), on_timeout(fail)]).
+
+% After the model cooldown, A no longer has its earlier conversation.
+
+?- self(Me), $A ! ask(Me, a3, "What is my name?").
+
+?- receive({answer(a3, Text) -> true ; model_error(a3, Reason) -> true},
+           [timeout(0), on_timeout(fail)]).
+
+% Stop both charts. Each enters its final state.
+
+?- $A ! stop, $B ! stop.
+
+% Alternatively, use the statechart runtime's administrative halt operation.
+
+?- statechart_halt($A, Reply, 1).
+
+-->

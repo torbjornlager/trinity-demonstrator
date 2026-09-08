@@ -308,7 +308,7 @@ The default timeout goal is `true`, so timeout expiry succeeds unless
 `on_timeout(fail)` (or another failing goal) is supplied explicitly.
 
 `monitor(Pid, Ref)` returns a fresh opaque reference. If `Pid` has already
-terminated, the caller immediately receives `down(Pid, Ref, noproc)`.
+terminated, the caller immediately receives `down(Pid, Ref, no_process)`.
 Monitor installation, actor termination and `demonitor(Ref, [flush])` are
 serialized: either termination delivers one `down/3`, or demonitoring removes
 the monitor before delivery. The `[flush]` option removes any already-delivered
@@ -317,7 +317,7 @@ the monitor before delivery. The `[flush]` option removes any already-delivered
 - `true` — normal successful completion;
 - `false` — goal failure;
 - `exception(Error)` — uncaught exception;
-- `noproc` — the monitored pid was already gone;
+- `no_process` — the monitored pid was already gone;
 - any other term — an explicit `exit/1-2` reason.
 
 Toplevel paging is implemented with SWI-Prolog's `findnsols/4`, mutable
