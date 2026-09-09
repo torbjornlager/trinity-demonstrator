@@ -16,7 +16,7 @@ in-memory activity log for the admin UI.
 :- use_module(library(http/json)).
 :- use_module(library(settings)).
 
-:- use_module(node_auth, [request_principal/2]).
+:- use_module(node_auth, [client_ip/2, request_principal/2]).
 :- use_module(node_log, [request_client_meta/3]).
 :- use_module(node_runtime_state, [current_node_value/2]).
 :- use_module(node_owner_tag, [request_owner_tagged/1, request_agent_tagged/1]).
@@ -36,7 +36,7 @@ in-memory activity log for the admin UI.
 log_interaction_request(Request, Event0) :-
     request_principal(Request, Principal),
     request_client_meta(Request, Principal, ClientMeta0),
-    interaction_client_meta(ClientMeta0, ClientMeta1),
+    interaction_client_meta(Request, ClientMeta0, ClientMeta1),
     add_owner_tag(Request, ClientMeta1, ClientMeta2),
     add_agent_tag(Request, ClientMeta2, ClientMeta),
     append_interaction_event(ClientMeta, Event0).
@@ -229,10 +229,12 @@ include_allowed_browser_field(Event, EventName, Pairs) :-
     ).
 
 
-allowed_browser_fields("tutorial_call", [example, example_label, device]).
+allowed_browser_fields("tutorial_call",
+                       [example, example_label, device, timezone, language]).
 allowed_browser_fields("example_spawn",
-                       [example, example_url, source_kind, transport, origin, device]).
-allowed_browser_fields("portal_view", [device, route]).
+                       [example, example_url, source_kind, transport, origin,
+                        device, timezone, language]).
+allowed_browser_fields("portal_view", [device, timezone, language, route]).
 
 
 browser_field_value(Key, Value0, Value) :-
@@ -248,6 +250,8 @@ max_field_length(source_kind, 40).
 max_field_length(transport, 40).
 max_field_length(origin, 40).
 max_field_length(device, 24).
+max_field_length(timezone, 80).
+max_field_length(language, 40).
 max_field_length(route, 40).
 max_field_length(_, 200).
 
@@ -318,16 +322,48 @@ event_clock(Now, At) :-
     format_time(string(At), '%FT%TZ', Now).
 
 
-interaction_client_meta(ClientMeta0, ClientMeta) :-
-    (   get_dict(user_agent, ClientMeta0, UA0), UA0 \== ""
-    ->  truncate_text(UA0, 240, UA),
-        put_dict(user_agent, ClientMeta0, UA, ClientMeta1)
+interaction_client_meta(Request, ClientMeta0, ClientMeta) :-
+    (   del_dict(user_agent, ClientMeta0, _, ClientMeta1)
+    ->  true
     ;   ClientMeta1 = ClientMeta0
     ),
-    (   get_dict(principal, ClientMeta1, "anonymous"),
-        get_dict(peer, ClientMeta1, Peer),
+    (   client_ip(Request, ClientIP),
+        ClientIP \== ""
+    ->  effective_peer_meta(Request, ClientIP, ClientMeta1, ClientMeta2)
+    ;   ClientMeta2 = ClientMeta1
+    ),
+    (   get_dict(principal, ClientMeta2, "anonymous"),
+        get_dict(peer, ClientMeta2, Peer),
         Peer \== ""
     ->  format(string(ClientId), 'peer:~w', [Peer]),
-        put_dict(client_id, ClientMeta1, ClientId, ClientMeta)
-    ;   ClientMeta = ClientMeta1
+        put_dict(client_id, ClientMeta2, ClientId, ClientMeta)
+    ;   ClientMeta = ClientMeta2
     ).
+
+
+effective_peer_meta(Request, ClientIP, ClientMeta0, ClientMeta) :-
+    (   raw_request_peer(Request, RawPeer),
+        RawPeer \== "",
+        RawPeer \== ClientIP
+    ->  put_dict(_{peer:ClientIP, proxy_peer:RawPeer}, ClientMeta0, ClientMeta)
+    ;   put_dict(peer, ClientMeta0, ClientIP, ClientMeta)
+    ).
+
+
+raw_request_peer(Request, Peer) :-
+    memberchk(peer(PeerTerm), Request),
+    peer_text(PeerTerm, Peer).
+
+
+peer_text(Host:_Port, Peer) :-
+    !,
+    peer_text(Host, Peer).
+peer_text(ip(A, B, C, D), Peer) :-
+    !,
+    format(string(Peer), '~w.~w.~w.~w', [A, B, C, D]).
+peer_text(ip(A, B, C, D, E, F, G, H), Peer) :-
+    !,
+    format(string(Peer), '~16r:~16r:~16r:~16r:~16r:~16r:~16r:~16r',
+           [A, B, C, D, E, F, G, H]).
+peer_text(Other, Peer) :-
+    text_value(Other, Peer).

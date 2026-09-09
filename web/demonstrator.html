@@ -8460,6 +8460,25 @@
               return "other";
             }
           },
+          detectTimezone: function() {
+            try {
+              if (typeof Intl !== "undefined" && Intl.DateTimeFormat) {
+                var zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (zone) { return String(zone); }
+              }
+            } catch (_error) {}
+            return "";
+          },
+          detectLanguage: function() {
+            try {
+              if (navigator.languages && navigator.languages.length > 0) {
+                return String(navigator.languages[0] || "");
+              }
+              return String(navigator.language || navigator.userLanguage || "");
+            } catch (_error) {
+              return "";
+            }
+          },
           reportInteraction: function(payload) {
             var body;
             var self = this;
@@ -8469,6 +8488,12 @@
             try {
               if (payload.device === undefined) {
                 payload.device = this.detectDevice();
+              }
+              if (payload.timezone === undefined) {
+                payload.timezone = this.detectTimezone();
+              }
+              if (payload.language === undefined) {
+                payload.language = this.detectLanguage();
               }
               body = JSON.stringify(payload);
             } catch (_error) {

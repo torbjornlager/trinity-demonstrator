@@ -468,7 +468,55 @@ test(interaction_log_rotates_and_caps_backups, [
           atom_concat(LogFile, '.4', Backup4),
           assertion(\+ exists_file(Backup4)) )).
 
+test(interaction_log_omits_user_agent, [
+        setup(t4_rotation_setup(LogFile)),
+        cleanup(t4_rotation_cleanup)
+     ]) :-
+    node_interaction_log:log_browser_interaction_request(
+        [peer(ip(127,0,0,1)), user_agent('test-agent')],
+        json{ event:'tutorial_call',
+              example:'smoke',
+              example_label:'smoke',
+              device:'mac',
+              timezone:'Europe/Stockholm',
+              language:'sv-SE'
+            }
+    ),
+    read_jsonl_first(LogFile, Event),
+    assertion(\+ get_dict(user_agent, Event, _)),
+    assertion(get_dict(device, Event, "mac")),
+    assertion(get_dict(timezone, Event, "Europe/Stockholm")),
+    assertion(get_dict(language, Event, "sv-SE")),
+    assertion(get_dict(peer, Event, "127.0.0.1")),
+    assertion(get_dict(client_id, Event, "peer:127.0.0.1")).
+
+test(interaction_log_uses_forwarded_client_ip_from_trusted_proxy, [
+        setup(t4_rotation_setup(LogFile)),
+        cleanup(t4_rotation_cleanup)
+     ]) :-
+    node_interaction_log:log_browser_interaction_request(
+        [ peer(ip(172,18,0,1)),
+          x_forwarded_for("198.51.100.23"),
+          user_agent('test-agent')
+        ],
+        json{event:'tutorial_call', example:'smoke', example_label:'smoke'}
+    ),
+    read_jsonl_first(LogFile, Event),
+    assertion(get_dict(peer, Event, "198.51.100.23")),
+    assertion(get_dict(proxy_peer, Event, "172.18.0.1")),
+    assertion(get_dict(client_id, Event, "peer:198.51.100.23")),
+    assertion(\+ get_dict(user_agent, Event, _)).
+
 :- end_tests(t4_logging).
+
+read_jsonl_first(File, Event) :-
+    read_file_to_string(File, Text, [encoding(utf8)]),
+    split_string(Text, "\n", "", [Line|_]),
+    setup_call_cleanup(
+        open_string(Line, Stream),
+        json_read_dict(Stream, Event, []),
+        close(Stream)
+    ).
 
 %  Maintenance / drain mode (Phase 8): toggled via the headless admin
 %  API, surfaced through /readyz (so a load balancer drains the node)
