@@ -70,12 +70,14 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
 :- multifile
     hook_event/1,
     hook_connection_context/2,
-    hook_ws_endpoint_override/2.
+    hook_ws_endpoint_override/2,
+    hook_terminal_delivery/2.
 
 :- dynamic ws_connection/4.
 :- dynamic ws_pending_event/3.
 :- dynamic io_endpoint_target/2.
 :- dynamic pending_io_prompt/3.
+:- dynamic pending_io_request/3. % NodeURL, RequestId, private reply queue
 
 best_effort(Goal) :-
     catch(Goal, _, true).
@@ -304,17 +306,67 @@ actors:hook_send('$io_sink'(distributed), _Message) :-
 
 route_io_endpoint(Token, HomeNode, Message) :-
     io_protocol_message(Message),
+    !,
     (   local_node_url(HomeNode)
-    ->  deliver_io_endpoint(Token, Message)
+    ->  (   deliver_io_endpoint(Token, Message)
+        ->  true
+        ;   io_request_result("endpoint_unavailable")
+        )
     ;   term_to_wire_atom(Message, MessageAtom),
-        best_effort(remote_send_command(HomeNode, json{
+        remote_request_io(HomeNode, json{
             command: io_request,
             token: Token,
             message: MessageAtom
-        }))
-    ),
-    !.
+        })
+    ).
 route_io_endpoint(_, _, _).
+
+% An I/O operation completes at the shared terminal queue, not at the
+% sender's socket. A reply after enqueueing establishes happens-before
+% for subsequent actor messages, even when they use another connection.
+% Keep replies out of the actor mailbox and release transport locks before
+% waiting: many actors may have independent requests on one connection.
+remote_request_io(NodeURL, Command0) :-
+    fresh_io_endpoint_token(IdAtom),
+    atom_string(IdAtom, RequestId),
+    put_dict(request_id, Command0, RequestId, Command),
+    setup_call_cleanup(
+        message_queue_create(ReplyQueue),
+        (   send_io_request(NodeURL, RequestId, ReplyQueue, Command),
+            (   thread_get_message(ReplyQueue, Result, [timeout(30)])
+            ->  io_request_result(Result)
+            ;   io_request_result("timeout")
+            )
+        ),
+        with_mutex(distributed_io_requests,
+            ( retractall(pending_io_request(NodeURL, RequestId, _)),
+              message_queue_destroy(ReplyQueue)
+            ))
+    ).
+
+send_io_request(NodeURL, RequestId, ReplyQueue, Command) :-
+    ws_mutex(NodeURL, ws_send_lock, SendMutex),
+    ws_mutex(NodeURL, ws_connection_lock, ConnectionMutex),
+    with_mutex(SendMutex,
+        with_mutex(ConnectionMutex,
+            ( remote_connection_locked(NodeURL, Socket, _),
+              with_mutex(distributed_io_requests,
+                  assertz(pending_io_request(NodeURL, RequestId, ReplyQueue))),
+              ws_send_json(Socket, Command)
+            ))).
+
+io_request_result("ok") :- !.
+io_request_result(Reason) :-
+    throw(error(io_error(write, Reason),
+                context(actors:terminal_output/2,
+                        'terminal did not acknowledge output'))).
+
+deliver_io_reply(NodeURL, RequestId, Result) :-
+    with_mutex(distributed_io_requests,
+        (   retract(pending_io_request(NodeURL, RequestId, Queue))
+        ->  thread_send_message(Queue, Result)
+        ;   true % cancelled request or late/duplicate reply
+        )).
 
 io_protocol_message(terminal_output(_, _)).
 io_protocol_message(terminal_io_output(_, _)).
@@ -331,7 +383,16 @@ deliver_io_endpoint(Token, Message) :-
     io_protocol_message(Message),
     io_endpoint_target(Token, Target),
     remember_pending_io_prompt(Token, Target, Message),
-    send(Target, Message).
+    deliver_terminal_target(Target, Message).
+
+% A browser-owned terminal can require an acknowledgement beyond this
+% node. The node layer supplies that sink without an upward dependency.
+deliver_terminal_target(Target, Message) :-
+    hook_terminal_delivery(Target, Message),
+    !.
+deliver_terminal_target(Target, Message) :-
+    actors:resolve_thread(Target, Thread),
+    thread_send_message(Thread, Message).
 
 remember_pending_io_prompt(Token, Queue, prompt(Pid, _)) :-
     best_effort_fail(message_queue_property(Queue, size(_))),
@@ -681,6 +742,9 @@ thread_running(ThreadId) :-
     best_effort_fail(thread_property(ThreadId, status(running))).
 
 remote_drop_connection(NodeURL) :-
+    with_mutex(distributed_io_requests,
+        forall(retract(pending_io_request(NodeURL, _, Queue)),
+               thread_send_message(Queue, "connection_closed"))),
     forall(retract(ws_connection(NodeURL, Socket, _Reader, SpawnQueue)),
            ( best_effort(ws_close(Socket, 1000, "done")),
              best_effort(message_queue_destroy(SpawnQueue))
@@ -703,7 +767,11 @@ remote_ws_read_loop(NodeURL, Socket, SpawnQueue) :-
     ).
 
 remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
-    (   %  Down events are handled entirely by the controller.
+    (   get_dict(type, Dict, "io_reply"),
+        get_dict(request_id, Dict, RequestId),
+        get_dict(status, Dict, Result)
+    ->  deliver_io_reply(NodeURL, RequestId, Result)
+    ;   %  Down events are handled entirely by the controller.
         %  Discriminator: if a target is registered for the pid, the
         %  local side has completed its setup and we can deliver now;
         %  otherwise we are racing ahead of the spawn caller's

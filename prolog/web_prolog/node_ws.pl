@@ -31,6 +31,7 @@ Architecture per connection:
 :- use_module(library(http/http_json)).
 :- use_module(library(apply)).
 :- use_module(library(option)).
+:- use_module(library(crypto)).
 
 :- use_module(actor_api, [
     spawn/3,
@@ -149,6 +150,58 @@ Architecture per connection:
 :- dynamic ws_connection_meta/2.
 :- dynamic ws_browser_connection/2.
 :- dynamic ws_browser_monitor/3.
+:- dynamic ws_browser_io/1.
+:- dynamic ws_browser_pid_scope/1.
+:- dynamic ws_browser_io_pending/3. % owning connection, reference, reply queue
+
+:- multifile distribution:hook_terminal_delivery/2.
+distribution:hook_terminal_delivery('$browser_io'(Queue), Message) :-
+    node_ws:browser_terminal_delivery(Queue, Message).
+
+actors:hook_send('$browser_io'(Queue), Message) :-
+    !,
+    browser_terminal_delivery(Queue, Message).
+
+browser_terminal_delivery(Queue, Message) :-
+    answer_to_json(Message, Event),
+    get_dict(type, Event, output),
+    !,
+    crypto_n_random_bytes(16, Bytes),
+    crypto_data_hash(Bytes, Ref, [algorithm(sha256)]),
+    setup_call_cleanup(message_queue_create(ReplyQueue),
+        ( with_mutex(browser_terminal_io,
+              ( ws_browser_io(Queue)
+              -> assertz(ws_browser_io_pending(Queue, Ref, ReplyQueue))
+              ;  browser_io_result(connection_closed) )),
+          thread_send_message(Queue, browser_io_request(Ref, Event)),
+          ( thread_get_message(ReplyQueue, Status, [timeout(30)])
+          -> browser_io_result(Status)
+          ;  browser_io_result(timeout) )
+        ),
+        with_mutex(browser_terminal_io,
+            ( retractall(ws_browser_io_pending(Queue, Ref, _)),
+              message_queue_destroy(ReplyQueue) ))).
+browser_terminal_delivery(Queue, Message) :-
+    thread_send_message(Queue, Message).
+
+browser_io_result(ok) :- !.
+browser_io_result(Reason) :-
+    throw(error(io_error(write, Reason),
+                context(actors:terminal_output/2,
+                        'browser terminal did not acknowledge output'))).
+
+browser_io_reply(Queue, Ref, Status) :-
+    with_mutex(browser_terminal_io,
+        ( retract(ws_browser_io_pending(Queue, Ref, ReplyQueue))
+        -> thread_send_message(ReplyQueue, Status)
+        ;  true )).
+
+close_browser_io(Queue) :-
+    with_mutex(browser_terminal_io,
+        ( retractall(ws_browser_io(Queue)),
+          forall(retract(ws_browser_io_pending(Queue, _, ReplyQueue)),
+                 thread_send_message(ReplyQueue, connection_closed)) )),
+    forget_io_endpoints_for_target('$browser_io'(Queue)).
 
 :- multifile actors:hook_send/2.
 :- multifile actors:hook_stop/1.
@@ -403,6 +456,9 @@ ws_relay_loop_1(NodePort, WebSocket, Queue, Principal) :-
 ws_relay_message_allowed(Principal, terminal_io_output(_, _)) :-
     !,
     \+ principal_has_capability(Principal, internal_transport).
+ws_relay_message_allowed(Principal, io_reply(_, _)) :-
+    !,
+    principal_has_capability(Principal, internal_transport).
 ws_relay_message_allowed(_, _).
 
 %!  ws_relay_message(+WebSocket, +Message) is det.
@@ -439,7 +495,20 @@ ws_relay_message(WebSocket, transport_welcome(Version)) :-
     atom_json_dict(Text, json{
         type:"transport_welcome",
         protocol:"web_prolog_browser_actor",
+        io_ack:true,
+        browser_pids:true,
         version:Version
+    }, []),
+    ws_send(WebSocket, text(Text)).
+
+ws_relay_message(WebSocket, browser_io_request(Ref, Event)) :-
+    atom_json_dict(Text, json{type:io_request, request_id:Ref, event:Event}, []),
+    ws_send(WebSocket, text(Text)).
+
+% Private transport reply, never an actor event or a public output frame.
+ws_relay_message(WebSocket, io_reply(RequestId, Status)) :-
+    atom_json_dict(Text, json{
+        type:io_reply, request_id:RequestId, status:Status
     }, []),
     ws_send(WebSocket, text(Text)).
 
@@ -519,6 +588,11 @@ ws_action(transport_hello, Dict, Queue, _Principal) :-
     ws_action_transport_hello(Dict, Queue).
 ws_action(io_request, Dict, Queue, Principal) :-
     ws_action_io_request(Dict, Queue, Principal).
+ws_action(browser_io_reply, Dict, Queue, _Principal) :-
+    ws_get_string(Dict, request_id, Ref),
+    ws_get_string(Dict, status, Status),
+    memberchk(Status, [ok, error]),
+    browser_io_reply(Queue, Ref, Status).
 ws_action(toplevel_call, Dict, Queue, Principal) :-
     ws_action_toplevel_call(Dict, Queue, Principal).
 ws_action(toplevel_next, Dict, Queue, Principal) :-
@@ -558,7 +632,14 @@ ws_action(exit, Dict, Queue, Principal) :-
 ws_action_transport_hello(Dict, Queue) :-
     ws_get_int_or(Dict, version, 1, Version),
     (   Version =:= 1
-    ->  thread_send_message(Queue, transport_welcome(1))
+    ->  ( get_dict(browser_pids, Dict, true)
+        -> ( ws_browser_pid_scope(Queue) -> true ; assertz(ws_browser_pid_scope(Queue)) )
+        ;  true ),
+        ( get_dict(io_ack, Dict, true)
+        -> with_mutex(browser_terminal_io,
+               ( ws_browser_io(Queue) -> true ; assertz(ws_browser_io(Queue)) ))
+        ;  true ),
+        thread_send_message(Queue, transport_welcome(1))
     ;   throw(error(domain_error(browser_actor_transport_version, Version),
                     context(node_ws:ws_action_transport_hello/2,
                             'supported browser actor transport version is 1')))
@@ -628,8 +709,9 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
     expand_dollar_vars(GoalAtom0, Bindings, GoalAtom),
     ws_reject_toplevel_call_source(Dict),
     ws_parse_toplevel_call_context(
-        Dict, GoalAtom, Goal, Template, Offset, Limit, Once
+        Dict, GoalAtom, Goal0, Template0, Offset, Limit, Once
     ),
+    ws_import_browser_pids(Queue, Goal0-Template0, Goal-Template),
     strip_module(Goal, _GoalCaller, PlainClientGoal),
     actor_module(Pid, Module),
     % The session's private actor module imports the node shared DB.
@@ -770,7 +852,8 @@ ws_action_spawn(Dict, Queue, Principal) :-
     effective_profile_for_route(ws, EffectiveProfile),
     ws_get_term_string(Dict, goal, GoalAtom0),
     atom_string(GoalAtom, GoalAtom0),
-    ws_read_term(goal, GoalAtom, Goal),
+    ws_read_term(goal, GoalAtom, Goal0),
+    ws_import_browser_pids(Queue, Goal0, Goal),
     rewrite_isotope_goal(Goal, RewrittenGoal),
     ws_shared_actor_goal(RewrittenGoal, GoalModule, PlainGoal, SpawnGoal),
     ws_parse_spawn_options(Dict, UserOptions),
@@ -815,12 +898,21 @@ ws_shared_actor_goal(Goal0, GoalModule, PlainGoal, SpawnGoal) :-
 %   command is accepted only over an authenticated node transport; endpoint
 %   tokens never grant public WebSocket clients a forwarding primitive.
 
-ws_action_io_request(Dict, _Queue, Principal) :-
+ws_action_io_request(Dict, Queue, Principal) :-
     require_capability(Principal, internal_transport),
     ws_get_string(Dict, token, Token),
     ws_get_term_string(Dict, message, MessageString),
     ws_read_term(message, MessageString, Message),
-    ignore(deliver_io_endpoint(Token, Message)).
+    (   get_dict(request_id, Dict, _)
+    ->  ws_get_string(Dict, request_id, RequestId),
+        (   catch(deliver_io_endpoint(Token, Message), _, fail)
+        ->  Status = ok
+        ;   Status = endpoint_unavailable
+        ),
+        thread_send_message(Queue, io_reply(RequestId, Status))
+    ;   % Older senders did not request acknowledgement.
+        ignore(deliver_io_endpoint(Token, Message))
+    ).
 
 %!  ws_action_send(+Dict, +Queue, +Principal) is det.
 %
@@ -831,7 +923,8 @@ ws_action_send(Dict, Queue, Principal) :-
     ws_get_pid(Dict, Pid),
     ws_require_send_target(Queue, Principal, Pid),
     ws_get_term_string(Dict, message, MsgString),
-    ws_read_term(message, MsgString, Message0),
+    ws_read_term(message, MsgString, RawMessage),
+    ws_import_browser_pids(Queue, RawMessage, Message0),
     ws_rewrite_browser_sender(Dict, Queue, Message0, Message),
     ws_send_message(Pid, Message).
 
@@ -855,6 +948,7 @@ ws_rewrite_browser_sender(Dict, Queue, Message0, Message) :-
     ).
 
 browser_local_pid(main).
+browser_local_pid(main@localhost).
 browser_local_pid(Id) :-
     integer(Id),
     Id >= 1000000000,
@@ -871,6 +965,32 @@ browser_local_pid(worker_actor(Id)) :-
 ws_browser_virtual_pid(Queue, BrowserPid, browser_actor(ConnectionId, BrowserPid)) :-
     ws_connection_meta(Queue, ConnectionMeta),
     get_dict(connection_id, ConnectionMeta, ConnectionId).
+
+% Qualified browser-local addresses have a different meaning at the peer.
+% Import them structurally at the connection boundary, wherever a pid is
+% carried in a goal/message. Bare integers, atoms, variables and source
+% strings remain data. Only the requesting connection gains a return route.
+ws_import_browser_pids(Queue, Term0, Term) :-
+    ( ws_browser_pid_scope(Queue)
+    -> import_browser_pids(Term0, Queue, Term)
+    ;  Term = Term0 ).
+
+import_browser_pids(Term, _, Term) :- var(Term), !.
+import_browser_pids(Term, Queue, Virtual) :-
+    Term = Pid@Node,
+    nonvar(Pid), Node == localhost,
+    browser_local_pid(Term),
+    !,
+    ws_browser_virtual_pid(Queue, Term, Virtual).
+import_browser_pids(Term0, Queue, Term) :-
+    compound(Term0),
+    !,
+    compound_name_arguments(Term0, Name, Args0),
+    maplist(import_browser_arg(Queue), Args0, Args),
+    compound_name_arguments(Term, Name, Args).
+import_browser_pids(Term, _, Term).
+
+import_browser_arg(Queue, Term0, Term) :- import_browser_pids(Term0, Queue, Term).
 
 %!  replace_browser_sender_argument(+BrowserPid, +VirtualPid,
 %!                                  +Message0, -Message) is det.
@@ -1024,6 +1144,9 @@ ws_spawn_io_target(Dict, _Queue, Principal, IoTarget) :-
 ws_spawn_io_target(_Dict, _Queue, Principal, '$io_sink'(distributed)) :-
     principal_has_capability(Principal, internal_transport),
     !.
+ws_spawn_io_target(_Dict, Queue, _Principal, '$browser_io'(Queue)) :-
+    ws_browser_io(Queue),
+    !.
 ws_spawn_io_target(_Dict, Queue, _Principal, Queue).
 
 
@@ -1038,6 +1161,7 @@ ws_spawn_io_target(_Dict, Queue, _Principal, Queue).
 %
 %   Tear down all state for a closed WebSocket connection.
 ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
+    close_browser_io(Queue),
     forall(
         retract(ws_actor(Queue, Pid)),
         ws_kill_actor(Pid)
@@ -1047,6 +1171,7 @@ ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
     catch(thread_join(RelayThread, _), _, true),
     retractall(ws_connection_meta(Queue, _)),
     retractall(ws_browser_connection(_, Queue)),
+    retractall(ws_browser_pid_scope(Queue)),
     retractall(ws_browser_monitor(Queue, _, _)),
     (   get_dict(connection_id, ConnectionMeta, ConnectionId)
     ->  ignore(catch(finish_activity(ws_connection, ConnectionId, disconnect),

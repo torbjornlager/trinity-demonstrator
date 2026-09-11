@@ -10561,7 +10561,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260902-statechart-validation-v7";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20260911-browser-pids-v8";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10803,7 +10803,7 @@
             var self = this;
             var node = this.swiWasmRemoteNodeUrl(nodeText);
             var existing = this.swiWasmRemoteActorConnections[node];
-            if (existing && existing.socket && existing.socket.readyState === WebSocket.OPEN) {
+            if (existing && existing.socket && existing.socket.readyState === WebSocket.OPEN && existing.ioAck) {
               return Promise.resolve(existing);
             }
             if (existing && existing.connecting) {
@@ -10811,9 +10811,10 @@
             }
             var entry = existing || { pendingSpawns: [], toplevelTemplates: {}, toplevelTargets: {} };
             entry.toplevelTargets = entry.toplevelTargets || {};
+            entry.ioAck = false;
             this.swiWasmRemoteActorConnections[node] = entry;
             entry.connecting = new Promise(function(resolve, reject) {
-              //  Single-settlement: resolve on open, reject on the first of
+              //  Single-settlement: resolve after I/O negotiation, reject on the first of
               //  error, close-before-open, or timeout.  Without this a socket
               //  that closes without the expected error ordering left the
               //  `connecting` promise pending forever, parking every remote
@@ -10848,21 +10849,29 @@
                 socket.send(JSON.stringify({
                   command: "transport_hello",
                   protocol: "web_prolog_browser_actor",
-                  version: 1
+                  version: 1,
+                  io_ack: true,
+                  browser_pids: true
                 }));
                 self.log("transport", "SWI-WASM connected to remote actor node " + node + ".", "swi-wasm");
-                settleResolve(entry);
               };
               socket.onmessage = function(event) {
                 var message;
                 try { message = JSON.parse(event.data); } catch (_) { return; }
                 if (message.type === "transport_welcome") {
-                  if (message.protocol !== "web_prolog_browser_actor" || message.version !== 1) {
+                  if (message.protocol !== "web_prolog_browser_actor" || message.version !== 1 || message.io_ack !== true || message.browser_pids !== true) {
+                    settleReject(new Error("Remote node does not support browser actor routing and acknowledged terminal I/O: " + node));
                     self.log("error", "Unsupported browser actor transport from " + node + ".", "swi-wasm");
                     socket.close();
                     return;
                   }
                   entry.protocol = message.version;
+                  entry.ioAck = true;
+                  settleResolve(entry);
+                  return;
+                }
+                if (message.type === "io_request") {
+                  self.acceptSwiWasmRemoteIo(socket, message);
                   return;
                 }
                 if (message.type === "spawned") {
@@ -10976,6 +10985,21 @@
               };
             });
             return entry.connecting;
+          },
+          acceptSwiWasmRemoteIo: function(socket, message) {
+            var status = "error";
+            try {
+              var event = message.event;
+              if (event && event.type === "output" && this.terminal) {
+                this.terminal.echo(this.formatOutputDisplay(event.data, event.kind));
+                status = "ok";
+              }
+            } finally {
+              // Both remote connections render through this terminal. Only
+              // then may the writer continue and send its next actor message.
+              socket.send(JSON.stringify({ command: "browser_io_reply",
+                request_id: message.request_id, status: status }));
+            }
           },
           spawnSwiWasmRemoteActor: function(nodeText, goalText, sourceText) {
             var self = this;
@@ -12308,7 +12332,7 @@
               "        term_string(Link, LinkText),",
               "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText, #LinkText),",
               "        await(SpawnPromise, SpawnedText),",
-              "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), spawn/3)) ; SpawnedText == PidText )",
+              "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), spawn/3)) ; term_string(SpawnedPid, SpawnedText), SpawnedPid == LocalPid )",
               "    ;   collect_remote_spawn_source(Goal, Options, ExtraSource),",
               "        term_string(Goal, GoalText),",
               "        term_string(Node, NodeText),",
@@ -12621,7 +12645,7 @@
               "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Lifecycle), GoalText),",
               "        SpawnPromise := swiWasmActorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
               "        await(SpawnPromise, SpawnedText),",
-              "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; SpawnedText == PidText )",
+              "        ( SpawnedText = null -> throw(error(resource_error(swi_wasm_worker_actor), toplevel_spawn/2)) ; term_string(SpawnedPid, SpawnedText), SpawnedPid == LocalPid )",
               "    ;   term_string(Node, NodeText),",
               "        option(session(Session), Options, true),",
               "        term_string(Session, SessionText),",

@@ -124,6 +124,36 @@ function embeddedWorkbenchMethod(name, nextName) {
   return Function("return (" + expression + ");")();
 }
 
+// Execute the actual browser acknowledgement handler, including failures.
+const acceptRemoteIo = embeddedWorkbenchMethod("acceptSwiWasmRemoteIo", "spawnSwiWasmRemoteActor");
+const ioOrder = [];
+const ioSocket = { send(text) { ioOrder.push(JSON.parse(text)); } };
+const ioView = {
+  terminal: { echo(text) { ioOrder.push(text); } },
+  formatOutputDisplay(data) { return data; }
+};
+acceptRemoteIo.call(ioView, ioSocket,
+  { request_id: "one", event: { type: "output", data: "pong" } });
+ok(ioOrder[0] === "pong" && ioOrder[1].command === "browser_io_reply" &&
+   ioOrder[1].request_id === "one" && ioOrder[1].status === "ok",
+   "remote output is accepted by the shared browser terminal before acknowledgement");
+ioOrder.length = 0;
+acceptRemoteIo.call(ioView, ioSocket,
+  { request_id: "blank", event: { type: "output", data: "" } });
+ok(ioOrder[0] === "" && ioOrder[1].status === "ok", "blank output is still acknowledged");
+ioOrder.length = 0;
+acceptRemoteIo.call({ terminal: null }, ioSocket,
+  { request_id: "gone", event: { type: "output", data: "pong" } });
+ok(ioOrder[0].status === "error", "missing browser terminal cannot acknowledge success");
+ioOrder.length = 0;
+try {
+  acceptRemoteIo.call({
+    terminal: { echo() { throw new Error("render failed"); } },
+    formatOutputDisplay(data) { return data; }
+  }, ioSocket, { request_id: "failed", event: { type: "output", data: "pong" } });
+} catch (_) {}
+ok(ioOrder[0].status === "error", "render failure replies with an I/O error");
+
 const errorDisplayHelpers = Function(
   source.slice(
     source.indexOf("function splitTopLevelArgs"),
@@ -560,7 +590,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-validation-v7'),
+   includes('/swi_wasm_actor_worker.js?v=20260911-browser-pids-v8'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -1389,7 +1419,7 @@ ok(workerSource.includes('"statechart_actor_start :-",') &&
    "a SWI-WASM statechart validates and starts before its worker announces readiness");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260902-statechart-validation-v7') &&
+   includes('/swi_wasm_actor_worker.js?v=20260911-browser-pids-v8') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('message.sourceKind, message.source, pid, message.name') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&

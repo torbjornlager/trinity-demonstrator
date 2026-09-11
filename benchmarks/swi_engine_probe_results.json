@@ -1,0 +1,368 @@
+{
+  "platform": "macOS-26.5.1-arm64-arm-64bit",
+  "swipl": "SWI-Prolog version 10.1.3 for fat-darwin",
+  "memory": [
+    {
+      "mode": "thread",
+      "count": 0,
+      "baseline_rss_kib": 12256,
+      "idle_rss_kib": 12256,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 1
+    },
+    {
+      "mode": "thread",
+      "count": 10,
+      "baseline_rss_kib": 12560,
+      "idle_rss_kib": 13328,
+      "delta_rss_kib": 768,
+      "delta_kib_per_unit": 76.8,
+      "repetition": 1
+    },
+    {
+      "mode": "thread",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 20000,
+      "delta_rss_kib": 7792,
+      "delta_kib_per_unit": 77.92,
+      "repetition": 1
+    },
+    {
+      "mode": "thread",
+      "count": 250,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 31680,
+      "delta_rss_kib": 19472,
+      "delta_kib_per_unit": 77.888,
+      "repetition": 1
+    },
+    {
+      "mode": "actor",
+      "count": 0,
+      "baseline_rss_kib": 12752,
+      "idle_rss_kib": 12752,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 1
+    },
+    {
+      "mode": "actor",
+      "count": 10,
+      "baseline_rss_kib": 12240,
+      "idle_rss_kib": 13136,
+      "delta_rss_kib": 896,
+      "delta_kib_per_unit": 89.6,
+      "repetition": 1
+    },
+    {
+      "mode": "actor",
+      "count": 100,
+      "baseline_rss_kib": 12320,
+      "idle_rss_kib": 20672,
+      "delta_rss_kib": 8352,
+      "delta_kib_per_unit": 83.52,
+      "repetition": 1
+    },
+    {
+      "mode": "actor",
+      "count": 250,
+      "baseline_rss_kib": 12800,
+      "idle_rss_kib": 33248,
+      "delta_rss_kib": 20448,
+      "delta_kib_per_unit": 81.792,
+      "repetition": 1
+    },
+    {
+      "mode": "engine",
+      "count": 0,
+      "baseline_rss_kib": 12240,
+      "idle_rss_kib": 12240,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 1
+    },
+    {
+      "mode": "engine",
+      "count": 10,
+      "baseline_rss_kib": 12800,
+      "idle_rss_kib": 13408,
+      "delta_rss_kib": 608,
+      "delta_kib_per_unit": 60.8,
+      "repetition": 1
+    },
+    {
+      "mode": "engine",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 18368,
+      "delta_rss_kib": 6160,
+      "delta_kib_per_unit": 61.6,
+      "repetition": 1
+    },
+    {
+      "mode": "engine",
+      "count": 250,
+      "baseline_rss_kib": 12352,
+      "idle_rss_kib": 27728,
+      "delta_rss_kib": 15376,
+      "delta_kib_per_unit": 61.504,
+      "repetition": 1
+    },
+    {
+      "mode": "thread",
+      "count": 0,
+      "baseline_rss_kib": 12528,
+      "idle_rss_kib": 12592,
+      "delta_rss_kib": 64,
+      "delta_kib_per_unit": null,
+      "repetition": 2
+    },
+    {
+      "mode": "thread",
+      "count": 10,
+      "baseline_rss_kib": 12832,
+      "idle_rss_kib": 13568,
+      "delta_rss_kib": 736,
+      "delta_kib_per_unit": 73.6,
+      "repetition": 2
+    },
+    {
+      "mode": "thread",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 20176,
+      "delta_rss_kib": 7968,
+      "delta_kib_per_unit": 79.68,
+      "repetition": 2
+    },
+    {
+      "mode": "thread",
+      "count": 250,
+      "baseline_rss_kib": 12320,
+      "idle_rss_kib": 31840,
+      "delta_rss_kib": 19520,
+      "delta_kib_per_unit": 78.08,
+      "repetition": 2
+    },
+    {
+      "mode": "actor",
+      "count": 0,
+      "baseline_rss_kib": 12240,
+      "idle_rss_kib": 12304,
+      "delta_rss_kib": 64,
+      "delta_kib_per_unit": null,
+      "repetition": 2
+    },
+    {
+      "mode": "actor",
+      "count": 10,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 13296,
+      "delta_rss_kib": 1088,
+      "delta_kib_per_unit": 108.8,
+      "repetition": 2
+    },
+    {
+      "mode": "actor",
+      "count": 100,
+      "baseline_rss_kib": 12320,
+      "idle_rss_kib": 20800,
+      "delta_rss_kib": 8480,
+      "delta_kib_per_unit": 84.8,
+      "repetition": 2
+    },
+    {
+      "mode": "actor",
+      "count": 250,
+      "baseline_rss_kib": 12832,
+      "idle_rss_kib": 33440,
+      "delta_rss_kib": 20608,
+      "delta_kib_per_unit": 82.432,
+      "repetition": 2
+    },
+    {
+      "mode": "engine",
+      "count": 0,
+      "baseline_rss_kib": 12240,
+      "idle_rss_kib": 12240,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 2
+    },
+    {
+      "mode": "engine",
+      "count": 10,
+      "baseline_rss_kib": 12288,
+      "idle_rss_kib": 12928,
+      "delta_rss_kib": 640,
+      "delta_kib_per_unit": 64.0,
+      "repetition": 2
+    },
+    {
+      "mode": "engine",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 18368,
+      "delta_rss_kib": 6160,
+      "delta_kib_per_unit": 61.6,
+      "repetition": 2
+    },
+    {
+      "mode": "engine",
+      "count": 250,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 27600,
+      "delta_rss_kib": 15392,
+      "delta_kib_per_unit": 61.568,
+      "repetition": 2
+    },
+    {
+      "mode": "thread",
+      "count": 0,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 12208,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 3
+    },
+    {
+      "mode": "thread",
+      "count": 10,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 12992,
+      "delta_rss_kib": 784,
+      "delta_kib_per_unit": 78.4,
+      "repetition": 3
+    },
+    {
+      "mode": "thread",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 20000,
+      "delta_rss_kib": 7792,
+      "delta_kib_per_unit": 77.92,
+      "repetition": 3
+    },
+    {
+      "mode": "thread",
+      "count": 250,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 31680,
+      "delta_rss_kib": 19472,
+      "delta_kib_per_unit": 77.888,
+      "repetition": 3
+    },
+    {
+      "mode": "actor",
+      "count": 0,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 12208,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 3
+    },
+    {
+      "mode": "actor",
+      "count": 10,
+      "baseline_rss_kib": 12864,
+      "idle_rss_kib": 13728,
+      "delta_rss_kib": 864,
+      "delta_kib_per_unit": 86.4,
+      "repetition": 3
+    },
+    {
+      "mode": "actor",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 20688,
+      "delta_rss_kib": 8480,
+      "delta_kib_per_unit": 84.8,
+      "repetition": 3
+    },
+    {
+      "mode": "actor",
+      "count": 250,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 33056,
+      "delta_rss_kib": 20848,
+      "delta_kib_per_unit": 83.392,
+      "repetition": 3
+    },
+    {
+      "mode": "engine",
+      "count": 0,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 12208,
+      "delta_rss_kib": 0,
+      "delta_kib_per_unit": null,
+      "repetition": 3
+    },
+    {
+      "mode": "engine",
+      "count": 10,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 12832,
+      "delta_rss_kib": 624,
+      "delta_kib_per_unit": 62.4,
+      "repetition": 3
+    },
+    {
+      "mode": "engine",
+      "count": 100,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 18368,
+      "delta_rss_kib": 6160,
+      "delta_kib_per_unit": 61.6,
+      "repetition": 3
+    },
+    {
+      "mode": "engine",
+      "count": 250,
+      "baseline_rss_kib": 12208,
+      "idle_rss_kib": 27600,
+      "delta_rss_kib": 15392,
+      "delta_kib_per_unit": 61.568,
+      "repetition": 3
+    }
+  ],
+  "scheduling": [
+    {
+      "iterations": 5000000,
+      "mode": "actor",
+      "probe_delay_ms": 0.010013580322265625,
+      "repetition": 1
+    },
+    {
+      "iterations": 5000000,
+      "mode": "engine",
+      "probe_delay_ms": 49.91292953491211,
+      "repetition": 1
+    },
+    {
+      "iterations": 5000000,
+      "mode": "actor",
+      "probe_delay_ms": 0.010013580322265625,
+      "repetition": 2
+    },
+    {
+      "iterations": 5000000,
+      "mode": "engine",
+      "probe_delay_ms": 37.241220474243164,
+      "repetition": 2
+    },
+    {
+      "iterations": 5000000,
+      "mode": "actor",
+      "probe_delay_ms": 0.011920928955078125,
+      "repetition": 3
+    },
+    {
+      "iterations": 5000000,
+      "mode": "engine",
+      "probe_delay_ms": 42.82498359680176,
+      "repetition": 3
+    }
+  ]
+}

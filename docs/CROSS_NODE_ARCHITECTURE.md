@@ -845,6 +845,51 @@ invoke the private `io_request` command.  The endpoint accepts only
 authorized for the owning browser queue exactly once. Closing the browser
 connection revokes its endpoints and pending prompts.
 
+Terminal delivery uses request/reply semantics. Each private `io_request`
+carries a unique `request_id`; the home node enqueues the terminal message
+before sending `io_reply` with that ID and status `ok`. The sender waits for
+this acknowledgement before returning from its I/O operation. Local writes
+already enqueue synchronously. Thus a subsequent actor message cannot cause
+another write to overtake the first at their shared terminal queue, even
+when the actors run on different nodes. This is a queue-acceptance guarantee,
+not confirmation that the browser has painted the text.
+
+Replies are correlated by node and request ID on private queues, outside
+application mailboxes. Waiting holds no transport lock. A revoked endpoint
+or dropped connection raises an I/O error; missing replies time out after
+30 seconds, also as errors, without retrying a potentially delivered write.
+Cancellation removes pending request state and late replies are discarded.
+Older senders without `request_id` remain accepted, but all participating
+nodes must support acknowledgements for the ordering guarantee: new senders
+do not silently fall back to asynchronous output on old peers.
+
+This does not join spawned actors or impose an order on independent writes.
+In example 09 the six ping/pong receipt lines alternate; the two finishing
+lines may race, and the spawning query's answer may arrive before completion.
+
+For a SWI-WASM terminal, the convergence point is the browser itself: remote
+actors on different nodes use different browser WebSocket connections. The
+shared bridge (used by both browser execution models) negotiates `io_ack:true`
+in `transport_hello` and waits for a confirming `transport_welcome` before
+spawning. The node assigns a connection-owned browser I/O sink. Each textual
+write arrives as `io_request` with a reference and the normal output event;
+the bridge accepts it into the terminal before sending `browser_io_reply`.
+The actor waits for that reply, which only its owning connection can satisfy.
+Local descendants inherit the sink; remote descendants reach it through the
+existing opaque distributed endpoint, whose acknowledgement now waits for
+the browser acknowledgement as well. Connection close releases pending
+writers with an I/O error and revokes the endpoint. Trace and prompt events
+retain their existing routes. This feature is automatically negotiated, not
+a user-facing setting; old peers are rejected explicitly by the new bridge.
+
+The same handshake negotiates `browser_pids:true`. At that connection's
+input boundary, qualified browser addresses such as `123@localhost` and
+`main@localhost` become connection-bound return addresses inside spawn goals,
+messages and toplevel calls. This lets a native actor receive the browser
+actor's pid as an argument at spawn time. Bare numbers, atoms, strings and
+variables retain their meaning; source text is not rewritten. Without this
+negotiation, `localhost` retains the native node's meaning.
+
 The ordinary node-to-node relay still drops unattributed
 `terminal_io_output/2`.  Thus a detached remote actor with no inherited
 terminal receives an explicit non-forwarding sink and cannot mint authority

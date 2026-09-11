@@ -79,6 +79,7 @@
 :- use_module(library(http/json)).
 :- use_module(library(http/websocket)).
 :- use_module(library(http/thread_httpd)).
+:- use_module(library(http/http_dispatch)).
 :- use_module(library(modules)).
 :- use_module(library(readutil), [read_file_to_string/3]).
 :- use_module(library(settings)).
@@ -96,6 +97,34 @@ run_tests :-
 :- meta_predicate with_http_public_url(+, +, +, 0).
 
 :- dynamic walked_goal/1.
+
+:- dynamic io_test_endpoint/1.
+:- multifile distribution:hook_ws_endpoint_override/2.
+distribution:hook_ws_endpoint_override('http://io-test.invalid', URL) :-
+    test_node:io_test_endpoint(URL).
+
+:- http_handler('/test_io_ack', io_test_upgrade, []).
+io_test_upgrade(Request) :-
+    http_upgrade_to_websocket(io_test_peer, [], Request).
+
+% A controlled peer holds both replies until the test releases them.
+% This tests the client's wait and multiplexing independently of timing
+% differences between real nodes. No sleeps or sorting in the program.
+io_test_peer(WS) :-
+    ws_receive_json(WS, First),
+    ws_receive_json(WS, Second),
+    thread_self(Peer),
+    thread_send_message(io_test_control, ready(Peer, First.request_id, Second.request_id)),
+    forall(between(1, 2, _),
+        ( thread_get_message(ack(Id)),
+          ws_send_json(WS, json{type:io_reply, request_id:Id, status:ok}) )),
+    thread_get_message(close).
+
+io_test_writer(Label) :-
+    catch(distribution:route_io_endpoint(test_token, 'http://io-test.invalid',
+                                        terminal_output(Label, hello)),
+          Error, true),
+    thread_send_message(io_test_control, returned(Label, Error)).
 
 node_test_server_callback(get, State, State, State).
 
@@ -2724,6 +2753,191 @@ test(distributed_io_endpoint_is_inherited_unchanged,
         distribution:inherited_io_endpoint(Inherited)
     ).
 
+test(distributed_io_ack_follows_terminal_enqueue) :-
+    Principal = principal{id:"node:test", capabilities:[internal_transport], unknown:false},
+    setup_call_cleanup(
+        ( message_queue_create(Terminal), message_queue_create(Replies),
+          assertz(distribution:io_endpoint_target(ack_test, Terminal)) ),
+        ( node_ws:ws_action_io_request(json{
+              token:"ack_test", request_id:"r1",
+              message:"terminal_output(sender,hello)"
+          }, Replies, Principal),
+          thread_get_message(Replies, io_reply(r1, ok), [timeout(1)]),
+          assertion(thread_get_message(Terminal, terminal_output(sender, hello), [timeout(0)]))
+        ),
+        ( retractall(distribution:io_endpoint_target(ack_test, _)),
+          message_queue_destroy(Terminal), message_queue_destroy(Replies) )
+    ).
+
+test(distributed_io_waits_for_each_ack_without_holding_connection_lock) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            ( atom_concat(URI, '/test_io_ack', URL),
+              assertz(test_node:io_test_endpoint(URL)),
+              message_queue_create(_, [alias(io_test_control)]) ),
+            setup_call_cleanup(
+                ( thread_create(io_test_writer(first), T1, []),
+                  thread_create(io_test_writer(second), T2, []) ),
+                ( thread_get_message(io_test_control, ready(Peer, R1, R2), [timeout(5)]),
+                  assertion(\+ thread_get_message(io_test_control, returned(_, _), [timeout(0.05)])),
+                  thread_send_message(Peer, ack(R2)),
+                  thread_get_message(io_test_control, returned(_, E2), [timeout(5)]),
+                  assertion(var(E2)),
+                  assertion(\+ thread_get_message(io_test_control, returned(_, _), [timeout(0.05)])),
+                  thread_send_message(Peer, ack(R1)),
+                  thread_get_message(io_test_control, returned(_, E1), [timeout(5)]),
+                  assertion(var(E1)),
+                  thread_send_message(Peer, close),
+                  assertion(\+ distribution:pending_io_request('http://io-test.invalid', _, _))
+                ),
+                ( distribution:remote_drop_connection('http://io-test.invalid'),
+                  thread_join(T1, _), thread_join(T2, _) )),
+            ( retractall(test_node:io_test_endpoint(_)), message_queue_destroy(io_test_control) )
+        )).
+
+test(distributed_io_revoked_endpoint_returns_error) :-
+    with_node_server(URI,
+        catch(distribution:remote_request_io(URI, json{
+                  command:io_request, token:"revoked",
+                  message:"terminal_output(sender,hello)"
+              }), Error, true)),
+    assertion(Error = error(io_error(write, "endpoint_unavailable"), _)),
+    assertion(\+ distribution:pending_io_request(_, _, _)).
+
+test(distributed_io_replies_are_correlated_and_private) :-
+    setup_call_cleanup(
+        ( message_queue_create(Q1), message_queue_create(Q2),
+          assertz(distribution:pending_io_request(peer, "r1", Q1)),
+          assertz(distribution:pending_io_request(peer, "r2", Q2)) ),
+        ( distribution:remote_ws_dispatch(other_peer, unused,
+              json{type:"io_reply", request_id:"r1", status:"ok"}),
+          assertion(\+ thread_get_message(Q1, _, [timeout(0)])),
+          distribution:remote_ws_dispatch(peer, unused,
+              json{type:"io_reply", request_id:"r2", status:"ok"}),
+          assertion(thread_get_message(Q2, "ok", [timeout(0)])),
+          assertion(\+ thread_get_message(Q1, _, [timeout(0)])),
+          distribution:remote_drop_connection(peer),
+          assertion(thread_get_message(Q1, "connection_closed", [timeout(0)])),
+          distribution:remote_ws_dispatch(peer, unused,
+              json{type:"io_reply", request_id:"r1", status:"ok"}),
+          assertion(\+ thread_get_message(Q1, _, [timeout(0)]))
+        ),
+        ( retractall(distribution:pending_io_request(peer, _, _)),
+          message_queue_destroy(Q1), message_queue_destroy(Q2) )
+    ).
+
+test(distributed_ping_pong_preserves_causal_output) :-
+    with_node_server(Home,
+        with_node_server(PongNode,
+            with_node_server(PingNode,
+                setup_call_cleanup(ws_open(Home, WS),
+                    ( % Use the example's actual predicates without changing
+                      % the protocol or adding completion/output barriers.
+                      source_file(test_node:run_tests, TestFile),
+                      file_directory_name(TestFile, TestDir),
+                      directory_file_path(TestDir, '../../../examples/actors/09 ping-pong.pl', Example),
+                      read_file_to_string(Example, Source, []),
+                      format(string(Options), "[session(true),src_text(~q)]", [Source]),
+                      ws_send_json(WS, json{command:toplevel_spawn, options:Options}),
+                      ws_receive_json(WS, Spawned),
+                      format(string(Goal),
+                          "spawn(pong,P,[node(~q),src_predicates([pong/0])]),spawn(ping(3,P),_,[node(~q),src_predicates([ping/2])])",
+                          [PongNode, PingNode]),
+                      ws_send_json(WS, json{command:toplevel_call, pid:Spawned.pid,
+                                           goal:Goal, template:"true"}),
+                      ws_receive_json_until_expected_types(WS,
+                          ["success","output","output","output","output","output","output","output","output"], Replies),
+                      findall(Data, (member(R, Replies), R.type == "output", Data = R.data), Lines),
+                      assertion(Lines = ["Pong received ping.", "Ping received pong.",
+                               "Pong received ping.", "Ping received pong.",
+                               "Pong received ping.", "Ping received pong." | _]),
+                      append([_,_,_,_,_,_], Finished, Lines),
+                      % The two final writes race: ping sends finished
+                      % before printing its own line.
+                      msort(Finished, ["Ping finished.", "Pong finished."])
+                    ),
+                    catch(ws_close(WS, 1000, done), _, true))))).
+
+% SWI-WASM owns one browser terminal but has separate connections to peers.
+% Its remote actors must wait for the browser, not just their node's queue.
+test(browser_terminal_ping_pong_across_two_connections) :-
+    with_node_server(N3,
+        with_node_server(N4,
+            setup_call_cleanup(
+                ( ws_open(N3, W3), ws_open(N4, W4) ),
+                ( forall(member(W, [W3,W4]),
+                      ( ws_send_json(W, json{command:transport_hello, version:1, io_ack:true}),
+                        ws_receive_json(W, Welcome), assertion(Welcome.io_ack == true) )),
+                  source_file(test_node:run_tests, TestFile),
+                  file_directory_name(TestFile, TestDir),
+                  directory_file_path(TestDir, '../../../examples/actors/09 ping-pong.pl', Example),
+                  read_file_to_string(Example, Source, []),
+                  format(string(Options), '[src_text(~q)]', [Source]),
+                  ws_send_json(W3, json{command:spawn, goal:"pong", options:Options}),
+                  ws_receive_json(W3, Spawned),
+                  format(string(Ping), 'ping(3,~w@~q)', [Spawned.pid, N3]),
+                  ws_send_json(W4, json{command:spawn, goal:Ping, options:Options}),
+                  ws_receive_json(W4, _),
+                  forall(between(1,3,_),
+                      ( browser_test_ack_output(W3, "Pong received ping."),
+                        browser_test_ack_output(W4, "Ping received pong.") )),
+                  browser_test_ack_output(W3, "Pong finished."),
+                  browser_test_ack_output(W4, "Ping finished.")
+                ),
+                ( catch(ws_close(W3,1000,done),_,true),
+                  catch(ws_close(W4,1000,done),_,true) )))).
+
+test(browser_terminal_reply_is_connection_scoped_and_disconnect_wakes_writer) :-
+    setup_call_cleanup(
+        ( message_queue_create(Owner), message_queue_create(Other),
+          message_queue_create(Reply),
+          assertz(node_ws:ws_browser_io(Owner)),
+          assertz(node_ws:ws_browser_io_pending(Owner, ref, Reply)) ),
+        ( node_ws:browser_io_reply(Other, ref, ok),
+          assertion(\+ thread_get_message(Reply, _, [timeout(0)])),
+          node_ws:close_browser_io(Owner),
+          assertion(thread_get_message(Reply, connection_closed, [timeout(0)])),
+          node_ws:browser_io_reply(Owner, ref, ok),
+          assertion(\+ thread_get_message(Reply, _, [timeout(0)])) ),
+        ( node_ws:close_browser_io(Owner), message_queue_destroy(Owner),
+          message_queue_destroy(Other), message_queue_destroy(Reply) )).
+
+test(browser_terminal_inherited_by_remote_descendant) :-
+    with_node_server(Home,
+        with_node_server(Remote,
+            setup_call_cleanup(ws_open(Home, WS),
+                ( ws_send_json(WS, json{command:transport_hello, version:1, io_ack:true}),
+                  ws_receive_json(WS, _),
+                  format(string(Goal), 'spawn(writeln(inherited),_,[node(~q)])', [Remote]),
+                  ws_send_json(WS, json{command:spawn, goal:Goal, options:"[]"}),
+                  ws_receive_json(WS, Spawned),
+                  assertion(Spawned.type == "spawned"),
+                  browser_test_ack_output(WS, "inherited") ),
+                catch(ws_close(WS,1000,done),_,true)))).
+
+test(browser_terminal_writer_waits_for_ack) :-
+    setup_call_cleanup(
+        ( message_queue_create(Queue), message_queue_create(Done),
+          assertz(node_ws:ws_browser_io(Queue)) ),
+        setup_call_cleanup(
+            thread_create(
+                ( node_ws:browser_terminal_delivery(Queue, terminal_output(writer, hello)),
+                  thread_send_message(Done, returned) ), Thread, []),
+            ( thread_get_message(Queue, browser_io_request(Ref, _), [timeout(1)]),
+              assertion(\+ thread_get_message(Done, _, [timeout(0.05)])),
+              node_ws:browser_io_reply(Queue, Ref, ok),
+              thread_get_message(Done, returned, [timeout(1)]),
+              assertion(\+ node_ws:ws_browser_io_pending(Queue, _, _)) ),
+            ( node_ws:close_browser_io(Queue), thread_join(Thread, _) )),
+        ( node_ws:close_browser_io(Queue), message_queue_destroy(Queue), message_queue_destroy(Done) )).
+
+browser_test_ack_output(WS, Text) :-
+    ws_receive(WS, Frame, [timeout(5)]),
+    atom_json_dict(Frame.data, Event, []),
+    assertion(Event.type == "io_request"),
+    assertion(Event.event.data == Text),
+    ws_send_json(WS, json{command:browser_io_reply, request_id:Event.request_id, status:ok}).
+
 test(public_ws_cannot_forge_distributed_io_endpoint,
      true(Error = error(authorization_error(_, capability(internal_transport)), _))) :-
     test_execution_principal("browser", Principal),
@@ -2889,6 +3103,70 @@ test(internal_transport_does_not_imply_execute) :-
 
 test(ws_browser_local_pid_accepts_localhost_qualification) :-
     node_ws:browser_local_pid(2159438818@localhost).
+
+test(ws_browser_pid_import_is_structural_and_preserves_data) :-
+    setup_call_cleanup(
+        ( assertz(node_ws:ws_connection_meta(pid_test, _{connection_id:connection_one})),
+          assertz(node_ws:ws_browser_pid_scope(pid_test)) ),
+        ( Input = goal(3, 2159438818, main, "2159438818@localhost",
+                       nested([2159438818@localhost,main@localhost]),
+                       X, X, Y@Host, 2159438818@OtherHost),
+          node_ws:ws_import_browser_pids(pid_test, Input, Output),
+          assertion(Output == goal(3,2159438818,main,"2159438818@localhost",
+              nested([browser_actor(connection_one,2159438818@localhost),
+                      browser_actor(connection_one,main@localhost)]),
+              X,X,Y@Host,2159438818@OtherHost)),
+          assertion(var(X)), assertion(var(Y)), assertion(var(Host)), assertion(var(OtherHost)),
+          node_ws:ws_import_browser_pids(unnegotiated, Input, Unchanged),
+          assertion(Unchanged == Input) ),
+        ( retractall(node_ws:ws_connection_meta(pid_test,_)),
+          retractall(node_ws:ws_browser_pid_scope(pid_test)) )).
+
+test(ws_remote_spawn_can_send_to_browser_pid_in_goal) :-
+    with_node_server(URI,
+        setup_call_cleanup(ws_open(URI, WS),
+            ( ws_send_json(WS, json{command:transport_hello,version:1,browser_pids:true}),
+              ws_receive_json(WS, Welcome), assertion(Welcome.browser_pids == true),
+              ws_send_json(WS, json{command:spawn,
+                  goal:"2159438818@localhost ! hello", options:"[]"}),
+              ws_receive_json_until_expected_types(WS, ["spawned","actor_message"], Replies),
+              member(Message, Replies), Message.type == "actor_message",
+              assertion(Message.target == "2159438818@localhost"),
+              assertion(Message.message == "hello") ),
+            catch(ws_close(WS,1000,done),_,true))).
+
+test(ws_mixed_ping_pong_routes_browser_actor_in_spawn_goal) :-
+    with_node_server(URI,
+        setup_call_cleanup(ws_open(URI, WS),
+            ( ws_send_json(WS, json{command:transport_hello,version:1,
+                                    browser_pids:true,io_ack:true}),
+              ws_receive_json(WS, _),
+              source_file(test_node:run_tests, TestFile),
+              file_directory_name(TestFile, TestDir),
+              directory_file_path(TestDir, '../../../examples/actors/09 ping-pong.pl', Example),
+              read_file_to_string(Example, Source, []),
+              format(string(Options), '[src_text(~q)]', [Source]),
+              ws_send_json(WS, json{command:spawn,
+                  goal:"ping(3,2159438818@localhost)",options:Options}),
+              ws_receive_json_until_expected_types(WS, ["spawned","actor_message"], First),
+              member(Spawned, First), Spawned.type == "spawned",
+              member(Ping, First), Ping.type == "actor_message",
+              assertion(Ping.target == "2159438818@localhost"),
+              sub_string(Ping.message,0,5,_,"ping("),
+              forall(between(1,3,Round),
+                  ( ws_send_json(WS, json{command:send,pid:Spawned.pid,message:"pong"}),
+                    browser_test_ack_output(WS,"Ping received pong."),
+                    ( Round < 3
+                    -> ws_receive_json(WS, Next), assertion(Next.type == "actor_message"),
+                       assertion(Next.target == "2159438818@localhost")
+                    ; true ) )),
+              ws_receive_json_until_expected_types(WS,["actor_message","io_request"],Last),
+              member(Finished,Last), Finished.type == "actor_message",
+              assertion(Finished.message == "finished"),
+              member(Output,Last), Output.type == "io_request",
+              assertion(Output.event.data == "Ping finished."),
+              ws_send_json(WS,json{command:browser_io_reply,request_id:Output.request_id,status:ok}) ),
+            catch(ws_close(WS,1000,done),_,true))).
 
 test(ws_browser_local_pid_rejects_nonlocal_qualification) :-
     \+ node_ws:browser_local_pid(2159438818@'https://n3.example.com').
@@ -4705,7 +4983,7 @@ test(ws_actor_toplevel_session_exposes_actor_primitives) :-
                     goal:"(spawn(2 > 1, Child, [monitor(true)]), receive({down(Child, _, Reason) -> true}, [timeout(1), on_timeout(Reason=timeout)]))",
                     format:"json"
                 }),
-                ws_receive_json(WS, MonitorReply),
+                ws_receive_toplevel_reply(WS, ToplevelPid, MonitorReply),
                 assertion(MonitorReply.type == "success"),
                 MonitorReply.data = [MonitorRow],
                 assertion(MonitorRow.'Reason' == "true")
