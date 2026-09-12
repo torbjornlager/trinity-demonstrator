@@ -751,4 +751,10 @@ private_listing_hidden(actor_time_output/1).
 private_listing_hidden(actor_time_string/2).
 private_listing_hidden(format_to_atom_safe/2).
 private_listing_hidden(reject_format_call_specifier/1).
+private_listing_hidden(format_has_call_specifier/1).
+private_listing_hidden(format_codes_have_call_specifier/1).
+private_listing_hidden(format_directive/3).
+private_listing_hidden(skip_format_numeric_argument/2).
+private_listing_hidden(skip_format_digits/2).
+private_listing_hidden(skip_format_colon/2).
 private_listing_hidden('$parent'/1).
