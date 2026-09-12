@@ -361,15 +361,20 @@ ok(conciseSwiWasmOutput(
    includes('return theme === "dark" ? "#7ae2a1" : "#15803d";') &&
    includes('return "[[;" + webPrologTerminalTimingColor() + ";]" + escaped + "]";'),
    "SWI-WASM time/1 output keeps inference and elapsed time only and uses theme-aware green");
-ok(includes('return "Welcome to [[b;;]Web Prolog]!\\n" +') &&
-   includes('"The [[b;;]" + profile + "] profile.\\n" +') &&
-   includes('"Powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog]\\n"') &&
+ok(includes('return "Welcome to [[b;;]Web Prolog], running\\n" +') &&
+   includes('node = this.isBrowserSwiWasmMode') &&
+   includes('? "SWI-WASM"') &&
+   includes(': nodeLabelForUrl(this.currentPortalNodeUrl)') &&
+   includes('"the [[b;;]" + profile + "] profile on node [[b;;]" + node + ",]\\n" +') &&
+   includes('"powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog].\\n"') &&
+   includes('a[href="https://www.swi-prolog.org/"]') &&
+   includes('background: url("/img/swi-logo.png") left center / 1em 1em no-repeat;') &&
    includes('profile = "ACTOR"') &&
    includes('profile = "ISOTOPE"') &&
    includes('profile = "ISOBASE"') &&
    includes("initialNodeInfoReady = this.fetchNodeInfo()") &&
    includes("initialNodeInfoReady.then(function()"),
-   "terminal greeting identifies the announced profile and links to SWI-Prolog");
+   "terminal greeting identifies the announced profile and node and links to SWI-Prolog with its owl logo");
 ok(includes("terminalHighlightPredicates: true") &&
    includes("Highlight Web Prolog predicates") &&
    includes("built-in predicate calls and predicate indicators") &&

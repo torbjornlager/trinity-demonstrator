@@ -1180,6 +1180,12 @@
         color: var(--terminal-wp-predicate) !important;
       }
 
+      .terminal .terminal-output a[href="https://www.swi-prolog.org/"] {
+        display: inline-block;
+        padding-left: 1.15em;
+        background: url("/img/swi-logo.png") left center / 1em 1em no-repeat;
+      }
+
       .terminal::before {
         content: "";
         position: absolute;
@@ -1279,7 +1285,6 @@
       .terminal .terminal-output > :not(.raw) a[href]:focus span,
       .terminal.external a[href]:hover span,
       .terminal.external a[href]:focus span {
-        background: transparent !important;
         background-color: transparent !important;
         color: var(--link-ink) !important;
         text-decoration: underline !important;
@@ -6813,6 +6818,7 @@
             window.location.assign(url.toString());
           },
           terminalGreetingText: function() {
+            var node;
             var profile;
             if (!this.showTerminalGreeting) {
               return false;
@@ -6824,9 +6830,12 @@
             } else {
               profile = "ACTOR";
             }
-            return "Welcome to [[b;;]Web Prolog]!\n" +
-              "The [[b;;]" + profile + "] profile.\n" +
-              "Powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog]\n";
+            node = this.isBrowserSwiWasmMode
+              ? "SWI-WASM"
+              : nodeLabelForUrl(this.currentPortalNodeUrl);
+            return "Welcome to [[b;;]Web Prolog], running\n" +
+              "the [[b;;]" + profile + "] profile on node [[b;;]" + node + ",]\n" +
+              "powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog].\n";
           },
           echoTerminalSystemInfo: function(term, message, options) {
             var echoOptions;
