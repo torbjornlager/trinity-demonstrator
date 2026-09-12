@@ -90,7 +90,7 @@ read(Term) :-
 
 reject_format_call_specifier(Format) :-
     format_to_atom_safe(Format, Atom),
-    (   sub_atom(Atom, _, 2, _, '~@')
+    (   format_has_call_specifier(Atom)
     ->  throw(error(permission_error(use, format_specifier, '~@'),
                     context(format/2,
                             'the ~@ format specifier is disabled for security')))
@@ -106,6 +106,48 @@ format_to_atom_safe(Format, Atom) :-
     ->  catch(atom_codes(Atom, Format), _, Atom = '')
     ;   Atom = ''
     ).
+
+format_has_call_specifier(Format) :-
+    atom_codes(Format, Codes),
+    format_codes_have_call_specifier(Codes).
+
+format_codes_have_call_specifier([]) :-
+    fail.
+format_codes_have_call_specifier([0'~|Codes]) :-
+    (   format_directive(Codes, Action, Rest)
+    ->  !,
+        (   Action =:= 0'@
+        ;   format_codes_have_call_specifier(Rest)
+        )
+    ;   format_codes_have_call_specifier(Codes)
+    ).
+format_codes_have_call_specifier([_|Codes]) :-
+    format_codes_have_call_specifier(Codes).
+
+format_directive(Codes0, Action, Rest) :-
+    skip_format_numeric_argument(Codes0, Codes1),
+    skip_format_colon(Codes1, Codes2),
+    Codes2 = [Action|Rest].
+
+skip_format_numeric_argument([Code|Codes], Rest) :-
+    code_type(Code, digit),
+    !,
+    skip_format_digits(Codes, Rest).
+skip_format_numeric_argument([0'*|Codes], Codes) :-
+    !.
+skip_format_numeric_argument([96, _Character|Codes], Codes) :-
+    !.
+skip_format_numeric_argument(Codes, Codes).
+
+skip_format_digits([Code|Codes], Rest) :-
+    code_type(Code, digit),
+    !,
+    skip_format_digits(Codes, Rest).
+skip_format_digits(Codes, Codes).
+
+skip_format_colon([0':|Codes], Codes) :-
+    !.
+skip_format_colon(Codes, Codes).
 
 time(Goal) :-
     system:call_time(Goal, Time, Result),

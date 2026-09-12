@@ -240,6 +240,42 @@ test(precompiled_io_rejects_format_call_specifier,
        on_timeout(fail)
    ]).
 
+test(precompiled_io_rejects_modified_format_call_specifiers,
+     [forall(member(Format, ['~1@', '~0@', '~:@', '~10@', '~`x@', '~*:@']))]) :-
+   self(Self),
+   format(string(Source),
+          "run(Parent) :- catch(format(~q, [true]), E, send(Parent, error(E))).",
+          [Format]),
+   spawn(run(Self), _Pid, [link(false), src_text(Source)]),
+   receive({
+       error(error(permission_error(use, format_specifier, '~@'), _)) -> true
+   }, [timeout(1), on_timeout(fail)]).
+
+test(precompiled_io_allows_escaped_tilde_before_at, Data == "~@") :-
+   message_queue_create(Queue),
+   spawn(run, _Pid, [
+       link(false),
+       target(Queue),
+       src_text("run :- format('~~@', []).")
+   ]),
+   (   thread_get_message(Queue, terminal_io_output(_, Data), [timeout(1)])
+   ->  true
+   ;   Data = timeout
+   ),
+   message_queue_destroy(Queue).
+
+test(generated_io_rejects_modified_format_call_specifier,
+     true(Error = error(permission_error(use, format_specifier, '~@'), _))) :-
+   self(Self),
+   spawn(run(Self), _Pid, [
+       link(false),
+       isolation_io(generated),
+       src_text("run(Parent) :- catch(format('~1@', [true]), E, send(Parent, error(E))).")
+   ]),
+   receive({
+       error(Error) -> true
+   }, [timeout(1), on_timeout(fail)]).
+
 test(precompiled_io_preserves_meta_call_context, Value == local) :-
    self(Self),
    message_queue_create(Queue),

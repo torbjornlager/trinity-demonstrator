@@ -221,17 +221,19 @@ server_yield(Ref, Response, Options) :-
 %!  server_yield(+Ref, +MonRef, -Response, +Options) is det.
 %
 %   Fail-fast variant of server_yield/3. Waits for Ref-Response or a
-%   down/3 message for MonRef. Cancels the monitor on normal reply;
+%   down/3 message for MonRef. Cancels the monitor when the wait finishes,
+%   including failure, timeout and exception paths;
 %   throws server_down(Reason) if the server terminates first.
 
 server_yield(Ref, MonRef, Response, Options) :-
-    receive({
-        Ref-Response0 ->
-            demonitor(MonRef),
-            Response = Response0 ;
-        down(_Pid, MonRef, Reason) ->
-            throw(server_down(Reason))
-    }, Options).
+    call_cleanup(
+        receive({
+            Ref-Response0 ->
+                Response = Response0 ;
+            down(_Pid, MonRef, Reason) ->
+                throw(server_down(Reason))
+        }, Options),
+        demonitor(MonRef, [flush])).
 
 
 %!  server_upgrade(+To, +Pred) is det.
@@ -351,10 +353,15 @@ ensure_server_callback(Module, PlainPred) :-
 server_halt(To, Reply) :-
     self(Self),
     make_ref(Ref),
-    To ! '$stop'(Self, Ref),
-    receive({
-        Ref-Reply -> true
-    }).
+    setup_call_cleanup(
+        monitor(To, MonRef),
+        (   To ! '$stop'(Self, Ref),
+            receive({
+                Ref-Reply0 -> Reply = Reply0 ;
+                down(_Pid, MonRef, Reason) -> throw(server_down(Reason))
+            })
+        ),
+        demonitor(MonRef, [flush])).
 
 %!  server_stop(+To, -Reply) is det.
 %

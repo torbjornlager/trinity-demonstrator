@@ -49,6 +49,13 @@ test_statechart_profile_runtime :-
 
 :- begin_tests(statechart_profile).
 
+test(duplicate_trace_rejected_before_source_processing,
+     [forall(member(Options, [[trace(true),trace(true)],
+                              [trace(false),trace(false)],
+                              [trace(true),trace(false)]])),
+      throws(error(permission_error(duplicate, statechart_option, trace), _))]) :-
+    statechart_spawn(_, Options).
+
 test(api_exposes_only_source_aware_spawn) :-
     predicate_property(statechart_actor:statechart_spawn(_, _), exported),
     predicate_property(statechart_actor:raise(_), exported),

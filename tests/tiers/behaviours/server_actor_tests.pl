@@ -58,6 +58,64 @@ blocking_cb(_, State, _, State) :- sleep(3600).
 
 :- begin_tests(server_actor).
 
+test(halt_detects_death_before_ack,
+     [throws(server_down(false))]) :-
+    spawn(receive({'$stop'(_, _) -> fail}), Pid, []),
+    server_halt(Pid, _).
+
+test(halt_preserves_unrelated_down) :-
+    self(Self),
+    actors:send(Self, down(other, unrelated, false)),
+    server_spawn(echo, [], Pid),
+    server_halt(Pid, true),
+    receive({down(other, unrelated, false) -> true},
+            [timeout(0), on_timeout(fail)]).
+
+test(halt_preserves_existing_monitor) :-
+    server_spawn(echo, [], Pid),
+    monitor(Pid, Ref),
+    server_halt(Pid, true),
+    receive({down(Pid, Ref, true) -> true},
+            [timeout(1), on_timeout(fail)]),
+    receive({down(Pid, _, _) -> fail}, [timeout(0)]).
+
+test(yield_cleans_monitor_on_timeout,
+     [forall(member(Handler, [true, fail, throw(timeout_test)]))]) :-
+    spawn(receive({stop -> true}), Pid, []),
+    monitor(Pid, Ref),
+    catch(ignore(server_yield(unanswered, Ref, _,
+                             [timeout(0), on_timeout(Handler)])),
+          timeout_test, true),
+    monitor(Pid, Witness),
+    actors:send(Pid, stop),
+    receive({down(Pid, Witness, true) -> true},
+            [timeout(1), on_timeout(fail)]),
+    receive({down(Pid, Ref, _) -> fail}, [timeout(0)]).
+
+test(yield_cleans_monitor_on_reply_unification_failure) :-
+    self(Self),
+    spawn(receive({stop -> true}), Pid, []),
+    monitor(Pid, Ref),
+    actors:send(Self, answer-actual),
+    \+ server_yield(answer, Ref, different, []),
+    monitor(Pid, Witness),
+    actors:send(Pid, stop),
+    receive({down(Pid, Witness, true) -> true},
+            [timeout(1), on_timeout(fail)]),
+    receive({down(Pid, Ref, _) -> fail}, [timeout(0)]).
+
+test(yield_preserves_timeout_handler_alternatives) :-
+    spawn(receive({stop -> true}), Pid, []),
+    monitor(Pid, Ref),
+    findall(X, server_yield(unanswered, Ref, _,
+                           [timeout(0), on_timeout(member(X, [a,b]))]), Xs),
+    assertion(Xs == [a,b]),
+    monitor(Pid, Witness),
+    actors:send(Pid, stop),
+    receive({down(Pid, Witness, true) -> true},
+            [timeout(1), on_timeout(fail)]),
+    receive({down(Pid, Ref, _) -> fail}, [timeout(0)]).
+
 
 %% 1. Basic spawn and single request.
 test(basic_spawn_and_request) :-
