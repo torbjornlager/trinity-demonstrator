@@ -1,4 +1,4 @@
-/* Reuse the bounded fake backend and conversation assertions from example 19. */
+/* Reuse the bounded fake backend and conversation assertions from example 21. */
 :- ['model_service_tests.pl'].
 
 spawn_model_chart(Pid) :- spawn_model_chart(normal, Pid).

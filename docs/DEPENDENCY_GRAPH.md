@@ -94,19 +94,19 @@ python3 tools/generate_dependency_graph.py
 | `examples/actors/03 expert-system.pl` | - |
 | `examples/actors/04 count_server.pl` | - |
 | `examples/actors/05 fridge.pl` | - |
-| `examples/actors/06 selective-receive.pl` | - |
-| `examples/actors/07 priority_queue.pl` | - |
-| `examples/actors/08 alarm.pl` | - |
-| `examples/actors/09 ping-pong.pl` | - |
-| `examples/actors/10 ring.pl` | - |
-| `examples/actors/11 dining_philosophers.pl` | - |
-| `examples/actors/12 links.pl` | - |
+| `examples/actors/06 ping-pong.pl` | - |
+| `examples/actors/07 selective-receive.pl` | - |
+| `examples/actors/08 priority_queue.pl` | - |
+| `examples/actors/09 alarm.pl` | - |
+| `examples/actors/10 links.pl` | - |
+| `examples/actors/11 ring.pl` | - |
+| `examples/actors/12 dining_philosophers.pl` | - |
 | `examples/actors/13 parallel.pl` | - |
 | `examples/actors/14 backtracking.pl` | - |
 | `examples/actors/15 simple_toplevel.pl` | - |
 | `examples/actors/16 fridge_server.pl` | - |
 | `examples/actors/17 rpc.pl` | - |
-| `examples/actors/18 promise-and-yield.pl` | - |
+| `examples/actors/19 promise-and-yield.pl` | - |
 | `examples/services/discovery_directory.pl` | - |
 | `examples/services/discovery_hub.pl` | - |
 | `examples/services/node_resident_services.pl` | - |

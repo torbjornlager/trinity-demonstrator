@@ -1,6 +1,6 @@
 # Public model example (19)
 
-Example `19 model-actor.pl` runs on **n3**, using the owner-installed
+Example `21 model-actor.pl` runs on **n3**, using the owner-installed
 `model_chat/2` shared-database predicate. The drawer source implements
 `chat_actor(History)`: it receives asks, appends successful user/assistant
 turns, replies to its caller, and loops with its own history. Reset clears
@@ -52,9 +52,9 @@ This recreates n3 and ends its current actor sessions. Schedule it when
 that interruption is acceptable. It does not recreate Caddy, other nodes,
 or the authentication sidecar. No new container is added.
 
-Open n3's portal and choose `19 model-actor.pl` under Web Prolog source.
+Open n3's portal and choose `21 model-actor.pl` under Web Prolog source.
 The n3 image contains the new source; other nodes' drawers receive it only
-when their images are updated. Example 19 is intended to execute on n3.
+when their images are updated. Example 21 is intended to execute on n3.
 The optional `compose.model.yaml` override can also enable the capability,
 but the `.env` setting is preferable for ordinary ongoing deployment.
 

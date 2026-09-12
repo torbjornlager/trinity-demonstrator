@@ -301,7 +301,7 @@ docker compose up --build -d        # rebuilds caddy, wp_n1..wp_n5, wp_admin
 
 ## Model example (n3)
 
-The optional public model capability for example 19 runs on **n3**. Its
+The optional public model capability for example 21 runs on **n3**. Its
 setup, resource bounds and focused deployment command are documented in
 [MODEL_SERVICE.md](MODEL_SERVICE.md). It is disabled by default and uses
 the Mac's native Ollama installation without adding a container.

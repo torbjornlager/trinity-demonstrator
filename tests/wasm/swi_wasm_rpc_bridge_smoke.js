@@ -519,12 +519,12 @@ ok(includes('<div class="project-title">Web Prolog code</div>') &&
    includes(':class="{ \'is-profile-incompatible\': isExampleUnavailable(example) }"'),
    "the Examples drawer reserves its SXML menu for ACTOR profiles");
 ok(includes('"02 grammar.pl": "stateless"') &&
-   includes('"18 promise-and-yield.pl": "stateless"') &&
-   !actorExample("18 promise-and-yield.pl").includes("writeln(") &&
-   actorExample("18 promise-and-yield.pl").includes("sleep(0.5)") &&
-   actorExample("18 promise-and-yield.pl").includes("timeout(0.1)") &&
-   !actorExample("18 promise-and-yield.pl").includes("sleep(1)") &&
-   !actorExample("18 promise-and-yield.pl").includes("sleep(2)"),
+   includes('"19 promise-and-yield.pl": "stateless"') &&
+   !actorExample("19 promise-and-yield.pl").includes("writeln(") &&
+   actorExample("19 promise-and-yield.pl").includes("sleep(0.5)") &&
+   actorExample("19 promise-and-yield.pl").includes("timeout(0.1)") &&
+   !actorExample("19 promise-and-yield.pl").includes("sleep(1)") &&
+   !actorExample("19 promise-and-yield.pl").includes("sleep(2)"),
    "grammar and promise/yield examples are available on ISOBASE nodes");
 {
   const currentLoadText = embeddedWorkbenchMethod(
@@ -1303,11 +1303,11 @@ ok(includes('source: String(extraSourceText || "")') &&
    "spawned SWI-WASM actors receive only explicit src_* source");
 ok(actorExample("04 count_server.pl").includes("src_predicates([count_server/1])") &&
    actorExample("05 fridge.pl").includes("src_predicates([fridge/1])") &&
-   actorExample("09 ping-pong.pl").includes("src_predicates([pong/0])") &&
-   actorExample("09 ping-pong.pl").includes("src_predicates([ping/2])") &&
-   actorExample("11 dining_philosophers.pl").includes("src_predicates([doForks/1])") &&
-   actorExample("11 dining_philosophers.pl").includes("doWaiter/4, processWaitList/2, areAvailable/2") &&
-   actorExample("11 dining_philosophers.pl").includes("philosopher/3, sleep/0") &&
+   actorExample("06 ping-pong.pl").includes("src_predicates([pong/0])") &&
+   actorExample("06 ping-pong.pl").includes("src_predicates([ping/2])") &&
+   actorExample("12 dining_philosophers.pl").includes("src_predicates([doForks/1])") &&
+   actorExample("12 dining_philosophers.pl").includes("doWaiter/4, processWaitList/2, areAvailable/2") &&
+   actorExample("12 dining_philosophers.pl").includes("philosopher/3, sleep/0") &&
    actorExample("15 simple_toplevel.pl").includes("src_predicates([session/2])"),
    "actor examples explicitly transfer editor predicates to spawned workers");
 ok(includes("src_predicates([Pred/Arity])") &&

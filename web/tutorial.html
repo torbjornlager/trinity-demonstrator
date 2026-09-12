@@ -479,6 +479,99 @@ father_child(mike, tom).
 </button>
 </p>
 
+<h2 id="service-policy">Reasoning about service requests</h2>
+
+<p>Before building a service-request agent, try its policy rules on their own.
+A laptop within budget is permitted; restricted services are forbidden.
+VPN requests deliberately overlap: one rule permits them within budget,
+while another forbids them. What should the program conclude?</p>
+
+<p>Load <strong>22 service-policy.pl</strong> from the Examples drawer, or use
+<strong>Load</strong> below. It works on <strong>ISOBASE</strong> (including
+<code>n1</code>), <strong>ISOTOPE</strong>, <strong>ACTOR</strong>, and
+<strong>SWI-WASM</strong>. These are the same rules used by
+<strong>18 service-request.xml</strong>.</p>
+
+<details><summary>Service-policy source</summary>
+<pre id="service-policy-source">%% Reasoning about service requests, before adding an agent.
+%
+% These are the policy rules from 18 service-request.xml. They run locally
+% on ISOBASE (including n1), ISOTOPE, ACTOR, and SWI-WASM.
+%
+% classify(+Fields, -Decision) expects validated, ground fields: at most
+% one service/1 and one cost/1. Services are laptop, vpn, restricted, or
+% training; costs are integers from 0 to 10000000. Either field may be
+% missing. The full statechart validates input before calling these rules.
+%
+% This example only classifies a request; it does not approve or send one.
+
+% Policy
+
+complete(Fields) :-
+    memberchk(service(_), Fields),
+    memberchk(cost(_), Fields).
+
+permit(Fields) :-
+    memberchk(service(Service), Fields),
+    memberchk(Service, [laptop, vpn]),
+    memberchk(cost(Cost), Fields),
+    Cost =&lt; 1000.
+
+forbid(Fields) :-
+    memberchk(service(restricted), Fields).
+forbid(Fields) :-
+    memberchk(service(vpn), Fields).
+
+% Assessment: the order matters.
+% Check completeness first, then conflict, prohibition, permission, and gap.
+
+classify(Fields, insufficient(missing_fields)) :-
+    \+ complete(Fields), !.
+classify(Fields, conflicting) :-
+    permit(Fields), forbid(Fields), !.
+classify(Fields, forbidden) :-
+    forbid(Fields), !.
+classify(Fields, permitted) :-
+    permit(Fields), !.
+classify(_, insufficient(policy_gap)).</pre></details>
+<p class="ask-buttons"><button onclick="consult(&quot;#service-policy-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
+
+<p>Each query supplies a ground field list and returns one assessment:</p>
+<pre id="service-policy-laptop">?- classify([service(laptop), cost(700)], Decision).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#service-policy-laptop&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Decision = permitted</code>.</p>
+<pre id="service-policy-restricted">?- classify([service(restricted), cost(1)], Decision).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#service-policy-restricted&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Decision = forbidden</code>.</p>
+<pre id="service-policy-vpn">?- classify([service(vpn), cost(10)], Decision).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#service-policy-vpn&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Decision = conflicting</code>.</p>
+<pre id="service-policy-missing">?- classify([service(laptop)], Decision).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#service-policy-missing&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Decision = insufficient(missing_fields)</code>.</p>
+<pre id="service-policy-training">?- classify([service(training), cost(500)], Decision).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#service-policy-training&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Decision = insufficient(policy_gap)</code>.</p>
+<pre id="service-policy-budget">?- classify([service(laptop), cost(1001)], Decision).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#service-policy-budget&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Decision = insufficient(policy_gap)</code>.</p>
+
+<p>The order of <code>classify/2</code>'s clauses makes the policy explicit.
+Missing fields come first. Next, check whether permission and prohibition
+both apply; only then check each separately. The cuts commit to that assessment,
+so asking for another answer cannot turn a conflict into permission.</p>
+
+<p>Notice the two kinds of insufficient information: a missing field, and a
+complete request that the policy does not cover. A laptop costing 1001 loses
+permission, but no rule forbids it. Failure to prove permission is not itself
+proof of prohibition.</p>
+
+<p><code>classify/2</code> expects the validated fields described in the source;
+it does not validate arbitrary input or generate requests from variables.
+The full <a href="/actor-profile-tutorial#statechart-service-request">service-request
+agent</a> adds validation, confirmation, review, and dispatch. Here, a result is
+only an assessment; no request is sent.</p>
+
 <h2>Stateless API limitations</h2>
 
 <p>
@@ -863,37 +956,71 @@ assert_many(Count) :-
 </p>
 
 
-<h2>Distributed proof trees</h2>
+<h2>Local and distributed proof trees</h2>
 
-<p>
-    A defining advantage of logic-based AI is transparency: every conclusion
-    rests on rules and facts, and an explanation can be constructed as a proof
-    object. On the Prolog Web, explanations can survive distribution. If a
-    subgoal is proved on another node, its justification is folded into the
-    same overall proof structure rather than hidden inside an opaque remote
-    call.
-</p>
+<p>A normal query gives an answer. A small meta-interpreter can also return
+an explanation: a term recording the rules and facts used to establish it.
+Start locally, then use the same idea across nodes.</p>
 
-<p>
-    A compact meta-interpreter achieves this by treating remote calls as
-    proof-producing sub-derivations. When the interpreter encounters a remote
-    goal it ships <em>itself</em> to the remote node via
-    <code>src_predicates([prove/2])</code>, so the remote node also runs
-    <code>prove/2</code> and returns a proof term. Remote contributions are
-    marked in the result with the <code>@</code> operator.
-</p>
+<p>Use <strong>SWI-WASM (Worker actors)</strong>, or any <strong>ISOBASE</strong>,
+<strong>ISOTOPE</strong>, or <strong>ACTOR</strong> node, including <code>n1</code>. The complete example is
+<strong>18 proof-trees.pl</strong> under <strong>Web Prolog code</strong> in the
+Examples drawer.</p>
 
-<div class="alert alert-info">
-  <strong>Note.</strong> This example runs on <code>n2</code>, which has
-  the distributed <code>mortal/1</code> and <code>human/1</code> definitions
-  in its shared database.
-</div>
+<h3>First an answer, then its explanation</h3>
+<p>Load a small knowledge base and the book's local proof-producing interpreter:</p>
+<pre id="dpt-local-source">% Knowledge base
 
-<p>
-    Load the interpreter into your session:
-</p>
+:- dynamic mortal/1, human/1.
 
-<pre id="dpt-prove-source">prove(true, true) :- !.
+mortal(X) :- human(X).
+human(socrates).
+
+% Interpreter
+
+prove(true, true) :- !.
+prove((A, B), (ProofA, ProofB)) :- !,
+    prove(A, ProofA), prove(B, ProofB).
+prove(A, A/Proof) :- clause(A, B), prove(B, Proof).</pre>
+<p class="ask-buttons"><button onclick="consult(&quot;#dpt-local-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
+<pre id="dpt-local-answer">?- mortal(Who).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#dpt-local-answer&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Who = socrates</code>. Now ask for the reasoning as well:</p>
+<pre id="dpt-local-proof">?- prove(mortal(Who), Proof).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#dpt-local-proof&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<pre>Who = socrates,
+Proof = mortal(socrates)/(human(socrates)/true).</pre>
+
+<p>Read this from the outside in: Socrates is mortal because he is human;
+<code>human(socrates)</code> is a fact, so its body is <code>true</code>.
+The <code>/</code> symbol constructs a term here; it does not perform division.
+For a conjunction, the interpreter returns a pair of proofs.</p>
+
+<h3>Let the explanation cross a node boundary</h3>
+<p>Add two cases for <code>rpc/2-3</code>. When the interpreter encounters a
+remote goal, it ships <code>prove/2</code> to that node and asks for a proof
+there. The returned term marks that step with <code>@URI</code>. Load the
+extended version, which includes the same local knowledge base:</p>
+<details><summary>Complete proof-tree example</summary>
+<pre id="dpt-prove-source">%% From answers to explanations, locally and across nodes.
+%
+% The first two queries need no remote service. The last uses n3 and n4.
+% This follows the proof-producing meta-interpreter in the AI chapter.
+%
+% A/Proof records a goal and its justification. true is a proved leaf;
+% (ProofA,ProofB) records a conjunction. A@URI/Proof marks a remote step.
+% These are ordinary Prolog terms, not a separate explanation language.
+
+% Knowledge base
+
+:- dynamic mortal/1, human/1.
+
+mortal(X) :- human(X).
+human(socrates).
+
+% Interpreter
+
+prove(true, true) :- !.
 prove(rpc(URI, A), Proof) :- !,
     prove(rpc(URI, A, []), Proof).
 prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
@@ -902,76 +1029,39 @@ prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
       | Options
     ]).
 prove((A, B), (ProofA, ProofB)) :- !,
-    prove(A, ProofA),
-    prove(B, ProofB).
-prove(A, A/Proof) :-
-    clause(A, B),
-    prove(B, Proof).
-</pre>
+    prove(A, ProofA), prove(B, ProofB).
+prove(A, A/Proof) :- clause(A, B), prove(B, Proof).</pre></details>
+<p class="ask-buttons"><button onclick="consult(&quot;#dpt-prove-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
 
-<p class="ask-buttons">
-  <button onclick="consult(&quot;#dpt-prove-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
-</p>
-
-<p>
-    On <code>n2</code>, the shared database contains:
-</p>
-
-<pre>:- dynamic mortal/1, human/1.
-
-mortal(X) :- human(X).
-
+<p>In this deployment, <code>n3</code> contains:</p>
+<pre>mortal(X) :- human(X).
 human(socrates).
-human(X) :- rpc('https://n1.elfenbenstornet.se', human(X)).
-</pre>
+human(X) :- rpc('https://n4.elfenbenstornet.se', human(X)).</pre>
+<p>And <code>n4</code> contains:</p>
+<pre>human(plato).
+human(aristotle).</pre>
+<pre id="dpt-prove-run">?- prove(rpc(&#x27;https://n3.elfenbenstornet.se&#x27;, mortal(Who)), Proof).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#dpt-prove-run&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 
-<p>
-    while <code>n1</code> hosts:
-</p>
+<p>The first answer is justified on <code>n3</code>:</p>
+<pre>Who = socrates,
+Proof = (mortal(socrates)@'https://n3.elfenbenstornet.se')/
+          (human(socrates)/true).</pre>
+<p>Request the next answer. Plato's proof also visits <code>n4</code>:</p>
+<pre>Who = plato,
+Proof = (mortal(plato)@'https://n3.elfenbenstornet.se')/
+          (human(plato)/
+            ((human(plato)@'https://n4.elfenbenstornet.se')/true)).</pre>
+<p>The next answer is Aristotle with the same shape. Only the interpreter is
+shipped; the remote nodes supply their own knowledge. Its recursive handling
+of <code>rpc</code> preserves the explanation at each hop.</p>
 
-<pre>:- dynamic human/1.
-
-human(plato).
-human(aristotle).
-</pre>
-
-<p>
-    Now ask for a proof:
-</p>
-
-<pre id="dpt-prove-run">?- prove(mortal(X), Proof).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#dpt-prove-run&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    You should see something like:
-</p>
-
-<pre>Proof = mortal(socrates)/(human(socrates)/true),
-X = socrates ;
-Proof = mortal(plato)/(human(plato)/(human(plato)@'https://n4.elfenbenstornet.se'/true)),
-X = plato ;
-Proof = mortal(aristotle)/(human(aristotle)/(human(aristotle)@'https://n4.elfenbenstornet.se'/true)),
-X = aristotle.
-</pre>
-
-<p>
-    The first answer is proved entirely on <code>n2</code>. The second and
-    third are proved by delegating to <code>n1</code>, and the annotation
-    <code>@'https://n1.elfenbenstornet.se'</code> documents exactly where each
-    remote step was resolved. The proof term is ordinary Prolog data: it can be
-    inspected, stored, or rendered into a human-readable explanation.
-</p>
-
-<div class="alert alert-info">
-  <strong>Note.</strong> <code>clause/2</code> can only inspect predicates
-  declared <code>dynamic</code>.
-</div>
-
+<p>This small interpreter handles facts, conjunctions, and rules whose clauses
+are available through <code>clause/2</code>, plus remote calls. It is not an
+interpreter for arbitrary Prolog built-ins or control constructs. The knowledge
+predicates are declared <code>dynamic</code> for inspection on the public nodes.
+A proof explains a conclusion relative to those rules and facts; it does not
+independently verify that the facts are true.</p>
 
 </section>
 
@@ -2251,6 +2341,127 @@ ping_pong :-
     The returned success term should now contain
     <code>input('Input',hello)</code>.
 </p>
+
+<h2 id="expert-system-agent">An expert-system agent and a simulation</h2>
+
+<p>We can turn the expert system in <strong>03 expert-system.pl</strong> into
+an agent by replacing terminal input with a question to another process:</p>
+<pre>prove(A) :- askable(A, Q), input(Q, T), T == yes.</pre>
+
+<p>The expert runs in a toplevel actor. The shell plays the user: it receives
+<code>prompt(Pid, Question)</code>, chooses <code>yes</code> or <code>no</code>
+randomly, and answers with <code>respond/2</code>. Proof search determines which
+question comes next. This follows the simulation in chapter 8 of the book.</p>
+
+<p>Select <strong>SWI-WASM</strong> and leave <strong>Settings &rarr; SWI-WASM
+execution model</strong> on <strong>Worker actors (default)</strong>, then load
+the source. The shell and expert run in separate browser workers. The same code
+also runs on the ACTOR nodes <code>n3</code> and <code>n4</code>.</p>
+
+<p>The source is available as <strong>20 expert-system-agent.pl</strong> in the
+Examples drawer. The book assumes a node-resident knowledge base; this version
+ships the rules along with the interpreter, so the browser simulation needs no
+remote knowledge service.</p>
+
+<details>
+<summary>Expert-system agent source</summary>
+<pre id="expert-agent-source">%% An expert-system agent and a simulation, following chapter 8.
+%
+% The expert asks with input/2; the shell plays the user and answers
+% randomly. Proof search decides which question comes next.
+%
+% The book assumes a node-resident knowledge base. Here we ship the rules
+% too, so the example runs without installing a separate service.
+
+:- dynamic good_pet/1, bird/1, has_feathers/1, tweets/1,
+           small/1, cuddly/1, yellow/1.
+
+% Inference engine
+
+prove(true) :- !.
+prove((A, B)) :- !, prove(A), prove(B).
+prove(A) :- clause(A, B), prove(B).
+prove(A) :- askable(A, Q), input(Q, T), T == yes.
+
+% Knowledge base
+
+good_pet(X) :- bird(X), small(X).
+good_pet(X) :- cuddly(X), yellow(X).
+
+bird(X) :- has_feathers(X), tweets(X).
+
+askable(tweets(_), &#x27;Does it tweet?&#x27;).
+askable(small(_), &#x27;Is it small?&#x27;).
+askable(cuddly(_), &#x27;Is it cuddly?&#x27;).
+askable(has_feathers(_), &#x27;Does it have feathers?&#x27;).
+askable(yellow(_), &#x27;Is it yellow?&#x27;).
+
+% Expert system
+
+expert_ask(Query, Pid, Options) :-
+    append([session(false),
+            src_predicates([prove/1, good_pet/1, bird/1, askable/2,
+                            has_feathers/1, tweets/1, small/1,
+                            cuddly/1, yellow/1])], Options, SpawnOptions),
+    toplevel_spawn(Pid, SpawnOptions),
+    toplevel_call(Pid, prove(Query), [
+        limit(1),
+        once(true)
+    ]).
+
+% Simulation
+
+simulation(Options) :-
+    random_member(Name, [tweety,pingu]),
+    format(&#x27;A1: Is ~w a good pet?~n&#x27;, [Name]),
+    expert_ask(good_pet(Name), Pid, Options),
+    interact(Pid, Name).
+
+interact(Pid, Name) :-
+    receive({
+        failure(Pid) -&gt;
+            format(&#x27;A2: No, ~w is not a good pet.~n&#x27;, [Name]) ;
+        success(Pid, _, false) -&gt;
+            format(&#x27;A2: Yes, ~w is a good pet.~n&#x27;, [Name]) ;
+        error(Pid, Error) -&gt;
+            throw(Error) ;
+        prompt(Pid, Question) -&gt;
+            format(&#x27;A2: ~w~n&#x27;, [Question]),
+            random_member(Answer, [yes,no]),
+            respond(Pid, Answer),
+            format(&#x27;A1: ~w~n&#x27;, [Answer]),
+            interact(Pid, Name)
+    }).</pre>
+</details>
+<p class="ask-buttons">
+  <button onclick="consult(&quot;#expert-agent-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
+</p>
+
+<pre id="expert-agent-run">?- simulation([]).</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#expert-agent-run&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p><code>A1</code> is the simulated user and <code>A2</code> is the expert.
+Run it a few times. A <code>no</code> answer can make the expert backtrack from
+the small-bird rule to the cuddly-and-yellow rule. The dialogue changes because
+the answers change, while the rules stay the same.</p>
+
+<p>Now give the expert one private fact:</p>
+<pre id="expert-agent-known">?- simulation([src_list([yellow(tweety)])]).</pre>
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#expert-agent-known&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>If this run selects Tweety and reaches the yellow subgoal, it can prove that
+fact without asking. Pingu still has no known colour. Each run starts a fresh
+actor, so the extra fact belongs only to that run.</p>
+
+<p><code>limit(1)</code> and <code>once(true)</code> ask for one proof and discard
+alternatives. They do not limit the questions needed to find it. As in the book,
+this is a small pedagogical client; a deployed client should also monitor the
+expert and bound its wait. The printed negative answer means no proof was found
+with the supplied answers.</p>
 
 <h2>Aborting and halting</h2>
 

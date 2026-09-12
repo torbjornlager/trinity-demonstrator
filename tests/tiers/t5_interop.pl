@@ -376,8 +376,8 @@ test(call_prolog_existence_error) :-
     S1 == S2,
     mask_pids(B1, M1),
     mask_pids(B2, M2),
-    sub_string(M1, Before1, _, _, "context("),
-    sub_string(M2, Before2, _, _, "context("),
+    once(sub_string(M1, Before1, _, _, "context(")),
+    once(sub_string(M2, Before2, _, _, "context(")),
     sub_string(M1, 0, Before1, _, Formal1),
     sub_string(M2, 0, Before2, _, Formal2),
     (   Formal1 == Formal2

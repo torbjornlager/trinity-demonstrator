@@ -4,7 +4,7 @@ Two statecharts, two conversations, one small language model.
 Select n3 (ACTOR), load this SXML, and use the Examples-menu queries below.
 Keep the Logger open with SXML trace enabled to watch ready -> thinking -> ready.
 
-This is the statechart counterpart of Web Prolog example 19. Each chart owns
+This is the statechart counterpart of Web Prolog example 21. Each chart owns
 history/1 in its private datamodel. An ask adds a user turn, thinking invokes
 the protected model_chat/2 capability asynchronously, and only a successful
 reply adds a complete exchange. reset clears only this chart; stop enters the

@@ -10,7 +10,7 @@
 
 % Load the exact drawer source in a test-only context. The public WS test
 % below instead resolves model_chat/2 from the real shared-database overlay.
-:- load_files(chat_example:'../examples/actors/19 model-actor.pl', []).
+:- load_files(chat_example:'../examples/actors/21 model-actor.pl', []).
 chat_example:model_chat(Messages, Result) :- model_service:model_chat(Messages, Result).
 
 :- dynamic backend_mode/1, seen/1, signals/2.
@@ -155,7 +155,7 @@ wait_for_idle :-
     ; sleep(0.01), wait_for_idle ).
 
 public_example(Port) :-
-    read_file_to_string('examples/actors/19 model-actor.pl', Source, []),
+    read_file_to_string('examples/actors/21 model-actor.pl', Source, []),
     term_string([src_text(Source)], Options),
     format(atom(URL), 'http://localhost:~d/ws', [Port]),
     setup_call_cleanup(

@@ -277,7 +277,9 @@ profile_check_step_(toplevel_spawn(Pid), Profile) :-
     ensure_goal_profile(Profile, toplevel_spawn(Pid)).
 profile_check_step_(toplevel_spawn(Pid, Options), Profile) :-
     ensure_goal_profile(Profile, toplevel_spawn(Pid, Options)),
-    profile_check_source_options(Profile, actor, Options).
+    % Like spawn/3, source may refer to predicates still being loaded.
+    % The spawned actor validates the materialized source at runtime.
+    profile_check_nested_spawn_source_options(Profile, actor, Options).
 profile_check_step_(toplevel_call(Pid, Goal), Profile) :-
     ensure_goal_profile(Profile, toplevel_call(Pid, Goal)),
     profile_check_goal_1(Profile, Goal).

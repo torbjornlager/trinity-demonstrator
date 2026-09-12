@@ -1,6 +1,6 @@
 :- module(model_service, [configure_model_service/1, model_answer/2, model_chat/2]).
 
-/** <module> Owner-installed, bounded inference capability for example 19.
+/** <module> Owner-installed, bounded inference capability for example 21.
 
 Only model_answer/2 and model_chat/2 are exposed in the public shared database. It returns to
 the calling actor; no return address, URL, model or options come from users.

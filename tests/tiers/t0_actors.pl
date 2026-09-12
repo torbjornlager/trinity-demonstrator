@@ -601,7 +601,6 @@ test(monitor_references_are_unique) :-
    same_length(Refs, UniqueRefs).
 
 test(spawned_child_inherits_io_target, Data == hello_io) :-
-   self(Self),
    message_queue_create(Queue),
    with_io_target(Queue,
                   ( spawn(terminal_output(hello_io), _Pid, [link(false)]),
