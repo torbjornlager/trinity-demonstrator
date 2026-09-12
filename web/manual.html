@@ -201,6 +201,8 @@
         <li><a href="#sec:actor-predicate-generics">Actor-based predicate generics</a></li>
         <li><a href="#sec:synchronous-predicate-api">Predicates for remote Prolog-style calls</a></li>
         <li><a href="#sec:iso-predicates">ISO predicates and related constructs</a></li>
+        <li><a href="#sec:node-introspection">Node introspection</a></li>
+        <li><a href="#sec:protocol-notes">HTTP and WebSocket conventions</a></li>
     </ul>
 </div>
 
@@ -258,7 +260,8 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
     </div>
     <pre>monitor(+PidOrName, -Ref) is det.</pre>
     <p>Installs a monitor and returns a fresh reference in <code>Ref</code>. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Pid,Ref,Reason)</code>.</p>
-    <p><span class="note-label">Note:</span> Using <code>monitor(true)</code> in <code>spawn/3</code> is the safest variant for short-lived children, since monitoring is established during spawn. Installing monitoring later with <code>monitor/2</code> is a separate step and may miss a child that exits immediately.</p>
+    <p><span class="note-label">Note:</span> <code>monitor(true)</code> in <code>spawn/3</code> installs monitoring before the child can terminate, preserving its actual exit reason. A monitor installed after termination is discharged with <code>down(Pid,Ref,no_process)</code>.</p>
+    <p>Reasons include <code>true</code> for success, <code>false</code> for failure, <code>exception(E)</code> for an uncaught exception, and an explicit exit term. Loss of remote observation produces <code>connection_closed</code>; it discharges the monitor without proving actor death, and reconnection does not restore it. At the monitor boundary, an SWI <code>error(Formal,Context)</code> preserves <code>Formal</code> but replaces <code>Context</code> with a variable. Undefined-procedure errors also omit private generated actor-module qualifications.</p>
 </article>
 
 <article class="predicate-entry" id="demonitor/1-2">
@@ -532,7 +535,7 @@ toplevel_next(+Pid, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>toplevel_abort(+Pid) is det.</pre>
-    <p>Tells the local toplevel <code>Pid</code> to abort the execution of the currently running goal. An unknown or non-local pid has no effect.</p>
+    <p>Tells the local toplevel <code>Pid</code> to abort the currently running goal. Abort runs supported cleanup, bypasses recovery in client <code>catch/3</code>, and returns a persistent session to PTCP state <strong>s1</strong> without terminating the actor. An unknown or non-local pid has no effect.</p>
 </article>
 
 <article class="predicate-entry" id="toplevel_halt/1-2">
@@ -542,7 +545,7 @@ toplevel_next(+Pid, +Options) is det.</pre>
     </div>
     <pre>toplevel_halt(+Pid) is det.
 toplevel_halt(+Pid, -Reply) is det.</pre>
-    <p>Terminates toplevel actor <code>Pid</code> from any protocol state. The one-argument form requests termination through the actor runtime and returns without waiting for confirmation. The two-argument form installs a private monitor, requests termination, and waits until termination has been observed; it then unifies <code>Reply</code> with <code>true</code>.</p>
+    <p>Terminates toplevel actor <code>Pid</code> from any protocol state. The one-argument form requests termination through the actor runtime and returns without waiting for confirmation. The two-argument form installs a private monitor and waits for its notification. Observed termination or <code>no_process</code> yields <code>Reply = true</code>. Loss of remote observation yields <code>Reply = error(connection_closed)</code>, leaving termination unconfirmed. Halt is an untrappable termination signal.</p>
     <p><strong>Note:</strong> The private monitor used by <code>toplevel_halt/2</code> is distinct from any existing monitor. If the toplevel was spawned with <code>monitor(true)</code>, the caller still receives its original <code>down(Pid, Pid, true)</code> notification.</p>
 </article>
 
@@ -594,7 +597,7 @@ server_promise(+To, +Request, -Ref, -MonRef) is det.</pre>
 server_yield(+Ref, -Response, +Options) is det.
 server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
     <p>Waits for the response matching <code>Ref</code>. The three-argument variant accepts the options of <code>receive/2</code>.</p>
-    <p>The four-argument variant uses <code>MonRef</code> to detect server termination, removes that monitor after a normal reply, and throws <code>server_down(Reason)</code> if the server dies before replying.</p>
+    <p>The four-argument variant uses <code>MonRef</code> to detect server termination and throws <code>server_down(Reason)</code> if the server dies before replying. When the wait finishes, fails, or throws, it removes the monitor and flushes pending notifications for that reference. This includes timeout paths. Alternatives supplied by <code>on_timeout/1</code> remain available; cleanup occurs when the call finishes.</p>
 </article>
 
 <article class="predicate-entry" id="server_upgrade/2-3">
@@ -616,6 +619,7 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     </div>
     <pre>server_halt(+To, -Reply) is det.</pre>
     <p>Asks the server <code>To</code> to stop gracefully and binds <code>Reply</code> to its acknowledgement.</p>
+    <p>A fresh correlation reference prevents unrelated acknowledgements from satisfying the request. A private monitor is installed before sending; if the server dies before acknowledging, the call throws <code>server_down(Reason)</code>. The private monitor and its pending notifications are removed on completion, failure, or exception. Existing monitors are unaffected.</p>
 </article>
 
 <h2 id="sec:statechart-api">Predicates for programming with statechart actors</h2>
@@ -636,9 +640,9 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
     <ul>
         <li><code>name(+Name)</code><br>Register the statechart actor under <code>Name</code> in the local ordinary-name namespace.</li>
     </ul>
-    <p>Statechart trace events are published automatically. The Logger's <strong>SXML trace</strong> filter controls their visibility; tutorial diagrams consume the same events for animation.</p>
+    <p><code>trace(true)</code> (the default) generates trace events; <code>trace(false)</code> suppresses them. At most one <code>trace/1</code> option is accepted: duplicates raise <code>permission_error(duplicate, statechart_option, trace)</code>. The Logger's <strong>SXML trace</strong> filter controls the visibility of generated events; tutorial diagrams consume those events for animation.</p>
     <p>All remaining options are passed through to <code>spawn/3</code>.</p>
-    <p><code>src_list/1</code> and <code>src_predicates/1</code> are rejected for <code>statechart_spawn/2</code>.</p>
+    <p><code>src_list/1</code> and <code>src_predicates/1</code> supply supplemental Prolog source for the statechart's private module. They do not count as the required XML source.</p>
 </article>
 
 <article class="predicate-entry" id="statechart_halt/2-3">
@@ -659,7 +663,7 @@ statechart_halt(+Pid, -Reply, +Timeout) is det.</pre>
     </div>
     <pre>raise(+Event) is det.</pre>
     <p>Enqueues <code>Event</code> on the <em>internal</em> event queue of the current statechart interpreter.</p>
-    <p><span class="note-label">Important:</span> <code>raise/1</code> is only meaningful inside executable statechart content such as <code>&lt;datamodel&gt;</code>, <code>&lt;onentry&gt;</code>, <code>&lt;onexit&gt;</code>, and <code>&lt;go&gt;</code>.</p>
+    <p><span class="note-label">Important:</span> <code>raise/1</code> is only meaningful inside executable statechart content such as <code>&lt;onentry&gt;</code>, <code>&lt;onexit&gt;</code>, and <code>&lt;go&gt;</code>. The event is handled after the current executable content and before a new external message. Datamodel source is loaded before the event queue is initialized.</p>
 </article>
 
 <article class="predicate-entry" id="in/1">
@@ -914,9 +918,51 @@ yield(+Ref, ?Answer, +Options) is det.</pre>
 <h3>Actor I/O (Overrides)</h3>
 <p>The ambient stream I/O predicates of ISO Prolog are blacklisted. In their place, the actor runtime prelude injects local overrides that route output through the actor messaging layer:</p>
 <p><code>nl/0</code>, <code>write/1</code>, <code>writeq/1</code>, <code>write_term/2</code>, <code>writeln/1</code>, <code>write_canonical/1</code>, <code>print/1</code>, <code>display/1</code>, <code>format/1-2</code></p>
+<p><code>read/1</code> uses the session prompt protocol. <code>time/1</code> reports timing through the output channel and checks its nested goal against the active profile and sandbox.</p>
+<p><code>format/1-2</code> rejects the goal-executing <code>~@</code> directive, including numeric and colon-modified forms such as <code>~1@</code>, <code>~:@</code>, and <code>~*:@</code>, with <code>permission_error(use, format_specifier, '~@')</code>. Escaped <code>~~@</code> produces literal text.</p>
 
 <h3>Atomic Term Processing</h3>
 <p><code>atom_length/2</code>, <code>atom_concat/3</code>, <code>atom_chars/2</code>, <code>atom_codes/2</code>, <code>sub_atom/5</code>, <code>char_code/2</code>, <code>number_chars/2</code>, <code>number_codes/2</code></p>
+
+<h2 id="sec:node-introspection">Node introspection</h2>
+<article class="predicate-entry" id="node_setting/2">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">node_setting/2</span></div>
+        <div class="predicate-family">all public profiles</div>
+    </div>
+    <pre>node_setting(?Key, ?Value) is nondet.</pre>
+    <p>Enumerates publicly visible settings of the node servicing the request. With <code>Key</code> bound, succeeds for its visible current value. Unknown or unavailable keys fail. Credentials, principal policies, and shared-database source are not exposed.</p>
+    <ul>
+        <li>General: <code>url</code>, <code>profile</code>, <code>sandbox</code>, <code>auth</code>, <code>timeout</code>, <code>rate_window_seconds</code>.</li>
+        <li>Stateless API: <code>max_inflight_calls</code>, <code>max_term_text_bytes</code>, <code>max_call_requests_per_window</code>.</li>
+        <li>Private database: <code>max_load_text_bytes</code>, <code>load_uri_allowed_origins</code>.</li>
+        <li>Session API: <code>max_sessions_per_principal</code>, <code>max_session_spawns_per_window</code>.</li>
+        <li>Actor API: <code>max_ws_actors_per_principal</code>, <code>max_ws_frame_bytes</code>, <code>max_ws_commands_per_window</code>.</li>
+    </ul>
+    <p>API-specific keys are visible only when their corresponding built-in family is enabled for the node's profile. This predicate reads settings; it does not modify them.</p>
+</article>
+
+<h2 id="sec:protocol-notes">HTTP and WebSocket conventions</h2>
+<p>These wire conventions complement the predicate API above and the book's Appendix D.</p>
+<h3>Results and source loading</h3>
+<p>In JSON success events, <code>data</code> is a list of binding objects whose values are Prolog-text strings: for example, <code>{"X":"42"}</code>. Default JSON query formatting replaces an explicit template with the visible named query variables. HTTP <code>format=prolog</code> returns a Prolog answer term and honors the template. WebSocket <code>format(prolog)</code> honors the template but retains a JSON envelope with Prolog-term strings in its <code>data</code> array. A <code>down</code> event's <code>reason</code> is Prolog term text; numeric monitor references are JSON numbers.</p>
+<p>Supply source through spawn options. HTTP <code>/toplevel_call</code> still accepts changed, nonempty <code>src_text</code> for compatibility; empty or unchanged source does not reload. WebSocket <code>toplevel_call</code> rejects a <code>src_text</code> field even when empty. Its canonical <code>options</code> string accepts only <code>template/1</code>, <code>offset/1</code>, <code>limit/1</code>, <code>once/1</code>, and <code>format/1</code>. Defaults are the goal, <code>0</code>, <code>10000000000</code>, <code>false</code>, and <code>json</code>, respectively. Goal and options are parsed together. A WebSocket <code>toplevel_next</code> frame may include a JSON integer <code>limit</code>; omission inherits the current limit.</p>
+<p>HTTP sessions force <code>session(true)</code>; WebSocket toplevel spawn defaults to <code>session(false)</code>. HTTP polling retrieves one queued event without advancing the solution sequence. Its timeout does not abort the goal. The transport's <code>statechart_trace</code> setting defaults to <code>false</code> and is stored and acknowledged, but the current delivery code does not consult it to suppress traces. Use the statechart's <code>trace/1</code> option to control generation.</p>
+<h3>Browser transport extensions</h3>
+<pre>{"command":"transport_hello","version":1,
+ "browser_pids":true,"io_ack":true}</pre>
+<p>The node answers with <code>type:"transport_welcome"</code>, <code>protocol:"web_prolog_browser_actor"</code>, <code>version:1</code>, and both capability flags set to <code>true</code>. Flags in the welcome advertise support; each extension is enabled only when requested in the hello.</p>
+<p>With <code>browser_pids</code> enabled, qualified browser-local pids embedded in goals, templates, and messages receive connection-scoped return routes. Bare numbers, atoms, and source strings remain data. Replies arrive as:</p>
+<pre>{"type":"actor_message","target":"2159438818@localhost",
+ "message":"reply(ok)"}</pre>
+<p>With <code>io_ack</code> enabled, terminal output arrives inside an acknowledgement request:</p>
+<pre>{"type":"io_request","request_id":"opaque-reference",
+ "event":{"type":"output","pid":123,"data":"hello"}}</pre>
+<p>After accepting the output, reply on the same connection:</p>
+<pre>{"command":"browser_io_reply","request_id":"opaque-reference",
+ "status":"ok"}</pre>
+<p>The alternative status is <code>error</code>. The actor waits for acceptance; an error, connection closure, or a 30-second acknowledgement timeout raises an I/O error. Late replies are discarded. This acknowledges acceptance, not browser painting. Prompts and query answers retain their ordinary event forms. Without this extension, output arrives directly as an <code>output</code> event.</p>
+<p>WebSocket-created actors have a connection lifecycle monitor in addition to any explicit client monitor. Its <code>down</code> event carries a node-generated reference. Closing the connection terminates its actors and revokes browser return routes.</p>
 
 </div>
 </body>
