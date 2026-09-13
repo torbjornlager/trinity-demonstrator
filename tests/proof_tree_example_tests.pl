@@ -45,3 +45,57 @@ check_remote_proofs(Port) :-
         plato-((mortal(plato)@URI)/(human(plato)/((human(plato)@URI)/true))),
         aristotle-((mortal(aristotle)@URI)/(human(aristotle)/((human(aristotle)@URI)/true)))
     ]).
+
+:- use_module('tiers/node/multi_node_harness').
+:- begin_tests(shared_proof_tree).
+
+test(shared_databases_ship_only_interpreter) :-
+    with_test_nodes([node_spec(proof_leaf, [auth(open), profile(stateless),
+        sandbox(blacklist), load_shared_db_text("human(plato). human(aristotle).")])],
+      (nb_getval(node_url_proof_leaf, Leaf),
+       format(string(Source),
+          'mortal(X):-human(X). human(socrates). human(X):-rpc(~q,human(X)).', [Leaf]),
+       with_test_nodes([node_spec(proof_root, [auth(open), profile(stateless),
+           sandbox(blacklist), load_shared_db_text(Source)])],
+         (nb_getval(node_url_proof_root, Root),
+          findall(Who-Proof, proof_example:prove(rpc(Root,mortal(Who)),Proof), Answers),
+          assertion(Answers == [
+            socrates-((mortal(socrates)@Root)/(human(socrates)/true)),
+            plato-((mortal(plato)@Root)/(human(plato)/((human(plato)@Leaf)/true))),
+            aristotle-((mortal(aristotle)@Root)/(human(aristotle)/((human(aristotle)@Leaf)/true)))
+          ])
+         )))).
+
+test(call_nth_and_clause_guards) :-
+    with_test_nodes([node_spec(guard, [auth(open), profile(stateless), sandbox(blacklist),
+                         load_shared_db_text("human(socrates).")])],
+      (nb_getval(node_url_guard, URI),
+       findall(X-N,rpc(URI,call_nth(member(X,[a,b]),N)),Answers),
+       assertion(Answers == [a-1,b-2]),
+       forall(member(Goal,[call_nth(halt,1),(G=halt,call_nth(G,1)),
+                          clause(rpc(_,_,_),_), clause(time(_),_),
+                          (H=node:shared_db(_),clause(H,_))]),
+         (catch((rpc(URI,Goal), Result=unexpected_success), Error, Result=error(Error)),
+          assertion(Result = error(_)))),
+       findall(B,rpc(URI,clause(p(_),B),[src_text("p(X):-call_nth(member(X,[a,b]),1).")]),Bodies),
+       assertion(Bodies = [call_nth(member(_,[a,b]),1)])
+      )).
+
+test(shared_inspection_shadowing_and_mutation) :-
+    forall(member(Prefix,["", ":- dynamic human/1. "]),
+      (string_concat(Prefix,"human(socrates).",Shared),
+       with_test_nodes([node_spec(inspect, [auth(open), profile(stateless), sandbox(blacklist),
+                             load_shared_db_text(Shared)])],
+         (nb_getval(node_url_inspect,URI),
+          findall(X-B,rpc(URI,clause(human(X),B)),SharedClauses),
+          assertion(SharedClauses == [socrates-true]),
+          findall(X-B,rpc(URI,clause(human(X),B),[src_text("human(local).")]),LocalClauses),
+          assertion(LocalClauses == [local-true]),
+          forall(member(Goal,[assertz(human(fake)),retractall(human(_))]),
+            (catch((rpc(URI,Goal),Result=unexpected_success),Error,Result=error(Error)),
+             assertion(Result=error(_)))),
+          findall(X,rpc(URI,human(X)),Humans),
+          assertion(Humans == [socrates])
+         )))).
+
+:- end_tests(shared_proof_tree).

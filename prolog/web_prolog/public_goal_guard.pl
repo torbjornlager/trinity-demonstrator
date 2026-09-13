@@ -138,6 +138,10 @@ rewrite_goal_(Module, Vars^Goal0, Vars^Goal) :-
     rewrite_goal(Module, Goal0, Goal).
 rewrite_goal_(Module, \+ Goal0, \+ Goal) :-
     rewrite_goal(Module, Goal0, Goal).
+rewrite_goal_(Module, call_nth(Goal0, N), call_nth(Goal, N)) :-
+    rewrite_goal(Module, Goal0, Goal).
+rewrite_goal_(Module, clause(Head, Body),
+              public_goal_guard:'$sandbox_clause'(Module, Head, Body)).
 rewrite_goal_(Module, once(Goal0), once(Goal)) :-
     rewrite_goal(Module, Goal0, Goal).
 rewrite_goal_(Module, ignore(Goal0), ignore(Goal)) :-
@@ -230,6 +234,8 @@ restore_goal_(Module, (A0 -> B0), (A -> B)) :-
 restore_goal_(Module, (A0 *-> B0), (A *-> B)) :-
     restore_goal(Module, A0, A),
     restore_goal(Module, B0, B).
+restore_goal_(_Module, public_goal_guard:'$sandbox_clause'(_Stored, Head, Body),
+              clause(Head, Body)).
 restore_goal_(Module, Guarded, Goal) :-
     restore_sandbox_call(Module, Guarded, Goal).
 restore_goal_(Module, Guarded, Goal) :-
@@ -258,6 +264,8 @@ restore_goal_(Module, call_cleanup(Goal0, Cleanup0),
 restore_goal_(Module, Vars^Goal0, Vars^Goal) :-
     restore_goal(Module, Goal0, Goal).
 restore_goal_(Module, \+ Goal0, \+ Goal) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, call_nth(Goal0, N), call_nth(Goal, N)) :-
     restore_goal(Module, Goal0, Goal).
 restore_goal_(Module, once(Goal0), once(Goal)) :-
     restore_goal(Module, Goal0, Goal).
@@ -477,3 +485,26 @@ text_to_string_(Text, String) :-
     atom(Text),
     !,
     atom_string(Text, String).
+
+% Read application clauses only, resolving imports without exposing runtime
+% predicates. Restore source-level bodies for interpreters and source export.
+'$sandbox_clause'(Module, Head, Body) :-
+    node_sandbox:allow_application_clause_goal(Module, Head, Body),
+    ( var(Head) -> throw(error(instantiation_error, clause/2)); true ),
+    ( callable(Head), functor(Head, Name, Arity),
+      \+ sub_atom(Name, 0, 1, _, '$'),
+      \+ isolation:private_listing_hidden(Name/Arity),
+      \+ predicate_property(Module:Head, built_in),
+      ( predicate_property(Module:Head, imported_from(Imported)) ->
+          isolation:shared_database_module(Owner),
+          predicate_property(Owner:Head, defined),
+          \+ predicate_property(Owner:Head, imported_from(_)),
+          ( Imported == Owner
+          ; Imported == user, predicate_property(Module:Head, file(node_shared_db_user)) )
+      ; Owner = Module )
+    -> clause(Owner:Head, Stored),
+       control_guard:restore_goal(Owner, Stored, Public),
+       restore_goal(Owner, Public, Original),
+       Body = Original
+    ; throw(error(permission_error(access, procedure, Head), clause/2))
+    ).

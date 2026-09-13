@@ -49,7 +49,7 @@ Primary basis:
 | `(@=<)/2`, `(==)/2`, `(\==)/2`, `(@<)/2`, `(@>)/2`, `(@>=)/2`, `compare/3`, `sort/2`, `keysort/2` | yes | yes | yes | Term comparison. |
 | `functor/3`, `arg/3`, `(=..)/2`, `copy_term/2`, `term_variables/2` | yes | yes | yes | Term construction and decomposition. |
 | `(is)/2`, `(=:=)/2`, `(=\=)/2`, `(<)/2`, `(=<)/2`, `(>)/2`, `(>=)/2` | yes | yes | yes | Arithmetic evaluation and comparison. |
-| `clause/2` | yes (local-only) | yes (local-only) | yes (local-only) | Head must name a predicate defined in the client's temporary module. Imported, shared, and runtime predicates remain blocked. |
+| `clause/2` | yes (application clauses) | yes (application clauses) | yes (application clauses) | Read-only inspection of local or shared application predicates; local definitions shadow shared ones. Returns source-level bodies. Module-qualified heads and runtime predicates are blocked. |
 | `assert/1-2`, `asserta/1-2`, `assertz/1-2`, `retract/1`, `retractall/1`, `abolish/1-2` | no | yes | yes | Dynamic DB mutation requires at least `isotope`. Asserted clauses are prechecked and rewritten. |
 | `findall/3`, `bagof/3`, `setof/3` | yes | yes | yes | All-solutions predicates. |
 | `(\+)/1`, `once/1`, `repeat/0`, `call/2-8`, `false/0` | yes | yes | yes | Logic and control. |

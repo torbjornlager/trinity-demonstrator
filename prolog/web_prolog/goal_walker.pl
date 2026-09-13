@@ -49,6 +49,7 @@ walk_structural_goal_(call_cleanup(_, _)).
 walk_structural_goal_(_^_).
 walk_structural_goal_(\+ _).
 walk_structural_goal_(once(_)).
+walk_structural_goal_(call_nth(_, _)).
 walk_structural_goal_(ignore(_)).
 walk_structural_goal_(forall(_, _)).
 walk_structural_goal_(call(_)).
@@ -104,6 +105,8 @@ walk_compound_(call_cleanup(Goal, Cleanup), CB) :-
 walk_compound_(_Vars^Goal, CB) :-
     walk_goal(CB, Goal).
 walk_compound_(\+ Goal, CB) :-
+    walk_goal(CB, Goal).
+walk_compound_(call_nth(Goal, _), CB) :-
     walk_goal(CB, Goal).
 walk_compound_(once(Goal), CB) :-
     walk_goal(CB, Goal).

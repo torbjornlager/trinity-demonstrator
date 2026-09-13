@@ -94,6 +94,8 @@ rewrite_goal_(Module, Vars^Goal0, Vars^Goal) :-
     rewrite_goal(Module, Goal0, Goal).
 rewrite_goal_(Module, \+ Goal0, \+ Goal) :-
     rewrite_goal(Module, Goal0, Goal).
+rewrite_goal_(Module, call_nth(Goal0, N), call_nth(Goal, N)) :-
+    rewrite_goal(Module, Goal0, Goal).
 rewrite_goal_(Module, once(Goal0), once(Goal)) :-
     rewrite_goal(Module, Goal0, Goal).
 rewrite_goal_(Module, ignore(Goal0), ignore(Goal)) :-
@@ -193,7 +195,7 @@ rewrite_meta_argument(Extra, Module, Closure,
     Extra > 0,
     !.
 rewrite_meta_argument(//, Module, Closure,
-                      control_guard:'$call'(Module, Closure)) :-
+                      control_guard:'$dcg'(Module, Closure)) :-
     !.
 rewrite_meta_argument(_, _, Arg, Arg).
 
@@ -265,6 +267,8 @@ restore_goal_(Module, call_cleanup(Goal0, Cleanup0),
 restore_goal_(Module, Vars^Goal0, Vars^Goal) :-
     restore_goal(Module, Goal0, Goal).
 restore_goal_(Module, \+ Goal0, \+ Goal) :-
+    restore_goal(Module, Goal0, Goal).
+restore_goal_(Module, call_nth(Goal0, N), call_nth(Goal, N)) :-
     restore_goal(Module, Goal0, Goal).
 restore_goal_(Module, once(Goal0), once(Goal)) :-
     restore_goal(Module, Goal0, Goal).
@@ -342,6 +346,7 @@ restore_meta_arguments([Mode|Modes], Module, [Arg0|Args0], [Arg|Args]) :-
 restore_meta_argument(0, Module, Goal0, Goal) :-
     !,
     restore_goal(Module, Goal0, Goal).
+restore_meta_argument(//, _Module, control_guard:'$dcg'(_, Body), Body) :- !.
 restore_meta_argument(Extra, _Module,
                       control_guard:'$call'(_StoredModule, Closure), Closure) :-
     (   integer(Extra), Extra > 0
@@ -406,6 +411,17 @@ recover_or_rethrow(Module, Error, Catcher, Recover) :-
     ;   throw(Error)
     ).
 
+
+% Grammar closures need DCG translation before ordinary guarded execution.
+% Calling a grammar body as a predicate breaks terminals and control constructs.
+'$dcg'(Module, Grammar, Input, Rest) :-
+    (var(Grammar) -> throw(error(instantiation_error, phrase/3)); true),
+    dcg_translate_rule((guard_dcg --> Grammar), (Head :- Goal)),
+    Head = guard_dcg(Input, Rest),
+    (   current_predicate(public_goal_guard:runtime_execute_goal/2)
+    ->  public_goal_guard:runtime_execute_goal(Module, Goal)
+    ;   runtime_execute(Module, Goal)
+    ).
 
 '$call'(Module, Goal0) :-
     runtime_execute(Module, Goal0).

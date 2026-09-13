@@ -514,7 +514,12 @@ load_options_text(GoalModule, Options, SourceText) :-
               load_option_text(GoalModule, Option, Text)
             ),
             Texts),
-    foldl(append_source_text, Texts, "", SourceText).
+    foldl(append_load_part, Texts, "", SourceText).
+
+% foldl supplies the new part first; append_source_text expects the accumulator
+% first. Preserve source-option order and clause order within each part.
+append_load_part(Part, Acc, Combined) :-
+    append_source_text(Acc, Part, Combined).
 
 
                 /*******************************

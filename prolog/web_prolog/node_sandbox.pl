@@ -614,7 +614,7 @@ sandbox_check_actor_(with_io_target(_Target, Goal), Profile, Module) :-
 %   falling back to the forbidden_plain_goal check.
 
 sandbox_check_unqualified_(blacklist, clause(Head, Body), _Profile, Module) :-
-    allow_local_clause_goal(Module, Head, Body).
+    allow_application_clause_goal(Module, Head, Body).
 sandbox_check_unqualified_(blacklist, format(Sink, Format, _Args), _Profile, _Module) :-
     format_memory_sink(Sink),
     reject_format_call_specifier(Format).
@@ -899,7 +899,7 @@ format_to_atom_safe(Format, Atom) :-
     ;   Atom = ''
     ).
 
-allow_local_clause_goal(_Module, Head0, Body) :-
+allow_application_clause_goal(_Module, Head0, Body) :-
     (   nonvar(Head0),
         Head0 = _:_
     ->  throw(error(permission_error(call, sandboxed, clause(Head0, Body)),

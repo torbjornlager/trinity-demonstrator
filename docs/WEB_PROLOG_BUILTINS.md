@@ -38,7 +38,8 @@ Primary basis:
   actor-local output predicates such as `write/1`, `writeln/1`, and `format/2`
   through the actor runtime prelude.
 - `clause/2` remains available only in its narrowed blacklist-safe form: the
-  head must name a local predicate in the client's own private module.
+  head must name a local or shared application predicate. Runtime predicates
+  and module-qualified heads are blocked; inspection does not grant mutation.
 
 ## 7.4.2 Directives
 
@@ -89,9 +90,10 @@ dynamically asserted clause bodies.
 
 ## 8.8 Clause Retrieval and Information
 
-`clause/2` — conditionally allowed; the head must name a local predicate
-defined in the client's own temporary module. Imported, shared, and runtime
-predicates are blocked.
+`clause/2` — read-only inspection of local and shared application predicates,
+with local definitions taking precedence. Returns original source-level bodies
+for meta-interpreters such as example 18. Runtime predicates, other imports and
+module-qualified heads are blocked.
 
 **Blacklisted:** `current_predicate/1`, `predicate_property/2`.
 
