@@ -139,6 +139,24 @@ run(Parent) :-
    ]),
    receive({ term(Term) -> true }, [timeout(1), on_timeout(fail)]).
 
+test(src_predicates_bare_name_missing,
+     [throws(error(type_error(predicate_indicator, source_test_k), _))]) :-
+   spawn(true, _, [src_predicates([source_test_k])]).
+
+test(src_predicates_bare_name_defined,
+     [setup(assertz(user:source_test_k)),
+      cleanup(abolish(user:source_test_k/0)),
+      throws(error(type_error(predicate_indicator, source_test_k), _))]) :-
+   spawn(user:true, _, [src_predicates([source_test_k])]).
+
+test(src_predicates_zero_arity,
+     [setup(assertz(user:source_test_k)),
+      cleanup(abolish(user:source_test_k/0))]) :-
+   self(Self),
+   spawn(user:(source_test_k, send(Self, copied_zero_arity)), _,
+         [link(false), src_predicates([source_test_k/0])]),
+   receive({copied_zero_arity -> true}, [timeout(1), on_timeout(fail)]).
+
 test(src_predicates, Value == a) :-
    self(Self),
    spawn(user:run(Self), _Pid, [

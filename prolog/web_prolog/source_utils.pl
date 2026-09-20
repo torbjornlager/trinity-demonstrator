@@ -59,11 +59,21 @@ terms_to_source(Terms, Source) :-
 %   using `listing/1`, producing textual source.
 predicates_to_source(Module, PIs, Source) :-
     must_be(list, PIs),
+    maplist(source_predicate_indicator, PIs),
     with_output_to(string(ListedSource),
                    maplist(listing2(Module), PIs)),
     restore_serialized_source(Module, ListedSource, Source).
 
-%!  listing2(+Module:atom, +PI:callable) is det.
+% Validate before listing/1, which also accepts bare names and callable heads.
+source_predicate_indicator(PI) :-
+    must_be(nonvar, PI),
+    (   PI = Name/Arity
+    ->  must_be(atom, Name),
+        must_be(nonneg, Arity)
+    ;   type_error(predicate_indicator, PI)
+    ).
+
+%!  listing2(+Module:atom, +PI:term) is det.
 %
 %   Helper used by predicates_to_source/3.
 listing2(Module, PI) :-
