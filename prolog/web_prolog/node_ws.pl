@@ -720,15 +720,12 @@ ws_action_toplevel_call(Dict, Queue, Principal) :-
     % invoke arbitrary modules.
     sandbox_check_goal_in_module(EffectiveProfile, Module, PlainClientGoal),
     rewrite_isotope_goal(PlainClientGoal, PlainGoal),
+    ( Limit == none -> LimitOptions = [] ; LimitOptions = [limit(Limit)] ),
+    append(LimitOptions, [template(Template), offset(Offset),
+                          once(Once), target(Queue)], CallOptions),
     with_isotope_session_public_execution_profile(
         Pid,
-        toplevel_call(Pid, PlainGoal, [
-            template(Template),
-            offset(Offset),
-            limit(Limit),
-            once(Once),
-            target(Queue)
-        ])
+        toplevel_call(Pid, PlainGoal, CallOptions)
     ).
 
 %!  ws_reject_toplevel_call_source(+Dict) is det.
@@ -759,7 +756,9 @@ ws_parse_toplevel_call_context(Dict, GoalAtom, Goal, Template,
 ws_parse_toplevel_call_context(Dict, GoalAtom, Goal, Template,
                                Offset, Limit, Once) :-
     ws_get_term_string_or(Dict, template, GoalAtom, TemplateAtom0),
-    ws_get_int_or(Dict, limit, 10 000 000 000, Limit),
+    ( get_dict(limit, Dict, Limit) -> must_be(positive_integer, Limit)
+    ; Limit = none
+    ),
     ws_get_int_or(Dict, offset, 0, Offset),
     ws_get_atom_or(Dict, once, false, Once0),
     ws_get_atom_or(Dict, format, json, Format),
@@ -771,8 +770,8 @@ ws_action_toplevel_next(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_next),
     ws_get_pid(Dict, Pid),
     ws_require_owned_session(Queue, Principal, Pid),
-    (   get_dict(limit, Dict, _)
-    ->  ws_get_int_or(Dict, limit, 10 000 000 000, LimitSpec)
+    (   get_dict(limit, Dict, LimitSpec)
+    ->  must_be(positive_integer, LimitSpec)
     ;   LimitSpec = inherit
     ),
     ws_toplevel_next_options(LimitSpec, Queue, Options),

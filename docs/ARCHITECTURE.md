@@ -186,7 +186,7 @@ rule.
 
 PTCP lifecycle policy uses three separate limits. `time_limit` runs only while
 the actor executes a goal in state **s2**; expiry reports
-`time_limit_exceeded` and returns a session actor to **s1**. `idle_limit` runs
+`error(resource_error(time), _)` and returns a session actor to **s1**. `idle_limit` runs
 only while the actor waits in **s1** or **s3**; expiry ends the actor normally.
 For PTCP session endpoints, the HTTP `timeout` parameter merely bounds how long
 a call or poll request waits for the next queued event and is non-destructive.

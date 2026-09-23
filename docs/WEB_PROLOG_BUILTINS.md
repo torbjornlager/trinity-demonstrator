@@ -322,7 +322,10 @@ the monitor before delivery. The `[flush]` option removes any already-delivered
 - `no_process` — the monitored pid was already gone;
 - any other term — an explicit `exit/1-2` reason.
 
-Toplevel paging is implemented with SWI-Prolog's `findnsols/4`, mutable
+Omitting `limit` from a call collects all solutions with `findall/3`, subject
+to resource bounds. Explicit limits must be positive integers. Neither
+`infinity` nor a large default count is used. Finite toplevel paging uses
+SWI-Prolog's `findnsols/4`, a mutable
 `count(N)` limit cell and `nb_setarg/3`. Exact-multiple chunks are detected as
 final (`success(Pid, Slice, false)`). Both the limit and target cells are
 created before query execution so `$next` updates remain in force across
@@ -386,3 +389,9 @@ For reference, the following ISO predicates are denied by the blacklist. See
 - **Source directives:** `use_module/1-2`, `load_files/1-2`, `consult/1`,
   `reconsult/1`, `include/1`, `ensure_loaded/1`, `module/1-2`,
   `initialization/1-2`, `redefine_system_predicate/1`.
+
+Remote execution-time exhaustion raises `error(resource_error(time), _)`;
+memory exhaustion raises `error(resource_error(space), _)`. Native and
+SWI-WASM RPC clients propagate the remote exception directly. The public
+resource exceptions elide backend context. Client transport timeouts remain
+distinct and do not imply remote cancellation.

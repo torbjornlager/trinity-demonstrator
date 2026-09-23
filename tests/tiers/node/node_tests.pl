@@ -810,6 +810,38 @@ test(rpc_localhost_finds_user_dispatcher_port) :-
         http_stop_server(Port, [])
     ).
 
+test(call_without_limit_after_cached_finite_slice,
+     true(Answer == success([b,c,d], false))) :-
+    with_node_server(URI,
+        ( call_url(URI, 'member(X,[a,b,c,d])', 'X', 0, 1, '', none, First),
+          read_answer(First, success([a], true)),
+          format(atom(URL),
+                 '~w/call?goal=member(X,[a,b,c,d])&template=X&offset=1&format=prolog', [URI]),
+          read_answer(URL, Answer)
+        )).
+
+test(call_rejects_nonpositive_limit, [forall(member(Limit, [0,-1]))]) :-
+    with_node_server(URI,
+        ( call_url(URI, true, true, 0, Limit, '', none, URL),
+          read_answer(URL, Answer),
+          assertion(Answer = error(_))
+        )).
+
+test(legacy_ws_call_rejects_invalid_limit,
+     [forall(member(Limit, [0,-1,1.5,"infinity","infinite","none"])), throws(error(_,_))]) :-
+    node_ws:ws_parse_toplevel_call_context(_{limit:Limit}, true, _, _, _, _, _).
+
+test(legacy_ws_call_without_limit) :-
+    node_ws:ws_parse_toplevel_call_context(_{}, true, true, _, 0, none, false).
+
+test(parse_call_options_without_limit) :-
+    parse_call_options_context('true', '[]', true, _, 0, none, false, none, []).
+
+test(parse_call_options_invalid_limit,
+     [forall(member(Limit, [0,-1,1.5,infinity,infinite,none])), throws(error(_,_))]) :-
+    format(atom(Options), '[limit(~w)]', [Limit]),
+    parse_call_options_context('true', Options, _, _, _, _, _, _, _).
+
 test(node_1_starts_http_endpoint, true(Answer == success([true], false))) :-
     with_node_server(URI,
         (
@@ -3442,8 +3474,8 @@ test(ws_toplevel_spawn_session_true_keeps_toplevel_alive,
 
 test(ws_toplevel_time_limit_uses_owner_ceiling_and_keeps_session_alive,
      true((TimeoutType == "error",
-           TimeoutData == "Time limit exceeded",
-           TimeoutDetails == "time_limit_exceeded",
+           TimeoutData == "Resource error: time",
+           TimeoutDetails == "error(resource_error(time),_)",
            RecoveryType == "success"))) :-
     with_node_server_options([auth(open), time_limit(0.05), idle_limit(2)], URI,
         setup_call_cleanup(
@@ -3495,7 +3527,7 @@ test(public_nested_toplevel_cannot_weaken_owner_time_limit) :-
                     ]),
                     toplevel_call(Pid, sleep(0.2), [template(true)]),
                     receive({
-                        error(Pid, time_limit_exceeded) -> true
+                        error(Pid, error(resource_error(time), _)) -> true
                     }, [
                         timeout(2),
                         on_timeout(throw(nested_toplevel_time_limit_timeout))
@@ -5399,6 +5431,13 @@ test(node_json_default_failure, true(Type == "failure")) :-
             Type = JSON.type
         )).
 
+test(resource_error_display_is_portable,
+     [forall(member(Resource-Message, [time-"Resource error: time", space-"Resource error: space"]))]) :-
+    answer_to_json(error(error(resource_error(Resource), private_context)), JSON),
+    assertion(JSON.data == Message),
+    format(string(Details), 'error(resource_error(~w),_)', [Resource]),
+    assertion(JSON.details == Details).
+
 test(node_json_default_error,
      true((Type == "error", string(Data), sub_string(Data, _, _, _, "Unknown procedure")))) :-
     with_node_server(URI,
@@ -5503,7 +5542,7 @@ test(isotope_spawn_returns_pid,
 
 test(isotope_time_limit_uses_swi_error_and_keeps_session_alive,
      true((TimeoutType == "error", TimeoutPID == Pid,
-           TimeoutData == "Time limit exceeded", TimeoutDetails == "time_limit_exceeded",
+           TimeoutData == "Resource error: time", TimeoutDetails == "error(resource_error(time),_)",
            RecoveryType == "success", RecoveryPID == Pid))) :-
     with_node_server_options([time_limit(0.05), idle_limit(2), timeout(1)], URI,
         setup_call_cleanup(
@@ -7508,7 +7547,7 @@ test(call_cache_is_isolated_per_node,
                 clear_node_cache
             ))).
 
-test(call_timeout_parameter_honored, true(Answer == error(timeout))) :-
+test(call_timeout_parameter_honored, true(Answer = error(error(resource_error(time), _)))) :-
     with_node_timeout(1,
         with_node_server(URI,
             (
@@ -7516,7 +7555,7 @@ test(call_timeout_parameter_honored, true(Answer == error(timeout))) :-
                 read_answer(URL, Answer)
             ))).
 
-test(call_timeout_owner_cap_wins, true(Answer == error(timeout))) :-
+test(call_timeout_owner_cap_wins, true(Answer = error(error(resource_error(time), _)))) :-
     with_node_timeout(0.01,
         with_node_server(URI,
             (
@@ -7525,7 +7564,7 @@ test(call_timeout_owner_cap_wins, true(Answer == error(timeout))) :-
             ))).
 
 test(call_timeout_is_isolated_per_node,
-     true((Answer1 == error(timeout),
+     true((Answer1 = error(error(resource_error(time), _)),
            Answer2 == success([true], false)))) :-
     with_node_server_options([timeout(0.01)], URI1,
         with_node_server_options([timeout(1)], URI2,
@@ -7538,7 +7577,7 @@ test(call_timeout_is_isolated_per_node,
 
 test(node_json_timeout_message,
      true((sub_string(Body, _, _, _, "\"type\":\"error\""),
-           sub_string(Body, _, _, _, "Timeout exceeded")))) :-
+           sub_string(Body, _, _, _, "Resource error: time")))) :-
     with_node_timeout(1,
         with_node_server(URI,
             (
@@ -7559,15 +7598,38 @@ test(call_once_parameter_honored, true(Answer == success([a], false))) :-
             read_answer(URL, Answer)
         )).
 
-test(rpc_3_timeout_requests_remote_timeout, [throws(timeout)]) :-
+test(rpc_3_timeout_requests_remote_timeout, [throws(error(resource_error(time), _))]) :-
     with_node_timeout(1,
         with_node_server(URI,
             rpc(URI, sleep(0.05), [timeout(0.01)]))).
 
-test(rpc_3_timeout_owner_cap_wins, [throws(timeout)]) :-
+test(rpc_3_timeout_owner_cap_wins, [throws(error(resource_error(time), _))]) :-
     with_node_timeout(0.01,
         with_node_server(URI,
             rpc(URI, sleep(0.05), [timeout(1)]))).
+
+test(rpc_memory_limit_has_portable_space_error) :-
+    with_node_server_options([max_actor_stack_bytes(16777216)], URI,
+        ( catch(rpc(URI, between(1,1000000000,_)), Error, true),
+          assertion(nonvar(Error)),
+          Error = error(resource_error(space), Context),
+          assertion(var(Context))
+        )).
+
+test(rpc_remote_time_limit_has_elided_context) :-
+    with_node_server_options([timeout(0.01)], URI,
+        ( catch(rpc(URI, sleep(0.1)), Error, true),
+          assertion(nonvar(Error)),
+          Error = error(resource_error(time), Context),
+          assertion(var(Context))
+        )).
+
+test(rpc_transport_timeout_is_not_resource_exhaustion) :-
+    with_node_server_options([timeout(1)], URI,
+        ( catch(rpc(URI, sleep(0.2), [http_timeout(0.01)]), Error, true),
+          assertion(nonvar(Error)),
+          assertion(Error \= error(resource_error(_), _))
+        )).
 
 test(rpc_3_http_timeout_option_is_transport, true) :-
     with_node_server(URI,

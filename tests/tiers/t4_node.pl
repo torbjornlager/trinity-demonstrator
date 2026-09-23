@@ -375,6 +375,18 @@ test(memory_ceiling_stops_allocation_bomb, true((Type == "error", After == "succ
 
 %  A configured-but-not-exceeded inference ceiling leaves normal
 %  queries working (the ceiling is generous, not a straitjacket).
+test(unlimited_collection_hits_memory_ceiling_and_can_retry,
+     true((Type == "error", Details == "error(resource_error(space),_)",
+           Answer == success([1,2],true)))) :-
+    test_node:with_node_server_options([max_actor_stack_bytes(16777216)], URI,
+        ( atom_concat(URI, '/call?goal=between(1,1000000000,X)&template=X', URL),
+          test_node:read_json_answer(URL, J),
+          get_dict(type, J, Type),
+          get_dict(details, J, Details),
+          atom_concat(URI, '/call?goal=between(1,1000000000,X)&template=X&limit=2&format=prolog', RetryURL),
+          test_node:read_answer(RetryURL, Answer)
+        )).
+
 test(inference_ceiling_allows_normal_query, true(Type == "success")) :-
     test_node:with_node_server_options([max_call_inferences(100000000)], URI,
         ( atom_concat(URI, '/call?goal=member(X,[a,b,c])&template=X', URL),

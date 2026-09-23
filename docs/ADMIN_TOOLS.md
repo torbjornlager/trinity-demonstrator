@@ -80,7 +80,7 @@ requested and owner values.
 #### **Time Limit** (seconds)
 
 Hard upper bound on goal execution while a PTCP session is working in state
-**s2**. Expiry reports `time_limit_exceeded`; the current goal is abandoned,
+**s2**. Expiry reports `error(resource_error(time), _)`; the current goal is abandoned,
 but the session actor remains alive and returns to state **s1**.
 
 - Default: 300 seconds

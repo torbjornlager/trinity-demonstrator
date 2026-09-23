@@ -68,7 +68,9 @@ compute_answer(Goal, Template, Offset, Limit, LoadText, RequestedTimeout,
 
 compute_answer_with_queue(Queue, Gid, Goal, Template, Offset, Limit,
                           LoadText, Timeout, Once, Answer) :-
-    (   cache_retract(Gid, Offset, Pid)
+    ( Limit == none -> LimitOptions = [] ; LimitOptions = [limit(Limit)] ),
+    (   Limit \== none,
+        cache_retract(Gid, Offset, Pid)
     ->  toplevel_next(Pid, [
             limit(Limit),
             target(Queue)
@@ -76,13 +78,13 @@ compute_answer_with_queue(Queue, Gid, Goal, Template, Offset, Limit,
     ;   toplevel_spawn_options(LoadText, SpawnOptions0),
         SpawnOptions = [target(Queue)|SpawnOptions0],
         toplevel_spawn(Pid, SpawnOptions),
-        toplevel_call(Pid, Goal, [
+        append(LimitOptions, [
             template(Template),
             offset(Offset),
-            limit(Limit),
             once(Once),
             target(Queue)
-        ])
+        ], CallOptions),
+        toplevel_call(Pid, Goal, CallOptions)
     ),
     wait_for_compute_answer(Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer).
 
@@ -90,7 +92,7 @@ wait_for_compute_answer(Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer) :
     (   thread_get_message(Queue, Message, [timeout(Timeout)])
     ->  compute_answer_message(Message, Queue, Timeout, Pid, Offset, Limit,
                                Gid, Once, Answer)
-    ;   Answer = error(timeout),
+    ;   Answer = error(error(resource_error(time), _)),
         exit(Pid, kill)
     ).
 

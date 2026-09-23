@@ -326,6 +326,9 @@ relation_error_string(error(relation_violation(src_text), _),
                       "Source loading is not available in the RELATION profile") :-
     !.
 
+resource_limit_error_string(error(resource_error(time), _), "Resource error: time").
+resource_limit_error_string(error(resource_error(space), _), "Resource error: space").
+
 resource_limit_error_string(error(resource_limit_exceeded(_PrincipalId, inflight_calls, Limit), _),
                             ErrorString) :-
     !,

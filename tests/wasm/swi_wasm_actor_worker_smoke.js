@@ -241,6 +241,11 @@ async function main() {
      "RPC delegates the common execution and transport options to the node controller");
   S.onmessage({ data: { command: "reply", id: rpcReq.id, ok: true, result: "success([v(b)],false)" } });
   ok((await rpcP) === "success([v(b)],false)", "RPC response text returns to Prolog");
+  const allRpc = S.actorRpc("'https://n1.example'", "true", "true", 0, "none", "", -1, false, -1);
+  const allReq = S._posted.filter(m => m.type === "request" && m.action === "rpc").pop();
+  ok(allReq.limit === undefined, "an unlimited RPC carries no numeric limit");
+  S.onmessage({ data: { command: "reply", id: allReq.id, ok: true, result: "success([true],false)" } });
+  await allRpc;
   ok(S.actorEnsureFinalFullStop("p(a).\n   ") === "p(a).\n   " &&
      S.actorEnsureFinalFullStop("p(a)") === "p(a).",
      "RPC src_text terminator detection ignores trailing whitespace");

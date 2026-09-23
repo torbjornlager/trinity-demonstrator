@@ -214,11 +214,13 @@ state_1(Pid, Target0, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
             option(template(Template0), Options, Goal),
             strip_module(Template0, _, Template),
             option(offset(Offset), Options, 0),
-            option(limit(Limit0), Options, 10 000 000 000),
+            ( option(limit(Limit0), Options)
+            -> must_be(positive_integer, Limit0), Limit = count(Limit0)
+            ;  Limit = all
+            ),
             option(once(Once), Options, false),
             option(target(Target1), Options, Target0),
             call_io_target(Options, DefaultIoTarget, Target1, IoTarget),
-            Limit = count(Limit0),
             Target = target(Target1),
             run_call(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
                      TimeLimit, IdleLimit)
@@ -271,7 +273,7 @@ run_call_answers(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
 
 send_time_limit_error(Target, Pid) :-
     arg(1, Target, Out),
-    send(Out, error(Pid, time_limit_exceeded)).
+    send(Out, error(Pid, error(resource_error(time), _))).
 
 create_time_limit_alarm(infinite, none) :-
     !.
@@ -332,7 +334,8 @@ state_3(Limit, Target, IdleLimit, Alarm, TimeLimit) :-
     receive_idle({
         '$next'(Options2) ->
             (   option(limit(NewLimit), Options2)
-            ->  nb_setarg(1, Limit, NewLimit)
+            ->  must_be(positive_integer, NewLimit),
+                nb_setarg(1, Limit, NewLimit)
             ;   true
             ),
             (   option(target(NewTarget), Options2)
@@ -346,7 +349,7 @@ state_3(Limit, Target, IdleLimit, Alarm, TimeLimit) :-
 
 %!  answer(+Goal, +Template, +Offset, +Limit, -Answer) is det.
 %
-%   Run a goal with `findnsols/4`-based slicing and map execution outcome to
+%   Collect all solutions or a finite slice and map execution outcome to
 %   `success/failure/error`.
 %
 %   - nondeterministic remainder -> `success(Slice, true)`
@@ -365,12 +368,23 @@ answer(Goal, Template, Offset, Limit, Answer) :-
     ;   Slice == []
     ->  Answer = failure
     ;   nonvar(Error)
-    ->  Answer = error(Error)
+    ->  normalize_resource_error(Error, PublicError),
+        Answer = error(PublicError)
     ;   var(Det)
     ->  Answer = success(Slice, true)
     ;   Det == true
     ->  Answer = success(Slice, false)
     ).
+
+% Public resource categories hide backend-specific memory names and context.
+normalize_resource_error(error(resource_error(Resource), _),
+                         error(resource_error(space), _)) :-
+    nonvar(Resource),
+    memberchk(Resource, [space, stack, memory, heap, trail, global_stack, local_stack]),
+    !.
+normalize_resource_error(time_limit_exceeded, error(resource_error(time), _)) :- !.
+normalize_resource_error(error(resource_error(time), _), error(resource_error(time), _)) :- !.
+normalize_resource_error(Error, Error).
 
 ptcp_control_exception('$abort_goal').
 ptcp_control_exception('$ptcp_time_limit').
@@ -396,7 +410,7 @@ slice(Goal, Template, Offset, Limit, Slice) :-
         integer(InfLimit),
         InfLimit > 0
     ->  call_with_inference_limit(
-            findnsols(Limit, Template, offset(Offset, Goal), Slice0),
+            collect_slice(Limit, Template, offset(Offset, Goal), Slice0),
             InfLimit, Result),
         (   Result == inference_limit_exceeded
         ->  throw(error(resource_error(inferences),
@@ -404,8 +418,18 @@ slice(Goal, Template, Offset, Limit, Slice) :-
                                 'per-call inference limit exceeded')))
         ;   Slice = Slice0
         )
-    ;   findnsols(Limit, Template, offset(Offset, Goal), Slice)
+    ;   collect_slice(Limit, Template, offset(Offset, Goal), Slice)
     ).
+
+% The marker all is internal; the public API represents it by omission.
+collect_slice(all, Template, Goal, Slice) :-
+    !,
+    findall(Template, Goal, Slice).
+collect_slice(Limit, Template, Goal, Slice) :-
+    findnsols(Limit, Template, Goal, Slice).
+
+validate_solution_limit(Options) :-
+    ( option(limit(N), Options) -> must_be(positive_integer, N) ; true ).
 
 %!  add_pid(+Answer0, +Pid, -Answer) is det.
 %
@@ -423,6 +447,7 @@ toplevel_call(Pid, Goal) :-
     toplevel_call(Pid, Goal, []).
 
 toplevel_call(Pid, Goal, Options) :-
+    validate_solution_limit(Options),
     %  No explicit copy_term/2 here: send/2 to a local pid resolves
     %  to thread_send_message/2, which places a copy of the term in
     %  the receiver's mailbox; send/2 to a remote pid serializes
@@ -438,6 +463,7 @@ toplevel_next(Pid) :-
     toplevel_next(Pid, []).
 
 toplevel_next(Pid, Options) :-
+    validate_solution_limit(Options),
     send(Pid, '$next'(Options)).
 
 

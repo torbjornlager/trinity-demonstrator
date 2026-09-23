@@ -37,12 +37,18 @@ the queue so a later yield can collect the pending answer. Manual
 
 :- use_module(library(apply)).
 :- use_module(library(option)).
+:- use_module(library(error)).
 :- use_module(library(random)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(url)).
 :- use_module(library(debug)).
 :- use_module(source_utils, [uri_atom/2]).
+
+solution_limit(Options, Limit) :-
+    ( option(limit(Limit), Options) -> must_be(positive_integer, Limit)
+    ; Limit = none
+    ).
 
 %!  runtime_property(?Property) is nondet.
 %
@@ -78,7 +84,7 @@ rpc(URI, Goal0, Options0) :-
     Template =.. [v|Vars],
     format(atom(GoalAtom), "(~p)", [Goal]),
     format(atom(TemplateAtom), "(~p)", [Template]),
-    option(limit(Limit), Options0, 10 000 000 000),
+    solution_limit(Options0, Limit),
     option(once(Once0), Options0, false),
     normalize_once(Once0, Once),
     option(timeout(RemoteTimeout0), Options0, none),
@@ -166,8 +172,9 @@ rpc(error(Error), _, _, _, _, _, _, _, _, _, _) :- throw(Error).
 rpc_search_params(GoalAtom, TemplateAtom, Offset, Limit,
                   LoadText, RemoteTimeout, Once, Search) :-
     Search0 = [goal=GoalAtom, template=TemplateAtom,
-               offset=Offset, limit=Limit, format=prolog],
-    append_optional_param(Search0, src_text, LoadText, Search1),
+               offset=Offset, format=prolog],
+    append_optional_param(Search0, limit, Limit, SearchLimit),
+    append_optional_param(SearchLimit, src_text, LoadText, Search1),
     append_optional_param(Search1, timeout, RemoteTimeout, Search2),
     append_optional_param(Search2, once, Once, Search).
 
@@ -240,7 +247,7 @@ promise(URI, Goal0, Reference, Options) :-
     strip_module(Goal0, GoalModule, Goal),
     option(template(Template), Options, Goal),
     option(offset(Offset), Options, 0),
-    option(limit(Limit), Options, 10000000000),
+    solution_limit(Options, Limit),
     option(once(Once0), Options, false),
     normalize_once(Once0, Once),
     option(timeout(RemoteTimeout0), Options, none),

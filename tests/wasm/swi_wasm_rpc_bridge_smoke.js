@@ -774,6 +774,14 @@ ok(workerToplevelOptionHelpers.spawnSource(
      "[limit(7),offset(3),once(true)]"
    )) === JSON.stringify({ limit: 7, offset: 3, once: true }),
    "the Worker consumes canonical spawn and call options instead of parallel private fields");
+ok(workerToplevelOptionHelpers.callOptions("[]").limit === "none",
+   "omitting a Worker call limit requests all solutions");
+for (const limit of ["0", "-1", "infinity", "infinite", "1.5"]) {
+  let rejected = false;
+  try { workerToplevelOptionHelpers.callOptions("[limit(" + limit + ")]"); }
+  catch (_) { rejected = true; }
+  ok(rejected, "Worker call rejects limit " + limit);
+}
 ok(formatJavaScriptObject.call(javaScriptObjectRenderer, {
      command: "toplevel_call",
      pid: 4384261893,
@@ -1161,8 +1169,8 @@ ok(workerSource.includes('option(time_limit(TimeLimit0), Options, infinite)') &&
    workerSource.includes('option(idle_limit(IdleLimit0), Options, infinite)') &&
    workerSource.includes('actorArmTimeLimit(#TimeLimit, #TargetText, #PidText)') &&
    workerSource.includes("on_timeout(throw('$ptcp_idle_limit'))") &&
-   workerSource.includes('data: "Time limit exceeded"') &&
-   workerSource.includes('details: "time_limit_exceeded"') &&
+   workerSource.includes('data: "Resource error: time"') &&
+   workerSource.includes('details: "error(resource_error(time),_)"') &&
    workerSource.includes('return /(?:^|:)ptcp\\(/.test(currentGoalText);') &&
    includes('Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit)') &&
    includes('message.timeLimit || "infinite"') &&
@@ -1328,9 +1336,12 @@ ok(workerSource.includes('actorRequest("remote_spawn"') &&
    includes('case "remote_spawn":') &&
    includes('case "remote_toplevel_spawn":'),
    "worker actors delegate remote spawning to the JavaScript node controller");
+ok(workerSource.includes('throw(Error)') && includes('throw(Err)') &&
+   !workerSource.includes('throw(rpc_error(Error))') && !includes('throw(rpc_error(Err))'),
+   "both browser RPC clients preserve remote exceptions without a wrapper");
 ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('Promise := actorRpc(') &&
-   workerSource.includes('option(limit(Limit), Options, 10000000000)') &&
+   workerSource.includes('solution_limit(Options, Limit)') &&
    workerSource.includes('"    Offset = 0,"') &&
    includes('"    Offset = 0,"') &&
    workerSource.includes('rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout)') &&

@@ -1238,7 +1238,7 @@
           auth: "Controls the authentication boundary. OPEN accepts unauthenticated requests, DEV trusts local development identity, and PRIVATE requires authenticated principals from the node policy.",
           sandbox: "Chooses the language sandbox policy. NO SANDBOX disables checks, WHITELIST keeps the current SWI-Prolog safe-goal policy, and BLACKLIST applies an initial deny-list over risky runtime and ISO predicates.",
           timeout: "Maximum time, in seconds, that an HTTP execution request waits for its next result. For /call, expiry retires the ephemeral computation; for a PTCP session endpoint it returns a non-destructive timeout event.",
-          time_limit: "Hard upper bound, in seconds, on PTCP execution while the session is working in state s2. Expiry reports time_limit_exceeded and returns the live session to s1.",
+          time_limit: "Hard upper bound, in seconds, on PTCP execution while the session is working in state s2. Expiry reports error(resource_error(time), _) and returns the live session to s1.",
           idle_limit: "Maximum inactivity, in seconds, while a PTCP session waits in s1 or s3. Expiry terminates the session normally.",
           cache_size: "Maximum number of cached /call result slices for identical stateless requests. Larger values reduce recomputation; smaller values reduce memory use.",
           cache_ttl: "Maximum idle lifetime, in seconds, of a cached /call continuation. Expiry stops the suspended toplevel so an abandoned enumeration cannot retain it indefinitely.",

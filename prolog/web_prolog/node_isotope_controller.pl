@@ -138,15 +138,12 @@ isotope_call_event(Pid, EffectiveProfile, GoalAtom0, TemplateAtom0, Offset, Limi
         % ISOTOPE clients without disabling read/1 itself.
         sandbox_check_goal_in_module(EffectiveProfile, Module, Goal),
         rewrite_isotope_goal(Goal, RewrittenGoal),
+        ( Limit == none -> LimitOptions = [] ; LimitOptions = [limit(Limit)] ),
+        append(LimitOptions, [template(Template), offset(Offset),
+                              once(Once), target(Queue)], CallOptions),
         with_isotope_session_public_execution_profile(
             Pid,
-            toplevel_call(Pid, RewrittenGoal, [
-                template(Template),
-                offset(Offset),
-                limit(Limit),
-                once(Once),
-                target(Queue)
-            ])
+            toplevel_call(Pid, RewrittenGoal, CallOptions)
         ),
         node:effective_timeout(RequestedTimeout, Timeout),
         wait_for_session_event(Pid, Queue, Timeout, Event)

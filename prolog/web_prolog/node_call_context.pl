@@ -42,6 +42,7 @@ http_parse_call_request(Request, ExtraSpecs,
                          Once0, RequestedTimeout0, BaseSpecs),
     append(ExtraSpecs, BaseSpecs, Specs),
     http_parameters(Request, Specs),
+    ( var(Limit) -> Limit = none ; must_be(positive_integer, Limit) ),
     (   nonvar(SrcText0)
     ->  LoadText = SrcText0
     ;   LoadText = ''
@@ -62,7 +63,7 @@ call_parameter_specs(GoalAtom, TemplateAtom0, Offset, Limit, Format, SrcText,
         goal(GoalAtom, [atom]),
         template(TemplateAtom0, [optional(true)]),
         offset(Offset, [integer, default(0)]),
-        limit(Limit, [integer, default(10 000 000 000)]),
+        limit(Limit, [integer, optional(true)]),
         format(Format, [atom, default(json)]),
         src_text(SrcText, [optional(true)]),
         once(Once0, [atom, default(false)]),
@@ -102,17 +103,14 @@ parse_call_options_context(GoalAtom, OptionsAtom, Goal, Template,
     option(template(Template0), Options0, Goal),
     option(format(Format), Options0, json),
     option(offset(Offset), Options0, 0),
-    option(limit(Limit), Options0, 10 000 000 000),
+    ( option(limit(Limit), Options0) -> must_be(positive_integer, Limit)
+    ; Limit = none
+    ),
     option(once(Once0), Options0, false),
     must_be(integer, Offset),
-    must_be(integer, Limit),
     (   Offset >= 0
     ->  true
     ;   domain_error(not_less_than_zero, Offset)
-    ),
-    (   Limit >= 0
-    ->  true
-    ;   domain_error(not_less_than_zero, Limit)
     ),
     fix_template(Format, Goal, Template0, Bindings, Template),
     normalize_once(Once0, Once),

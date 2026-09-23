@@ -70,6 +70,52 @@ flush_shell_mailbox :-
 sample_wife(socrates, xantippa).
 sample_wife(aristotle, pythias).
 
+test(unlimited_offset_finishes_without_next) :-
+    setup_call_cleanup(
+        toplevel_spawn(Pid, [session(true)]),
+        ( toplevel_call(Pid, member(X, [a,b,c,d]), [template(X),offset(2)]),
+          receive({success(Pid, [c,d], false) -> true},
+                  [timeout(2),on_timeout(throw(missing_unlimited_answer))]),
+          toplevel_call(Pid, true),
+          receive({success(Pid, [true], false) -> true},
+                  [timeout(2),on_timeout(throw(session_not_idle))])
+        ), exit(Pid, true)).
+
+test(finite_limit_changes_and_is_inherited) :-
+    setup_call_cleanup(
+        toplevel_spawn(Pid, [session(true)]),
+        ( toplevel_call(Pid, between(1,8,X), [template(X),limit(1)]),
+          receive({success(Pid,[1],true) -> true}, [timeout(2),on_timeout(throw(first_slice))]),
+          catch(toplevel_next(Pid, [limit(infinity)]), error(type_error(positive_integer,infinity),_), Rejected=true),
+          assertion(Rejected == true),
+          toplevel_next(Pid, [limit(3)]),
+          receive({success(Pid,[2,3,4],true) -> true}, [timeout(2),on_timeout(throw(resized_slice))]),
+          toplevel_next(Pid),
+          receive({success(Pid,[5,6,7],true) -> true}, [timeout(2),on_timeout(throw(inherited_slice))]),
+          toplevel_next(Pid),
+          receive({success(Pid,[8],false) -> true}, [timeout(2),on_timeout(throw(last_slice))])
+        ), exit(Pid, true)).
+
+test(invalid_initial_limit_rejected_before_send,
+     [forall(member(Limit, [0,-1,1.5,infinity,infinite,none])), throws(error(_,_))]) :-
+    toplevel_call(unused_pid, true, [limit(Limit)]).
+
+test(invalid_next_limit_rejected_before_send,
+     [forall(member(Limit, [0,-1,1.5,infinity,infinite,none])), throws(error(_,_))]) :-
+    toplevel_next(unused_pid, [limit(Limit)]).
+
+test(memory_errors_normalized_without_changing_other_exceptions) :-
+    forall(member(Resource, [stack,memory,heap,trail,global_stack,local_stack,space]),
+        ( toplevel_actors:normalize_resource_error(
+              error(resource_error(Resource), backend_detail), Error),
+          Error = error(resource_error(space), Context),
+          assertion(var(Context))
+        )),
+    toplevel_actors:normalize_resource_error(
+        error(resource_error(inferences), diagnostic), Other),
+    assertion(Other == error(resource_error(inferences), diagnostic)),
+    toplevel_actors:normalize_resource_error(custom_error, custom_error).
+
 test(simple, Results == [a,b,c]) :-
    toplevel_spawn(Pid, [
        session(false),
@@ -682,7 +728,7 @@ test(time_limit_reports_swi_term_and_keeps_session_alive) :-
    ]),
    toplevel_call(Pid, sleep(0.2), [template(true)]),
    receive({
-       error(Pid, time_limit_exceeded) -> true
+       error(Pid, error(resource_error(time), _)) -> true
    }, [ timeout(2), on_timeout(throw(shell_receive_timeout)) ]),
    %  The running time limit aborts only the current goal.  The same actor
    %  must have returned to s1 and accept a subsequent call.
@@ -749,7 +795,7 @@ guarded_timeout(Parent) :-
        ( toplevel_call(Pid, guarded_timeout(Self), [template(true)]),
          receive({ timeout_started -> true },
                  [timeout(2), on_timeout(throw(shell_receive_timeout))]),
-         receive({ error(Pid, time_limit_exceeded) -> true },
+         receive({ error(Pid, error(resource_error(time), _)) -> true },
                  [timeout(2), on_timeout(throw(shell_receive_timeout))]),
          receive({ timeout_recovered -> throw(time_limit_was_caught) },
                  [timeout(0), on_timeout(true)]),

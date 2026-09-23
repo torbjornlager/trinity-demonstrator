@@ -173,13 +173,17 @@
       "(?:^|[,\\[])\\s*" + name + "\\s*\\(\\s*([0-9]+)\\s*\\)"
     );
     var match = expression.exec(String(optionsText || "[]"));
+    if (new RegExp("(?:^|[,\\[])\\s*" + name + "\\s*\\(").test(String(optionsText || "[]")) &&
+        (!match || (name === "limit" && Number(match[1]) <= 0))) {
+      throw new Error(name + " must be " + (name === "limit" ? "a positive" : "a non-negative") + " integer");
+    }
     return match ? Number(match[1]) : defaultValue;
   }
 
   function toplevelCallOptions(optionsText) {
     var text = String(optionsText || "[]");
     return {
-      limit: callIntegerOption(text, "limit", 1),
+      limit: callIntegerOption(text, "limit", "none"),
       offset: callIntegerOption(text, "offset", 0),
       once: /(?:^|[,\[])\s*once\s*\(\s*true\s*\)/.test(text)
     };
@@ -338,7 +342,7 @@
       goal: String(goalText || "true"),
       template: String(templateText || "true"),
       offset: Number(offset || 0),
-      limit: Number(limit || 10000000000),
+      limit: String(limit) === "none" ? undefined : Number(limit),
       loadText: String(loadText || ""),
       remoteTimeout: Number(remoteTimeout),
       once: once === true || String(once) === "true",
@@ -528,13 +532,13 @@
   function sendPtcpTimeLimitError() {
     var targetText = ptcpTimeLimitTargetText;
     var pidText = ptcpTimeLimitPidText || selfPidText;
-    var messageText = "error(" + pidText + ",time_limit_exceeded)";
+    var messageText = "error(" + pidText + ",error(resource_error(time),_))";
     ptcpTimeLimitTargetText = "";
     ptcpTimeLimitPidText = "";
     if (workerRole === "shell_toplevel" && localizePid(targetText) === "terminal") {
       post("error", {
-        data: "Time limit exceeded",
-        details: "time_limit_exceeded"
+        data: "Resource error: time",
+        details: "error(resource_error(time),_)"
       });
       return Promise.resolve(true);
     }
@@ -1107,7 +1111,7 @@
       "    term_to_atom(Goal, GoalText),",
       "    term_to_atom(Template, TemplateText),",
       "    Offset = 0,",
-      "    option(limit(Limit), Options, 10000000000),",
+      "    solution_limit(Options, Limit),",
       "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
       "    collect_rpc_load_text(Options, LoadText),",
       "    worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout).",
@@ -1130,7 +1134,7 @@
       "    ;   Response = failure",
       "    ->  fail",
       "    ;   Response = error(Error)",
-      "    ->  throw(rpc_error(Error))",
+      "    ->  throw(Error)",
       "    ;   throw(rpc_error(unexpected_response))",
       "    ).",
       "",
@@ -1142,7 +1146,7 @@
       "    term_to_atom(Goal, GoalText),",
       "    term_to_atom(Template, TemplateText),",
       "    option(offset(Offset), Options, 0),",
-      "    option(limit(Limit), Options, 10000000000),",
+      "    solution_limit(Options, Limit),",
       "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
       "    collect_rpc_load_text(Options, LoadText),",
       "    Ref := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout).",
@@ -1424,7 +1428,7 @@
       "            term_string(PlainGoal, GoalText, [variable_names(Bindings)]),",
       "            Goal = user:PlainGoal,",
       "            dict_create(Template, bindings, Bindings),",
-      "            Options = [template(Template), limit(Limit0), offset(Offset), once(Once)],",
+      "            ( Limit0 == none -> Limits = [] ; must_be(positive_integer, Limit0), Limits = [limit(Limit0)] ), append(Limits, [template(Template), offset(Offset), once(Once)], Options),",
       "            toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) ;",
       "        '$call'(Goal, Options) ->",
       "            toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) ;",
@@ -1444,10 +1448,9 @@
       "            option(template(Template0), Options, Goal),",
       "            strip_module(Template0, _, Template),",
       "            option(offset(Offset), Options, 0),",
-      "            option(limit(Limit0), Options, 10000000000),",
+      "            ( option(limit(N), Options) -> must_be(positive_integer, N), Limit = count(N) ; Limit = all ),",
       "            option(once(Once), Options, false),",
       "            option(target(Target1), Options, Target0),",
-      "            Limit = count(Limit0),",
       "            Target = target(Target1),",
       "            arm_time_limit(TimeLimit, Target1, Pid),",
       "            state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),",
@@ -1484,7 +1487,7 @@
       "    receive_idle({",
       "        '$next'(Options2) ->",
       "            (   option(limit(NewLimit), Options2)",
-      "            ->  nb_setarg(1, Limit, NewLimit)",
+      "            ->  must_be(positive_integer, NewLimit), nb_setarg(1, Limit, NewLimit)",
       "            ;   true",
       "            ),",
       "            (   option(target(NewTarget), Options2)",
@@ -1504,14 +1507,23 @@
       "    ;   Slice == []",
       "    ->  Answer = failure",
       "    ;   nonvar(Error)",
-      "    ->  Answer = error(Error)",
+      "    ->  normalize_resource_error(Error, PublicError), Answer = error(PublicError)",
       "    ;   var(Det)",
       "    ->  Answer = success(Slice, true)",
       "    ;   Det == true",
       "    ->  Answer = success(Slice, false)",
       "    ).",
       "",
-      "slice(Goal, Template, Offset, count(Limit), Slice) :-",
+      "normalize_resource_error(error(resource_error(Resource), _),",
+      "                         error(resource_error(space), _)) :-",
+      "    nonvar(Resource),",
+      "    memberchk(Resource, [space, stack, memory, heap, trail, global_stack, local_stack]),",
+      "    !.",
+      "normalize_resource_error(time_limit_exceeded, error(resource_error(time), _)) :- !.",
+      "normalize_resource_error(error(resource_error(time), _), error(resource_error(time), _)) :- !.",
+      "normalize_resource_error(Error, Error).",
+      "slice(Goal, Template, Offset, all, Slice) :- !, findall(Template, offset(Offset, Goal), Slice).",
+      "slice(Goal, Template, Offset, Limit, Slice) :-",
       "    findnsols(Limit, Template, offset(Offset, Goal), Slice).",
       "",
       "apply_once_answer(true, success(Slice, _), success(Slice, false)) :- !.",
@@ -1521,11 +1533,13 @@
       "add_pid(failure, Pid, failure(Pid)).",
       "add_pid(error(Term), Pid, error(Pid, Term)).",
       "",
+      "solution_limit(Options, Limit) :- ( option(limit(Limit), Options) -> must_be(positive_integer, Limit) ; Limit = none ).",
+      "validate_solution_limit(Options) :- solution_limit(Options, _).",
       "toplevel_call(Pid, Goal) :- toplevel_call(Pid, Goal, []).",
-      "toplevel_call(Pid, Goal, Options) :- send(Pid, '$call'(Goal, Options)).",
+      "toplevel_call(Pid, Goal, Options) :- validate_solution_limit(Options), send(Pid, '$call'(Goal, Options)).",
       "",
       "toplevel_next(Pid) :- toplevel_next(Pid, []).",
-      "toplevel_next(Pid, Options) :- send(Pid, '$next'(Options)).",
+      "toplevel_next(Pid, Options) :- validate_solution_limit(Options), send(Pid, '$next'(Options)).",
       "",
       "toplevel_halt(Pid) :- exit(Pid, true).",
       "",
