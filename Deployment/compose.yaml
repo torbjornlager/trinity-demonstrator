@@ -95,6 +95,9 @@ services:
       - /tmp:size=128m
     environment:
       WP_MODEL_SERVICE: ${WP_MODEL_SERVICE:-no}
+      WP_JEV_SERVICE: ${WP_JEV_SERVICE:-no}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      TYPESAFE_ENDPOINT: ${TYPESAFE_ENDPOINT:-}
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl

@@ -4048,7 +4048,9 @@
         "19 promise-and-yield.pl": "stateless",
         "20 expert-system-agent.pl": "actor",
         "21 model-actor.pl": "actor",
-        "22 service-policy.pl": "stateless"
+        "22 service-policy.pl": "stateless",
+        "23 jev-agent.pl": "actor",
+        "24 jev-sxml-agent.pl": "actor"
       });
 
       window.webPrologTerminalConvertLinks = true;
@@ -5580,8 +5582,8 @@
           label: "The ACTOR profile",
           apiPath: "/actor-api-tutorial",
           apiLabel: "The stateful WebSocket API",
-          behaviourPath: "",
-          behaviourLabel: ""
+          behaviourPath: "/jev-sxml-tutorial",
+          behaviourLabel: "Jev agent experiment"
         };
       }
 
@@ -6340,8 +6342,8 @@
                   : String(source || "");
                 self.handleTutorialConsult(combined, id);
               },
-              loadExample: function(path) {
-                self.handleTutorialExternalExample(path);
+              loadExample: function(path, options) {
+                self.handleTutorialExternalExample(path, options);
               },
               setTerminalExamples: function(examples) {
                 self.setTerminalExamples(examples);
@@ -7607,6 +7609,11 @@
             }
             normalized = raw.replace(/^https?:\/\/[^/]+/i, "");
             fileName = normalized.split("/").pop() || normalized;
+            try {
+              fileName = decodeURIComponent(fileName);
+            } catch (_error) {
+              // Keep the original filename when a tutorial supplies malformed escaping.
+            }
             specialMap = {
               "expert-system.pl": { url: "/examples/actors/expert-system.pl", kind: "prolog", name: "expert-system.pl" },
               "grammar.pl": { url: "/examples/actors/grammar.pl", kind: "prolog", name: "grammar.pl" },
@@ -7629,7 +7636,9 @@
           loadExampleFile: function(url, kind, label, options) {
             var self = this;
             var loadOptions = options || {};
-            this.selectWorkspace("prolog");
+            if (!loadOptions.preserveWorkspace) {
+              this.selectWorkspace("prolog");
+            }
             fetch(url, {
               cache: "no-store",
               headers: { Accept: "text/plain" }
@@ -8701,7 +8710,8 @@
             }
             return this.loadTutorialProgramIntoCurrentSession(adapted);
           },
-          handleTutorialExternalExample: function(path) {
+          handleTutorialExternalExample: function(path, options) {
+            var tutorialOptions = options || {};
             if (!this.hasEditorPane) {
               this.log("warn", "This node does not expose an editor workspace for tutorial examples.", "tutorial");
               this.selectWorkspace("tutorial");
@@ -8713,7 +8723,10 @@
               this.selectDock("terminal");
               return;
             }
-            this.loadExampleFile(resolved.url, resolved.kind, resolved.name, { focus: "editor" });
+            this.loadExampleFile(resolved.url, resolved.kind, resolved.name,
+              tutorialOptions.target === "session"
+                ? { focus: "terminal", preserveWorkspace: true }
+                : { focus: "editor" });
           },
           applyNewBindings: function(newMap) {
             var names = Object.keys(newMap);

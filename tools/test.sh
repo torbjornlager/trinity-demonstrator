@@ -76,5 +76,6 @@ run_wasm
 
 run_tier MODEL tests/model_service_tests.pl run_tests
 run_tier MODEL_SXML tests/model_statechart_tests.pl 'run_tests(model_statechart)'
+run_tier JEV tests/jev_tests.pl 'run_tests(jev)'
 
 exit $FAILED

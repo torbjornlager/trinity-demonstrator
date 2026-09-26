@@ -12,6 +12,7 @@
     start_example_services/2
 ]).
 :- use_module('../examples/services/model_service.pl', [configure_model_service/1]).
+:- use_module('../examples/services/jev_service.pl', [configure_jev_service/0]).
 :- use_module(library(web_prolog/node_runtime_state), [
     with_node_port_context/2,
     update_current_node_runtime/1
@@ -26,6 +27,7 @@ start_n3 :-
     !.
 start_n3 :-
     configure_n3_model_service,
+    configure_n3_jev_service,
     common_shared_db_path(CommonSharedDBPath),
     actor_common_shared_db_path(ActorCommonSharedDBPath),
     node_overlay_shared_db_path(n3, OverlaySharedDBPath),
@@ -88,6 +90,13 @@ start_n3 :-
 configure_n3_model_service :-
     ( getenv('WP_MODEL_SERVICE', yes)
     -> configure_model_service('http://host.docker.internal:11434/api/chat')
+    ; true ).
+
+% Opt-in fixed Jev semantic-observation capability. The key stays in the owner
+% environment; public actors can ask only the bounded tutorial questions.
+configure_n3_jev_service :-
+    ( getenv('WP_JEV_SERVICE', yes)
+    -> configure_jev_service
     ; true ).
 
 start_n3_forever :-

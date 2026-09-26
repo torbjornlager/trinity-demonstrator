@@ -1,0 +1,98 @@
+<!--
+Jev supplies typed semantic observations; SXML decides what they mean now.
+
+Normally this chart is owned by 24 jev-sxml-agent.pl. The gateway keeps the
+external HTTP call outside the statechart macrostep and attaches the complete
+Choice, Score and Noul values to observed/4.
+
+The utterance "yes" is `affirm` in both cases:
+  * in idle it changes no state and reports that nothing awaits confirmation;
+  * in awaiting_confirmation it confirms the pending deployment.
+-->
+<statechart version="0.2" initial="idle">
+  <datamodel>
+    /* The chart owns the proposal that gives a later affirm or deny event its
+       referent. This is deliberately small: it is tutorial interaction state,
+       not a durable deployment record. */
+    :- dynamic pending_proposal/3.
+
+    confident(choice(_, _, Confidence)) :- Confidence &gt;= 0.70.
+    has_intent(choice(Intent, _, _), Intent).
+
+    remember_proposal(Ref, Text, observation(Intent, _, _, _)) :-
+        retractall(pending_proposal(_, _, _)),
+        assertz(pending_proposal(Ref, Text, Intent)).
+
+    take_proposal(proposal(Ref, Text, Intent)) :-
+        retract(pending_proposal(Ref, Text, Intent)).
+
+    report(From, Ref, Text, Observation, State, Transition, Action, Reply) :-
+        From ! demo_reply(Ref,
+                 report(Text, Observation, state(State),
+                        transition(Transition), action(Action), Reply)).
+  </datamodel>
+
+  <state id="idle">
+    <go on="observed(From, Ref, Text, unavailable(Error))">
+      report(From, Ref, Text, unavailable(Error), idle, none,
+             retry_later, "Jev is unavailable; no state change was made.")
+    </go>
+    <go on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), \+ confident(Intent)">
+      report(From, Ref, Text, Observation, idle, none,
+             clarify, "I am not confident enough to act. Please rephrase.")
+    </go>
+    <go to="awaiting_confirmation"
+        on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), confident(Intent), has_intent(Intent, request_deploy)">
+      remember_proposal(Ref, Text, Observation),
+      report(From, Ref, Text, Observation, idle,
+             idle-awaiting_confirmation, ask_confirmation,
+             "Deployment is prepared. Say yes to confirm or no to cancel.")
+    </go>
+    <go on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), confident(Intent), has_intent(Intent, status)">
+      report(From, Ref, Text, Observation, idle, none,
+             show_status, "No deployment is currently awaiting confirmation.")
+    </go>
+    <go on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), confident(Intent), has_intent(Intent, affirm)">
+      report(From, Ref, Text, Observation, idle, none,
+             explain_context, "Yes to what? No deployment is awaiting confirmation.")
+    </go>
+    <go on="observed(From, Ref, Text, Observation)">
+      report(From, Ref, Text, Observation, idle, none,
+             clarify, "Tell me if you want to prepare a deployment.")
+    </go>
+  </state>
+
+  <state id="awaiting_confirmation">
+    <go on="observed(From, Ref, Text, unavailable(Error))">
+      report(From, Ref, Text, unavailable(Error), awaiting_confirmation, none,
+             retry_later, "Jev is unavailable; the pending deployment remains unchanged.")
+    </go>
+    <go on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), \+ confident(Intent)">
+      report(From, Ref, Text, Observation, awaiting_confirmation, none,
+             clarify, "I could not confidently interpret that; please say yes or no.")
+    </go>
+    <go to="idle" on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), confident(Intent), has_intent(Intent, affirm)">
+      take_proposal(Proposal),
+      report(From, Ref, Text, Observation, awaiting_confirmation,
+             awaiting_confirmation-idle, simulate_deploy(Proposal),
+             "Confirmed. The demonstrator records the deployment action.")
+    </go>
+    <go to="idle" on="observed(From, Ref, Text, Observation)"
+        if="Observation = observation(Intent, _, _, _), confident(Intent), has_intent(Intent, deny)">
+      take_proposal(Proposal),
+      report(From, Ref, Text, Observation, awaiting_confirmation,
+             awaiting_confirmation-idle, cancel(Proposal),
+             "Cancelled. No deployment action was recorded.")
+    </go>
+    <go on="observed(From, Ref, Text, Observation)">
+      report(From, Ref, Text, Observation, awaiting_confirmation, none,
+             ask_confirmation, "A deployment is pending; please say yes or no.")
+    </go>
+  </state>
+</statechart>

@@ -29,3 +29,8 @@ model_answer(Prompt, Result) :-
 % Bounded multi-turn conversation; history remains owned by the caller.
 model_chat(Messages, Result) :-
     model_service:model_chat(Messages, Result).
+
+% Fixed, owner-installed Jev capability for examples 23, 24 and 20. It is
+% unavailable unless N3 starts with WP_JEV_SERVICE=yes and TYPESAFE_API_KEY.
+jev_deployment_observation(Text, Result) :-
+    jev_service:jev_deployment_observation(Text, Result).

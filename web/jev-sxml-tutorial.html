@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Prolog Tutorial — Jev semantic observations</title>
+  <meta name="description" content="Build a Jev-backed Observe–Think–Act actor, then add SXML when interaction state matters.">
+  <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <link rel="stylesheet" href="/vendor/tutorial-common.css">
+  <style>
+    main { max-width: 900px; }
+    .pipeline { font-family: var(--mono-font); line-height: 1.8; text-align: center; }
+    .tentative { border-style: dashed; }
+    .stage-marker { margin-top: 2.6rem; padding-top: 1.4rem; border-top: 3px solid var(--border); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Jev semantic observations in Web Prolog</h1>
+  <p class="lede">First build a complete Jev-backed Observe–Think–Act actor with ordinary Prolog. Then add SXML only when the meaning of an observation depends on interaction history.</p>
+
+  <div class="note tentative">
+    <strong>Experimental tutorial.</strong> Use N3's native ACTOR runtime. Its owner must enable <code>WP_JEV_SERVICE=yes</code> and provide <code>TYPESAFE_API_KEY</code>. The credential stays in the node environment; it never enters this page, actor source, SXML, or actor messages. Every action below is conversational or simulated.
+  </div>
+
+  <nav aria-label="Table of contents"><ul>
+    <li><a href="#stage-one">Part I — Jev + Web Prolog</a></li>
+    <li><a href="#setup">1. Jev setup</a></li>
+    <li><a href="#wire">2. Minimal Jev request</a></li>
+    <li><a href="#decision">3. Typed probabilistic decisions</a></li>
+    <li><a href="#observation">4. Semantic observation</a></li>
+    <li><a href="#actor">5–6. Observe, Think and Act</a></li>
+    <li><a href="#stage-two">Part II — Why add SXML?</a></li>
+    <li><a href="#affirm">7. “Affirm what?”</a></li>
+    <li><a href="#state">8–9. Explicit interaction state</a></li>
+    <li><a href="#same-observation">10. Same observation, different state</a></li>
+    <li><a href="#uncertainty">11. Uncertainty remains data</a></li>
+    <li><a href="#swedish">12. Swedish below the boundary</a></li>
+  </ul></nav>
+
+  <section id="stage-one" class="stage-marker">
+    <h2>Part I — Jev + an ordinary Web Prolog actor</h2>
+    <div class="pipeline">natural-language input<br>&darr;<br>bounded Choice, Score and Noul questions to Jev<br>&darr;<br>typed probabilistic decision<br>&darr;<br>Trinity semantic observation<br>&darr;<br>ordinary Prolog clauses in a Web Prolog actor<br>&darr;<br>conversational or simulated action</div>
+    <p>Jev answers bounded semantic questions. The Trinity layer treats the resulting typed probabilistic decision as a semantic observation: ordinary Prolog data, not generated code or permission to perform an effect.</p>
+  </section>
+
+  <section id="setup">
+    <h2>1. Jev setup</h2>
+    <p>The node owner supplies the credential and explicitly enables the narrow deployment-assessment capability. Uploaded code can choose only the input text; it cannot choose the credential, endpoint, model, or question vocabulary.</p>
+    <pre><code>WP_JEV_SERVICE=yes
+TYPESAFE_API_KEY=...             # owner environment only</code></pre>
+    <p>The current provider endpoint is <code>POST https://api.typesafe.ai/v1/systemone</code>, authenticated with a bearer token. Provider details are isolated in <strong>jev_http.pl</strong> because they may change independently of the architecture.</p>
+  </section>
+
+  <section id="wire">
+    <h2>2. The lowest-level useful request</h2>
+    <p>The client sends one state value and a map of named typed questions. A reduced request looks like:</p>
+    <pre><code>{
+  "model": "jev-latest",
+  "state": {"message": "Please prepare a deployment"},
+  "questions": {
+    "intent": {
+      "type": "choice",
+      "instructions": "Which single intent best describes the message?",
+      "criteria": {
+        "request_deploy": "Ask to prepare or perform a deployment",
+        "affirm": "Confirm, approve, agree, or say yes",
+        "deny": "Reject, cancel, disagree, or say no",
+        "status": "Ask for current deployment status",
+        "other": "None of the other options is a good fit"
+      }
+    }
+  }
+}</code></pre>
+    <p>The response identifies the concrete model, returns answers under the same names, and includes usage. Transport errors and malformed responses remain provider-layer errors; application code never inspects provider JSON fields directly.</p>
+  </section>
+
+  <section id="decision">
+    <h2>3. Typed probabilistic decisions as Prolog data</h2>
+    <p>The project-level <code>jev_decide/3</code> abstraction expresses Jev Choice, Score and Noul questions as Prolog terms and binds their typed probabilistic decisions:</p>
+    <pre><code>jev_decide(_{message:Text}, [
+    choice(intent, "Which intent?", Criteria, Intent),
+    score(urgency, "How urgent?", Levels, Urgency),
+    noul(is_question, "Is this a question?", IsQuestion)
+], RawResponse).</code></pre>
+    <p>A successful call binds:</p>
+    <pre><code>Intent     = choice(Symbol, Probabilities, Confidence)
+Urgency    = score(Value, Legend, LevelProbabilities, Confidence)
+IsQuestion = noul(YesProbability)</code></pre>
+    <p>Choice retains its full alternative distribution. Score is a probability-weighted position on a zero-based rubric, not a normalised confidence. Noul is the probability of yes/true and has no second confidence value. The complete provider response is retained rather than silently discarding model, usage, or future extension fields.</p>
+  </section>
+
+  <section id="observation">
+    <h2>4. Treat the decision as a semantic observation</h2>
+    <p>Both stages consume exactly one application-facing shape:</p>
+    <pre><code>observation(IntentChoice,
+            UrgencyScore,
+            QuestionNoul,
+            provenance(RawResponse))</code></pre>
+    <p>No usable semantic answer is represented separately:</p>
+    <pre><code>unavailable(configuration)
+unavailable(timeout)
+unavailable(rate_limited)
+unavailable(malformed_response)
+unavailable(transport)</code></pre>
+    <p>An unavailable assessment is not <code>deny</code>, <code>other</code>, or <code>false</code>.</p>
+  </section>
+
+  <section id="actor">
+    <h2>5–6. Receive input, Think and Act</h2>
+    <p>The Stage 1 actor is the whole agent. It observes through the node capability, chooses an action with ordinary clauses, and replies:</p>
+    <pre><code>jev_agent_loop :-
+    receive({
+        say(From, Ref, Text) -&gt;
+            jev_observation(Text, Observation),
+            jev_stage1_decision(Observation, Action, Reply),
+            From ! agent_reply(Ref,
+                      report(Text, Observation, action(Action), Reply)),
+            jev_agent_loop;
+        stop -&gt; true
+    }).</code></pre>
+    <p><code>request_deploy</code> prepares only a simulated preview; <code>status</code> reports that no real deployment exists. The main success path therefore does not yet need confirmation state.</p>
+    <div class="actions"><button type="button" data-load="/examples/actors/23%20jev-agent.pl" data-load-target="session">Load Stage 1 actor</button></div>
+    <pre id="jev-stage1-spawn"><code>?- jev_agent_spawn(Pid).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-stage1-spawn">Spawn Stage 1</button></div>
+    <pre id="jev-stage1-deploy"><code>?- self(Me), $Pid ! say(Me, deploy, "Please prepare a deployment"),
+   receive({agent_reply(deploy, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-stage1-deploy">Prepare simulated preview</button></div>
+    <pre id="jev-stage1-status"><code>?- self(Me), $Pid ! say(Me, status, "What is the deployment status?"),
+   receive({agent_reply(status, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-stage1-status">Ask status</button></div>
+    <pre id="jev-stage1-stop"><code>?- $Pid ! stop.</code></pre>
+    <div class="actions"><button class="secondary" type="button" data-ask="#jev-stage1-stop">Stop Stage 1</button></div>
+    <div class="note"><strong>Checkpoint.</strong> We already have a complete neuro-symbolic Observe–Think–Act agent. Nothing so far requires a statechart.</div>
+  </section>
+
+  <section id="stage-two" class="stage-marker">
+    <h2>Part II — Why add SXML?</h2>
+    <p>Now introduce a problem the stateless success path did not have: a later utterance may refer to an earlier conversational commitment.</p>
+  </section>
+
+  <section id="affirm">
+    <h2>7. A confident label still leaves a question</h2>
+    <p>Jev may confidently map both <code>yes</code> and <code>ja</code> to the symbolic Choice <code>affirm</code>. But classification alone cannot answer: <em>affirm what?</em></p>
+    <table aria-label="State-dependent meaning"><thead><tr><th>Interaction state</th><th>Observation</th><th>Behavioural meaning</th></tr></thead><tbody>
+      <tr><td><code>idle</code></td><td><code>affirm</code></td><td>Explain that nothing awaits confirmation.</td></tr>
+      <tr><td><code>awaiting_confirmation</code></td><td><code>affirm</code></td><td>Confirm the pending simulated proposal.</td></tr>
+      <tr><td><code>awaiting_confirmation</code></td><td><code>deny</code></td><td>Cancel and return to idle.</td></tr>
+    </tbody></table>
+    <p>Ordinary Prolog could store this state. SXML becomes useful because it makes the protocol, permitted next moves, and later temporal extensions explicit.</p>
+  </section>
+
+  <section id="state">
+    <h2>8–9. Explicit state and the macrostep boundary</h2>
+    <p>The Stage 2 gateway reuses the same <code>jev_deployment_observation/2</code> capability and the same <code>observation/4</code> term. It adds only a chart-owning actor and the correlated event envelope:</p>
+    <pre><code>observed(From, Ref, OriginalText, Observation)</code></pre>
+    <p>The ordering is important:</p>
+    <ol>
+      <li>the gateway receives natural language;</li>
+      <li>external Jev inference completes outside the chart;</li>
+      <li>the completed result is normalised;</li>
+      <li><code>observed/4</code> enters SXML as one external event;</li>
+      <li>the chart processes its macrostep to completion without HTTP I/O.</li>
+    </ol>
+    <p>The serial gateway preserves arrival order but blocks its mailbox while Jev answers. That is acceptable here. A production version needing cancellation or concurrency would use correlated worker actors and an explicit obsolete-result policy.</p>
+    <div class="actions"><button type="button" data-load="/examples/actors/24%20jev-sxml-agent.pl" data-load-target="session">Load Stage 2 gateway</button></div>
+    <pre id="jev-stage2-spawn"><code>?- jev_sxml_agent_spawn(Pid).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-stage2-spawn">Spawn Stage 2</button></div>
+  </section>
+
+  <section id="same-observation">
+    <h2>10. The same observation in two states</h2>
+    <h3>Affirm while idle</h3>
+    <pre id="jev-idle-yes"><code>?- self(Me), $Pid ! say(Me, idle_yes, "yes"),
+   receive({demo_reply(idle_yes, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-idle-yes">Say “yes” while idle</button></div>
+    <p>Expect <code>action(explain_context)</code> and <code>transition(none)</code>.</p>
+
+    <h3>Create a pending commitment</h3>
+    <pre id="jev-stage2-deploy"><code>?- self(Me), $Pid ! say(Me, deploy, "Please prepare a deployment"),
+   receive({demo_reply(deploy, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-stage2-deploy">Prepare deployment proposal</button></div>
+    <p>The <code>request_deploy</code> observation enters <code>awaiting_confirmation</code>. No deployment occurs.</p>
+
+    <h3>Affirm while awaiting confirmation</h3>
+    <pre id="jev-awaiting-yes"><code>?- self(Me), $Pid ! say(Me, confirm, "yes"),
+   receive({demo_reply(confirm, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-awaiting-yes">Say “yes” to confirm</button></div>
+    <p>The same symbolic <code>affirm</code> now selects <code>simulate_deploy(Proposal)</code> and returns to <code>idle</code>. The proposal contains the reference, original request text, and intent saved when the chart entered <code>awaiting_confirmation</code>; the larger raw provider response is not retained in interaction state.</p>
+
+    <h3>Denial cancels</h3>
+    <p>Prepare another proposal with the preceding button, then:</p>
+    <pre id="jev-awaiting-no"><code>?- self(Me), $Pid ! say(Me, cancel, "no"),
+   receive({demo_reply(cancel, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-awaiting-no">Say “no” to cancel</button></div>
+  </section>
+
+  <section id="uncertainty">
+    <h2>11. Uncertainty remains data</h2>
+    <p>Both stages accept an intent winner only when Choice confidence is at least <code>0.70</code>. This is an application-specific teaching value, not a universal or calibrated threshold.</p>
+    <pre id="jev-ambiguous"><code>?- self(Me), $Pid ! say(Me, ambiguous,
+       "Yes, deploy it -- actually no, do not deploy it."),
+   receive({demo_reply(ambiguous, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-ambiguous">Send contradictory input</button></div>
+    <p>The 2026-09-25 live probe returned <code>deny</code> with <code>deny=0.74</code>, <code>other=0.24</code>, <code>request_deploy=0.02</code>, and confidence <code>0.66</code>. Exact results may change. The deterministic policy asks for clarification and leaves the chart state unchanged.</p>
+    <p>This is deterministic control over uncertain evidence, not probabilistic control flow. The chart does not branch into alternative probabilistic states.</p>
+  </section>
+
+  <section id="swedish">
+    <h2>12. Swedish below the observation boundary</h2>
+    <p>Prepare a proposal, then try Swedish affirmation:</p>
+    <pre id="jev-swedish"><code>?- self(Me), $Pid ! say(Me, swedish, "ja"),
+   receive({demo_reply(swedish, Report) -&gt; true},
+           [timeout(20), on_timeout(fail)]).</code></pre>
+    <div class="actions"><button type="button" data-ask="#jev-swedish">Say “ja”</button></div>
+    <p>If the sensor produces <code>affirm</code>, the Prolog and SXML layers use the same clauses and transition as English <code>yes</code>. Likewise <code>nej</code> can produce <code>deny</code>. This is language independence of the symbolic interface; a few successful probes do not establish multilingual accuracy.</p>
+  </section>
+
+  <section id="implementation">
+    <h2>Read and edit the implementation</h2>
+    <div class="actions">
+      <button type="button" data-load="/examples/actors/23%20jev-agent.pl">Open Stage 1 actor</button>
+      <button type="button" data-load="/examples/actors/24%20jev-sxml-agent.pl">Open Stage 2 gateway</button>
+      <button class="secondary" type="button" data-load="/examples/statecharts/20%20jev-deployment-assistant.xml">Open SXML chart</button>
+    </div>
+    <p>Compare the Stage 1 decision clauses with the Stage 2 chart. The semantic-observation boundary is unchanged; Stage 2 refines the behavioural policy and represents its interaction state explicitly.</p>
+    <pre id="jev-stage2-stop"><code>?- $Pid ! stop.</code></pre>
+    <div class="actions"><button class="secondary" type="button" data-ask="#jev-stage2-stop">Stop Stage 2</button></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  function bridge() {
+    try { return window.parent !== window ? window.parent.webPrologTutorialBridge : null; }
+    catch (_error) { return null; }
+  }
+  function queryFrom(selector) {
+    var node = document.querySelector(selector);
+    return node ? node.textContent.replace(/^\s*\?-\s*/, "").trim() : "";
+  }
+  function applyAppearance(options) {
+    options = options || {};
+    var root = document.documentElement;
+    var size = parseInt(options.fontSize, 10);
+    root.setAttribute("data-theme", options.theme === "dark" ? "dark" : "light");
+    if (options.fontFamily) root.style.setProperty("--mono-font", options.fontFamily);
+    if (Number.isFinite(size)) {
+      root.style.setProperty("--mono-size", size + "px");
+      root.style.setProperty("--text-size", (size + 1) + "px");
+    }
+    if (options.fontWeight) root.style.setProperty("--mono-weight", options.fontWeight);
+  }
+  function restoreAppearance() {
+    applyAppearance({
+      theme: localStorage.getItem("wb.themeMode"),
+      fontFamily: localStorage.getItem("wb.monoFontFamily"),
+      fontSize: localStorage.getItem("wb.monoFontSize"),
+      fontWeight: localStorage.getItem("wb.monoFontWeight")
+    });
+  }
+  window.tutorialFrameBridge = {
+    applyAppearance: applyAppearance,
+    applyTheme: function (theme) { applyAppearance({ theme: theme }); }
+  };
+  window.addEventListener("message", function (event) {
+    if (event.origin !== location.origin || !event.data) return;
+    if (event.data.type === "webprolog-appearance") applyAppearance(event.data);
+    if (event.data.type === "webprolog-theme") applyAppearance({ theme: event.data.theme });
+  });
+  document.querySelectorAll("[data-ask]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var api = bridge();
+      if (api && typeof api.askExample === "function") {
+        api.askExample(queryFrom(button.getAttribute("data-ask")), button.getAttribute("data-ask"));
+      }
+    });
+  });
+  document.querySelectorAll("[data-load]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var api = bridge();
+      if (api && typeof api.loadExample === "function") {
+        api.loadExample(button.getAttribute("data-load"), {
+          target: button.getAttribute("data-load-target") || "editor"
+        });
+      }
+    });
+  });
+  var api = bridge();
+  if (api && typeof api.appearanceOptions === "function") applyAppearance(api.appearanceOptions());
+  else restoreAppearance();
+}());
+</script>
+</body>
+</html>

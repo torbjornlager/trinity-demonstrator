@@ -254,6 +254,7 @@ HTTP endpoint layout:
 :- http_handler(root('isobase-api-tutorial'), node_isobase_api_tutorial_page, []).
 :- http_handler(root('isotope-api-tutorial'), node_isotope_api_tutorial_page, []).
 :- http_handler(root('actor-api-tutorial'), node_actor_api_tutorial_page, []).
+:- http_handler(root('jev-sxml-tutorial'), node_jev_sxml_tutorial_page, []).
 :- http_handler(root(manual), node_manual_page, []).
 :- http_handler(root(editor_frame), node_editor_frame_page, []).
 :- http_handler(root('swi_wasm_actor_worker.js'), node_swi_wasm_actor_worker_page, []).
@@ -1388,6 +1389,10 @@ node_actor_api_tutorial_page(Request) :-
     node_actor_api_tutorial_file(File),
     reply_uncached_file(File, Request).
 
+node_jev_sxml_tutorial_page(Request) :-
+    node_jev_sxml_tutorial_file(File),
+    reply_uncached_file(File, Request).
+
 %!  node_manual_page(+Request) is det.
 %
 %   Serve the HTML version of the appendix manual predicate reference.
@@ -2085,6 +2090,11 @@ node_actor_api_tutorial_file(File) :-
     module_property(node, file(ThisFile)),
     file_directory_name(ThisFile, Dir),
     directory_file_path(Dir, '../../web/actor-api-tutorial.html', File).
+
+node_jev_sxml_tutorial_file(File) :-
+    module_property(node, file(ThisFile)),
+    file_directory_name(ThisFile, Dir),
+    directory_file_path(Dir, '../../web/jev-sxml-tutorial.html', File).
 
 %!  node_manual_file(-File) is det.
 %
