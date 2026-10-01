@@ -74,6 +74,8 @@ curl https://n5.elfenbenstornet.se/healthz      # {"status":"ok"}
 The full topology, environment setup, operational commands, and SSO-gated
 `n5` configuration are documented in
 [Deployment/README.md](Deployment/README.md).
+That guide also contains an opt-in, immediately reversible Trealla N5
+override for private interoperability testing.
 
 Validate a configuration without starting the server:
 

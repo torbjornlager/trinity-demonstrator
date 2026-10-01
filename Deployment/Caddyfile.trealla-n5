@@ -1,0 +1,61 @@
+# n5: Trealla execution backend, still gated by the existing owner-only
+# GitHub SSO. Static demonstrator content is borrowed from N3; relative API
+# and WebSocket requests return here and are routed to Trealla.
+n5.elfenbenstornet.se {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle /oauth2/* {
+		reverse_proxy oauth2_n5:4180 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-Uri {uri}
+		}
+	}
+
+	# Nothing below this point is reachable without the existing GitHub
+	# owner session. Trealla can consequently use auth(open) on wp_net.
+	handle {
+		forward_auth oauth2_n5:4180 {
+			uri /oauth2/auth
+			copy_headers X-Auth-Request-User X-Auth-Request-Email
+
+			@unauth status 401
+			handle_response @unauth {
+				redir https://{host}/oauth2/sign_in?rd={scheme}://{host}{uri}
+			}
+		}
+
+		route {
+			@n5_root path /
+			redir @n5_root /demonstrator 302
+
+			@trealla path /call /ws /healthz /readyz /version /node_info /metrics
+			reverse_proxy @trealla wp_n5:3060 {
+				import common_proxy_headers
+				transport http {
+					read_timeout 0
+					write_timeout 0
+				}
+			}
+
+			# N3 supplies only browser-facing files and the example catalogue.
+			# It does not execute N5 requests: those use the relative API routes
+			# above and therefore reach Trealla.
+			@n5_ui path /manual /img* /vendor* /portal /demonstrator /calculator /tutorial /swi-wasm-tutorial /isobase-profile-tutorial /isotope-profile-tutorial /actor-profile-tutorial /statechart-behaviour-tutorial /isobase-api-tutorial /isotope-api-tutorial /actor-api-tutorial /jev-sxml-tutorial /editor_frame /examples_index /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /sxml-0.2.dtd
+			reverse_proxy @n5_ui wp_n3:3053 {
+				import common_proxy_headers
+			}
+
+			respond "Not found" 404
+		}
+	}
+}
+
+# Keep admin off the public internet. Trealla administration is available
+# from inside its container through Deployment/start_node.pl.

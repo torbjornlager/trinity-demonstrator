@@ -1,0 +1,10 @@
+FROM caddy:2
+
+# Reuse the normal multi-node configuration through the start of N4, then
+# replace only its trailing N5 site block. This keeps the default Caddy image
+# and configuration intact for rollback.
+COPY Deployment/Caddyfile /tmp/Caddyfile.base
+COPY Deployment/Caddyfile.trealla-n5 /tmp/Caddyfile.trealla-n5
+RUN sed '/^# n5:/,$d' /tmp/Caddyfile.base > /etc/caddy/Caddyfile \
+    && cat /tmp/Caddyfile.trealla-n5 >> /etc/caddy/Caddyfile \
+    && caddy validate --config /etc/caddy/Caddyfile

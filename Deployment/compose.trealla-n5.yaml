@@ -1,0 +1,47 @@
+# Opt-in Trealla replacement for the private N5 execution backend.
+#
+# Apply after the normal compose file. The ordinary compose file is left
+# untouched and is therefore the rollback configuration.
+#
+#   docker compose -f Deployment/compose.yaml \
+#     -f Deployment/compose.trealla-n5.yaml \
+#     --env-file Deployment/.env up -d --build wp_n5 oauth2_n5 caddy
+
+services:
+  wp_n5:
+    build:
+      # Paths in Compose overrides are resolved relative to the first compose
+      # file (Deployment/compose.yaml). The two repositories are siblings in
+      # the development/deployment checkout.
+      context: ../../trealla-port
+      dockerfile: Deployment/Dockerfile
+      args:
+        TREALLA_VERSION: ${TREALLA_N5_VERSION:-v3.12.6}
+    environment:
+      WP_PORT: "3060"
+      WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
+      WP_PROFILE: actor
+      # GitHub oauth2-proxy is the owner-only outer boundary. The backend is
+      # deliberately open only on the private Compose network.
+      WP_AUTH: open
+      WP_ACK_PUBLIC: "yes"
+      WP_SANDBOX: ${WP_N5_SANDBOX:-blacklist}
+      WP_ADMIN_TOKEN: ${WP_TREALLA_N5_ADMIN_TOKEN:?Set WP_TREALLA_N5_ADMIN_TOKEN to at least 24 random characters}
+      WP_WS_ALLOWED_ORIGINS: https://n0.elfenbenstornet.se,https://n1.elfenbenstornet.se,https://n2.elfenbenstornet.se,https://n3.elfenbenstornet.se,https://n4.elfenbenstornet.se,https://n5.elfenbenstornet.se
+      WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
+      WP_MAX_ACTORS: ${WP_TREALLA_N5_MAX_ACTORS:-128}
+      WP_MAX_INFLIGHT_CALLS: ${WP_TREALLA_N5_MAX_INFLIGHT_CALLS:-4}
+      WP_AUDIT_LOG_FILE: /state/audit.jsonl
+      WP_TOKENS_FILE: /state/tokens.pl
+      WP_DRAIN_GRACE_SECONDS: ${WP_DRAIN_GRACE_SECONDS:-10}
+    volumes:
+      - trealla_n5_state:/state
+    pids_limit: 256
+
+  caddy:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.caddy.trealla-n5
+
+volumes:
+  trealla_n5_state:

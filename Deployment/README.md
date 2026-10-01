@@ -325,6 +325,86 @@ node-relative `src_uri('/examples/...')` through its own public URL (the
 server-side request has no browser SSO cookie). Load the example in the
 editor and use `src_text(<editor>)`, as in the shared-database example.
 
+## Optional Trealla N5
+
+[`compose.trealla-n5.yaml`](compose.trealla-n5.yaml) replaces only N5's
+execution backend with the native Trealla port. It is deliberately an
+override: the normal `compose.yaml`, SWI N5 image, and normal Caddyfile remain
+unchanged as the rollback configuration.
+
+The override assumes sibling checkouts:
+
+```text
+parent/
+  trinity-demonstrator/
+  trealla-port/
+```
+
+GitHub SSO remains the owner-only public boundary. Behind it, Trealla runs
+`auth(open)` only on the private Compose network. N3 supplies N5's static
+demonstrator, tutorial, example, and image files; `/call`, `/ws`, discovery,
+health, readiness, version, and metrics go to Trealla. The page therefore
+remains usable, but examples requiring SWI-specific predicates, statecharts,
+the SWI shared database, or the HTTP `/toplevel_*` routes are expected to
+fail. N5 advertises only `local_actor`, `toplevels`, and `distributed_actor`
+tutorial sections.
+
+Add a random internal administration token to `Deployment/.env`:
+
+```sh
+printf 'WP_TREALLA_N5_ADMIN_TOKEN=%s\n' "$(openssl rand -hex 32)" >> Deployment/.env
+```
+
+Validate the merged configuration before changing the running services:
+
+```sh
+./tools/test-trealla-n5-override.sh
+
+# Or configuration only:
+docker compose -f Deployment/compose.yaml \
+  -f Deployment/compose.trealla-n5.yaml \
+  --env-file Deployment/.env config --quiet
+```
+
+Cut over N5 and Caddy while leaving the other nodes alone:
+
+```sh
+docker compose -f Deployment/compose.yaml \
+  -f Deployment/compose.trealla-n5.yaml \
+  --env-file Deployment/.env \
+  up -d --build wp_n5 oauth2_n5 caddy
+```
+
+Check the backend and the SSO edge:
+
+```sh
+docker compose -f Deployment/compose.yaml \
+  -f Deployment/compose.trealla-n5.yaml \
+  --env-file Deployment/.env ps
+docker compose -f Deployment/compose.yaml \
+  -f Deployment/compose.trealla-n5.yaml \
+  --env-file Deployment/.env logs --tail=100 wp_n5 caddy
+curl -I https://n5.elfenbenstornet.se/demonstrator
+```
+
+An unauthenticated `curl` should still redirect to `/oauth2/sign_in`. After
+signing in, `/version` should report `"web_prolog":"trealla-port"`,
+`/node_info` should report `"profile":"actor"`, and the N5 demonstrator
+should connect over WebSocket.
+
+Rollback does not require a Git revert. Recreate the original services using
+only the normal Compose file:
+
+```sh
+docker compose -f Deployment/compose.yaml \
+  --env-file Deployment/.env \
+  up -d --build --force-recreate wp_n5 oauth2_n5 caddy
+```
+
+The named `trealla_n5_state` volume is intentionally retained after rollback
+so its audit log and token state remain recoverable. It can be removed later
+only after confirming it is no longer needed.
+
 ## Security Model
 
 This bundle is a practical first step, not a complete hardening story.
