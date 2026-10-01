@@ -40,14 +40,16 @@ docker compose -p "$SMOKE_PROJECT" -f "$BASE_COMPOSE" \
 
 SMOKE_NETWORK=${SMOKE_PROJECT}_wp_net
 NODE_INFO=$(docker run --rm --network "$SMOKE_NETWORK" caddy:2.8.4-alpine \
-    wget -qO- http://wp_n5:3060/node_info)
+    wget --header='X-Web-Prolog-User: owner@example.test' \
+      -qO- http://wp_n5:3060/node_info)
 printf '%s' "$NODE_INFO" | grep -Fq '"self_url":"https:\/\/n5.elfenbenstornet.se"'
 printf '%s' "$NODE_INFO" | grep -Fq '"profile":"actor"'
 printf '%s' "$NODE_INFO" | \
     grep -Fq '"tutorial_sections":["local_actor","toplevels","distributed_actor"]'
 
 ANSWER=$(docker run --rm --network "$SMOKE_NETWORK" caddy:2.8.4-alpine \
-    wget -qO- 'http://wp_n5:3060/call?goal=member(X%2C%5Ba%2Cb%5D)&format=json&limit=1')
+    wget --header='X-Web-Prolog-User: owner@example.test' \
+      -qO- 'http://wp_n5:3060/call?goal=member(X%2C%5Ba%2Cb%5D)&format=json&limit=1')
 printf '%s' "$ANSWER" | grep -Fq '"type":"success"'
 printf '%s' "$ANSWER" | grep -Fq '"X":"a"'
 
