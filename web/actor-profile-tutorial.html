@@ -2028,7 +2028,7 @@ Start locally, then use the same idea across nodes.</p>
 <strong>18 proof-trees.pl</strong> under <strong>Web Prolog code</strong> in the
 Examples drawer.</p>
 
-<h3>First an answer, then its explanation</h3>
+<h2>First an answer, then its explanation</h2>
 <p>Load a small knowledge base and the book's local proof-producing interpreter:</p>
 <pre id="dpt-local-source">% Knowledge base
 
@@ -2057,7 +2057,7 @@ Proof = mortal(socrates)/(human(socrates)/true).</pre>
 The <code>/</code> symbol constructs a term here; it does not perform division.
 For a conjunction, the interpreter returns a pair of proofs.</p>
 
-<h3>Let the explanation cross a node boundary</h3>
+<h2>Let the explanation cross a node boundary</h2>
 <p>Add two cases for <code>rpc/2-3</code>. When the interpreter encounters a
 remote goal, it ships <code>prove/2</code> to that node and asks for a proof
 there. The returned term marks that step with <code>@URI</code>. Load the
