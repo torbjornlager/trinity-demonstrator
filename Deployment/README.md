@@ -372,7 +372,11 @@ Cut over N5 and Caddy while leaving the other nodes alone:
 docker compose -f Deployment/compose.yaml \
   -f Deployment/compose.trealla-n5.yaml \
   --env-file Deployment/.env \
-  up -d --build wp_n5 oauth2_n5 caddy
+  build wp_n5 caddy
+docker compose -f Deployment/compose.yaml \
+  -f Deployment/compose.trealla-n5.yaml \
+  --env-file Deployment/.env \
+  up -d --no-deps wp_n5 caddy
 ```
 
 Check the backend and the SSO edge:
@@ -398,7 +402,10 @@ only the normal Compose file:
 ```sh
 docker compose -f Deployment/compose.yaml \
   --env-file Deployment/.env \
-  up -d --build --force-recreate wp_n5 oauth2_n5 caddy
+  build wp_n5 caddy
+docker compose -f Deployment/compose.yaml \
+  --env-file Deployment/.env \
+  up -d --no-deps --force-recreate wp_n5 caddy
 ```
 
 The named `trealla_n5_state` volume is intentionally retained after rollback

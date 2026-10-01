@@ -5,7 +5,10 @@
 #
 #   docker compose -f Deployment/compose.yaml \
 #     -f Deployment/compose.trealla-n5.yaml \
-#     --env-file Deployment/.env up -d --build wp_n5 oauth2_n5 caddy
+#     --env-file Deployment/.env build wp_n5 caddy
+#   docker compose -f Deployment/compose.yaml \
+#     -f Deployment/compose.trealla-n5.yaml \
+#     --env-file Deployment/.env up -d --no-deps wp_n5 caddy
 
 services:
   wp_n5:
