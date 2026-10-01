@@ -40,6 +40,11 @@ services:
       WP_LOAD_URI_ORIGINS: https://n2.elfenbenstornet.se
       WP_LOAD_URI_ORIGIN_ALIASES: https://n2.elfenbenstornet.se=http://wp_n2:3052
       WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
+      # Match the SWI node's interactive defaults. Execution time is charged
+      # only while a result slice is computing; idle time governs suspended
+      # pages and abandoned sessions independently.
+      WP_TIME_LIMIT: ${WP_TREALLA_N5_TIME_LIMIT:-300}
+      WP_IDLE_LIMIT: ${WP_TREALLA_N5_IDLE_LIMIT:-300}
       WP_MAX_ACTORS: ${WP_TREALLA_N5_MAX_ACTORS:-128}
       WP_MAX_INFLIGHT_CALLS: ${WP_TREALLA_N5_MAX_INFLIGHT_CALLS:-4}
       WP_AUDIT_LOG_FILE: /state/audit.jsonl
