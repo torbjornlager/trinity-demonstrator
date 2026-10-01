@@ -40,6 +40,10 @@ services:
       WP_LOAD_URI_ORIGINS: https://n2.elfenbenstornet.se
       WP_LOAD_URI_ORIGIN_ALIASES: https://n2.elfenbenstornet.se=http://wp_n2:3052
       WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
+      # Load Trealla's attributed copies of the same three shared-database
+      # layers as N4. They are baked into the image for portable deployment.
+      WP_SHARED_DB_FILES: /app/Deployment/shared_db_common.pl,/app/Deployment/shared_db_actor_common.pl,/app/Deployment/shared_db_n4.pl
+      WP_SHARED_DB_OVERLAY_FILE: ""
       # Match the SWI node's interactive defaults. Execution time is charged
       # only while a result slice is computing; idle time governs suspended
       # pages and abandoned sessions independently.
