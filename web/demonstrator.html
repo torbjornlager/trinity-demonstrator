@@ -8303,6 +8303,9 @@
           prologQuotedText: function(text) {
             return "'" + String(text == null ? "" : text)
               .replace(/\\/g, "\\\\")
+              .replace(/\r/g, "\\r")
+              .replace(/\n/g, "\\n")
+              .replace(/\t/g, "\\t")
               .replace(/'/g, "''") + "'";
           },
           toplevelSpawnOptionsText: function(sourceText, session, lifecycle) {

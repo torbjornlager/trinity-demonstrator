@@ -14,6 +14,13 @@ const source = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "demonstrator.html"),
   "utf8"
 );
+const prologQuotedTextMatch = source.match(
+  /prologQuotedText: function\(text\) \{([\s\S]*?)\n          \},\n          toplevelSpawnOptionsText:/
+);
+if (!prologQuotedTextMatch) {
+  throw new Error("could not extract demonstrator prologQuotedText helper");
+}
+const prologQuotedText = Function("text", prologQuotedTextMatch[1]);
 const workerSource = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
   "utf8"
@@ -732,6 +739,9 @@ ok(!includes("syncTracePreferenceToLiveSessions") &&
 ok(includes('options: this.toplevelSpawnOptionsText(loadText, true)') &&
    includes('jsonBody: body\n            }).then(function(event) {\n              self.log("transport", JSON.stringify(event, null, 2), "isotope", "response");'),
    "ISOTOPE puts session and initial source in spawn options and logs the response as API traffic");
+ok(prologQuotedText("first.\nsecond('quoted').\r\nthird\tvalue.") ===
+     "'first.\\nsecond(''quoted'').\\r\\nthird\\tvalue.'",
+   "session source serializer escapes multiline layout for portable Prolog term parsing");
 ok(includes('if (entry.scope === "wasm-worker") return "STATEFUL WORKER · JS OBJECT";') &&
    includes('logSwiWasmWorkerTraffic: function(envelope, direction)') &&
    includes('this.formatJavaScriptObject(envelope || {})') &&
