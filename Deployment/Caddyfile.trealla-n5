@@ -19,7 +19,8 @@ n5.elfenbenstornet.se {
 	}
 
 	# Nothing below this point is reachable without the existing GitHub
-	# owner session. Trealla can consequently use auth(open) on wp_net.
+	# owner session. The verified identity is also passed to Trealla, whose
+	# own auth(private) policy remains authoritative for execution routes.
 	handle {
 		forward_auth oauth2_n5:4180 {
 			uri /oauth2/auth
@@ -37,7 +38,16 @@ n5.elfenbenstornet.se {
 
 			@trealla path /call /ws /healthz /readyz /version /node_info /metrics
 			reverse_proxy @trealla wp_n5:3060 {
-				import common_proxy_headers
+				# Strip every client-controlled identity/capability header, then
+				# replace the identity with oauth2-proxy's verified email.
+				header_up -X-Web-Prolog-Principal
+				header_up -X-Authenticated-User
+				header_up -X-Web-Prolog-Capabilities
+				header_up -X-Web-Prolog-Caps
+				header_up -X-Web-Prolog-Internal-Proxy
+				header_up X-Forwarded-Proto https
+				header_up X-Forwarded-Host {host}
+				header_up X-Web-Prolog-User {http.request.header.X-Auth-Request-Email}
 				transport http {
 					read_timeout 0
 					write_timeout 0

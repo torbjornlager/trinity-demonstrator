@@ -24,10 +24,13 @@ services:
       WP_PORT: "3060"
       WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
       WP_PROFILE: actor
-      # GitHub oauth2-proxy is the owner-only outer boundary. The backend is
-      # deliberately open only on the private Compose network.
-      WP_AUTH: open
-      WP_ACK_PUBLIC: "yes"
+      # Match the SWI N5 policy: oauth2-proxy authenticates the owner and
+      # Caddy supplies that verified identity to the private Trealla node.
+      WP_AUTH: private
+      WP_OWNER: ${WP_N5_OWNER:?Set WP_N5_OWNER to your verified GitHub email}
+      # Docker bridge peers are the only callers in this RFC1918 range; the
+      # public port is exposed by Caddy alone, never by the Trealla service.
+      WP_TRUSTED_PROXY_RANGES: ${WP_TREALLA_N5_TRUSTED_PROXY_RANGES:-172.16.0.0/12}
       WP_SANDBOX: ${WP_N5_SANDBOX:-blacklist}
       WP_ADMIN_TOKEN: ${WP_TREALLA_N5_ADMIN_TOKEN:?Set WP_TREALLA_N5_ADMIN_TOKEN to at least 24 random characters}
       WP_WS_ALLOWED_ORIGINS: https://n0.elfenbenstornet.se,https://n1.elfenbenstornet.se,https://n2.elfenbenstornet.se,https://n3.elfenbenstornet.se,https://n4.elfenbenstornet.se,https://n5.elfenbenstornet.se
