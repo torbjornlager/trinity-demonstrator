@@ -34,6 +34,11 @@ services:
       WP_SANDBOX: ${WP_N5_SANDBOX:-blacklist}
       WP_ADMIN_TOKEN: ${WP_TREALLA_N5_ADMIN_TOKEN:?Set WP_TREALLA_N5_ADMIN_TOKEN to at least 24 random characters}
       WP_WS_ALLOWED_ORIGINS: https://n0.elfenbenstornet.se,https://n1.elfenbenstornet.se,https://n2.elfenbenstornet.se,https://n3.elfenbenstornet.se,https://n4.elfenbenstornet.se,https://n5.elfenbenstornet.se
+      # Permit the tutorial's src_uri example only for N2. The explicit alias
+      # uses the authenticated deployment's internal HTTP backend after the
+      # public N2 origin and address have passed source policy checks.
+      WP_LOAD_URI_ORIGINS: https://n2.elfenbenstornet.se
+      WP_LOAD_URI_ORIGIN_ALIASES: https://n2.elfenbenstornet.se=http://wp_n2:3052
       WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
       WP_MAX_ACTORS: ${WP_TREALLA_N5_MAX_ACTORS:-128}
       WP_MAX_INFLIGHT_CALLS: ${WP_TREALLA_N5_MAX_INFLIGHT_CALLS:-4}
