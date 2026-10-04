@@ -105,3 +105,27 @@ result-size ceiling; the existing memory ceiling bounds solution collection.
 Author-directed (Semantic Contracts decision D4). Pinned by the D4 tests in
 `t2_toplevel.pl` and the `isotope_*` / `admin_reclaim_terminates_session`
 tests in `node_tests.pl`.
+
+## Answers on the wire (D5, 2026-10-04)
+
+- **Constrained answers are rejected.** A toplevel answer whose solutions
+  contain attributed variables (from `dif/2`, `freeze/2`, CLP(FD), ...) is
+  replaced by `error(representation_error(constraints), _)`, and the query
+  ends. Previously the constraints were silently dropped, so `dif(X, a)`
+  over `/call` answered as if `X` were unconstrained. The rule applies to
+  every toplevel, local or remote, and therefore also to `rpc/2-3` and
+  stateless `/call`. A solution in which the constrained variable has been
+  bound is unaffected. Returning residual goals instead is left as an
+  optional profile feature; this node does not offer it.
+- **`double_quotes` is fixed as `string`.** Goals, call and spawn options,
+  respond input, rpc answers, remote answer fields and WebSocket terms are
+  read with an explicit `double_quotes(string)`, and every actor module has
+  the flag set to `string`, so client source reads `"..."` as a string. With
+  SWI-Prolog's default flags nothing changes; the difference shows only on a
+  host started with another default (for example `--traditional`).
+
+Author-directed (Semantic Contracts decision D5). Pinned by
+`constrained_answer_is_a_representation_error`,
+`constrained_solution_on_a_later_page`, `bound_constrained_variable_is_portable`
+in `t2_toplevel.pl` and the `call_constrained_*`, `rpc_constrained_*` and
+`double_quotes_fixed_as_string_on_the_wire` tests in `node_tests.pl`.

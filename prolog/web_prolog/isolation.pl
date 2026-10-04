@@ -340,7 +340,14 @@ import_shared_db(Module) :-
 
 configure_actor_operators(Module) :-
     Module:op(800, xfx, !),
-    Module:op(1000, xfy, if).
+    Module:op(1000, xfy, if),
+    configure_actor_syntax(Module).
+
+%   The profiles fix the meaning of a double-quoted literal rather than
+%   inheriting the host's default (Semantic Contracts D5): "abc" is a
+%   string in actor source and in goals read on behalf of an actor.
+configure_actor_syntax(Module) :-
+    set_prolog_flag(Module:double_quotes, string).
 
 prepare_actor_io(Module, Options, Options0, PreparedOptions) :-
     actor_io_mode(Options, Mode),

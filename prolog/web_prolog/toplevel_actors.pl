@@ -429,6 +429,10 @@ state_3(Limit, Target, IdleLimit, Alarm, TimeLimit) :-
 %   - exception                  -> `error(Exception)`
 
 answer(Goal, Template, Offset, Limit, Answer) :-
+    answer_(Goal, Template, Offset, Limit, Answer0),
+    portable_answer(Answer0, Answer).
+
+answer_(Goal, Template, Offset, Limit, Answer) :-
     Pending = pending(none),
     catch(
        call_cleanup(slice(capture_error(Goal, Pending), Template, Offset,
@@ -457,6 +461,25 @@ answer(Goal, Template, Offset, Limit, Answer) :-
     ;   Det == true
     ->  Answer = success(Slice, false)
     ).
+
+%   An answer is a plain Herbrand term (Semantic Contracts D5).  A slice
+%   whose solutions carry constraints (attributed variables, as left by
+%   dif/2, freeze/2 or CLP(FD)) cannot be represented: printing it would
+%   drop the constraints and present a conditional answer as an
+%   unconditional one.  It is therefore replaced by a representation error,
+%   which ends the query.  The rule is the same for a local and a remote
+%   client, so a toplevel's answers do not depend on where its client is.
+portable_answer(Answer0, Answer) :-
+    answer_slice(Answer0, Slice),
+    \+ term_attvars(Slice, []),
+    !,
+    Answer = error(error(representation_error(constraints),
+                         context(toplevel_actors:answer/5,
+                                 'answer contains constrained variables'))).
+portable_answer(Answer, Answer).
+
+answer_slice(success(Slice, _), Slice).
+answer_slice(pending_error(Slice, _), Slice).
 
 %   Run Goal, recording an ordinary exception instead of letting it discard
 %   the solutions already collected for the current page.  With a finite

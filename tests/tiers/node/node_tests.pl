@@ -8689,4 +8689,49 @@ test(statechart_chart_goal_hook_gates_dangerous_under_public_profile) :-
     with_sandbox_mode(blacklist,
         statechart_runtime:check_chart_goal(process_create(path(echo), [x], []))).
 
+%  D5: answers carrying constraints are reported as representation errors,
+%  over /call and through rpc/2-3.
+test(call_constrained_answer_is_representation_error,
+     true(sub_string(Data, _, _, _, "constraints"))) :-
+    with_node_server(URI,
+        (   json_call_url(URI, 'dif(X,a)', 0, 1, URL),
+            read_json_answer(URL, JSON),
+            assertion(JSON.type == "error"),
+            Data = JSON.data
+        )).
+
+test(rpc_constrained_answer_raises_representation_error,
+     error(representation_error(constraints))) :-
+    with_node_server(URI,
+        rpc(URI, dif(_X, a))).
+
+test(rpc_constrained_answer_after_solutions,
+     true(Seen == [1])) :-
+    with_node_server(URI,
+        (   findall(X, catch(rpc(URI, (member(X, [1,2]), (X == 2 -> dif(_, a) ; true)),
+                                 [limit(1)]),
+                             error(representation_error(constraints), _),
+                             fail),
+                    Seen)
+        )).
+
+%  D5: double-quoted text is a string on the wire, whatever the host's
+%  default double_quotes flag.
+test(double_quotes_fixed_as_string_on_the_wire,
+     true((GoalString == true, AnswerValue == "ab", SourceString == true))) :-
+    current_prolog_flag(double_quotes, Old),
+    setup_call_cleanup(
+        set_prolog_flag(double_quotes, codes),
+        with_node_server(URI,
+            (   call_url(URI, '(X = "ab", (string(X) -> S = true ; S = false))',
+                         'S', 0, 1, '', none, URL1),
+                read_answer(URL1, success([GoalString], _)),
+                rpc(URI, X0 = "ab"),
+                AnswerValue = X0,
+                call_url(URI, '(p(X), (string(X) -> S = true ; S = false))', 'S',
+                         0, 1, 'p("q").', none, URL2),
+                read_answer(URL2, success([SourceString], _))
+            )),
+        set_prolog_flag(double_quotes, Old)).
+
 :- end_tests(node).

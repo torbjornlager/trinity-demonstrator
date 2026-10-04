@@ -338,7 +338,7 @@ read_response_input(Pid0, InputAtom, Input) :-
     (   retract(isotope_pending_prompt(Pid, '|:'))
     ->  read_period_terminated_term(InputAtom, Input)
     ;   retractall(isotope_pending_prompt(Pid, _)),
-        read_term_from_atom(InputAtom, Input, [])
+        read_term_from_atom(InputAtom, Input, [double_quotes(string)])
     ).
 
 
@@ -357,7 +357,7 @@ read_period_terminated_term(InputAtom, Input) :-
 
 
 read_period_terminated_stream(Stream, Input) :-
-    read_term(Stream, Input, [syntax_errors(error)]),
+    read_term(Stream, Input, [syntax_errors(error), double_quotes(string)]),
     read_string(Stream, _, Rest),
     (   string_codes(Rest, Codes),
         forall(member(Code, Codes), code_type(Code, space))
@@ -450,7 +450,7 @@ rewrite_isotope_source_text(SourceIn, SourceOut) :-
 
 %!  read_rewritten_isotope_terms(+In, -Terms:list) is det.
 read_rewritten_isotope_terms(In, Terms) :-
-    read_term(In, Term0, []),
+    read_term(In, Term0, [double_quotes(string)]),
     (   Term0 == end_of_file
     ->  Terms = []
     ;   rewrite_isotope_source_term(Term0, Term),

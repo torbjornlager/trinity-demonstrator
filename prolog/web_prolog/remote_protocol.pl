@@ -71,7 +71,7 @@ goal_template_to_wire_atoms(Goal, Template, GoalAtom, TemplateAtom) :-
 ws_json_down_reason(Dict, Reason) :-
     get_dict(type, Dict, "down"),
     (   get_dict(reason, Dict, ReasonStr)
-    ->  (   catch(term_string(Reason, ReasonStr), _, fail)
+    ->  (   catch(term_string(Reason, ReasonStr, [double_quotes(string)]), _, fail)
         ->  true
         ;   atom_string(Reason, ReasonStr)
         )
@@ -105,7 +105,7 @@ ws_json_to_actor_event(Dict, CompoundPid, output(CompoundPid, Term)) :-
     get_dict(type, Dict, "output"),
     !,
     (   get_dict(data, Dict, DataStr)
-    ->  (   catch(term_string(Term, DataStr), _, fail)
+    ->  (   catch(term_string(Term, DataStr, [double_quotes(string)]), _, fail)
         ->  true
         ;   Term = DataStr
         )
@@ -133,7 +133,7 @@ ws_json_to_actor_event(Dict, CompoundPid, responded(CompoundPid)) :-
 reify_json_row(Str, Term) :-
     string(Str),
     !,
-    (   catch(term_string(Term, Str), _, fail)
+    (   catch(term_string(Term, Str, [double_quotes(string)]), _, fail)
     ->  true
     ;   Term = Str
     ).
@@ -148,7 +148,7 @@ reify_json_row(V, V).
 reify_json_pair(K-V, K-VOut) :-
     string(V),
     !,
-    (   catch(term_string(VOut, V), _, fail)
+    (   catch(term_string(VOut, V, [double_quotes(string)]), _, fail)
     ->  true
     ;   VOut = V
     ).

@@ -162,7 +162,7 @@ http_read_answer(URI, Options, Answer) :-
     call_cleanup(
         (   http_open(URI, Stream, Options),
             nb_setarg(1, Holder, Stream),
-            read(Stream, Answer)
+            read_term(Stream, Answer, [double_quotes(string)])
         ),
         close_held_stream(Holder)).
 

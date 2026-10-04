@@ -96,6 +96,7 @@ parse_call_options_context(GoalAtom, OptionsAtom, Goal, Template,
     atomic_list_concat(['(', GoalAtom, ')+(', OptionsAtom, ')'], CallAtom),
     read_term_from_atom(CallAtom, Goal+Options0,
                         [ module(actor),
+                          double_quotes(string),
                           variable_names(Bindings)
                         ]),
     must_be(list, Options0),
@@ -144,6 +145,7 @@ parse_goal_template(GoalAtom, TemplateAtom, Goal, Template, Bindings) :-
     atomic_list_concat(['(', GoalAtom, ')+(', TemplateAtom, ')'], QTAtom),
     read_term_from_atom(QTAtom, Goal+Template,
                         [ module(actor),
+                          double_quotes(string),
                           variable_names(Bindings)
                         ]).
 

@@ -1764,4 +1764,4 @@ ws_parse_enabled_atom(Value, _) :-
 %   is protected regardless of how the text was obtained.
 ws_read_term(Field, Text, Term) :-
     check_term_text_size(Field, Text),
-    read_term_from_atom(Text, Term, [module(node_ws)]).
+    read_term_from_atom(Text, Term, [module(node_ws), double_quotes(string)]).

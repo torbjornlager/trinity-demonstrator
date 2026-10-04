@@ -135,7 +135,7 @@ parse_spawn_options_value(Value, _) :-
 
 %!  parse_spawn_options_atom(+OptionsAtom, -SpawnOptions:list) is det.
 parse_spawn_options_atom(OptionsAtom, SpawnOptions) :-
-    read_term_from_atom(OptionsAtom, SpawnOptions, []),
+    read_term_from_atom(OptionsAtom, SpawnOptions, [double_quotes(string)]),
     must_be(list, SpawnOptions).
 
 

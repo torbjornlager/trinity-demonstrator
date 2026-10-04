@@ -960,6 +960,58 @@ test(error_without_preceding_solutions_is_immediate) :-
          receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
        )).
 
+%  D5: an answer carrying constraints is not representable; the error
+%  ends the query and the session accepts a new call.
+test(constrained_answer_is_a_representation_error) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, dif(X, a), [template(X)]),
+         receive({ error(Pid, E) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(subsumes_term(error(representation_error(constraints), _), E)),
+         toplevel_call(Pid, Y = b, [template(Y)]),
+         receive({ success(Pid, Page, More) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(Page == [b]),
+         assertion(More == false)
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+test(constrained_solution_on_a_later_page) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, (member(X, [a,b]), (X == b -> freeze(Y, true) ; Y = 1)),
+                       [template(X-Y), limit(1)]),
+         receive({ success(Pid, Page, More) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(Page == [a-1]),
+         assertion(More == true),
+         toplevel_next(Pid),
+         receive({ error(Pid, E) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(subsumes_term(error(representation_error(constraints), _), E))
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+test(bound_constrained_variable_is_portable) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, (dif(X, a), X = b), [template(X)]),
+         receive({ success(Pid, Page, _) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(Page == [b])
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
 :- end_tests(t2_toplevels).
 
 

@@ -369,7 +369,7 @@ send(+PidOrName, +Message, +Options) is det.</pre>
         <li><code>delay(+Number)</code><br>Delays the sending by a specified number of seconds. Default is <code>0</code>.</li>
         <li><code>id(+ID)</code><br><code>ID</code> is a user-supplied identifier that can be used by <code>cancel/1</code> to stop the sending from taking place.</li>
     </ul>
-    <p>Portable actor application messages are acyclic ordinary Prolog terms. Atoms, strings, numbers, variables, lists, and compound terms are portable; variables arrive as fresh variables. Attributed variables, streams, and other non-text blob values must be encoded explicitly by the application. The demonstrator validates this subset whenever serialization is required. Native local delivery may happen to carry additional host terms, but programs using them are outside the placement-independent contract.</p>
+    <p>Portable actor application messages are acyclic ordinary Prolog terms. Atoms, strings, numbers, variables, lists, and compound terms are portable; variables arrive as fresh variables. Attributed variables, streams, and other non-text blob values must be encoded explicitly by the application. The demonstrator validates this subset whenever serialization is required. A double-quoted literal denotes a string in every profile: goals, options, answers, input and actor source are read with <code>double_quotes</code> set to <code>string</code>, whatever the host's default. Native local delivery may happen to carry additional host terms, but programs using them are outside the placement-independent contract.</p>
 </article>
 
 <article class="predicate-entry" id="cancel/1">
@@ -504,6 +504,7 @@ toplevel_call(+Pid, +Goal, +Options) is det.</pre>
         <li><code>error(Pid, Data)</code><br><code>Pid</code> is the pid of the toplevel throwing the error. <code>Data</code> is the error term.</li>
     </ul>
     <p>A toplevel serves one controlling client at a time, and each call starts afresh: when it accepts <code>Goal</code>, it discards any <code>toplevel_next/1-2</code>, <code>toplevel_stop/1</code> or input left over from an earlier query. If the goal raises an exception after a finite <code>limit</code> has already collected some solutions, those solutions are delivered first as <code>success(Pid, Data, true)</code>, and the error answers the following <code>toplevel_next/1-2</code>. A <code>toplevel_stop/1</code> in that state discards the error.</p>
+    <p>Answers are plain terms. A solution that still carries constraints, such as those left by <code>dif/2</code>, <code>freeze/2</code> or CLP(FD), cannot be represented in an answer: printing it would drop the constraints. The toplevel then reports <code>error(Pid, error(representation_error(constraints), _))</code> instead of the page, and the query ends. This holds whether the client is local or remote. A goal that needs such answers should bind the constrained variables, for example by labelling, or return the constraints as ordinary terms.</p>
 </article>
 
 <article class="predicate-entry" id="toplevel_next/1-2">

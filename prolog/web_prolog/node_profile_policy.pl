@@ -519,7 +519,7 @@ goal_required_profile(read_term(_, _, _), isotope).
 
 
 profile_check_source_terms(Profile, Stream) :-
-    read_term(Stream, Term, []),
+    read_term(Stream, Term, [double_quotes(string)]),
     (   Term == end_of_file
     ->  true
     ;   profile_check_source_term(Profile, Term),
