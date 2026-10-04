@@ -158,6 +158,12 @@ Architecture per connection:
 :- dynamic ws_browser_io/1.
 :- dynamic ws_browser_pid_scope/1.
 :- dynamic ws_browser_io_pending/3. % owning connection, reference, reply queue
+:- dynamic ws_process_halting/0.
+
+% at_halt/1 hooks run before the runtime cancels the remaining threads.
+% Connection cleanups that run during that cancellation must not join
+% other threads, which may already be torn down.
+:- at_halt(assertz(node_ws:ws_process_halting)).
 
 :- multifile distribution:hook_terminal_delivery/2.
 distribution:hook_terminal_delivery('$browser_io'(Queue), Message) :-
@@ -1224,7 +1230,10 @@ ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
     ),
     forget_io_endpoints_for_target(Queue),
     catch(thread_send_message(Queue, '$ws_close'), _, true),
-    catch(thread_join(RelayThread, _), _, true),
+    (   ws_process_halting
+    ->  true
+    ;   catch(thread_join(RelayThread, _), _, true)
+    ),
     retractall(ws_connection_meta(Queue, _)),
     retractall(ws_answer_terms(Queue)),
     retractall(ws_browser_connection(_, Queue)),

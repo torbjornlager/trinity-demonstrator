@@ -40,6 +40,7 @@ on authenticated node transports; browser-supplied lineage is rejected.
 :- dynamic actor_owner/2, mailbox_count/2, principal_lineage/3,
            delegated_route/3, cpu_sample/2, cpu_account/4, cpu_watcher/3.
 :- thread_local owner_context/1, connection_spawn/0.
+:- dynamic lease_active/1.
 :- meta_predicate with_owner_context(+, +, +, 0), with_connection_spawn(0),
                   with_wire_context(+, +, +, 0), with_websocket_lease(+, 0).
 
@@ -343,6 +344,13 @@ terminal_option(io_target(_)).
 % The host WebSocket reader answers incoming ping frames automatically.
 % Finite stream timeouts plus outgoing pings detect a silent peer; they are
 % evidence of contact loss, never evidence that remote work has stopped.
+%
+% The pinger is detached and is never joined: joining it from this cleanup
+% races with thread teardown when the process halts with connections open.
+% Instead each ping is sent under a per-connection mutex, and only while the
+% lease is active.  The cleanup deactivates the lease under the same mutex
+% before the connection closes the socket, so no ping can reach a closed
+% stream.
 with_websocket_lease(Socket, Goal) :-
     policy_limit(ws_lease_seconds, Seconds),
     (   Seconds == infinite
@@ -350,18 +358,25 @@ with_websocket_lease(Socket, Goal) :-
     ;   stream_pair(Socket, In, Out),
         set_stream(In, timeout(Seconds)), set_stream(Out, timeout(Seconds)),
         Interval is Seconds / 3,
+        mutex_create(Mutex),
         setup_call_cleanup(
-            thread_create(lease_pings(Socket, Interval), Pinger, []),
+            ( assertz(lease_active(Mutex)),
+              thread_create(lease_pings(Socket, Interval, Mutex), Pinger,
+                            [detached(true)]) ),
             Goal,
-            ( catch(thread_send_message(Pinger, stop), _, true),
-              catch(thread_join(Pinger, _), _, true) )
+            ( with_mutex(Mutex, retractall(lease_active(Mutex))),
+              catch(thread_send_message(Pinger, stop), _, true) )
         )
     ).
-lease_pings(Socket, Interval) :-
-    (   thread_get_message(stop, [timeout(Interval)])
+
+lease_pings(Socket, Interval, Mutex) :-
+    thread_self(Me),
+    (   thread_get_message(Me, stop, [timeout(Interval)])
     ->  true
-    ;   catch(ws_send(Socket, ping("web-prolog-lease")), _, fail)
-    ->  lease_pings(Socket, Interval)
+    ;   with_mutex(Mutex,
+                   ( lease_active(Mutex),
+                     catch(ws_send(Socket, ping("web-prolog-lease")), _, fail) ))
+    ->  lease_pings(Socket, Interval, Mutex)
     ;   true
     ).
 

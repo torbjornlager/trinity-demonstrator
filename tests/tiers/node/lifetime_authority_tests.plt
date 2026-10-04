@@ -282,4 +282,20 @@ test(lease_reclaims_silent_connection_work) :-
     test_node:with_node_server_options([ws_lease_seconds(0.15)], URI,
         plunit_lifetime_authority:lease_scenario(URI)).
 
+% A client that only answers the server's pings (ws_receive/2 replies with
+% pong automatically) stays in contact, so its work is not reclaimed.
+lease_ping_scenario(URI) :-
+    setup_call_cleanup(test_node:ws_open(URI, WS),
+        (test_node:ws_send_json(WS, json{command:spawn,goal:"sleep(10)",options:"[]"}),
+         test_node:ws_receive_json(WS, Event),
+         term_string(Pid, Event.pid),
+         catch(call_with_time_limit(1.5, websocket:ws_receive(WS, _)),
+               time_limit_exceeded, true),
+         assertion(actors:resolve_actor_thread(Pid, _))),
+        catch(websocket:ws_close(WS, 1000, "done"), _, true)).
+
+test(lease_pings_keep_a_responsive_connection) :-
+    test_node:with_node_server_options([ws_lease_seconds(0.6)], URI,
+        plunit_lifetime_authority:lease_ping_scenario(URI)).
+
 :- end_tests(lifetime_authority).
