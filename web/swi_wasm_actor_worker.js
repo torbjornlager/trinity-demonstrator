@@ -17,6 +17,12 @@
   var ptcpTimeLimitTimer = null;
   var ptcpTimeLimitTargetText = "";
   var ptcpTimeLimitPidText = "";
+  // PTCP state reported by the toplevel itself (Semantic Contracts D3, D4):
+  // its pid and session mode, and the client of the active query ("" when
+  // the toplevel is idle in s1).
+  var ptcpPidText = "";
+  var ptcpSessionText = "true";
+  var ptcpClientText = "";
   var currentGoalText = "";
   var inheritedSource = "";
   var behaviourSource = "";
@@ -474,8 +480,10 @@
     var target = localizePid(targetText || selfPidText);
     var reason = String(reasonText || "true");
     if (target === selfPidText || target === "self") {
-      exitReason = reason;
-      post("exit", { pid: selfPidText, reason: reason });
+      if (exitReason === null) {
+        exitReason = reason;
+      }
+      post("exit", { pid: selfPidText, reason: exitReason });
       return Promise.resolve(true);
     }
     return actorRequest("exit", {
@@ -492,13 +500,74 @@
     return actorRequest("abort", { pid: target });
   }
 
+  // A toplevel blocked in receive is woken with an interrupt text, on which
+  // it aborts its own goal; a running goal is aborted by the engine.  An
+  // engine abort requested while Prolog awaits a JavaScript promise would
+  // only take effect at an arbitrary later point.
+  function interruptGoal() {
+    if (waiters.length > 0) {
+      waiters.shift().resolve("'$wasm_interrupt'");
+      return true;
+    }
+    if (Prolog && typeof Prolog.abort === "function") {
+      Prolog.abort();
+      return true;
+    }
+    return false;
+  }
+
   function abortCurrentGoal() {
+    if (isPtcpGoal()) {
+      // An abort never resumes a terminating toplevel, and has no effect on
+      // an idle one (s1).
+      if (exitReason !== null || ptcpClientText === "") {
+        return true;
+      }
+      abortRequested = true;
+      return interruptGoal();
+    }
     abortRequested = true;
     if (Prolog && typeof Prolog.abort === "function") {
       Prolog.abort();
       return true;
     }
     return false;
+  }
+
+  function actorPtcpStart(pidText, sessionText) {
+    ptcpPidText = String(pidText || "");
+    ptcpSessionText = String(sessionText || "true");
+    ptcpClientText = "";
+    return true;
+  }
+
+  function actorPtcpClient(clientText) {
+    ptcpClientText = String(clientText || "");
+    return true;
+  }
+
+  // The first exit reason commits termination (Semantic Contracts D3).
+  function actorRecordExit(reasonText) {
+    if (exitReason === null) {
+      exitReason = String(reasonText || "true");
+    }
+    return true;
+  }
+
+  // The acknowledgement of an abort goes to the client of the aborted query,
+  // after the answers that query had already sent (Semantic Contracts D4).
+  function sendAbortAcknowledgement(clientText) {
+    if (!clientText) {
+      return Promise.resolve(true);
+    }
+    if (workerRole === "shell_toplevel" && localizePid(clientText) === "terminal") {
+      post("abort", {});
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(actorSend(clientText, "abort(" + ptcpPidText + ")")).catch(function(error) {
+      post("error", { error: "PTCP abort acknowledgement failed: " + String(error) });
+      return false;
+    });
   }
 
   function actorArmTimeLimit(seconds, targetText, pidText) {
@@ -511,8 +580,11 @@
     ptcpTimeLimitPidText = String(pidText || selfPidText);
     ptcpTimeLimitTimer = setTimeout(function() {
       ptcpTimeLimitTimer = null;
+      if (exitReason !== null) {
+        return;
+      }
       ptcpTimeLimitRequested = true;
-      abortCurrentGoal();
+      interruptGoal();
     }, delay * 1000);
     return true;
   }
@@ -550,12 +622,18 @@
 
   function restartAbortedPtcp(error) {
     var timedOut = ptcpTimeLimitRequested;
+    var clientText = ptcpClientText;
     actorDisarmTimeLimit();
     ptcpTimeLimitRequested = false;
     abortRequested = false;
-    exitReason = null;
-    return (timedOut ? sendPtcpTimeLimitError() : Promise.resolve(true)).then(function() {
+    ptcpClientText = "";
+    return (timedOut ? sendPtcpTimeLimitError() : sendAbortAcknowledgement(clientText)).then(function() {
       post("aborted", error === undefined ? {} : { error: String(error) });
+      if (ptcpSessionText === "false") {
+        // A one-shot toplevel ends instead of returning to s1.
+        post("done", { reason: "true" });
+        return undefined;
+      }
       return runGoal(currentGoalText);
     });
   }
@@ -713,7 +791,9 @@
   }
 
   function actorSetDoneReason(reasonText) {
-    exitReason = String(reasonText || "true");
+    if (exitReason === null) {
+      exitReason = String(reasonText || "true");
+    }
     return true;
   }
 
@@ -750,6 +830,9 @@
   self.actorTerminalOutput = actorTerminalOutput;
   self.actorToplevelEvent = actorToplevelEvent;
   self.actorSetDoneReason = actorSetDoneReason;
+  self.actorPtcpStart = actorPtcpStart;
+  self.actorPtcpClient = actorPtcpClient;
+  self.actorRecordExit = actorRecordExit;
   self.actorInput = actorInput;
   // A parent passes its complete runtime source to the coordinator when
   // spawning a child. The behaviour runtime is already installed in the
@@ -885,7 +968,7 @@
       "        await(PidPromise, PidText),",
       "        term_string(LocalPid, PidText),",
       "        Pid = LocalPid@localhost,",
-      "        term_string(Goal, GoalText),",
+      "        wire_text(Goal, GoalText),",
       "        ( option(name(Name), Options) -> term_string(Name, NameText) ; NameText = \"\" ),",
       "        option(link(Link), Options, true),",
       "        term_string(Link, LinkText),",
@@ -894,7 +977,7 @@
       "        term_string(SpawnedPid, SpawnedText), SpawnedPid == LocalPid",
       "    ;   collect_spawn_source(Options, ExtraSource),",
       "        term_string(Node, NodeText),",
-      "        term_string(Goal, GoalText),",
+      "        wire_text(Goal, GoalText),",
       "        Promise := actorRemoteSpawn(#NodeText, #GoalText, #ExtraSource),",
       "        await(Promise, PidText),",
       "        term_string(Pid, PidText)",
@@ -925,11 +1008,14 @@
       "            ( Template = Answer",
       "            -> receive({down(Pid, _, true) -> true})",
       "            ; worker_tidy_all(Pids), !, fail ) ;",
-      "        down(FailedPid, _, false) if memberchk(FailedPid, Pids) ->",
+      "        down(FailedPid, _, false) if known_worker(FailedPid, Pids) ->",
       "            worker_tidy_all(Pids), !, fail ;",
-      "        down(FailedPid, _, exception(Error)) if memberchk(FailedPid, Pids) ->",
+      "        down(FailedPid, _, exception(Error)) if known_worker(FailedPid, Pids) ->",
       "            worker_tidy_all(Pids), throw(Error)",
       "    }).",
+      "",
+      "%  A guard tests a worker pid; it never binds one (Semantic Contracts D1).",
+      "known_worker(Pid, Pids) :- ground(Pid), memberchk(Pid, Pids).",
       "",
       "first_solution(Solution, QualifiedGoals) :-",
       "    first_solution_(Solution, QualifiedGoals, [on_fail(continue), on_error(stop)]).",
@@ -961,13 +1047,13 @@
       "wait_first([], _, _, _) :- !, fail.",
       "wait_first(Pids, Solution, OnFail, OnError) :-",
       "    receive({",
-      "        Winner-Solution if memberchk(Winner, Pids) ->",
+      "        Winner-Solution if known_worker(Winner, Pids) ->",
       "            worker_tidy_all(Pids) ;",
-      "        down(FailedPid, _, false) if memberchk(FailedPid, Pids) ->",
+      "        down(FailedPid, _, false) if known_worker(FailedPid, Pids) ->",
       "            ( OnFail == continue -> selectchk(FailedPid, Pids, Rest),",
       "              wait_first(Rest, Solution, OnFail, OnError)",
       "            ; worker_tidy_all(Pids), !, fail ) ;",
-      "        down(FailedPid, _, exception(Error)) if memberchk(FailedPid, Pids) ->",
+      "        down(FailedPid, _, exception(Error)) if known_worker(FailedPid, Pids) ->",
       "            ( OnError == continue -> selectchk(FailedPid, Pids, Rest),",
       "              wait_first(Rest, Solution, OnFail, OnError)",
       "            ; worker_tidy_all(Pids), throw(Error) )",
@@ -1108,8 +1194,7 @@
       "    term_variables(Goal, Variables),",
       "    Template =.. [v|Variables],",
       "    term_string(Node, NodeText),",
-      "    term_to_atom(Goal, GoalText),",
-      "    term_to_atom(Template, TemplateText),",
+      "    wire_texts([Goal, Template], [GoalText, TemplateText]),",
       "    Offset = 0,",
       "    solution_limit(Options, Limit),",
       "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
@@ -1119,7 +1204,7 @@
       "worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout) :-",
       "    Promise := actorRpc(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout),",
       "    await(Promise, ResponseText),",
-      "    (   catch(term_string(Response, ResponseText), _, fail)",
+      "    (   catch(wire_read(ResponseText, Response), _, fail)",
       "    ->  true",
       "    ;   throw(rpc_error(parse_failed))",
       "    ),",
@@ -1143,8 +1228,7 @@
       "promise(Node, Goal, Ref, Options) :-",
       "    option(template(Template), Options, Goal),",
       "    term_string(Node, NodeText),",
-      "    term_to_atom(Goal, GoalText),",
-      "    term_to_atom(Template, TemplateText),",
+      "    wire_texts([Goal, Template], [GoalText, TemplateText]),",
       "    option(offset(Offset), Options, 0),",
       "    solution_limit(Options, Limit),",
       "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
@@ -1160,7 +1244,7 @@
       "    (   ResponseText = null",
       "    ->  option(on_timeout(OnTimeout), Options, true),",
       "        call(OnTimeout)",
-      "    ;   catch(term_string(Message, ResponseText), _, throw(rpc_error(parse_failed)))",
+      "    ;   catch(wire_read(ResponseText, Message), _, throw(rpc_error(parse_failed)))",
       "    ).",
       "",
       "rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout) :-",
@@ -1243,6 +1327,24 @@
       "",
       "Pid ! Message :- send(Pid, Message).",
       "",
+      "%  Canonical term text (Semantic Contracts D5), as in the native node's",
+      "%  wire_text.pl: quoted, operator-independent, no portray hooks, no",
+      "%  numbervars, explicit variable names so that terms written together",
+      "%  share their variables; read with double_quotes set to string.",
+      "wire_text(Term, Text) :- wire_texts([Term], [Text]).",
+      "wire_texts(Terms, Texts) :-",
+      "    term_variables(Terms, Vars),",
+      "    wire_variable_names(Vars, 1, Names),",
+      "    maplist(wire_write(Names), Terms, Texts).",
+      "wire_write(Names, Term, Text) :-",
+      "    with_output_to(string(Text),",
+      "        write_term(Term, [quoted(true), ignore_ops(true), portray(false), numbervars(false), variable_names(Names)])).",
+      "wire_variable_names([], _, []).",
+      "wire_variable_names([Var|Vars], N, [Name=Var|Names]) :-",
+      "    format(atom(Name), '_~d', [N]), N1 is N + 1,",
+      "    wire_variable_names(Vars, N1, Names).",
+      "wire_read(Text, Term) :- term_string(Term, Text, [double_quotes(string)]).",
+      "",
       "toplevel_event_text(error(_, Error), Text, Details) :- !,",
       "    term_string(Error, Text),",
       "    exception_display_text(Error, Details).",
@@ -1266,7 +1368,7 @@
       "send(Pid, Message) :-",
       "    must_be_transportable_term(Message),",
       "    term_string(Pid, PidText),",
-      "    term_string(Message, MessageText),",
+      "    wire_text(Message, MessageText),",
       "    Promise := actorSend(#PidText, #MessageText),",
       "    await(Promise, Sent),",
       "    (   Sent == true",
@@ -1280,7 +1382,7 @@
       "    must_be_transportable_term(Message),",
       "    delayed_send_id(Options, Id),",
       "    term_string(Pid, PidText),",
-      "    term_string(Message, MessageText),",
+      "    wire_text(Message, MessageText),",
       "    term_string(Id, IdText),",
       "    Promise := actorSendDelayed(#PidText, #MessageText, #Delay, #IdText),",
       "    await(Promise, Sent),",
@@ -1324,12 +1426,17 @@
       "    !.",
       "flush_down(_).",
       "",
+      "%  The first exit reason commits termination (Semantic Contracts D3).",
+      "%  The reason is recorded with the worker, and the goal is then aborted;",
+      "%  cleanup handlers run as it unwinds, and it cannot be resumed.",
       "exit(Reason) :-",
-      "    throw('$actor_exit'(Reason)).",
+      "    term_string(Reason, ReasonText),",
+      "    _ := actorRecordExit(#ReasonText),",
+      "    abort.",
       "",
       "exit(Pid, Reason) :-",
       "    (   ( Pid == self ; self(Pid) )",
-      "    ->  throw('$actor_exit'(Reason))",   // abort own goal, like exit/1 (desktop: thread_signal(exit))
+      "    ->  exit(Reason)",   // abort own goal, like exit/1 (desktop: thread_signal(exit))
       "    ;   term_string(Pid, PidText),",
       "        term_string(Reason, ReasonText),",
       "        Promise := actorExit(#PidText, #ReasonText),",
@@ -1415,9 +1522,35 @@
       "    must_be(number, Limit0),",
       "    ( Limit0 > 0 -> Limit = Limit0 ; throw(error(domain_error(Kind, Limit0), toplevel_spawn/2)) ).",
       "",
+      "%  The worker restarts ptcp/3 after an abort or a running-time expiry,",
+      "%  so the abort acknowledgement, the one-shot rule and the time-limit",
+      "%  error are handled by the worker (restartAbortedPtcp).  The toplevel",
+      "%  tells the worker its pid, its session mode and, while a query is",
+      "%  active, the client to acknowledge (Semantic Contracts D3, D4).",
       "ptcp(Pid, Target, SessionOrLifecycle) :-",
       "    ptcp_lifecycle(SessionOrLifecycle, Session, TimeLimit, IdleLimit),",
+      "    term_string(Pid, PidText),",
+      "    term_string(Session, SessionText),",
+      "    _ := actorPtcpStart(#PidText, #SessionText),",
       "    catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit), '$ptcp_idle_limit', true).",
+      "",
+      "ptcp_client(Target) :-",
+      "    (   Target == none",
+      "    ->  ClientText = \"\"",
+      "    ;   wire_text(Target, ClientText)",
+      "    ),",
+      "    _ := actorPtcpClient(#ClientText).",
+      "",
+      "%  Discard control and input messages left over from an earlier query:",
+      "%  those that arrived before the call and were skipped (deferred) while the",
+      "%  toplevel waited for it.  A command sent after the call is kept.",
+      "drain_stale_commands :-",
+      "    forall(( clause(deferred(Message), true, Ref), stale_command(Message) ),",
+      "           erase(Ref)).",
+      "",
+      "stale_command('$next'(_)).",
+      "stale_command('$stop').",
+      "stale_command('$input'(_, _)).",
       "",
       "ptcp_lifecycle(ptcp_options(Session, TimeLimit, IdleLimit), Session, TimeLimit, IdleLimit) :- !.",
       "ptcp_lifecycle(Session, Session, infinite, infinite).",
@@ -1425,12 +1558,14 @@
       "state_1(Pid, Target0, Session, TimeLimit, IdleLimit) :-",
       "    receive_idle({",
       "        '$call_text'(GoalText, Limit0, Offset, Once) ->",
-      "            term_string(PlainGoal, GoalText, [variable_names(Bindings)]),",
+      "            drain_stale_commands,",
+      "            term_string(PlainGoal, GoalText, [variable_names(Bindings), double_quotes(string)]),",
       "            Goal = user:PlainGoal,",
       "            dict_create(Template, bindings, Bindings),",
       "            ( Limit0 == none -> Limits = [] ; must_be(positive_integer, Limit0), Limits = [limit(Limit0)] ), append(Limits, [template(Template), offset(Offset), once(Once)], Options),",
       "            toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) ;",
       "        '$call'(Goal, Options) ->",
+      "            drain_stale_commands,",
       "            toplevel_run_call(Goal, Options, Target0, Pid, TimeLimit, IdleLimit) ;",
       "        '$reload' ->",
       "            catch(load_private_source('/worker_user_code.pl'), Error, send(Target0, error(Pid, Error)))",
@@ -1452,15 +1587,36 @@
       "            option(once(Once), Options, false),",
       "            option(target(Target1), Options, Target0),",
       "            Target = target(Target1),",
+      "            ptcp_client(Target1),",
       "            arm_time_limit(TimeLimit, Target1, Pid),",
       "            state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),",
       "            disarm_time_limit(TimeLimit),",
       "            arg(1, Target, Out),",
-      "            send(Out, Answer),",
-      "            (   arg(3, Answer, true)",
-      "            ->  state_3(Limit, Target, IdleLimit, TimeLimit, Pid)",
+      "            (   Answer = pending_error(Pid, Slice, Error)",
+      "            ->  send(Out, success(Pid, Slice, true)),",
+      "                state_3_error(Pid, Error, Target, IdleLimit)",
+      "            ;   send(Out, Answer),",
+      "                (   arg(3, Answer, true)",
+      "                ->  state_3(Limit, Target, IdleLimit, TimeLimit, Pid)",
+      "                ;   true",
+      "                )",
+      "            ),",
+      "            ptcp_client(none).",
+      "",
+      "%  Solutions found before an exception are delivered as a page with more",
+      "%  to come; the error answers the next request (Semantic Contracts D4).",
+      "state_3_error(Pid, Error, Target, IdleLimit) :-",
+      "    receive_idle({",
+      "        '$next'(Options) ->",
+      "            (   option(target(NewTarget), Options)",
+      "            ->  nb_setarg(1, Target, NewTarget),",
+      "                ptcp_client(NewTarget)",
       "            ;   true",
-      "            ).",
+      "            ),",
+      "            arg(1, Target, Out),",
+      "            send(Out, error(Pid, Error)) ;",
+      "        '$stop' -> true",
+      "    }, IdleLimit).",
       "",
       "arm_time_limit(infinite, _, _) :- !.",
       "arm_time_limit(TimeLimit, Target, Pid) :-",
@@ -1491,7 +1647,8 @@
       "            ;   true",
       "            ),",
       "            (   option(target(NewTarget), Options2)",
-      "            ->  nb_setarg(1, Target, NewTarget)",
+      "            ->  nb_setarg(1, Target, NewTarget),",
+      "                ptcp_client(NewTarget)",
       "            ;   true",
       "            ),",
       "            arg(1, Target, ActiveTarget),",
@@ -1501,18 +1658,54 @@
       "    }, IdleLimit).",
       "",
       "answer(Goal, Template, Offset, Limit, Answer) :-",
-      "    catch(call_cleanup(slice(Goal, Template, Offset, Limit, Slice), Det = true), Error, true),",
-      "    (   nonvar(Error), Error == '$abort_goal'",
-      "    ->  throw('$abort_goal')",
-      "    ;   Slice == []",
-      "    ->  Answer = failure",
+      "    answer_(Goal, Template, Offset, Limit, Answer0),",
+      "    portable_answer(Answer0, Answer).",
+      "",
+      "answer_(Goal, Template, Offset, Limit, Answer) :-",
+      "    Pending = pending(none),",
+      "    catch(call_cleanup(slice(capture_error(Goal, Pending), Template, Offset, Limit, Slice), Det = true), Error, true),",
+      "    arg(1, Pending, Captured),",
+      "    (   nonvar(Error), control_exception(Error)",
+      "    ->  throw(Error)",
+      "    ;   Captured \\== none, Slice \\== [], Limit \\== all",
+      "    ->  normalize_resource_error(Captured, PublicError), Answer = pending_error(Slice, PublicError)",
+      "    ;   Captured \\== none",
+      "    ->  normalize_resource_error(Captured, PublicError), Answer = error(PublicError)",
       "    ;   nonvar(Error)",
       "    ->  normalize_resource_error(Error, PublicError), Answer = error(PublicError)",
+      "    ;   Slice == []",
+      "    ->  Answer = failure",
       "    ;   var(Det)",
       "    ->  Answer = success(Slice, true)",
       "    ;   Det == true",
       "    ->  Answer = success(Slice, false)",
       "    ).",
+      "",
+      "%  Run Goal, recording an ordinary exception instead of letting it discard",
+      "%  the solutions already collected for the current page.",
+      "capture_error(Goal, Pending) :-",
+      "    catch(Goal, E, record_goal_error(E, Pending)).",
+      "",
+      "record_goal_error(E, _) :-",
+      "    control_exception(E),",
+      "    !,",
+      "    throw(E).",
+      "record_goal_error(E, Pending) :-",
+      "    nb_setarg(1, Pending, E),",
+      "    fail.",
+      "",
+      "%  An answer is a plain term (Semantic Contracts D5): a page whose solutions",
+      "%  carry constraints cannot be represented, and ends the query with a",
+      "%  representation error.",
+      "portable_answer(Answer0, Answer) :-",
+      "    answer_slice(Answer0, Slice),",
+      "    \\+ term_attvars(Slice, []),",
+      "    !,",
+      "    Answer = error(error(representation_error(constraints), _)).",
+      "portable_answer(Answer, Answer).",
+      "",
+      "answer_slice(success(Slice, _), Slice).",
+      "answer_slice(pending_error(Slice, _), Slice).",
       "",
       "normalize_resource_error(error(resource_error(Resource), _),",
       "                         error(resource_error(space), _)) :-",
@@ -1527,11 +1720,13 @@
       "    findnsols(Limit, Template, offset(Offset, Goal), Slice).",
       "",
       "apply_once_answer(true, success(Slice, _), success(Slice, false)) :- !.",
+      "apply_once_answer(true, pending_error(Slice, _), success(Slice, false)) :- !.",
       "apply_once_answer(_, Answer, Answer).",
       "",
       "add_pid(success(Slice, More), Pid, success(Pid, Slice, More)).",
       "add_pid(failure, Pid, failure(Pid)).",
       "add_pid(error(Term), Pid, error(Pid, Term)).",
+      "add_pid(pending_error(Slice, Term), Pid, pending_error(Pid, Slice, Term)).",
       "",
       "solution_limit(Options, Limit) :- ( option(limit(Limit), Options) -> must_be(positive_integer, Limit) ; Limit = none ).",
       "validate_solution_limit(Options) :- solution_limit(Options, _).",
@@ -1676,13 +1871,35 @@
       "    ->  option(on_timeout(Goal), Options, true),",
       "        clauses_module(Clauses, Module),",
       "        call(Module:Goal)",
-      "    ;   term_string(Msg, MessageText),",
+      "    ;   MessageText == \"'$wasm_interrupt'\"",
+      "    ->  abort",
+      "    ;   wire_read(MessageText, Msg),",
+      "        assertz(deferred(Msg), Ref),",
       "        (   select_body(Clauses, Msg, Module, Body)",
-      "        ->  call(Module:Body)",
-      "        ;   assertz(deferred(Msg)),",
-      "            receive_loop(Clauses, Options)",
+      "        ->  erase(Ref),",
+      "            call(Module:Body)",
+      "        ;   receive_loop(Clauses, Options)",
       "        )",
       "    ).",
+      "",
+      "%  A new message is recorded as deferred before its guards run, and the",
+      "%  record is erased only when a clause is selected.  A control exception",
+      "%  escaping from a guard therefore leaves the message in the mailbox",
+      "%  (Semantic Contracts D2).  The worker interrupts a toplevel blocked here",
+      "%  with the '$wasm_interrupt' text; the goal is then aborted.",
+      "",
+      "guard_exception(E) :-",
+      "    control_exception(E),",
+      "    !,",
+      "    throw(E).",
+      "guard_exception(_) :-",
+      "    fail.",
+      "",
+      "control_exception(E) :- var(E), !, fail.",
+      "control_exception('$abort_goal').",
+      "control_exception('$ptcp_time_limit').",
+      "control_exception('$aborted').",
+      "control_exception(unwind(_)).",
       "",
       "receive_timeout(Options, Timeout) :-",
       "    (   option(timeout(Timeout0), Options)",
@@ -1716,7 +1933,7 @@
       "    ->  if(Pattern, Guard) = Head,",
       "        subsumes_term(Pattern, Message),",
       "        Pattern = Message,",
-      "        catch(once(Module:Guard), _, fail)",
+      "        catch(once(Module:Guard), E, guard_exception(E))",
       "    ;   subsumes_term(Head, Message),",
       "        Head = Message",
       "    )."
@@ -1752,15 +1969,20 @@
       },
       { heartbeat: 10000 }
     ).then(function() {
+      // A goal that completed is never restarted, even if an abort arrived
+      // while it was finishing (Semantic Contracts D3).
       flushOutput(true);
-      if (abortRequested && isPtcpGoal()) {
-        return restartAbortedPtcp();
-      }
       actorDisarmTimeLimit();
       post("done", { reason: exitReason || "true" });
     }).catch(function(error) {
       flushOutput(true);
-      if (abortRequested && isPtcpGoal()) {
+      if (exitReason !== null) {
+        // exit/1 aborts the goal after recording its reason.
+        actorDisarmTimeLimit();
+        post("done", { reason: exitReason });
+        return undefined;
+      }
+      if ((abortRequested || ptcpTimeLimitRequested) && isPtcpGoal()) {
         return restartAbortedPtcp(error);
       }
       actorDisarmTimeLimit();
@@ -1957,8 +2179,9 @@
       return;
     }
     if (message.command === "toplevel_abort" && workerRole === "shell_toplevel") {
+      // The abort event is the toplevel's acknowledgement, posted once the
+      // abort has taken effect (Semantic Contracts D4).
       abortCurrentGoal();
-      post("abort", {});
       return;
     }
     if (message.command === "toplevel_halt" && workerRole === "shell_toplevel") {

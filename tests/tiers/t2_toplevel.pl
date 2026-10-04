@@ -960,6 +960,26 @@ test(error_without_preceding_solutions_is_immediate) :-
          receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
        )).
 
+%  D4: only commands that arrived before the call are discarded; a next
+%  sent right after the call, before the first answer, is kept.
+test(next_sent_after_call_is_kept) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, member(X, [a,b,c]), [template(X), limit(1)]),
+         toplevel_next(Pid),
+         receive({ success(Pid, P1, true) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         receive({ success(Pid, P2, true) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(P1 == [a]),
+         assertion(P2 == [b]),
+         toplevel_stop(Pid)
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
 %  D5: an answer carrying constraints is not representable; the error
 %  ends the query and the session accepts a new call.
 test(constrained_answer_is_a_representation_error) :-

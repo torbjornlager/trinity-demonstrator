@@ -29,6 +29,7 @@ respond_with_answer(prolog, Answer) :-
     write_term(Answer, [
         quoted(true),
         ignore_ops(true),
+        numbervars(false),
         fullstop(true),
         nl(true),
         blobs(portray),

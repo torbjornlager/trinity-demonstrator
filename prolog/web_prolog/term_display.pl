@@ -14,17 +14,25 @@ term_to_display_string(Term, String) :-
     term_to_display_string(Term, [], String).
 
 term_to_display_string(Term, VarNames, String) :-
-    copy_term(Term-VarNames, DisplayTerm-DisplayVarNames),
-    explicitly_named_vars(DisplayVarNames, NamedVars),
-    anonymize_unnamed_vars(DisplayTerm, NamedVars),
+    explicitly_named_vars(VarNames, NamedVars),
+    term_variables(Term, Vars),
+    include(var_not_named(NamedVars), Vars, AnonymousVars),
+    maplist(anonymous_name, AnonymousVars, AnonymousNames),
+    append(VarNames, AnonymousNames, DisplayVarNames),
     with_output_to(
         string(String),
-        write_term(DisplayTerm, [
+        write_term(Term, [
             quoted(true),
-            numbervars(true),
+            portray(false),
+            numbervars(false),
             variable_names(DisplayVarNames)
         ])
     ).
+
+%   An unnamed variable is shown as `_`.  The name is given through
+%   variable_names/1 rather than by binding the variable to '$VAR'('_'),
+%   so a term that really contains '$VAR'(N) is shown as that term.
+anonymous_name(Var, '_'=Var).
 
 explicitly_named_vars(VarNames, NamedVars) :-
     explicitly_named_vars_(VarNames, [], NamedVars).
@@ -43,11 +51,6 @@ binding_named_var(_Name=Var, Var) :-
 binding_named_var(_Name-Var, Var) :-
     var(Var).
 
-anonymize_unnamed_vars(Term, NamedVars) :-
-    term_variables(Term, Vars),
-    include(var_not_named(NamedVars), Vars, AnonymousVars),
-    maplist(make_anonymous_placeholder, AnonymousVars).
-
 var_not_named(NamedVars, Var) :-
     \+ member_var_eq(NamedVars, Var).
 
@@ -56,6 +59,3 @@ member_var_eq([Candidate|_], Var) :-
     !.
 member_var_eq([_|Rest], Var) :-
     member_var_eq(Rest, Var).
-
-make_anonymous_placeholder(Var) :-
-    Var = '$VAR'('_').

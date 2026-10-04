@@ -129,3 +129,38 @@ Author-directed (Semantic Contracts decision D5). Pinned by
 `constrained_solution_on_a_later_page`, `bound_constrained_variable_is_portable`
 in `t2_toplevel.pl` and the `call_constrained_*`, `rpc_constrained_*` and
 `double_quotes_fixed_as_string_on_the_wire` tests in `node_tests.pl`.
+
+## Canonical term text and browser alignment (D5 completion, 2026-10-04)
+
+- **One way of writing term text.** Goals and templates sent by `rpc/2-3`
+  and `promise/3-4`, actor messages and options sent to other nodes or to
+  browser actors, and `format=prolog` answers are written by
+  `wire_text.pl`: quoted, `ignore_ops(true)`, no portray hooks, no
+  `numbervars`, explicit variable names shared between terms written
+  together. Previously `rpc/2-3` used `~p` (portray hooks and operator
+  syntax of the sender), node-to-node messages used `numbervars`, and JSON
+  display strings bound unnamed variables to `'$VAR'('_')`; a real
+  `'$VAR'(N)` term or a sender-only operator did not survive the trip.
+- **Node-to-node toplevel events carry `term`.** A peer that sends
+  `X-Web-Prolog-Protocol` gets the canonical text of the solution list or
+  exception in a `term` field of `success`/`error` WebSocket events, and the
+  receiving node restores the exact terms. Previously remote toplevel rows
+  were rebuilt from display text (losing variable sharing) and errors became
+  `remote_error(Text)`; that fallback remains for peers without the field.
+- **Stale commands.** Only `'$next'`, `'$stop'` and `'$input'` messages that
+  arrived before an accepted call (and were deferred) are discarded; a
+  command sent after the call is kept (`next_sent_after_call_is_kept`).
+- **Browser runtime.** The SWI-WASM Worker bridge (and, where it applies, the
+  main-thread compatibility bridge in `demonstrator.html`) now follows D1-D5:
+  guard control exceptions propagate and messages are deferred before guards
+  run; worker pids in `parallel/1` and `first_solution/2-3` guards are tested,
+  not bound; `exit/1` records the first reason and aborts the goal; abort of
+  a toplevel is acknowledged with `abort(Pid)` (the shell's `abort` event is
+  now that acknowledgement), is a no-op when idle, ends a `session(false)`
+  toplevel and never restarts an exiting one; a toplevel blocked in receive
+  is interrupted rather than engine-aborted (which previously wedged it);
+  stale commands are discarded, a partial page precedes an error,
+  constrained answers are rejected, and messages and rpc goals use canonical
+  term text read with `double_quotes(string)`. Pinned by
+  `tests/wasm/swi_wasm_contracts.js`, which runs the Worker against the real
+  SWI-WASM engine under Node.

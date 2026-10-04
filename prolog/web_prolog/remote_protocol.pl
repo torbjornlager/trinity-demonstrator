@@ -22,6 +22,8 @@ The protocol itself is specified in docs/CROSS_NODE_ARCHITECTURE.md.
 :- op(200, xfx, @).
 
 :- use_module(actors, [transportable_term/1]).
+:- use_module(wire_text, [term_to_wire_text/2, terms_to_wire_texts/2,
+                          wire_text_to_term/2]).
 
 %!  protocol_version(-Version) is det.
 %
@@ -46,10 +48,7 @@ term_to_wire_atom(Term, Atom) :-
                     context(remote_protocol:term_to_wire_atom/2,
                             'term is outside the portable wire-term subset')))
     ),
-    copy_term(Term, Copy),
-    numbervars(Copy, 0, _),
-    with_output_to(atom(Atom),
-                   write_term(Copy, [numbervars(true), quoted(true)])).
+    term_to_wire_text(Term, Atom).
 
 
 %!  goal_template_to_wire_atoms(+Goal, +Template, -GoalAtom, -TemplateAtom) is det.
@@ -59,12 +58,7 @@ term_to_wire_atom(Term, Atom) :-
 goal_template_to_wire_atoms(Goal, Template, GoalAtom, TemplateAtom) :-
     strip_module(Goal, _, PlainGoal),
     strip_module(Template, _, PlainTemplate),
-    copy_term(PlainGoal+PlainTemplate, CopyGoal+CopyTemplate),
-    numbervars(CopyGoal+CopyTemplate, 0, _),
-    with_output_to(atom(GoalAtom),
-                   write_term(CopyGoal, [numbervars(true), quoted(true)])),
-    with_output_to(atom(TemplateAtom),
-                   write_term(CopyTemplate, [numbervars(true), quoted(true)])).
+    terms_to_wire_texts([PlainGoal, PlainTemplate], [GoalAtom, TemplateAtom]).
 
 
 %!  ws_json_down_reason(+Dict, -Reason) is semidet.
@@ -88,19 +82,32 @@ ws_json_is_io_output(Dict) :-
 %!  ws_json_to_actor_event(+Dict, +CompoundPid, -Event) is semidet.
 %
 %   Convert a JSON dict received from `/ws` into a local actor event term.
+%   A peer node that received our X-Web-Prolog-Protocol header adds a
+%   `term` field with the canonical text of the solution list or the
+%   exception (Semantic Contracts D5); the exact terms are then restored.
+%   Without it (older peers), rows are rebuilt from their display text and
+%   an error is reported as remote_error(Text).
 ws_json_to_actor_event(Dict, CompoundPid, success(CompoundPid, Rows, More)) :-
     get_dict(type, Dict, "success"),
     !,
-    get_dict(data, Dict, DataList),
     (get_dict(more, Dict, true) -> More = true ; More = false),
-    maplist(reify_json_row, DataList, Rows).
+    (   event_term(Dict, Rows0),
+        is_list(Rows0)
+    ->  Rows = Rows0
+    ;   get_dict(data, Dict, DataList),
+        maplist(reify_json_row, DataList, Rows)
+    ).
 ws_json_to_actor_event(Dict, CompoundPid, failure(CompoundPid)) :-
     get_dict(type, Dict, "failure"),
     !.
-ws_json_to_actor_event(Dict, CompoundPid, error(CompoundPid, remote_error(ErrorStr))) :-
+ws_json_to_actor_event(Dict, CompoundPid, error(CompoundPid, Error)) :-
     get_dict(type, Dict, "error"),
     !,
-    (get_dict(data, Dict, ErrorStr) -> true ; ErrorStr = "Unknown remote error").
+    (   event_term(Dict, Error)
+    ->  true
+    ;   (get_dict(data, Dict, ErrorStr) -> true ; ErrorStr = "Unknown remote error"),
+        Error = remote_error(ErrorStr)
+    ).
 ws_json_to_actor_event(Dict, CompoundPid, output(CompoundPid, Term)) :-
     get_dict(type, Dict, "output"),
     !,
@@ -128,6 +135,11 @@ ws_json_to_actor_event(Dict, CompoundPid, responded(CompoundPid)) :-
     get_dict(type, Dict, "responded"),
     !.
 
+
+event_term(Dict, Term) :-
+    get_dict(term, Dict, Text),
+    string(Text),
+    catch(wire_text_to_term(Text, Term), _, fail).
 
 %!  reify_json_row(+JSONRow, -PrologRow) is det.
 reify_json_row(Str, Term) :-

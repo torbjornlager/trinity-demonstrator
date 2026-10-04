@@ -53,6 +53,8 @@ Architecture per connection:
     toplevel_abort/2
 ]).
 :- use_module(node_response, [answer_to_json/2]).
+:- use_module(actors, [transportable_term/1]).
+:- use_module(wire_text, [term_to_wire_text/2]).
 :- use_module(node_ip_policy, [ip_access_denied/1]).
 :- use_module(node_log, [
     request_client_meta/3,
@@ -149,6 +151,7 @@ Architecture per connection:
 :- dynamic ws_actor_owner/2.
 :- dynamic ws_actor_kind/2.
 :- dynamic ws_connection_meta/2.
+:- dynamic ws_answer_terms/1.        % connection whose peer wants `term` fields
 :- dynamic ws_browser_connection/2.
 :- dynamic ws_browser_monitor/3.
 :- dynamic ws_browser_io/1.
@@ -242,8 +245,9 @@ ws_handler_open(Request, NodePort) :-
     ),
     (   var(Error)
     ->  request_client_meta(Request, Principal, ClientMeta),
+        peer_answer_terms(Request, AnswerTerms),
         http_upgrade_to_websocket(
-            ws_main(NodePort, Principal, ClientMeta),
+            ws_main(NodePort, Principal, ClientMeta, AnswerTerms),
             [],
             Request
         )
@@ -381,10 +385,22 @@ normalize_origin_text(Value0, Norm) :-
     ).
 
 
-%!  ws_main(+NodePort, +Principal, +ClientMeta, +WebSocket) is det.
+%!  peer_answer_terms(+Request, -AnswerTerms:boolean) is det.
+%
+%   A connecting node announces itself with the X-Web-Prolog-Protocol
+%   header.  Such a peer receives toplevel answers and errors also as
+%   canonical term text (the `term` field), so that it can restore the
+%   exact terms (Semantic Contracts D5).  Browsers, which do not send the
+%   header, get the display fields only.
+peer_answer_terms(Request, true) :-
+    memberchk(x_web_prolog_protocol(_), Request),
+    !.
+peer_answer_terms(_, false).
+
+%!  ws_main(+NodePort, +Principal, +ClientMeta, +AnswerTerms, +WebSocket) is det.
 %
 %   Per-connection main: create queue, start relay, run reader loop.
-ws_main(NodePort, Principal, ClientMeta, WebSocket) :-
+ws_main(NodePort, Principal, ClientMeta, AnswerTerms, WebSocket) :-
     with_node_port_context(
         NodePort,
         (
@@ -393,6 +409,10 @@ ws_main(NodePort, Principal, ClientMeta, WebSocket) :-
             Namespace = ws_client(NamespaceId),
             put_dict(_{connection_id:NamespaceId}, ClientMeta, ConnectionMeta),
             assertz(ws_connection_meta(Queue, ConnectionMeta)),
+            (   AnswerTerms == true
+            ->  assertz(ws_answer_terms(Queue))
+            ;   true
+            ),
             assertz(ws_browser_connection(NamespaceId, Queue)),
             ignore(catch(start_activity(ws_connection, NamespaceId,
                                         ConnectionMeta), _, true)),
@@ -438,7 +458,7 @@ ws_relay_loop_1(NodePort, WebSocket, Queue, Principal) :-
         ws_note_message(Message),
         (   ws_relay_message_allowed(Principal, Message)
         ->  catch(
-                ws_relay_message(WebSocket, Message),
+                ws_relay_message(WebSocket, Queue, Message),
                 _,
                 true
             )
@@ -473,6 +493,29 @@ ws_relay_message_allowed(_, _).
 %   documents (manual.html:210/231), so the conversion was removed --
 %   down/3 now passes through and is serialized by answer_to_json/2 in
 %   node_response.pl with a `ref` field included.
+%!  answer_term_text(+Message, -Text) is semidet.
+%
+%   Canonical text of the payload of a toplevel answer: the solution list
+%   of a success, the exception term of an error.  Fails for other events
+%   and for payloads outside the portable term subset.
+answer_term_text(success(_Pid, Slice, _More), Text) :-
+    transportable_term(Slice),
+    term_to_wire_text(Slice, Text).
+answer_term_text(error(_Pid, Error), Text) :-
+    transportable_term(Error),
+    term_to_wire_text(Error, Text).
+
+ws_relay_message(WebSocket, Queue, Message) :-
+    ws_answer_terms(Queue),
+    answer_term_text(Message, TermText),
+    !,
+    answer_to_json(Message, JSON0),
+    put_dict(term, JSON0, TermText, JSON),
+    atom_json_dict(Text, JSON, []),
+    ws_send(WebSocket, text(Text)).
+ws_relay_message(WebSocket, _Queue, Message) :-
+    ws_relay_message(WebSocket, Message).
+
 ws_relay_message(WebSocket, Message) :-
     answer_to_json(Message, JSON),
     atom_json_dict(Text, JSON, []),
@@ -484,7 +527,7 @@ ws_relay_message(WebSocket, Message) :-
 %  connection.
 ws_relay_message(WebSocket, browser_message(BrowserPid, Message)) :-
     term_string(BrowserPid, BrowserPidText),
-    term_string(Message, MessageText),
+    term_to_wire_text(Message, MessageText),
     atom_json_dict(Text, json{
         type:"actor_message",
         target:BrowserPidText,
@@ -1171,6 +1214,7 @@ ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
     catch(thread_send_message(Queue, '$ws_close'), _, true),
     catch(thread_join(RelayThread, _), _, true),
     retractall(ws_connection_meta(Queue, _)),
+    retractall(ws_answer_terms(Queue)),
     retractall(ws_browser_connection(_, Queue)),
     retractall(ws_browser_pid_scope(Queue)),
     retractall(ws_browser_monitor(Queue, _, _)),

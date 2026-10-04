@@ -1227,6 +1227,22 @@ default_io_target(Fallback, Fallback).
 
 :- thread_local deferred/1.
 
+%!  discard_deferred(:Test) is det.
+%
+%   Remove the messages that receive/1-2 has already skipped, the ones that
+%   arrived before the message most recently received, for which
+%   call(Test, Message) succeeds.  Messages still in the queue, which
+%   arrived later, are untouched.  Not exported: the toplevel layer calls it
+%   qualified, to discard commands left over from an earlier query.
+
+:- meta_predicate discard_deferred(1).
+
+discard_deferred(Test) :-
+    forall(( clause(deferred(Msg), true, Ref),
+             call(Test, Msg)
+           ),
+           erase(Ref)).
+
 receive(Clauses) :-
     receive(Clauses, []).
 

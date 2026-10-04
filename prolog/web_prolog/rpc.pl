@@ -44,6 +44,7 @@ the queue so a later yield can collect the pending answer. Manual
 :- use_module(library(url)).
 :- use_module(library(debug)).
 :- use_module(source_utils, [uri_atom/2]).
+:- use_module(wire_text, [terms_to_wire_texts/2, wire_read_options/1]).
 
 solution_limit(Options, Limit) :-
     ( option(limit(Limit), Options) -> must_be(positive_integer, Limit)
@@ -82,8 +83,7 @@ rpc(URI, Goal0, Options0) :-
     parse_url(RPCURI, Parts),
     term_variables(Goal, Vars),
     Template =.. [v|Vars],
-    format(atom(GoalAtom), "(~p)", [Goal]),
-    format(atom(TemplateAtom), "(~p)", [Template]),
+    goal_template_texts(Goal, Template, GoalAtom, TemplateAtom),
     solution_limit(Options0, Limit),
     option(once(Once0), Options0, false),
     normalize_once(Once0, Once),
@@ -149,6 +149,16 @@ rpc(Template, Offset, Limit, GoalAtom, TemplateAtom, Parts,
     rpc(Answer, Template, Offset, Limit, GoalAtom, TemplateAtom, Parts,
         Options, LoadText, RemoteTimeout, Once).
 
+%!  goal_template_texts(+Goal, +Template, -GoalAtom, -TemplateAtom) is det.
+%
+%   Write Goal and Template as canonical term text (see wire_text.pl),
+%   each in parentheses, with shared variable names so that the node,
+%   which reads them together, restores their shared variables.
+goal_template_texts(Goal, Template, GoalAtom, TemplateAtom) :-
+    terms_to_wire_texts([Goal, Template], [GoalText, TemplateText]),
+    format(atom(GoalAtom), "(~w)", [GoalText]),
+    format(atom(TemplateAtom), "(~w)", [TemplateText]).
+
 %!  http_read_answer(+URI, +Options, -Answer) is det.
 %
 %   Open URI and read one answer term.  The request is made in the body of
@@ -162,7 +172,8 @@ http_read_answer(URI, Options, Answer) :-
     call_cleanup(
         (   http_open(URI, Stream, Options),
             nb_setarg(1, Holder, Stream),
-            read_term(Stream, Answer, [double_quotes(string)])
+            wire_read_options(ReadOptions),
+            read_term(Stream, Answer, ReadOptions)
         ),
         close_held_stream(Holder)).
 
@@ -288,8 +299,7 @@ promise(URI, Goal0, Reference, Options) :-
 
 promise(URI, Goal, Template, Offset, Limit,
         HTTPOptions, LoadText, RemoteTimeout, Once, Queue) :-
-    format(atom(GoalTemplateAtom), "(~p)$@$(~p)", [Goal, Template]),
-    atomic_list_concat([GoalAtom, TemplateAtom], $@$, GoalTemplateAtom),
+    goal_template_texts(Goal, Template, GoalAtom, TemplateAtom),
     parse_url(URI, Parts),
     rpc_search_params(GoalAtom, TemplateAtom, Offset, Limit,
                       LoadText, RemoteTimeout, Once, Search),

@@ -207,13 +207,17 @@ set_current_client(Target) :-
     retractall(ptcp_current_client(_)),
     assertz(ptcp_current_client(Target)).
 
-%   Discard control and input messages left over from an earlier query.
+%   Discard control and input messages left over from an earlier query:
+%   those that arrived before the call and were skipped while the toplevel
+%   waited for it.  A command sent after the call is kept, so a client may
+%   send its next request without waiting for the first answer.
+%   actors:discard_deferred/1 is a layer-0 internal, called qualified.
 drain_stale_commands :-
-    receive({
-        '$next'(_) -> drain_stale_commands ;
-        '$stop' -> drain_stale_commands ;
-        '$input'(_, _) -> drain_stale_commands
-    }, [timeout(0)]).
+    actors:discard_deferred(toplevel_actors:stale_command).
+
+stale_command('$next'(_)).
+stale_command('$stop').
+stale_command('$input'(_, _)).
 
 ptcp_lifecycle(ptcp_options(Session, TimeLimit0, IdleLimit0, DefaultIoTarget),
                Session, TimeLimit, IdleLimit, DefaultIoTarget) :-

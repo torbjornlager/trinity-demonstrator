@@ -384,4 +384,38 @@ test(rpc_round_trip_to_remote_node,
         )).
 
 
+%  ---- D5: remote toplevel answers and errors keep their exact terms ----
+%
+%  A node peer receives toplevel events with a `term` field holding
+%  canonical term text, so variable sharing within a solution, '$VAR'
+%  terms, strings and exception terms survive the hop.
+
+test(remote_toplevel_answers_keep_exact_terms,
+     [setup(flush_mailbox), Result == ok]) :-
+    with_test_nodes(
+        [node_spec(b, [profile(actor), auth(open)])],
+        (   remote_only_actor_url(URLB),
+            toplevel_spawn(Pid, [node(URLB), session(true)]),
+            toplevel_call(Pid, T = f(X, X, '$VAR'(1), "s", 'a b', _),
+                          [template(T)]),
+            receive({ success(Pid, [Row], false) -> true },
+                    [timeout(5), on_timeout(throw(no_answer))]),
+            Row = f(A, B, V, S, Q, C),
+            assertion(A == B),
+            assertion(A \== C),
+            assertion(V == '$VAR'(1)),
+            assertion(S == "s"),
+            assertion(Q == 'a b'),
+            toplevel_call(Pid, atom_length(_, _), []),
+            receive({ error(Pid, E) -> true },
+                    [timeout(5), on_timeout(throw(no_error))]),
+            assertion(subsumes_term(error(instantiation_error, _), E)),
+            toplevel_call(Pid, dif(Y, a), [template(Y)]),
+            receive({ error(Pid, E2) -> true },
+                    [timeout(5), on_timeout(throw(no_error))]),
+            assertion(subsumes_term(error(representation_error(constraints), _), E2)),
+            toplevel_halt(Pid, _),
+            Result = ok
+        )).
+
 :- end_tests(cross_node_lifecycle).

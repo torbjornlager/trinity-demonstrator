@@ -8734,4 +8734,28 @@ test(double_quotes_fixed_as_string_on_the_wire,
             )),
         set_prolog_flag(double_quotes, Old)).
 
+%  D5: rpc writes goals as canonical term text: no portray hooks, no
+%  operator syntax, no numbervars.
+:- op(700, xfx, ===>).
+:- multifile user:portray/1.
+user:portray(d5_secret) :- write(d5_public).
+
+test(rpc_term_text_is_canonical,
+     true(X == f('$VAR'(1), "s", 'a b', {x}, -(1), (a ===> b), d5_secret))) :-
+    with_node_server(URI,
+        rpc(URI, X = f('$VAR'(1), "s", 'a b', {x}, -(1), (a ===> b), d5_secret))).
+
+test(rpc_keeps_variable_sharing_between_goal_and_template,
+     true((A == B, A \== C))) :-
+    with_node_server(URI,
+        rpc(URI, T = g(A, A, _), [limit(1)])),
+    T = g(A, B, C).
+
+test(prolog_format_answer_keeps_dollar_var,
+     true(Answer == success(['$VAR'(1)], false))) :-
+    with_node_server(URI,
+        (   call_url(URI, 'X = \'$VAR\'(1)', 'X', 0, 1, '', none, URL),
+            read_answer(URL, Answer)
+        )).
+
 :- end_tests(node).
