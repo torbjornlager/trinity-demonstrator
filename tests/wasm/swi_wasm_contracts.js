@@ -137,14 +137,26 @@ const scenarios = {
     check(/\[ok\],false\)/.test(m[1] || ""), "then a new call: " + m[1]);
   },
 
-  async abort_in_s1_is_a_no_op(W, check) {
+  async abort_in_s1_is_acknowledged_and_changes_nothing(W, check) {
     await startToplevel(W);
     abort(W);
-    await sleep(300);
+    await nSends(W, 1);
     deliver(W, "'$call'(Y = ok,[template(Y)])");
-    const m = await nSends(W, 1);
-    await sleep(200);
-    check(m.length === 1 && /\[ok\],false\)/.test(m[0]), "no acknowledgement, call still served: " + m.join(" | "));
+    const m = await nSends(W, 2);
+    check(m[0] === "abort(" + QPID + ")", "idle abort is acknowledged: " + m[0]);
+    check(/\[ok\],false\)/.test(m[1] || ""), "toplevel stays idle and serves the next call: " + m[1]);
+  },
+
+  async throw_none_is_an_error(W, check) {
+    await startToplevel(W);
+    deliver(W, "'$call'(throw(none),[template(x),limit(5)])");
+    deliver(W, "'$call'((member(X,[1,2]), (X == 2 -> throw(none) ; true)),[template(X),limit(5)])");
+    await nSends(W, 2);
+    deliver(W, "'$next'([])");
+    const m = await nSends(W, 3);
+    check(/^error\(.*,none\)$/.test(m[0]), "throw(none) is an error, not failure: " + m[0]);
+    check(/\[1\],true\)$/.test(m[1] || ""), "solution first: " + m[1]);
+    check(/^error\(.*,none\)$/.test(m[2] || ""), "then the error: " + m[2]);
   },
 
   async abort_ends_one_shot_toplevel(W, check) {

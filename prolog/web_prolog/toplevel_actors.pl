@@ -443,16 +443,16 @@ answer_(Goal, Template, Offset, Limit, Answer) :-
                           Limit, Slice),
                     Det = true),
            Error, true),
-    arg(1, Pending, Captured),
+    arg(1, Pending, Cell),
     (   nonvar(Error),
-        ptcp_control_exception(Error)
+        ( ptcp_control_exception(Error) ; Error = unwind(_) )
     ->  throw(Error)
-    ;   Captured \== none,
+    ;   Cell = caught(Captured),
         Slice \== [],
         Limit \== all
     ->  normalize_resource_error(Captured, PublicError),
         Answer = pending_error(Slice, PublicError)
-    ;   Captured \== none
+    ;   Cell = caught(Captured)
     ->  normalize_resource_error(Captured, PublicError),
         Answer = error(PublicError)
     ;   nonvar(Error)
@@ -499,8 +499,10 @@ record_goal_error(E, _) :-
     ),
     !,
     throw(E).
+%   The cell holds caught(E), never the bare exception, so a goal that
+%   throws the empty marker itself (throw(none)) is still recorded.
 record_goal_error(E, Pending) :-
-    nb_setarg(1, Pending, E),
+    nb_setarg(1, Pending, caught(E)),
     fail.
 
 % Public resource categories hide backend-specific memory names and context.

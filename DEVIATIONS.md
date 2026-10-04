@@ -79,10 +79,12 @@ result-size ceiling; the existing memory ceiling bounds solution collection.
 
 ## Toplevel query boundaries (D4, 2026-10-04)
 
-- **Abort is acknowledged.** Unless it is a no-op in state s1 or the
-  toplevel is already terminating, `toplevel_abort/1` makes the toplevel send
-  `abort(Pid)` to the client of its most recent call, after any answers the
-  aborted query had already sent. The WebSocket transport forwards this
+- **Abort is acknowledged.** Unless the toplevel is already terminating,
+  `toplevel_abort/1` makes the toplevel send `abort(Pid)` to the client of
+  its most recent call (before any call, to its spawn target), after any
+  answers the aborted query had already sent. This includes an abort that
+  reaches an idle toplevel (s1), which stays idle (a one-shot toplevel
+  ends), so an abort racing the end of a query is still answered. The WebSocket transport forwards this
   message instead of synthesising its own abort event; the HTTP `/abort`
   endpoint replies only once it has arrived (or with `timeout`).
 - **Each call starts afresh.** On accepting a call the toplevel discards
@@ -190,3 +192,15 @@ correctness/security fix; the pre-layering baseline (`demonstrator-peer`) has
 the same hole and is **not** re-cut. Pinned by
 `client_source_cannot_install_goal_expansion` and
 `client_source_cannot_declare_term_expansion_multifile` in `node_tests.pl`.
+
+## Review corrections to D4/D5 (2026-10-04)
+
+- **Captured exceptions are wrapped.** The page-collection cell records
+  `caught(E)`; previously the bare exception was stored next to the empty
+  marker `none`, so `throw(none)` was reported as failure, or a solution
+  followed by it as a final success. Pinned by `throw_none_is_an_error` (t2
+  and the SWI-WASM contract tests).
+- **Idle abort acknowledged in the browser runtime.** The SWI-WASM Worker now
+  acknowledges an abort that reaches an idle toplevel, as the native node
+  already did; a one-shot toplevel ends. The manual and DEVIATIONS no longer
+  describe the s1 case as silent.

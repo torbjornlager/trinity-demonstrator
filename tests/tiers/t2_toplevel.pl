@@ -980,6 +980,48 @@ test(next_sent_after_call_is_kept) :-
          receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
        )).
 
+%  The captured-error cell must not collide with the goal's own exception
+%  terms: throw(none) is an ordinary exception like any other.
+test(throw_none_is_an_error) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, throw(none), [template(x), limit(5)]),
+         receive({ error(Pid, E) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(E == none),
+         toplevel_call(Pid, (member(X, [1, 2]), (X == 2 -> throw(none) ; true)),
+                       [template(X), limit(5)]),
+         receive({ success(Pid, Page, More) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(Page == [1]),
+         assertion(More == true),
+         toplevel_next(Pid),
+         receive({ error(Pid, E2) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(E2 == none)
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+%  The running-time limit is a control exception: it is never captured as
+%  a pending error behind solutions already found.
+test(time_limit_after_solutions_is_not_a_partial_page) :-
+   toplevel_spawn(Pid, [session(true), monitor(true), time_limit(0.3)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, (member(X, [ok, wait]), (X == wait -> sleep(5) ; true)),
+                       [template(X), limit(5)]),
+         receive({ error(Pid, E) -> true ;
+                   success(Pid, P, M) -> E = unexpected(P, M) },
+                 [timeout(3), on_timeout(throw(shell_receive_timeout))]),
+         assertion(subsumes_term(error(resource_error(time), _), E))
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
 %  D5: an answer carrying constraints is not representable; the error
 %  ends the query and the session accepts a new call.
 test(constrained_answer_is_a_representation_error) :-

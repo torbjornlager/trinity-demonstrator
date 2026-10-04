@@ -23,6 +23,8 @@
   var ptcpPidText = "";
   var ptcpSessionText = "true";
   var ptcpClientText = "";
+  var ptcpLastClientText = "";
+  var ptcpTargetText = "";
   var currentGoalText = "";
   var inheritedSource = "";
   var behaviourSource = "";
@@ -547,9 +549,10 @@
 
   function abortCurrentGoal() {
     if (isPtcpGoal()) {
-      // An abort never resumes a terminating toplevel, and has no effect on
-      // an idle one (s1).
-      if (exitReason !== null || ptcpClientText === "") {
+      // An abort never resumes a terminating toplevel.  Every other abort is
+      // acknowledged, including one that reaches an idle toplevel (s1):
+      // there the toplevel stays idle, or a one-shot toplevel ends.
+      if (exitReason !== null) {
         return true;
       }
       abortRequested = true;
@@ -563,15 +566,19 @@
     return false;
   }
 
-  function actorPtcpStart(pidText, sessionText) {
+  function actorPtcpStart(pidText, sessionText, targetText) {
     ptcpPidText = String(pidText || "");
     ptcpSessionText = String(sessionText || "true");
+    ptcpTargetText = String(targetText || "");
     ptcpClientText = "";
     return true;
   }
 
   function actorPtcpClient(clientText) {
     ptcpClientText = String(clientText || "");
+    if (ptcpClientText) {
+      ptcpLastClientText = ptcpClientText;
+    }
     return true;
   }
 
@@ -651,7 +658,9 @@
 
   function restartAbortedPtcp(error) {
     var timedOut = ptcpTimeLimitRequested;
-    var clientText = ptcpClientText;
+    // The acknowledgement goes to the client of the aborted query; an abort
+    // of an idle toplevel goes to its most recent client, else its target.
+    var clientText = ptcpClientText || ptcpLastClientText || ptcpTargetText;
     actorDisarmTimeLimit();
     ptcpTimeLimitRequested = false;
     abortRequested = false;
@@ -1560,7 +1569,8 @@
       "    ptcp_lifecycle(SessionOrLifecycle, Session, TimeLimit, IdleLimit),",
       "    term_string(Pid, PidText),",
       "    term_string(Session, SessionText),",
-      "    _ := actorPtcpStart(#PidText, #SessionText),",
+      "    term_string(Target, TargetText),",
+      "    _ := actorPtcpStart(#PidText, #SessionText, #TargetText),",
       "    catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit), '$ptcp_idle_limit', true).",
       "",
       "ptcp_client(Target) :-",
@@ -1693,12 +1703,12 @@
       "answer_(Goal, Template, Offset, Limit, Answer) :-",
       "    Pending = pending(none),",
       "    catch(call_cleanup(slice(capture_error(Goal, Pending), Template, Offset, Limit, Slice), Det = true), Error, true),",
-      "    arg(1, Pending, Captured),",
+      "    arg(1, Pending, Cell),",
       "    (   nonvar(Error), control_exception(Error)",
       "    ->  throw(Error)",
-      "    ;   Captured \\== none, Slice \\== [], Limit \\== all",
+      "    ;   Cell = caught(Captured), Slice \\== [], Limit \\== all",
       "    ->  normalize_resource_error(Captured, PublicError), Answer = pending_error(Slice, PublicError)",
-      "    ;   Captured \\== none",
+      "    ;   Cell = caught(Captured)",
       "    ->  normalize_resource_error(Captured, PublicError), Answer = error(PublicError)",
       "    ;   nonvar(Error)",
       "    ->  normalize_resource_error(Error, PublicError), Answer = error(PublicError)",
@@ -1720,7 +1730,7 @@
       "    !,",
       "    throw(E).",
       "record_goal_error(E, Pending) :-",
-      "    nb_setarg(1, Pending, E),",
+      "    nb_setarg(1, Pending, caught(E)),",
       "    fail.",
       "",
       "%  An answer is a plain term (Semantic Contracts D5): a page whose solutions",
