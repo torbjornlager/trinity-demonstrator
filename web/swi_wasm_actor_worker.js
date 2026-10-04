@@ -155,10 +155,39 @@
         }
         return output;
       }
-      if (character === "\\" && text.charAt(index + 1) === "\\") {
-        output += "\\";
-        index += 2;
-        continue;
+      if (character === "\\") {
+        // Decode the escape sequences of a quoted Prolog atom.  The
+        // controller writes newlines, tabs and carriage returns as \n, \t
+        // and \r (prologQuotedText), so these must be read back, or the
+        // whole program reaches the consult as one line of text.
+        var escaped = text.charAt(index + 1);
+        var simple = { n: "\n", t: "\t", r: "\r", a: "\x07", b: "\b", f: "\f",
+                       v: "\v", e: "\x1b", s: " ", "0": "\0",
+                       "\\": "\\", "'": "'", "\"": "\"", "`": "`" };
+        if (escaped === "\n") {
+          index += 2;
+          continue;
+        }
+        if (escaped === "x") {
+          var hex = /^x([0-9a-fA-F]+)\\/.exec(text.slice(index + 1));
+          if (hex) {
+            output += String.fromCodePoint(parseInt(hex[1], 16));
+            index += 1 + hex[0].length;
+            continue;
+          }
+        }
+        var octal = /^([0-7]+)\\/.exec(text.slice(index + 1));
+        if (octal) {
+          output += String.fromCodePoint(parseInt(octal[1], 8));
+          index += 1 + octal[0].length;
+          continue;
+        }
+        if (Object.prototype.hasOwnProperty.call(simple, escaped)) {
+          output += simple[escaped];
+          index += 2;
+          continue;
+        }
+        throw new Error("undefined escape sequence \\" + escaped + " in src_text/1");
       }
       output += character;
       index += 1;

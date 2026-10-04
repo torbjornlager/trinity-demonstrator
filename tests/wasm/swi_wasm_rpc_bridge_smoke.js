@@ -784,6 +784,18 @@ ok(workerToplevelOptionHelpers.spawnSource(
      "[limit(7),offset(3),once(true)]"
    )) === JSON.stringify({ limit: 7, offset: 3, once: true }),
    "the Worker consumes canonical spawn and call options instead of parallel private fields");
+{
+  // The Worker must decode what the controller's serializer writes: a
+  // multiline program with tabs, quotes and backslashes survives the
+  // src_text/1 round trip unchanged.
+  const program = "p('quoted').\nq :-\n\t\\+ bad,\r\n\tX = \"s\".\n";
+  ok(workerToplevelOptionHelpers.spawnSource(
+       "[session(true),src_text(" + prologQuotedText(program) + ")]"
+     ) === program,
+     "spawn source round-trips through prologQuotedText and the Worker reader");
+  ok(workerToplevelOptionHelpers.spawnSource("[src_text('a\\x41\\b\\101\\c')]") === "aAbAc",
+     "the Worker reader decodes hexadecimal and octal escapes");
+}
 ok(workerToplevelOptionHelpers.callOptions("[]").limit === "none",
    "omitting a Worker call limit requests all solutions");
 for (const limit of ["0", "-1", "infinity", "infinite", "1.5"]) {
