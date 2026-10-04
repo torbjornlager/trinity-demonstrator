@@ -430,10 +430,12 @@ precheck_source_terms(Profile, Module, Stream) :-
 
 precheck_source_term(Profile, _Module, (:- Directive)) :-
     !,
+    reject_expansion_declaration(Directive),
     reject_forbidden_directive(Profile, Directive).
 precheck_source_term(Profile, Module, (Head :- Body)) :-
     !,
     reject_qualified_head(Head),
+    reject_expansion_clause(Head),
     reject_forbidden_goal(Profile, Module, Body).
 precheck_source_term(Profile, Module, Rule) :-
     Rule = (_Head --> _Body),
@@ -441,7 +443,62 @@ precheck_source_term(Profile, Module, Rule) :-
     dcg_translate_rule(Rule, Expanded),
     precheck_expanded_source_term(Profile, Module, Expanded).
 precheck_source_term(_Profile, _Module, Fact) :-
-    reject_qualified_head(Fact).
+    reject_qualified_head(Fact),
+    reject_expansion_clause(Fact).
+
+
+%!  reject_expansion_clause(+Head) is det.
+%
+%   Client source must not install term/goal expansion hooks. Such a hook
+%   fires while the loader reads the rest of the client's own source, which
+%   runs before the per-goal sandbox check and can rewrite a benign-looking
+%   clause body into a forbidden call (Soundness item S2 / Semantic
+%   Contracts D6c). The node reads client source with expansion otherwise
+%   off and does DCG translation itself, so refusing these definitions
+%   closes the only route by which client source adds a load-time hook.
+
+reject_expansion_clause(Head) :-
+    callable(Head),
+    functor(Head, Name, Arity),
+    expansion_predicate(Name, Arity),
+    !,
+    throw(error(permission_error(define, expansion_hook, Name/Arity),
+                context(node_sandbox:reject_expansion_clause/1,
+                        'client source may not define expansion hooks'))).
+reject_expansion_clause(_).
+
+%!  reject_expansion_declaration(+Directive) is det.
+%
+%   Reject a multifile/dynamic/discontiguous declaration that would attach a
+%   client clause to an expansion hook, so the rejection above cannot be
+%   bypassed by declaring the hook first.
+
+reject_expansion_declaration(Directive) :-
+    callable(Directive),
+    functor(Directive, Decl, 1),
+    memberchk(Decl, [multifile, dynamic, discontiguous]),
+    arg(1, Directive, Spec),
+    spec_names_expansion(Spec),
+    !,
+    throw(error(permission_error(define, expansion_hook, Decl),
+                context(node_sandbox:reject_expansion_declaration/1,
+                        'client source may not declare expansion hooks'))).
+reject_expansion_declaration(_).
+
+spec_names_expansion(Spec) :-
+    nonvar(Spec),
+    (   Spec = (A, B)
+    ->  ( spec_names_expansion(A) ; spec_names_expansion(B) )
+    ;   is_list(Spec)
+    ->  ( member(S, Spec), spec_names_expansion(S) )
+    ;   Spec = _Module:Inner
+    ->  spec_names_expansion(Inner)
+    ;   Spec = Name/Arity,
+        expansion_predicate(Name, Arity)
+    ).
+
+expansion_predicate(term_expansion, 2).
+expansion_predicate(goal_expansion, 2).
 
 precheck_expanded_source_term(_, _, []) :-
     !.

@@ -164,3 +164,29 @@ in `t2_toplevel.pl` and the `call_constrained_*`, `rpc_constrained_*` and
   term text read with `double_quotes(string)`. Pinned by
   `tests/wasm/swi_wasm_contracts.js`, which runs the Worker against the real
   SWI-WASM engine under Node.
+
+## Client source may not install expansion hooks (D6c / S2, 2026-10-04)
+
+A public client's loaded source (and any clause it asserts at runtime) can no
+longer define or declare `term_expansion/2` or `goal_expansion/2`. Such a hook
+fired while SWI-Prolog's loader read the rest of the client's own source,
+which runs **before** the per-goal sandbox check, so a client could write
+
+```prolog
+goal_expansion(trigger, shell('…', _)).
+p :- trigger.
+```
+
+and have `p/0` loaded with a `shell/2` body that then ran unchecked — a full
+blacklist-sandbox escape (reproduced before the fix). The precheck
+(`node_sandbox:reject_expansion_clause/1`, `reject_expansion_declaration/1`)
+now refuses a clause head or a `multifile`/`dynamic`/`discontiguous`
+declaration that names an expansion predicate, with
+`permission_error(define, expansion_hook, …)`. The node already reads client
+source as raw terms and does DCG translation itself, so blocking these
+definitions closes the only route by which client source adds a load-time
+hook; the same precheck guards `assert/1` at runtime. Author-directed
+correctness/security fix; the pre-layering baseline (`demonstrator-peer`) has
+the same hole and is **not** re-cut. Pinned by
+`client_source_cannot_install_goal_expansion` and
+`client_source_cannot_declare_term_expansion_multifile` in `node_tests.pl`.

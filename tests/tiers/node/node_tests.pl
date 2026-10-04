@@ -5405,6 +5405,33 @@ test(public_profile_supervisor_framework_start_keeps_module,
                 supervisor_actor:supervisor_halt(Pid)
             ))).
 
+% D6c / Soundness S2: client source may not install expansion hooks.  A
+% goal_expansion defined by the client would otherwise fire while the loader
+% reads the rest of the client's own source and rewrite a benign-looking
+% body into a forbidden call, before the per-goal sandbox check runs.
+test(client_source_cannot_install_goal_expansion,
+     true(sub_string(Data, _, _, _, "expansion_hook"))) :-
+    with_node_server_options([sandbox(blacklist), profile(actor)], URI,
+        (   format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+            Src = "goal_expansion(trigger, shell('echo pwned', _)).\np :- trigger.",
+            format(string(Opts), "[session(true),src_text(~q)]", [Src]),
+            read_json_post(SpawnURL, _{options:Opts}, JSON),
+            Type = JSON.get(type),
+            assertion(Type == "error"),
+            Data = JSON.get(data)
+        )).
+
+test(client_source_cannot_declare_term_expansion_multifile,
+     true(sub_string(Data, _, _, _, "expansion_hook"))) :-
+    with_node_server_options([sandbox(blacklist), profile(actor)], URI,
+        (   format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+            Src = ":- multifile term_expansion/2.\nterm_expansion(a, b).",
+            format(string(Opts), "[session(true),src_text(~q)]", [Src]),
+            read_json_post(SpawnURL, _{options:Opts}, JSON),
+            assertion(JSON.get(type) == "error"),
+            Data = JSON.get(data)
+        )).
+
 test(node_json_default_success_bindings,
      true((Type == "success", More == true, Data = [Row], get_dict('X', Row, "a")))) :-
     with_node_server(URI,
