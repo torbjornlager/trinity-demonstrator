@@ -352,7 +352,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>exit(+Pid, +Reason) is det.</pre>
-    <p>Terminates the process identified by <code>Pid</code> with <code>Reason</code>. For remote actors, the runtime routes this request through the remote node.</p>
+    <p>Terminates the process identified by <code>Pid</code> with <code>Reason</code>. For remote actors, the runtime routes this request through the remote node. Termination commits when the first exit reason is accepted; later exit and abort signals have no effect.</p>
 </article>
 
 <a id="!/2"></a>
@@ -433,7 +433,7 @@ receive(+Clauses, +Options) is nondet.</pre>
    PatternN [if GuardN] -&gt;
          BodyN
 }</pre>
-    <p>A clause accepts a message if the message unifies with its pattern and its optional guard succeeds. A guard is evaluated for its first solution only, as if by <code>once/1</code>, and should be free of side effects. Bindings from the pattern and guard are in scope in the body. If a guard fails or raises an exception, that clause does not accept the message.</p>
+    <p>A clause accepts a message if its pattern matches the message and its optional guard succeeds. Matching is one-sided: the pattern must subsume the message, so a pattern never binds variables that occur in the message. A guard is evaluated for its first solution only, as if by <code>once/1</code>, and should be free of side effects. Bindings from the pattern and guard are in scope in the body. If a guard fails or raises an ordinary exception, that clause does not accept the message. Control exceptions (abort, termination, enforced limits) propagate out of <code>receive/1-2</code>, and the message being examined stays in the mailbox. A guard that checks a correlation reference or a pid should test it with <code>==</code> rather than bind it.</p>
     <p>Messages accepted by no clause are <em>deferred</em>: they remain in the mailbox, without any change in their contents or relative order, and are available to later receive calls. <code>receive({})</code> accepts no message and waits, subject to <code>Options</code>. Valid options:</p>
     <ul>
         <li><code>timeout(+Number)</code><br>Bounds the wait for an accepted message, in seconds. The value <code>0</code> inspects messages already in the mailbox without waiting for another. Default is no timeout.</li>
@@ -535,7 +535,7 @@ toplevel_next(+Pid, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>toplevel_abort(+Pid) is det.</pre>
-    <p>Tells the local toplevel <code>Pid</code> to abort the currently running goal. Abort runs supported cleanup, bypasses recovery in client <code>catch/3</code>, and returns a persistent session to PTCP state <strong>s1</strong> without terminating the actor. An unknown or non-local pid has no effect.</p>
+    <p>Tells the local toplevel <code>Pid</code> to abort the currently running goal. Abort runs supported cleanup, bypasses recovery in client <code>catch/3</code>, and returns a persistent session to PTCP state <strong>s1</strong> without terminating the actor. A <code>session(false)</code> toplevel terminates instead. An abort in <strong>s1</strong> has no effect, one in <strong>s3</strong> abandons the suspended solutions, and one that arrives after termination has been committed is ignored. An unknown or non-local pid has no effect.</p>
 </article>
 
 <article class="predicate-entry" id="toplevel_halt/1-2">
@@ -697,7 +697,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <ul>
         <li><code>start(+Goal)</code><br>Required. Start goal for the child. The special form <code>server(Pred,ServerOptions)</code> starts a generic server child. The default initial state is <code>[]</code>. It may be replaced with <code>initial_state(+State)</code>. All remaining <code>ServerOptions</code> are passed to <code>server_spawn/4</code>.</li>
         <li><code>restart(+Policy)</code><br>One of <code>permanent</code> (default), <code>transient</code>, or <code>temporary</code>.</li>
-        <li><code>shutdown(+Shutdown)</code><br>One of <code>brutal_kill</code>, <code>infinity</code>, or a timeout in seconds. The default is <code>5</code> for workers and <code>infinity</code> for supervisor children.</li>
+        <li><code>shutdown(+Shutdown)</code><br>One of <code>brutal_kill</code>, <code>infinity</code>, or a timeout in seconds. The default is <code>5</code> for workers and <code>infinity</code> for supervisor children. With a timeout, a server child is first sent its stop request and receives <code>exit(Pid, shutdown)</code> only if it has not exited in time; other children receive <code>exit(Pid, shutdown)</code> at once.</li>
         <li><code>type(+Type)</code><br><code>worker</code> (default) or <code>supervisor</code>.</li>
     </ul>
 </article>

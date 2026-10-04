@@ -125,6 +125,10 @@ test(dynamic_terminate_and_delete) :-
 test(dynamic_restart_child) :-
     test_dynamic_restart_child.
 
+test(server_child_timed_shutdown_is_graceful) :-
+    test_server_child_timed_shutdown_is_graceful.
+test(plain_child_timed_shutdown_uses_shutdown_signal) :-
+    test_plain_child_timed_shutdown_uses_shutdown_signal.
 test(server_child) :-
     test_server_child.
 
@@ -348,6 +352,41 @@ test_dynamic_restart_child :-
     assert_true(Pid2 \= undefined, 'w1 should be running'),
     assert_true(Pid2 \= Pid1, 'w1 should have new pid'),
     cleanup(t9_sup).
+
+
+%% Timed shutdown of a server child is a stop request first, so the
+%% server exits normally; a child without a stop protocol receives
+%% exit(Pid, shutdown).
+test_server_child_timed_shutdown_is_graceful :-
+    supervisor_spawn([
+        child(gfridge, [
+            start(server(test_fridge, [initial_state([])])),
+            shutdown(5)
+        ])
+    ], _Pid, [name(tgs_sup)]),
+    sleep(0.2),
+    supervisor_which_children(tgs_sup, C0),
+    get_child_pid(gfridge, C0, Pid),
+    monitor(Pid, Ref),
+    supervisor_terminate_child(tgs_sup, gfridge, R),
+    assert_eq(R, ok, 'terminate should succeed'),
+    receive({down(Pid, Ref, Reason) -> true}, [timeout(3), on_timeout(fail)]),
+    assert_eq(Reason, true, 'server should stop gracefully'),
+    cleanup(tgs_sup).
+
+test_plain_child_timed_shutdown_uses_shutdown_signal :-
+    supervisor_spawn([
+        child(pw, [start(forever), shutdown(5)])
+    ], _Pid, [name(tps_sup)]),
+    sleep(0.2),
+    supervisor_which_children(tps_sup, C0),
+    get_child_pid(pw, C0, Pid),
+    monitor(Pid, Ref),
+    supervisor_terminate_child(tps_sup, pw, R),
+    assert_eq(R, ok, 'terminate should succeed'),
+    receive({down(Pid, Ref, Reason) -> true}, [timeout(3), on_timeout(fail)]),
+    assert_eq(Reason, shutdown, 'plain child gets exit(Pid, shutdown)'),
+    cleanup(tps_sup).
 
 
 %% 10. Server child: fridge server under supervision.

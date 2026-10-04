@@ -145,12 +145,32 @@ rpc(Template, Offset, Limit, GoalAtom, TemplateAtom, Parts,
         search(Search)
       | Parts
     ]),
-    setup_call_cleanup(
-        http_open(ExpandedURI, Stream, Options),
-        read(Stream, Answer),
-        close(Stream)),
+    http_read_answer(ExpandedURI, Options, Answer),
     rpc(Answer, Template, Offset, Limit, GoalAtom, TemplateAtom, Parts,
         Options, LoadText, RemoteTimeout, Once).
+
+%!  http_read_answer(+URI, +Options, -Answer) is det.
+%
+%   Open URI and read one answer term.  The request is made in the body of
+%   call_cleanup/2, not in a setup goal: SWI-Prolog protects setup goals
+%   from signals, so a slow or silent remote node would otherwise delay
+%   abort, halt and exit signals until it replied.  The stream is closed in
+%   cleanup only if it was actually opened.
+
+http_read_answer(URI, Options, Answer) :-
+    Holder = stream(none),
+    call_cleanup(
+        (   http_open(URI, Stream, Options),
+            nb_setarg(1, Holder, Stream),
+            read(Stream, Answer)
+        ),
+        close_held_stream(Holder)).
+
+close_held_stream(stream(Stream)) :-
+    (   Stream == none
+    ->  true
+    ;   close(Stream, [force(true)])
+    ).
 
 rpc(success(Slice, true), Template, Offset, Limit, GoalAtom, TemplateAtom,
     Parts, Options, LoadText, RemoteTimeout, Once) :-
@@ -279,10 +299,7 @@ promise(URI, Goal, Template, Offset, Limit,
       | Parts
     ]),
     catch((
-        setup_call_cleanup(
-            http_open(ExpandedURI, Stream, HTTPOptions),
-            read(Stream, Message),
-            close(Stream)),
+        http_read_answer(ExpandedURI, HTTPOptions, Message),
         catch(thread_send_message(Queue, Message), SendError,
               format(user_error, 'promise: thread_send_message error: ~w~n', [SendError]))
     ), HTTPError,

@@ -15,6 +15,7 @@
      whereis_service/2,      % +Name, -Pid
      exit/1,                 % +Reason
      exit/2,                 % +Pid, +Reason
+     actor_terminating/0,
      (!)/2,                  % +Pid, +Message
      send/2,                 % +Pid, +Message
      send/3,                 % +Pid, +Message, +Options
@@ -306,6 +307,10 @@ spawn_local_activate(LocalPid, Pid, Goal, EffectiveOptions) :-
     self(Self),
     spawn_prepare_context(Self, EffectiveOptions, PreparedContext),
     install_preconfigured_monitor(Pid, EffectiveOptions),
+    %  The parent records the link and the spawn-time monitor before the
+    %  child thread exists, so no termination of the child can go
+    %  unreported and no termination of the parent can miss the link.
+    install_spawn_relations(Self, Pid, EffectiveOptions),
     local_actor_start_goal(Self, LocalPid, Goal, EffectiveOptions, StartGoal),
     spawn_thread_options(ThreadOptions),
     catch(
@@ -318,11 +323,28 @@ spawn_local_activate(LocalPid, Pid, Goal, EffectiveOptions) :-
         ),
         Error,
         (
+            remove_spawn_relations(Self, Pid),
             forall(hook_spawn_failed(LocalPid), true),
             forall(hook_spawn_abort(PreparedContext), true),
             throw(Error)
         )
     ).
+
+install_spawn_relations(Parent, Pid, Options) :-
+    option(link(Link), Options, true),
+    (   Link == true
+    ->  assertz(link(Parent, Pid))
+    ;   true
+    ),
+    option(monitor(Monitor), Options, false),
+    (   Monitor == true
+    ->  assertz(monitor(Parent, Pid, Pid))
+    ;   true
+    ).
+
+remove_spawn_relations(Parent, Pid) :-
+    retractall(link(Parent, Pid)),
+    retractall(monitor(Parent, Pid, Pid)).
 
 install_preconfigured_monitor(Pid, Options) :-
     option(monitor_target(Target), Options),
@@ -467,7 +489,8 @@ stop_self(Parent) :-
 %   Actor bootstrap sequence:
 %
 %     1. register pid/thread mapping,
-%     2. install optional link/monitor,
+%     2. check that a linked parent is still alive (the parent itself
+%        recorded the link and monitor before creating this thread),
 %     3. run the start body — by default: notify the parent and call
 %        Goal in the caller's module; the isolation glue takes this
 %        over through hook_start_body/7 to prepare a private module
@@ -482,14 +505,13 @@ start(Parent, Pid, Goal, Options) :-
     canonical_pid(Pid, GlobalPid),
     assertz('$parent'(Parent)),
     remember_actor_namespace(Pid),
-    option(link(Link), Options, true),
-    (   Link == true
-    ->  assertz(link(Parent, GlobalPid))
-    ;   true
-    ),
-    option(monitor(Monitor), Options, false),
-    (   Monitor == true
-    ->  assertz(monitor(Parent, GlobalPid, GlobalPid))
+    %  The link and monitor were recorded by the parent before this thread
+    %  was created.  If the link record has already gone, the parent
+    %  stopped before this pid became resolvable, so its cleanup could not
+    %  reach us: terminate now rather than run as an orphan.
+    (   option(link(true), Options, true),
+        \+ link(Parent, GlobalPid)
+    ->  exit(kill)
     ;   true
     ),
     catch(
@@ -963,7 +985,9 @@ send_service(Name, Message) :-
 
 %!  exit(+Reason)
 %
-%   Exit the calling process.
+%   Exit the calling process.  Termination commits when the first exit
+%   reason is recorded: from then on the actor is terminating, its reason
+%   is fixed, and later exit requests (and exit signals) have no effect.
 
 :- dynamic exit_reason/2.
 
@@ -972,8 +996,21 @@ exit(Reason) :-
     instantiation_error(Reason).
 exit(Reason) :-
     self_local(LocalSelf),
-    asserta(exit_reason(LocalSelf, Reason)),
-    abort.
+    (   exit_reason(LocalSelf, _)
+    ->  true
+    ;   assertz(exit_reason(LocalSelf, Reason)),
+        abort
+    ).
+
+%!  actor_terminating is semidet.
+%
+%   True once termination of the calling actor has been committed.  Used by
+%   the PTCP boundary so that an abort cannot resume a terminating toplevel.
+
+actor_terminating :-
+    self_local(LocalSelf),
+    exit_reason(LocalSelf, _),
+    !.
 
 
 %!  exit(+Pid, +Reason) is det.
@@ -1182,7 +1219,8 @@ default_io_target(Fallback, Fallback).
 %!  receive(+ReceiveClauses) is nondet.
 %!  receive(+ReceiveClauses, +Options) is nondet.
 %
-%   Committed message selection by Prolog unification. One invocation consumes at most
+%   Committed message selection by one-sided matching: a pattern may bind its
+%   own variables but never variables inside the message. One invocation consumes at most
 %   one message, but its ordinary Prolog clause body may yield several logical
 %   solutions. Backtracking through that body never selects another message or
 %   clause.
@@ -1213,12 +1251,18 @@ receive(Mailbox, Clauses, Options) :-
 % Keep one deadline throughout the scan: unrelated arrivals do not restart
 % the wait. Preserve timeout(0), whose queue-inspection semantics differ
 % from an expired deadline. The original options retain the timeout body.
+%
+% A new message is recorded as deferred before its guards run, and the
+% record is erased only when a clause is selected.  A control exception that
+% escapes from a guard therefore leaves the message in the mailbox, in its
+% original position.
 receive_scan(Mailbox, Clauses, GetOptions, Options) :-
     (   thread_get_message(Mailbox, Msg, GetOptions)
-    ->  (   select_body(Clauses, Msg, Module, Body)
-        ->  call(Module:Body)
-        ;   assertz(deferred(Msg)),
-            receive_scan(Mailbox, Clauses, GetOptions, Options)
+    ->  assertz(deferred(Msg), Ref),
+        (   select_body(Clauses, Msg, Module, Body)
+        ->  erase(Ref),
+            call(Module:Body)
+        ;   receive_scan(Mailbox, Clauses, GetOptions, Options)
         )
     ;   option(on_timeout(Goal), Options, true),
         clauses_module(Clauses, Module),
@@ -1239,10 +1283,14 @@ select_body(Clauses, Message, actors, Body) :-
 
 %!  select_body_aux(+Clauses, +Message, +Module, -Body) is semidet.
 %
-%   Unify a message with receive patterns, including guarded `if/2` forms.
-%   A pattern may specialize variables in the receiver's copy of a message.
-%   Failed candidates undo both pattern and guard bindings before trying the
-%   next clause or message. The enclosing receive commits to the first match.
+%   Match a message against receive patterns, including guarded `if/2` forms.
+%   Matching is one-sided: the pattern must subsume the message, so a pattern
+%   never specializes variables in the receiver's copy of a message.  A guard
+%   that fails or raises an ordinary exception rejects the candidate; a
+%   reserved control exception (abort, termination, enforced limits)
+%   propagates.  Failed candidates undo both pattern and guard bindings before
+%   trying the next clause or message. The enclosing receive commits to the
+%   first match.
 select_body_aux((Clause ; Clauses), Message, Module, Body) :-
     (   select_body_aux(Clause,  Message, Module, Body)
     ;   select_body_aux(Clauses, Message, Module, Body)
@@ -1250,10 +1298,28 @@ select_body_aux((Clause ; Clauses), Message, Module, Body) :-
 select_body_aux((Head -> Body), Message, Module, Body) :-
     (   nonvar(Head),
         Head = if(Pattern, Guard)
-    ->  Pattern = Message,
-        best_effort_fail(once(Module:Guard))
-    ;   Head = Message
+    ->  match_message(Pattern, Message),
+        catch(once(Module:Guard), E, guard_exception(E))
+    ;   match_message(Head, Message)
     ).
+
+match_message(Pattern, Message) :-
+    subsumes_term(Pattern, Message),
+    Pattern = Message.
+
+guard_exception(E) :-
+    guard_control_exception(E),
+    !,
+    throw(E).
+guard_exception(_) :-
+    fail.
+
+%   The reserved control transfers of control_guard:reserved_control/1,
+%   repeated here because this layer may not import control_guard.  Any
+%   host unwind (abort or halt) is included.
+guard_control_exception('$abort_goal').
+guard_control_exception('$ptcp_time_limit').
+guard_control_exception(unwind(_)).
 
 
                 /*******************************

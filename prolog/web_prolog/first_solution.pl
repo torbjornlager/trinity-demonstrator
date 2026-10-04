@@ -103,10 +103,10 @@ wait_first([], _, _, _) :-
 wait_first(Pids, Solution, OnFail, OnError) :-
     receive({
         Winner-Solution
-                if memberchk(Winner, Pids) ->
+                if known_worker(Winner, Pids) ->
             tidy_up_all(Pids) ;
         down(FailedPid, _, false)
-                if memberchk(FailedPid, Pids) ->
+                if known_worker(FailedPid, Pids) ->
             (   OnFail == continue
             ->  selectchk(FailedPid, Pids, Rest),
                 wait_first(Rest, Solution, OnFail, OnError)
@@ -115,7 +115,7 @@ wait_first(Pids, Solution, OnFail, OnError) :-
                 fail
             ) ;
         down(FailedPid, _, exception(Error))
-                if memberchk(FailedPid, Pids) ->
+                if known_worker(FailedPid, Pids) ->
             (   OnError == continue
             ->  selectchk(FailedPid, Pids, Rest),
                 wait_first(Rest, Solution, OnFail, OnError)
@@ -123,3 +123,10 @@ wait_first(Pids, Solution, OnFail, OnError) :-
                 throw(Error)
             )
     }).
+
+
+%   A guard must test a worker pid, not bind it: a message carrying an
+%   unbound pid could otherwise be accepted as coming from a real worker.
+known_worker(Pid, Pids) :-
+    ground(Pid),
+    memberchk(Pid, Pids).

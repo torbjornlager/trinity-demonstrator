@@ -431,47 +431,61 @@ shutdown_running([]).
 shutdown_running([ch(_, undefined, _) | Rest]) :- !,
     shutdown_running(Rest).
 shutdown_running([ch(Id, Pid, Spec) | Rest]) :-
-    spec(_, _, _, Shutdown, _) = Spec,
+    spec(_, Start, _, Shutdown, _) = Spec,
     debug(supervisor, '[sup] Shutting down ~w (~w)', [Id, Pid]),
-    do_shutdown(Pid, Shutdown),
+    do_shutdown(Pid, Shutdown, Start),
     shutdown_running(Rest).
 
 shutdown_one(ch(_, undefined, _)) :- !.
 shutdown_one(ch(Id, Pid, Spec)) :-
-    spec(_, _, _, Shutdown, _) = Spec,
+    spec(_, Start, _, Shutdown, _) = Spec,
     debug(supervisor, '[sup] Shutting down ~w (~w)', [Id, Pid]),
-    do_shutdown(Pid, Shutdown).
+    do_shutdown(Pid, Shutdown, Start).
 
 
-%% do_shutdown(+Pid, +ShutdownSpec)
+%% do_shutdown(+Pid, +ShutdownSpec, +Start)
 %%
-%% Shutdown uses `exit(Pid, shutdown)` as the termination signal,
-%% matching Erlang/OTP semantics.  The signal is delivered as a
-%% thread interrupt that raises `exit(shutdown)`.
+%% Termination is untrappable and the first committed exit reason
+%% wins, so a later `exit(Pid, kill)` cannot override an `exit(Pid,
+%% shutdown)` already in progress.  An orderly, time-bounded shutdown
+%% is therefore a message-level stop request followed, after the
+%% timeout, by the termination signal:
 %%
-%% Behaviour actors (server_actor, statechart_actor) catch this
-%% signal and run their cleanup logic before exiting.  Plain actors
-%% are terminated immediately.
+%%   - brutal_kill: terminate at once with reason `kill`;
+%%   - Timeout: ask a server child to stop ('$stop'/2), wait up to
+%%     Timeout seconds for it to exit, then send `exit(Pid, shutdown)`;
+%%   - infinity: ask a server child to stop and wait for it without
+%%     limit.
 %%
-%% For the timed variant the supervisor waits up to Timeout seconds
-%% for the child to exit, then escalates to `exit(Pid, kill)`.
+%% Children with no stop protocol (plain actors, nested supervisors)
+%% receive `exit(Pid, shutdown)` directly; their cleanup handlers run
+%% as they unwind.
 
-do_shutdown(Pid, brutal_kill) :- !,
+do_shutdown(Pid, brutal_kill, _) :- !,
     exit(Pid, kill),
     wait_down(Pid).
-
-do_shutdown(Pid, infinity) :- !,
-    exit(Pid, shutdown),
-    wait_down(Pid).
-
-do_shutdown(Pid, Timeout) :-
-    number(Timeout),
-    exit(Pid, shutdown),
-    (   wait_down_timeout(Pid, Timeout)
-    ->  true
-    ;   exit(Pid, kill),
+do_shutdown(Pid, Shutdown, Start) :-
+    (   request_stop(Pid, Start, Ref)
+    ->  (   Shutdown == infinity
+        ->  wait_down(Pid)
+        ;   number(Shutdown),
+            wait_down_timeout(Pid, Shutdown)
+        ->  true
+        ;   exit(Pid, shutdown),
+            wait_down(Pid)
+        ),
+        flush_stop_reply(Ref)
+    ;   exit(Pid, shutdown),
         wait_down(Pid)
     ).
+
+request_stop(Pid, server(_, _), Ref) :-
+    self(Self),
+    make_ref(Ref),
+    Pid ! '$stop'(Self, Ref).
+
+flush_stop_reply(Ref) :-
+    receive({ Ref-_ -> true }, [timeout(0)]).
 
 wait_down(Pid) :-
     receive({ down(Pid, _, _) -> true }).
@@ -505,8 +519,8 @@ handle_call(start_child(NormSpec), From, Ref, State0, State) :-
 handle_call(terminate_child(Id), From, Ref, State0, State) :-
     sup(Str, MR, MT, Children, RL) = State0,
     (   member(ch(Id, Pid, Spec), Children), Pid \= undefined
-    ->  spec(_, _, _, Shutdown, _) = Spec,
-        do_shutdown(Pid, Shutdown),
+    ->  spec(_, Start, _, Shutdown, _) = Spec,
+        do_shutdown(Pid, Shutdown, Start),
         replace_child(Id, ch(Id, undefined, Spec), Children, Children1),
         sup_reply(From, Ref, ok),
         State = sup(Str, MR, MT, Children1, RL)

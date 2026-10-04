@@ -86,11 +86,18 @@ par_yield(Pids, Pid, Template) :-
                 fail
             ) ;
         down(FailedPid, _, false)
-                if memberchk(FailedPid, Pids) ->
+                if known_worker(FailedPid, Pids) ->
             tidy_up_all(Pids),
             !, fail ;
         down(FailedPid, _, exception(E))
-                if memberchk(FailedPid, Pids) ->
+                if known_worker(FailedPid, Pids) ->
             tidy_up_all(Pids),
             throw(E)
     }).
+
+
+%   A guard must test a worker pid, not bind it: a message carrying an
+%   unbound pid could otherwise be accepted as coming from a real worker.
+known_worker(Pid, Pids) :-
+    ground(Pid),
+    memberchk(Pid, Pids).

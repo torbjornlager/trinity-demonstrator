@@ -211,6 +211,16 @@ test(fail_fast_cleanup_leaves_mailbox_empty) :-
     flush_parallel_mailbox.
 
 
+%  A guard tests worker pids rather than binding them: a down/3 message
+%  with an unbound pid is not mistaken for a worker failure.
+test(ignores_down_with_unbound_pid, [timeout(2)]) :-
+    flush_parallel_mailbox,
+    self(Self),
+    Self ! down(_, _, false),
+    parallel([true, true]),
+    receive({down(P, _, false) -> true}, [timeout(0), on_timeout(fail)]),
+    assertion(var(P)).
+
 :- end_tests(parallel).
 
 

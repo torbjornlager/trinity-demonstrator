@@ -178,43 +178,60 @@ test(receive11, Result == done) :-
    ]),
    Result = done.
 
-test(receive_specializes_nonground_message) :-
+%  Matching is one-sided: a pattern never binds a variable in the message.
+
+test(receive_does_not_specialize_nonground_message) :-
    self(Self),
    Self ! offer(SenderVar),
-   receive({offer(coffee) -> true}, [timeout(0), on_timeout(fail)]),
+   receive({offer(coffee) -> fail}, [timeout(0), on_timeout(true)]),
+   receive({offer(X) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(X)),
    assertion(var(SenderVar)).
 
-test(receive_specializes_deferred_message) :-
+test(receive_does_not_specialize_deferred_message) :-
    self(Self),
    Self ! offer(SenderVar),
    Self ! ready,
    receive({ready -> true}, [timeout(0), on_timeout(fail)]),
-   receive({offer(tea) -> true}, [timeout(0), on_timeout(fail)]),
+   receive({offer(tea) -> fail}, [timeout(0), on_timeout(true)]),
+   receive({offer(X) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(X)),
    assertion(var(SenderVar)).
 
-test(receive_can_equate_message_variables) :-
+test(receive_does_not_equate_message_variables) :-
    self(Self),
-   Self ! pair(A, B),
-   receive({pair(X, X) -> X = shared}, [timeout(0), on_timeout(fail)]),
-   assertion(X == shared),
-   assertion(var(A)),
-   assertion(var(B)),
-   assertion(A \== B).
+   Self ! pair(_, _),
+   receive({pair(X, X) -> fail}, [timeout(0), on_timeout(true)]),
+   receive({pair(Y, Z) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(Y)),
+   assertion(var(Z)),
+   assertion(Y \== Z).
 
 test(receive_preserves_message_variable_sharing) :-
    self(Self),
    Self ! pair(A, A),
-   receive({pair(coffee, tea) -> fail;
-            pair(coffee, X) -> true}, [timeout(0), on_timeout(fail)]),
-   assertion(X == coffee),
+   receive({pair(coffee, _) -> fail;
+            pair(X, Y) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(X == Y),
+   assertion(var(X)),
    assertion(var(A)).
+
+test(receive_correlation_reference_is_not_forged) :-
+   self(Self),
+   Ref = ref_4711,
+   Self ! _-bogus,
+   Self ! Ref-genuine,
+   receive({Ref-Answer -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(Answer == genuine),
+   receive({V-bogus -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(V)).
 
 test(receive_guard_rollback_between_clauses,
      [forall(member(RejectedGuard, [fail, throw(rejected_guard)]))]) :-
    self(Self),
    Self ! offer(SenderVar),
-   receive({offer(coffee) if (Witness = rejected, RejectedGuard) -> fail;
-            offer(tea) if Witness = accepted -> Result = Witness},
+   receive({offer(_) if (Witness = rejected, RejectedGuard) -> fail;
+            offer(_) if Witness = accepted -> Result = Witness},
            [timeout(0), on_timeout(fail)]),
    assertion(Result == accepted),
    assertion(var(SenderVar)).
@@ -223,15 +240,26 @@ test(receive_guard_rollback_preserves_deferred_message) :-
    self(Self),
    Self ! offer(SenderVar),
    Self ! ready,
-   receive({offer(coffee) if fail -> fail;
+   receive({offer(_) if fail -> fail;
             ready -> true}, [timeout(0), on_timeout(fail)]),
-   receive({offer(tea) -> true}, [timeout(0), on_timeout(fail)]),
+   receive({offer(X) -> true}, [timeout(0), on_timeout(fail)]),
+   assertion(var(X)),
    assertion(var(SenderVar)).
+
+test(receive_guard_control_exception_propagates_and_keeps_message,
+     [forall(member(Control, ['$abort_goal', '$ptcp_time_limit']))]) :-
+   self(Self),
+   Self ! probe,
+   catch(receive({probe if throw(Control) -> fail},
+                 [timeout(0), on_timeout(fail)]),
+         Caught, true),
+   assertion(Caught == Control),
+   receive({probe -> true}, [timeout(0), on_timeout(fail)]).
 
 test(receive_commits_selection_but_preserves_body_alternatives,
      Values == [first, second]) :-
    self(Self),
-   Self ! offer(_),
+   Self ! offer(coffee),
    Self ! offer(tea),
    findall(Value,
            receive({offer(coffee) -> member(Value, [first, second]);
@@ -624,6 +652,24 @@ test(portable_wire_term_rejects_attributed_variables, [fail]) :-
 test(portable_wire_term_rejects_streams, [fail]) :-
    current_output(Stream),
    transportable_term(Stream).
+
+%  Termination commits at the first exit reason; later exits have no effect.
+
+test(exit_first_reason_wins_over_exit_in_cleanup) :-
+   spawn(setup_call_cleanup(true, sleep(5), exit(second)), Pid, [monitor(true)]),
+   sleep(0.2),
+   exit(Pid, first),
+   receive({down(Pid, Pid, Reason) -> true}, [timeout(3), on_timeout(fail)]),
+   assertion(Reason == first).
+
+test(exit_second_signal_during_unwind_is_ignored) :-
+   spawn(setup_call_cleanup(true, sleep(5), sleep(0.4)), Pid, [monitor(true)]),
+   sleep(0.2),
+   exit(Pid, first),
+   sleep(0.1),
+   exit(Pid, second),
+   receive({down(Pid, Pid, Reason) -> true}, [timeout(3), on_timeout(fail)]),
+   assertion(Reason == first).
 
 :- end_tests(t0_actors).
 

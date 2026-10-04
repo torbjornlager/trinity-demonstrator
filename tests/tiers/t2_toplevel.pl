@@ -859,6 +859,29 @@ test(ptcp_limits_must_be_positive_or_infinite,
    catch(toplevel_spawn(_Pid, [time_limit(0)]), Error, true),
    nonvar(Error).
 
+test(abort_ends_one_shot_toplevel) :-
+   toplevel_spawn(Pid, [session(false), monitor(true)]),
+   toplevel_call(Pid, sleep(10), [template(true)]),
+   sleep(0.2),
+   toplevel_abort(Pid),
+   receive({down(Pid, Pid, Reason) -> true},
+           [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+   assertion(Reason == true).
+
+test(abort_in_idle_state_is_a_no_op) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_abort(Pid),
+         sleep(0.1),
+         toplevel_call(Pid, true, [template(true)]),
+         receive({ success(Pid, [true], false) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))])
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
 :- end_tests(t2_toplevels).
 
 

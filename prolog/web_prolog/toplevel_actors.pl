@@ -61,7 +61,8 @@ rewrite_goal_if_needed/3.
     demonitor/2,
     exit/2,
     register/2,
-    with_io_target/2
+    with_io_target/2,
+    actor_terminating/0
 ]).
 :- use_module(isolation, [
     actor_module/2,
@@ -163,8 +164,20 @@ ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
     catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit,
                   DefaultIoTarget),
           '$abort_goal',
-          ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
-                       DefaultIoTarget)).
+          after_abort(Pid, Target, Session, TimeLimit, IdleLimit,
+                      DefaultIoTarget)).
+
+%   An abort never resumes a toplevel whose termination is already
+%   committed, and a one-shot (session(false)) toplevel ends when aborted
+%   instead of waiting idle for a call that will not come.
+after_abort(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
+    (   actor_terminating
+    ->  true
+    ;   Session == false
+    ->  true
+    ;   ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
+                     DefaultIoTarget)
+    ).
 
 ptcp_lifecycle(ptcp_options(Session, TimeLimit0, IdleLimit0, DefaultIoTarget),
                Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
@@ -496,6 +509,14 @@ toplevel_stop(Pid) :-
     send(Pid, '$stop').
 
 
+%   Runs in the target thread.  An abort that arrives after termination has
+%   been committed is ignored.
+abort_signal :-
+    (   actor_terminating
+    ->  true
+    ;   throw('$abort_goal')
+    ).
+
 %!  toplevel_abort(+Pid) is det.
 %
 %   Abort the currently running goal in toplevel actor Pid using thread_signal/2.
@@ -504,7 +525,7 @@ toplevel_abort(Pid) :-
     %  Sibling-layer internal access; deliberately not exported by
     %  actors.
     (   actors:resolve_thread(Pid, ThreadId)
-    ->  catch(thread_signal(ThreadId, throw('$abort_goal')),
+    ->  catch(thread_signal(ThreadId, toplevel_actors:abort_signal),
               error(existence_error(_,_), _),
               true)
     ;   true
