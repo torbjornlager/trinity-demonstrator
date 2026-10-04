@@ -49,7 +49,8 @@ Architecture per connection:
     toplevel_call/3,
     toplevel_next/2,
     toplevel_stop/1,
-    toplevel_abort/1
+    toplevel_abort/1,
+    toplevel_abort/2
 ]).
 :- use_module(node_response, [answer_to_json/2]).
 :- use_module(node_ip_policy, [ip_access_denied/1]).
@@ -810,8 +811,9 @@ ws_action_toplevel_abort(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_abort),
     ws_get_pid(Dict, Pid),
     ws_require_owned_session(Queue, Principal, Pid),
-    toplevel_abort(Pid),
-    thread_send_message(Queue, abort(Pid)).
+    %  The toplevel itself acknowledges the abort with abort(Pid), after
+    %  any answers of the aborted query, so the client sees them in order.
+    toplevel_abort(Pid, Queue).
 
 %!  ws_action_set_trace(+Dict, +Queue, +Principal) is det.
 %

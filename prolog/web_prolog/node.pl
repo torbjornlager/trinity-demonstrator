@@ -162,6 +162,7 @@ Design notes:
     admin_terminate_isotope_session/2,
     set_isotope_session_trace/2,
     wait_for_session_event/4,
+    ensure_isotope_ready/3,
     with_isotope_session_public_execution_profile/2
 ]).
 :- use_module(node_isotope_controller, [
@@ -202,6 +203,7 @@ Design notes:
 :- use_module(library(http/http_server)).
 :- use_module(library(http/http_error)).
 :- use_module(library(http/http_json)).
+:- use_module(library(http/http_wrapper), [http_current_request/1]).
 :- use_module(library(http/http_host), []).
 :- setting(cache_size, integer, 100, 'Max number of cache entries').
 :- setting(cache_ttl,  number,  300, 'Maximum lifetime of an unused cached continuation in seconds').
@@ -1809,28 +1811,32 @@ isotope_call_authorized_event(Principal, Pid, GoalAtom, TemplateAtom0, Offset, L
     authorize_isotope_session_access(Principal, toplevel_call, Pid),
     require_source_text_access(Principal, LoadText0),
     effective_profile_for_route(toplevel_call, EffectiveProfile),
-    isotope_call_event(Pid, EffectiveProfile, GoalAtom, TemplateAtom0, Offset, Limit,
-                       Format, LoadText0, Once0, RequestedTimeout0, Event).
+    isotope_sequenced(
+        Pid,
+        isotope_call_event(Pid, EffectiveProfile, GoalAtom, TemplateAtom0,
+                           Offset, Limit, Format, LoadText0, Once0,
+                           RequestedTimeout0),
+        Event).
 
 
 isotope_next_authorized_event(Principal, Pid, Timeout, LimitSpec, Event) :-
     authorize_isotope_session_access(Principal, toplevel_next, Pid),
-    isotope_next_event(Pid, Timeout, LimitSpec, Event).
+    isotope_sequenced(Pid, isotope_next_event(Pid, Timeout, LimitSpec), Event).
 
 
 isotope_poll_authorized_event(Principal, Pid, Timeout, Event) :-
     authorize_isotope_session_access(Principal, toplevel_poll, Pid),
-    isotope_poll_event(Pid, Timeout, Event).
+    isotope_sequenced(Pid, isotope_poll_event(Pid, Timeout), Event).
 
 
 isotope_stop_authorized_event(Principal, Pid, Event) :-
     authorize_isotope_session_access(Principal, toplevel_stop, Pid),
-    isotope_stop_event(Pid, Event).
+    isotope_sequenced(Pid, isotope_stop_event(Pid), Event).
 
 
 isotope_abort_authorized_event(Principal, Pid, Event) :-
     authorize_isotope_session_access(Principal, toplevel_abort, Pid),
-    isotope_abort_event(Pid, Event).
+    isotope_sequenced(Pid, isotope_abort_event(Pid), Event).
 
 
 isotope_halt_authorized_event(Principal, Pid, halted(Pid, true)) :-
@@ -1847,8 +1853,52 @@ isotope_trace_authorized_event(Principal, Pid, Enabled, Event) :-
 
 isotope_respond_authorized_event(Principal, Pid, InputAtom, Event) :-
     authorize_isotope_session_access(Principal, toplevel_respond, Pid),
-    isotope_respond_event(Pid, InputAtom, Event).
+    isotope_sequenced(Pid, isotope_respond_event(Pid, InputAtom), Event).
 
+
+%!  isotope_sequenced(+Pid, :EventGoal, -Event) is det.
+%
+%   Retry-safe delivery for the semi-stateful HTTP binding.  Every session
+%   command answers with exactly one event, and each event is numbered: the
+%   response carries the header `Web-Prolog-Seq: N`.  A client may send
+%   `Web-Prolog-Ack: N`, the number of the last event it received.  If that
+%   is less than the number of the last event sent, the previous response
+%   was lost: the command is a retry, so the last event is delivered again
+%   and the command is not executed a second time.  Without the header the
+%   command always executes.  Sequence numbers live only in the HTTP
+%   binding; they never appear in Prolog answer terms.
+
+:- dynamic isotope_last_event/3.          % SessionPid, Seq, Event
+
+isotope_sequenced(Pid, EventGoal, Event) :-
+    node_session:session_pid_key(Pid, SessionPid),
+    (   request_ack(Ack),
+        isotope_last_event(SessionPid, Seq, Last),
+        Ack < Seq
+    ->  Event = Last
+    ;   call(EventGoal, Event),
+        with_mutex(isotope_sequence,
+            (   (   retract(isotope_last_event(SessionPid, Seq0, _))
+                ->  true
+                ;   Seq0 = 0
+                ),
+                Seq is Seq0 + 1,
+                (   Event = down(_, _, _)
+                ->  true
+                ;   assertz(isotope_last_event(SessionPid, Seq, Event))
+                )
+            ))
+    ),
+    format("Web-Prolog-Seq: ~w~n", [Seq]).
+
+request_ack(Ack) :-
+    catch(http_current_request(Request), _, fail),
+    memberchk(web_prolog_ack(Value), Request),
+    (   number(Value)
+    ->  Ack = Value
+    ;   catch(atom_number(Value, Ack), _, fail)
+    ),
+    integer(Ack).
 
 authorize_isotope_session_access(Principal, RouteId, Pid) :-
     require_route_access(Principal, RouteId),
@@ -1926,9 +1976,33 @@ isotope_stop_event(Pid, stop(Pid)) :-
     toplevel_stop(Pid).
 
 
-isotope_abort_event(Pid, abort(Pid)) :-
+isotope_abort_event(Pid, Event) :-
     profile_check_route(toplevel_abort),
-    toplevel_abort(Pid).
+    isotope_session_queue(Pid, Queue),
+    effective_timeout(none, Timeout),
+    %  An abort must reach the toplevel inside its PTCP boundary, which a
+    %  freshly spawned session may not have entered yet.
+    ensure_isotope_ready(Pid, Queue, Timeout),
+    toplevel_abort(Pid, Queue),
+    get_time(Now),
+    Deadline is Now + Timeout,
+    await_abort_ack(Pid, Queue, Deadline, Event).
+
+%   Events queued before the toplevel's abort(Pid) acknowledgement belong to
+%   the aborted query and are discarded; the acknowledgement is the reply.
+%   If the toplevel does not acknowledge in time (it may be unwinding), the
+%   reply is timeout(Pid) and the acknowledgement arrives with a later poll.
+await_abort_ack(Pid, Queue, Deadline, Event) :-
+    (   thread_get_message(Queue, Message, [deadline(Deadline)])
+    ->  (   Message = abort(_)
+        ->  Event = abort(Pid)
+        ;   Message = down(_, _, _)
+        ->  node_session:session_pid_key(Pid, SessionPid),
+            node_session:session_message_event(SessionPid, Message, Event)
+        ;   await_abort_ack(Pid, Queue, Deadline, Event)
+        )
+    ;   Event = timeout(Pid)
+    ).
 
 %!  node_image_page(+Request) is det.
 %

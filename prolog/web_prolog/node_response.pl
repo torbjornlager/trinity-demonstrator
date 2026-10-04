@@ -176,7 +176,11 @@ json_pid_value_canonical(Pid, Pid).
 %   Prolog-format responses retain the actual exception term.
 error_to_json_dict(ErrorTerm, JSON0, JSON) :-
     error_to_json_string(ErrorTerm, ErrorString),
-    put_dict(data, JSON0, ErrorString, JSON1),
+    put_dict(data, JSON0, ErrorString, JSON1a),
+    (   error_code(ErrorTerm, Code)
+    ->  put_dict(code, JSON1a, Code, JSON1)
+    ;   JSON1 = JSON1a
+    ),
     (   exception_display_string(ErrorTerm, ErrorString, DetailedString)
     ->  put_dict(details, JSON1, DetailedString, JSON)
     ;   JSON = JSON1
@@ -208,6 +212,12 @@ public_exception_term(Error, Error).
 private_actor_module(Module) :-
     atom(Module),
     sub_atom(Module, 0, _, _, 'actor_').
+
+%!  error_code(+ErrorTerm, -Code) is semidet.
+%
+%   Stable machine-readable codes for errors a client must act on.  The
+%   human-readable `data` string is not a classification interface.
+error_code(error(existence_error(isotope_session, _), _), "session_lost").
 
 %!  error_to_json_string(+ErrorTerm, -ErrorString) is det.
 error_to_json_string(ErrorTerm, ErrorString) :-

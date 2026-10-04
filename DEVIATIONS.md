@@ -76,3 +76,32 @@ Both SWI-WASM RPC clients now throw the remote exception directly, matching
 native RPC, instead of adding `rpc_error/1`. Transport and parsing failures
 remain separate from remote resource exhaustion. This does not add a new
 result-size ceiling; the existing memory ceiling bounds solution collection.
+
+## Toplevel query boundaries (D4, 2026-10-04)
+
+- **Abort is acknowledged.** Unless it is a no-op in state s1 or the
+  toplevel is already terminating, `toplevel_abort/1` makes the toplevel send
+  `abort(Pid)` to the client of its most recent call, after any answers the
+  aborted query had already sent. The WebSocket transport forwards this
+  message instead of synthesising its own abort event; the HTTP `/abort`
+  endpoint replies only once it has arrived (or with `timeout`).
+- **Each call starts afresh.** On accepting a call the toplevel discards
+  queued `'$next'`, `'$stop'` and `'$input'` messages. Previously a
+  `toplevel_next/1` sent before `toplevel_call/2` was deferred and applied to
+  the next query (the old `next_wrong_order` test); it is now discarded
+  (`next_before_call_is_discarded`).
+- **Partial page before error.** With a finite `limit`, an exception raised
+  after some solutions were collected first yields `success(Pid, Slice, true)`;
+  the error answers the following next (a stop discards it). Without a limit
+  the error is reported alone, as before.
+- **HTTP retry safety.** Session responses carry `Web-Prolog-Seq`; a request
+  with `Web-Prolog-Ack` lower than the latest number re-delivers the latest
+  event without re-executing. JSON bodies are unchanged.
+- **session_lost.** A session's former owner addressing an ended or
+  reclaimed session gets an error with `code: "session_lost"` (previously the
+  generic "Not authorized to access session"). Other principals still get the
+  generic refusal.
+
+Author-directed (Semantic Contracts decision D4). Pinned by the D4 tests in
+`t2_toplevel.pl` and the `isotope_*` / `admin_reclaim_terminates_session`
+tests in `node_tests.pl`.

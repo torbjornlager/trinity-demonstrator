@@ -47,6 +47,7 @@ Session lifecycle and queue/message normalization for node ISOTOPE endpoints.
 :- dynamic isotope_session_profile/2.
 :- dynamic isotope_session_namespace/2.
 :- dynamic isotope_session_owner/2.
+:- dynamic isotope_session_ended/3.      % SessionPid, OwnerId, EndedAt
 :- dynamic isotope_session_trace/1.
 :- dynamic isotope_ready/1.
 :- dynamic isotope_pending_prompt/2.
@@ -223,7 +224,8 @@ cleanup_isotope_session(Pid) :-
     retractall(isotope_loaded_text(SessionPid, _)),
     retractall(isotope_session_profile(SessionPid, _)),
     retractall(isotope_session_namespace(SessionPid, _)),
-    retractall(isotope_session_owner(SessionPid, _)),
+    forall(retract(isotope_session_owner(SessionPid, OwnerId)),
+           remember_ended_session(SessionPid, OwnerId)),
     retractall(isotope_session_trace(SessionPid)),
     retractall(isotope_ready(SessionPid)),
     retractall(isotope_pending_prompt(SessionPid, _)),
@@ -252,6 +254,12 @@ require_isotope_session_owner(PrincipalId, Pid) :-
     session_pid_key(Pid, SessionPid),
     (   isotope_session_owner(SessionPid, PrincipalId)
     ->  true
+    ;   isotope_session_ended(SessionPid, PrincipalId, _)
+    ->  %  Only the former owner learns that the session has ended; any
+        %  other principal gets the ordinary authorization error.
+        throw(error(existence_error(isotope_session, SessionPid),
+                    context(node_session:require_isotope_session_owner/2,
+                            'session lost: ended or expired')))
     ;   throw(error(authorization_error(PrincipalId, session(SessionPid)),
                     context(node_session:require_isotope_session_owner/2,
                             'principal does not own this ISOTOPE session')))
@@ -310,6 +318,7 @@ session_message_event(Pid, terminal_output(Pid, Data), terminal_output(Pid, Data
 session_message_event(Pid, prompt(Pid, Prompt), prompt(Pid, Prompt)) :-
     remember_pending_prompt(Pid, Prompt).
 session_message_event(Pid, '$abort_goal', abort(Pid)).
+session_message_event(Pid, abort(_), abort(Pid)).
 session_message_event(Pid, down(Pid, Ref, Reason), down(Pid, Ref, Reason)) :-
     cleanup_isotope_session(Pid).
 session_message_event(Pid, Message, error(Pid, Unexpected)) :-
@@ -522,3 +531,26 @@ session_pid_local(Pid) :-
 
 pid_string(Pid, PidString) :-
     term_string(Pid, PidString).
+
+
+%!  remember_ended_session(+SessionPid, +OwnerId) is det.
+%
+%   Keep a bounded record of recently ended sessions so that their owner
+%   receives a distinct `session_lost` error rather than an authorization
+%   error.  Pids are never reused, so the record cannot be confused with a
+%   later session.
+remember_ended_session(SessionPid, OwnerId) :-
+    get_time(Now),
+    assertz(isotope_session_ended(SessionPid, OwnerId, Now)),
+    prune_ended_sessions(Now).
+
+prune_ended_sessions(Now) :-
+    Cutoff is Now - 3600,
+    forall(( isotope_session_ended(P, O, At), At < Cutoff ),
+           retractall(isotope_session_ended(P, O, At))),
+    (   aggregate_all(count, isotope_session_ended(_, _, _), N),
+        N > 10000
+    ->  forall(( limit(1000, isotope_session_ended(P, O, At)) ),
+               retractall(isotope_session_ended(P, O, At)))
+    ;   true
+    ).

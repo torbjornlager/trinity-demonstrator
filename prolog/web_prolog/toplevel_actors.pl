@@ -9,6 +9,7 @@
      toplevel_halt/2,
      toplevel_stop/1,
      toplevel_abort/1,
+     toplevel_abort/2,
      normalize_ptcp_limit/3
    ]).
 
@@ -26,6 +27,12 @@ The actor speaks a small command protocol over mailbox messages:
   - `'$stop'` to stop paging.
 
 Replies are sent as `success/failure/error` terms enriched with `Pid`.
+
+Every abort is acknowledged with `abort(Pid)`, sent to the toplevel's
+current client after the aborted query's own answers.  When a call is
+accepted, stray `'$next'`, `'$stop'` and `'$input'` messages left over from
+an earlier query are discarded, so each query starts from a clean mailbox.
+A toplevel serves one controlling client at a time.
 
 Extracted from the demonstrator's toplevel_actor.pl.  Cross-node
 toplevel spawns are claimed by the distribution layer through a hook:
@@ -173,11 +180,40 @@ ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
 after_abort(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
     (   actor_terminating
     ->  true
-    ;   Session == false
-    ->  true
-    ;   ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
-                     DefaultIoTarget)
+    ;   send_abort_ack(Pid, Target),
+        (   Session == false
+        ->  true
+        ;   ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
+                         DefaultIoTarget)
+        )
     ).
+
+%   The acknowledgement goes to the target named by the abort request, if
+%   any, else to the client of the most recent call, else to the spawn-time
+%   target.  It is sent by the toplevel itself, so every answer the aborted
+%   query produced precedes it in the client's mailbox.
+:- thread_local ptcp_current_client/1, ptcp_abort_ack_target/1.
+
+send_abort_ack(Pid, DefaultTarget) :-
+    (   retract(ptcp_abort_ack_target(Out))
+    ->  true
+    ;   ptcp_current_client(Out)
+    ->  true
+    ;   Out = DefaultTarget
+    ),
+    send(Out, abort(Pid)).
+
+set_current_client(Target) :-
+    retractall(ptcp_current_client(_)),
+    assertz(ptcp_current_client(Target)).
+
+%   Discard control and input messages left over from an earlier query.
+drain_stale_commands :-
+    receive({
+        '$next'(_) -> drain_stale_commands ;
+        '$stop' -> drain_stale_commands ;
+        '$input'(_, _) -> drain_stale_commands
+    }, [timeout(0)]).
 
 ptcp_lifecycle(ptcp_options(Session, TimeLimit0, IdleLimit0, DefaultIoTarget),
                Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
@@ -224,6 +260,7 @@ normalize_ptcp_limit(Kind, Limit0, Limit) :-
 state_1(Pid, Target0, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
     receive_idle({
         '$call'(Goal, Options) ->
+            drain_stale_commands,
             option(template(Template0), Options, Goal),
             strip_module(Template0, _, Template),
             option(offset(Offset), Options, 0),
@@ -233,6 +270,7 @@ state_1(Pid, Target0, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
             ),
             option(once(Once), Options, false),
             option(target(Target1), Options, Target0),
+            set_current_client(Target1),
             call_io_target(Options, DefaultIoTarget, Target1, IoTarget),
             Target = target(Target1),
             run_call(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
@@ -278,11 +316,30 @@ run_call_answers(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
     state_2(Goal, Template, Offset, Limit, Once, IoTarget, Pid, Answer),
     disarm_time_limit_alarm(Alarm),
     arg(1, Target, Out),
-    send(Out, Answer),
-    (   arg(3, Answer, true)
-    ->  state_3(Limit, Target, IdleLimit, Alarm, TimeLimit)
-    ;   true
+    (   Answer = pending_error(Pid, Slice, Error)
+    ->  %  Solutions found before an exception are delivered as a page
+        %  with more to come; the error answers the next request.
+        send(Out, success(Pid, Slice, true)),
+        state_3_error(Pid, Error, Target, IdleLimit)
+    ;   send(Out, Answer),
+        (   arg(3, Answer, true)
+        ->  state_3(Limit, Target, IdleLimit, Alarm, TimeLimit)
+        ;   true
+        )
     ).
+
+state_3_error(Pid, Error, Target, IdleLimit) :-
+    receive_idle({
+        '$next'(Options) ->
+            (   option(target(NewTarget), Options)
+            ->  nb_setarg(1, Target, NewTarget),
+                set_current_client(NewTarget)
+            ;   true
+            ),
+            arg(1, Target, Out),
+            send(Out, error(Pid, Error)) ;
+        '$stop' -> true
+    }, IdleLimit).
 
 send_time_limit_error(Target, Pid) :-
     arg(1, Target, Out),
@@ -352,7 +409,8 @@ state_3(Limit, Target, IdleLimit, Alarm, TimeLimit) :-
             ;   true
             ),
             (   option(target(NewTarget), Options2)
-            ->  nb_setarg(1, Target, NewTarget)
+            ->  nb_setarg(1, Target, NewTarget),
+                set_current_client(NewTarget)
             ;   true
             ),
             arm_time_limit_alarm(Alarm, TimeLimit),
@@ -371,23 +429,52 @@ state_3(Limit, Target, IdleLimit, Alarm, TimeLimit) :-
 %   - exception                  -> `error(Exception)`
 
 answer(Goal, Template, Offset, Limit, Answer) :-
+    Pending = pending(none),
     catch(
-       call_cleanup(slice(Goal, Template, Offset, Limit, Slice),
+       call_cleanup(slice(capture_error(Goal, Pending), Template, Offset,
+                          Limit, Slice),
                     Det = true),
            Error, true),
+    arg(1, Pending, Captured),
     (   nonvar(Error),
         ptcp_control_exception(Error)
     ->  throw(Error)
-    ;   Slice == []
-    ->  Answer = failure
+    ;   Captured \== none,
+        Slice \== [],
+        Limit \== all
+    ->  normalize_resource_error(Captured, PublicError),
+        Answer = pending_error(Slice, PublicError)
+    ;   Captured \== none
+    ->  normalize_resource_error(Captured, PublicError),
+        Answer = error(PublicError)
     ;   nonvar(Error)
     ->  normalize_resource_error(Error, PublicError),
         Answer = error(PublicError)
+    ;   Slice == []
+    ->  Answer = failure
     ;   var(Det)
     ->  Answer = success(Slice, true)
     ;   Det == true
     ->  Answer = success(Slice, false)
     ).
+
+%   Run Goal, recording an ordinary exception instead of letting it discard
+%   the solutions already collected for the current page.  With a finite
+%   limit, the recorded error is reported after those solutions (see
+%   answer/5); a request for all solutions at once reports the error alone,
+%   as before.  Control exceptions propagate.
+capture_error(Goal, Pending) :-
+    catch(Goal, E, record_goal_error(E, Pending)).
+
+record_goal_error(E, _) :-
+    (   ptcp_control_exception(E)
+    ;   E = unwind(_)
+    ),
+    !,
+    throw(E).
+record_goal_error(E, Pending) :-
+    nb_setarg(1, Pending, E),
+    fail.
 
 % Public resource categories hide backend-specific memory names and context.
 normalize_resource_error(error(resource_error(Resource), _),
@@ -403,6 +490,8 @@ ptcp_control_exception('$abort_goal').
 ptcp_control_exception('$ptcp_time_limit').
 
 apply_once_answer(true, success(Slice, _), success(Slice, false)) :-
+    !.
+apply_once_answer(true, pending_error(Slice, _), success(Slice, false)) :-
     !.
 apply_once_answer(_, Answer, Answer).
 
@@ -451,6 +540,7 @@ validate_solution_limit(Options) :-
 add_pid(success(Slice, More), Pid, success(Pid, Slice, More)).
 add_pid(failure, Pid, failure(Pid)).
 add_pid(error(Term), Pid, error(Pid, Term)).
+add_pid(pending_error(Slice, Term), Pid, pending_error(Pid, Slice, Term)).
 
 
 %!  toplevel_call(+Pid, :Goal) is det.
@@ -517,15 +607,34 @@ abort_signal :-
     ;   throw('$abort_goal')
     ).
 
+abort_signal(AckTarget) :-
+    (   actor_terminating
+    ->  true
+    ;   retractall(ptcp_abort_ack_target(_)),
+        assertz(ptcp_abort_ack_target(AckTarget)),
+        throw('$abort_goal')
+    ).
+
 %!  toplevel_abort(+Pid) is det.
 %
 %   Abort the currently running goal in toplevel actor Pid using thread_signal/2.
 
 toplevel_abort(Pid) :-
+    toplevel_abort_signal(Pid, toplevel_actors:abort_signal).
+
+%!  toplevel_abort(+Pid, +AckTarget) is det.
+%
+%   As toplevel_abort/1, but send the `abort(Pid)` acknowledgement to
+%   AckTarget.  Used by the node bindings, whose client is a session queue.
+
+toplevel_abort(Pid, AckTarget) :-
+    toplevel_abort_signal(Pid, toplevel_actors:abort_signal(AckTarget)).
+
+toplevel_abort_signal(Pid, Signal) :-
     %  Sibling-layer internal access; deliberately not exported by
     %  actors.
     (   actors:resolve_thread(Pid, ThreadId)
-    ->  catch(thread_signal(ThreadId, toplevel_actors:abort_signal),
+    ->  catch(thread_signal(ThreadId, Signal),
               error(existence_error(_,_), _),
               true)
     ;   true

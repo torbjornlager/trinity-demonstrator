@@ -512,7 +512,9 @@ relay_messages(Parent, Count) :-
    Count1 is Count - 1,
    relay_messages(Parent, Count1).
 
-test(next_wrong_order, Result == true) :-
+%  D4: a call starts from a clean mailbox.  `next` commands that arrive
+%  before the call belong to no query and are discarded.
+test(next_before_call_is_discarded, Result == true) :-
    toplevel_spawn(Pid, [
        session(false),
        monitor(true)
@@ -531,11 +533,9 @@ test(next_wrong_order, Result == true) :-
        success(Pid, [1,2], true) -> true
    }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
    receive({
-       success(Pid, [3,4,5,6,7], true) -> true
-   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
-   receive({
-       success(Pid, [8,9,10,11,12], false) -> true
-   }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]),
+       success(Pid, _, _) -> throw(stale_next_was_applied)
+   }, [ timeout(0.2), on_timeout(true) ]),
+   toplevel_stop(Pid),
    receive({
        down(Pid, _, Result) -> true
    }, [ timeout(20), on_timeout(throw(shell_receive_timeout)) ]).
@@ -763,6 +763,8 @@ guarded(Parent) :-
          toplevel_abort(Pid),
          receive({ cleaned -> true },
                  [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         receive({ abort(Pid) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
          receive({
              application_recovered -> throw(abort_was_caught)
          }, [timeout(0), on_timeout(true)]),
@@ -864,6 +866,8 @@ test(abort_ends_one_shot_toplevel) :-
    toplevel_call(Pid, sleep(10), [template(true)]),
    sleep(0.2),
    toplevel_abort(Pid),
+   receive({abort(Pid) -> true},
+           [timeout(2), on_timeout(throw(shell_receive_timeout))]),
    receive({down(Pid, Pid, Reason) -> true},
            [timeout(2), on_timeout(throw(shell_receive_timeout))]),
    assertion(Reason == true).
@@ -873,9 +877,83 @@ test(abort_in_idle_state_is_a_no_op) :-
    setup_call_cleanup(
        true,
        ( toplevel_abort(Pid),
-         sleep(0.1),
+         receive({ abort(Pid) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
          toplevel_call(Pid, true, [template(true)]),
          receive({ success(Pid, [true], false) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))])
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+%  D4: abort is acknowledged after the aborted query's answers, and each
+%  call starts from a clean mailbox.
+
+test(abort_acknowledgement_follows_answers) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, member(X, [a,b,c]), [template(X), limit(1)]),
+         receive({ success(Pid, [a], true) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         toplevel_abort(Pid),
+         receive({ Msg -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(Msg == abort(Pid)),
+         toplevel_call(Pid, true, [template(true)]),
+         receive({ success(Pid, [true], false) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))])
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+test(stale_next_after_stop_is_discarded) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, member(X, [a,b]), [template(X), limit(1)]),
+         receive({ success(Pid, [a], true) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         toplevel_stop(Pid),
+         toplevel_next(Pid),
+         toplevel_call(Pid, member(Y, [c,d]), [template(Y), limit(1)]),
+         receive({ success(Pid, [c], true) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         receive({ Late -> throw(unexpected(Late)) },
+                 [timeout(0.2), on_timeout(true)]),
+         toplevel_stop(Pid)
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+test(partial_page_precedes_error) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, (member(X, [1,2,bad]), Y is X + 1),
+                       [template(Y), limit(5)]),
+         receive({ success(Pid, Page, More) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(Page == [2,3]),
+         assertion(More == true),
+         toplevel_next(Pid),
+         receive({ error(Pid, E) -> true },
+                 [timeout(2), on_timeout(throw(shell_receive_timeout))]),
+         assertion(subsumes_term(error(type_error(_, _), _), E))
+       ),
+       ( catch(exit(Pid, test_cleanup), _, true),
+         receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)])
+       )).
+
+test(error_without_preceding_solutions_is_immediate) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(
+       true,
+       ( toplevel_call(Pid, (X = bad, _ is X + 1), [template(X), limit(5)]),
+         receive({ error(Pid, _) -> true },
                  [timeout(2), on_timeout(throw(shell_receive_timeout))])
        ),
        ( catch(exit(Pid, test_cleanup), _, true),

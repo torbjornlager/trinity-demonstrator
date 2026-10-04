@@ -1904,10 +1904,11 @@ test(admin_runtime_reports_client_activity_log,
             )
         )).
 
+% D4: the reclaimed session's former owner learns that it was lost.
 test(admin_reclaim_terminates_session,
      true((RemainingSessions == [],
            Type == "error",
-           sub_string(Data, _, _, _, "Not authorized to access session")))) :-
+           Code == "session_lost"))) :-
     alice_full_principal_option(AlicePolicy),
     with_node_server_options([auth(private), owner("owner"), AlicePolicy], URI,
         setup_call_cleanup(
@@ -1930,7 +1931,7 @@ test(admin_reclaim_terminates_session,
                 isotope_call_url(URI, Pid, 'true', '', CallURL),
                 read_json_answer_headers(CallURL, AliceHeaders, CallJSON),
                 Type = CallJSON.get(type),
-                Data = CallJSON.get(data)
+                Code = CallJSON.get(code)
             ),
             kill_isotope_session(Pid)
         )).
@@ -6598,6 +6599,94 @@ test(isotope_read_response_requires_period,
                 RespondData = RespondJSON.data
             ),
             kill_isotope_session(Pid)
+        )).
+
+%  D4: retry-safe semi-stateful HTTP.  Each session event is numbered in
+%  the Web-Prolog-Seq response header; a request carrying an older
+%  Web-Prolog-Ack is a retry and receives the previous event again.
+first_x(JSON, V) :-
+    get_dict(data, JSON, [Row]),
+    get_dict('X', Row, V).
+
+seq_post(URL, Ack, JSON, Seq) :-
+    (   Ack == none
+    ->  Extra = []
+    ;   Extra = [request_header('Web-Prolog-Ack'=Ack)]
+    ),
+    append(Extra, [ method(post), post(form([])),
+                    request_header('Accept'='application/json'),
+                    header(web_prolog_seq, SeqAtom) ], Options),
+    setup_call_cleanup(
+        http_open(URL, Stream, Options),
+        json_read_dict(Stream, JSON),
+        close(Stream)),
+    atom_number(SeqAtom, Seq).
+
+test(isotope_http_retry_redelivers_last_event) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (   format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[session(true)]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (   format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=between(1,5,X)&template=X&limit=1&format=json',
+                       [URI, Pid]),
+                seq_post(CallURL, 0, J1, S1),
+                assertion(first_x(J1, "1")),
+                format(atom(NextURL), '~w/toplevel_next?pid=~w&format=json',
+                       [URI, Pid]),
+                seq_post(NextURL, S1, J2, S2),
+                assertion(first_x(J2, "2")),
+                assertion(S2 =:= S1 + 1),
+                %  The response to the last next was "lost": retry with the
+                %  old acknowledgement.  The node must not advance.
+                seq_post(NextURL, S1, J3, S3),
+                assertion(first_x(J3, "2")),
+                assertion(S3 =:= S2),
+                seq_post(NextURL, S2, J4, _),
+                assertion(first_x(J4, "3"))
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_abort_waits_for_acknowledgement,
+     true((Type == "abort", PID == Pid))) :-
+    with_node_server(URI,
+        setup_call_cleanup(
+            (
+                format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+                read_json_post(SpawnURL, _{options:"[session(true)]"}, SpawnJSON),
+                Pid = SpawnJSON.pid
+            ),
+            (
+                format(atom(CallURL),
+                       '~w/toplevel_call?pid=~w&goal=between(1,5,X)&template=X&limit=1&format=json',
+                       [URI, Pid]),
+                read_json_answer(CallURL, _),
+                format(atom(AbortURL),
+                       '~w/toplevel_abort?pid=~w&format=json',
+                       [URI, Pid]),
+                read_json_answer(AbortURL, JSON),
+                Type = JSON.type,
+                PID = JSON.pid
+            ),
+            kill_isotope_session(Pid)
+        )).
+
+test(isotope_ended_session_reports_session_lost,
+     true(Code == "session_lost")) :-
+    with_node_server(URI,
+        (   format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+            read_json_post(SpawnURL, _{options:"[session(true)]"}, SpawnJSON),
+            get_dict(pid, SpawnJSON, Pid),
+            format(atom(HaltURL), '~w/toplevel_halt?pid=~w&format=json',
+                   [URI, Pid]),
+            read_json_answer(HaltURL, _),
+            format(atom(NextURL), '~w/toplevel_next?pid=~w&format=json',
+                   [URI, Pid]),
+            read_json_answer(NextURL, JSON),
+            get_dict(code, JSON, Code)
         )).
 
 test(isotope_abort_returns_abort_event,
