@@ -1075,15 +1075,11 @@ ok(includes("function settleReject(error)") &&
 ok(workerSource.includes('action === "input" ? null'),
    "worker input is exempt from the coordinator request timeout");
 ok(includes('root.crypto.getRandomValues(values);') &&
-   includes('randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];') &&
-   includes('pid = String(min + (randomValue % span));') &&
-   includes('this.swiWasmReservedWorkerActorPids[pid] = true;') &&
-   includes('this.swiWasmActorWorkers[pid] ||') &&
-   includes('this.swiWasmReservedWorkerActorPids[pid] ||') &&
+   includes('var values = new Uint8Array(5);') &&
+   includes('this.swiWasmIssuedIdentities[pid] = true;') &&
    workerSource.includes('/^[1-9][0-9]{9}$/.test(selfPidText)') &&
-   nodeWsSource.includes("Id >= 1000000000") &&
-   nodeWsSource.includes("Id =< 9999999999"),
-   "SWI-WASM local workers use reserved random ten-digit numeric pids");
+   nodeWsSource.includes("Id >= 1000000000, Id =< 9999999999"),
+   "SWI-WASM worker pids use secure, never-reused ten-digit integers");
 ok(swiWasmLocalPidHelpers.qualify("2159438818") === "2159438818@localhost" &&
    swiWasmLocalPidHelpers.localize("2159438818@localhost") === "2159438818" &&
    includes('Pid = LocalPid@localhost') &&
@@ -1131,19 +1127,20 @@ ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
    "Hide local node in pid only removes @localhost from terminal display");
 ok(includes("reserveSwiWasmActorRef: function()") &&
    includes("this.swiWasmReservedActorRefs[ref] = true;") &&
-   includes("this.swiWasmReservedActorRefs[pid]") &&
+   includes("this.swiWasmIssuedIdentities[ref]") &&
    workerSource.includes('return actorRequest("make_ref", {});') &&
-   workerSource.includes('"    await(Promise, RefText),"') &&
+   workerSource.includes('"    actor_await(Promise, RefText),"') &&
    !workerSource.includes('return "ref(" + selfPidText') &&
    !includes('return "ref(" + self.swiWasmNextActorRefId'),
    "SWI-WASM references are coordinator-reserved ten-digit numeric tokens");
 {
   const livePromises = {};
-  const ref1 = makeBrowserPromiseRef(livePromises);
+  const mint = { randomSwiIdentity: embeddedWorkbenchMethod("randomSwiIdentity", "reserveSwiWasmWorkerActorPid") };
+  const ref1 = makeBrowserPromiseRef.call(mint, livePromises);
   livePromises[String(ref1)] = true;
-  const ref2 = makeBrowserPromiseRef(livePromises);
-  ok(String(ref1).length === 10 && String(ref2).length === 10 &&
-     ref1 >= 1000000000 && ref2 <= 1073741823 && ref1 !== ref2 &&
+  const ref2 = makeBrowserPromiseRef.call(mint, livePromises);
+  ok(typeof ref1 === "string" && typeof ref2 === "string" &&
+     Number(ref1) >= 1000000000 && Number(ref2) <= 9999999999 && ref1 !== ref2 &&
      workerSource.includes("function makePromiseRef()") &&
      !workerSource.includes("var nextRefId = 1"),
      "main and Worker SWI-WASM promises use opaque ten-digit references");
@@ -1198,7 +1195,7 @@ ok(workerSource.includes('option(time_limit(TimeLimit0), Options, infinite)') &&
    includes('message.timeLimit || "infinite"') &&
    includes('message.idleLimit || "infinite"'),
    "SWI-WASM toplevels separate s2 time limits from s1/s3 idle limits");
-ok(workerSource.includes('"    await(Promise, PidText),",\n      "    term_string(Pid, PidText).') &&
+ok(workerSource.includes('"    actor_await(Promise, PidText),",\n      "    term_string(Pid, PidText).') &&
    includes('"    PidText := swiWasmActorWhereis(#Kind, #NameText),",\n              "    term_string(Pid, PidText).'),
    "whereis/2 binds an absent local name to undefined like a remote node");
 ok(includes('entry.worker.terminate();') &&
@@ -1374,7 +1371,7 @@ ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    includes('setTimeout(function() { controller.abort(); }, httpTimeout * 1000)'),
    "both SWI-WASM rpc/3 models keep initial transport offset internal");
 ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
-   workerSource.includes('Ref := actorPromiseStart(') &&
+   workerSource.includes('RefText := actorPromiseStart(') &&
    workerSource.includes('option(offset(Offset), Options, 0)') &&
    includes('(member(offset(Offset), Opts) -> true ; Offset = 0)') &&
    workerSource.includes('Promise := actorPromiseWait(') &&

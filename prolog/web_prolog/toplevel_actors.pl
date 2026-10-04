@@ -162,46 +162,40 @@ maybe_register_toplevel_name(Options, Pid) :-
 ptcp(Pid, Target, SessionOrLifecycle) :-
     ptcp_lifecycle(SessionOrLifecycle, Session, TimeLimit, IdleLimit,
                    DefaultIoTarget),
-    catch(ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
-                       DefaultIoTarget),
-          '$ptcp_idle_limit',
-          true).
+    thread_self(SelfThread), thread_property(SelfThread, id(Thread)),
+    setup_call_cleanup(true,
+        catch(ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
+                           DefaultIoTarget), '$ptcp_idle_limit', true),
+        retractall(pending_abort(Thread, _))).
 
 ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
-    catch(state_1(Pid, Target, Session, TimeLimit, IdleLimit,
-                  DefaultIoTarget),
+    catch((sig_atomic((drain_abort_acks(Pid, Target, Aborted),
+                       retractall(ptcp_recovering),
+                       (ptcp_accepting -> true; assertz(ptcp_accepting)))),
+           (actor_terminating -> true;
+            Aborted == true, Session == false -> true;
+            state_1(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget))),
           '$abort_goal',
-          after_abort(Pid, Target, Session, TimeLimit, IdleLimit,
-                      DefaultIoTarget)).
+          ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget)).
 
-%   An abort never resumes a toplevel whose termination is already
-%   committed, and a one-shot (session(false)) toplevel ends when aborted
-%   instead of waiting idle for a call that will not come.
-after_abort(Pid, Target, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
-    (   actor_terminating
-    ->  true
-    ;   send_abort_ack(Pid, Target),
-        (   Session == false
-        ->  true
-        ;   ptcp_running(Pid, Target, Session, TimeLimit, IdleLimit,
-                         DefaultIoTarget)
-        )
-    ).
+% Drain under sig_atomic while the restart catch is installed. A second
+% signal then queues another acknowledgement and re-enters the protected loop.
+drain_abort_acks(Pid, Target, true) :-
+    thread_self(SelfThread), thread_property(SelfThread, id(Thread)),
+    pending_abort(Thread, _), !,
+    forall(retract(pending_abort(Thread, Requested)),
+        ((Requested == default -> abort_ack_client(Target, Out); Out = Requested),
+         send(Out, abort(Pid)))).
+drain_abort_acks(_, _, false).
 
 %   The acknowledgement goes to the target named by the abort request, if
 %   any, else to the client of the most recent call, else to the spawn-time
 %   target.  It is sent by the toplevel itself, so every answer the aborted
 %   query produced precedes it in the client's mailbox.
-:- thread_local ptcp_current_client/1, ptcp_abort_ack_target/1.
+:- thread_local ptcp_current_client/1, ptcp_recovering/0, ptcp_accepting/0.
+:- dynamic pending_abort/2.
 
-send_abort_ack(Pid, DefaultTarget) :-
-    (   retract(ptcp_abort_ack_target(Out))
-    ->  true
-    ;   ptcp_current_client(Out)
-    ->  true
-    ;   Out = DefaultTarget
-    ),
-    send(Out, abort(Pid)).
+abort_ack_client(Default, Out) :- (ptcp_current_client(Out) -> true; Out = Default).
 
 set_current_client(Target) :-
     retractall(ptcp_current_client(_)),
@@ -633,16 +627,20 @@ toplevel_stop(Pid) :-
 abort_signal :-
     (   actor_terminating
     ->  true
-    ;   throw('$abort_goal')
+    ;   interrupt_ptcp
     ).
 
-abort_signal(AckTarget) :-
+abort_signal(_AckTarget) :-
     (   actor_terminating
     ->  true
-    ;   retractall(ptcp_abort_ack_target(_)),
-        assertz(ptcp_abort_ack_target(AckTarget)),
-        throw('$abort_goal')
+    ;   interrupt_ptcp
     ).
+
+% Signals during recovery record their request without unwinding the recovery
+% handler. The flag is cleared only inside the newly installed restart catch.
+interrupt_ptcp :-
+    (ptcp_accepting, \+ ptcp_recovering
+    -> assertz(ptcp_recovering), throw('$abort_goal'); true).
 
 %!  toplevel_abort(+Pid) is det.
 %
@@ -663,8 +661,9 @@ toplevel_abort_signal(Pid, Signal) :-
     %  Sibling-layer internal access; deliberately not exported by
     %  actors.
     (   actors:resolve_thread(Pid, ThreadId)
-    ->  catch(thread_signal(ThreadId, Signal),
-              error(existence_error(_,_), _),
-              true)
+    ->  (Signal = toplevel_actors:abort_signal(Target) -> true; Target = default),
+        assertz(pending_abort(ThreadId, Target), Ref),
+        catch(thread_signal(ThreadId, Signal),
+              error(existence_error(_,_), _), erase(Ref))
     ;   true
     ).

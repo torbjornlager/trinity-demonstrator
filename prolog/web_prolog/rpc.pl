@@ -39,6 +39,7 @@ the queue so a later yield can collect the pending answer. Manual
 :- use_module(library(option)).
 :- use_module(library(error)).
 :- use_module(library(random)).
+:- use_module(library(crypto)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(url)).
@@ -376,8 +377,16 @@ normalize_once(Value, _) :-
 %   yield/2-3's must_be(integer) check and stays as in the
 %   demonstrator.
 make_reference(Reference) :-
-    repeat,
-    random_between(1000000000, 9999999999, Reference),
-    promise_queue_key(Reference, QueueKey),
-    \+ promise_queue_store(QueueKey, _),
-    !.
+    with_mutex(rpc_references,
+        (   repeat,
+            crypto_n_random_bytes(5, Bytes),
+            foldl(reference_byte, Bytes, 0, Raw),
+            Raw < 1098000000000,
+            Reference is 1000000000 + Raw mod 9000000000,
+            \+ issued_reference(Reference),
+            !,
+            assertz(issued_reference(Reference))
+        )).
+
+:- dynamic issued_reference/1.
+reference_byte(Byte, Acc, Next) :- Next is Acc * 256 + Byte.

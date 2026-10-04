@@ -178,6 +178,7 @@ Design notes:
     compute_answer/8,
     cache/3
 ]).
+:- use_module(node_lifetime, [with_owner_context/4]).
 :- use_module(node_execution_context, [with_public_execution_profile/2]).
 :- use_module(node_ws).
 :- use_module(dollar_expansion, [capture_answer_bindings/1]).
@@ -831,8 +832,9 @@ isobase_event(Principal, GoalAtom, TemplateAtom0, Offset, Limit, Format, LoadTex
         Principal,
         with_public_execution_profile(
             EffectiveProfile,
-            compute_answer(Goal, Template, Offset, Limit, LoadText,
-                           RequestedTimeout, Once, Answer)
+            with_owner_context(Principal, http_call, local,
+                compute_answer(Goal, Template, Offset, Limit, LoadText,
+                               RequestedTimeout, Once, Answer))
         )
     ).
 
@@ -896,7 +898,10 @@ node(Port, Options0) :-
     %  are node runtime values consumed by the layer-0/2 hooks, not
     %  startup-option plumbing. Defaults are `unlimited`, so a node
     %  configured without them behaves exactly as the demonstrator.
-    extract_resource_ceiling(max_actor_stack_bytes, Options0, MaxActorStackBytes, Options1),
+    extract_plain_option(peer_transport_tokens, [], Options0, PeerTokens, PeerOptions),
+    must_be(list, PeerTokens), maplist(valid_peer_token, PeerTokens),
+    extract_lifetime_options(PeerOptions, LifetimeOptions, LifetimeSettings),
+    extract_resource_ceiling(max_actor_stack_bytes, LifetimeOptions, MaxActorStackBytes, Options1),
     extract_resource_ceiling(max_call_inferences, Options1, MaxCallInferences, Options2),
     extract_resource_ceiling(max_actors, Options2, MaxActors, Options3),
     extract_resource_ceiling(max_interaction_log_bytes, Options3, MaxLogBytes, Options4),
@@ -972,7 +977,7 @@ node(Port, Options0) :-
     get_time(StartedAt),
     server_url(Port, URL),
     shared_db_runtime_module(Port, SharedDBModule),
-    register_node_runtime(Port, node_runtime{
+    Runtime0 = node_runtime{
         url:URL,
         shared_db_source:SharedDB,
         shared_db_module:SharedDBModule,
@@ -1009,7 +1014,10 @@ node(Port, Options0) :-
         dev_principal:DevPrincipal,
         dev_capabilities:DevCapabilities,
         principal_policies:PrincipalPolicies
-    }),
+    },
+    put_dict(LifetimeSettings, Runtime0, Runtime1),
+    put_dict(peer_transport_tokens, Runtime1, PeerTokens, Runtime),
+    register_node_runtime(Port, Runtime),
     with_node_port_context(Port, set_node_shared_db(SharedDB)),
     set_global_shared_db_fallback(SharedDB),
     register_node_self(URL).
@@ -1868,6 +1876,10 @@ isotope_respond_authorized_event(Principal, Pid, InputAtom, Event) :-
 %   command always executes.  Sequence numbers live only in the HTTP
 %   binding; they never appear in Prolog answer terms.
 
+:- multifile node_session:hook_session_cleanup/1.
+node_session:hook_session_cleanup(Pid) :-
+    with_mutex(isotope_sequence, retractall(node:isotope_last_event(Pid, _, _))).
+
 :- dynamic isotope_last_event/3.          % SessionPid, Seq, Event
 
 isotope_sequenced(Pid, EventGoal, Event) :-
@@ -1885,7 +1897,9 @@ isotope_sequenced(Pid, EventGoal, Event) :-
                 Seq is Seq0 + 1,
                 (   Event = down(_, _, _)
                 ->  true
-                ;   assertz(isotope_last_event(SessionPid, Seq, Event))
+                ;   node_session:isotope_session(SessionPid, _)
+                ->  assertz(isotope_last_event(SessionPid, Seq, Event))
+                ;   true
                 )
             ))
     ),
@@ -2423,3 +2437,28 @@ effective_cache_ttl(CacheTTL) :-
     ->  CacheTTL = CacheTTL0
     ;   setting(cache_ttl, CacheTTL)
     ).
+
+% D7 principal-tree ceilings have conservative, finite defaults.
+extract_lifetime_options(Options0, Options, Settings) :-
+    lifetime_options([max_principal_actors-32, max_mailbox_messages-1024,
+                      max_term_depth-128, principal_cpu_seconds-30,
+                      principal_cpu_window-60, ws_lease_seconds-30],
+                     Options0, Options, Pairs),
+    dict_pairs(Settings, _, Pairs).
+lifetime_options([], Options, Options, []).
+lifetime_options([Name-Default|Names], Options0, Options, [Name-Value|Pairs]) :-
+    extract_plain_option(Name, Default, Options0, Raw, Options1),
+    (   memberchk(Name, [max_principal_actors, max_mailbox_messages, max_term_depth])
+    ->  must_be(positive_integer, Raw), Value = Raw
+    ;   Name == ws_lease_seconds, Raw == infinite
+    ->  Value = infinite
+    ;   must_be(number, Raw),
+        (Raw > 0 -> Value = Raw; domain_error(positive_number, Raw))
+    ),
+    lifetime_options(Names, Options1, Options, Pairs).
+
+% Credentials are keyed by the exact destination URL, never by a client header.
+valid_peer_token(Node-Token) :-
+    must_be(atom, Node), must_be(atom, Token),
+    (sub_atom(Node, 0, _, _, 'https://'); sub_atom(Node, 0, _, _, 'http://')),
+    \+ sub_atom(Token, _, _, _, '\r'), \+ sub_atom(Token, _, _, _, '\n').

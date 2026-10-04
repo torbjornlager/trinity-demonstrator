@@ -24,6 +24,7 @@ execution paths.
 :- op(200, xfx, @).
 :- op(1000, xfy, if).
 
+:- use_module(node_lifetime, [check_term/1]).
 :- use_module(library(error)).
 :- use_module(library(lists)).
 :- use_module(library(modules)).
@@ -124,6 +125,7 @@ sandbox_check_goal(Profile, QualifiedGoal) :-
 %   Validate Goal as code that executes in Module. This is the internal entry
 %   point for temporary actor modules created during source validation.
 sandbox_check_goal_in_module(Profile, Module, Goal) :-
+    check_term(Goal),
     must_be(atom, Module),
     must_be(callable, Goal),
     profile_check_goal(Profile, Module:Goal),
@@ -499,6 +501,8 @@ spec_names_expansion(Spec) :-
 
 expansion_predicate(term_expansion, 2).
 expansion_predicate(goal_expansion, 2).
+expansion_predicate(term_expansion, 4).
+expansion_predicate(goal_expansion, 4).
 
 precheck_expanded_source_term(_, _, []) :-
     !.

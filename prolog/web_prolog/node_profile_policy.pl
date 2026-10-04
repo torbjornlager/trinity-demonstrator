@@ -36,6 +36,7 @@ Explicit profile ceilings for node routes and submitted Web Prolog code.
 :- use_module(isolation, [source_options/3]).
 
 :- thread_local profile_source_module/1.
+:- multifile hook_check_source_term/1.
 
 :- setting(profile, atom, workbench, 'Node profile: workbench, relation, isobase, isotope, or actor').
 
@@ -522,7 +523,8 @@ profile_check_source_terms(Profile, Stream) :-
     read_term(Stream, Term, [double_quotes(string)]),
     (   Term == end_of_file
     ->  true
-    ;   profile_check_source_term(Profile, Term),
+    ;   forall(hook_check_source_term(Term), true),
+        profile_check_source_term(Profile, Term),
         profile_check_source_terms(Profile, Stream)
     ).
 

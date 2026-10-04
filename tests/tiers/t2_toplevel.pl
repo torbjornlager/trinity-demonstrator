@@ -890,6 +890,16 @@ test(abort_in_idle_state_is_a_no_op) :-
 %  D4: abort is acknowledged after the aborted query's answers, and each
 %  call starts from a clean mailbox.
 
+test(rapid_aborts_are_all_acknowledged) :-
+   toplevel_spawn(Pid, [session(true), monitor(true)]),
+   setup_call_cleanup(true,
+       (forall(between(1, 20, _), toplevel_abort(Pid)),
+        forall(between(1, 20, _),
+           receive({abort(Pid) -> true}, [timeout(2), on_timeout(throw(missing_abort_ack))])),
+        toplevel_call(Pid, true),
+        receive({success(Pid, [true], false) -> true}, [timeout(2), on_timeout(throw(dead_after_aborts))])),
+       (exit(Pid, cleanup), receive({down(Pid, _, _) -> true}, [timeout(2), on_timeout(true)]))).
+
 test(abort_acknowledgement_follows_answers) :-
    toplevel_spawn(Pid, [session(true), monitor(true)]),
    setup_call_cleanup(

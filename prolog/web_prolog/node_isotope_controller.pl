@@ -39,6 +39,7 @@ Build endpoint events and parse shared ISOTOPE wait-request parameters.
 ]).
 :- use_module(node_profile_policy, [profile_check_route/1]).
 :- use_module(node_sandbox, [sandbox_check_goal/2, sandbox_check_goal_in_module/3]).
+:- use_module(node_lifetime, [with_owner_context/4]).
 :- use_module(node_execution_context, [with_public_execution_context/3]).
 :- use_module(dollar_expansion, [
     expand_dollar_vars/3,
@@ -87,7 +88,8 @@ isotope_spawn_event(Request, Principal, PrincipalId, EffectiveProfile, Event) :-
             with_public_execution_context(
                 EffectiveProfile,
                 Namespace,
-                toplevel_spawn(Pid, SpawnOptions)
+                with_owner_context(Principal, http_session(Namespace), local,
+                                   toplevel_spawn(Pid, SpawnOptions))
             ),
             register_isotope_session(Pid, InitialLoadText, EffectiveProfile,
                                      PrincipalId),

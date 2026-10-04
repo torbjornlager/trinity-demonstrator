@@ -32,6 +32,7 @@ function makeMockSelf() {
   const s = {
     postMessage: function(m) { posted.push(m); },
     close: function() { s._closed = true; },
+    crypto: require("crypto").webcrypto,
     _posted: posted
   };
   return s;
@@ -265,8 +266,8 @@ async function main() {
   const promiseReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "rpc";
   }).pop();
-  ok(Number.isInteger(promiseRef) && String(promiseRef).length === 10 &&
-     promiseRef >= 1000000000 && promiseRef <= 1073741823 &&
+  ok(typeof promiseRef === "string" && Number(promiseRef) >= 1000000000 &&
+     Number(promiseRef) <= 9999999999 &&
      promiseReq.goal === "mortal(Who)",
      "promise starts RPC and returns an opaque ten-digit reference");
   const promiseWait = S.actorPromiseWait(promiseRef, -1);
@@ -278,7 +279,7 @@ async function main() {
   const retainedReq = S._posted.filter(function(m) {
     return m.type === "request" && m.action === "rpc";
   }).pop();
-  ok(String(retainedRef).length === 10 && retainedRef !== promiseRef,
+  ok(Number(retainedRef) <= 9999999999 && retainedRef !== promiseRef,
      "separate worker promises receive distinct ten-digit references");
   ok((await S.actorPromiseWait(retainedRef, 0)) === null,
      "timed-out yield leaves the promise pending");

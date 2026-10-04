@@ -4671,7 +4671,7 @@
       }
 
       // Browser actors are exposed to Prolog as Id@localhost, while the
-      // JavaScript node controller keeps using the raw ten-digit Id as its
+      // JavaScript node controller keeps using the decimal Id as its
       // worker-map key.  Keep the conversion at this boundary so localhost
       // remains a local-node designator rather than a network destination.
       function qualifySwiWasmLocalPid(pidText) {
@@ -10530,53 +10530,37 @@
               });
             };
           },
-          reserveSwiWasmWorkerActorPid: function() {
-            var min = 1000000000;
-            var span = 9000000000;
-            var max53 = 9007199254740992;
-            var unbiasedLimit = max53 - (max53 % span);
+          randomSwiIdentity: function() {
             var root = typeof globalThis !== "undefined" ? globalThis : window;
-            var pid;
-            var randomValue;
+            if (!root.crypto || typeof root.crypto.getRandomValues !== "function") {
+              throw new Error("Secure randomness is required for actor identities");
+            }
+            var value;
             do {
-              if (root.crypto && typeof root.crypto.getRandomValues === "function") {
-                do {
-                  var values = new Uint32Array(2);
-                  root.crypto.getRandomValues(values);
-                  randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];
-                } while (randomValue >= unbiasedLimit);
-              } else {
-                randomValue = Math.floor(Math.random() * span);
+              var values = new Uint8Array(5);
+              root.crypto.getRandomValues(values);
+              value = 0;
+              for (var i = 0; i < values.length; i++) {
+                value = value * 256 + values[i];
               }
-              pid = String(min + (randomValue % span));
-            } while (this.swiWasmActorWorkers[pid] ||
-                     this.swiWasmReservedWorkerActorPids[pid] ||
-                     this.swiWasmReservedActorRefs[pid]);
+            } while (value >= 1098000000000);
+            return String(1000000000 + (value % 9000000000));
+          },
+          reserveSwiWasmWorkerActorPid: function() {
+            var pid;
+            this.swiWasmIssuedIdentities = this.swiWasmIssuedIdentities || {};
+            do { pid = this.randomSwiIdentity(); }
+            while (this.swiWasmIssuedIdentities[pid]);
+            this.swiWasmIssuedIdentities[pid] = true;
             this.swiWasmReservedWorkerActorPids[pid] = true;
             return pid;
           },
           reserveSwiWasmActorRef: function() {
-            var min = 1000000000;
-            var span = 9000000000;
-            var max53 = 9007199254740992;
-            var unbiasedLimit = max53 - (max53 % span);
-            var root = typeof globalThis !== "undefined" ? globalThis : window;
             var ref;
-            var randomValue;
-            do {
-              if (root.crypto && typeof root.crypto.getRandomValues === "function") {
-                do {
-                  var values = new Uint32Array(2);
-                  root.crypto.getRandomValues(values);
-                  randomValue = (values[0] & 0x1fffff) * 4294967296 + values[1];
-                } while (randomValue >= unbiasedLimit);
-              } else {
-                randomValue = Math.floor(Math.random() * span);
-              }
-              ref = String(min + (randomValue % span));
-            } while (this.swiWasmActorWorkers[ref] ||
-                     this.swiWasmReservedWorkerActorPids[ref] ||
-                     this.swiWasmReservedActorRefs[ref]);
+            this.swiWasmIssuedIdentities = this.swiWasmIssuedIdentities || {};
+            do { ref = this.randomSwiIdentity(); }
+            while (this.swiWasmIssuedIdentities[ref]);
+            this.swiWasmIssuedIdentities[ref] = true;
             this.swiWasmReservedActorRefs[ref] = true;
             return ref;
           },
@@ -13202,16 +13186,19 @@
               "    solution_limit(Opts, Lim),",
               "    rpc_transport_options(Opts, RemoteTimeout, Once, HTTPTimeout),",
               "    web_rpc_url(URL, Goal, Template, Offset, Lim, Opts, RemoteTimeout, Once, FinalURL),",
-              "    Ref := swiPromiseStart(#FinalURL, #HTTPTimeout).",
+              "    RefText := swiPromiseStart(#FinalURL, #HTTPTimeout),",
+              "    number_string(Ref, RefText).",
               "",
               "yield(Ref, Message) :-",
-              "    Promise := swiPromiseWait(#Ref, -1),",
+              "    number_string(Ref, RefText),",
+              "    Promise := swiPromiseWait(#RefText, -1),",
               "    await(Promise, Resp),",
               "    (Resp = null -> true ; web_parse_rpc_response(Resp, Message)).",
               "",
               "yield(Ref, Message, Opts) :-",
               "    (member(timeout(Timeout), Opts) -> true ; Timeout = -1),",
-              "    Promise := swiPromiseWait(#Ref, #Timeout),",
+              "    number_string(Ref, RefText),",
+              "    Promise := swiPromiseWait(#RefText, #Timeout),",
               "    await(Promise, Resp),",
               "    (   Resp = null",
               "    ->  (member(on_timeout(OnTimeout), Opts) -> call(OnTimeout) ; true)",
@@ -13825,20 +13812,10 @@
           },
           makeBrowserPromiseRef: function(existing) {
             var ref;
-            var store = existing || {};
-            var min = 1000000000;
-            var span = 73741824; // 1073741823 - min + 1; keep refs safely below SWI-WASM's tagged int boundary.
-            do {
-              var root = typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : {});
-              if (root.crypto && typeof root.crypto.getRandomValues === "function") {
-                var values = new Uint32Array(1);
-                root.crypto.getRandomValues(values);
-                ref = min + (values[0] % span);
-              } else {
-                ref = min + Math.floor(Math.random() * span);
-              }
-              ref = Math.floor(ref);
-            } while (Object.prototype.hasOwnProperty.call(store, String(ref)));
+            this.swiWasmIssuedPromiseRefs = this.swiWasmIssuedPromiseRefs || {};
+            do { ref = this.randomSwiIdentity(); }
+            while (this.swiWasmIssuedPromiseRefs[ref] || (existing && existing[ref]));
+            this.swiWasmIssuedPromiseRefs[ref] = true;
             return ref;
           },
           isSwiWasmUnboundVariable: function(value) {

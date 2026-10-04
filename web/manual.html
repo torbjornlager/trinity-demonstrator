@@ -226,13 +226,13 @@
     <pre>spawn(+Goal) is det.
 spawn(+Goal, -Pid) is det.
 spawn(+Goal, -Pid, +Options) is det.</pre>
-    <p>Creates a new Web Prolog actor process running <code>Goal</code>.</p> 
+    <p>Creates a new Web Prolog actor process running <code>Goal</code>. A principal subtree quota raises <code>error(resource_error(actors), _)</code>. Lost contact during remote creation raises <code>error(remote_spawn_failed(connection_closed), _)</code>; the remote outcome is unknown and retrying side effects needs duplicate suppression.</p>
     
 <p>Valid options are:</p>
     <ul>
         <li><code>node(+URI)</code><br>Creates the process locally or on a remote compatible node. Default is <code>localhost</code>.</li>
         <li><code>monitor(+Boolean)</code><br>If <code>true</code>, monitoring is installed as part of process creation. Default is <code>false</code>.</li>
-        <li><code>link(+Boolean)</code><br>If <code>true</code>, installs directional parent-to-child link cleanup. Default is <code>true</code>.</li>
+        <li><code>link(+Boolean)</code><br>If <code>true</code>, installs directional parent-to-child link cleanup. Default is <code>true</code>. On a public node, only its owner may use <code>link(false)</code>; detachment transfers ownership to the node and sends output to its log.</li>
         <li><code>src_text(+AtomOrString)</code><br>Loads the clauses specified by a Web Prolog source text into the actor's private Prolog database before calling <code>Goal</code>.</li>
         <li><code>src_list(+ListOfClauses)</code><br>Converts the clauses to source text and loads them into the actor's private Prolog database before calling <code>Goal</code>.</li>
         <li><code>src_uri(+URI)</code><br>Loads the clauses specified by a file path, file URI, or HTTP(S) URI into the actor's private Prolog database before calling <code>Goal</code>.</li>
@@ -259,7 +259,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>monitor(+PidOrName, -Ref) is det.</pre>
-    <p>Installs a monitor and returns a fresh reference in <code>Ref</code>. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Pid,Ref,Reason)</code>.</p>
+    <p>Installs a monitor on an actor the caller may send to and returns a fresh reference in <code>Ref</code>. References use secure randomness and are never reissued; knowing a reference does not authorize removal of another actor’s monitor. The first argument may be a pid or a registered local name. When the monitored process terminates, the monitoring process receives a message of the form <code>down(Pid,Ref,Reason)</code>.</p>
     <p><span class="note-label">Note:</span> <code>monitor(true)</code> in <code>spawn/3</code> installs monitoring before the child can terminate, preserving its actual exit reason. A monitor installed after termination is discharged with <code>down(Pid,Ref,no_process)</code>.</p>
     <p>Reasons include <code>true</code> for success, <code>false</code> for failure, <code>exception(E)</code> for an uncaught exception, and an explicit exit term. Loss of remote observation produces <code>connection_closed</code>; it discharges the monitor without proving actor death, and reconnection does not restore it. At the monitor boundary, an SWI <code>error(Formal,Context)</code> preserves <code>Formal</code> but replaces <code>Context</code> with a variable. Undefined-procedure errors also omit private generated actor-module qualifications.</p>
 </article>
@@ -271,7 +271,7 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
     </div>
     <pre>demonitor(+Ref) is det.
 demonitor(+Ref, +Options) is det.</pre>
-    <p>Stops monitoring identified by <code>Ref</code>. This is idempotent. There is only one valid option:</p>
+    <p>Stops only a monitor installed by the calling actor and identified by <code>Ref</code>. This is idempotent. There is only one valid option:</p>
     <ul>
         <li><code>flush</code><br>Non-blocking removal of all pending <code>down(_,Ref,_)</code> messages from the mailbox.</li>
     </ul>
@@ -352,7 +352,7 @@ demonitor(+Ref, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>exit(+Pid, +Reason) is det.</pre>
-    <p>Terminates the process identified by <code>Pid</code> with <code>Reason</code>. For remote actors, the runtime routes this request through the remote node. Termination commits when the first exit reason is accepted; later exit and abort signals have no effect.</p>
+    <p>Terminates an actor in the caller’s ownership tree, identified by <code>Pid</code>, with <code>Reason</code>. A client targeting another tree receives <code>error(permission_error(exit, actor, Pid), _)</code>. Raw host thread ids and aliases are never actor termination targets. For remote actors, the runtime routes this request through the remote node. Termination commits when the first exit reason is accepted; later exit and abort signals have no effect.</p>
 </article>
 
 <a id="!/2"></a>

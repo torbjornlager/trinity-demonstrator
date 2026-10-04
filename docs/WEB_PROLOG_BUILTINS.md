@@ -236,7 +236,7 @@ All runtimes accept the same `rpc/3` transport options: `limit/1`, `once/1`,
 `timeout/1`, and `http_timeout/1`, together with the `src_*` source options.
 `promise/4` accepts these plus `template/1` and `offset/1`; offset selects the
 single slice collected by the promise and is not a public `rpc/3` option.
-Promise references are opaque ten-digit integers. A `yield/3` timeout never
+Promise references are opaque ten-digit integers, minted securely and never reused. A `yield/3` timeout never
 consumes its promise; without `on_timeout/1`, the timeout path succeeds.
 
 `runtime_property/1` reports host capabilities rather than changing language

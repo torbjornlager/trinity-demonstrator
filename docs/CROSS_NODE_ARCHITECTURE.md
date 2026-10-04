@@ -101,7 +101,7 @@ but must preserve the portable subset's copying semantics.
 |---|---|
 | `self/1` | Canonical pid of the current actor or thread |
 | `canonical_pid/2` | Normalize pid to `Id@URL` |
-| `make_id/1` | Generate a fresh, unguessable 10-digit id from the system CSPRNG (used for pids and Refs) |
+| `make_id/1` | Generate a never-reused ten-digit integer id from the system CSPRNG (used for pids and Refs) |
 | `spawn/3` | Local spawn with options `node`, `link`, `monitor`, `monitor_target`, `monitor_ref` |
 | `send/2` | Send to a pid's mailbox (local) |
 | `exit/2` | Terminate an actor (local) |
@@ -1270,3 +1270,77 @@ In the reference (this repository):
 
 A port is interoperable with the reference if it satisfies §11 and
 implements the wire protocol of §4 byte-for-byte.
+
+## Principal lineage and lifetime policy
+
+Updated node peers attach `lineage` and `account` (128-bit token strings) to
+commands. Ownership and registries use the receiving connection plus lineage;
+quotas charge the delegated principal account across its lineages. The transport
+peer must be trusted to delegate that account. Browsers cannot set these fields.
+Older peers that omit them retain one ownership scope per connection and cannot
+claim lineage isolation.
+
+Language sends remain open, subject to node policy. Public actor termination
+requires ownership; monitor removal requires the installing actor. Host thread
+aliases and raw thread numbers are never public termination targets.
+
+Node startup accepts `max_principal_actors(32)`, `max_mailbox_messages(1024)`,
+`max_term_depth(128)`, `principal_cpu_seconds(30)`, `principal_cpu_window(60)`,
+and `ws_lease_seconds(30)` by default. CPU is sampled every 50 ms over all
+locally hosted descendants; enforced termination still waits for safe points.
+`ws_lease_seconds(infinite)` disables the lease. Ping/pong contact detection
+reclaims locally owned connection work, but says nothing about whether work at
+a disconnected remote node has stopped. A failed remote spawn reports
+`error(remote_spawn_failed(connection_closed), _)`; its remote outcome is unknown.
+Retries of effectful work need an application idempotency key or equivalent
+duplicate suppression.
+
+A delegated route is recorded before waiting for a spawn acknowledgement. When
+the last locally hosted actor in a lineage ends, `lineage_close` reclaims that
+lineage at the peer, including spawns whose pid has not yet been acknowledged.
+Spawn commands carry a fresh decimal-string `request_id`, echoed on `spawned`
+and spawn-error responses, so a late reply to an abandoned request cannot
+satisfy a subsequent spawn. Older peers may omit this correlation field; they
+do not provide the same cancellation-race guarantee. Closed spawn reply queues
+remain alive until their waiter observes closure, then are destroyed.
+
+The demonstrator deliberately uses ten-digit pids and public references to keep
+interactive output compact. They use CSPRNG rejection sampling and lifetime
+non-reuse, but provide only about 33 bits of entropy. Production deployments
+should widen identities and correlation references (for example to 128 random
+bits); pid entropy remains defence in depth, never authorization. Hidden
+lineage and account tokens retain their 128-bit format. Current compact local
+pids serialize as JSON numbers; wider identities remain supported as decimal
+strings to avoid JavaScript Number rounding.
+
+### Public peer credentials
+
+Private and loopback peers retain the existing internal transport handshake.
+For a peer reached from a public IP, issue a bearer token on the receiving
+node with capabilities `[execute, internal_transport]` (using the owner token
+API), then configure the sending node with:
+
+```prolog
+node(3060, [peer_transport_tokens([
+    'https://peer.example'-'wp_ID_SECRET'
+])]).
+```
+
+The token is sent only to that exact destination URL. The receiver verifies
+it through the existing bearer-token store before accepting lineage or account
+fields. Configure the reverse direction separately when it initiates its own
+connection. Merely supplying `X-Web-Prolog-Capabilities` from a public IP does
+not authenticate a peer. Use HTTPS for these credentials.
+
+Anonymous lifetime accounts are scoped to one HTTP call, HTTP session or
+WebSocket connection; authenticated principal accounts span connections.
+Ended local trees release their remote ownership and lineage records. CPU
+watchers finish when the last local actor leaves, and unused account metadata
+expires after its CPU accounting window. The issued-id registry stays for the
+node lifetime to prevent identity reuse.
+
+Application mailbox capacity and term depth do not reject runtime-generated
+monitor notifications. These messages still consume accounting space until
+received or flushed. Term depth measures nesting, with an entire flat list
+counting as one level; long lists remain subject to message and input size
+limits.

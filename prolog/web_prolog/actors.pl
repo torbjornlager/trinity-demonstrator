@@ -117,6 +117,17 @@ Side-effect-style (all solutions are run via forall/2; no clauses = no-op):
   - hook_admit_spawn(+LiveCount, +Options): spawn-admission control; a
     clause that throws rejects a local spawn (global concurrency cap).
 
+  - hook_admit_spawn(+Pid, +LiveCount, +Options): record ownership and
+    reserve subtree capacity before the child can start.
+  - hook_check_spawn/1, hook_check_exit/1, hook_check_monitor/1,
+    hook_check_send/2: caller-side authority and term-admission checks.
+  - hook_message_consumed/0: release a queued or deferred message charge.
+
+First-success delivery style:
+
+  - hook_deliver_message(+Pid, +Thread, +Message): reserve receiver mailbox
+    capacity and enqueue atomically; default delivery applies if no hook handles it.
+
 Resource-ceiling style:
 
   - hook_thread_options(-Options): extra thread_create/3 options for a
@@ -131,6 +142,7 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
 */
 
 :- use_module(library(debug)).
+:- use_module(library(crypto)).
 :- use_module(library(option)).
 :- use_module(library(error)).
 :- use_module(library(aggregate)).
@@ -158,7 +170,14 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     hook_spawn_commit/2,
     hook_spawn_abort/1,
     hook_thread_options/1,
-    hook_admit_spawn/2.
+    hook_admit_spawn/2,
+    hook_admit_spawn/3,
+    hook_check_spawn/1,
+    hook_check_exit/1,
+    hook_check_monitor/1,
+    hook_check_send/2,
+    hook_deliver_message/3,
+    hook_message_consumed/0.
 
 :- meta_predicate
     spawn(:),
@@ -219,14 +238,21 @@ make_pid(Pid) :-
         Pid = actor(N)
     ).
 
+:- dynamic issued_local_ref/1.
+
 %!  make_ref(-Ref) is det.
 %
 %   Mint a fresh monitor reference (an opaque token, not a pid).
 make_ref(Ref) :-
     (   hook_make_ref(Ref0)
     ->  Ref = Ref0
-    ;   flag(wp_actor_ref_counter, N, N + 1),
-        Ref = ref(N)
+    ;   with_mutex(actor_references,
+            (   repeat,
+                crypto_n_random_bytes(16, Bytes),
+                Ref = ref(Bytes),
+                \+ issued_local_ref(Ref), !,
+                assertz(issued_local_ref(Ref))
+            ))
     ).
 
 %!  canonical_pid(+Pid0, -Pid) is det.
@@ -274,6 +300,8 @@ spawn(Goal, Pid) :-
     spawn(Goal, Pid, []).
 
 spawn(Goal, Pid, Options) :-
+    must_be(list, Options),
+    forall(hook_check_spawn(Options), true),
     (   hook_spawn(Goal, Pid, Options)
     ->  true
     ;   option(node(Node), Options, localhost),
@@ -373,6 +401,7 @@ admit_local_spawn(LocalPid, Options) :-
             aggregate_all(count, spawn_reservation(_), Reserved),
             Count is Live + Reserved,
             forall(hook_admit_spawn(Count, Options), true),
+            forall(hook_admit_spawn(LocalPid, Count, Options), true),
             assertz(spawn_reservation(LocalPid))
         )).
 
@@ -382,7 +411,8 @@ admit_local_spawn(LocalPid, Options) :-
 %   spawn_local/3's cleanup, after the actor is live or the spawn failed.
 release_spawn_reservation(LocalPid) :-
     with_mutex(actors_spawn_admission,
-               retractall(spawn_reservation(LocalPid))).
+               retractall(spawn_reservation(LocalPid))),
+    (pid_thread(LocalPid, _) -> true; forall(hook_spawn_failed(LocalPid), true)).
 
 %!  spawn_thread_options(-Options) is det.
 %
@@ -624,7 +654,7 @@ stop(Pid, Parent) :-
             with_mutex(actors_monitor_lifecycle,
                 (   down_reason(Pid, Reason),
                     forall(retract(monitor(Other, GlobalPid, Ref)),
-                           Other ! down(GlobalPid, Ref, Reason)),
+                           send_system(Other, down(GlobalPid, Ref, Reason))),
                     retractall(pid_thread(Pid, _)),
                     retractall(thread_pid(_, Pid))
                 ))
@@ -736,6 +766,7 @@ monitor(Name, Ref) :-
 monitor(Pid, Ref) :-
     self(Self),
     canonical_pid(Pid, CanonPid),
+    forall(hook_check_monitor(CanonPid), true),
     make_ref(Ref),
     with_mutex(actors_monitor_lifecycle,
         install_monitor(Self, CanonPid, Ref, Outcome)),
@@ -768,15 +799,19 @@ monitor_target_alive(CanonPid) :-
 
 deliver_missing_monitor(installed, _, _, _).
 deliver_missing_monitor(missing, Self, Ref, CanonPid) :-
-    Self ! down(CanonPid, Ref, no_process).
+    send_system(Self, down(CanonPid, Ref, no_process)).
 
 demonitor(Ref) :-
     demonitor(Ref, []).
 
 demonitor(Ref, Options) :-
+    must_be(ground, Ref),
+    self(Self),
     with_mutex(actors_monitor_lifecycle,
-        (   retractall(monitor(_, _, Ref)),
-            forall(hook_demonitor(Ref), true)
+        (   (   retract(monitor(Self, _, Ref))
+            ->  forall(hook_demonitor(Ref), true)
+            ;   true
+            )
         )),
     (   option(flush, Options)
     ->  flush_monitor_down(Ref)
@@ -1019,10 +1054,15 @@ actor_terminating :-
 %   distribution layer through hook_exit/2.
 
 exit(Pid, Reason) :-
+    must_be(ground, Pid),
+    forall(hook_check_exit(Pid), true),
+    exit_actor(Pid, Reason).
+
+exit_actor(Pid, Reason) :-
     hook_exit(Pid, Reason),
     !.
-exit(Pid, Reason) :-
-    (   resolve_thread(Pid, ThreadId)
+exit_actor(Pid, Reason) :-
+    (   resolve_actor_thread(Pid, ThreadId)
     ->  best_effort_if_gone(thread_signal(ThreadId, exit(Reason)))
     ;   true
     ).
@@ -1039,17 +1079,27 @@ exit(Pid, Reason) :-
 %
 %   Send Message to Pid.
 
+:- thread_local system_delivery/0.
+
+send_system(Pid, Message) :-
+    setup_call_cleanup(asserta(system_delivery, Ref),
+                       catch(send(Pid, Message), _, true), erase(Ref)).
+
 Pid ! Message :-
     send(Pid, Message).
 
 send(Pid, Message) :-
+    (system_delivery -> true; forall(hook_check_send(Pid, Message), true)),
+    send_checked(Pid, Message).
+
+send_checked(Pid, Message) :-
     hook_send(Pid, Message),
     !.
-send(Name, Message) :-
+send_checked(Name, Message) :-
     registered_target(Name, Pid),
     !,
     send(Pid, Message).
-send(Name, _Message) :-
+send_checked(Name, _Message) :-
     is_name(Name),
     !,
     %  The context literal is the demonstrator's exact error term:
@@ -1057,10 +1107,16 @@ send(Name, _Message) :-
     throw(error(existence_error(actor_name, Name),
                 context(actor:send/2,
                         'no actor registered under name'))).
-send(Pid, Message) :-
+send_checked(Pid, Message) :-
     (   resolve_thread(Pid, ThreadId)
-    ->  best_effort_if_gone(thread_send_message(ThreadId, Message))
+    ->  deliver_actor_message(Pid, ThreadId, Message)
     ;   true
+    ).
+
+deliver_actor_message(Pid, ThreadId, Message) :-
+    (   hook_deliver_message(Pid, ThreadId, Message)
+    ->  true
+    ;   best_effort_if_gone(thread_send_message(ThreadId, Message))
     ).
 
 send(Pid, Message, Options) :-
@@ -1241,7 +1297,7 @@ discard_deferred(Test) :-
     forall(( clause(deferred(Msg), true, Ref),
              call(Test, Msg)
            ),
-           erase(Ref)).
+           (erase(Ref), forall(hook_message_consumed, true))).
 
 receive(Clauses) :-
     receive(Clauses, []).
@@ -1251,6 +1307,7 @@ receive(Clauses, Options) :-
     (   clause(deferred(Msg), true, Ref),
         select_body(Clauses, Msg, Module, Body)
     ->  erase(Ref),
+        forall(hook_message_consumed, true),
         call(Module:Body)
     ;   receive(Mailbox, Clauses, Options)
     ).
@@ -1277,6 +1334,7 @@ receive_scan(Mailbox, Clauses, GetOptions, Options) :-
     ->  assertz(deferred(Msg), Ref),
         (   select_body(Clauses, Msg, Module, Body)
         ->  erase(Ref),
+            forall(hook_message_consumed, true),
             call(Module:Body)
         ;   receive_scan(Mailbox, Clauses, GetOptions, Options)
         )
@@ -1363,6 +1421,14 @@ is_name(Name) :-
 %!  resolve_thread(+Target, -ThreadId) is semidet.
 %
 %   Resolve send target that may be pid, queue id, thread id, or `main`.
+% Public termination resolves only runtime-issued actor pids. Internal I/O
+% may still address private queues, but no thread alias is a termination pid.
+resolve_actor_thread(Pid, ThreadId) :-
+    nonvar(Pid),
+    pid_local(Pid, LocalPid),
+    pid_thread(LocalPid, ThreadId),
+    is_thread(ThreadId).
+
 resolve_thread(main, main) :- !.
 resolve_thread(Pid, ThreadId) :-
     pid_local(Pid, LocalPid),

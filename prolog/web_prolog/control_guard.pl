@@ -418,8 +418,10 @@ recover_or_rethrow(Module, Error, Catcher, Recover) :-
     (var(Grammar) -> throw(error(instantiation_error, phrase/3)); true),
     dcg_translate_rule((guard_dcg --> Grammar), (Head :- Goal)),
     Head = guard_dcg(Input, Rest),
-    (   current_predicate(public_goal_guard:runtime_execute_goal/2)
-    ->  public_goal_guard:runtime_execute_goal(Module, Goal)
+    GuardModule = public_goal_guard,
+    (   current_module(GuardModule),
+        current_predicate(GuardModule:runtime_execute_goal/2)
+    ->  call(GuardModule:runtime_execute_goal(Module, Goal))
     ;   runtime_execute(Module, Goal)
     ).
 

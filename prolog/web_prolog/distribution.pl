@@ -21,7 +21,7 @@ the demonstrator's actor.pl and toplevel_actor.pl and installed as
 implementations of the layer-0/layer-2 hooks.
 
 Loading this module changes pid representation to the demonstrator's:
-locally minted pids become cryptographically random 10-digit integers
+locally minted pids become integer ids with 128 cryptographically random bits
 (make_id/1), and canonicalization globalizes them to `Id@SelfNodeURL`
 (pid_utils).  The main thread's pid is re-minted accordingly at load time.
 
@@ -64,17 +64,21 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
     ws_json_is_io_output/1,
     ws_json_to_actor_event/3
 ]).
+:- use_module(control_guard, [rethrow_reserved/1]).
 :- use_module(isolation, [rewrite_source_options/3]).
 :- use_module(toplevel_actors, []).
 
 :- multifile
     hook_event/1,
-    hook_connection_context/2,
+    hook_connection_context/2, hook_transport_options/2,
     hook_ws_endpoint_override/2,
-    hook_terminal_delivery/2.
+    hook_terminal_delivery/2,
+    hook_command_context/2, hook_remote_actor/1, hook_remote_retired/1, hook_remote_spawn_start/1.
 
 :- dynamic ws_connection/4.
 :- dynamic ws_pending_event/3.
+:- dynamic spawn_queue_user/1.
+:- dynamic closed_spawn_queue/1.
 :- dynamic io_endpoint_target/2.
 :- dynamic pending_io_prompt/3.
 :- dynamic pending_io_request/3. % NodeURL, RequestId, private reply queue
@@ -92,51 +96,44 @@ best_effort_fail(Goal) :-
 
 %!  make_id(-Id) is det.
 %
-%   Generate a cryptographically random, currently-unused 10-digit actor id.
+%   Generate a cryptographically random, never-reused ten-digit actor id.
 %   A mutex makes the uniqueness check and reservation atomic.
-%   The reserved_id/1 fact acts as a lightweight claim so that
+%   The issued_id/1 fact acts as a lightweight claim so that
 %   concurrent spawners cannot pick the same id before the child
-%   thread asserts pid_thread/2.  The reservation is cleaned up
-%   through actors' hook_pid_activated/1 once the mapping is in place.
+%   thread asserts pid_thread/2.  Issued ids remain recorded after activation, failure, and death; they
+%   are never recycled during the runtime lifetime.
 %
 %   crypto_n_random_bytes/2 is deliberately used instead of
 %   random_between/3.  SWI-Prolog initializes the latter's pseudo-random
 %   state separately in every thread, making the first child spawn from
-%   each actor disproportionately expensive.  The CSPRNG keeps ids
-%   unguessable without that per-actor initialization cost.
-:- dynamic reserved_id/1.
+%   each actor disproportionately expensive.  The CSPRNG adds defence in depth without that per-actor initialization cost.
+:- dynamic issued_id/1.
 
 make_id(Id) :-
     with_mutex('$make_id', (
         repeat,
-        random_ten_digit_id(Id),
+        random_actor_id(Id),
         \+ actors:pid_thread(Id, _),
-        \+ reserved_id(Id),
+        \+ issued_id(Id),
         !,
-        assertz(reserved_id(Id))
+        assertz(issued_id(Id))
     )).
 
-random_ten_digit_id(Id) :-
+random_actor_id(Id) :-
     repeat,
-    crypto_n_random_bytes(5, [B0, B1, B2, B3, B4]),
-    Raw is (((((B0*256)+B1)*256+B2)*256+B3)*256+B4),
-    %  1,098,000,000,000 is the largest multiple of 9,000,000,000
-    %  below 2^40.  Rejecting the short tail avoids modulo bias.
-    Raw < 1098000000000,
-    !,
-    Id is 1000000000 + (Raw mod 9000000000).
+    crypto_n_random_bytes(5, Bytes),
+    foldl(id_byte, Bytes, 0, Raw),
+    % Reject the short tail before reducing to the nine-billion-value space.
+    Raw < 1098000000000, !,
+    Id is 1000000000 + Raw mod 9000000000.
+
+id_byte(Byte, Acc, Next) :- Next is Acc * 256 + Byte.
 
 actors:hook_make_pid(Pid) :-
     make_id(Pid).
 
 actors:hook_make_ref(Ref) :-
     make_id(Ref).
-
-actors:hook_pid_activated(Pid) :-
-    retractall(reserved_id(Pid)).
-
-actors:hook_spawn_failed(Pid) :-
-    retractall(reserved_id(Pid)).
 
 actors:hook_canonical_pid(Pid0, Pid) :-
     pid_utils:canonical_pid(Pid0, Pid).
@@ -161,7 +158,7 @@ distribution_init_main_pid :-
         assertz(actors:pid_thread(MainPid, MainThreadId)),
         assertz(actors:thread_pid(MainThreadId, MainPid)),
         assertz(actors:main_pid(MainPid)),
-        retractall(reserved_id(MainPid))
+        ignore(issued_id(MainPid))
     ;   true
     ).
 
@@ -609,7 +606,8 @@ maybe_register_toplevel_name(Options, Pid) :-
                 *******************************/
 
 %!  ws_send_json(+WebSocket, +JSONDict) is det.
-ws_send_json(WebSocket, JSONDict) :-
+ws_send_json(WebSocket, Dict0) :-
+    (hook_command_context(Dict0, JSONDict) -> true; JSONDict = Dict0),
     atom_json_dict(Text, JSONDict, []),
     ws_send(WebSocket, text(Text)).
 
@@ -618,27 +616,77 @@ ws_send_json(WebSocket, JSONDict) :-
 %   Send a spawn-like command (`spawn` or `toplevel_spawn`) on the shared
 %   WebSocket connection for NodeURL and wait for the corresponding
 %   `spawned(Pid)` event.
-remote_request_spawn(NodeURL, Command, RemotePid) :-
+remote_request_spawn(NodeURL, Command0, RemotePid) :-
+    make_id(Request), number_string(Request, RequestId),
+    put_dict(request_id, Command0, RequestId, Command),
+    forall(hook_remote_spawn_start(NodeURL), true),
     ws_mutex(NodeURL, ws_spawn_lock, Mutex),
+    catch(with_mutex(Mutex,
+               setup_call_cleanup(
+                   acquire_spawn_connection(NodeURL, Socket, SpawnQueue),
+                   (ws_send_json(Socket, Command),
+                    remote_wait_spawned(SpawnQueue, RequestId, RemotePid)),
+                   release_spawn_queue(SpawnQueue))), Error, remote_spawn_error(Error)).
+
+% Reserve the reply queue before connection cleanup can destroy it.
+acquire_spawn_connection(NodeURL, Socket, Queue) :-
+    ws_mutex(NodeURL, ws_connection_lock, Mutex),
     with_mutex(Mutex,
-               ( remote_connection(NodeURL, Socket, SpawnQueue),
-                 ws_send_json(Socket, Command),
-                 remote_wait_spawned(SpawnQueue, RemotePid)
-               )).
+        (remote_connection_locked(NodeURL, Socket, Queue),
+         with_mutex(spawn_queue_lifetime, assertz(spawn_queue_user(Queue))))).
+
+release_spawn_queue(Queue) :-
+    with_mutex(spawn_queue_lifetime,
+        (retractall(spawn_queue_user(Queue)), destroy_closed_spawn_queue(Queue))).
+
+close_spawn_queue(Queue) :-
+    with_mutex(spawn_queue_lifetime,
+        (assertz(closed_spawn_queue(Queue)),
+         best_effort(thread_send_message(Queue, connection_closed)),
+         destroy_closed_spawn_queue(Queue))).
+
+destroy_closed_spawn_queue(Queue) :-
+    (closed_spawn_queue(Queue), \+ spawn_queue_user(Queue)
+    -> retractall(closed_spawn_queue(Queue)), best_effort(message_queue_destroy(Queue))
+    ; true).
+
+remote_spawn_error(error(remote_spawn_failed(Reason), Context)) :- !,
+    throw(error(remote_spawn_failed(Reason), Context)).
+remote_spawn_error(Error) :-
+    rethrow_reserved(Error),
+    throw(error(remote_spawn_failed(connection_closed),
+                context(distribution:remote_request_spawn/3,
+                        transport_error(Error)))).
 
 remote_wait_spawned(SpawnQueue, RemotePid) :-
+    remote_wait_spawned(SpawnQueue, _, RemotePid).
+
+remote_wait_spawned(SpawnQueue, RequestId, RemotePid) :-
     catch(thread_get_message(SpawnQueue, Message),
           Error,
-          throw(error(remote_spawn_failed(Error),
+          (rethrow_reserved(Error), throw(error(remote_spawn_failed(Error),
                       context(actor:remote_request_spawn/3,
-                              'failed waiting for spawned event')))),
+                              'failed waiting for spawned event'))))),
+    (   Message = spawn_reply(ReplyId, Reply)
+    ->  (   (var(RequestId); ReplyId == RequestId)
+        ->  remote_spawn_reply(Reply, SpawnQueue, RequestId, RemotePid)
+        ;   remote_wait_spawned(SpawnQueue, RequestId, RemotePid)
+        )
+    ;   remote_spawn_reply(Message, SpawnQueue, RequestId, RemotePid)
+    ).
+
+remote_spawn_reply(Message, SpawnQueue, RequestId, RemotePid) :-
     (   Message = spawned(RemotePid)
     ->  true
     ;   Message = spawn_error(SpawnError)
     ->  throw(error(remote_spawn_failed(SpawnError),
                     context(actor:remote_request_spawn/3,
                             'remote node reported spawn failure')))
-    ;   remote_wait_spawned(SpawnQueue, RemotePid)
+    ;   Message == connection_closed
+    ->  throw(error(remote_spawn_failed(connection_closed),
+                    context(distribution:remote_request_spawn/3,
+                            'remote spawn outcome is unknown after transport loss')))
+    ;   remote_wait_spawned(SpawnQueue, RequestId, RemotePid)
     ).
 
 
@@ -660,6 +708,7 @@ remote_send_command(NodeURL, Command) :-
 %   flush_pending_for_pid/2 so that any buffered down events have the
 %   correct monitor entries to deliver against.
 register_remote_pid(RemotePid@NodeURL, Target) :-
+    forall(hook_remote_actor(RemotePid@NodeURL), true),
     node_controller:register_remote_target(RemotePid@NodeURL, Target).
 
 
@@ -708,7 +757,9 @@ remote_connection_locked(NodeURL, Socket, SpawnQueue) :-
         SpawnQueue = SpawnQueue0
     ;   remote_drop_connection(NodeURL),
         node_url_to_ws_endpoint(NodeURL, WsURL),
-        internal_transport_ws_options(WSOptions),
+        internal_transport_ws_options(DefaultWSOptions),
+        findall(O, (hook_transport_options(NodeURL, Os), member(O, Os)), ExtraWSOptions),
+        append(ExtraWSOptions, DefaultWSOptions, WSOptions),
         http_open_websocket(WsURL, Socket, WSOptions),
         message_queue_create(SpawnQueue),
         %  The node layer wraps the reader goal with its logging scope
@@ -742,12 +793,16 @@ thread_running(ThreadId) :-
     best_effort_fail(thread_property(ThreadId, status(running))).
 
 remote_drop_connection(NodeURL) :-
+    ws_mutex(NodeURL, ws_connection_lock, Mutex),
+    with_mutex(Mutex, remote_drop_connection_locked(NodeURL)).
+
+remote_drop_connection_locked(NodeURL) :-
     with_mutex(distributed_io_requests,
         forall(retract(pending_io_request(NodeURL, _, Queue)),
                thread_send_message(Queue, "connection_closed"))),
     forall(retract(ws_connection(NodeURL, Socket, _Reader, SpawnQueue)),
            ( best_effort(ws_close(Socket, 1000, "done")),
-             best_effort(message_queue_destroy(SpawnQueue))
+             close_spawn_queue(SpawnQueue)
            )),
     retractall(ws_pending_event(NodeURL, _, _)).
 
@@ -787,11 +842,11 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
     ;   get_dict(type, Dict, "spawned"),
         get_dict(pid, Dict, RawPid),
         normalize_remote_pid(RawPid, RemotePid)
-    ->  best_effort(thread_send_message(SpawnQueue, spawned(RemotePid)))
+    ->  remote_queue_spawn_reply(SpawnQueue, Dict, spawned(RemotePid))
     ;   get_dict(type, Dict, "error"),
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
-        best_effort(thread_send_message(SpawnQueue, spawn_error(ErrorData)))
+        remote_queue_spawn_reply(SpawnQueue, Dict, spawn_error(ErrorData))
     ;   %  Compatibility with older peers that serialized the private
         %  source:"io" marker.  Current peers suppress terminal I/O at
         %  the originating relay and never put that marker on the wire.
@@ -813,6 +868,10 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
     ->  route_remote_event(NodeURL, RemotePid, Dict)
     ;   true
     ).
+
+remote_queue_spawn_reply(Queue, Dict, Reply) :-
+    (get_dict(request_id, Dict, Id) -> Message = spawn_reply(Id, Reply); Message = Reply),
+    best_effort(thread_send_message(Queue, Message)).
 
 remote_event_pid(Dict, RemotePid) :-
     get_dict(pid, Dict, RawPid),
@@ -836,11 +895,12 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
             retractall(actors:monitor(_, CompoundPid, _)),
             %  The remote pid is gone, so its target registration and any
             %  link records that pointed to it are now stale.
+            forall(hook_remote_retired(CompoundPid), true),
             node_controller:forget_remote_target(CompoundPid),
             retractall(node_controller:remote_link_(_, CompoundPid)),
             retractall(actors:link(_, CompoundPid)),
             forall(member(monitor(Watcher, Ref), Entries),
-                   send(Watcher, down(CompoundPid, Ref, Reason)))
+                   actors:send_system(Watcher, down(CompoundPid, Ref, Reason)))
         )).
 
 normalize_remote_pid(Pid0, Pid) :-
@@ -886,7 +946,7 @@ remote_ws_connection_closed(NodeURL) :-
         (   node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
             forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
                    ( retractall(actors:monitor(_, CompoundPid, _)),
-                     send(Watcher, down(CompoundPid, Ref, connection_closed))
+                     actors:send_system(Watcher, down(CompoundPid, Ref, connection_closed))
                    )),
             node_controller:drop_remote_state_for_node(NodeURL)
         )).

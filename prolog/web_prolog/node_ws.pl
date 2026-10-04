@@ -31,6 +31,7 @@ Architecture per connection:
 :- use_module(library(http/http_json)).
 :- use_module(library(apply)).
 :- use_module(library(option)).
+:- use_module(node_lifetime, []).
 :- use_module(library(crypto)).
 
 :- use_module(actor_api, [
@@ -401,6 +402,11 @@ peer_answer_terms(_, false).
 %
 %   Per-connection main: create queue, start relay, run reader loop.
 ws_main(NodePort, Principal, ClientMeta, AnswerTerms, WebSocket) :-
+    with_node_port_context(NodePort,
+        node_lifetime:with_websocket_lease(WebSocket,
+            node_ws:ws_main_owned(NodePort, Principal, ClientMeta, AnswerTerms, WebSocket))).
+
+ws_main_owned(NodePort, Principal, ClientMeta, AnswerTerms, WebSocket) :-
     with_node_port_context(
         NodePort,
         (
@@ -516,6 +522,10 @@ ws_relay_message(WebSocket, Queue, Message) :-
 ws_relay_message(WebSocket, _Queue, Message) :-
     ws_relay_message(WebSocket, Message).
 
+ws_relay_message(WebSocket, spawn_reply(RequestId, Message)) :- !,
+    answer_to_json(Message, JSON0),
+    put_dict(request_id, JSON0, RequestId, JSON),
+    atom_json_dict(Text, JSON, []), ws_send(WebSocket, text(Text)).
 ws_relay_message(WebSocket, Message) :-
     answer_to_json(Message, JSON),
     atom_json_dict(Text, JSON, []),
@@ -575,7 +585,7 @@ ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta) :-
                 ws_dispatch(Dict, Queue, Principal, ConnectionMeta)
             ),
             Error,
-            ws_send_error(Queue, Error)
+            ws_send_command_reply(Queue, Dict, error(Error))
         ),
         ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta)
     ;   ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta)
@@ -596,7 +606,9 @@ ws_dispatch(Dict, Queue, Principal, ConnectionMeta) :-
             get_dict(command, Dict, Command0),
             atom_string(Command, Command0),
             enforce_ws_command_rate_limit(Principal, Command),
-            ws_action(Command, Dict, Queue, Principal),
+            node_lifetime:with_wire_context(Dict, Queue, Principal,
+                node_lifetime:with_connection_spawn(
+                    node_ws:ws_action(Command, Dict, Queue, Principal))),
             get_time(FinishedAt),
             DurationMs is max(0, round((FinishedAt - StartedAt) * 1000)),
             ignore(
@@ -626,6 +638,10 @@ ws_dispatch(Dict, Queue, Principal, ConnectionMeta) :-
 
 %!  ws_action(+Command, +Dict, +Queue, +Principal) is det.
 
+ws_action(lineage_close, _, Queue, Principal) :-
+    (principal_has_capability(Principal, internal_transport) -> true;
+     throw(error(permission_error(use, transport_lineage, lineage_close), _))),
+    node_lifetime:reclaim_lineage(Queue).
 ws_action(toplevel_spawn, Dict, Queue, Principal) :-
     ws_action_toplevel_spawn(Dict, Queue, Principal).
 ws_action(transport_hello, Dict, Queue, _Principal) :-
@@ -724,7 +740,7 @@ ws_action_toplevel_spawn(Dict, Queue, Principal) :-
             commit_ws_actor_capacity(Reservation, Pid),
             catch(load_text_into_session(Pid, LoadText), LoadError, true),
             (   var(LoadError)
-            ->  thread_send_message(Queue, spawned(Pid))
+            ->  ws_send_command_reply(Queue, Dict, spawned(Pid))
             ;   %  The session never reached the client: tear it down
                 %  fully (toplevel_abort/1 only interrupts the current
                 %  goal and would leak the idle actor, its ws_actor/2 row,
@@ -922,7 +938,7 @@ ws_action_spawn(Dict, Queue, Principal) :-
             assertz(ws_actor(Queue, Pid)),
             remember_ws_actor_metadata(Pid, Queue, Principal, actor),
             commit_ws_actor_capacity(Reservation, Pid),
-            thread_send_message(Queue, spawned(Pid))
+            ws_send_command_reply(Queue, Dict, spawned(Pid))
         ),
         Error,
         (
@@ -995,12 +1011,10 @@ browser_local_pid(main).
 browser_local_pid(main@localhost).
 browser_local_pid(Id) :-
     integer(Id),
-    Id >= 1000000000,
-    Id =< 9999999999.
+    Id >= 1000000000, Id =< 9999999999.
 browser_local_pid(Id@localhost) :-
     integer(Id),
-    Id >= 1000000000,
-    Id =< 9999999999.
+    Id >= 1000000000, Id =< 9999999999.
 % Accept browser tabs running the pre-numeric SWI-WASM bridge during rollout.
 browser_local_pid(worker_actor(Id)) :-
     integer(Id),
@@ -1070,9 +1084,7 @@ actors:hook_stop(Pid0) :-
 ws_action_monitor(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, monitor),
     ws_get_pid(Dict, Pid),
-    ws_require_owned_resource(Queue, Principal, Pid, actor,
-                              node_ws:ws_action_monitor/3,
-                              'pid is not owned by this WebSocket connection'),
+    ws_require_send_target(Queue, Principal, Pid),
     ws_get_term_string(Dict, ref, RefText),
     ws_read_term(ref, RefText, Ref),
     canonical_pid(Pid, CanonPid),
@@ -1208,7 +1220,7 @@ ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
     close_browser_io(Queue),
     forall(
         retract(ws_actor(Queue, Pid)),
-        ws_kill_actor(Pid)
+        (node_lifetime:connection_owns(Queue, Pid) -> ws_kill_actor(Pid); true)
     ),
     forget_io_endpoints_for_target(Queue),
     catch(thread_send_message(Queue, '$ws_close'), _, true),
@@ -1235,6 +1247,8 @@ ws_require_owned_actor(Queue, Principal, Pid) :-
                               node_ws:ws_require_owned_actor/3,
                               'pid is not owned by this WebSocket connection').
 
+ws_require_send_target(_, Principal, _) :-
+    principal_has_capability(Principal, internal_transport), !.
 ws_require_send_target(_Queue, _Principal, Name) :-
     atom(Name),
     ws_published_service_name(Name),
@@ -1247,11 +1261,13 @@ ws_require_send_target(_Queue, _Principal, Name) :-
 ws_require_send_target(Queue, Principal, Pid) :-
     ws_require_owned_actor(Queue, Principal, Pid).
 
-ws_require_owned_resource(_Queue, Principal, _Pid, _Kind, _Context, _Message) :-
+ws_require_owned_resource(Queue, Principal, Pid, _Kind, _Context, _Message) :-
     principal_has_capability(Principal, internal_transport),
-    !.
+    node_lifetime:connection_owns(Queue, Pid), !.
 ws_require_owned_resource(Queue, _Principal, Pid, _Kind, _Context, _Message) :-
     ws_owned_actor(Queue, Pid),
+    (node_lifetime:current_owner_context(_)
+    -> node_lifetime:connection_owns(Queue, Pid); true),
     !.
 ws_require_owned_resource(_Queue, Principal, Pid0, Kind, Context, Message) :-
     principal_id(Principal, PrincipalId),
@@ -1280,6 +1296,7 @@ ws_owned_actor(Queue, Pid) :-
     !.
 
 ws_kill_actor(Pid) :-
+    (node_lifetime:current_owner_context(_) -> node_lifetime:check_exit(Pid); true),
     retractall(actors:monitor(_, Pid, _)),
     ignore(catch(finish_activity(ws_actor, Pid, connection_closed), _, true)),
     forget_ws_actor_metadata(Pid),
@@ -1335,10 +1352,15 @@ current_ws_actor_infos(Infos) :-
 %   If ParentPid is a WebSocket-owned actor/session, reserve capacity for a
 %   nested child spawn so in-language spawn/3 uses the same WS ownership and
 %   limit accounting as direct /ws spawn commands.
+prepare_inherited_ws_actor_spawn(_, Options, none) :-
+    option(link(false), Options), !.
 prepare_inherited_ws_actor_spawn(ParentPid0, Options, Context) :-
     (   ws_inherited_spawn_parent(ParentPid0, Queue, Principal),
         ws_child_kind(Options, Kind)
-    ->  reserve_ws_actor_capacity(Principal, Reservation),
+    ->  catch(reserve_ws_actor_capacity(Principal, Reservation),
+              error(resource_limit_exceeded(_, _, _), _),
+              throw(error(resource_error(actors),
+                          context(actors:spawn/3, 'principal actor quota reached')))),
         Context = inherited_ws_actor(Queue, Principal, Reservation, Kind)
     ;   Context = none
     ).
@@ -1412,6 +1434,11 @@ admin_terminate_ws_actor(Pid, Reason) :-
 %!  ws_send_error(+Queue, +Error) is det.
 %
 %   Send a protocol-level error to the browser.
+ws_send_command_reply(Queue, Dict, Reply) :-
+    (is_dict(Dict), get_dict(request_id, Dict, Id)
+    -> thread_send_message(Queue, spawn_reply(Id, Reply))
+    ; thread_send_message(Queue, Reply)).
+
 ws_send_error(Queue, Error) :-
     thread_send_message(Queue, error(Error)).
 
@@ -1808,4 +1835,5 @@ ws_parse_enabled_atom(Value, _) :-
 %   is protected regardless of how the text was obtained.
 ws_read_term(Field, Text, Term) :-
     check_term_text_size(Field, Text),
-    read_term_from_atom(Text, Term, [module(node_ws), double_quotes(string)]).
+    read_term_from_atom(Text, Term, [module(node_ws), double_quotes(string)]),
+    node_lifetime:check_term(Term).

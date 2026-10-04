@@ -37,6 +37,7 @@ inline.
 :- use_module(node_session, []).
 :- use_module(node_session_limits, [apply_node_ptcp_limits/2]).
 :- use_module(node_ws, []).
+:- use_module(node_lifetime, []).
 :- use_module(node_log, [log_event/1]).
 
 :- op(200, xfx, @).
@@ -73,7 +74,10 @@ actors:hook_spawn_options(Goal, Options0, Options) :-
     % deliberately recognises these local predicates as actor I/O, whereas
     % importing the shared precompiled implementation would expose them as
     % ordinary stream-I/O predicates during goal validation.
-    Options = [isolation_io(generated)|ModuleOptions].
+    node_lifetime:rehome_options([isolation_io(generated)|ModuleOptions], Options).
+actors:hook_spawn_options(_, Options0, Options) :-
+    node_lifetime:rehome_options(Options0, Options),
+    Options0 \== Options.
 
 internal_spawn_option(inherit_goal_module(_)).
 internal_spawn_option(isolation_io(_)).
@@ -115,9 +119,12 @@ glue_goal_module(Module, _, Module).
 %  profile into the child thread.
 :- multifile actors:hook_spawn_context/2.
 actors:hook_spawn_context(StartGoal0, StartGoal) :-
+    StartGoal0 = actors:start(_, LocalPid, _, _),
+    (node_lifetime:wrap_actor_context(LocalPid, StartGoal0, OwnedStart)
+    -> true; OwnedStart = StartGoal0),
     (   current_node_port(NodePort)
-    ->  StartGoal1 = node_runtime_state:with_node_port_context(NodePort, StartGoal0)
-    ;   StartGoal1 = StartGoal0
+    ->  StartGoal1 = node_runtime_state:with_node_port_context(NodePort, OwnedStart)
+    ;   StartGoal1 = OwnedStart
     ),
     (   current_public_execution_namespace(Namespace)
     ->  StartGoal2 = node_execution_context:with_public_execution_namespace(Namespace, StartGoal1)
@@ -296,7 +303,9 @@ distribution:hook_event(Event) :-
 %  with_node_port_context wrap in actor.pl's remote_connection).
 :- multifile distribution:hook_connection_context/2.
 distribution:hook_connection_context(Goal0,
-        node_runtime_state:with_node_port_context(Port, Goal0)) :-
+        node_runtime_state:with_node_port_context(Port,
+            node_lifetime:with_websocket_lease(Socket, Goal0))) :-
+    Goal0 = distribution:remote_ws_reader(_, Socket, _),
     current_node_port(Port).
 
 %  WS endpoint overrides for the in-process test harness (was
@@ -305,3 +314,42 @@ distribution:hook_connection_context(Goal0,
 distribution:hook_ws_endpoint_override(NodeURL, WsURL) :-
     current_node_value(ws_endpoint_overrides, Overrides),
     memberchk(NodeURL-WsURL, Overrides).
+
+% D7-D8: node policy stays above the stand-alone actor layer.
+:- multifile actors:hook_check_spawn/1, actors:hook_check_exit/1,
+             actors:hook_check_monitor/1, actors:hook_admit_spawn/3,
+             actors:hook_deliver_message/3, actors:hook_message_consumed/0,
+             actors:hook_stop/1, actors:hook_spawn_failed/1,
+             distribution:hook_command_context/2.
+actors:hook_check_spawn(Options) :- node_lifetime:check_spawn(Options).
+actors:hook_check_exit(Pid) :- node_lifetime:check_exit(Pid).
+actors:hook_check_monitor(Pid) :- node_lifetime:check_monitor(Pid).
+actors:hook_admit_spawn(Pid, _, Options) :- node_lifetime:admit_actor(Pid, Options).
+actors:hook_deliver_message(Pid, Thread, Message) :-
+    node_lifetime:deliver_message(Pid, Thread, Message).
+actors:hook_message_consumed :- node_lifetime:message_consumed.
+actors:hook_stop(Pid) :- node_lifetime:forget_actor(Pid).
+actors:hook_spawn_failed(Pid) :- node_lifetime:forget_actor(Pid).
+distribution:hook_command_context(Command0, Command) :-
+    node_lifetime:command_context(Command0, Command).
+
+actors:hook_send('$node_log', Message) :- node_lifetime:node_log_output(Message).
+
+:- multifile actors:hook_check_send/2,
+             distribution:hook_remote_actor/1, distribution:hook_remote_retired/1.
+actors:hook_check_send(_, Message) :-
+    (node_lifetime:current_owner_context(_) -> node_lifetime:check_term(Message); true).
+distribution:hook_remote_actor(Pid) :- node_lifetime:remember_remote(Pid).
+distribution:hook_remote_retired(Pid) :- node_lifetime:forget_actor(Pid).
+
+:- multifile node_profile_policy:hook_check_source_term/1.
+node_profile_policy:hook_check_source_term(Term) :- node_lifetime:check_term(Term).
+
+:- multifile distribution:hook_remote_spawn_start/1.
+distribution:hook_remote_spawn_start(Node) :- node_lifetime:remember_route(Node).
+
+:- multifile distribution:hook_transport_options/2.
+distribution:hook_transport_options(NodeURL, [request_header('Authorization'=Bearer)]) :-
+    current_node_value(peer_transport_tokens, Credentials),
+    memberchk(NodeURL-Token, Credentials),
+    format(atom(Bearer), 'Bearer ~w', [Token]).

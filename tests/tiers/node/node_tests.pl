@@ -2531,7 +2531,7 @@ test(dev_admin_ws_actor_limit_is_enforced,
 
 test(private_ws_actor_limit_counts_nested_spawn_from_toplevel_call,
      true((Type == "error",
-           sub_string(Data, _, _, _, "Too many active WebSocket actors")))) :-
+           sub_string(Data, _, _, _, "Not enough resources: actors")))) :-
     alice_full_principal_option(AlicePolicy),
     with_node_server_options(
         [auth(private), AlicePolicy, max_ws_actors_per_principal(2)],
@@ -2549,7 +2549,7 @@ test(private_ws_actor_limit_counts_nested_spawn_from_toplevel_call,
                 ws_send_json(WebSocket, json{
                     command:toplevel_call,
                     pid:Pid,
-                    goal:"spawn(sleep(5), _P1, [link(false)]), spawn(sleep(5), _P2, [link(false)])",
+                    goal:"spawn(sleep(5), _P1), spawn(sleep(5), _P2)",
                     template:"true"
                 }),
                 ws_receive_json(WebSocket, Reply),
@@ -5389,7 +5389,7 @@ test(public_profile_server_framework_start_keeps_module,
             setup_call_cleanup(
                 server_actor:server_spawn(test_node:node_test_server_callback,
                                           7, Pid,
-                                          [monitor(true), link(false)]),
+                                          [monitor(true), link(true)]),
                 server_actor:server_request(Pid, get, Response),
                 server_actor:server_halt(Pid, _)
             ))).
@@ -5400,7 +5400,7 @@ test(public_profile_supervisor_framework_start_keeps_module,
         with_public_execution_profile(actor,
             setup_call_cleanup(
                 supervisor_actor:supervisor_spawn([], Pid,
-                                                  [monitor(true), link(false)]),
+                                                  [monitor(true), link(true)]),
                 supervisor_actor:supervisor_count_children(Pid, Counts),
                 supervisor_actor:supervisor_halt(Pid)
             ))).
@@ -5409,6 +5409,9 @@ test(public_profile_supervisor_framework_start_keeps_module,
 % goal_expansion defined by the client would otherwise fire while the loader
 % reads the rest of the client's own source and rewrite a benign-looking
 % body into a forbidden call, before the per-goal sandbox check runs.
+% D7 permits detachment only to the node owner. Existing public source-loading,
+% visibility and quota tests therefore use link(true) so they still exercise
+% their original feature; rejection of link(false) is tested independently.
 test(client_source_cannot_install_goal_expansion,
      true(sub_string(Data, _, _, _, "expansion_hook"))) :-
     with_node_server_options([sandbox(blacklist), profile(actor)], URI,
@@ -5420,6 +5423,16 @@ test(client_source_cannot_install_goal_expansion,
             assertion(Type == "error"),
             Data = JSON.get(data)
         )).
+
+test(client_source_cannot_install_four_argument_expansion,
+     [forall(member(Name, [term_expansion, goal_expansion]))]) :-
+    with_node_server_options([sandbox(blacklist), profile(actor)], URI,
+        (format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+         format(string(Src), ":- multifile ~w/4.\n~w(a,b,c,d).", [Name, Name]),
+         format(string(Opts), "[session(true),src_text(~q)]", [Src]),
+         read_json_post(SpawnURL, _{options:Opts}, JSON),
+         assertion(JSON.get(type) == "error"),
+         assertion(sub_string(JSON.get(data), _, _, _, "expansion_hook")))).
 
 test(client_source_cannot_declare_term_expansion_multifile,
      true(sub_string(Data, _, _, _, "expansion_hook"))) :-
@@ -7475,7 +7488,7 @@ test(public_actor_client_actors_list_is_namespace_scoped,
                     ws_send_json(WS1, json{
                         command:toplevel_call,
                         pid:ToplevelPid1,
-                        goal:"self(Self), spawn(sleep(5), Child, [link(false)]), actors(Pids)",
+                        goal:"self(Self), spawn(sleep(5), Child, [link(true)]), actors(Pids)",
                         template:"Self-Child-Pids"
                     }),
                     ws_receive_json(WS1, Reply),
@@ -7557,7 +7570,7 @@ test(public_actor_client_listing_does_not_accept_an_actor_pid,
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:ToplevelPid,
-                    goal:"spawn(receive({stop -> true}), Child, [src_text(\"hello(a).\"), link(false)]), Child=Child",
+                    goal:"spawn(receive({stop -> true}), Child, [src_text(\"hello(a).\"), link(true)]), Child=Child",
                     template:"Child"
                 }),
                 ws_receive_json(WS, SpawnChildReply),
@@ -8412,7 +8425,7 @@ test(sandbox_on_ws_toplevel_call_allows_nested_spawn_load_uri,
                         ws_receive_json(WS, Spawned),
                         get_dict(pid, Spawned, Pid),
                         format(string(GoalText),
-                               "self(Self), spawn(child(Self), _Pid, [src_uri(~q), link(false)]), receive({loaded -> true})",
+                               "self(Self), spawn(child(Self), _Pid, [src_uri(~q), link(true)]), receive({loaded -> true})",
                                [File]),
                         ws_send_json(WS, json{
                             command:toplevel_call,
@@ -8444,7 +8457,7 @@ test(sandbox_on_ws_toplevel_call_allows_computed_nested_spawn_load_list,
                 ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
-                GoalText = "findall(s(N), between(1,3,N), Ns), spawn(true, _Pid, [src_list(Ns), link(false)])",
+                GoalText = "findall(s(N), between(1,3,N), Ns), spawn(true, _Pid, [src_list(Ns), link(true)])",
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,
@@ -8471,7 +8484,7 @@ test(sandbox_on_ws_toplevel_call_reports_size_error_for_computed_nested_spawn_lo
                 ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
-                GoalText = "findall(s(N), between(1,2000,N), Ns), spawn(receive({}), _Pid, [src_list(Ns), link(false)])",
+                GoalText = "findall(s(N), between(1,2000,N), Ns), spawn(receive({}), _Pid, [src_list(Ns), link(true)])",
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,
@@ -8502,7 +8515,7 @@ test(sandbox_on_ws_toplevel_call_repeats_size_error_for_computed_nested_spawn_lo
                 ws_send_json(WS, json{command:toplevel_spawn, options:"[session(true)]"}),
                 ws_receive_json(WS, Spawned),
                 get_dict(pid, Spawned, Pid),
-                GoalText = "findall(s(N), between(1,250,N), Ns), spawn(receive({}), _Pid, [src_list(Ns), link(false)])",
+                GoalText = "findall(s(N), between(1,250,N), Ns), spawn(receive({}), _Pid, [src_list(Ns), link(true)])",
                 ws_send_json(WS, json{
                     command:toplevel_call,
                     pid:Pid,

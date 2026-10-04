@@ -204,3 +204,59 @@ the same hole and is **not** re-cut. Pinned by
   acknowledges an abort that reaches an idle toplevel, as the native node
   already did; a one-shot toplevel ends. The manual and DEVIATIONS no longer
   describe the s1 case as silent.
+
+## Lifetime, authority and compact identities (D7/D8, 2026-10-04)
+
+- Public application code may spawn only linked children. `link(false)` is
+  reserved for the node owner; detached owner work sends inherited output to
+  the node log. Transport-created roots remain bound to their connection or
+  HTTP session. Existing source-loading and visibility tests now use linked
+  children to preserve their original purpose; independent tests reject
+  unauthorized detachment.
+- Actor ownership, delegated lineage and resource accounts are recorded
+  separately from pids. Sends and monitors remain open; exit is confined to
+  the caller's ownership tree. Host thread aliases and numeric host thread
+  ids never become public actor authority. Demonitor removes only the
+  calling actor's subscription.
+- Finite defaults bound principal actors (32), application mailbox messages
+  (1,024), nesting depth (128), and aggregate sampled CPU (30 seconds per
+  60-second window). Flat list length is not nesting depth; cycles are
+  rejected. Runtime monitor notifications bypass application admission
+  limits, are still counted until consumed, and cannot prevent retirement.
+- Anonymous HTTP calls, sessions and WebSocket connections have independent
+  lifetime accounts. Authenticated principals share an account across their
+  connections. CPU watcher threads stop when no local actors remain;
+  ended lineage and remote ownership records are reclaimed. Unused CPU
+  accounts and their account tokens expire after the accounting window.
+- Trusted peer transports carry separate lineage and account tokens. Public
+  peers may authenticate with an issued bearer token granting
+  `internal_transport`, configured per exact destination URL through
+  `peer_transport_tokens([NodeURL-Token])`. Untrusted browsers cannot supply
+  lineage. Header-only transport claims remain restricted to trusted local
+  or private peers.
+- Visible actor and reference identities are CSPRNG-selected ten-digit
+  integers and are never reissued during a node or browser coordinator's
+  lifetime. JSON carries these compact ids as numbers. Issued-id registries
+  are intentionally retained; they are distinct from expired ownership
+  metadata. Hidden transport tokens remain 128 bits. Book examples use
+  eight digits and recommend larger production identities.
+
+## Review repairs (2026-10-04)
+
+- Browser abort acknowledgements normalize canonical pid text before routing.
+  Privileged cancellation interrupts message, RPC, input and send waits;
+  application messages cannot impersonate that control path. Each abort is
+  acknowledged, including during recovery or a concurrent time-limit report.
+- Native toplevels queue abort requests independently of host signals and
+  protect recovery. Rapid requests, including during startup, retain their
+  acknowledgements and leave persistent toplevels usable.
+- HTTP event replay records are removed with their session. Sequencing covers
+  event-consuming endpoints; spawn and halt have no sequence header, and
+  retrying spawn creates another session.
+- Client source and declarations may define neither two-argument nor
+  four-argument term or goal expansion hooks.
+
+Pinned by `lifetime_authority_tests.plt`, the native toplevel and node tests,
+`tests/wasm/swi_wasm_contracts.js`, and the browser smoke suites. Running-time,
+abort and termination controls bypass client recovery; inference exhaustion
+remains an ordinary catchable exception.

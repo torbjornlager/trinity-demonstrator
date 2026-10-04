@@ -45,10 +45,11 @@ http_status(URL, Status) :-
 :- user:load_files('node/statechart_trace_options_tests.plt', []).
 :- user:load_files('node/cross_node_lifecycle_tests.plt', []).
 :- user:load_files('node/node_controller_tests.plt', []).
+:- user:load_files('node/lifetime_authority_tests.plt', []).
 
 run_tier :-
     layer_honesty,
-    run_tests([ node,
+    run_tests([ lifetime_authority, node,
                 goal_walker,
                 generic_actor_api,
                 actor_remote_exit_failure,

@@ -162,10 +162,16 @@ json_pid_value_canonical(Id@Node0, JSONPid) :-
     ),
     normalize_node_url(Self0, Self),
     (   Node == Self
-    ->  JSONPid = Id
+    ->  json_integer_identity(Id, JSONPid)
     ;   term_to_atom(Id@Node, JSONPid)
     ).
+json_pid_value_canonical(Pid, JSONPid) :-
+    integer(Pid), !, json_integer_identity(Pid, JSONPid).
 json_pid_value_canonical(Pid, Pid).
+
+json_integer_identity(Id, Text) :-
+    abs(Id) > 9007199254740991, !, number_string(Id, Text).
+json_integer_identity(Id, Id).
 
 
 %!  error_to_json_dict(+ErrorTerm, +JSON0:dict, -JSON:dict) is det.

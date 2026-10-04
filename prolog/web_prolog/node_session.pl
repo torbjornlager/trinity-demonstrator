@@ -213,6 +213,8 @@ with_isotope_session_public_execution_profile(Pid0, Goal) :-
 %!  cleanup_isotope_session(+Pid) is det.
 %
 %   Tear down queue bookkeeping and remembered source for a session.
+:- multifile hook_session_cleanup/1.
+
 cleanup_isotope_session(Pid) :-
     session_pid_key(Pid, SessionPid),
     ignore(catch(finish_activity(isotope_session, SessionPid, cleanup),
@@ -230,7 +232,8 @@ cleanup_isotope_session(Pid) :-
     retractall(isotope_ready(SessionPid)),
     retractall(isotope_pending_prompt(SessionPid, _)),
     forget_isotope_session_owner(SessionPid),
-    clear_session_bindings(SessionPid).
+    clear_session_bindings(SessionPid),
+    forall(hook_session_cleanup(SessionPid), true).
 
 
 %!  isotope_session_queue(+Pid, -Queue) is det.

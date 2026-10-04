@@ -27,12 +27,14 @@ const CLIENT = "9999999999";
 function bootWorker() {
   const posted = [];
   const sends = [];
+  const control = { hold: [], held: [] };
   let S = null;
   global.self = {
     postMessage: function(m) {
       posted.push(m);
       if (m.type === "request") {
         if (m.action === "send") sends.push({ to: m.to, message: m.message });
+        if (control.hold.includes(m.action)) { control.held.push(m); return; }
         setImmediate(function() {
           S.onmessage({ data: { command: "reply", id: m.id, ok: true, result: true } });
         });
@@ -51,7 +53,7 @@ function bootWorker() {
   };
   (0, eval)(fs.readFileSync(path.join(ROOT, "web", "swi_wasm_actor_worker.js"), "utf8"));
   S = global.self;
-  return { S: S, posted: posted, sends: sends };
+  return { S: S, posted: posted, sends: sends, control: control };
 }
 
 const sleep = function(ms) { return new Promise(function(r) { setTimeout(r, ms); }); };
@@ -244,6 +246,81 @@ const scenarios = {
     check(/\[kept\],false\)$/.test(m[0]), "control exception propagates, message kept: " + m[0]);
   },
 
+  async abort_during_rpc_wait(W, check) {
+    await startToplevel(W);
+    W.control.hold = ["rpc"];
+    deliver(W, "'$call'(rpc('https://example.org', p(X)),[template(X)])");
+    check(await until(() => W.control.held.length > 0), "RPC request is pending");
+    abort(W);
+    await nSends(W, 1);
+    deliver(W, "'$call'(Y=ok,[template(Y)])");
+    const m = await nSends(W, 2);
+    check(/^abort\(/.test(m[0] || "") && /\[ok\],false\)/.test(m[1] || ""), "abort cancels RPC and next call survives");
+  },
+
+  async abort_during_input_wait(W, check) {
+    await startToplevel(W);
+    W.control.hold = ["input"];
+    deliver(W, "'$call'((P := actorInput(\"|:\"), swi_wasm_actor_bridge:actor_await(P,X)),[template(X)])");
+    check(await until(() => W.control.held.length > 0), "input request is pending");
+    abort(W);
+    await nSends(W, 1);
+    deliver(W, "'$call'(Y=ok,[template(Y)])");
+    const m = await nSends(W, 2);
+    check(/^abort\(/.test(m[0] || "") && /\[ok\],false\)/.test(m[1] || ""), "input cancels and next call survives");
+  },
+
+  async abort_during_send_wait(W, check) {
+    await startToplevel(W);
+    W.control.hold = ["send"];
+    deliver(W, "'$call'(send(9999999999@localhost, payload),[])");
+    check(await until(() => W.control.held.length > 0), "send request is pending");
+    W.control.hold = [];
+    abort(W);
+    await nSends(W, 2);
+    deliver(W, "'$call'(Y=ok,[template(Y)])");
+    const m = await nSends(W, 3);
+    check(/^abort\(/.test(m[1] || "") && /\[ok\],false\)/.test(m[2] || ""), "send wait cancels and next call survives");
+  },
+
+  async second_abort_during_acknowledgement(W, check) {
+    await startToplevel(W);
+    W.control.hold = ["send"];
+    abort(W);
+    await until(() => W.control.held.length === 1);
+    abort(W);
+    W.control.hold = [];
+    const ack = W.control.held.shift();
+    W.S.onmessage({data:{command:"reply",id:ack.id,ok:true,result:true}});
+    await nSends(W, 2);
+    deliver(W, "'$call'(Y=ok,[template(Y)])");
+    const m = await nSends(W, 3);
+    check(m.filter(x => /^abort\(/.test(x)).length === 2, "both aborts acknowledged");
+    check(/\[ok\],false\)/.test(m[2] || ""), "persistent toplevel still responds");
+  },
+
+  async application_interrupt_atom_is_data(W, check) {
+    await startToplevel(W);
+    deliver(W, "'$call'(receive({X -> true}),[template(X)])");
+    await sleep(100);
+    deliver(W, "'$wasm_interrupt'");
+    const m = await nSends(W, 1);
+    check(/success\(.*\['\$wasm_interrupt'\],false\)/.test(m[0] || ""), "reserved-looking atom is ordinary data: " + m[0]);
+  },
+
+  async abort_during_time_limit_report(W, check) {
+    await startToplevel(W, "ptcp_options(true, 0.15, infinite)");
+    W.control.hold = ["send"];
+    deliver(W, "'$call'(receive({never -> true}),[])");
+    check(await until(() => W.control.held.length > 0), "time limit report is pending");
+    abort(W);
+    W.control.hold = [];
+    const report = W.control.held.shift();
+    W.S.onmessage({data:{command:"reply",id:report.id,ok:true,result:true}});
+    const m = await nSends(W, 2);
+    check(/resource_error\(time\)/.test(m[0] || "") && /^abort\(/.test(m[1] || ""), "time report and abort acknowledgement both delivered");
+  },
+
   async exit_first_reason_wins(W, check) {
     await startActor(W, "(catch(exit(first), _, true), exit(second))");
     await until(function() { return done(W).length > 0; });
@@ -261,6 +338,8 @@ async function runOne(name) {
     console.log((cond ? "  ok   " : "  FAIL ") + name + ": " + label);
   };
   await scenarios[name](W, check);
+  W.sends.filter(s => /^abort\(/.test(s.message)).forEach(s =>
+    check(s.to === CLIENT, "abort recipient is routable: " + s.to));
   return failures;
 }
 

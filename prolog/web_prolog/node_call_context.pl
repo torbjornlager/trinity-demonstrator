@@ -14,6 +14,7 @@ Shared request parsing and execution context normalization for stateless
 :- op(200, xfx, @).
 :- op(1000, xfy, if).
 
+:- use_module(node_lifetime, [check_term/1]).
 :- use_module(library(apply)).
 :- use_module(library(error)).
 :- use_module(library(http/http_parameters)).
@@ -99,6 +100,7 @@ parse_call_options_context(GoalAtom, OptionsAtom, Goal, Template,
                           double_quotes(string),
                           variable_names(Bindings)
                         ]),
+    check_term(Goal+Options0),
     must_be(list, Options0),
     maplist(validate_call_option, Options0),
     option(template(Template0), Options0, Goal),
@@ -147,7 +149,8 @@ parse_goal_template(GoalAtom, TemplateAtom, Goal, Template, Bindings) :-
                         [ module(actor),
                           double_quotes(string),
                           variable_names(Bindings)
-                        ]).
+                        ]),
+    check_term(Goal+Template).
 
 %!  fix_template(+Format, +Goal, +Template0, +Bindings, -Template) is det.
 %

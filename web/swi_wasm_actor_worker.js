@@ -13,6 +13,9 @@
   var Module = null;
   var exitReason = null;
   var abortRequested = false;
+  var pendingAbortCount = 0;
+  var recoveringPtcp = false;
+  var activeAwait = null;
   var ptcpTimeLimitRequested = false;
   var ptcpTimeLimitTimer = null;
   var ptcpTimeLimitTargetText = "";
@@ -293,6 +296,10 @@
 
   function localizePid(pidText) {
     var text = String(pidText || "").trim();
+    // wire_text/2 uses canonical prefix notation for the @/2 operator.
+    var canonical = /^@\(([^,]+),\s*(.+)\)$/.exec(text);
+    if (canonical) text = canonical[1].trim() + "@" + canonical[2].trim();
+    if (/^terminal\s*@\s*'?localhost'?$/.test(text)) return "terminal";
     if (/^main\s*@\s*'?localhost'?$/.test(text)) return "main";
     var match = /^([1-9][0-9]{9})\s*@\s*'?localhost'?$/.exec(text);
     return match ? match[1] : text;
@@ -403,22 +410,25 @@
     return ref;
   }
 
+  var issuedPromiseRefs = Object.create(null);
   function makePromiseRef() {
+    if (!self.crypto || typeof self.crypto.getRandomValues !== "function") {
+      throw new Error("Secure randomness is required for promise references");
+    }
     var ref;
-    var min = 1000000000;
-    // Keep the value within SWI-WASM's tagged-integer range while retaining
-    // the canonical ten-digit opaque-reference presentation.
-    var span = 73741824;
     do {
-      if (self.crypto && typeof self.crypto.getRandomValues === "function") {
-        var values = new Uint32Array(1);
+      var value;
+      do {
+        var values = new Uint8Array(5);
         self.crypto.getRandomValues(values);
-        ref = min + (values[0] % span);
-      } else {
-        ref = min + Math.floor(Math.random() * span);
-      }
-      ref = Math.floor(ref);
-    } while (Object.prototype.hasOwnProperty.call(pendingRpcPromises, String(ref)));
+        value = 0;
+        for (var i = 0; i < values.length; i++) {
+          value = value * 256 + values[i];
+        }
+      } while (value >= 1098000000000);
+      ref = String(1000000000 + (value % 9000000000));
+    } while (issuedPromiseRefs[ref]);
+    issuedPromiseRefs[ref] = true;
     return ref;
   }
 
@@ -427,7 +437,7 @@
   }
 
   function actorPromiseWait(refValue, timeoutSeconds) {
-    var ref = Number(refValue);
+    var ref = String(refValue);
     var pending = pendingRpcPromises[ref];
     var timeout = Number(timeoutSeconds);
     if (!pending) return Promise.resolve(null);
@@ -531,13 +541,42 @@
     return actorRequest("abort", { pid: target });
   }
 
-  // A toplevel blocked in receive is woken with an interrupt text, on which
-  // it aborts its own goal; a running goal is aborted by the engine.  An
-  // engine abort requested while Prolog awaits a JavaScript promise would
-  // only take effect at an arbitrary later point.
+  // Interrupt an await at the privileged bridge boundary, never by injecting
+  // an application mailbox message or by returning a fake reply to the goal.
+  function actorAwait(promise) {
+    if (!isPtcpGoal()) return promise;
+    return new Promise(function(resolve, reject) {
+      var waiting = { interrupt: function() { resolve(null); } };
+      activeAwait = waiting;
+      function finish(callback, value) {
+        if (activeAwait === waiting) activeAwait = null;
+        callback(value);
+      }
+      Promise.resolve(promise).then(function(value) {
+        finish(resolve, value);
+      }, function(error) { finish(reject, error); });
+      if (abortRequested || ptcpTimeLimitRequested) waiting.interrupt();
+    });
+  }
+
+  function actorControlPending() {
+    return abortRequested || ptcpTimeLimitRequested;
+  }
+
   function interruptGoal() {
-    if (waiters.length > 0) {
-      waiters.shift().resolve("'$wasm_interrupt'");
+    if (activeAwait) {
+      var waiting = activeAwait;
+      activeAwait = null;
+      // Remove the old receive waiter before the next query can receive.
+      waiters.splice(0).forEach(function(w) {
+        if (w.timer !== null) clearTimeout(w.timer);
+      });
+      Object.keys(pendingRequests).forEach(function(id) {
+        var request = pendingRequests[id];
+        delete pendingRequests[id];
+        request.reject(new Error("query interrupted"));
+      });
+      waiting.interrupt();
       return true;
     }
     if (Prolog && typeof Prolog.abort === "function") {
@@ -555,8 +594,9 @@
       if (exitReason !== null) {
         return true;
       }
+      pendingAbortCount++;
       abortRequested = true;
-      return interruptGoal();
+      return recoveringPtcp ? true : interruptGoal();
     }
     abortRequested = true;
     if (Prolog && typeof Prolog.abort === "function") {
@@ -658,22 +698,27 @@
 
   function restartAbortedPtcp(error) {
     var timedOut = ptcpTimeLimitRequested;
-    // The acknowledgement goes to the client of the aborted query; an abort
-    // of an idle toplevel goes to its most recent client, else its target.
     var clientText = ptcpClientText || ptcpLastClientText || ptcpTargetText;
+    recoveringPtcp = true;
     actorDisarmTimeLimit();
     ptcpTimeLimitRequested = false;
-    abortRequested = false;
     ptcpClientText = "";
-    return (timedOut ? sendPtcpTimeLimitError() : sendAbortAcknowledgement(clientText)).then(function() {
-      post("aborted", error === undefined ? {} : { error: String(error) });
-      if (ptcpSessionText === "false") {
-        // A one-shot toplevel ends instead of returning to s1.
-        post("done", { reason: "true" });
-        return undefined;
-      }
-      return runGoal(currentGoalText);
-    });
+    function acknowledgePending() {
+      if (pendingAbortCount === 0) return Promise.resolve(true);
+      pendingAbortCount--;
+      return sendAbortAcknowledgement(clientText).then(acknowledgePending);
+    }
+    return (timedOut ? sendPtcpTimeLimitError() : Promise.resolve(true))
+      .then(acknowledgePending).then(function() {
+        abortRequested = false;
+        recoveringPtcp = false;
+        post("aborted", error === undefined ? {} : { error: String(error) });
+        if (ptcpSessionText === "false") {
+          post("done", { reason: "true" });
+          return undefined;
+        }
+        return runGoal(currentGoalText);
+      });
   }
 
   function actorTerminalOutput(text, termText) {
@@ -839,6 +884,8 @@
     return actorRequest("input", { prompt: String(promptText || "") });
   }
 
+  self.actorAwait = actorAwait;
+  self.actorControlPending = actorControlPending;
   self.actorMakeRef = actorMakeRef;
   self.actorReceive = actorReceive;
   self.actorSend = actorSend;
@@ -1003,7 +1050,7 @@
       "    (   Node == localhost",
       "    ->  collect_spawn_source(Options, ExtraSource),",
       "        PidPromise := actorReservePid(),",
-      "        await(PidPromise, PidText),",
+      "        actor_await(PidPromise, PidText),",
       "        term_string(LocalPid, PidText),",
       "        Pid = LocalPid@localhost,",
       "        wire_text(Goal, GoalText),",
@@ -1011,13 +1058,13 @@
       "        option(link(Link), Options, true),",
       "        term_string(Link, LinkText),",
       "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource, #NameText, #LinkText),",
-      "        await(Promise, SpawnedText),",
+      "        actor_await(Promise, SpawnedText),",
       "        term_string(SpawnedPid, SpawnedText), SpawnedPid == LocalPid",
       "    ;   collect_spawn_source(Options, ExtraSource),",
       "        term_string(Node, NodeText),",
       "        wire_text(Goal, GoalText),",
       "        Promise := actorRemoteSpawn(#NodeText, #GoalText, #ExtraSource),",
-      "        await(Promise, PidText),",
+      "        actor_await(Promise, PidText),",
       "        term_string(Pid, PidText)",
       "    ),",
       "    install_spawn_monitor(Pid, Options).",
@@ -1131,11 +1178,11 @@
       "    option(node(Node), Options, localhost),",
       "    (   Node == localhost",
       "    ->  Promise := actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText),",
-      "        await(Promise, ResultText), statechart_spawn_worker_result(ResultText, Pid)",
+      "        actor_await(Promise, ResultText), statechart_spawn_worker_result(ResultText, Pid)",
       "    ;   statechart_remote_goal(SourceKind, Source, Trace, Options, Goal),",
       "        term_string(Goal, GoalText), term_string(Node, NodeText),",
       "        Promise := actorRemoteSpawn(#NodeText, #GoalText, #SupportSource),",
-      "        await(Promise, PidText), term_string(Pid, PidText),",
+      "        actor_await(Promise, PidText), term_string(Pid, PidText),",
       "        maybe_register_toplevel_name(Options, Pid)",
       "    ),",
       "    install_spawn_monitor(Pid, Options).",
@@ -1241,7 +1288,7 @@
       "",
       "worker_rpc_page(NodeText, GoalText, TemplateText, Template, Offset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout) :-",
       "    Promise := actorRpc(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout),",
-      "    await(Promise, ResponseText),",
+      "    actor_await(Promise, ResponseText),",
       "    (   catch(wire_read(ResponseText, Response), _, fail)",
       "    ->  true",
       "    ;   throw(rpc_error(parse_failed))",
@@ -1271,14 +1318,16 @@
       "    solution_limit(Options, Limit),",
       "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
       "    collect_rpc_load_text(Options, LoadText),",
-      "    Ref := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout).",
+      "    RefText := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout),",
+      "    number_string(Ref, RefText).",
       "",
       "yield(Ref, Message) :- yield(Ref, Message, []).",
       "",
       "yield(Ref, Message, Options) :-",
       "    option(timeout(Timeout), Options, -1),",
-      "    Promise := actorPromiseWait(#Ref, #Timeout),",
-      "    await(Promise, ResponseText),",
+      "    number_string(Ref, RefText),",
+      "    Promise := actorPromiseWait(#RefText, #Timeout),",
+      "    actor_await(Promise, ResponseText),",
       "    (   ResponseText = null",
       "    ->  option(on_timeout(OnTimeout), Options, true),",
       "        call(OnTimeout)",
@@ -1330,7 +1379,7 @@
       "    source_option_member(src_uri(URI), Options),",
       "    term_string(URI, URIText),",
       "    Promise := actorLoadUri(#URIText),",
-      "    await(Promise, Text),",
+      "    actor_await(Promise, Text),",
       "    (Text = null -> throw(rpc_error(fetch_failed)) ; true).",
       "",
       "install_spawn_monitor(Pid, Options) :-",
@@ -1338,17 +1387,17 @@
       "    !,",
       "    term_string(Pid, PidText),",
       "    Promise := actorMonitor(#PidText, #PidText),",
-      "    await(Promise, _).",
+      "    actor_await(Promise, _).",
       "install_spawn_monitor(_, _).",
       "",
       "actors(Pids) :-",
       "    Promise := actorActors(),",
-      "    await(Promise, PidsText),",
+      "    actor_await(Promise, PidsText),",
       "    term_string(Pids, PidsText).",
       "",
       "make_ref(Ref) :-",
       "    Promise := actorMakeRef(),",
-      "    await(Promise, RefText),",
+      "    actor_await(Promise, RefText),",
       "    term_string(Ref, RefText).",
       "",
       "canonical_pid(Pid@localhost, Pid@localhost) :- integer(Pid), !.",
@@ -1408,7 +1457,7 @@
       "    term_string(Pid, PidText),",
       "    wire_text(Message, MessageText),",
       "    Promise := actorSend(#PidText, #MessageText),",
-      "    await(Promise, Sent),",
+      "    actor_await(Promise, Sent),",
       "    (   Sent == true",
       "    ->  true",
       "    ;   throw(error(existence_error(actor, Pid), send/2))",
@@ -1423,7 +1472,7 @@
       "    wire_text(Message, MessageText),",
       "    term_string(Id, IdText),",
       "    Promise := actorSendDelayed(#PidText, #MessageText, #Delay, #IdText),",
-      "    await(Promise, Sent),",
+      "    actor_await(Promise, Sent),",
       "    Sent == true.",
       "send(Pid, Message, _) :- send(Pid, Message).",
       "",
@@ -1437,7 +1486,7 @@
       "cancel(Id) :-",
       "    term_string(Id, IdText),",
       "    Promise := actorCancel(#IdText),",
-      "    await(Promise, Cancelled),",
+      "    actor_await(Promise, Cancelled),",
       "    Cancelled == true.",
       "",
       "monitor(Pid, Ref) :-",
@@ -1445,7 +1494,7 @@
       "    term_string(Pid, PidText),",
       "    term_string(Ref, RefText),",
       "    Promise := actorMonitor(#PidText, #RefText),",
-      "    await(Promise, Monitored),",
+      "    actor_await(Promise, Monitored),",
       "    Monitored == true.",
       "",
       "demonitor(Ref) :- demonitor(Ref, []).",
@@ -1453,7 +1502,7 @@
       "demonitor(Ref, Options) :-",
       "    term_string(Ref, RefText),",
       "    Promise := actorDemonitor(#RefText),",
-      "    await(Promise, _),",
+      "    actor_await(Promise, _),",
       "    (   member(flush, Options)",
       "    ->  flush_down(Ref)",
       "    ;   true",
@@ -1478,7 +1527,7 @@
       "    ;   term_string(Pid, PidText),",
       "        term_string(Reason, ReasonText),",
       "        Promise := actorExit(#PidText, #ReasonText),",
-      "        await(Promise, Exited),",
+      "        actor_await(Promise, Exited),",
       "        Exited == true",
       "    ).",
       "",
@@ -1489,7 +1538,7 @@
       "    term_string(Name, NameText),",
       "    term_string(Pid, PidText),",
       "    Promise := actorRegister(#Kind, #NameText, #PidText),",
-      "    await(Promise, Registered),",
+      "    actor_await(Promise, Registered),",
       "    (   Registered == true",
       "    ->  true",
       "    ;   throw(error(permission_error(register, actor_name, Name), register/2))",
@@ -1501,7 +1550,7 @@
       "unregister_name(Kind, Name) :-",
       "    term_string(Name, NameText),",
       "    Promise := actorUnregister(#Kind, #NameText),",
-      "    await(Promise, _).",
+      "    actor_await(Promise, _).",
       "",
       "whereis(Name, Pid) :- whereis_name(actor, Name, Pid).",
       "whereis_service(Name, Pid) :- whereis_name(service, Name, Pid).",
@@ -1509,7 +1558,7 @@
       "whereis_name(Kind, Name, Pid) :-",
       "    term_string(Name, NameText),",
       "    Promise := actorWhereis(#Kind, #NameText),",
-      "    await(Promise, PidText),",
+      "    actor_await(Promise, PidText),",
       "    term_string(Pid, PidText).",
       "",
       "respond(Pid, Answer) :-",
@@ -1530,20 +1579,20 @@
       "    ->  self(Self),",
       "        option(target(Target), Options, Self),",
       "        PidPromise := actorReservePid(),",
-      "        await(PidPromise, PidText),",
+      "        actor_await(PidPromise, PidText),",
       "        term_string(LocalPid, PidText),",
       "        Pid = LocalPid@localhost,",
       "        Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit),",
       "        term_string(swi_wasm_actor_bridge:ptcp(Pid, Target, Lifecycle), GoalText),",
       "        Promise := actorSpawnWithPid(#PidText, #GoalText, #ExtraSource),",
-      "        await(Promise, SpawnedText),",
+      "        actor_await(Promise, SpawnedText),",
       "        term_string(SpawnedPid, SpawnedText), SpawnedPid == LocalPid",
       "    ;   term_string(Node, NodeText),",
       "        term_string(Session, SessionText),",
       "        term_string(TimeLimit, TimeLimitText),",
       "        term_string(IdleLimit, IdleLimitText),",
       "        Promise := actorRemoteToplevelSpawn(#NodeText, #ExtraSource, #SessionText, #TimeLimitText, #IdleLimitText),",
-      "        await(Promise, PidText),",
+      "        actor_await(Promise, PidText),",
       "        term_string(Pid, PidText)",
       "    ),",
       "    install_spawn_monitor(Pid, Options),",
@@ -1791,7 +1840,7 @@
       "toplevel_abort(Pid) :-",
       "    term_string(Pid, PidText),",
       "    Promise := actorAbort(#PidText),",
-      "    await(Promise, Aborted),",
+      "    actor_await(Promise, Aborted),",
       "    Aborted == true.",
       "",
       "output(Term) :- output(Term, []).",
@@ -1839,7 +1888,7 @@
       "        ; term_string(Prompt, PromptText)",
       "        ),",
       "        Promise := actorInput(#PromptText),",
-      "        await(Promise, AnswerText),",
+      "        actor_await(Promise, AnswerText),",
       "        AnswerText \\== null,",
       "        term_string(Answer, AnswerText)",
       "    ).",
@@ -1886,6 +1935,12 @@
       "        flush",
       "    }, [timeout(0)]).",
       "",
+      "actor_await(Promise, Result) :-",
+      "    Wrapped := actorAwait(#Promise),",
+      "    await(Wrapped, Result),",
+      "    Pending := actorControlPending(),",
+      "    ( Pending == true -> abort ; true ).",
+      "",
       "receive(Clauses) :- receive(Clauses, []).",
       "",
       "receive(Clauses, Options) :-",
@@ -1905,13 +1960,11 @@
       "receive_loop(Clauses, Options) :-",
       "    receive_timeout(Options, Timeout),",
       "    Promise := actorReceive(#Timeout),",
-      "    await(Promise, MessageText),",
+      "    actor_await(Promise, MessageText),",
       "    (   MessageText = null",
       "    ->  option(on_timeout(Goal), Options, true),",
       "        clauses_module(Clauses, Module),",
       "        call(Module:Goal)",
-      "    ;   MessageText == \"'$wasm_interrupt'\"",
-      "    ->  abort",
       "    ;   wire_read(MessageText, Msg),",
       "        assertz(deferred(Msg), Ref),",
       "        (   select_body(Clauses, Msg, Module, Body)",
@@ -1924,8 +1977,8 @@
       "%  A new message is recorded as deferred before its guards run, and the",
       "%  record is erased only when a clause is selected.  A control exception",
       "%  escaping from a guard therefore leaves the message in the mailbox",
-      "%  (Semantic Contracts D2).  The worker interrupts a toplevel blocked here",
-      "%  with the '$wasm_interrupt' text; the goal is then aborted.",
+      "%  (Semantic Contracts D2). The privileged await bridge checks control",
+      "%  state after wakeup; application messages cannot impersonate a signal.",
       "",
       "guard_exception(E) :-",
       "    control_exception(E),",
