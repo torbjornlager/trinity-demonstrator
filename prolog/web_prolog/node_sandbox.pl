@@ -665,6 +665,12 @@ sandbox_check_actor_(spawn(Goal, _Pid), Profile, Module) :-
     sandbox_check_goal_in_module(Profile, Module, Goal).
 sandbox_check_actor_(spawn(Goal, _Pid, Options), Profile, Module) :-
     reject_nested_spawn_goal(Profile, Module, Goal, Options).
+sandbox_check_actor_(supervisor_spawn(ChildSpecs, _Pid), Profile, Module) :-
+    reject_supervisor_child_specs(Profile, Module, ChildSpecs).
+sandbox_check_actor_(supervisor_spawn(ChildSpecs, _Pid, _Options), Profile, Module) :-
+    reject_supervisor_child_specs(Profile, Module, ChildSpecs).
+sandbox_check_actor_(supervisor_spawn_child(_Sup, ChildSpec, _Reply), Profile, Module) :-
+    reject_supervisor_child_specs(Profile, Module, [ChildSpec]).
 sandbox_check_actor_(with_io_target(_Target, Goal), Profile, Module) :-
     reject_forbidden_goal(Profile, Module, Goal).
 
@@ -704,6 +710,12 @@ sandbox_check_unqualified_(_, spawn(Goal, _Pid), Profile, Module) :-
     sandbox_check_goal_in_module(Profile, Module, Goal).
 sandbox_check_unqualified_(_, spawn(Goal, _Pid, Options), Profile, Module) :-
     reject_nested_spawn_goal(Profile, Module, Goal, Options).
+sandbox_check_unqualified_(_, supervisor_spawn(ChildSpecs, _Pid), Profile, Module) :-
+    reject_supervisor_child_specs(Profile, Module, ChildSpecs).
+sandbox_check_unqualified_(_, supervisor_spawn(ChildSpecs, _Pid, _Options), Profile, Module) :-
+    reject_supervisor_child_specs(Profile, Module, ChildSpecs).
+sandbox_check_unqualified_(_, supervisor_spawn_child(_Sup, ChildSpec, _Reply), Profile, Module) :-
+    reject_supervisor_child_specs(Profile, Module, [ChildSpec]).
 sandbox_check_unqualified_(_, toplevel_call(_Pid, Goal), Profile, Module) :-
     reject_forbidden_goal(Profile, Module, Goal).
 sandbox_check_unqualified_(_, toplevel_call(_Pid, Goal, Options), Profile, Module) :-
@@ -722,6 +734,9 @@ sandbox_public_goal(toplevel_stop(_)).
 sandbox_public_goal(toplevel_halt(_)).
 sandbox_public_goal(toplevel_halt(_, _)).
 sandbox_public_goal(toplevel_abort(_)).
+sandbox_public_goal(supervisor_spawn(_, _)).
+sandbox_public_goal(supervisor_spawn(_, _, _)).
+sandbox_public_goal(supervisor_spawn_child(_, _, _)).
 
 forbidden_plain_goal(consult(_)).
 forbidden_plain_goal(reconsult(_)).
@@ -1122,6 +1137,63 @@ receive_option_calls(Options, Calls) :-
 receive_option_calls(_, []).
 
 
+%!  supervisor_child_meta_calls(+DefaultModule, +ChildSpecs, -Calls) is det.
+%
+%   Expose executable start/1 entries embedded in supervisor child-spec data.
+%   A list-valued meta argument only qualifies the list as a whole; it does
+%   not make library(sandbox) discover goals nested inside the list.  Server
+%   callbacks are deliberately omitted: the behaviour calls a callback of a
+%   different arity and its supplied source is checked independently.
+
+supervisor_child_meta_calls(DefaultModule, ChildSpecs0, Calls) :-
+    supervisor_specs_context(DefaultModule, ChildSpecs0, Module, ChildSpecs),
+    supervisor_child_specs_calls(Module, ChildSpecs, Calls).
+
+supervisor_specs_context(_Default, Module:ChildSpecs, Module, ChildSpecs) :-
+    atom(Module),
+    !.
+supervisor_specs_context(Default, ChildSpecs, Default, ChildSpecs).
+
+supervisor_child_specs_calls(Module, ChildSpecs, [Module:ChildSpecs]) :-
+    var(ChildSpecs),
+    !.
+supervisor_child_specs_calls(_, [], []) :-
+    !.
+supervisor_child_specs_calls(Module, [ChildSpec|ChildSpecs], Calls) :-
+    !,
+    supervisor_child_spec_calls(Module, ChildSpec, Here),
+    supervisor_child_specs_calls(Module, ChildSpecs, Rest),
+    append(Here, Rest, Calls).
+supervisor_child_specs_calls(_, _, []).
+
+supervisor_child_spec_calls(Module, child(_Id, Options), Calls) :-
+    is_list(Options),
+    memberchk(start(Start), Options),
+    !,
+    supervisor_start_calls(Module, Start, Calls).
+supervisor_child_spec_calls(_, _, []).
+
+supervisor_start_calls(_, _Module:server(_, _), []) :-
+    !.
+supervisor_start_calls(_, server(_, _), []) :-
+    !.
+supervisor_start_calls(_Default, Module:start_sub_supervisor(Specs, _), Calls) :-
+    atom(Module),
+    !,
+    supervisor_child_meta_calls(Module, Specs, Calls).
+supervisor_start_calls(Module, start_sub_supervisor(Specs, _), Calls) :-
+    !,
+    supervisor_child_meta_calls(Module, Specs, Calls).
+supervisor_start_calls(Module, Goal, [Module:Goal]).
+
+reject_supervisor_child_specs(Profile, Module, ChildSpecs) :-
+    supervisor_child_meta_calls(Module, ChildSpecs, Calls),
+    maplist(reject_supervisor_child_goal(Profile), Calls).
+
+reject_supervisor_child_goal(Profile, Module:Goal) :-
+    sandbox_check_goal_in_module(Profile, Module, Goal).
+
+
 sandbox:safe_primitive(actors:self(_)).
 sandbox:safe_primitive(actors:monitor(_, _)).
 sandbox:safe_primitive(actors:demonitor(_)).
@@ -1156,11 +1228,10 @@ sandbox:safe_primitive(actor_api:node_setting(_, _)).
 %  caller's own clause text to ship; any URI fetch is the remote node's
 %  concern under its origin policy.)
 %
-%  NOTE: the remaining behaviour-spawn API -- statechart_spawn/server_spawn/
-%  supervisor_spawn -- is deliberately NOT declared here.  Those
+%  NOTE: statechart_spawn and server_spawn require their own handling. Those
 %  route through spawn/3 (so the runtime hook re-checks what they spawn) and
-%  several carry a client goal/callback (server_spawn's Pred, server_upgrade,
-%  supervisor child start(Goal)) or a URI loader (statechart interpret/1)
+%  carry a client callback (server_spawn's Pred, server_upgrade) or a URI
+%  loader (statechart interpret/1)
 %  that must stay sandbox-checked.  Declaring them safe requires per-predicate
 %  handling (safe_meta listing the goal args + public_runtime_support_goal
 %  exemptions for the internal loops); see the review notes.
@@ -1204,6 +1275,16 @@ sandbox:safe_meta(first_solution:first_solution(_, QualifiedGoals), Calls) :-
     sandbox_goal_list_calls(QualifiedGoals, Calls).
 sandbox:safe_meta(first_solution:first_solution(_, QualifiedGoals, _), Calls) :-
     sandbox_goal_list_calls(QualifiedGoals, Calls).
+
+%  Supervisor child start goals are embedded in list data, so describe them
+%  explicitly to library(sandbox).  Runtime spawn hooks still validate child
+%  source options and the internal supervisor/child entry loops.
+sandbox:safe_meta(supervisor_actor:supervisor_spawn(ChildSpecs, _Pid), Calls) :-
+    supervisor_child_meta_calls(actor, ChildSpecs, Calls).
+sandbox:safe_meta(supervisor_actor:supervisor_spawn(ChildSpecs, _Pid, _Options), Calls) :-
+    supervisor_child_meta_calls(actor, ChildSpecs, Calls).
+sandbox:safe_meta(supervisor_actor:supervisor_spawn_child(_Sup, ChildSpec, _Reply), Calls) :-
+    supervisor_child_meta_calls(actor, [ChildSpec], Calls).
 
 sandbox_goal_list_calls(QualifiedGoals, Calls) :-
     strip_module(QualifiedGoals, Module, Goals),

@@ -4414,6 +4414,74 @@ test(sandbox_check_goal_blacklist_rejects_open,
             message_to_string(Error, ErrorString)
         )).
 
+test(sandbox_check_goal_blacklist_rejects_forbidden_supervisor_child_start,
+     true(sub_string(ErrorString, _, _, _, "sandboxed"))) :-
+    with_sandbox_mode(blacklist,
+        (
+            catch(sandbox_check_goal(
+                      actor,
+                      supervisor_spawn([
+                          child(unsafe, [start(open('/tmp/nope', read, _))])
+                      ], _Pid)),
+                  Error, true),
+            nonvar(Error),
+            message_to_string(Error, ErrorString)
+        )).
+
+test(sandbox_check_goal_blacklist_rejects_forbidden_dynamic_supervisor_child_start,
+     true(sub_string(ErrorString, _, _, _, "sandboxed"))) :-
+    with_sandbox_mode(blacklist,
+        (
+            catch(sandbox_check_goal(
+                      actor,
+                      supervisor_spawn_child(
+                          supervisor,
+                          child(unsafe, [start(shell(command))]),
+                          _Reply)),
+                  Error, true),
+            nonvar(Error),
+            message_to_string(Error, ErrorString)
+        )).
+
+test(sandbox_check_goal_blacklist_rejects_forbidden_nested_supervisor_child_start,
+     true(sub_string(ErrorString, _, _, _, "sandboxed"))) :-
+    with_sandbox_mode(blacklist,
+        (
+            catch(sandbox_check_goal(
+                      actor,
+                      supervisor_spawn([
+                          child(inner, [
+                              start(start_sub_supervisor([
+                                  child(unsafe, [start(shell(command))])
+                              ], []))
+                          ])
+                      ], _Pid)),
+                  Error, true),
+            nonvar(Error),
+            message_to_string(Error, ErrorString)
+        )).
+
+test(sandbox_check_goal_whitelist_allows_safe_supervisor_child_start) :-
+    with_sandbox_mode(whitelist,
+        sandbox_check_goal(actor,
+                           supervisor_actor:supervisor_spawn(test_node:[
+                               child(worker, [start(true)])
+                           ], _Pid))).
+
+test(sandbox_check_goal_whitelist_rejects_forbidden_supervisor_child_start,
+     true(sub_string(ErrorString, _, _, _, "sandboxed"))) :-
+    with_sandbox_mode(whitelist,
+        (
+            catch(sandbox_check_goal(
+                      actor,
+                      supervisor_actor:supervisor_spawn(test_node:[
+                          child(unsafe, [start(open('/tmp/nope', read, _))])
+                      ], _Pid)),
+                  Error, true),
+            nonvar(Error),
+            message_to_string(Error, ErrorString)
+        )).
+
 test(sandbox_check_goal_blacklist_rejects_shell,
      true(sub_string(ErrorString, _, _, _, "sandboxed"))) :-
     with_sandbox_mode(blacklist,
@@ -5313,6 +5381,34 @@ test(ws_tutorial_spawn_source_supports_supervised_server_upgrade,
                     format:"json"
                 }),
                 ws_receive_json_until_expected_types(WS, ["success"], [_])
+            ),
+            catch(ws_close(WS, 1000, done), _, true)
+        )).
+
+test(ws_supervisor_children_preserve_submitted_source_in_public_context) :-
+    Source = "forever :- receive({stop -> true}).",
+    format(string(SpawnOptions),
+           "[session(true),src_text(~q)]",
+           [Source]),
+    with_node_server_options([profile(actor), auth(dev), sandbox(blacklist)], URI,
+        setup_call_cleanup(
+            ws_open(URI, WS),
+            (
+                ws_send_json(WS, json{
+                    command:toplevel_spawn,
+                    options:SpawnOptions
+                }),
+                ws_receive_json(WS, Spawned),
+                get_dict(pid, Spawned, Pid),
+                ws_send_json(WS, json{
+                    command:toplevel_call,
+                    pid:Pid,
+                    goal:"supervisor_spawn([child(a,[start(forever)]),child(b,[start(forever)])],Sup,[src_predicates([forever/0])]),supervisor_count_children(Sup,[specs-2,active-2,supervisors-0,workers-2]),supervisor_halt(Sup)",
+                    format:"json"
+                }),
+                ws_receive_json_until_expected_types(WS, ["success"],
+                                                     [Reply]),
+                assertion(Reply.more == false)
             ),
             catch(ws_close(WS, 1000, done), _, true)
         )).

@@ -269,8 +269,17 @@ do_spawn_child(server(Pred, ServerOpts), Name, Pid) :- !,
     ensure_callback_load(Pred, ExtraOpts, ChildOpts),
     server_spawn(Pred, State, Pid,
                  [name(Name), link(true) | ChildOpts]).
-do_spawn_child(Goal, _Name, Pid) :-
-    spawn(Goal, Pid, [link(true)]).
+do_spawn_child(supervisor_actor:start_sub_supervisor(ChildSpecs0, SupOptions),
+               _Name, Pid) :-
+    !,
+    strip_module(ChildSpecs0, SourceModule, ChildSpecs),
+    child_specs_source_options(SourceModule, ChildSpecs, SourceOptions),
+    spawn(supervisor_actor:start_sub_supervisor(SourceModule:ChildSpecs,
+                                                SupOptions),
+          Pid, [link(true)|SourceOptions]).
+do_spawn_child(Goal0, _Name, Pid) :-
+    child_goal_source_options(Goal0, Goal, SourceOptions),
+    spawn(Goal, Pid, [link(true)|SourceOptions]).
 
 is_server_actor_opt(initial_state(_)).
 
@@ -279,12 +288,79 @@ callback_load_option(Pred, src_predicates([Name/Arity])) :-
     functor(PlainPred, Name, ExtraArity),
     Arity is ExtraArity + 4.
 
-ensure_callback_load(_, Options, Options) :-
-    member(Option, Options),
-    server_source_option(Option),
-    !.
-ensure_callback_load(Pred, Options, [CallbackLoad|Options]) :-
-    callback_load_option(Pred, CallbackLoad).
+ensure_callback_load(Pred, Options0, Options) :-
+    (   member(Option, Options0),
+        server_source_option(Option)
+    ->  LoadedOptions = Options0
+    ;   callback_load_option(Pred, CallbackLoad),
+        LoadedOptions = [CallbackLoad|Options0]
+    ),
+    predicate_source_module(Pred, 4, SourceModule),
+    ensure_source_module(SourceModule, LoadedOptions, Options).
+
+% Preserve submitted child code across the supervisor-to-child actor
+% boundary. Public actors deliberately do not inherit a live caller module,
+% so a qualified start goal alone is insufficient: its defining clauses must
+% be copied just as they are for a direct public spawn/3.
+child_goal_source_options(Goal0, Goal, Options) :-
+    strip_module(Goal0, SourceModule, Plain),
+    (   callable_pi(Plain, 0, PI),
+        local_predicate(SourceModule, PI)
+    ->  Goal = SourceModule:Plain,
+        Options = [source_module(SourceModule), src_predicates([PI])]
+    ;   Goal = Goal0,
+        Options = []
+    ).
+
+child_specs_source_options(SourceModule, ChildSpecs, Options) :-
+    child_specs_pis(ChildSpecs, PIs0),
+    include(local_predicate(SourceModule), PIs0, LocalPIs0),
+    sort(LocalPIs0, LocalPIs),
+    (   LocalPIs == []
+    ->  Options = []
+    ;   Options = [source_module(SourceModule), src_predicates(LocalPIs)]
+    ).
+
+child_specs_pis([], []).
+child_specs_pis([child(_, Options)|Specs], PIs) :-
+    (   option(start(Start), Options)
+    ->  start_term_pis(Start, Here)
+    ;   Here = []
+    ),
+    child_specs_pis(Specs, Rest),
+    append(Here, Rest, PIs).
+
+start_term_pis(server(Callback, _), [PI]) :-
+    !,
+    strip_module(Callback, _, Plain),
+    callable_pi(Plain, 4, PI).
+start_term_pis(start_sub_supervisor(ChildSpecs0, _), PIs) :-
+    !,
+    strip_module(ChildSpecs0, _, ChildSpecs),
+    child_specs_pis(ChildSpecs, PIs).
+start_term_pis(Goal, [PI]) :-
+    strip_module(Goal, _, Plain),
+    callable_pi(Plain, 0, PI).
+
+callable_pi(Callable, ExtraArity, Name/Arity) :-
+    callable(Callable),
+    functor(Callable, Name, BaseArity),
+    Arity is BaseArity + ExtraArity.
+
+local_predicate(Module, Name/Arity) :-
+    functor(Head, Name, Arity),
+    predicate_property(Module:Head, number_of_clauses(Count)),
+    Count > 0,
+    \+ predicate_property(Module:Head, imported_from(_)).
+
+predicate_source_module(Callable0, ExtraArity, SourceModule) :-
+    strip_module(Callable0, Module, Callable),
+    callable_pi(Callable, ExtraArity, Name/Arity),
+    functor(Head, Name, Arity),
+    (   predicate_property(Module:Head, imported_from(Imported))
+    ->  SourceModule = Imported
+    ;   SourceModule = Module
+    ).
 
 server_source_option(src_text(_)).
 server_source_option(src_list(_)).

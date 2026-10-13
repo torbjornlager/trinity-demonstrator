@@ -96,7 +96,9 @@ public_framework_start_goal(toplevel_actors, Goal) :-
 public_framework_start_goal(server_actor, Goal) :-
     goal_has_pi(Goal, server_loop/2).
 public_framework_start_goal(supervisor_actor, Goal) :-
-    goal_has_pi(Goal, sup_init/2).
+    (   goal_has_pi(Goal, sup_init/2)
+    ;   goal_has_pi(Goal, start_sub_supervisor/2)
+    ).
 public_framework_start_goal(parallel, Goal) :-
     goal_has_pi(Goal, par_worker/4).
 public_framework_start_goal(first_solution, Goal) :-
