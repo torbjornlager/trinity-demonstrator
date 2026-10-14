@@ -340,14 +340,15 @@ parent/
   trealla-port/
 ```
 
-GitHub SSO remains the owner-only public boundary. Behind it, Trealla runs
-`auth(open)` only on the private Compose network. N3 supplies N5's static
+GitHub SSO remains the owner-only public boundary. Behind it, Trealla also
+enforces `auth(private)` and accepts the verified owner identity only from
+trusted Compose-network proxies. N3 supplies N5's static
 demonstrator, tutorial, example, and image files; `/call`, `/ws`, discovery,
-health, readiness, version, and metrics go to Trealla. The page therefore
-remains usable, but examples requiring SWI-specific predicates, statecharts,
-the SWI shared database, or the HTTP `/toplevel_*` routes are expected to
-fail. N5 advertises only `local_actor`, `toplevels`, and `distributed_actor`
-tutorial sections.
+health, readiness, version, and metrics go to Trealla. N5 loads attributed
+copies of N4's common and actor shared databases and advertises only the
+currently supported `local_actor`, `toplevels`, and `distributed_actor`
+tutorial sections; the UI hides the other tutorial sections rather than
+presenting examples that this deployment has not qualified.
 
 Add a random internal administration token to `Deployment/.env`:
 
@@ -365,6 +366,19 @@ docker compose -f Deployment/compose.yaml \
   -f Deployment/compose.trealla-n5.yaml \
   --env-file Deployment/.env config --quiet
 ```
+
+Run the browser-protocol tutorial regressions (currently tutorial 19) with a
+sibling `trinity-conformance` checkout:
+
+```sh
+./tools/test-trealla-n5-tutorials.sh
+```
+
+The test starts an isolated private N5, publishes it only on loopback, loads
+the tutorial source through `toplevel_spawn`, runs its example query, and
+checks the promise results returned through the WebSocket protocol. Override
+the checkout with `TRINITY_CONFORMANCE_ROOT` or the loopback port with
+`TREALLA_N5_TEST_PORT` when needed.
 
 Cut over N5 and Caddy while leaving the other nodes alone:
 

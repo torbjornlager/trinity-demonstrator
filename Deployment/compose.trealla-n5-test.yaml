@@ -1,0 +1,7 @@
+# Test-only loopback publication for black-box Trealla N5 protocol checks.
+# Keep production N5 reachable only through Caddy/SSO.
+
+services:
+  wp_n5:
+    ports:
+      - "127.0.0.1:${TREALLA_N5_TEST_PORT:-13060}:3060"
