@@ -637,14 +637,12 @@ sandbox_enforce_goal(whitelist, Module, Goal) :-
 %  runtime-bound assert/format/call/shared-DB that safe_goal cannot clear
 %  statically (flooring on safe_goal broke those profiles wholesale).
 %
-%  SECURITY BOUNDARY AND ITS LIMIT: the denylist's completeness is the boundary
-%  for DIRECT calls, and the blacklisted_goal_pattern/2 set below is kept current
-%  for the known dangerous families.  It cannot, however, stop a dangerous goal
-%  CONSTRUCTED at runtime and run through call/1 (e.g. `C = process_create(...),
-%  call(C)`), because the offending predicate is not visible at static check
-%  time -- and call/1 of a runtime goal is a deliberate isotope-profile feature.
-%  Closing that residual channel requires whitelist mode (which rejects call/1 of
-%  an unbound goal) or OS-level containment of the node process.
+%  Runtime goals reached through guarded call/N and declared meta-predicate
+%  callbacks are checked when invoked by public_goal_guard. This remains a
+%  curated denylist, not a complete security boundary: host code that invokes
+%  an undeclared goal argument, or other unmediated reflective paths, still
+%  requires scrutiny. Whitelist mode and host containment remain necessary
+%  for the stronger public-node isolation claim.
 sandbox_enforce_goal(blacklist, _Module, _Goal).
 sandbox_enforce_goal(off, _Module, _Goal).
 

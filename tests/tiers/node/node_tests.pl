@@ -5644,6 +5644,87 @@ test(node_json_type_error_simplified,
             Data = JSON.data
         )).
 
+test(node_call_blacklist_rejects_higher_order_callbacks,
+     [forall(member(Goal, [
+         'maplist(nb_getval(guard_probe),[_])',
+         'P=nb_getval(guard_probe),maplist(P,[_])',
+         'maplist(maplist(nb_getval(guard_probe)),[[_]])',
+         'include(nb_getval(guard_probe),[_],_)',
+         'foldl(call,[nb_getval],guard_probe,_)'
+     ]))]) :-
+    with_node_server_options([profile(isobase),sandbox(blacklist)], URI,
+        (json_call_url(URI, Goal, 0, 1, URL),
+         read_json_answer(URL, JSON),
+         assertion(JSON.type == "error"),
+         assertion(sub_string(JSON.data, _, _, _, "sandboxed")))).
+
+test(node_call_blacklist_preserves_higher_order_bindings) :-
+    with_node_server_options([profile(isobase),sandbox(blacklist)], URI,
+        (json_call_url_with_load_text(URI, 'run(X)',
+             "plus_one(A,B) :- B is A+1. run(X) :- maplist(plus_one,[1,2],X).", URL),
+         read_json_answer(URL, JSON),
+         assertion(JSON.type == "success"),
+         JSON.data = [Row], get_dict('X',Row,Value), assertion(Value == "[2,3]"))).
+
+test(node_call_blacklist_guards_loaded_higher_order_body) :-
+    with_node_server_options([profile(isobase),sandbox(blacklist)], URI,
+        (json_call_url_with_load_text(URI, run,
+             "saved(nb_getval(guard_probe)). run :- saved(P), maplist(P,[_]).", URL),
+         read_json_answer(URL, JSON),
+         assertion(JSON.type == "error"),
+         assertion(sub_string(JSON.data, _, _, _, "sandboxed")))).
+
+test(isotope_blacklist_guards_asserted_higher_order_body) :-
+    with_node_server_options([profile(isotope),sandbox(blacklist)], URI,
+        setup_call_cleanup(
+            (format(atom(SpawnURL), '~w/toplevel_spawn', [URI]),
+             read_json_post(SpawnURL, _{options:"[]"}, SpawnJSON),
+             Pid = SpawnJSON.pid),
+            (isotope_call_url(URI, Pid,
+                 '(assertz((q :- saved(P),maplist(P,[_]))),q)',
+                 "saved(nb_getval(guard_probe)).", URL),
+             read_json_answer(URL, JSON),
+             assertion(JSON.type == "error"),
+             assertion(sub_string(JSON.data, _, _, _, "sandboxed"))),
+            kill_isotope_session(Pid))).
+
+test(ws_blacklist_guards_higher_order_callback) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)], URI,
+        setup_call_cleanup(ws_open(URI, WS),
+            (ws_send_json(WS, json{command:toplevel_spawn,options:"[session(true)]"}),
+             ws_receive_json_first_of(WS, ["spawned"], Spawned),
+             ws_send_json(WS, json{command:toplevel_call,pid:Spawned.pid,
+                 goal:"maplist(nb_getval(guard_probe),[_])"}),
+             ws_receive_json_first_of(WS, ["error"], JSON),
+             assertion(sub_string(JSON.data, _, _, _, "sandboxed"))),
+            catch(ws_close(WS,1000,done),_,true))).
+
+test(ws_blacklist_src_predicates_restores_higher_order_closure) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)], URI,
+        setup_call_cleanup(ws_open(URI, WS),
+            (ws_send_json(WS, json{command:toplevel_spawn,
+                 options:"[session(true),src_text('p(X) :- maplist(=(a),X).')]"}),
+             ws_receive_json_first_of(WS, ["spawned"], Spawned),
+             ws_send_json(WS, json{command:toplevel_call,pid:Spawned.pid,
+                 goal:"self(S),spawn((p([X]),S ! X),C,[src_predicates([p/1]),monitor(true)]),receive({a -> true}),receive({down(C,_,true) -> true})"}),
+             ws_receive_json_first_of(WS, ["success","error"], JSON),
+             assertion(JSON.type == "success")),
+            catch(ws_close(WS,1000,done),_,true))).
+
+test(ws_blacklist_src_predicates_guards_shipped_higher_order_body) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)], URI,
+        setup_call_cleanup(ws_open(URI, WS),
+            (ws_send_json(WS, json{command:toplevel_spawn,
+                 options:"[session(true),src_text('p :- maplist(nb_getval(guard_probe),[_]).')]"}),
+             ws_receive_json_first_of(WS, ["spawned"], Spawned),
+             ws_send_json(WS, json{command:toplevel_call,pid:Spawned.pid,
+                 goal:"spawn(p,C,[src_predicates([p/0]),monitor(true)]),receive({down(C,_,Reason) -> true})"}),
+             ws_receive_json_first_of(WS, ["success","error"], JSON),
+             assertion(JSON.type == "success"),
+             JSON.data = [Row], get_dict('Reason',Row,Reason),
+             assertion(sub_string(Reason,_,_,_,"sandboxed"))),
+            catch(ws_close(WS,1000,done),_,true))).
+
 test(node_call_blacklist_rejects_saved_goal_term_via_call,
      true((Type == "error", sub_string(Data, _, _, _, "sandboxed")))) :-
     with_node_server_options([sandbox(blacklist)], URI,

@@ -116,6 +116,10 @@ rewrite_goal_(Module, (A0 -> B0), (A -> B)) :-
 rewrite_goal_(Module, (A0 *-> B0), (A *-> B)) :-
     rewrite_goal(Module, A0, A),
     rewrite_goal(Module, B0, B).
+rewrite_goal_(Module, QualifiedModule:Goal0, QualifiedModule:Goal) :-
+    atom(QualifiedModule),
+    (QualifiedModule == Module ; memberchk(QualifiedModule, [actor,node])),
+    rewrite_goal(QualifiedModule, Goal0, Goal).
 rewrite_goal_(Module, catch(Goal0, Catcher, Recover0),
               catch(Goal, Catcher, Recover)) :-
     rewrite_goal(Module, Goal0, Goal),
@@ -206,6 +210,45 @@ rewrite_goal_(Module, assertz(Clause0),
               public_goal_guard:'$sandbox_assertz'(Module, Clause0)).
 rewrite_goal_(Module, assertz(Clause0, Ref),
               public_goal_guard:'$sandbox_assertz'(Module, Clause0, Ref)).
+rewrite_goal_(Module, Goal0, Goal) :-
+    callable(Goal0),
+    functor(Goal0, Name, Arity),
+    Name \== (:),
+    functor(Skeleton, Name, Arity),
+    predicate_property(Module:Skeleton, meta_predicate(MetaSpec)),
+    Goal0 =.. [Name|Args0],
+    MetaSpec =.. [_|Modes],
+    rewrite_meta_arguments(Modes, Module, Args0, Args),
+    Goal =.. [Name|Args].
+
+% Check the fully applied callback at invocation time, when its arguments
+% and a runtime-selected closure are available. ':' denotes module-sensitive
+% data, not executable code. Existing special forms above retain their own
+% handling (notably existential generators and dynamic clause terms).
+rewrite_meta_arguments([], _, [], []).
+rewrite_meta_arguments([Mode|Modes], Module, [Arg0|Args0], [Arg|Args]) :-
+    rewrite_meta_argument(Mode, Module, Arg0, Arg),
+    rewrite_meta_arguments(Modes, Module, Args0, Args).
+
+rewrite_meta_argument(Extra, Module, Closure,
+                      public_goal_guard:'$sandbox_call'(Module, Closure)) :-
+    integer(Extra), Extra >= 0,
+    !,
+    (   Extra =< 7
+    ->  true
+    ;   throw(error(domain_error(sandbox_closure_arity, Extra),
+                    context(public_goal_guard:rewrite_goal/3,
+                            'closures with more than seven extra arguments are unsupported')))
+    ).
+rewrite_meta_argument(//, Module, Grammar,
+                      public_goal_guard:'$sandbox_dcg'(Module, Grammar)) :-
+    !.
+rewrite_meta_argument(^, _, _, _) :-
+    !,
+    throw(error(domain_error(sandbox_meta_argument, ^),
+                context(public_goal_guard:rewrite_goal/3,
+                        'existential goals require the explicit collection-predicate handlers'))).
+rewrite_meta_argument(_, _, Arg, Arg).
 
 
 %!  restore_goal(+Module, +Goal0, -Goal) is det.
@@ -342,15 +385,30 @@ restore_meta_arguments([Mode|Modes], Module, [Arg0|Args0], [Arg|Args]) :-
 
 restore_meta_argument(0, Module, Goal0, Goal) :-
     !,
-    restore_goal(Module, Goal0, Goal).
-restore_meta_argument(Extra, _Module,
-                      public_goal_guard:'$sandbox_call'(_StoredModule, Closure),
-                      Closure) :-
-    (   integer(Extra), Extra > 0
-    ;   Extra == (//)
-    ),
+    (   nonvar(Goal0),
+        Goal0 = public_goal_guard:Call,
+        nonvar(Call), Call = '$sandbox_call'(_StoredModule, Original)
+    ->  restore_goal(Module, Original, Goal)
+    ;   restore_goal(Module, Goal0, Goal)
+    ).
+restore_meta_argument(//, _Module, Guarded, Grammar) :-
+    nonvar(Guarded), Guarded = public_goal_guard:Call,
+    nonvar(Call), Call = '$sandbox_dcg'(_StoredModule, Grammar),
+    !.
+restore_meta_argument(Extra, _Module, Guarded, Closure) :-
+    integer(Extra), Extra > 0,
+    nonvar(Guarded), Guarded = public_goal_guard:Call,
+    nonvar(Call), Call = '$sandbox_call'(_StoredModule, Closure),
     !.
 restore_meta_argument(_, _, Arg, Arg).
+
+% DCG closures must be translated, not simply called with two extra args:
+% terminals, braces, and grammar control constructs have special semantics.
+'$sandbox_dcg'(Module, Grammar, Input, Rest) :-
+    (var(Grammar) -> throw(error(instantiation_error, phrase/3)); true),
+    dcg_translate_rule((guard_dcg --> Grammar), (Head :- Goal)),
+    Head = guard_dcg(Input, Rest),
+    runtime_execute_goal(Module, Goal).
 
 
 '$sandbox_call'(Module, Goal0) :-
@@ -430,7 +488,10 @@ blacklist_guard_profile(Profile) :-
 runtime_sandbox_check(Profile, Module, Goal0) :-
     (   Goal0 = (QM:Inner),
         atom(QM)
-    ->  node_sandbox:sandbox_check_goal(Profile, QM:Inner)
+    ->  (   QM == Module
+        ->  node_sandbox:sandbox_check_goal_in_module(Profile, Module, Inner)
+        ;   node_sandbox:sandbox_check_goal(Profile, QM:Inner)
+        )
     ;   node_sandbox:sandbox_check_goal_in_module(Profile, Module, Goal0)
     ).
 
