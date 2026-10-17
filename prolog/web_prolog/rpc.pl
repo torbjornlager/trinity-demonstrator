@@ -13,7 +13,7 @@
      normalize_once/2
    ]).
 
-:- dynamic promise_queue_store/2.
+:- dynamic promise_state/6. % Key, WakeQueue, Worker, ExpiryThread, Collector, Result
 :- multifile prepare_timeout_callback/3.
 
 /** <module> Web Prolog RPC Client (layer 3, HTTP-only)
@@ -26,11 +26,11 @@ WebSocket; loadable on its own next to bare actors.pl.
   - async Promise/Yield (`promise/3-4`, `yield/2-3`, `promise_cleanup/1`),
   - shared text/timeout/boolean normalization helpers.
 
-Note on Promise cleanup: Each call to `promise/3-4` creates an internal
-message queue stored in a dynamic predicate. Collection removes its lookup
-entry; a timed-out yield retains it for retry. Coordinated reclamation of
-queues/workers and concurrent collection/expiry remain lifecycle work.
-`promise_cleanup/1` removes the lookup entry when a caller abandons a promise.
+Promise collection, expiry and explicit cleanup share promise_lifecycle.
+Answers stay in the record until consumed; the private queue only wakes a
+collector. Timed-out or interrupted waits release their collection claim.
+Disposal destroys the queue and stops local worker/expiry threads. This does
+not cancel execution on the remote node or establish client ownership.
 */
 
 :- use_module(pid_utils, [localhost_node/1]).
@@ -333,20 +333,94 @@ promise_queue_key(Reference, QueueKey) :-
     atomic_list_concat([promise_queue_, Reference], QueueKey).
 
 
-%!  promise_auto_cleanup_thread(+QueueKey, +TimeoutSeconds) is det.
-%   Remove an unconsumed promise lookup after the retention interval.
-%   This does not reclaim its queue/worker or cancel the remote request.
-promise_auto_cleanup_thread(QueueKey, TimeoutSeconds) :-
-    sleep(TimeoutSeconds),
-    retractall(promise_queue_store(QueueKey, _)).
+% Resource creation is protected from asynchronous interruption. Threads
+% enter through the same mutex, after their handles have been recorded.
+start_promise(Reference, WorkerGoal) :-
+    promise_queue_key(Reference, Key),
+    setup_call_catcher_cleanup(
+        with_mutex(promise_lifecycle,
+            (   new_promise_state(Key, _),
+                catch(start_promise_threads(Key, WorkerGoal), Error,
+                      (dispose_promise_locked(Key), throw(Error)))
+            )),
+        true,
+        Catcher,
+        (Catcher == exit -> true; promise_cleanup(Reference))).
+
+new_promise_state(Key, Queue) :-
+    message_queue_create(Queue),
+    catch(assertz(promise_state(Key,Queue,none,none,none,pending)), Error,
+          (message_queue_destroy(Queue), throw(Error))).
+
+start_promise_threads(Key, WorkerGoal) :-
+    must_be(callable, WorkerGoal),
+    thread_create(promise_thread(Key,worker,WorkerGoal), Worker, [detached(true)]),
+    retract(promise_state(Key,Q,none,none,C,R)),
+    assertz(promise_state(Key,Q,starting(Worker),none,C,R)),
+    thread_create(promise_thread(Key,timer,rpc:promise_auto_cleanup_thread(Key,300)), Timer, [detached(true)]),
+    retract(promise_state(Key,Q,starting(Worker),none,C,R)),
+    assertz(promise_state(Key,Q,starting(Worker),starting(Timer),C,R)).
+
+promise_thread(Key, Role, Goal) :-
+    catch(
+        (promise_transaction(activate_promise_thread(Key,Role,Active)),
+         (Active == true -> call(Goal); true)),
+        '$rpc_promise_disposed', true).
+
+activate_promise_thread(Key, Role, Active) :-
+    (   retract(promise_state(Key,Q,W0,T0,C,R))
+    ->  (Role == worker -> W0 = starting(Thread), W = running(Thread), T = T0
+        ; T0 = starting(Thread), T = running(Thread), W = W0),
+        assertz(promise_state(Key,Q,W,T,C,R)), Active = true
+    ;   Active = false
+    ).
+
+:- meta_predicate promise_transaction(0).
+% Commit only short local operations here; never protect an HTTP read or wait
+% from signals. An interrupted collector cannot leave half-disposed state.
+promise_transaction(Goal) :-
+    setup_call_cleanup(with_mutex(promise_lifecycle, Goal), true, true).
+
+promise_auto_cleanup_thread(Key, Seconds) :-
+    (   with_mutex(promise_lifecycle, promise_state(Key,_,_,_,_,_))
+    ->  sleep(Seconds),
+        promise_transaction(dispose_promise_locked(Key))
+    ;   true
+    ).
 
 %!  promise_cleanup(+Reference) is det.
-%   Remove the lookup entry for an abandoned promise. Queue/worker
-%   reclamation remains separate lifecycle work.
+%   Idempotent local disposal; does not establish remote cancellation.
 promise_cleanup(Reference) :-
     must_be(integer, Reference),
-    promise_queue_key(Reference, QueueKey),
-    retractall(promise_queue_store(QueueKey, _)).
+    promise_queue_key(Reference, Key),
+    promise_transaction(dispose_promise_locked(Key)).
+
+dispose_promise_locked(Key) :-
+    (   retract(promise_state(Key,Queue,Worker,Timer,_,_))
+    ->  message_queue_destroy(Queue),
+        stop_promise_thread(Timer), stop_promise_thread(Worker)
+    ;   true
+    ).
+
+stop_promise_thread(none) :- !.
+% A starting thread checks for the record after installing its handler.
+stop_promise_thread(starting(_)) :- !.
+stop_promise_thread(running(Thread)) :-
+    thread_self(Self),
+    (   Thread == Self -> true
+    ;   catch(thread_signal(Thread, throw('$rpc_promise_disposed')),
+              error(existence_error(thread,_),_), true)
+    ).
+
+% Completion and disposal serialize: a retired worker cannot deliver to a
+% destroyed queue. The answer survives a collector interrupted after wakeup.
+deliver_promise_answer(Key, Answer) :-
+    promise_transaction(
+        (   retract(promise_state(Key,Q,W,T,C,pending))
+        ->  assertz(promise_state(Key,Q,W,T,C,ready(Answer))),
+            thread_send_message(Q, ready)
+        ;   true
+        )).
 
 
 %!  promise(+URI, :Goal, -Reference) is det.
@@ -369,30 +443,25 @@ promise(URI, Goal0, Reference, Options) :-
     atom_string(LoadText, LoadTextString),
     rpc_http_options(Options, HTTPOptions),
     make_reference(Reference),
-    message_queue_create(Queue),
-    promise_queue_key(Reference, QueueKey),
-    assertz(promise_queue_store(QueueKey, Queue)),
-    % Schedule automatic cleanup after 5 minutes (300 seconds) if not consumed
-    thread_create(promise_auto_cleanup_thread(QueueKey, 300), _, [detached(true)]),
-    thread_create(promise(RPCURI, Goal, Template, Offset, Limit,
-                          HTTPOptions, LoadText, RemoteTimeout, Once, Queue),
-                  _,
-                  [detached(true)]).
+    promise_queue_key(Reference, Key),
+    start_promise(Reference,
+        rpc:promise_worker(Key,RPCURI,Goal,Template,Offset,Limit,
+                           HTTPOptions,LoadText,RemoteTimeout,Once)).
 
-promise(URI, Goal, Template, Offset, Limit,
-        HTTPOptions, LoadText, RemoteTimeout, Once, Queue) :-
-    catch(
-        (   once(promise_answer(URI, Goal, Template, Offset, Limit,
-                               HTTPOptions, LoadText, RemoteTimeout, Once, Answer))
-        ->  Message = Answer
-        ;   Message = error(error(promise_worker_failed,
-                                  context(rpc:promise/4, 'request produced no answer')))
-        ),
-        Error, Message = error(Error)),
-    % Delivery to a queue already disposed by lifecycle management cannot
-    % be recovered here; that is separate from request/response failures.
-    catch(thread_send_message(Queue, Message), SendError,
-          print_message(warning, SendError)).
+promise_worker(Key, URI, Goal, Template, Offset, Limit,
+               HTTPOptions, LoadText, RemoteTimeout, Once) :-
+    (   with_mutex(promise_lifecycle, promise_state(Key,_,_,_,_,_))
+    ->  catch(
+            (   once(promise_answer(URI, Goal, Template, Offset, Limit,
+                                   HTTPOptions, LoadText, RemoteTimeout, Once, Answer))
+            ->  Message = Answer
+            ;   Message = error(error(promise_worker_failed,
+                                      context(rpc:promise/4, 'request produced no answer')))
+            ),
+            Error, Message = error(Error)),
+        deliver_promise_answer(Key, Message)
+    ;   true
+    ).
 
 promise_answer(URI, Goal, Template, Offset, Limit,
                HTTPOptions, LoadText, RemoteTimeout, Once, Answer) :-
@@ -430,18 +499,56 @@ yield(Reference, Message, Options0) :-
     must_be(integer, Reference),
     strip_module(Options0, Caller, Options),
     validate_client_options(yield, Options),
-    promise_queue_key(Reference, QueueKey),
-    (   promise_queue_store(QueueKey, Queue)
-    ->  exclude(yield_timeout_callback, Options, WaitOptions),
-        (   thread_get_message(Queue, Msg, WaitOptions)
-        ->  retractall(promise_queue_store(QueueKey, Queue)),
-            Message = Msg
-        ;   % A timeout leaves the promise available for another attempt.
-            yield_timeout(Reference, Message, Caller, Options)
-        )
-    ;   throw(error(existence_error(promise, Reference),
-                    context(rpc:yield/3, 'unknown, consumed, or expired promise')))
+    promise_queue_key(Reference, Key),
+    exclude(yield_timeout_callback, Options, WaitOptions),
+    setup_call_cleanup(
+        with_mutex(promise_lifecycle, claim_promise(Reference,Key,Queue,Claim,Ready)),
+        wait_for_promise(Reference,Key,Queue,Claim,Ready,WaitOptions,Outcome),
+        with_mutex(promise_lifecycle, release_promise_claim(Key,Claim))),
+    (   Outcome = answer(Answer) -> Message = Answer
+    ;   yield_timeout(Reference, Message, Caller, Options)
     ).
+
+claim_promise(Reference, Key, Queue, Claim, Ready) :-
+    (   promise_state(Key,Queue,W,T,Collector,Result)
+    ->  (   Collector == none
+        ->  flag(promise_collector_counter, N, N+1), Claim = collector(N),
+            retract(promise_state(Key,Queue,W,T,none,Result)),
+            assertz(promise_state(Key,Queue,W,T,Claim,Result)),
+            (Result = ready(_) -> Ready = true; Ready = false)
+        ;   throw(error(permission_error(collect,promise,Reference),
+                        context(rpc:yield/3, 'collection already in progress')))
+        )
+    ;   missing_promise(Reference)
+    ).
+
+wait_for_promise(Reference, Key, Queue, Claim, Ready, Options, Outcome) :-
+    (   Ready == true -> true
+    ;   catch(ignore(thread_get_message(Queue,ready,Options)), Error,
+              promise_wait_error(Reference,Key,Error))
+    ),
+    promise_transaction(
+        (   promise_state(Key,_,_,_,Claim,Result)
+        ->  (   Result = ready(Answer)
+            ->  dispose_promise_locked(Key), Outcome = answer(Answer)
+            ;   Outcome = timeout
+            )
+        ;   missing_promise(Reference)
+        )).
+
+promise_wait_error(Reference, Key, Error) :-
+    with_mutex(promise_lifecycle,
+        (promise_state(Key,_,_,_,_,_) -> throw(Error); missing_promise(Reference))).
+
+release_promise_claim(Key, Claim) :-
+    (   retract(promise_state(Key,Q,W,T,Claim,Result))
+    ->  assertz(promise_state(Key,Q,W,T,none,Result))
+    ;   true
+    ).
+
+missing_promise(Reference) :-
+    throw(error(existence_error(promise, Reference),
+                context(rpc:yield/3, 'unknown, consumed, or expired promise'))).
 
 yield_timeout_callback(on_timeout(_)).
 
@@ -484,7 +591,7 @@ normalize_once(Value, _) :-
 %!  make_reference(-Reference) is det.
 %
 %   Mint a fresh integer promise reference.  References are
-%   rpc-local (they key promise_queue_store/2), so no shared pid
+%   rpc-local (they key promise_state/6), so no shared pid
 %   machinery is needed; the integer shape is observable through
 %   yield/2-3's must_be(integer) check and stays as in the
 %   demonstrator.

@@ -20,11 +20,12 @@ reply(Requests, Request) :-
 
 with_answer(Ref, Goal) :-
     setup_call_cleanup(
-        (rpc:make_reference(Ref), message_queue_create(Queue),
-         rpc:promise_queue_key(Ref, Key), assertz(rpc:promise_queue_store(Key,Queue)),
-         thread_send_message(Queue,failure)),
+        (rpc:make_reference(Ref),
+         rpc:promise_queue_key(Ref, Key),
+         with_mutex(promise_lifecycle,rpc:new_promise_state(Key,_)),
+         rpc:deliver_promise_answer(Key,failure)),
         Goal,
-        (retractall(rpc:promise_queue_store(Key,_)), message_queue_destroy(Queue))).
+        rpc:promise_cleanup(Ref)).
 
 invoke(rpc, URI, Options) :- rpc(URI,true,Options).
 invoke(promise, URI, Options) :- promise(URI,true,_,Options).
@@ -74,11 +75,11 @@ test(bad_values_before_source_fetch,
 test(bad_promise_offset, [throws(error(type_error(nonneg,-1),_))]) :-
     promise(17,true,_,[offset(-1)]).
 test(promise_validation_does_not_allocate) :-
-    aggregate_all(count,rpc:promise_queue_store(_,_),Before),
+    aggregate_all(count,rpc:promise_state(_,_,_,_,_,_),Before),
     catch(promise(17,true,Ref,[src_uri('http://127.0.0.1:1/never'),typo(1)]),Error,true),
     assertion(Error = error(domain_error(promise_option,typo(1)),_)),
     assertion(var(Ref)),
-    aggregate_all(count,rpc:promise_queue_store(_,_),After), assertion(Before==After).
+    aggregate_all(count,rpc:promise_state(_,_,_,_,_,_),After), assertion(Before==After).
 test(template_sharing_and_source_repetition) :-
     Options=[template(f(X,X)),src_text('p(a).'),src_text("p(b)."),src_list([q(X)])],
     rpc:validate_client_options(promise,Options),

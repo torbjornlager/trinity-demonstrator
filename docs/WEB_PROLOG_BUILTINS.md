@@ -464,8 +464,32 @@ still unbound. A failing callback throws `error(timeout_callback_failed(Ref), _)
 Both yield variants throw `error(existence_error(promise, Ref), _)` for an
 unknown, consumed, or expired reference. Native promise workers deliver request,
 transport, parsing, and invalid-response failures as `error(Error)` answers.
-Ownership, concurrent collection/expiry, resource reclamation, and remote
-cancellation remain separate lifecycle work.
+Native promises retain an unconsumed answer for 300 seconds from creation.
+One active collector is allowed per reference; a competing yield raises
+`error(permission_error(collect, promise, Ref), Context)`. This claim is released
+on timeout or interruption, before running the timeout callback. Callback
+failure/exception does not consume the promise; a retry remains possible
+unless another collector or disposal has since won.
+
+Completion, collection, expiry and explicit `promise_cleanup/1` serialize under
+a lifecycle mutex. Answers stay in the record until collection commits, so
+interrupting a collector after wakeup does not lose the answer. Successful
+collection consumes the reference and destroys its wake queue. Expiry or
+explicit cleanup invalidates it and wakes an already waiting collector with
+`existence_error(promise, Ref)`; an unavailable promise does not invoke its
+timeout callback. The mutex determines whether collection or disposal wins.
+
+Disposal also stops the local expiry task and interrupts an unfinished local
+HTTP worker, whose stream cleanup runs as it unwinds. A thread not yet activated
+observes disposal and exits without starting the request. Detached threads
+release their resources as they exit; disposal does not wait for the remote
+node. Late worker completion is ignored without writing to a destroyed queue.
+Failed initialisation rolls back allocated local resources. Explicit cleanup
+remains idempotent. This is local disposal, not guaranteed remote cancellation.
+
+References remain runtime-wide without enforcing client ownership. Cross-client
+ownership, automatic cleanup on client abandonment, and remote cancellation
+remain separate lifecycle work.
 
 `runtime_property/1` reports host capabilities rather than changing language
 semantics. Its properties are `implementation/1`, `persistent/1`,
