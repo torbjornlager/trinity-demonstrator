@@ -19,12 +19,12 @@ a conflicting output fails rather than selecting another worker.
 :- use_module(library(lists), [memberchk/2, selectchk/3]).
 :- use_module(library(option)).
 :- use_module(actors, [
-    spawn/3,
     self/1,
     send/2,
     receive/1
 ]).
-:- use_module(worker_cleanup, [tidy_up_all/1, worker_error/3]).
+:- use_module(worker_cleanup, [with_worker_scope/2, spawn_worker/3,
+                             close_worker_scope/1, release_worker/2, worker_error/3]).
 :- use_module(control_guard, []).
 
 :- multifile isolation:prepare_module/3.
@@ -71,8 +71,9 @@ first_solution_(Solution, QualifiedGoals, Options) :-
     strip_module(QualifiedGoals, Module, Goals0),
     must_be(list, Goals0),
     maplist(qualify_goal(Module), Goals0, Goals),
-    maplist(first_solve(Solution), Goals, Pids),
-    wait_first(Pids, Solution, OnFail, OnError).
+    with_worker_scope(Scope,
+        (maplist(first_solve(Scope, Solution), Goals, Pids),
+         wait_first(Scope, Pids, Solution, OnFail, OnError))).
 
 
 valid_first_solution_option(on_fail(_)) :- !.
@@ -87,11 +88,9 @@ qualify_goal(Module, Goal0, Module:Goal) :-
     control_guard:rewrite_goal(Module, Goal0, Goal).
 
 
-first_solve(Solution, Goal, Pid) :-
+first_solve(Scope, Solution, Goal, Pid) :-
     self(Self),
-    spawn(first_worker(Self, Pid, Solution, Goal), Pid, [
-        monitor(true)
-    ]).
+    spawn_worker(Scope, first_worker(Self, Pid, Solution, Goal), Pid).
 
 
 %  Private framework entry point.  The public node sandbox validates Goal
@@ -101,32 +100,39 @@ first_worker(Self, Pid, Solution, Goal) :-
     send(Self, Pid-Solution).
 
 
-wait_first([], _, _, _) :-
+% Unscoped collector entry for independently owned workers.
+wait_first(Pids, Solution, OnFail, OnError) :-
+    reverse(Pids, Reversed),
+    wait_first(workers(Reversed), Pids, Solution, OnFail, OnError).
+
+wait_first(_, [], _, _, _) :-
     !,
     fail.
-wait_first(Pids, Solution, OnFail, OnError) :-
+wait_first(Scope, Pids, Solution, OnFail, OnError) :-
     receive({
         Winner-Reply
                 if known_worker(Winner, Pids) ->
             % Selection commits to this worker. Clean up before a conflicting
             % caller output can make unification fail.
-            tidy_up_all(Pids),
+            close_worker_scope(Scope),
             Solution = Reply ;
         down(FailedPid, _, false)
                 if known_worker(FailedPid, Pids) ->
             (   OnFail == continue
-            ->  selectchk(FailedPid, Pids, Rest),
-                wait_first(Rest, Solution, OnFail, OnError)
-            ;   tidy_up_all(Pids),
+            ->  release_worker(Scope, FailedPid),
+                selectchk(FailedPid, Pids, Rest),
+                wait_first(Scope, Rest, Solution, OnFail, OnError)
+            ;   close_worker_scope(Scope),
                 !,
                 fail
             ) ;
         down(FailedPid, _, Reason)
                 if known_worker(FailedPid, Pids) ->
             (   OnError == continue
-            ->  selectchk(FailedPid, Pids, Rest),
-                wait_first(Rest, Solution, OnFail, OnError)
-            ;   tidy_up_all(Pids),
+            ->  release_worker(Scope, FailedPid),
+                selectchk(FailedPid, Pids, Rest),
+                wait_first(Scope, Rest, Solution, OnFail, OnError)
+            ;   close_worker_scope(Scope),
                 worker_error(FailedPid, Reason, Error),
                 throw(Error)
             )

@@ -29,12 +29,12 @@ Built directly on the layer-0 actor primitives.
 :- use_module(library(error)).
 :- use_module(library(lists), [memberchk/2]).
 :- use_module(actors, [
-    spawn/3,
     self/1,
     send/2,
     receive/1
 ]).
-:- use_module(worker_cleanup, [tidy_up_all/1, worker_error/3]).
+:- use_module(worker_cleanup, [with_worker_scope/2, spawn_worker/3, close_worker_scope/1,
+                             release_worker_scope/1, release_worker/2, worker_error/3]).
 :- use_module(control_guard, []).
 
 :- multifile isolation:prepare_module/3.
@@ -52,8 +52,10 @@ parallel(QualifiedGoals) :-
     must_be(list, Goals0),
     maplist(qualify_goal(Module), Goals0, Goals),
     maplist(goal_template, Goals, Templates),
-    maplist(par_solve, Goals, Templates, Pids),
-    maplist(par_yield(Pids), Pids, Templates).
+    with_worker_scope(Scope,
+        (maplist(par_solve(Scope), Goals, Templates, Pids),
+         maplist(par_yield(Scope, Pids), Pids, Templates),
+         release_worker_scope(Scope))).
 
 
 qualify_goal(Module, Goal0, Module:Goal) :-
@@ -64,11 +66,9 @@ goal_template(Goal, Template) :-
     term_variables(Goal, Template).
 
 
-par_solve(Goal, Template, Pid) :-
+par_solve(Scope, Goal, Template, Pid) :-
     self(Self),
-    spawn(par_worker(Self, Pid, Goal, Template), Pid, [
-        monitor(true)
-    ]).
+    spawn_worker(Scope, par_worker(Self, Pid, Goal, Template), Pid).
 
 
 %  Private framework entry point.  The public node sandbox validates Goal
@@ -77,7 +77,12 @@ par_worker(Self, Pid, Goal, Template) :-
     call(Goal),
     send(Self, Pid-Template).
 
+% Unscoped collector entry for independently owned workers.
 par_yield(Pids, Pid, Template) :-
+    reverse(Pids, Reversed),
+    par_yield(workers(Reversed), Pids, Pid, Template).
+
+par_yield(Scope, Pids, Pid, Template) :-
     receive({
         Pid-Answer ->
             (   Template = Answer
@@ -85,22 +90,22 @@ par_yield(Pids, Pid, Template) :-
                     % The accepted result establishes success. This down
                     % only confirms termination, whatever its reason.
                     down(Pid, _, _) ->
-                        true
+                        release_worker(Scope, Pid)
                 })
-            ;   tidy_up_all(Pids),
+            ;   close_worker_scope(Scope),
                 !,
                 fail
             ) ;
         down(FailedPid, _, false)
                 if known_worker(FailedPid, Pids) ->
-            tidy_up_all(Pids),
+            close_worker_scope(Scope),
             !, fail ;
         down(FailedPid, _, Reason)
                 if (known_worker(FailedPid, Pids),
                     (Reason \== true ; FailedPid == Pid)) ->
             % A later worker's normal down may precede the current result.
             % Leave it deferred until that worker's result is collected.
-            tidy_up_all(Pids),
+            close_worker_scope(Scope),
             worker_error(FailedPid, Reason, Error),
             throw(Error)
     }).

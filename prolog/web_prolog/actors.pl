@@ -529,8 +529,11 @@ spawn_thread_options(Options) :-
 %   sufficient — no heuristic delay.
 check_actor_start_error(Pid) :-
     thread_self(Me),
-    (   thread_get_message(Me, start_error(Pid, Error), [timeout(0)])
-    ->  throw(Error)
+    % Startup may be inside a signal-protected ownership handoff. Inspect
+    % without waiting, then consume the known message from our own queue.
+    (   thread_peek_message(Me, start_error(Pid, Error))
+    ->  thread_get_message(Me, start_error(Pid, Error)),
+        throw(Error)
     ;   true
     ).
 

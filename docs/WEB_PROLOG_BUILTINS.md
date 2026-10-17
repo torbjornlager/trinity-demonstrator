@@ -681,6 +681,30 @@ All workers are cleaned up before the selected payload is unified with
 unification and variable sharing. A mismatch consumes the winning reply and
 fails after cleanup; it does not try another solver or apply `on_error`.
 
+Both native operations now own their workers through an enclosing cleanup
+scope. Every successful spawn is recorded in a private ownership record;
+creation and recording are protected together against interruption, one
+worker at a time. A later startup failure cleans up workers already created
+and propagates the original error. Exceptions and caller interruption during
+the wait also terminate owned workers and remove their result and monitor
+messages before propagating the exception. The caller can catch that error
+and continue without relying on parent-exit containment to reclaim workers.
+If the caller has committed to actor termination, cleanup requests worker
+stops and removes its worker monitors without waiting for replies to the
+dying mailbox. Existing parent-to-child containment completes that teardown;
+this does not add a guarantee that every child has stopped before the parent's
+termination notification is delivered.
+
+Consuming a worker's termination notification releases that worker from the
+ownership record. Existing early cleanup clears the remaining record, so the
+enclosing finalizer does not repeat termination or create new cleanup monitors
+for already-settled workers. Normal `parallel/1` completion releases the record
+after collecting every result and termination notification.
+Result bindings, out-of-order completion, first-solution selection, and
+`on_fail`/`on_error` policies are unchanged. Unrelated actors, monitors and
+messages are preserved. This scope applies to the native worker generics;
+it adds no paging cleanup or remote-cancellation mechanism.
+
 ### Node Control
 
 `node/1`, `node/2`.
