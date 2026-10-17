@@ -7099,6 +7099,22 @@ test(rpc_3_load_text, set(X == [a, b])) :-
     with_node_server(URI,
         rpc(URI, p(X), [src_text('p(a). p(b).')])).
 
+test(rpc_3_repeated_source_options, all(X == [a,b])) :-
+    with_node_server(URI,
+        rpc(URI,p(X),[src_text('p(a).'),src_list([p(b)])])).
+
+test(promise_4_validated_template_and_offset) :-
+    with_node_server(URI,
+        (promise(URI,p(X),Ref,[template(pair(X,X)),offset(1),limit(1),
+                              src_text('p(a).'),src_list([p(b)])]),
+         yield(Ref,Answer,[timeout(2)]),
+         assertion(Answer = success([pair(b,b)],_)), assertion(var(X)))).
+
+test(rpc_options_validated_inside_stateless_call,
+     [throws(error(domain_error(rpc_option,timout(1)),_))]) :-
+    with_node_server(URI,
+        rpc(URI,rpc('http://127.0.0.1:1',true,[timout(1)]))).
+
 test(rpc_3_load_list, set(X == [a, b])) :-
     with_node_server(URI,
         rpc(URI, p(X), [src_list([p(a), p(b)])])).

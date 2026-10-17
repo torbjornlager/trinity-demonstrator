@@ -236,6 +236,42 @@ All runtimes accept the same `rpc/3` transport options: `limit/1`, `once/1`,
 `timeout/1`, and `http_timeout/1`, together with the `src_*` source options.
 `promise/4` accepts these plus `template/1` and `offset/1`; offset selects the
 single slice collected by the promise and is not a public `rpc/3` option.
+
+The native client validates the complete option list at entry, before URI
+resolution/source fetching in `rpc/3` and `promise/4`, or waiting/collection
+in `yield/3`. Options must be unary terms in a proper list. Unknown names,
+wrong arities, and options belonging to another operation raise
+`error(domain_error(rpc_option, Option), _)`, `promise_option`, or
+`yield_option`, respectively. Invalid values raise type, domain, or
+instantiation errors with the public predicate in the context. Every supplied
+option is validated, even if a later duplicate would otherwise be ignored.
+
+Native `rpc/3` and `promise/4` support this HTTP subset in addition to
+`http_timeout/1`:
+
+- `request_header(Name=Value)`: atom name and atom/string value; may be repeated.
+- `authorization(basic(User,Password))` or `authorization(bearer(Token))`:
+  atom/string arguments.
+- `user_agent(Agent)`: atom/string value.
+
+These options apply to requests to the execution node, including later RPC
+slices; they do not configure `src_uri/1` fetching. Other SWI HTTP options are
+rejected rather than forwarded. Query/source options never reach `http_open/3`;
+`http_timeout/1` is translated to the host transport's `timeout/1`.
+Repeated source options retain their order. Query settings use the first
+occurrence; templates retain variable sharing with the goal and offsets must
+be nonnegative integers. Existing timeout conventions remain: negative
+execution/HTTP timeouts become zero; an execution timeout of `none` or an
+unbound value is unspecified. Native source text continues to accept
+atom/string/codes/chars representations; this does not settle the portable
+text contract.
+
+Native `yield/3` accepts only `timeout(Number)` and `on_timeout(Callable)`;
+the first occurrence of each takes effect. A negative wait timeout returns
+immediately if no answer is available. Validation never runs the callback
+or consumes the promise. Broader actor/wrapper option validation and
+synchronous-wrapper answer routing remain separate work.
+
 Promise references are opaque ten-digit integers, minted securely and never reused.
 Native `yield/3` returns `timeout` when its wait expires and retains the promise
 for retry. An `on_timeout/1` callback runs once in the caller's context; its
