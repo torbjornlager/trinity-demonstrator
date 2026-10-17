@@ -250,9 +250,10 @@ remote dispatch. Receiving HTTP/WebSocket toplevel endpoints validate raw
 client options before source preparation and metadata injection; internal
 metadata cannot be supplied as raw client options. Existing HTTP session
 defaults, reserved WebSocket routing, and owner ceilings are unchanged.
-Name validation only checks its type; registration still follows creation.
-Supervisor child-specification validation is described below. Atomic naming
-and lifecycle changes remain separate work.
+In addition to name-type validation, local named creation now uses a
+reservation/publication protocol, described below. Supervisor
+child-specification validation is described in its own section. Remote
+naming and broader lifecycle changes remain separate work.
 
 ### Actor Messaging
 
@@ -262,6 +263,33 @@ and lifecycle changes remain separate work.
 ### Actor Naming
 
 `register/2`, `whereis/2`, `unregister/1`.
+
+Native local named creation by `toplevel_spawn/2`, `server_spawn/4`,
+`supervisor_spawn/3`, and `statechart_spawn/2` reserves the first `name/1`
+in the caller's existing ordinary namespace before launching an actor.
+Existing namespace isolation and the independent service registry are
+unchanged. An occupied or reserved name raises `name_is_in_use(Name)` before
+local launch. Ordinary `register/2` respects pending name/pid claims, using
+its existing collision errors.
+
+Pending reservations are invisible to `whereis/2` and message routing.
+`unregister/1` removes published bindings; it does not cancel a pending
+startup. After preparation succeeds and the pid is resolvable, the readiness
+handshake publishes the name before the application goal runs. Preparation
+failure or cancellation releases the pending claim; a cancelled preparation
+cannot later publish it. Retirement and publication use the registry mutex,
+so immediate termination cannot be followed by a stale wrapper registration.
+After publication, explicit unregister/rename behavior remains available.
+Returning a pid does not guarantee continued liveness or completed application
+initialisation; effects after activation are not rolled back by this protocol.
+
+Composition uses `actors:spawn_with_name/4`, with an internal
+`name_reservation/1` option. Raw remote clients cannot supply that metadata.
+The distribution hook recognises local node URL aliases; plain `spawn/3`
+still rejects `name/1`. Requests that actually create remote actors retain
+post-spawn alias registration, without a cross-node atomicity guarantee.
+Ordinary `register/2` still does not validate local pid liveness, and remote
+alias cleanup remains explicit client work. Broader lifecycle work is unchanged.
 
 ### Owner Service Publication
 

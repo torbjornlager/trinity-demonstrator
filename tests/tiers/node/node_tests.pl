@@ -7589,6 +7589,20 @@ test(public_actor_client_cannot_access_service_registry_predicates) :-
     once(sub_string(UnregisterError, _, _, _, "No permission to unregister service counter")),
     once(sub_string(RegisterError, _, _, _, "No permission to register service counter")).
 
+test(public_ws_named_creation_preserves_namespaces) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        setup_call_cleanup((ws_open(URI,WS1),ws_open(URI,WS2)),
+            forall(member(WS,[WS1,WS2]),
+                (ws_send_json(WS,json{command:toplevel_spawn,
+                     options:"[session(true),name(atomic_named_session)]"}),
+                 ws_receive_json_first_of(WS,["spawned","error"],Spawned),
+                 assertion(Spawned.type=="spawned"),
+                 ws_send_json(WS,json{command:toplevel_call,pid:Spawned.pid,
+                     goal:"self(S),whereis(atomic_named_session,P),S==P"}),
+                 ws_receive_json_first_of(WS,["success","error"],Reply),
+                 assertion(Reply.type=="success"))),
+            (catch(ws_close(WS1,1000,done),_,true),catch(ws_close(WS2,1000,done),_,true)))).
+
 test(public_ws_clients_have_isolated_registered_name_namespaces,
      true((Self1 == Pid1,
            Self2 == Pid2,
@@ -8194,7 +8208,8 @@ test(remote_toplevel_spawn_rejects_raw_metadata,
 
 test(ws_bare_spawn_rejects_framework_metadata,
      [forall(member(Option,[source_module(test_node),inherit_goal_module(false),
-                           isolation_io(generated),monitor_target(main),monitor_ref(123)]))]) :-
+                           isolation_io(generated),monitor_target(main),monitor_ref(123),
+                           name_reservation(test_token)]))]) :-
     with_node_server_options([profile(actor),sandbox(blacklist)],URI,
         setup_call_cleanup(ws_open(URI,WS),
             (term_string([Option],Text,[quoted(true)]),

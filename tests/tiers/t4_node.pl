@@ -45,6 +45,7 @@ http_status(URL, Status) :-
 :- use_module('spawn_options_tests.pl', []).
 :- use_module('wrapper_options_tests.pl', []).
 :- use_module('supervisor_child_spec_tests.pl', []).
+:- use_module('named_creation_tests.pl', []).
 :- user:load_files('node/generic_actor_tests.pl', []).
 :- use_module('node/node_tests.pl', []).
 :- user:load_files('node/actor_remote_exit_failure.plt', []).
@@ -61,6 +62,7 @@ run_tier :-
                 spawn_options, spawn_source_options,
                 wrapper_options,
                 supervisor_child_specs,
+                named_creation,
                 goal_walker,
                 generic_actor_api,
                 actor_remote_exit_failure,

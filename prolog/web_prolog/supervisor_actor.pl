@@ -200,11 +200,7 @@ supervisor_spawn(ChildSpecs0, Pid, Options) :-
     exclude(is_sup_option, Options, SpawnOpts0),
     ensure_source_module(SourceModule, SpawnOpts0, SpawnOpts),
     State0 = sup(Strategy, MaxR, MaxT, [], []),
-    spawn(sup_init(Specs, State0), Pid, SpawnOpts),
-    (   option(name(Name), Options)
-    ->  register(Name, Pid)
-    ;   true
-    ).
+    spawn_with_name(sup_init(Specs, State0), Pid, SpawnOpts, Options).
 
 is_sup_option(strategy(_)).
 is_sup_option(intensity(_)).

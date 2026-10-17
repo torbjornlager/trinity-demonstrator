@@ -66,6 +66,7 @@ rewrite_goal_if_needed/3.
 ]).
 :- use_module(actors, [
     spawn/3,
+    spawn_with_name/4,
     self/1,
     send/2,
     receive/1,
@@ -148,9 +149,8 @@ local_toplevel_spawn(Pid, SourceModule, Options) :-
     option(io_target(DefaultIoTarget), Options, follow_result_target),
     exclude(is_toplevel_spawn_opt, Options, SpawnOptions),
     Lifecycle = ptcp_options(Session, TimeLimit, IdleLimit, DefaultIoTarget),
-    spawn(ptcp(Pid, Target, Lifecycle), Pid,
-          [source_module(SourceModule)|SpawnOptions]),
-    maybe_register_toplevel_name(Options, Pid).
+    spawn_with_name(ptcp(Pid, Target, Lifecycle), Pid,
+                    [source_module(SourceModule)|SpawnOptions], Options).
 
 effective_ptcp_limits(TimeLimit0, IdleLimit0, TimeLimit, IdleLimit) :-
     (   hook_ptcp_limits(TimeLimit0, IdleLimit0, TimeLimit1, IdleLimit1)
@@ -165,12 +165,6 @@ is_toplevel_spawn_opt(session(_)).
 is_toplevel_spawn_opt(time_limit(_)).
 is_toplevel_spawn_opt(idle_limit(_)).
 is_toplevel_spawn_opt(io_target(_)).
-
-maybe_register_toplevel_name(Options, Pid) :-
-    (   option(name(Name), Options)
-    ->  register(Name, Pid)
-    ;   true
-    ).
 
 %!  ptcp(+Pid, +Target, +SessionOrLifecycle) is det.
 %

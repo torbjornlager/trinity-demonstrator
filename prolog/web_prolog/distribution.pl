@@ -176,6 +176,9 @@ actors:hook_spawn(Goal, Pid, Options) :-
     ;   spawn_remote(Goal, Pid, Node, Options)
     ).
 
+% Keep local named creation local even when the caller names this node by URL.
+actors:hook_local_spawn_node(Node) :- localhost_node(Node).
+
 %!  spawn_remote(:Goal, -Pid, +Node0, +Options) is det.
 %
 %   Spawn a remote actor over WebSocket and return a compound pid `Id@Node`.
@@ -239,6 +242,7 @@ local_only_spawn_option(link(_)).
 local_only_spawn_option(monitor(_)).
 local_only_spawn_option(monitor_target(_)).
 local_only_spawn_option(monitor_ref(_)).
+local_only_spawn_option(name_reservation(_)).
 local_only_spawn_option(source_module(_)).
 local_only_spawn_option(inherit_goal_module(_)).
 local_only_spawn_option(isolation_io(_)).

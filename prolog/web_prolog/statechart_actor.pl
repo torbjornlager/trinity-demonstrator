@@ -139,8 +139,7 @@ statechart_spawn(Pid, OptionsSpec) :-
     statechart_spawn_source(Options2, SourceGoal0, SpawnOptions0),
     traced_statechart_source_goal(Trace, SourceGoal0, SourceGoal),
     ensure_statechart_source_module(SourceModule, SpawnOptions0, SpawnOptions),
-    spawn(SourceGoal, Pid, SpawnOptions),
-    maybe_register_statechart_name(Options0, Pid).
+    spawn_with_name(SourceGoal, Pid, SpawnOptions, Options0).
 
 is_statechart_spawn_local_option(name(_)).
 
@@ -176,12 +175,6 @@ configure_trace(Trace) :-
     retractall(trace_disabled),
     (   Trace == false
     ->  assertz(trace_disabled)
-    ;   true
-    ).
-
-maybe_register_statechart_name(Options, Pid) :-
-    (   option(name(Name), Options)
-    ->  register(Name, Pid)
     ;   true
     ).
 

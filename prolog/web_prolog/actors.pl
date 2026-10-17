@@ -2,6 +2,7 @@
    [ spawn/1,                % :Goal
      spawn/2,                % :Goal, -Pid
      spawn/3,                % :Goal, -Pid, +Options
+     spawn_with_name/4,      % :Goal, -Pid, +SpawnOptions, +WrapperOptions
      validate_spawn_options/2, % +Options, +Scope (runtime composition API)
      validate_spawn_wrapper_options/4, % +Options, +Scope, +PI, +ExtraSpecs
      actors/1,               % -List of actors
@@ -87,6 +88,8 @@ Identity-style (semidet; first solution wins, default = identity/fail):
   - hook_local_pid(+Pid0, -LocalPid): localize a pid (fail = not local).
   - hook_self(-Pid): override self/1's result.
   - hook_namespace(-NS): current registry/visibility namespace.
+  - hook_local_spawn_node(+Node): recognise this node's local URL aliases
+    for the named-creation helper (localhost is local without this hook).
 
 Takeover-style (semidet; if a clause succeeds the core path is skipped):
 
@@ -162,6 +165,7 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     hook_namespace/1,
     hook_service_registry_denied/0,
     hook_spawn/3,
+    hook_local_spawn_node/1,
     hook_send/2,
     hook_exit/2,
     hook_start_body/7,
@@ -190,6 +194,7 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     spawn(:),
     spawn(:, -),
     spawn(:, -, +),
+    spawn_with_name(:, -, +, +),
     receive(:),
     receive(:, +),
     with_io_target(+, 0),
@@ -320,6 +325,22 @@ spawn(Goal, Pid, Options) :-
         )
     ).
 
+% Composition helper for naming wrappers. Remote creation retains its
+% historical post-spawn alias registration; only local startup is reserved.
+spawn_with_name(Goal, Pid, Options, WrapperOptions) :-
+    (   option(name(Name), WrapperOptions)
+    ->  must_be(atom, Name),
+        option(node(Node), Options, localhost),
+        (   (Node == localhost ; once(hook_local_spawn_node(Node)))
+        ->  setup_call_catcher_cleanup(
+                reserve_spawn_name(Name, Token),
+                spawn(Goal, Pid, [name_reservation(Token)|Options]),
+                Catcher, finish_spawn_name(Token, Catcher))
+        ;   spawn(Goal, Pid, Options), register(Name, Pid)
+        )
+    ;   spawn(Goal, Pid, Options)
+    ).
+
 %!  spawn_local(:Goal, -Pid, +Options) is det.
 %
 %   Spawn a regular local actor in this Prolog node.
@@ -329,6 +350,7 @@ spawn_local(Goal, Pid, Options) :-
     validate_spawn_options(EffectiveOptions, runtime),
     make_pid(LocalPid),
     canonical_pid(LocalPid, Pid),
+    attach_spawn_name(EffectiveOptions, Pid),
     %  Admission reserves a slot for LocalPid (under a mutex) and the
     %  reservation lives until the actor is activated or the spawn fails,
     %  so concurrent spawns cannot all observe the same below-ceiling
@@ -392,6 +414,7 @@ core_spawn_option(io_target, public, error:must_be(nonvar)).
 core_spawn_option(node, public, actors:spawn_node_value).
 core_spawn_option(monitor_target, internal, error:must_be(nonvar)).
 core_spawn_option(monitor_ref, internal, error:must_be(nonvar)).
+core_spawn_option(name_reservation, internal, error:must_be(nonvar)).
 
 spawn_node_value(Node) :-
     must_be(nonvar, Node),
@@ -626,8 +649,8 @@ start_body(GlobalPid, Parent, Goal, Options) :-
     %  so hook implementations receive them as opaque callables and
     %  the protocol needs no exported API (and no wrapper can strand
     %  them in a foreign calling context).
-    OnReady = actors:actor_started(Parent, GlobalPid),
-    OnPrepError = actors:actor_start_failed(Parent, GlobalPid),
+    OnReady = actors:actor_started(Parent, GlobalPid, Options),
+    OnPrepError = actors:actor_start_failed(Parent, GlobalPid, Options),
     Runner = actors:start_goal_runner(Options),
     (   hook_start_body(GlobalPid, Goal, Options,
                         OnReady, OnPrepError, Runner, Start)
@@ -636,8 +659,8 @@ start_body(GlobalPid, Parent, Goal, Options) :-
     ),
     call(Start).
 
-%!  actor_started(+Parent, +Pid) is det.
-%!  actor_start_failed(+Parent, +Pid, +Error) is det.
+%!  actor_started(+Parent, +Pid, +Options) is det.
+%!  actor_start_failed(+Parent, +Pid, +Options, +Error) is det.
 %
 %   The spawn handshake protocol: the parent blocks on
 %   `initialized(Pid)` and then peeks for `start_error(Pid, Error)`.
@@ -645,10 +668,14 @@ start_body(GlobalPid, Parent, Goal, Options) :-
 %   the parent's zero-timeout peek finds it.  Internal: reach
 %   hook_start_body/7 implementations only as the OnReady/OnPrepError
 %   closures.
-actor_started(Parent, Pid) :-
+actor_started(Parent, Pid, Options) :-
+    catch(publish_spawn_name(Parent, Pid, Options), Error,
+          (send_thread_message(Parent, start_error(Pid, Error)),
+           send_thread_message(Parent, initialized(Pid)), throw(Error))),
     send_thread_message(Parent, initialized(Pid)).
 
-actor_start_failed(Parent, Pid, Error) :-
+actor_start_failed(Parent, Pid, Options, Error) :-
+    fail_spawn_name(Parent, Pid, Options),
     send_thread_message(Parent, start_error(Pid, Error)).
 
 %!  start_goal_runner(+Options, :Goal) is det.
@@ -715,7 +742,9 @@ stop(Pid, Parent) :-
     %  transaction (and is removed here), or observes the retired pid and
     %  fails; it cannot install a stale service mapping after cleanup.
     with_mutex(actors_registry,
-        (   retractall(registered(_Namespace, _Name, GlobalPid)),
+        (   retractall(spawn_name_reservation(_, _, _, _, GlobalPid, _)),
+            retractall(spawn_name_reservation(_, _, _, GlobalPid, _, _)),
+            retractall(registered(_Namespace, _Name, GlobalPid)),
             retractall(registered_service(_ServiceName, GlobalPid)),
             with_mutex(actors_monitor_lifecycle,
                 (   down_reason(Pid, Reason),
@@ -896,6 +925,7 @@ flush_monitor_down(Ref) :-
 
 :- dynamic registered/3.
 :- dynamic registered_service/2.
+:- dynamic spawn_name_reservation/6. % Token, Namespace, Name, Owner, Pid, State
 :- dynamic delayed_send/3.
 
 register(Name, Pid) :-
@@ -933,7 +963,7 @@ register_service(Name, Pid) :-
 unregister(Name) :-
     must_be(atom, Name),
     current_registry_namespace(Namespace),
-    retractall(registered(Namespace, Name, _)).
+    with_mutex(actors_registry, retractall(registered(Namespace, Name, _))).
 
 %!  unregister_service(+Name) is det.
 %
@@ -993,12 +1023,71 @@ service_registry_access_error(Goal) :-
                         'service registry inspection is reserved for node-owned runtime code'))).
 
 ensure_name_registration_available(Namespace, Name, Pid, CanonPid) :-
-    (   ordinary_registered_pid(Namespace, CanonPid)
+    (   (ordinary_registered_pid(Namespace, CanonPid) ; reserved_spawn_pid(Namespace, CanonPid))
     ->  throw(process_already_has_a_name(Pid))
-    ;   ordinary_registered_name(Namespace, Name)
+    ;   (ordinary_registered_name(Namespace, Name) ; reserved_spawn_name(Namespace, Name))
     ->  throw(name_is_in_use(Name))
     ;   true
     ).
+
+reserve_spawn_name(Name, Token) :-
+    self(Owner), make_ref(Token), current_registry_namespace(Namespace),
+    with_mutex(actors_registry,
+        (   (ordinary_registered_name(Namespace,Name) ; reserved_spawn_name(Namespace,Name))
+        ->  throw(name_is_in_use(Name))
+        ;   assertz(spawn_name_reservation(Token,Namespace,Name,Owner,pending,reserved))
+        )).
+
+reserved_spawn_name(Namespace, Name) :-
+    spawn_name_reservation(_, NS, Name, _, _, State), State \== published,
+    (nonvar(Namespace) -> Namespace == NS ; true).
+
+reserved_spawn_pid(Namespace, Pid) :-
+    spawn_name_reservation(_, NS, _, _, Child, State), State \== published,
+    Child \== pending, Pid == Child,
+    (nonvar(Namespace) -> Namespace == NS ; true).
+
+attach_spawn_name(Options, Pid) :-
+    (   option(name_reservation(Token),Options)
+    ->  self(Owner),
+        with_mutex(actors_registry,
+            (   retract(spawn_name_reservation(Token,NS,Name,Owner,pending,reserved))
+            ->  assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
+            ;   existence_error(name_reservation,Token)
+            ))
+    ;   true
+    ).
+
+publish_spawn_name(Owner, Pid, Options) :-
+    (   option(name_reservation(Token),Options)
+    ->  with_mutex(actors_registry,
+            (   retract(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
+            ->  assertz(registered(NS,Name,Pid)),
+                assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,published))
+            ;   spawn_name_reservation(Token,_,_,Owner,Pid,failed)
+            ->  true  % preparation failed: acknowledge, without publication
+            ;   existence_error(name_reservation,Token)
+            ))
+    ;   true
+    ).
+
+fail_spawn_name(Owner, Pid, Options) :-
+    (   option(name_reservation(Token),Options)
+    ->  with_mutex(actors_registry,
+            (   retract(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
+            ->  assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,failed))
+            ;   true
+            ))
+    ;   true
+    ).
+
+finish_spawn_name(Token, Catcher) :-
+    with_mutex(actors_registry,
+        forall(retract(spawn_name_reservation(Token,NS,Name,_,Pid,State)),
+            (   Catcher \== exit, Catcher \== (!), State == published
+            ->  retractall(registered(NS,Name,Pid))
+            ;   true
+            ))).
 
 ensure_service_registration_available(Name) :-
     (   published_service_name(Name)

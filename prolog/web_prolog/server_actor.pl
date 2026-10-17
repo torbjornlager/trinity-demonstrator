@@ -69,11 +69,7 @@ server_spawn(Pred0, State, Pid, Options) :-
     Pred = SourceModule:PlainPred,
     exclude(is_server_spawn_opt, Options, SpawnOpts0),
     ensure_source_module(SourceModule, SpawnOpts0, SpawnOpts),
-    spawn(server_loop(Pred, State), Pid, SpawnOpts),
-    (   option(name(Name), Options)
-    ->  register(Name, Pid)
-    ;   true
-    ).
+    spawn_with_name(server_loop(Pred, State), Pid, SpawnOpts, Options).
 
 is_server_spawn_opt(name(_)).
 
