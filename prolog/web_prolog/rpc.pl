@@ -81,6 +81,7 @@ rpc(URI, Goal) :-
     rpc(URI, Goal, []).
 
 rpc(URI, Goal0, Options0) :-
+    validate_client_options(rpc, Options0),
     resolve_rpc_uri(URI, RPCURI),
     strip_module(Goal0, GoalModule, Goal),
     parse_url(RPCURI, Parts),
@@ -212,6 +213,90 @@ rpc_search_params(GoalAtom, TemplateAtom, Offset, Limit,
     append_optional_param(Search1, timeout, RemoteTimeout, Search2),
     append_optional_param(Search2, once, Once, Search).
 
+% Validate the whole list before URI resolution, source fetching, worker
+% creation, or waiting. Inspect option names without instantiating user terms;
+% in particular template/1 and on_timeout/1 must retain variable sharing.
+validate_client_options(Kind, Options) :-
+    client_option_context(Kind, PI),
+    catch((must_be(list, Options),
+           maplist(validate_client_option(Kind), Options)),
+          error(Formal, _),
+          throw(error(Formal, context(PI, 'invalid client option')))).
+
+client_option_context(rpc, rpc:rpc/3).
+client_option_context(promise, rpc:promise/4).
+client_option_context(yield, rpc:yield/3).
+
+validate_client_option(Kind, Option) :-
+    must_be(nonvar, Option),
+    (   compound(Option), compound_name_arity(Option, Name, 1),
+        client_option_type(Kind, Name, Type)
+    ->  arg(1, Option, Value),
+        validate_client_value(Type, Value)
+    ;   atom_concat(Kind, '_option', Domain),
+        domain_error(Domain, Option)
+    ).
+
+client_option_type(rpc, Name, Type) :- query_option_type(Name, Type).
+client_option_type(promise, template, template).
+client_option_type(promise, offset, nonneg).
+client_option_type(promise, Name, Type) :- query_option_type(Name, Type).
+client_option_type(yield, timeout, number).
+client_option_type(yield, on_timeout, callable).
+
+query_option_type(limit, positive_integer).
+query_option_type(once, boolean).
+query_option_type(timeout, remote_timeout).
+query_option_type(http_timeout, number).
+query_option_type(src_text, source_text).
+query_option_type(src_list, list).
+query_option_type(src_uri, atom_or_string).
+query_option_type(src_predicates, predicate_indicators).
+query_option_type(request_header, request_header).
+query_option_type(authorization, authorization).
+query_option_type(user_agent, atom_or_string).
+
+validate_client_value(template, _) :- !.
+validate_client_value(remote_timeout, Value) :- !,
+    % Preserve the existing unspecified-timeout and negative-timeout rules.
+    normalize_requested_timeout(Value, _).
+validate_client_value(boolean, Value) :- !,
+    must_be(nonvar, Value), normalize_once(Value, _).
+validate_client_value(source_text, Value) :- !,
+    % Keep the demonstrator's existing atom/string/codes/chars convention.
+    system:text_to_string(Value, _).
+validate_client_value(atom_or_string, Value) :- !,
+    must_be(nonvar, Value),
+    (atom(Value) -> true ; string(Value) -> true ; type_error(atom_or_string, Value)).
+validate_client_value(predicate_indicators, Value) :- !,
+    must_be(list, Value), maplist(validate_client_pi, Value).
+validate_client_value(request_header, Value) :- !,
+    must_be(nonvar, Value),
+    (   compound(Value), compound_name_arity(Value, '=', 2)
+    ->  arg(1, Value, Name), arg(2, Value, Text),
+        must_be(atom, Name), validate_client_value(atom_or_string, Text)
+    ;   type_error(http_request_header, Value)
+    ).
+validate_client_value(authorization, Value) :- !,
+    must_be(nonvar, Value),
+    (   compound(Value), compound_name_arity(Value, basic, 2)
+    ->  arg(1, Value, User), arg(2, Value, Password),
+        validate_client_value(atom_or_string, User),
+        validate_client_value(atom_or_string, Password)
+    ;   compound(Value), compound_name_arity(Value, bearer, 1)
+    ->  arg(1, Value, Token), validate_client_value(atom_or_string, Token)
+    ;   domain_error(http_authorization, Value)
+    ).
+validate_client_value(Type, Value) :- must_be(Type, Value).
+
+validate_client_pi(PI) :-
+    must_be(nonvar, PI),
+    (   compound(PI), compound_name_arity(PI, '/', 2)
+    ->  arg(1, PI, Name), arg(2, PI, Arity),
+        must_be(atom, Name), must_be(nonneg, Arity)
+    ;   type_error(predicate_indicator, PI)
+    ).
+
 %!  rpc_http_options(+Options0, -HTTPOptions) is det.
 rpc_http_options(Options0, HTTPOptions) :-
     (   select_option(http_timeout(HTTPTimeout0), Options0, Options1)
@@ -220,19 +305,12 @@ rpc_http_options(Options0, HTTPOptions) :-
     ;   Options1 = Options0,
         HTTPPrefix = []
     ),
-    exclude(rpc_internal_option, Options1, HTTPFiltered),
+    include(rpc_transport_option, Options1, HTTPFiltered),
     append(HTTPPrefix, HTTPFiltered, HTTPOptions).
 
-rpc_internal_option(limit(_)).
-rpc_internal_option(template(_)).
-rpc_internal_option(offset(_)).
-rpc_internal_option(timeout(_)).
-rpc_internal_option(http_timeout(_)).
-rpc_internal_option(src_text(_)).
-rpc_internal_option(src_list(_)).
-rpc_internal_option(src_uri(_)).
-rpc_internal_option(src_predicates(_)).
-rpc_internal_option(once(_)).
+rpc_transport_option(request_header(_)).
+rpc_transport_option(authorization(_)).
+rpc_transport_option(user_agent(_)).
 
 %!  append_optional_param(+Search0, +Key, +Value, -Search) is det.
 append_optional_param(Search, _, '', Search) :- !.
@@ -277,6 +355,7 @@ promise(URI, Goal, Reference) :-
     promise(URI, Goal, Reference, []).
 
 promise(URI, Goal0, Reference, Options) :-
+    validate_client_options(promise, Options),
     resolve_rpc_uri(URI, RPCURI),
     strip_module(Goal0, GoalModule, Goal),
     option(template(Template), Options, Goal),
@@ -350,7 +429,7 @@ yield(Reference, Message) :-
 yield(Reference, Message, Options0) :-
     must_be(integer, Reference),
     strip_module(Options0, Caller, Options),
-    must_be(list, Options),
+    validate_client_options(yield, Options),
     promise_queue_key(Reference, QueueKey),
     (   promise_queue_store(QueueKey, Queue)
     ->  exclude(yield_timeout_callback, Options, WaitOptions),
