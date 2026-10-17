@@ -403,8 +403,11 @@ The short forms supply `[]`; the default wait has no timeout. A timeout
 callback runs once in its caller's context with bindings retained; callback
 failure makes the wrapper fail and exceptions propagate. Without a callback,
 a timeout succeeds leaving `Answer` unbound, matching `receive/2` rather than
-`yield/3`'s default `timeout` result. A timeout does not stop the query or
-discard a later answer. A pre-instantiated answer mismatch consumes the
+`yield/3`'s default `timeout` result. A timeout does not stop the query. Each call or next has a fresh private
+request reference, carried by its answer. A later synchronous wait on the
+same pid discards obsolete tagged replies it encounters and accepts only
+its own reference; skipping stale replies does not restart the wait deadline.
+Ordinary asynchronous answers and I/O remain available. A pre-instantiated answer mismatch consumes the
 selected answer and fails. Each wrapper installs a private monitor before
 sending and throws `toplevel_down(Reason)` if it observes termination instead
 of an answer. The monitor is removed with `demonitor(Ref, [flush])` on every
@@ -412,9 +415,17 @@ exit path, including send exceptions, timeout callbacks, and answer mismatch.
 Existing monitors and unrelated messages are preserved. Remote reasons may
 include `connection_closed`, which reports lost observation rather than proven
 death. Query exceptions still return `error(Pid, Error)` answer terms.
-Public-node callbacks cross the usual sandbox boundary. These wrappers remain
-single-client operations; concurrent-client
-coordination and stale-answer correlation are separate work.
+Public-node callbacks cross the usual sandbox boundary. These wrappers remain single-client operations; request correlation does
+not coordinate concurrent callers or change the PTCP rules for advancing
+or replacing a query.
+
+Remote synchronous requests require the WebSocket subprotocol
+`web-prolog-sync-v1` on the actual connection. An unsupported peer raises
+`error(permission_error(use,toplevel_correlation,Node),_)` before the query
+is sent, even with `timeout(0)`. The receive timeout still starts after
+sending; it does not bound connection setup. Older peers remain usable for
+asynchronous operations. Synchronous return terms are unchanged; the private
+reply envelope is removed by the wrapper.
 
 ### Remote Queries
 

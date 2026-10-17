@@ -255,7 +255,7 @@ ws_handler_open(Request, NodePort) :-
         peer_answer_terms(Request, AnswerTerms),
         http_upgrade_to_websocket(
             ws_main(NodePort, Principal, ClientMeta, AnswerTerms),
-            [],
+            [subprotocols(['web-prolog-sync-v1'])],
             Request
         )
     ;   ws_profile_error_reply(Error)
@@ -521,6 +521,16 @@ answer_term_text(error(_Pid, Error), Text) :-
     transportable_term(Error),
     term_to_wire_text(Error, Text).
 
+% Queue-targeted correlated answers use additive metadata. Native actor
+% targets receive the same envelope through the ordinary actor-term transport.
+ws_relay_message(WebSocket, _Queue, '$toplevel_reply'(Ref, Answer)) :-
+    !,
+    answer_to_json(Answer, JSON0),
+    term_to_wire_text(Ref, RefText),
+    put_dict(toplevel_correlation, JSON0, RefText, JSON1),
+    (answer_term_text(Answer, TermText) -> put_dict(term, JSON1, TermText, JSON)
+    ; JSON = JSON1),
+    atom_json_dict(Text, JSON, []), ws_send(WebSocket, text(Text)).
 ws_relay_message(WebSocket, Queue, Message) :-
     ws_answer_terms(Queue),
     answer_term_text(Message, TermText),

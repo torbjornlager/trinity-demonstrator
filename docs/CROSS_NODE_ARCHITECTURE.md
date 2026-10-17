@@ -35,8 +35,17 @@ which carries no version field at all. A node:
 The field is **additive and backward-compatible**: a demonstrator-era
 peer ignores the unknown header, and a versioned node tolerates its
 absence (treating a peer as version 1). It exists so future
-incompatible changes are detectable — it carries no negotiation yet.
-Bump `protocol_version/1` only on an incompatible wire change.
+incompatible changes are detectable. The version header itself does not
+negotiate optional features. Bump `protocol_version/1` only on an incompatible
+wire change.
+
+Native peers additionally offer and select the optional WebSocket subprotocol
+`web-prolog-sync-v1`. Its selection promises correlated PTCP replies. A peer
+that selects no such subprotocol remains usable for asynchronous operations;
+native synchronous wrappers raise
+`error(permission_error(use,toplevel_correlation,Node),_)` before sending the
+query. Support is recorded per connection during its upgrade and removed on
+connection teardown, so reconnecting checks the new peer again.
 
 For cross-node operations, each node hosts a **node controller**:
 a Prolog module that owns three dynamic tables and a small set of
@@ -350,6 +359,22 @@ field.  Prolog terms in arguments are encoded as wire atoms via
 | `toplevel_next` | `pid` | as `toplevel_call`; inherits the preceding call's `limit` |
 | `toplevel_stop` | `pid` | `stop` |
 | `toplevel_halt` | `pid` | `halted` |
+
+Native synchronous calls and nexts use the ordinary `send` command with
+`'$request_ref'(Ref)` in the private PTCP options and `target(Caller)`.
+The toplevel replies with `'$toplevel_reply'(Ref,Answer)` through ordinary
+actor-term delivery, preserving the caller's route and the original answer
+term. Each next supplies a new reference. An asynchronous next clears the
+reference, and an asynchronous call starts with no reference.
+
+For a queue-targeted reply serialized as a JSON answer event, the relay adds
+`toplevel_correlation` containing the canonical reference text. It retains
+the normal `pid`, `type`, and display fields and includes the canonical
+`term` payload for success/error. The decoder restores the same private
+reply envelope. The native wrapper removes that envelope before returning
+`success/3`, `failure/1`, or `error/2` to the caller. No correlation field is
+added to ordinary asynchronous events. Delayed errors and time-limit errors
+use the reference of the request they answer.
 
 ### 4.4 Inbound events
 

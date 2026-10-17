@@ -15,12 +15,85 @@ drain_answers(Pid) :-
     receive({
         success(P,_,_) if P == Pid -> drain_answers(Pid) ;
         failure(P) if P == Pid -> drain_answers(Pid) ;
-        error(P,_) if P == Pid -> drain_answers(Pid)
+        error(P,_) if P == Pid -> drain_answers(Pid) ;
+        '$toplevel_reply'(_,A) if toplevel_actors:toplevel_answer_pid(A,Pid) -> drain_answers(Pid)
     },[timeout(0)]).
 
 callback_answer(Answer) :- Answer = waited.
 
+% The same scenarios also run over the real WebSocket transport in T4.
+correlation_case(late_call(Outcome)) :- member(Outcome, [true,fail,throw(old_error)]).
+correlation_case(late_next).
+correlation_case(pending_error).
+correlation_case(time_limit).
+correlation_case(late_time_limit).
+correlation_case(next_time_limit).
+correlation_case(async_next_clears_reference).
+correlation_case(async_call_clears_reference).
+correlation_case(async_messages_preserved).
+
+correlation_scenario(Pid, late_call(Outcome)) :-
+    toplevel_call_synch(Pid,(sleep(0.06),Outcome),Late,[timeout(0.005)]),
+    assertion(var(Late)),
+    toplevel_call_synch(Pid,X=fresh,Answer,[template(X),timeout(2),on_timeout(throw(missing_fresh))]),
+    assertion(Answer == success(Pid,[fresh],false)).
+correlation_scenario(Pid, late_next) :-
+    toplevel_call_synch(Pid,(member(X,[a,b,c]),(X==b -> sleep(0.06);true)),First,
+                        [template(X),limit(1),timeout(2)]),
+    assertion(First == success(Pid,[a],true)),
+    toplevel_next_synch(Pid,Late,[timeout(0.005)]), assertion(var(Late)),
+    toplevel_next_synch(Pid,Last,[timeout(2),on_timeout(throw(missing_last))]),
+    assertion(Last == success(Pid,[c],false)).
+correlation_scenario(Pid, pending_error) :-
+    toplevel_call_synch(Pid,(X=a;throw(page_error)),First,
+                        [template(X),limit(2),timeout(2)]),
+    assertion(First == success(Pid,[a],true)),
+    toplevel_next_synch(Pid,Last,[timeout(2),on_timeout(throw(missing_error))]),
+    assertion(Last == error(Pid,page_error)).
+correlation_scenario(Pid, time_limit) :-
+    toplevel_call_synch(Pid,sleep(1),Answer,[timeout(2),on_timeout(throw(missing_alarm))]),
+    assertion(Answer = error(Pid,error(resource_error(time),_))).
+correlation_scenario(Pid, late_time_limit) :-
+    toplevel_call_synch(Pid,sleep(1),Late,[timeout(0.005)]), assertion(var(Late)),
+    toplevel_call_synch(Pid,true,Answer,[timeout(2),on_timeout(throw(missing_after_alarm))]),
+    assertion(Answer == success(Pid,[true],false)).
+correlation_scenario(Pid, next_time_limit) :-
+    toplevel_call_synch(Pid,(X=a;(sleep(1),X=b)),_,[template(X),limit(1),timeout(2)]),
+    toplevel_next_synch(Pid,Answer,[timeout(2),on_timeout(throw(missing_next_alarm))]),
+    assertion(Answer = error(Pid,error(resource_error(time),_))).
+correlation_scenario(Pid, async_next_clears_reference) :-
+    toplevel_call_synch(Pid,member(X,[a,b]),_,[template(X),limit(1),timeout(2)]),
+    toplevel_next(Pid),
+    receive({success(Pid,[b],false) -> true},[timeout(2),on_timeout(throw(missing_async_next))]).
+correlation_scenario(Pid, async_call_clears_reference) :-
+    toplevel_call_synch(Pid,true,_,[timeout(2)]),
+    toplevel_call(Pid,fail),
+    receive({failure(Pid) -> true},[timeout(2),on_timeout(throw(missing_async_failure))]).
+correlation_scenario(Pid, async_messages_preserved) :-
+    toplevel_call(Pid,fail),
+    toplevel_call_synch(Pid,true,Answer,[timeout(2),on_timeout(throw(missing_sync))]),
+    assertion(Answer == success(Pid,[true],false)),
+    receive({failure(Pid) -> true},[timeout(2),on_timeout(throw(lost_async))]).
+
+stale_sender(Self, Pid) :-
+    forall(between(1,30,_),
+           (send(Self,'$toplevel_reply'(obsolete,success(Pid,[old],false))),sleep(0.01))).
+
 :- begin_tests(toplevel_synch).
+
+test(correlation, [forall(correlation_case(Case))]) :-
+    with_toplevel(Pid,[time_limit(0.15)],correlation_scenario(Pid,Case)).
+
+test(stale_replies_do_not_restart_deadline, [timeout(3)]) :-
+    with_toplevel(Pid,[],
+        (self(Self),
+         setup_call_cleanup(spawn(stale_sender(Self,Pid),Sender,[link(false)]),
+             (get_time(Start),
+              toplevel_call_synch(Pid,sleep(1),A,
+                                  [timeout(0.06),on_timeout(A=timed_out)]),
+              get_time(End), Elapsed is End-Start,
+              assertion(A == timed_out), assertion(Elapsed < 0.22)),
+             exit(Sender,true)))).
 
 test(default_arities_and_paging) :-
     with_toplevel(Pid,[],

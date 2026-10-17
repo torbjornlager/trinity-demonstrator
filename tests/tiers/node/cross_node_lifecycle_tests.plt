@@ -90,6 +90,35 @@ test(remote_synchronous_call_reports_toplevel_termination,
         )).
 
 
+test(remote_synchronous_correlation,
+     [setup(flush_mailbox),forall(test_toplevel_synch:correlation_case(Case))]) :-
+    with_test_nodes(
+        [node_spec(b, [profile(actor), auth(open)])],
+        (remote_only_actor_url(URLB),
+         toplevel_spawn(Pid, [node(URLB), session(true),time_limit(0.15)]),
+         setup_call_cleanup(true,
+             test_toplevel_synch:correlation_scenario(Pid,Case),
+             toplevel_halt(Pid,true)))).
+
+% Correlated answers must not follow the creation-time controller target.
+% A subsequent asynchronous call still uses that original target.
+test(remote_synchronous_target_and_async_default, [setup(flush_mailbox)]) :-
+    with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
+        (remote_only_actor_url(URLB), self(Self),
+         setup_call_cleanup(spawn(forward_sync_test(Self),Sink,[link(false)]),
+             (toplevel_spawn(Pid,[node(URLB),session(true),target(Sink)]),
+              setup_call_cleanup(true,
+                  (toplevel_call_synch(Pid,true,A,[timeout(2),on_timeout(throw(misrouted))]),
+                   assertion(A == success(Pid,[true],false)),
+                   toplevel_call(Pid,fail),
+                   receive({forwarded(failure(Pid)) -> true},
+                           [timeout(2),on_timeout(throw(lost_async_target))])),
+                  toplevel_halt(Pid,true))),
+             exit(Sink,true)))).
+
+forward_sync_test(Self) :-
+    receive({Message -> send(Self,forwarded(Message)),forward_sync_test(Self)}).
+
 %  ------------------ cross-node link propagation --------------------
 %
 %  Spawn a parent actor on node A whose body is "spawn a child on

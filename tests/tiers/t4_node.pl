@@ -50,6 +50,7 @@ http_status(URL, Status) :-
 :- use_module('named_creation_tests.pl', []).
 :- use_module('server_promise_cleanup_tests.pl', []).
 :- use_module('node/remote_alias_cleanup_tests.pl', []).
+:- use_module('node/toplevel_correlation_transport_tests.pl', []).
 :- use_module('node/namespace_teardown_tests.pl', []).
 :- user:load_files('node/generic_actor_tests.pl', []).
 :- use_module('node/node_tests.pl', []).
@@ -63,7 +64,7 @@ http_status(URL, Status) :-
 run_tier :-
     layer_honesty,
     run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, promise_lifecycle, promise_ownership, rpc_options,
-                toplevel_synch,
+                toplevel_synch, toplevel_correlation_transport,
                 spawn_options, spawn_source_options,
                 wrapper_options,
                 supervisor_child_specs,

@@ -68,6 +68,7 @@ rewrite_goal_if_needed/3.
     spawn/3,
     spawn_with_name/4,
     self/1,
+    make_ref/1,
     send/2,
     receive/1,
     receive/2,
@@ -286,7 +287,8 @@ state_1(Pid, Target0, Session, TimeLimit, IdleLimit, DefaultIoTarget) :-
             option(target(Target1), Options, Target0),
             set_current_client(Target1),
             call_io_target(Options, DefaultIoTarget, Target1, IoTarget),
-            Target = target(Target1),
+            option('$request_ref'(RequestRef), Options, none),
+            Target = target(Target1, RequestRef),
             run_call(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
                      TimeLimit, IdleLimit)
         }, IdleLimit),
@@ -329,13 +331,12 @@ run_call_answers(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
     arm_time_limit_alarm(Alarm, TimeLimit),
     state_2(Goal, Template, Offset, Limit, Once, IoTarget, Pid, Answer),
     disarm_time_limit_alarm(Alarm),
-    arg(1, Target, Out),
     (   Answer = pending_error(Pid, Slice, Error)
     ->  %  Solutions found before an exception are delivered as a page
         %  with more to come; the error answers the next request.
-        send(Out, success(Pid, Slice, true)),
+        send_toplevel_answer(Target, success(Pid, Slice, true)),
         state_3_error(Pid, Error, Target, IdleLimit)
-    ;   send(Out, Answer),
+    ;   send_toplevel_answer(Target, Answer),
         (   arg(3, Answer, true)
         ->  state_3(Limit, Target, IdleLimit, Alarm, TimeLimit)
         ;   true
@@ -345,19 +346,29 @@ run_call_answers(Goal, Template, Offset, Limit, Once, Target, IoTarget, Pid,
 state_3_error(Pid, Error, Target, IdleLimit) :-
     receive_idle({
         '$next'(Options) ->
-            (   option(target(NewTarget), Options)
-            ->  nb_setarg(1, Target, NewTarget),
-                set_current_client(NewTarget)
-            ;   true
-            ),
-            arg(1, Target, Out),
-            send(Out, error(Pid, Error)) ;
+            update_answer_target(Options, Target),
+            send_toplevel_answer(Target, error(Pid, Error)) ;
         '$stop' -> true
     }, IdleLimit).
 
 send_time_limit_error(Target, Pid) :-
-    arg(1, Target, Out),
-    send(Out, error(Pid, error(resource_error(time), _))).
+    send_toplevel_answer(Target, error(Pid, error(resource_error(time), _))).
+
+% The reference follows each request, independently of the retained target.
+% An asynchronous next clears it, restoring ordinary answer messages.
+update_answer_target(Options, Target) :-
+    (   option(target(NewTarget), Options)
+    ->  nb_setarg(1, Target, NewTarget), set_current_client(NewTarget)
+    ;   true
+    ),
+    option('$request_ref'(RequestRef), Options, none),
+    nb_setarg(2, Target, RequestRef).
+
+send_toplevel_answer(Target, Answer) :-
+    arg(1, Target, Out), arg(2, Target, RequestRef),
+    (RequestRef == none -> Message = Answer
+    ; Message = '$toplevel_reply'(RequestRef, Answer)),
+    send(Out, Message).
 
 create_time_limit_alarm(infinite, none) :-
     !.
@@ -422,11 +433,7 @@ state_3(Limit, Target, IdleLimit, Alarm, TimeLimit) :-
                 nb_setarg(1, Limit, NewLimit)
             ;   true
             ),
-            (   option(target(NewTarget), Options2)
-            ->  nb_setarg(1, Target, NewTarget),
-                set_current_client(NewTarget)
-            ;   true
-            ),
+            update_answer_target(Options2, Target),
             arm_time_limit_alarm(Alarm, TimeLimit),
             fail ;
         '$stop' -> true
@@ -620,10 +627,11 @@ toplevel_call_synch(Pid, Goal, Answer) :-
 
 toplevel_call_synch(Pid, Goal, Answer, Options0) :-
     synchronous_options(call, Options0, Caller, QueryOptions, ReceiveOptions),
+    make_ref(RequestRef),
     setup_call_cleanup(
         monitor(Pid, Ref),
-        (toplevel_call(Pid, Goal, QueryOptions),
-         synchronous_answer(Pid, Ref, Answer, Caller, ReceiveOptions)),
+        (toplevel_call(Pid, Goal, ['$request_ref'(RequestRef)|QueryOptions]),
+         synchronous_answer(Pid, Ref, RequestRef, Answer, Caller, ReceiveOptions)),
         demonitor(Ref, [flush])).
 
 %!  toplevel_next_synch(+Pid, -Answer) is semidet.
@@ -633,10 +641,11 @@ toplevel_next_synch(Pid, Answer) :-
 
 toplevel_next_synch(Pid, Answer, Options0) :-
     synchronous_options(next, Options0, Caller, QueryOptions, ReceiveOptions),
+    make_ref(RequestRef),
     setup_call_cleanup(
         monitor(Pid, Ref),
-        (toplevel_next(Pid, QueryOptions),
-         synchronous_answer(Pid, Ref, Answer, Caller, ReceiveOptions)),
+        (toplevel_next(Pid, ['$request_ref'(RequestRef)|QueryOptions]),
+         synchronous_answer(Pid, Ref, RequestRef, Answer, Caller, ReceiveOptions)),
         demonitor(Ref, [flush])).
 
 synchronous_options(Kind, Options0, Caller, [target(Self)|Query], Receive) :-
@@ -680,19 +689,29 @@ synchronous_option_value(target, Target, Self) :- !,
 synchronous_option_value(term, _, _) :- !.
 synchronous_option_value(Type, Value, _) :- must_be(Type, Value).
 
-synchronous_answer(Pid, MonRef, Answer, Caller, Options) :-
+synchronous_answer(Pid, MonRef, RequestRef, Answer, Caller, Options) :-
     option(on_timeout(Callback), Options, true),
-    exclude(synchronous_timeout_option, Options, WaitOptions),
-    % Only protocol answers are selected; I/O and unrelated messages remain
-    % available. Unify Answer after selection, so a mismatch consumes it.
-    once(receive({
-        success(P,Data,More) if P == Pid -> Answer = success(P,Data,More) ;
-        failure(P) if P == Pid -> Answer = failure(P) ;
-        error(P,Error) if P == Pid -> Answer = error(P,Error) ;
-        down(_,Ref,Reason) if Ref == MonRef -> throw(toplevel_down(Reason))
-    }, [on_timeout(run_wait_callback(Caller,Callback))|WaitOptions])).
+    (   option(timeout(Seconds), Options), Seconds > 0
+    ->  get_time(Now), Deadline is Now + Seconds, WaitOptions = [deadline(Deadline)]
+    ;   option(timeout(Seconds), Options)
+    ->  WaitOptions = [timeout(Seconds)]
+    ;   WaitOptions = []
+    ),
+    once(synchronous_receive(Pid, MonRef, RequestRef, Answer, Caller, Callback,
+                             WaitOptions)).
 
-synchronous_timeout_option(on_timeout(_)).
+synchronous_receive(Pid, MonRef, RequestRef, Answer, Caller, Callback, WaitOptions) :-
+    receive({
+        '$toplevel_reply'(ReplyRef, Reply) if toplevel_answer_pid(Reply, Pid) ->
+            (ReplyRef == RequestRef -> Answer = Reply
+            ; synchronous_receive(Pid, MonRef, RequestRef, Answer, Caller,
+                                  Callback, WaitOptions)) ;
+        down(_,Ref,Reason) if Ref == MonRef -> throw(toplevel_down(Reason))
+    }, [on_timeout(run_wait_callback(Caller,Callback))|WaitOptions]).
+
+toplevel_answer_pid(success(P,_,_), Pid) :- P == Pid.
+toplevel_answer_pid(failure(P), Pid) :- P == Pid.
+toplevel_answer_pid(error(P,_), Pid) :- P == Pid.
 
 run_wait_callback(Caller, Goal0) :-
     (   hook_wait_callback(Caller, Goal0, Goal)

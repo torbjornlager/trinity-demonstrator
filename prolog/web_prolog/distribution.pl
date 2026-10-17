@@ -76,6 +76,7 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
     hook_command_context/2, hook_remote_actor/1, hook_remote_retired/1, hook_remote_spawn_start/1.
 
 :- dynamic ws_connection/4.
+:- dynamic ws_sync_connection/1.
 :- dynamic ws_pending_event/3.
 :- dynamic spawn_queue_user/1.
 :- dynamic closed_spawn_queue/1.
@@ -440,12 +441,7 @@ actors:hook_send(Name@Node, Message) :-
     atom(Name),
     \+ local_node_url(Node),
     !,
-    term_to_wire_atom(Message, MsgAtom),
-    best_effort(remote_send_command(Node, json{
-        command: send,
-        pid: Name,
-        message: MsgAtom
-    })).
+    remote_actor_send(Node, Name, Message).
 actors:hook_send(Name@Node, Message) :-
     atom(Name),
     local_node_url(Node),
@@ -456,16 +452,39 @@ actors:hook_send(Id@Node, Message) :-
     ;   \+ local_node_url(Node)
     ),
     !,
-    term_to_wire_atom(Message, MsgAtom),
-    best_effort(remote_send_command(Node, json{
-        command: send,
-        pid: Id,
-        message: MsgAtom
-    })).
+    remote_actor_send(Node, Id, Message).
 actors:hook_send(Id@Node, Message) :-
     local_node_url(Node),
     !,
     actors:send(Id, Message).
+
+% The ordinary actor-term transport carries the private reply envelope
+% without changing target or I/O semantics. Check support on the actual
+% connection before sending a synchronous query; async sends remain compatible.
+remote_actor_send(Node, Pid, Message) :-
+    term_to_wire_atom(Message, MsgAtom),
+    Command = json{command:send, pid:Pid, message:MsgAtom},
+    (   correlated_toplevel_message(Message)
+    ->  ws_mutex(Node, ws_send_lock, Mutex),
+        with_mutex(Mutex,
+            (remote_connection(Node, Socket, _),
+             require_toplevel_correlation(Socket, Node),
+             ws_send_json(Socket, Command)))
+    ;   best_effort(remote_send_command(Node, Command))
+    ).
+
+correlated_toplevel_message('$call'(_, Options)) :-
+    option('$request_ref'(_), Options), !.
+correlated_toplevel_message('$next'(Options)) :-
+    option('$request_ref'(_), Options).
+
+require_toplevel_correlation(Socket, Node) :-
+    (   ws_sync_connection(Socket)
+    ->  true
+    ;   throw(error(permission_error(use, toplevel_correlation, Node),
+                    context(toplevel_actors,
+                            'peer does not support correlated synchronous replies')))
+    ).
 
 %  Cross-node exits go directly over the per-node WebSocket via
 %  safe_remote_kill_send/4.  Failures emit a remote_exit_failed event
@@ -766,6 +785,9 @@ remote_connection_locked(NodeURL, Socket, SpawnQueue) :-
         findall(O, (hook_transport_options(NodeURL, Os), member(O, Os)), ExtraWSOptions),
         append(ExtraWSOptions, DefaultWSOptions, WSOptions),
         http_open_websocket(WsURL, Socket, WSOptions),
+        % Read the stream property before the reader owns its input lock.
+        (ws_property(Socket, subprotocol('web-prolog-sync-v1'))
+        -> assertz(ws_sync_connection(Socket)) ; true),
         message_queue_create(SpawnQueue),
         %  The node layer wraps the reader goal with its logging scope
         %  through hook_connection_context/2.  Module-qualified so the
@@ -783,6 +805,7 @@ remote_connection_locked(NodeURL, Socket, SpawnQueue) :-
 
 
 internal_transport_ws_options([
+    subprotocols(['web-prolog-sync-v1']),
     request_header('X-Web-Prolog-User'=PrincipalId),
     request_header('X-Web-Prolog-Capabilities'=CapabilityHeader),
     request_header('X-Web-Prolog-Protocol'=ProtocolVersion)
@@ -806,7 +829,8 @@ remote_drop_connection_locked(NodeURL) :-
         forall(retract(pending_io_request(NodeURL, _, Queue)),
                thread_send_message(Queue, "connection_closed"))),
     forall(retract(ws_connection(NodeURL, Socket, _Reader, SpawnQueue)),
-           ( best_effort(ws_close(Socket, 1000, "done")),
+           ( retractall(ws_sync_connection(Socket)),
+             best_effort(ws_close(Socket, 1000, "done")),
              close_spawn_queue(SpawnQueue)
            )),
     retractall(ws_pending_event(NodeURL, _, _)).

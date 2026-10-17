@@ -87,6 +87,11 @@ ws_json_is_io_output(Dict) :-
 %   exception (Semantic Contracts D5); the exact terms are then restored.
 %   Without it (older peers), rows are rebuilt from their display text and
 %   an error is reported as remote_error(Text).
+ws_json_to_actor_event(Dict, CompoundPid, '$toplevel_reply'(Ref, Answer)) :-
+    get_dict(toplevel_correlation, Dict, RefText), !,
+    wire_text_to_term(RefText, Ref), ground(Ref),
+    del_dict(toplevel_correlation, Dict, _, Plain),
+    ws_json_to_actor_event(Plain, CompoundPid, Answer).
 ws_json_to_actor_event(Dict, CompoundPid, success(CompoundPid, Rows, More)) :-
     get_dict(type, Dict, "success"),
     !,
