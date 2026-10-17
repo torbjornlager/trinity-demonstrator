@@ -560,6 +560,15 @@ remains available for `server_yield/4`, which performs the normal cleanup.
 Abandonment after a successful send and a live server that never replies remain
 separate lifecycle concerns.
 
+`server_yield/2-3` selects the reply for `Ref` using a fresh payload variable,
+then unifies that payload with `Response`. Compatible instantiated outputs
+and nonground replies use ordinary unification, preserving payload variable
+sharing. A conflicting output consumes the reply and fails immediately; it
+does not leave the reply deferred or invoke the timeout callback. Unrelated
+references and messages remain available. The monitored `server_yield/4`
+already uses this selection-before-unification rule. Existing reference
+handling and timeout/callback behaviour are unchanged.
+
 ### Supervisors
 
 `supervisor_spawn/2`, `supervisor_spawn/3`,
@@ -653,6 +662,12 @@ original terms and other exits throw `worker_exit(Pid,Reason)`, including
 is removed and the call keeps waiting while alternatives remain. If all
 alternatives are removed, the call fails. No new options are introduced.
 Notifications from unrelated actors remain in the caller's mailbox.
+
+The winning reply is selected independently of the caller's output pattern.
+All workers are cleaned up before the selected payload is unified with
+`Solution`. Compatible outputs and nonground payloads retain ordinary
+unification and variable sharing. A mismatch consumes the winning reply and
+fails after cleanup; it does not try another solver or apply `on_error`.
 
 ### Node Control
 

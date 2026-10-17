@@ -9,7 +9,9 @@
 
 Runs alternative goals concurrently in monitored worker actors, returns the
 first successful solution, and cleans up every remaining worker without
-leaving result or monitor messages in the caller's mailbox.
+leaving result or monitor messages in the caller's mailbox. The selected
+reply is consumed and workers are cleaned up before output unification;
+a conflicting output fails rather than selecting another worker.
 */
 
 :- use_module(library(apply)).
@@ -104,9 +106,12 @@ wait_first([], _, _, _) :-
     fail.
 wait_first(Pids, Solution, OnFail, OnError) :-
     receive({
-        Winner-Solution
+        Winner-Reply
                 if known_worker(Winner, Pids) ->
-            tidy_up_all(Pids) ;
+            % Selection commits to this worker. Clean up before a conflicting
+            % caller output can make unification fail.
+            tidy_up_all(Pids),
+            Solution = Reply ;
         down(FailedPid, _, false)
                 if known_worker(FailedPid, Pids) ->
             (   OnFail == continue

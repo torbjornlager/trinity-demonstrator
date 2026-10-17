@@ -79,6 +79,41 @@ test(halt_preserves_existing_monitor) :-
             [timeout(1), on_timeout(fail)]),
     receive({down(Pid, _, _) -> fail}, [timeout(0)]).
 
+% Exercise both the delegating short form and the option-bearing form.
+yield_output_test(short, Ref, Response) :- server_yield(Ref,Response).
+yield_output_test(options, Ref, Response) :-
+    server_yield(Ref,Response,[timeout(0),on_timeout(throw(missing_reply))]).
+
+test(yield_instantiated_output_match,
+     [forall(member(Form,[short,options])),timeout(2)]) :-
+    self(Self),actors:make_ref(Ref),actors:send(Self,Ref-expected),
+    yield_output_test(Form,Ref,expected).
+
+test(yield_mismatch_consumes_reply,
+     [forall(member(Form,[short,options])),timeout(2)]) :-
+    self(Self),actors:make_ref(Ref),actors:make_ref(Other),
+    actors:send(Self,Other-unrelated),actors:send(Self,Ref-actual),
+    \+ yield_output_test(Form,Ref,different),
+    receive({Ref-_ -> throw(unconsumed_mismatching_reply)},[timeout(0)]),
+    receive({Other-unrelated -> true},[timeout(0),on_timeout(fail)]).
+
+test(yield_nonground_reply_uses_unification,
+     [forall(member(Form,[short,options])),timeout(2)]) :-
+    self(Self),actors:make_ref(Ref),actors:send(Self,Ref-pair(V,V)),
+    yield_output_test(Form,Ref,pair(fixed,X)),
+    assertion(X==fixed),assertion(var(V)).
+
+test(yield_preserves_reply_variable_sharing,
+     [forall(member(Form,[short,options])),timeout(2)]) :-
+    self(Self),actors:make_ref(Ref),actors:send(Self,Ref-pair(V,V)),
+    yield_output_test(Form,Ref,pair(A,B)),
+    assertion(var(A)),assertion(A==B),assertion(var(V)),assertion(A\==V).
+
+test(unmonitored_yield_timeout_callback_unchanged) :-
+    actors:make_ref(Ref),
+    findall(X,server_yield(Ref,_,[timeout(0),on_timeout(member(X,[a,b]))]),Xs),
+    assertion(Xs==[a,b]).
+
 test(yield_cleans_monitor_on_timeout,
      [forall(member(Handler, [true, fail, throw(timeout_test)]))]) :-
     spawn(receive({stop -> true}), Pid, []),

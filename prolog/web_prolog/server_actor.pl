@@ -207,15 +207,15 @@ server_promise(To, Request, Ref, MonRef) :-
 %!  server_yield(+Ref, -Response) is det.
 %!  server_yield(+Ref, -Response, +Options) is det.
 %
-%   Wait for the server reply matching Ref. Options are passed to
-%   receive/2.
+%   Wait for the server reply matching Ref, then unify Response. A conflicting
+%   output consumes the reply and fails. Options are passed to receive/2.
 
 server_yield(Ref, Response) :-
     server_yield(Ref, Response, []).
 
 server_yield(Ref, Response, Options) :-
     receive({
-        Ref-Response -> true
+        Ref-Reply -> Response = Reply
     }, Options).
 
 

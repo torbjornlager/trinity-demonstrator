@@ -443,4 +443,63 @@ test(unbound_pid_unusual_down_is_preserved, [timeout(2)]) :-
     receive({down(P,unrelated_ref,cancelled) -> assertion(var(P))},
             [timeout(0),on_timeout(fail)]).
 
+first_output_test(short, Solution, Goals) :- first_solution(Solution,Goals).
+first_output_test(options, Solution, Goals) :-
+    first_solution(Solution,Goals,[on_error(continue)]).
+
+test(instantiated_output_match,
+     [forall(member(Form,[short,options])),timeout(2)]) :-
+    first_output_test(Form,pair(fixed,X),[X=value]),assertion(X==value).
+
+test(nonground_result_sharing,
+     [forall(member(Form,[short,options])),timeout(2)]) :-
+    first_output_test(Form,Solution,[Solution=pair(V,V)]),
+    Solution=pair(A,B),
+    assertion(var(A)),assertion(A==B),assertion(var(V)),assertion(A\==V).
+
+% Mutation of the worker's copied template gives an end-to-end mismatch.
+% The worker sends a result but the caller's original template stays intact.
+test(output_mismatch_is_failure_not_error,
+     [forall(member(Form,[short,options])),setup(flush_parallel_mailbox),timeout(2)]) :-
+    Solution=box(expected),
+    \+ first_output_test(Form,Solution,[nb_setarg(1,Solution,actual),receive({})]),
+    assertion(Solution==box(expected)),assert_parallel_mailbox_empty.
+
+% Controlled replies exercise selection independently of the template copied
+% into public workers, including nonground replies requiring unification.
+:- meta_predicate with_output_workers(+,-,0).
+with_output_workers(Reply, Pids, Goal) :-
+    self(Self),
+    setup_call_cleanup(
+        spawn((self(P),send(Self,P-Reply),send(Self,output_ready(P)),receive({})),
+              Winner,[monitor(true),link(false)]),
+        (receive({output_ready(Winner) -> true}),
+         setup_call_cleanup(
+             spawn((self(P),send(Self,P-expected),send(Self,output_ready(P)),receive({})),
+                   Other,[monitor(true),link(false)]),
+             (receive({output_ready(Other) -> true}),Pids=[Winner,Other],call(Goal)),
+             worker_cleanup:tidy_up_all([Other]))),
+        worker_cleanup:tidy_up_all([Winner])).
+
+assert_output_workers_stopped(Pids) :-
+    forall(member(Pid,Pids),
+           (actors:monitor(Pid,Ref),
+            receive({down(Pid,Ref,no_process) -> true},
+                    [timeout(0),on_timeout(throw(worker_still_running(Pid)))]))).
+
+test(selected_mismatch_cleans_workers_before_failure,
+     [setup(flush_parallel_mailbox),timeout(2)]) :-
+    self(Self),send(Self,output_unrelated),
+    with_output_workers(actual,Pids,
+        (\+ first_solution:wait_first(Pids,expected,continue,continue),
+         assert_output_workers_stopped(Pids),assert_parallel_mailbox_empty,
+         receive({output_unrelated -> true},[timeout(0),on_timeout(fail)]))).
+
+test(selected_nonground_reply_uses_unification,
+     [setup(flush_parallel_mailbox),timeout(2)]) :-
+    with_output_workers(pair(V,V),Pids,
+        (first_solution:wait_first(Pids,pair(fixed,X),continue,stop),
+         assertion(X==fixed),assertion(var(V)),
+         assert_output_workers_stopped(Pids),assert_parallel_mailbox_empty)).
+
 :- end_tests(first_solution).
