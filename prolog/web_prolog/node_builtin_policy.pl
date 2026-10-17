@@ -227,6 +227,10 @@ builtin_goal_policy(toplevel_call(_, _), toplevel, actor).
 builtin_goal_policy(toplevel_call(_, _, _), toplevel, actor).
 builtin_goal_policy(toplevel_next(_), toplevel, actor).
 builtin_goal_policy(toplevel_next(_, _), toplevel, actor).
+builtin_goal_policy(toplevel_call_synch(_, _, _), toplevel, actor).
+builtin_goal_policy(toplevel_call_synch(_, _, _, _), toplevel, actor).
+builtin_goal_policy(toplevel_next_synch(_, _), toplevel, actor).
+builtin_goal_policy(toplevel_next_synch(_, _, _), toplevel, actor).
 builtin_goal_policy(toplevel_stop(_), toplevel, actor).
 builtin_goal_policy(toplevel_abort(_), toplevel, actor).
 builtin_goal_policy(toplevel_halt(_), toplevel, actor).
@@ -430,6 +434,8 @@ builtin_family_spec(toplevel,
                     "Manage explicit toplevel actors and paged solution streams.",
                     ["toplevel_spawn/1", "toplevel_spawn/2", "toplevel_call/2",
                      "toplevel_call/3", "toplevel_next/1", "toplevel_next/2",
+                     "toplevel_call_synch/3", "toplevel_call_synch/4",
+                     "toplevel_next_synch/2", "toplevel_next_synch/3",
                      "toplevel_stop/1", "toplevel_abort/1",
                      "toplevel_halt/1", "toplevel_halt/2"],
                     [actor]).

@@ -719,8 +719,23 @@ sandbox_check_unqualified_(_, toplevel_call(_Pid, Goal), Profile, Module) :-
 sandbox_check_unqualified_(_, toplevel_call(_Pid, Goal, Options), Profile, Module) :-
     reject_forbidden_goal(Profile, Module, Goal),
     reject_toplevel_call_options(Profile, Options).
+sandbox_check_unqualified_(_, toplevel_call_synch(_Pid, Goal, _Answer), Profile, Module) :-
+    reject_forbidden_goal(Profile, Module, Goal).
+sandbox_check_unqualified_(_, toplevel_call_synch(_Pid, Goal, _Answer, Options0), Profile, Module) :-
+    reject_forbidden_goal(Profile, Module, Goal),
+    synchronous_options_module(Options0, Module, Caller, Options),
+    reject_receive_options(Profile, Caller, Options).
+sandbox_check_unqualified_(_, toplevel_next_synch(_Pid, _Answer, Options0), Profile, Module) :-
+    synchronous_options_module(Options0, Module, Caller, Options),
+    reject_receive_options(Profile, Caller, Options).
 sandbox_check_unqualified_(_, with_io_target(_Target, Goal), Profile, Module) :-
     reject_forbidden_goal(Profile, Module, Goal).
+
+synchronous_options_module(Options0, Default, Module, Options) :-
+    (   nonvar(Options0), Options0 = M:List, atom(M)
+    ->  Module = M, Options = List
+    ;   Module = Default, Options = Options0
+    ).
 
 sandbox_public_goal(toplevel_spawn(_)).
 sandbox_public_goal(toplevel_spawn(_, _)).
@@ -1248,6 +1263,19 @@ sandbox:safe_meta(rpc:yield(_, _, Options0), Calls) :-
     receive_option_calls(Options, Goals),
     maplist(qualify_sandbox_goal(Module), Goals, Calls).
 sandbox:safe_primitive(rpc:runtime_property(_)).
+
+% Client goals run in the target toplevel through prepared_goal/3. Only
+% timeout callbacks execute here and must be exposed to whitelist checking.
+sandbox:safe_meta(toplevel_actors:toplevel_call_synch(_, _, _), []).
+sandbox:safe_meta(toplevel_actors:toplevel_call_synch(_, _, _, Options0), Calls) :-
+    strip_module(Options0, Module, Options),
+    receive_option_calls(Options, Goals),
+    maplist(qualify_sandbox_goal(Module), Goals, Calls).
+sandbox:safe_meta(toplevel_actors:toplevel_next_synch(_, _), []).
+sandbox:safe_meta(toplevel_actors:toplevel_next_synch(_, _, Options0), Calls) :-
+    strip_module(Options0, Module, Options),
+    receive_option_calls(Options, Goals),
+    maplist(qualify_sandbox_goal(Module), Goals, Calls).
 
 %  Statechart behaviour entry points.  statechart_spawn/2 routes through
 %  spawn/3, so its chart source options are re-validated by the runtime

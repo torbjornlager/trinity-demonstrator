@@ -60,7 +60,9 @@
     update_current_node_runtime/1
 ]).
 :- use_module('../../../prolog/web_prolog/node_execution_context.pl', [with_public_execution_profile/2]).
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl', [toplevel_spawn/2, toplevel_call/3, toplevel_next/1]).
+:- use_module('../../../prolog/web_prolog/toplevel_actors.pl',
+              [toplevel_spawn/2, toplevel_call/3, toplevel_next/1,
+               toplevel_call_synch/4, toplevel_next_synch/3, toplevel_halt/2]).
 :- use_module('../../../prolog/web_prolog/actor_api.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, make_id/1, op(200, xfx, @)]).
 :- use_module('../../../prolog/web_prolog/pid_utils.pl', [pid_local/2]).
 :- use_module('../../../prolog/web_prolog/statechart_actor.pl', [statechart_spawn/2]).
@@ -8073,6 +8075,52 @@ test(whitelist_yield_inspects_timeout_callback) :-
          catch(sandbox_check_goal_in_module(isobase,test_node,
              yield(1,_,[on_timeout(open('/tmp/nope',read,_))])),Error,true),
          assertion(nonvar(Error)))).
+
+test(synchronous_wrappers_inspect_timeout_callbacks,
+     [forall(member(Mode,[blacklist,whitelist]))]) :-
+    with_sandbox_mode(Mode,
+        (sandbox_check_goal_in_module(actor,test_node,
+             toplevel_call_synch(1,true,Answer,[on_timeout(Answer=timeout)])),
+         catch(sandbox_check_goal_in_module(actor,test_node,
+             toplevel_next_synch(1,_,[on_timeout(open('/tmp/nope',read,_))])),Error,true),
+         assertion(nonvar(Error)))).
+
+test(synchronous_wrappers_guard_runtime_selected_callback,
+     [forall(member(Mode,[blacklist,whitelist]))]) :-
+    with_sandbox_mode(Mode,
+        setup_call_cleanup(toplevel_spawn(Pid,[session(true)]),
+            (Callback=open('/tmp/nope',read,_),
+             catch(with_public_execution_profile(actor,
+                 toplevel_next_synch(Pid,_,[timeout(0),on_timeout(Callback)])),Error,true),
+             assertion(nonvar(Error))),
+            toplevel_halt(Pid,true))).
+
+test(synchronous_wrappers_require_actor_profile) :-
+    catch(profile_check_goal(isobase,toplevel_next_synch(1,_,[])),Error,true),
+    assertion(nonvar(Error)).
+
+test(ws_remote_synchronous_wrappers) :-
+    with_node_server(URI,
+        setup_call_cleanup(toplevel_spawn(Pid,[session(true),node(URI)]),
+            (toplevel_call_synch(Pid,member(X,[a,b]),First,
+                 [template(X),limit(1),timeout(2),on_timeout(throw(missing_first))]),
+             assertion(First==success(Pid,[a],true)),assertion(var(X)),
+             toplevel_next_synch(Pid,Second,[timeout(2),on_timeout(throw(missing_next))]),
+             assertion(Second==success(Pid,[b],false))),
+            toplevel_halt(Pid,true))).
+
+test(ws_synchronous_wrappers_loaded_callback_context) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)], URI,
+        setup_call_cleanup(ws_open(URI,WS),
+            (ws_send_json(WS,json{command:toplevel_spawn,
+                 options:"[session(true),src_text('cb(A) :- A=local_timeout.')]"}),
+             ws_receive_json_first_of(WS,["spawned"],Spawned),
+             ws_send_json(WS,json{command:toplevel_call,pid:Spawned.pid,
+                 goal:"toplevel_spawn(C,[session(true)]), toplevel_next_synch(C,Answer,[timeout(0),on_timeout(cb(Answer))]), toplevel_call_synch(C,true,Final,[timeout(1),on_timeout(throw(missing))]), toplevel_halt(C)"}),
+             ws_receive_json_first_of(WS,["success","error"],JSON),
+             assertion(JSON.type=="success"),
+             JSON.data=[Row],get_dict('Answer',Row,Answer),assertion(Answer=="local_timeout")),
+            catch(ws_close(WS,1000,done),_,true))).
 
 test(ws_shipped_yield_callback_uses_destination_context) :-
     with_node_server_options([profile(actor),sandbox(blacklist)], URI,

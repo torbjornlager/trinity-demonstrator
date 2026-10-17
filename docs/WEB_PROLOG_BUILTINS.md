@@ -227,6 +227,44 @@ node-relative URIs continue to work only if they resolve to an allowed origin.
 `toplevel_call/3`, `toplevel_next/1`, `toplevel_next/2`,
 `toplevel_stop/1`, `toplevel_abort/1`, `toplevel_halt/1-2`.
 
+Native synchronous wrappers are exported by `toplevel_actors` (and the
+`web_prolog` umbrella): `toplevel_call_synch/3-4` and
+`toplevel_next_synch/2-3`. They send one command and collect one protocol answer
+from the caller's mailbox. Pass the toplevel's concrete pid. Logical failure
+and query exceptions return `failure(Pid)` and `error(Pid,Error)` terms.
+Goal variables remain independent in the caller. I/O and unrelated messages
+are not selected.
+
+Every synchronous command supplies `target(Self)`, where `self(Self)` names
+the waiting caller, overriding creation-time or retained query targets.
+Every explicit `target(Target)` must satisfy `Target == Self`: an unbound
+target raises an instantiation error and a conflicting target (including an
+alias) raises `error(domain_error(synchronous_toplevel_target,Target),_)`.
+All routing and option checks run before a query starts or advances.
+Asynchronous routing semantics are unchanged.
+
+Call query options are `template/1`, `offset/1` (nonnegative integer),
+`limit/1` (positive integer), `once/1` (boolean), and native `io_target/1`
+(a separate I/O destination). Next query options are `limit/1`.
+Both wrappers accept local receive options `timeout(Number)` and
+`on_timeout(Callable)`. Query options are sent only to the toplevel;
+receive options stay in the local wait. Unknown names/arities and misplaced
+options raise `domain_error(toplevel_call_synch_option,Option)` or
+`domain_error(toplevel_next_synch_option,Option)` inside `error/2`.
+Malformed lists/values raise type, domain, or instantiation errors with the
+public predicate in the context. Repeated query/receive settings use their
+first occurrence; templates and callbacks retain variable sharing.
+
+The short forms supply `[]`; the default wait has no timeout. A timeout
+callback runs once in its caller's context with bindings retained; callback
+failure makes the wrapper fail and exceptions propagate. Without a callback,
+a timeout succeeds leaving `Answer` unbound, matching `receive/2` rather than
+`yield/3`'s default `timeout` result. A timeout does not stop the query or
+discard a later answer. A pre-instantiated answer mismatch consumes the
+selected answer and fails. Public-node callbacks cross the usual sandbox
+boundary. These wrappers remain single-client operations; concurrent-client
+coordination and stale-answer correlation are separate work.
+
 ### Remote Queries
 
 `rpc/2`, `rpc/3`, `promise/3`, `promise/4`, `yield/2`, `yield/3`,

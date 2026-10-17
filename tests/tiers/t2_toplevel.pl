@@ -11,6 +11,7 @@
 :- use_module('../../prolog/web_prolog/isolation.pl').
 :- use_module('../../prolog/web_prolog/toplevel_actors.pl').
 :- use_module(library(plunit)).
+:- use_module('toplevel_synch_tests.pl', []).
 
 %  Composition glue (same single chain the umbrella will define).
 actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
@@ -20,6 +21,7 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 run_tier :-
     layer_honesty,
     run_tests([ t2_toplevels,
+                toplevel_synch,
                 t2_hooks,
                 t2_programs,
                 t2_shell_io

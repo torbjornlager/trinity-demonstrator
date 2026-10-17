@@ -41,6 +41,7 @@ http_status(URL, Status) :-
 :- use_module('node/public_goal_guard_tests.pl', []).
 :- use_module('node/promise_yield_tests.pl', []).
 :- use_module('node/rpc_options_tests.pl', []).
+:- use_module('toplevel_synch_tests.pl', []).
 :- user:load_files('node/generic_actor_tests.pl', []).
 :- use_module('node/node_tests.pl', []).
 :- user:load_files('node/actor_remote_exit_failure.plt', []).
@@ -53,6 +54,7 @@ http_status(URL, Status) :-
 run_tier :-
     layer_honesty,
     run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, rpc_options,
+                toplevel_synch,
                 goal_walker,
                 generic_actor_api,
                 actor_remote_exit_failure,

@@ -5,6 +5,10 @@
      toplevel_call/3,
      toplevel_next/1,
      toplevel_next/2,
+     toplevel_call_synch/3,
+     toplevel_call_synch/4,
+     toplevel_next_synch/2,
+     toplevel_next_synch/3,
      toplevel_halt/1,
      toplevel_halt/2,
      toplevel_stop/1,
@@ -52,6 +56,7 @@ rewrite_goal_if_needed/3.
 :- use_module(library(option)).
 :- use_module(library(apply)).
 :- use_module(library(error)).
+:- op(1000, xfy, if).
 :- use_module(library(time), [
     alarm/4,
     install_alarm/2,
@@ -78,13 +83,18 @@ rewrite_goal_if_needed/3.
 
 :- multifile
     hook_toplevel_spawn/3,
+    hook_wait_callback/3,
     hook_ptcp_limits/4,
     hook_inference_limit/1.
 
 :- meta_predicate
     toplevel_spawn(-, :),
     toplevel_call(+, :),
-    toplevel_call(+, :, +).
+    toplevel_call(+, :, +),
+    toplevel_call_synch(+, :, -),
+    toplevel_call_synch(+, :, -, :),
+    toplevel_next_synch(+, -),
+    toplevel_next_synch(+, -, :).
 
 
 %!  toplevel_spawn(-Pid) is det.
@@ -591,6 +601,90 @@ toplevel_next(Pid) :-
 toplevel_next(Pid, Options) :-
     validate_solution_limit(Options),
     send(Pid, '$next'(Options)).
+
+%!  toplevel_call_synch(+Pid, :Goal, -Answer) is semidet.
+%!  toplevel_call_synch(+Pid, :Goal, -Answer, :Options) is semidet.
+%
+%   Select this caller as the answer target, send one query, and collect
+%   one answer. A receive timeout does not stop or cancel the query.
+toplevel_call_synch(Pid, Goal, Answer) :-
+    toplevel_call_synch(Pid, Goal, Answer, []).
+
+toplevel_call_synch(Pid, Goal, Answer, Options0) :-
+    synchronous_options(call, Options0, Caller, QueryOptions, ReceiveOptions),
+    toplevel_call(Pid, Goal, QueryOptions),
+    synchronous_answer(Pid, Answer, Caller, ReceiveOptions).
+
+%!  toplevel_next_synch(+Pid, -Answer) is semidet.
+%!  toplevel_next_synch(+Pid, -Answer, :Options) is semidet.
+toplevel_next_synch(Pid, Answer) :-
+    toplevel_next_synch(Pid, Answer, []).
+
+toplevel_next_synch(Pid, Answer, Options0) :-
+    synchronous_options(next, Options0, Caller, QueryOptions, ReceiveOptions),
+    toplevel_next(Pid, QueryOptions),
+    synchronous_answer(Pid, Answer, Caller, ReceiveOptions).
+
+synchronous_options(Kind, Options0, Caller, [target(Self)|Query], Receive) :-
+    strip_module(Options0, Caller, Options),
+    atom_concat(toplevel_, Kind, Prefix), atom_concat(Prefix, '_synch', Name),
+    (Kind == call -> Arity = 4 ; Arity = 3),
+    catch((must_be(list, Options), self(Self),
+           split_synchronous_options(Options, Kind, Self, Query, Receive)),
+          error(Formal, _),
+          throw(error(Formal, context(toplevel_actors:Name/Arity,
+                                     'invalid synchronous toplevel option')))).
+
+split_synchronous_options([], _, _, [], []).
+split_synchronous_options([Option|Options], Kind, Self, Query, Receive) :-
+    must_be(nonvar, Option),
+    (   compound(Option), compound_name_arity(Option, Name, 1),
+        synchronous_option(Kind, Name, Destination, Type)
+    ->  arg(1, Option, Value),
+        synchronous_option_value(Type, Value, Self),
+        (   Destination == query -> Query = [Option|Qs], Receive = Rs
+        ;   Destination == receive -> Query = Qs, Receive = [Option|Rs]
+        ;   Query = Qs, Receive = Rs
+        ),
+        split_synchronous_options(Options, Kind, Self, Qs, Rs)
+    ;   atom_concat(toplevel_, Kind, Prefix),
+        atom_concat(Prefix, '_synch_option', Domain), domain_error(Domain, Option)
+    ).
+
+synchronous_option(_, target, routing, target).
+synchronous_option(_, timeout, receive, number).
+synchronous_option(_, on_timeout, receive, callable).
+synchronous_option(_, limit, query, positive_integer).
+synchronous_option(call, template, query, term).
+synchronous_option(call, offset, query, nonneg).
+synchronous_option(call, once, query, boolean).
+synchronous_option(call, io_target, query, nonvar).
+
+synchronous_option_value(target, Target, Self) :- !,
+    must_be(nonvar, Target),
+    (Target == Self -> true ; domain_error(synchronous_toplevel_target, Target)).
+synchronous_option_value(term, _, _) :- !.
+synchronous_option_value(Type, Value, _) :- must_be(Type, Value).
+
+synchronous_answer(Pid, Answer, Caller, Options) :-
+    option(on_timeout(Callback), Options, true),
+    exclude(synchronous_timeout_option, Options, WaitOptions),
+    % Only protocol answers are selected; I/O and unrelated messages remain
+    % available. Unify Answer after selection, so a mismatch consumes it.
+    once(receive({
+        success(P,Data,More) if P == Pid -> Answer = success(P,Data,More) ;
+        failure(P) if P == Pid -> Answer = failure(P) ;
+        error(P,Error) if P == Pid -> Answer = error(P,Error)
+    }, [on_timeout(run_wait_callback(Caller,Callback))|WaitOptions])).
+
+synchronous_timeout_option(on_timeout(_)).
+
+run_wait_callback(Caller, Goal0) :-
+    (   hook_wait_callback(Caller, Goal0, Goal)
+    ->  true
+    ;   prepared_goal(Caller, Goal0, Goal)
+    ),
+    call(Caller:Goal).
 
 
 %!  toplevel_halt(+Pid) is det.

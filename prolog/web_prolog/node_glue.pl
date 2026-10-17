@@ -238,6 +238,12 @@ rpc:prepare_timeout_callback(Module, Goal0, Goal) :-
     node_sandbox:sandbox_check_goal_in_module(Profile, Module, Goal0),
     isolation:prepared_goal(Module, Goal0, Goal).
 
+:- multifile toplevel_actors:hook_wait_callback/3.
+toplevel_actors:hook_wait_callback(Module, Goal0, Goal) :-
+    current_public_execution_profile(Profile),
+    node_sandbox:sandbox_check_goal_in_module(Profile, Module, Goal0),
+    isolation:prepared_goal(Module, Goal0, Goal).
+
 %  Sandbox vetting of load options (was prepare_runtime_source_options
 %  in actor_source.pl).
 :- multifile isolation:prepare_source_options/3.

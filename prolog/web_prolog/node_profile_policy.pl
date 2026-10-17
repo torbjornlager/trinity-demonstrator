@@ -293,6 +293,20 @@ profile_check_step_(toplevel_next(Pid), Profile) :-
 profile_check_step_(toplevel_next(Pid, Options), Profile) :-
     ensure_goal_profile(Profile, toplevel_next(Pid, Options)),
     profile_check_toplevel_options(Profile, Options).
+profile_check_step_(toplevel_call_synch(Pid, Goal, Answer), Profile) :-
+    ensure_goal_profile(Profile, toplevel_call_synch(Pid, Goal, Answer)),
+    profile_check_goal_1(Profile, Goal).
+profile_check_step_(toplevel_call_synch(Pid, Goal, Answer, Options0), Profile) :-
+    ensure_goal_profile(Profile, toplevel_call_synch(Pid, Goal, Answer, Options0)),
+    profile_check_goal_1(Profile, Goal),
+    strip_module(Options0, _, Options),
+    profile_check_receive_options(Profile, Options).
+profile_check_step_(toplevel_next_synch(Pid, Answer), Profile) :-
+    ensure_goal_profile(Profile, toplevel_next_synch(Pid, Answer)).
+profile_check_step_(toplevel_next_synch(Pid, Answer, Options0), Profile) :-
+    ensure_goal_profile(Profile, toplevel_next_synch(Pid, Answer, Options0)),
+    strip_module(Options0, _, Options),
+    profile_check_receive_options(Profile, Options).
 profile_check_step_(toplevel_stop(Pid), Profile) :-
     ensure_goal_profile(Profile, toplevel_stop(Pid)).
 profile_check_step_(toplevel_halt(Pid), Profile) :-
