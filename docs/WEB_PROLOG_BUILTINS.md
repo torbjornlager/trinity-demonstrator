@@ -251,8 +251,8 @@ client options before source preparation and metadata injection; internal
 metadata cannot be supplied as raw client options. Existing HTTP session
 defaults, reserved WebSocket routing, and owner ceilings are unchanged.
 Name validation only checks its type; registration still follows creation.
-Child-specification validation, atomic naming, and lifecycle changes remain
-separate work.
+Supervisor child-specification validation is described below. Atomic naming
+and lifecycle changes remain separate work.
 
 ### Actor Messaging
 
@@ -419,6 +419,43 @@ an implementation extension and is not placement-independent.
 `supervisor_delete_child/3`, `supervisor_respawn_child/3`,
 `supervisor_which_children/2`, `supervisor_count_children/2`,
 `supervisor_halt/1`.
+
+Native supervisors validate the complete initial child list before creating
+the supervisor or starting children. `supervisor_spawn_child/3` reuses the
+single-child validator before contacting the supervisor. Nested supervisors
+use the same list validator.
+
+- Child and option lists must be proper, and each specification an acyclic
+  `child(Id,Options)` term. Ids must be ground; ordinary children retain
+  support for compound ids. Server-child ids must be atoms because they
+  also become registered names.
+- Duplicate initial ids raise
+  `error(permission_error(duplicate,supervisor_child_id,Id),_)`, within each
+  supervisor's own list. A valid dynamic addition whose id is already present
+  still returns `error(already_present)`.
+- Only unary `start/1`, `restart/1`, `shutdown/1`, and `type/1` options are
+  accepted. Unknown names/arities raise
+  `error(domain_error(supervisor_child_option,Option),_)`. Missing `start/1`
+  retains `error(missing_start_option(Id),supervisor)`.
+- Restart policies are `permanent`, `transient`, or `temporary`; types are
+  `worker` or `supervisor`. Shutdown is `brutal_kill`, `infinity`, or a
+  nonnegative numeric timeout, including zero and fractional seconds.
+- Start goals must be callable and supplied module qualifiers atoms. For
+  the recognised `server(Pred,ServerOptions)` form, the callback must also
+  be callable; server/spawn options are validated, with `initial_state/1`
+  accepted as arbitrary state data. Direct `start_sub_supervisor/2` forms,
+  unqualified or explicitly qualified by `supervisor_actor`, recursively
+  validate their child lists and supervisor options. Module-qualified child
+  lists retain their source-module semantics.
+
+Malformed structures/values raise type, domain, or instantiation errors;
+cyclic specifications raise `error(representation_error(cyclic_term),_)`.
+Every option occurrence is checked, but the first still determines its
+effective value. Defaults and variable sharing within goals/states are
+preserved, and validation does not bind input variables. Other callable start
+goals remain runtime code: validation does not execute them, fetch source,
+check predicate availability, reserve names, or guarantee startup success.
+Monitor installation, shutdown, and other lifecycle behavior are unchanged.
 
 ### Statechart Actors
 

@@ -65,8 +65,33 @@ comment block below.
 %% Child specification normalisation
 %% -------------------------------------------------------------------
 
-normalise_child_spec(Caller, child(Id, Opts),
+normalise_child_specs(Caller, ChildSpecs, Specs) :-
+    must_be(list, ChildSpecs),
+    check_acyclic_child_spec(ChildSpecs),
+    maplist(normalise_child_spec(Caller), ChildSpecs, Specs),
+    unique_child_ids(Specs, []).
+
+unique_child_ids([], _).
+unique_child_ids([spec(Id,_,_,_,_)|Specs], Seen) :-
+    (   memberchk(Id, Seen)
+    ->  permission_error(duplicate, supervisor_child_id, Id)
+    ;   unique_child_ids(Specs, [Id|Seen])
+    ).
+
+check_acyclic_child_spec(Spec) :-
+    (acyclic_term(Spec) -> true ; representation_error(cyclic_term)).
+
+normalise_child_spec(Caller, ChildSpec,
                      spec(Id, Start, Restart, Shutdown, Type)) :-
+    must_be(nonvar, ChildSpec),
+    check_acyclic_child_spec(ChildSpec),
+    (   compound(ChildSpec), compound_name_arity(ChildSpec, child, 2)
+    ->  arg(1, ChildSpec, Id), arg(2, ChildSpec, Opts)
+    ;   type_error(supervisor_child_spec, ChildSpec)
+    ),
+    must_be(ground, Id),
+    must_be(list, Opts),
+    maplist(validate_child_option(Caller,Id), Opts),
     (   option(start(Start0), Opts)
     ->  qualify_start_term(Caller, Start0, Start)
     ;   throw(error(missing_start_option(Id), supervisor))
@@ -75,6 +100,62 @@ normalise_child_spec(Caller, child(Id, Opts),
     option(type(Type), Opts, worker),
     default_shutdown(Type, DefShutdown),
     option(shutdown(Shutdown), Opts, DefShutdown).
+
+validate_child_option(Caller, Id, Option) :-
+    must_be(nonvar, Option),
+    (   compound(Option), compound_name_arity(Option, Name, 1),
+        memberchk(Name, [start,restart,shutdown,type])
+    ->  arg(1, Option, Value), validate_child_value(Name, Caller, Id, Value)
+    ;   domain_error(supervisor_child_option, Option)
+    ).
+
+validate_child_value(start, Caller, Id, Start) :-
+    validate_child_callable(Start),
+    (   Start = server(Pred, Options)
+    ->  must_be(atom, Id), validate_child_callable(Pred),
+        actors:validate_spawn_wrapper_options(Options, runtime,
+            supervisor_actor:supervisor_spawn/3,
+            [initial_state=supervisor_actor:child_state_value,
+             name=error:must_be(atom)])
+    ;   Start = start_sub_supervisor(Specs, Options)
+    ->  validate_nested_supervisor(Caller, Specs, Options)
+    ;   Start = supervisor_actor:start_sub_supervisor(Specs, Options)
+    ->  validate_nested_supervisor(Caller, Specs, Options)
+    ;   true
+    ).
+validate_child_value(restart, _, _, Policy) :-
+    must_be(oneof([permanent,transient,temporary]), Policy).
+validate_child_value(type, _, _, Type) :-
+    must_be(oneof([worker,supervisor]), Type).
+validate_child_value(shutdown, _, _, Shutdown) :-
+    must_be(nonvar, Shutdown),
+    (   Shutdown == brutal_kill -> true
+    ;   Shutdown == infinity -> true
+    ;   number(Shutdown), Shutdown >= 0 -> true
+    ;   domain_error(supervisor_child_shutdown, Shutdown)
+    ).
+
+% Only the module qualification is inspected, not the goal's arguments or
+% predicate availability. Start goals and states may retain shared variables.
+validate_child_callable(Goal) :-
+    must_be(callable, Goal),
+    (   Goal = Module:Inner
+    ->  must_be(atom, Module), validate_child_callable(Inner)
+    ;   true
+    ).
+
+child_state_value(_).
+
+validate_nested_supervisor(Caller, Specs0, Options) :-
+    validate_supervisor_options(Options),
+    child_specs_module(Specs0, Caller, Module, Specs),
+    normalise_child_specs(Module, Specs, _).
+
+child_specs_module(Specs0, Default, Module, Specs) :-
+    (   nonvar(Specs0), Specs0 = Qualified:Inner
+    ->  must_be(atom, Qualified), child_specs_module(Inner, Qualified, Module, Specs)
+    ;   Module = Default, Specs = Specs0
+    ).
 
 default_shutdown(supervisor, infinity).
 default_shutdown(worker, 5).
@@ -115,7 +196,7 @@ supervisor_spawn(ChildSpecs0, Pid, Options) :-
     option(strategy(Strategy), Options, one_for_one),
     option(intensity(MaxR), Options, 1),
     option(period(MaxT), Options, 5),
-    maplist(normalise_child_spec(SourceModule), ChildSpecs, Specs),
+    normalise_child_specs(SourceModule, ChildSpecs, Specs),
     exclude(is_sup_option, Options, SpawnOpts0),
     ensure_source_module(SourceModule, SpawnOpts0, SpawnOpts),
     State0 = sup(Strategy, MaxR, MaxT, [], []),
@@ -176,7 +257,7 @@ start_sub_supervisor(ChildSpecs0, Options) :-
     option(strategy(Strategy), Options, one_for_one),
     option(intensity(MaxR), Options, 1),
     option(period(MaxT), Options, 5),
-    maplist(normalise_child_spec(Caller), ChildSpecs, Specs),
+    normalise_child_specs(Caller, ChildSpecs, Specs),
     State0 = sup(Strategy, MaxR, MaxT, [], []),
     sup_init(Specs, State0).
 

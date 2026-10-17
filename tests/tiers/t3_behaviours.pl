@@ -30,11 +30,13 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 :- ensure_loaded('behaviours/statechart_actor_tests.pl').
 :- use_module('behaviours/service_request_example_tests.pl', []).
 :- use_module('wrapper_options_tests.pl', []).
+:- use_module('supervisor_child_spec_tests.pl', []).
 
 run_tier :-
     layer_honesty,
     run_tests([ server_actor,
                 wrapper_options,
+                supervisor_child_specs,
                 supervisor,
                 parallel,
                 first_solution,
