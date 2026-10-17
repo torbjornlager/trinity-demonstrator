@@ -15,6 +15,10 @@ combined; incompatible bindings make the conjunction fail.
 If several workers fail or throw, the first abnormal `down/3` observed by
 the caller determines the result.  Thus multiple faults are intentionally
 scheduling-dependent rather than selected by goal-list position.
+An exit without a result is reported as worker_exit(Pid, Reason), unless
+it represents ordinary failure or an exception (which retain their outcomes).
+A normal down for a later worker waits until its result is collected. Once a
+result is accepted, the down only confirms termination, regardless of reason.
 Built directly on the layer-0 actor primitives.
 
 @see server_actor.pl, supervisor_actor.pl and statechart_actor.pl for
@@ -30,7 +34,7 @@ Built directly on the layer-0 actor primitives.
     send/2,
     receive/1
 ]).
-:- use_module(worker_cleanup, [tidy_up_all/1]).
+:- use_module(worker_cleanup, [tidy_up_all/1, worker_error/3]).
 :- use_module(control_guard, []).
 
 :- multifile isolation:prepare_module/3.
@@ -78,7 +82,9 @@ par_yield(Pids, Pid, Template) :-
         Pid-Answer ->
             (   Template = Answer
             ->  receive({
-                    down(Pid, _, true) ->
+                    % The accepted result establishes success. This down
+                    % only confirms termination, whatever its reason.
+                    down(Pid, _, _) ->
                         true
                 })
             ;   tidy_up_all(Pids),
@@ -89,10 +95,14 @@ par_yield(Pids, Pid, Template) :-
                 if known_worker(FailedPid, Pids) ->
             tidy_up_all(Pids),
             !, fail ;
-        down(FailedPid, _, exception(E))
-                if known_worker(FailedPid, Pids) ->
+        down(FailedPid, _, Reason)
+                if (known_worker(FailedPid, Pids),
+                    (Reason \== true ; FailedPid == Pid)) ->
+            % A later worker's normal down may precede the current result.
+            % Leave it deferred until that worker's result is collected.
             tidy_up_all(Pids),
-            throw(E)
+            worker_error(FailedPid, Reason, Error),
+            throw(Error)
     }).
 
 

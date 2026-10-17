@@ -1,5 +1,6 @@
 :- module(worker_cleanup, [
-    tidy_up_all/1
+    tidy_up_all/1,
+    worker_error/3
 ]).
 
 /** <module> Cleanup for generic worker actors
@@ -7,7 +8,8 @@
 Shared, race-free cleanup for actor-based predicate generics.  Waiting for a
 private cleanup monitor before draining establishes a mailbox ordering
 barrier: result and monitor messages sent before worker termination can no
-longer arrive after the zero-time drain.
+longer arrive after the zero-time drain. The shared worker_error/3 helper
+preserves exception terms and classifies other unexplained worker exits.
 */
 
 :- use_module(library(apply)).
@@ -43,3 +45,13 @@ drain_mailbox(Pid) :-
         down(Pid, _, _) ->
             drain_mailbox(Pid)
     }, [timeout(0)]).
+
+
+%!  worker_error(+Pid, +Reason, -Error) is det.
+%
+%   Preserve a worker exception; report other unexplained exits explicitly.
+worker_error(Pid, Reason, Error) :-
+    (   nonvar(Reason), Reason = exception(E)
+    ->  Error = E
+    ;   Error = worker_exit(Pid, Reason)
+    ).

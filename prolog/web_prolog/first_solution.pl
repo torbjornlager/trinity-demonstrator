@@ -22,7 +22,7 @@ leaving result or monitor messages in the caller's mailbox.
     send/2,
     receive/1
 ]).
-:- use_module(worker_cleanup, [tidy_up_all/1]).
+:- use_module(worker_cleanup, [tidy_up_all/1, worker_error/3]).
 :- use_module(control_guard, []).
 
 :- multifile isolation:prepare_module/3.
@@ -45,7 +45,9 @@ isolation:prepare_module(Module, _GoalModule, _Options) :-
 %     - on_fail(stop|continue)
 %       Stop on the first failed solver, or keep waiting. Default continue.
 %     - on_error(stop|continue)
-%       Rethrow the first solver exception, or keep waiting. Default stop.
+%       Throw the first solver error, or keep waiting. Default stop.
+%       Exceptions keep their terms; other unexplained exits, including true,
+%       become worker_exit(Pid, Reason).
 
 first_solution(Solution, QualifiedGoals) :-
     first_solution_(Solution, QualifiedGoals, [
@@ -114,12 +116,13 @@ wait_first(Pids, Solution, OnFail, OnError) :-
                 !,
                 fail
             ) ;
-        down(FailedPid, _, exception(Error))
+        down(FailedPid, _, Reason)
                 if known_worker(FailedPid, Pids) ->
             (   OnError == continue
             ->  selectchk(FailedPid, Pids, Rest),
                 wait_first(Rest, Solution, OnFail, OnError)
             ;   tidy_up_all(Pids),
+                worker_error(FailedPid, Reason, Error),
                 throw(Error)
             )
     }).
