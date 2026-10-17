@@ -304,10 +304,37 @@ mutex with registration and precedes monitor notifications, using registry
 before monitor lifecycle lock order. Termination cleanup preserves other
 pids; connection-loss cleanup preserves other nodes. A name reused for another
 pid survives old termination events. Names for local actors are unaffected.
-No retirement records prevent later remote registration from recreating an
-alias. Without an observed event, clients must explicitly unregister aliases.
-Implicit monitoring, namespace teardown, and broader lifecycle work remain
-separate.
+Within an open namespace, no remote retirement records prevent later
+registration from recreating an alias. Without an observed event, clients must explicitly unregister aliases.
+
+Managed client namespace teardown closes admission, removes ordinary names,
+and cancels pending named-startup reservations under the registry mutex.
+Late `register/2`, name reservation, and name publication raise
+`error(permission_error(register, closed_namespace, Namespace), Context)`.
+A surviving actor cannot repopulate a closed namespace. This operation does
+not terminate running actors or change service registrations; existing
+lifetime and ownership policies continue to apply. A pending named startup
+whose publication is rejected follows normal startup failure handling.
+
+A WebSocket connection owns its shared `ws_client/1` namespace, closed on
+disconnect. Ending one toplevel leaves that namespace open. An HTTP interactive
+session owns its `isotope_session/1` namespace, closed on actual session
+cleanup or local session-actor retirement (including early exit). Replacing
+session bookkeeping or returning from a request context leaves it open.
+Delegated `ws_lineage/2` namespaces close on explicit lineage closure or
+connection teardown; later commands cannot reopen a closed lineage. Other
+lineages and namespaces are unaffected. The standalone global namespace
+remains available.
+
+Runtime composition uses `node_execution_context`'s namespace/connection
+open and close helpers, with `actors:hook_registry_namespace_status/2`
+checking admission and `actors:hook_registry_retire/1` running inside local
+registry retirement. Only open namespace/connection records are retained;
+closed lineage markers are discarded when their connection ends. Ordinary
+request context entry never opens a namespace. These helpers are internal
+runtime operations, not public client predicates.
+Implicit monitoring, automatic expiry, distributed cancellation, and broader
+lifecycle work remain separate.
 
 ### Owner Service Publication
 

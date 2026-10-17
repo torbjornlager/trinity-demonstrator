@@ -88,6 +88,10 @@ Identity-style (semidet; first solution wins, default = identity/fail):
   - hook_local_pid(+Pid0, -LocalPid): localize a pid (fail = not local).
   - hook_self(-Pid): override self/1's result.
   - hook_namespace(-NS): current registry/visibility namespace.
+  - hook_registry_namespace_status(+NS, -Status): claim a managed namespace
+    as open or closed; unclaimed namespaces remain available.
+  - hook_registry_retire(+Pid): registry teardown before pid retirement,
+    called under actors_registry, before actors_monitor_lifecycle.
   - hook_local_spawn_node(+Node): recognise this node's local URL aliases
     for the named-creation helper (localhost is local without this hook).
 
@@ -163,6 +167,8 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     hook_local_pid/2,
     hook_self/1,
     hook_namespace/1,
+    hook_registry_namespace_status/2,
+    hook_registry_retire/1,
     hook_service_registry_denied/0,
     hook_spawn/3,
     hook_local_spawn_node/1,
@@ -746,6 +752,7 @@ stop(Pid, Parent) :-
             retractall(spawn_name_reservation(_, _, _, GlobalPid, _, _)),
             retractall(registered(_Namespace, _Name, GlobalPid)),
             retractall(registered_service(_ServiceName, GlobalPid)),
+            forall(hook_registry_retire(GlobalPid), true),
             with_mutex(actors_monitor_lifecycle,
                 (   down_reason(Pid, Reason),
                     forall(retract(monitor(Other, GlobalPid, Ref)),
@@ -937,6 +944,7 @@ register(Name, Pid) :-
     %  or two pids claiming one name.
     with_mutex(actors_registry,
         (   ensure_name_registration_available(Namespace, Name, Pid, CanonPid),
+            ensure_registry_namespace_open(Namespace),
             ensure_registerable_local_pid(Pid, CanonPid),
             asserta(registered(Namespace, Name, CanonPid))
         )).
@@ -1023,6 +1031,21 @@ service_registry_access_error(Goal) :-
                 context(actors:require_service_registry_access/1,
                         'service registry inspection is reserved for node-owned runtime code'))).
 
+% Internal composition API. The node closes admission under the same lock
+% before clearing bindings and reservations; actors themselves are untouched.
+retire_registry_namespace(Namespace) :-
+    with_mutex(actors_registry,
+        (retractall(registered(Namespace, _, _)),
+         retractall(spawn_name_reservation(_, Namespace, _, _, _, _)))).
+
+ensure_registry_namespace_open(Namespace) :-
+    (   hook_registry_namespace_status(Namespace, Status)
+    ->  (Status == open -> true;
+         throw(error(permission_error(register, closed_namespace, Namespace),
+                     context(actors:register/2, 'client namespace has ended'))))
+    ;   true
+    ).
+
 %  Called under actors_registry, also held while retiring pid mappings.
 %  Only local actor pids are checked; remote aliases retain their semantics.
 ensure_registerable_local_pid(Pid, CanonPid) :-
@@ -1048,9 +1071,11 @@ ensure_name_registration_available(Namespace, Name, Pid, CanonPid) :-
 reserve_spawn_name(Name, Token) :-
     self(Owner), make_ref(Token), current_registry_namespace(Namespace),
     with_mutex(actors_registry,
-        (   (ordinary_registered_name(Namespace,Name) ; reserved_spawn_name(Namespace,Name))
-        ->  throw(name_is_in_use(Name))
-        ;   assertz(spawn_name_reservation(Token,Namespace,Name,Owner,pending,reserved))
+        (   ensure_registry_namespace_open(Namespace),
+            (   (ordinary_registered_name(Namespace,Name) ; reserved_spawn_name(Namespace,Name))
+            ->  throw(name_is_in_use(Name))
+            ;   assertz(spawn_name_reservation(Token,Namespace,Name,Owner,pending,reserved))
+            )
         )).
 
 reserved_spawn_name(Namespace, Name) :-
@@ -1064,24 +1089,30 @@ reserved_spawn_pid(Namespace, Pid) :-
 
 attach_spawn_name(Options, Pid) :-
     (   option(name_reservation(Token),Options)
-    ->  self(Owner),
+    ->  self(Owner), current_registry_namespace(Namespace),
         with_mutex(actors_registry,
-            (   retract(spawn_name_reservation(Token,NS,Name,Owner,pending,reserved))
-            ->  assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
-            ;   existence_error(name_reservation,Token)
+            (   ensure_registry_namespace_open(Namespace),
+                (   retract(spawn_name_reservation(Token,NS,Name,Owner,pending,reserved))
+                ->  assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
+                ;   existence_error(name_reservation,Token)
+                )
             ))
     ;   true
     ).
 
 publish_spawn_name(Owner, Pid, Options) :-
     (   option(name_reservation(Token),Options)
-    ->  with_mutex(actors_registry,
-            (   retract(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
-            ->  assertz(registered(NS,Name,Pid)),
-                assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,published))
-            ;   spawn_name_reservation(Token,_,_,Owner,Pid,failed)
-            ->  true  % preparation failed: acknowledge, without publication
-            ;   existence_error(name_reservation,Token)
+    ->  current_registry_namespace(Namespace),
+        with_mutex(actors_registry,
+            (   ensure_registry_namespace_open(Namespace),
+                (   retract(spawn_name_reservation(Token,NS,Name,Owner,Pid,reserved))
+                ->  ensure_registry_namespace_open(NS),
+                    assertz(registered(NS,Name,Pid)),
+                    assertz(spawn_name_reservation(Token,NS,Name,Owner,Pid,published))
+                ;   spawn_name_reservation(Token,_,_,Owner,Pid,failed)
+                ->  true  % preparation failed: acknowledge, without publication
+                ;   existence_error(name_reservation,Token)
+                )
             ))
     ;   true
     ).

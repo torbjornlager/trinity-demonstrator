@@ -131,7 +131,7 @@ register_isotope_session(Pid, InitialLoadText0, Profile) :-
 
 register_isotope_session(Pid, InitialLoadText0, Profile, OwnerId) :-
     session_pid_key(Pid, SessionPid),
-    cleanup_isotope_session(SessionPid),
+    reset_isotope_session(SessionPid),
     text_to_string(InitialLoadText0, InitialLoadText),
     message_queue_create(Queue),
     assertz(isotope_session(SessionPid, Queue)),
@@ -150,8 +150,13 @@ remember_isotope_session_profile(Pid, Profile) :-
 %!  remember_isotope_session_namespace(+Pid, +Namespace) is det.
 remember_isotope_session_namespace(Pid, Namespace) :-
     session_pid_key(Pid, SessionPid),
-    retractall(isotope_session_namespace(SessionPid, _)),
-    assertz(isotope_session_namespace(SessionPid, Namespace)).
+    with_mutex(actors_registry,
+        (   retractall(isotope_session_namespace(SessionPid, _)),
+            assertz(isotope_session_namespace(SessionPid, Namespace)),
+            (Namespace = isotope_session(_), \+ actors:monitor_target_alive(SessionPid)
+            -> node_execution_context:close_client_namespace(Namespace)
+            ;  true)
+        )).
 
 
 %!  set_isotope_session_trace(+Pid, +Enabled) is det.
@@ -217,6 +222,13 @@ with_isotope_session_public_execution_profile(Pid0, Goal) :-
 
 cleanup_isotope_session(Pid) :-
     session_pid_key(Pid, SessionPid),
+    with_mutex(actors_registry,
+        (close_http_session_namespace(SessionPid),
+         retractall(isotope_session_namespace(SessionPid, _)))),
+    reset_isotope_session(SessionPid).
+
+% Queue/bookkeeping replacement does not end the namespace.
+reset_isotope_session(SessionPid) :-
     ignore(catch(finish_activity(isotope_session, SessionPid, cleanup),
                  _, true)),
     (   retract(isotope_session(SessionPid, Queue))
@@ -225,7 +237,6 @@ cleanup_isotope_session(Pid) :-
     ),
     retractall(isotope_loaded_text(SessionPid, _)),
     retractall(isotope_session_profile(SessionPid, _)),
-    retractall(isotope_session_namespace(SessionPid, _)),
     forall(retract(isotope_session_owner(SessionPid, OwnerId)),
            remember_ended_session(SessionPid, OwnerId)),
     retractall(isotope_session_trace(SessionPid)),
@@ -234,6 +245,20 @@ cleanup_isotope_session(Pid) :-
     forget_isotope_session_owner(SessionPid),
     clear_session_bindings(SessionPid),
     forall(hook_session_cleanup(SessionPid), true).
+
+
+% Local retirement and remembering a newly spawned session serialize here,
+% so even an early exit closes the HTTP namespace. Shared WS namespaces end
+% only when their connection ends, never when one toplevel terminates.
+:- multifile actors:hook_registry_retire/1.
+actors:hook_registry_retire(Pid) :-
+    node_session:close_http_session_namespace(Pid).
+
+close_http_session_namespace(Pid) :-
+    (   isotope_session_namespace(Pid, Namespace), Namespace = isotope_session(_)
+    ->  node_execution_context:close_client_namespace(Namespace)
+    ;   true
+    ).
 
 
 %!  isotope_session_queue(+Pid, -Queue) is det.

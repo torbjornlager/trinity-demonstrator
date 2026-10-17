@@ -83,31 +83,37 @@ isotope_spawn_event(Request, Principal, PrincipalId, EffectiveProfile, Event) :-
     make_id(NamespaceId),
     Namespace = isotope_session(NamespaceId),
     reserve_isotope_session_capacity(Principal, Reservation),
-    catch(
-        (
-            with_public_execution_context(
-                EffectiveProfile,
-                Namespace,
-                with_owner_context(Principal, http_session(Namespace), local,
-                                   toplevel_spawn(Pid, SpawnOptions))
+    setup_call_catcher_cleanup(
+        node_execution_context:open_client_namespace(Namespace),
+        catch(
+            (
+                with_public_execution_context(
+                    EffectiveProfile,
+                    Namespace,
+                    with_owner_context(Principal, http_session(Namespace), local,
+                                       toplevel_spawn(Pid, SpawnOptions))
+                ),
+                register_isotope_session(Pid, InitialLoadText, EffectiveProfile,
+                                         PrincipalId),
+                request_client_meta(Request, Principal, ClientMeta),
+                put_dict(_{pid:Pid, profile:EffectiveProfile}, ClientMeta,
+                         SessionMeta),
+                ignore(catch(start_activity(isotope_session, Pid, SessionMeta),
+                             _, true)),
+                remember_isotope_session_namespace(Pid, Namespace),
+                set_isotope_session_trace(Pid, TraceEnabled),
+                commit_isotope_session_capacity(Reservation, Pid),
+                Event = spawned(Pid)
             ),
-            register_isotope_session(Pid, InitialLoadText, EffectiveProfile,
-                                     PrincipalId),
-            request_client_meta(Request, Principal, ClientMeta),
-            put_dict(_{pid:Pid, profile:EffectiveProfile}, ClientMeta,
-                     SessionMeta),
-            ignore(catch(start_activity(isotope_session, Pid, SessionMeta),
-                         _, true)),
-            remember_isotope_session_namespace(Pid, Namespace),
-            set_isotope_session_trace(Pid, TraceEnabled),
-            commit_isotope_session_capacity(Reservation, Pid),
-            Event = spawned(Pid)
+            Error,
+            (
+                release_capacity_reservation(Reservation),
+                throw(Error)
+            )
         ),
-        Error,
-        (
-            release_capacity_reservation(Reservation),
-            throw(Error)
-        )
+        Catcher,
+        (Catcher == exit -> true;
+         node_execution_context:close_client_namespace(Namespace))
     ).
 
 

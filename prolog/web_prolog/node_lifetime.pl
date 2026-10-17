@@ -423,5 +423,9 @@ in_scope(_, Goal) :- call(Goal).
 
 reclaim_lineage(Queue) :-
     current_owner_context(ctx(_, _, Lineage, false, Queue)),
+    (   current_public_execution_namespace(ws_lineage(Queue, Token))
+    ->  node_execution_context:close_client_namespace(ws_lineage(Queue, Token))
+    ;   true
+    ),
     findall(Pid, actor_owner(Pid, ctx(_, _, Lineage, false, Queue)), Pids),
     forall(member(Pid, Pids), actors:exit(Pid, kill)).

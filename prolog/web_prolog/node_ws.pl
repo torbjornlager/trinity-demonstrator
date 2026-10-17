@@ -431,13 +431,17 @@ ws_main_owned(NodePort, Principal, ClientMeta, AnswerTerms, WebSocket) :-
             thread_create(ws_relay_loop(NodePort, WebSocket, Queue, Principal), RelayThread, [
                 detached(false)
             ]),
-            catch(
-                with_public_execution_namespace(
-                    Namespace,
-                    ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta)
+            setup_call_cleanup(
+                node_execution_context:open_client_connection(Queue, Namespace),
+                catch(
+                    with_public_execution_namespace(
+                        Namespace,
+                        ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta)
+                    ),
+                    _,
+                    true
                 ),
-                _,
-                true
+                node_execution_context:close_client_connection(Queue)
             ),
             ws_cleanup(Queue, RelayThread, ConnectionMeta)
         )
@@ -1225,6 +1229,7 @@ ws_spawn_io_target(_Dict, Queue, _Principal, Queue).
 %
 %   Tear down all state for a closed WebSocket connection.
 ws_cleanup(Queue, RelayThread, ConnectionMeta) :-
+    node_execution_context:close_client_connection(Queue),
     close_browser_io(Queue),
     forall(
         retract(ws_actor(Queue, Pid)),

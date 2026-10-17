@@ -144,6 +144,10 @@ actors:hook_spawn_context(StartGoal0, StartGoal) :-
 actors:hook_namespace(Namespace) :-
     current_public_execution_namespace(Namespace).
 
+:- multifile actors:hook_registry_namespace_status/2.
+actors:hook_registry_namespace_status(Namespace, Status) :-
+    node_execution_context:client_namespace_status(Namespace, Status).
+
 %  The service registry is reserved for node-owned runtime code (was
 %  require_service_registry_access/1 in actor.pl).
 :- multifile actors:hook_service_registry_denied/0.

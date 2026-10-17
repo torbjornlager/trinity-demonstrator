@@ -4,7 +4,10 @@
     with_public_execution_namespace/2,
     without_public_execution_context/1,
     current_public_execution_profile/1,
-    current_public_execution_namespace/1
+    current_public_execution_namespace/1,
+    open_client_namespace/1, close_client_namespace/1,
+    open_client_connection/2, close_client_connection/1,
+    client_namespace_status/2
 ]).
 
 /** <module> Public Execution Context
@@ -14,6 +17,8 @@ owner-controlled local runtime activity.
 */
 
 :- use_module(node_profile_policy, [normalize_profile/2]).
+:- use_module(actors, []).
+:- use_module(library(error)).
 
 :- thread_local current_public_execution_profile_local/1.
 :- thread_local current_public_execution_namespace_local/1.
@@ -81,3 +86,47 @@ current_public_execution_namespace(Namespace) :-
     !,
     Value \== '$suppressed',
     Namespace = Value.
+
+
+% Runtime-only namespace admission. No per-client tombstone is needed:
+% missing open namespaces reject writes; delegated closure markers live only
+% until their owning connection ends. All access is under actors_registry.
+:- dynamic open_namespace/1, namespace_connection/2, closed_lineage/2.
+
+open_client_namespace(Namespace) :-
+    must_be(ground, Namespace),
+    with_mutex(actors_registry,
+        (open_namespace(Namespace) -> true; assertz(open_namespace(Namespace)))).
+
+open_client_connection(Queue, Namespace) :-
+    with_mutex(actors_registry,
+        (open_client_namespace(Namespace), assertz(namespace_connection(Queue, Namespace)))).
+
+close_client_namespace(Namespace) :-
+    must_be(ground, Namespace),
+    with_mutex(actors_registry,
+        (   retractall(open_namespace(Namespace)),
+            (Namespace = ws_lineage(Queue, Token), namespace_connection(Queue, _)
+            -> (closed_lineage(Queue,Token) -> true; assertz(closed_lineage(Queue,Token)))
+            ;  true),
+            actors:retire_registry_namespace(Namespace)
+        )).
+
+close_client_connection(Queue) :-
+    with_mutex(actors_registry,
+        (   forall(retract(namespace_connection(Queue, Namespace)),
+                   close_client_namespace(Namespace)),
+            actors:retire_registry_namespace(ws_lineage(Queue, _)),
+            retractall(closed_lineage(Queue, _))
+        )).
+
+client_namespace_status(Namespace, Status) :-
+    managed_namespace(Namespace),
+    (   namespace_is_open(Namespace) -> Status = open; Status = closed).
+managed_namespace(ws_client(_)).
+managed_namespace(isotope_session(_)).
+managed_namespace(ws_lineage(_, _)).
+namespace_is_open(ws_lineage(Queue, Token)) :-
+    namespace_connection(Queue, _), \+ closed_lineage(Queue, Token).
+namespace_is_open(ws_client(Id)) :- open_namespace(ws_client(Id)).
+namespace_is_open(isotope_session(Id)) :- open_namespace(isotope_session(Id)).
