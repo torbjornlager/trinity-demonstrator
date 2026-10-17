@@ -193,7 +193,9 @@ rpc(success(Slice, true), Template, Offset, Limit, GoalAtom, TemplateAtom,
     !,
     (   member(Template, Slice)
     ;   Once == false,
-        NewOffset is Offset + Limit,
+        % A page may be short while retaining a continuation (e.g. an error).
+        length(Slice, Count),
+        NewOffset is Offset + Count,
         debug(node(rpc), 'New HTTP request from offset ~w', [NewOffset]),
         rpc(Template, NewOffset, Limit, GoalAtom, TemplateAtom, Parts,
             Options, LoadText, RemoteTimeout, Once)

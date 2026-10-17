@@ -43,6 +43,7 @@ http_status(URL, Status) :-
 :- use_module('node/promise_lifecycle_tests.pl', []).
 :- use_module('node/promise_ownership_tests.pl', []).
 :- use_module('node/rpc_options_tests.pl', []).
+:- use_module('node/native_paging_tests.pl', []).
 :- use_module('toplevel_synch_tests.pl', []).
 :- use_module('spawn_options_tests.pl', []).
 :- use_module('wrapper_options_tests.pl', []).
@@ -63,7 +64,7 @@ http_status(URL, Status) :-
 
 run_tier :-
     layer_honesty,
-    run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, promise_lifecycle, promise_ownership, rpc_options,
+    run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, promise_lifecycle, promise_ownership, rpc_options, native_paging,
                 toplevel_synch, toplevel_correlation_transport,
                 spawn_options, spawn_source_options,
                 wrapper_options,

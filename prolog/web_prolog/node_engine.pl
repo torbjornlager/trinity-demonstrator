@@ -97,12 +97,14 @@ wait_for_compute_answer(Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer) :
     ).
 
 compute_answer_message(success(Pid, Slice, true), _Queue, _Timeout, Pid,
-                       Offset, Limit, Gid, Once, Answer) :-
+                       Offset, _Limit, Gid, Once, Answer) :-
     !,
     (   Once == true
     ->  toplevel_stop(Pid),
         Answer = success(Slice, false)
-    ;   Index is Offset + Limit,
+    ;   % Cache the position actually reached, including partial error pages.
+        length(Slice, Count),
+        Index is Offset + Count,
         cache_update(Gid, Index, Pid),
         Answer = success(Slice, true)
     ).

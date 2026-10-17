@@ -437,6 +437,18 @@ All runtimes accept the same `rpc/3` transport options: `limit/1`, `once/1`,
 `promise/4` accepts these plus `template/1` and `offset/1`; offset selects the
 single slice collected by the promise and is not a public `rpc/3` option.
 
+Paging offsets count answers actually returned, rather than requested page
+capacity. After `success(Slice,true)`, the native RPC client requests
+`Offset + length(Slice)`, and the native node stores its continuation at that
+same offset. A partial page can retain a continuation: for example, answers
+found before an exception are returned first, and the pending exception is
+collected on the next request. Correct offsets let that request resume the
+cached actor without re-executing the query. This rule applies to nonzero
+offsets and when the next request changes its limit. Full pages, final pages,
+and `once(true)` retain their existing behaviour. Client and server must both
+follow the actual-count rule for partial-page cache reuse; no wire fields
+change.
+
 The native client validates the complete option list at entry, before URI
 resolution/source fetching in `rpc/3` and `promise/4`, or waiting/collection
 in `yield/3`. Options must be unary terms in a proper list. Unknown names,
