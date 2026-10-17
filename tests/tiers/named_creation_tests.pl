@@ -157,6 +157,58 @@ test(explicit_unregister_and_rename_from_application_goal) :-
         (receive({renamed->true},[timeout(2),on_timeout(throw(missing_rename))]),
          whereis(Old,Absent),assertion(Absent==undefined),whereis(New,Found),assertion(Found==Pid)),
         stop_actor(Pid)).
+test(register_rejects_retired_local_pid) :-
+    gensym(register_retired_,Name),
+    spawn(receive({}),Pid,[link(false)]),stop_actor(Pid),
+    catch(register(Name,Pid),Error,true),
+    assertion(nonvar(Error)),
+    assertion(Error=error(existence_error(process,Pid),context(actors:register/2,_))),
+    whereis(Name,Found),assertion(Found==undefined).
+test(register_termination_race_leaves_no_binding) :-
+    forall(between(1,30,_),
+      (gensym(register_race_,Name),
+       spawn(receive({}),Pid,[link(false)]),
+       setup_call_cleanup(message_queue_create(Gate),
+         setup_call_cleanup(
+           thread_create((thread_get_message(Gate,go),
+                          catch(register(Name,Pid),
+                                error(existence_error(process,Pid),_),true)),Thread,[]),
+           (thread_send_message(Gate,go),stop_actor(Pid),
+            thread_join(Thread,Status),assertion(Status==true),
+            whereis(Name,Found),assertion(Found==undefined)),
+           (catch(thread_join(Thread,_),_,true),stop_actor(Pid))),
+         message_queue_destroy(Gate)))).
+test(register_stale_local_pid_in_other_namespaces) :-
+    gensym(register_stale_ns_,Name),
+    spawn(receive({}),Pid,[link(false)]),stop_actor(Pid),
+    forall(member(NS,[register_ns_one,register_ns_two]),
+      with_namespace(NS,
+        (catch(register(Name,Pid),Error,true),
+         assertion(nonvar(Error)),
+         assertion(Error=error(existence_error(process,Pid),_)),
+         whereis(Name,Found),assertion(Found==undefined)))).
+test(register_local_pid_forms,
+     [condition(current_predicate(pid_utils:canonical_pid/2))]) :-
+    with_actor(Pid,
+      (actors:pid_local(Pid,Local),
+       term_string(Pid,String),term_to_atom(Pid,Atom),
+       forall(member(Form,[Pid,Local,String,Atom]),
+         (gensym(register_form_,Name),
+          setup_call_cleanup(register(Name,Form),
+            (whereis(Name,Found),assertion(Found==Pid)),unregister(Name)))),
+       stop_actor(Pid),
+       forall(member(Form,[Pid,Local,String,Atom]),
+         (gensym(register_dead_form_,Name),catch(register(Name,Form),Error,true),
+          assertion(nonvar(Error)),
+         assertion(Error=error(existence_error(process,Form),_)))))).
+test(register_remote_alias_still_unchecked) :-
+    gensym(register_remote_,Name),Remote='@'(987654321,'http://remote.invalid:12345'),
+    setup_call_cleanup(register(Name,Remote),
+      (whereis(Name,Found),assertion(Found==Remote)),unregister(Name)).
+test(register_main_still_supported) :-
+    gensym(register_main_,Name),
+    setup_call_cleanup(register(Name,main),
+      (whereis(Name,Found),assertion(Found==main)),unregister(Name)).
 test(plain_spawn_still_rejects_name,
      [throws(error(domain_error(spawn_option,name(test)),_))]) :- spawn(true,_,[name(test)]).
 

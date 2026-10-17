@@ -390,6 +390,12 @@ test(register_cleared_on_exit, Reason == reason) :-
        down(Pid2, _, Reason) -> true
    }).
 
+test(register_retired_local_pid,
+     [throws(error(existence_error(process,Pid),context(actors:register/2,_)))]) :-
+   spawn(true,Pid,[monitor(true)]),
+   receive({down(Pid,Pid,_)->true},[timeout(2),on_timeout(throw(missing_down))]),
+   register(retired_local_test,Pid).
+
 test(send_to_unknown_name_raises,
      true(Error = error(existence_error(actor_name, noname), _))) :-
    catch(send(noname, msg), Error, true),

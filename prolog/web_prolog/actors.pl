@@ -738,9 +738,9 @@ stop(Pid, Parent) :-
     %  is present here and receives exactly one down/3, or demonitor/2
     %  removes it before delivery and can safely flush the mailbox.
     %  Registration and pid retirement share the registry mutex.  A
-    %  concurrent register_service/2 therefore either publishes before this
+    %  concurrent registration therefore either publishes before this
     %  transaction (and is removed here), or observes the retired pid and
-    %  fails; it cannot install a stale service mapping after cleanup.
+    %  fails; it cannot install a stale local binding after cleanup.
     with_mutex(actors_registry,
         (   retractall(spawn_name_reservation(_, _, _, _, GlobalPid, _)),
             retractall(spawn_name_reservation(_, _, _, GlobalPid, _, _)),
@@ -937,6 +937,7 @@ register(Name, Pid) :-
     %  or two pids claiming one name.
     with_mutex(actors_registry,
         (   ensure_name_registration_available(Namespace, Name, Pid, CanonPid),
+            ensure_registerable_local_pid(Pid, CanonPid),
             asserta(registered(Namespace, Name, CanonPid))
         )).
 
@@ -1021,6 +1022,20 @@ service_registry_access_error(Goal) :-
     throw(error(permission_error(access, actor_service_registry, Goal),
                 context(actors:require_service_registry_access/1,
                         'service registry inspection is reserved for node-owned runtime code'))).
+
+%  Called under actors_registry, also held while retiring pid mappings.
+%  Only local actor pids are checked; remote aliases retain their semantics.
+ensure_registerable_local_pid(Pid, CanonPid) :-
+    pid_local(CanonPid, LocalPid),
+    (   (integer(LocalPid) ; LocalPid == main
+        ; nonvar(LocalPid), LocalPid = actor(Id), integer(Id))
+    ->  (   monitor_target_alive(CanonPid)
+        ->  true
+        ;   throw(error(existence_error(process, Pid),
+                        context(actors:register/2, 'local actor no longer exists')))
+        )
+    ;   true
+    ).
 
 ensure_name_registration_available(Namespace, Name, Pid, CanonPid) :-
     (   (ordinary_registered_pid(Namespace, CanonPid) ; reserved_spawn_pid(Namespace, CanonPid))

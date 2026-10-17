@@ -288,8 +288,14 @@ Composition uses `actors:spawn_with_name/4`, with an internal
 The distribution hook recognises local node URL aliases; plain `spawn/3`
 still rejects `name/1`. Requests that actually create remote actors retain
 post-spawn alias registration, without a cross-node atomicity guarantee.
-Ordinary `register/2` still does not validate local pid liveness, and remote
-alias cleanup remains explicit client work. Broader lifecycle work is unchanged.
+Ordinary `register/2` checks local actor existence under the same registry
+mutex as insertion and retirement. After the existing collision checks, a
+missing local actor raises `error(existence_error(process, Pid), Context)`.
+This includes local URL-qualified pids and their accepted textual forms;
+`main` remains supported. Registration before retirement is removed by cleanup;
+registration after retirement is rejected. Success does not guarantee continued
+liveness. Remote aliases remain unchecked, with explicit client cleanup.
+Broader lifecycle work is unchanged.
 
 ### Owner Service Publication
 
