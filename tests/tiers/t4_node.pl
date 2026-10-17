@@ -41,6 +41,7 @@ http_status(URL, Status) :-
 :- use_module('node/public_goal_guard_tests.pl', []).
 :- use_module('node/promise_yield_tests.pl', []).
 :- use_module('node/promise_lifecycle_tests.pl', []).
+:- use_module('node/promise_ownership_tests.pl', []).
 :- use_module('node/rpc_options_tests.pl', []).
 :- use_module('toplevel_synch_tests.pl', []).
 :- use_module('spawn_options_tests.pl', []).
@@ -61,7 +62,7 @@ http_status(URL, Status) :-
 
 run_tier :-
     layer_honesty,
-    run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, promise_lifecycle, rpc_options,
+    run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, promise_lifecycle, promise_ownership, rpc_options,
                 toplevel_synch,
                 spawn_options, spawn_source_options,
                 wrapper_options,

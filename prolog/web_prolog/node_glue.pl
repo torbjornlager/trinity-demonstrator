@@ -242,6 +242,28 @@ rpc:prepare_timeout_callback(Module, Goal0, Goal) :-
     node_sandbox:sandbox_check_goal_in_module(Profile, Module, Goal0),
     isolation:prepared_goal(Module, Goal0, Goal).
 
+% Promise ownership is a client boundary, not the collecting thread's id.
+% Session namespaces take precedence over principal-wide HTTP identity.
+:- multifile rpc:hook_promise_owner/1.
+rpc:hook_promise_owner(Owner) :- promise_client_owner(Owner).
+
+promise_client_owner(Owner) :-
+    % Resolve the innermost owner frame before matching its carrier; querying
+    % with a constrained context could accidentally select an outer frame.
+    (node_lifetime:current_owner_context(Context0) -> Context = some(Context0); Context = none),
+    (   current_public_execution_namespace(Namespace)
+    ->  (ground(Namespace)
+        -> node_lifetime:scope(Scope), Owner = client_namespace(Scope,Namespace)
+        ;  Owner = unavailable)
+    ;   Context = some(ctx(Scope,Id,_,_,http_call))
+    ->  (ground(Scope-Id) -> Owner = http_client(Scope,Id); Owner = unavailable)
+    ;   current_public_execution_profile(_)
+    ->  Owner = unavailable
+    ;   Context = some(ctx(_,_,_,false,_))
+    ->  Owner = unavailable
+    ;   Owner = trusted_local
+    ).
+
 :- multifile toplevel_actors:hook_wait_callback/3.
 toplevel_actors:hook_wait_callback(Module, Goal0, Goal) :-
     current_public_execution_profile(Profile),

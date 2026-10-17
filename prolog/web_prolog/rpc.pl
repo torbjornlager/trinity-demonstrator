@@ -13,8 +13,8 @@
      normalize_once/2
    ]).
 
-:- dynamic promise_state/6. % Key, WakeQueue, Worker, ExpiryThread, Collector, Result
-:- multifile prepare_timeout_callback/3.
+:- dynamic promise_state/7. % Key, WakeQueue, Worker, ExpiryThread, Collector, Result, Owner
+:- multifile prepare_timeout_callback/3, hook_promise_owner/1.
 
 /** <module> Web Prolog RPC Client (layer 3, HTTP-only)
 
@@ -30,7 +30,8 @@ Promise collection, expiry and explicit cleanup share promise_lifecycle.
 Answers stay in the record until consumed; the private queue only wakes a
 collector. Timed-out or interrupted waits release their collection claim.
 Disposal destroys the queue and stops local worker/expiry threads. This does
-not cancel execution on the remote node or establish client ownership.
+not cancel execution on the remote node. Node composition scopes ownership to
+client namespaces or stateless HTTP identities; standalone use remains shared.
 */
 
 :- use_module(pid_utils, [localhost_node/1]).
@@ -348,18 +349,23 @@ start_promise(Reference, WorkerGoal) :-
         (Catcher == exit -> true; promise_cleanup(Reference))).
 
 new_promise_state(Key, Queue) :-
+    promise_owner_context(Owner),
+    (Owner == unavailable
+    -> throw(error(permission_error(create,promise,client_context),
+                   context(rpc:promise/4, 'public execution has no client identity')))
+    ; true),
     message_queue_create(Queue),
-    catch(assertz(promise_state(Key,Queue,none,none,none,pending)), Error,
+    catch(assertz(promise_state(Key,Queue,none,none,none,pending,Owner)), Error,
           (message_queue_destroy(Queue), throw(Error))).
 
 start_promise_threads(Key, WorkerGoal) :-
     must_be(callable, WorkerGoal),
     thread_create(promise_thread(Key,worker,WorkerGoal), Worker, [detached(true)]),
-    retract(promise_state(Key,Q,none,none,C,R)),
-    assertz(promise_state(Key,Q,starting(Worker),none,C,R)),
+    retract(promise_state(Key,Q,none,none,C,R,Owner)),
+    assertz(promise_state(Key,Q,starting(Worker),none,C,R,Owner)),
     thread_create(promise_thread(Key,timer,rpc:promise_auto_cleanup_thread(Key,300)), Timer, [detached(true)]),
-    retract(promise_state(Key,Q,starting(Worker),none,C,R)),
-    assertz(promise_state(Key,Q,starting(Worker),starting(Timer),C,R)).
+    retract(promise_state(Key,Q,starting(Worker),none,C,R,Owner)),
+    assertz(promise_state(Key,Q,starting(Worker),starting(Timer),C,R,Owner)).
 
 promise_thread(Key, Role, Goal) :-
     catch(
@@ -368,10 +374,10 @@ promise_thread(Key, Role, Goal) :-
         '$rpc_promise_disposed', true).
 
 activate_promise_thread(Key, Role, Active) :-
-    (   retract(promise_state(Key,Q,W0,T0,C,R))
+    (   retract(promise_state(Key,Q,W0,T0,C,R,Owner))
     ->  (Role == worker -> W0 = starting(Thread), W = running(Thread), T = T0
         ; T0 = starting(Thread), T = running(Thread), W = W0),
-        assertz(promise_state(Key,Q,W,T,C,R)), Active = true
+        assertz(promise_state(Key,Q,W,T,C,R,Owner)), Active = true
     ;   Active = false
     ).
 
@@ -382,7 +388,7 @@ promise_transaction(Goal) :-
     setup_call_cleanup(with_mutex(promise_lifecycle, Goal), true, true).
 
 promise_auto_cleanup_thread(Key, Seconds) :-
-    (   with_mutex(promise_lifecycle, promise_state(Key,_,_,_,_,_))
+    (   with_mutex(promise_lifecycle, promise_state(Key,_,_,_,_,_,_))
     ->  sleep(Seconds),
         promise_transaction(dispose_promise_locked(Key))
     ;   true
@@ -393,10 +399,22 @@ promise_auto_cleanup_thread(Key, Seconds) :-
 promise_cleanup(Reference) :-
     must_be(integer, Reference),
     promise_queue_key(Reference, Key),
-    promise_transaction(dispose_promise_locked(Key)).
+    promise_transaction(
+        (promise_accessible(Key) -> dispose_promise_locked(Key); true)).
+
+% The node supplies client identity; without that composition, local threads
+% and actors keep their historical sharing. Owner keys must be ground and
+% compared by identity, never unified with another client's key.
+promise_owner_context(Owner) :-
+    (hook_promise_owner(Key) -> must_be(ground,Key), Owner = Key
+    ; Owner = trusted_local).
+
+promise_accessible(Key) :-
+    promise_owner_context(Current), Current \== unavailable,
+    promise_state(Key,_,_,_,_,_,Stored), Stored == Current.
 
 dispose_promise_locked(Key) :-
-    (   retract(promise_state(Key,Queue,Worker,Timer,_,_))
+    (   retract(promise_state(Key,Queue,Worker,Timer,_,_,_))
     ->  message_queue_destroy(Queue),
         stop_promise_thread(Timer), stop_promise_thread(Worker)
     ;   true
@@ -416,8 +434,8 @@ stop_promise_thread(running(Thread)) :-
 % destroyed queue. The answer survives a collector interrupted after wakeup.
 deliver_promise_answer(Key, Answer) :-
     promise_transaction(
-        (   retract(promise_state(Key,Q,W,T,C,pending))
-        ->  assertz(promise_state(Key,Q,W,T,C,ready(Answer))),
+        (   retract(promise_state(Key,Q,W,T,C,pending,Owner))
+        ->  assertz(promise_state(Key,Q,W,T,C,ready(Answer),Owner)),
             thread_send_message(Q, ready)
         ;   true
         )).
@@ -450,7 +468,7 @@ promise(URI, Goal0, Reference, Options) :-
 
 promise_worker(Key, URI, Goal, Template, Offset, Limit,
                HTTPOptions, LoadText, RemoteTimeout, Once) :-
-    (   with_mutex(promise_lifecycle, promise_state(Key,_,_,_,_,_))
+    (   with_mutex(promise_lifecycle, promise_state(Key,_,_,_,_,_,_))
     ->  catch(
             (   once(promise_answer(URI, Goal, Template, Offset, Limit,
                                    HTTPOptions, LoadText, RemoteTimeout, Once, Answer))
@@ -510,11 +528,12 @@ yield(Reference, Message, Options0) :-
     ).
 
 claim_promise(Reference, Key, Queue, Claim, Ready) :-
-    (   promise_state(Key,Queue,W,T,Collector,Result)
+    (   promise_accessible(Key),
+        promise_state(Key,Queue,W,T,Collector,Result,Owner)
     ->  (   Collector == none
         ->  flag(promise_collector_counter, N, N+1), Claim = collector(N),
-            retract(promise_state(Key,Queue,W,T,none,Result)),
-            assertz(promise_state(Key,Queue,W,T,Claim,Result)),
+            retract(promise_state(Key,Queue,W,T,none,Result,Owner)),
+            assertz(promise_state(Key,Queue,W,T,Claim,Result,Owner)),
             (Result = ready(_) -> Ready = true; Ready = false)
         ;   throw(error(permission_error(collect,promise,Reference),
                         context(rpc:yield/3, 'collection already in progress')))
@@ -528,7 +547,7 @@ wait_for_promise(Reference, Key, Queue, Claim, Ready, Options, Outcome) :-
               promise_wait_error(Reference,Key,Error))
     ),
     promise_transaction(
-        (   promise_state(Key,_,_,_,Claim,Result)
+        (   promise_state(Key,_,_,_,Claim,Result,_)
         ->  (   Result = ready(Answer)
             ->  dispose_promise_locked(Key), Outcome = answer(Answer)
             ;   Outcome = timeout
@@ -538,11 +557,11 @@ wait_for_promise(Reference, Key, Queue, Claim, Ready, Options, Outcome) :-
 
 promise_wait_error(Reference, Key, Error) :-
     with_mutex(promise_lifecycle,
-        (promise_state(Key,_,_,_,_,_) -> throw(Error); missing_promise(Reference))).
+        (promise_state(Key,_,_,_,_,_,_) -> throw(Error); missing_promise(Reference))).
 
 release_promise_claim(Key, Claim) :-
-    (   retract(promise_state(Key,Q,W,T,Claim,Result))
-    ->  assertz(promise_state(Key,Q,W,T,none,Result))
+    (   retract(promise_state(Key,Q,W,T,Claim,Result,Owner))
+    ->  assertz(promise_state(Key,Q,W,T,none,Result,Owner))
     ;   true
     ).
 
@@ -591,7 +610,7 @@ normalize_once(Value, _) :-
 %!  make_reference(-Reference) is det.
 %
 %   Mint a fresh integer promise reference.  References are
-%   rpc-local (they key promise_state/6), so no shared pid
+%   rpc-local (they key promise_state/7), so no shared pid
 %   machinery is needed; the integer shape is observable through
 %   yield/2-3's must_be(integer) check and stays as in the
 %   demonstrator.

@@ -487,9 +487,34 @@ node. Late worker completion is ignored without writing to a destroyed queue.
 Failed initialisation rolls back allocated local resources. Explicit cleanup
 remains idempotent. This is local disposal, not guaranteed remote cancellation.
 
-References remain runtime-wide without enforcing client ownership. Cross-client
-ownership, automatic cleanup on client abandonment, and remote cancellation
-remain separate lifecycle work.
+Native node composition records a ground owner key with each promise and
+checks it under the lifecycle mutex before a collector claims the promise:
+
+- WebSocket, HTTP interactive-session and delegated transport calls use their
+  existing client namespace, scoped to the node. Sharing a principal does not
+  merge separate session namespaces.
+- Authenticated stateless HTTP calls use principal identity scoped to the node,
+  allowing collection in a later request by that principal.
+- Anonymous stateless HTTP calls use the existing distinct request identity,
+  including when an anonymous per-IP identity is configured. A later anonymous
+  request cannot collect; use a session or authentication across requests.
+- Trusted local/standalone code retains sharing across threads and actors.
+  It has no implicit override for public clients' promises, and public clients
+  cannot collect trusted local promises.
+
+A foreign yield raises the same `existence_error(promise, Ref)` as an unknown
+reference, without invoking its callback or exposing an active collector.
+Foreign `promise_cleanup/1` is an idempotent no-op, just as for an absent
+reference. Authorised cleanup works normally; internal expiry can dispose of
+any expired promise independently of client identity. Public execution without
+a usable client identity fails closed at promise creation.
+
+Composition uses `rpc:hook_promise_owner/1`; the independent RPC library defaults
+to trusted local sharing. Ownership is unchanged by timeout, interruption or
+retry. Namespace teardown does not automatically dispose of promises: a
+surviving actor with that namespace can still collect its own reference.
+Ownership transfer, automatic disposal on client/namespace teardown, remote
+cancellation, and a portable ownership contract remain separate work.
 
 `runtime_property/1` reports host capabilities rather than changing language
 semantics. Its properties are `implementation/1`, `persistent/1`,

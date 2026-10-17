@@ -24,7 +24,7 @@ wait_until(Goal) :- call_with_time_limit(3,wait_loop(Goal)).
 wait_loop(Goal) :- (call(Goal) -> true; sleep(0.002),wait_loop(Goal)).
 :- meta_predicate wait_until(0), wait_loop(0).
 claimed(Key) :-
-    with_mutex(promise_lifecycle,(rpc:promise_state(Key,_,_,_,Claim,_),Claim\==none)).
+    with_mutex(promise_lifecycle,(rpc:promise_state(Key,_,_,_,Claim,_,_),Claim\==none)).
 thread_stopped(Thread) :-
     \+ catch(thread_property(Thread,status(running)),error(existence_error(thread,_),_),fail).
 queue_gone(Q) :-
@@ -44,10 +44,10 @@ serve(Events, Gate, _) :-
     catch(format('Content-type: application/x-prolog~n~nsuccess([ok],false).~n'),_,true).
 resources(Ref,Key,Q,W,T) :-
     rpc:promise_queue_key(Ref,Key),
-    with_mutex(promise_lifecycle,rpc:promise_state(Key,Q,Worker,Timer,_,_)),
+    with_mutex(promise_lifecycle,rpc:promise_state(Key,Q,Worker,Timer,_,_,_)),
     arg(1,Worker,W),arg(1,Timer,T).
 assert_disposed(Key,Q,W,T) :-
-    assertion(\+rpc:promise_state(Key,_,_,_,_,_)),assertion(queue_gone(Q)),
+    assertion(\+rpc:promise_state(Key,_,_,_,_,_,_)),assertion(queue_gone(Q)),
     wait_until(thread_stopped(W)),wait_until(thread_stopped(T)).
 
 :- begin_tests(promise_lifecycle).
@@ -55,7 +55,7 @@ assert_disposed(Key,Q,W,T) :-
 test(collection_reclaims_queue) :-
     with_pending(Ref,Key,Q,
       (rpc:deliver_promise_answer(Key,failure),yield(Ref,Answer),assertion(Answer==failure),
-       assertion(queue_gone(Q)),assertion(\+rpc:promise_state(Key,_,_,_,_,_)))).
+       assertion(queue_gone(Q)),assertion(\+rpc:promise_state(Key,_,_,_,_,_,_)))).
 
 test(competing_collector_rejected_without_disturbing_first) :-
     with_pending(Ref,Key,_,
@@ -107,17 +107,17 @@ test(expiry_thread_reclaims_its_own_resources) :-
     with_pending(_Ref,Key,Q,
       (with_mutex(promise_lifecycle,
          (thread_create(rpc:promise_thread(Key,timer,rpc:promise_auto_cleanup_thread(Key,0)),Timer,[detached(true)]),
-          retract(rpc:promise_state(Key,Q,W,none,C,R)),
-          assertz(rpc:promise_state(Key,Q,W,starting(Timer),C,R)))),
+          retract(rpc:promise_state(Key,Q,W,none,C,R,Owner)),
+          assertz(rpc:promise_state(Key,Q,W,starting(Timer),C,R,Owner)))),
        wait_until(thread_stopped(Timer)),assertion(queue_gone(Q)),
-       assertion(\+rpc:promise_state(Key,_,_,_,_,_)))).
+       assertion(\+rpc:promise_state(Key,_,_,_,_,_,_)))).
 
 test(initialisation_failure_rolls_back_state_and_queue) :-
     findall(Q,message_queue_property(Q,size(_)),Before),
     rpc:make_reference(Ref),rpc:promise_queue_key(Ref,Key),
     catch(rpc:start_promise(Ref,17),Error,true),
     assertion(nonvar(Error)),assertion(Error=error(type_error(callable,17),_)),
-    assertion(\+rpc:promise_state(Key,_,_,_,_,_)),
+    assertion(\+rpc:promise_state(Key,_,_,_,_,_,_)),
     findall(Q,message_queue_property(Q,size(_)),After),
     sort(Before,BeforeSet),sort(After,AfterSet),assertion(AfterSet==BeforeSet).
 
