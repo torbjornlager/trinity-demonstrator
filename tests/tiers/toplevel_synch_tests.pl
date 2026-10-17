@@ -3,6 +3,7 @@
 :- use_module('../../prolog/web_prolog/actors.pl').
 :- use_module('../../prolog/web_prolog/toplevel_actors.pl').
 :- use_module(library(plunit)).
+:- use_module(library(gensym)).
 
 :- meta_predicate with_toplevel(-,+,0).
 
@@ -120,5 +121,60 @@ test(preinstantiated_answer_mismatch_consumes_answer) :-
     with_toplevel(Pid,[],
         (\+ toplevel_call_synch(Pid,true,failure(Pid),[timeout(2)]),
          receive({success(Pid,_,_)->throw(answer_not_consumed)},[timeout(0)]))).
+
+test(call_detects_termination_without_timeout,
+     [timeout(3),throws(toplevel_down(synchronous_call_exit))]) :-
+    with_toplevel(Pid,[],toplevel_call_synch(Pid,exit(synchronous_call_exit),_)).
+
+test(next_detects_termination_without_timeout,
+     [timeout(3),throws(toplevel_down(synchronous_next_exit))]) :-
+    with_toplevel(Pid,[],
+      (toplevel_call_synch(Pid,
+         (member(X,[a,b]),(X==b -> exit(synchronous_next_exit);true)),First,
+         [template(X),limit(1)]),
+       assertion(First==success(Pid,[a],true)),toplevel_next_synch(Pid,_))).
+
+test(termination_preserves_existing_monitor_and_unrelated_down) :-
+    with_toplevel(Pid,[],
+      (self(Self),monitor(Pid,Existing),send(Self,down(other_pid,other_ref,other_reason)),
+       catch(toplevel_call_synch(Pid,exit(synchronous_exit),_),Error,true),
+       assertion(Error==toplevel_down(synchronous_exit)),
+       receive({down(Pid,Existing,synchronous_exit)->true},
+               [timeout(2),on_timeout(throw(missing_existing_monitor))]),
+       receive({down(other_pid,other_ref,other_reason)->true},
+               [timeout(0),on_timeout(throw(missing_unrelated_down))]),
+       receive({down(Pid,_,_)->throw(leaked_private_down)},[timeout(0)]))).
+
+test(timeout_paths_clean_only_private_monitor,
+     [forall(member(Callback,[true,fail,throw(test_wait_exception)]))]) :-
+    with_toplevel(Pid,[],
+      (self(Self),monitor(Pid,Existing),
+       catch(ignore(toplevel_call_synch(Pid,sleep(1),_,
+                    [timeout(0),on_timeout(Callback)])),test_wait_exception,true),
+       findall(Ref,actors:monitor(Self,Pid,Ref),Refs),assertion(Refs==[Existing]),
+       toplevel_halt(Pid,true),
+       receive({down(Pid,Existing,true)->true},[timeout(2),on_timeout(throw(missing_existing_down))]),
+       receive({down(Pid,_,_)->throw(leaked_wait_monitor)},[timeout(0)]))).
+
+test(success_preserves_existing_monitor_without_leaking_private_monitor) :-
+    with_toplevel(Pid,[],
+      (self(Self),monitor(Pid,Existing),toplevel_call_synch(Pid,true,Answer),
+       assertion(Answer==success(Pid,[true],false)),
+       findall(Ref,actors:monitor(Self,Pid,Ref),Refs),assertion(Refs==[Existing]),
+       demonitor(Existing,[flush]))).
+
+test(reply_mismatch_cleans_private_monitor) :-
+    with_toplevel(Pid,[],
+      (self(Self),monitor(Pid,Existing),
+       \+toplevel_call_synch(Pid,true,failure(Pid),[timeout(2)]),
+       findall(Ref,actors:monitor(Self,Pid,Ref),Refs),assertion(Refs==[Existing]),
+       demonitor(Existing,[flush]))).
+
+test(send_exception_flushes_private_down,
+     [forall(member(Kind,[call,next]))]) :-
+    gensym(missing_sync_toplevel_,Name),
+    catch((Kind==call -> toplevel_call_synch(Name,true,_);toplevel_next_synch(Name,_)),Error,true),
+    assertion(Error=error(existence_error(actor_name,Name),_)),assertion(nonvar(Error)),
+    receive({down(Name,_,_)->throw(leaked_send_down)},[timeout(0)]).
 
 :- end_tests(toplevel_synch).

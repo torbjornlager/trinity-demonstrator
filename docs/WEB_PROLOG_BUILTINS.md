@@ -405,8 +405,15 @@ failure makes the wrapper fail and exceptions propagate. Without a callback,
 a timeout succeeds leaving `Answer` unbound, matching `receive/2` rather than
 `yield/3`'s default `timeout` result. A timeout does not stop the query or
 discard a later answer. A pre-instantiated answer mismatch consumes the
-selected answer and fails. Public-node callbacks cross the usual sandbox
-boundary. These wrappers remain single-client operations; concurrent-client
+selected answer and fails. Each wrapper installs a private monitor before
+sending and throws `toplevel_down(Reason)` if it observes termination instead
+of an answer. The monitor is removed with `demonitor(Ref, [flush])` on every
+exit path, including send exceptions, timeout callbacks, and answer mismatch.
+Existing monitors and unrelated messages are preserved. Remote reasons may
+include `connection_closed`, which reports lost observation rather than proven
+death. Query exceptions still return `error(Pid, Error)` answer terms.
+Public-node callbacks cross the usual sandbox boundary. These wrappers remain
+single-client operations; concurrent-client
 coordination and stale-answer correlation are separate work.
 
 ### Remote Queries

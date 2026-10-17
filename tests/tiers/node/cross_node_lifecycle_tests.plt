@@ -77,6 +77,19 @@ test(remote_retirement_withdraws_registered_alias,
         )).
 
 
+test(remote_synchronous_call_reports_toplevel_termination,
+     [setup(flush_mailbox),timeout(5)]) :-
+    with_test_nodes(
+        [node_spec(b, [profile(actor), auth(open)])],
+        (   remote_only_actor_url(URLB),
+            toplevel_spawn(Pid, [node(URLB), session(true)]),
+            setup_call_cleanup(true,
+                (catch(toplevel_call_synch(Pid,exit(remote_sync_exit),_),Error,true),
+                 assertion(Error == toplevel_down(remote_sync_exit))),
+                toplevel_halt(Pid,true))
+        )).
+
+
 %  ------------------ cross-node link propagation --------------------
 %
 %  Spawn a parent actor on node A whose body is "spawn a child on

@@ -612,14 +612,19 @@ toplevel_next(Pid, Options) :-
 %!  toplevel_call_synch(+Pid, :Goal, -Answer, :Options) is semidet.
 %
 %   Select this caller as the answer target, send one query, and collect
-%   one answer. A receive timeout does not stop or cancel the query.
+%   one answer or throw toplevel_down(Reason) on observed termination.
+%   A receive timeout does not stop or cancel the query. The private monitor
+%   is removed and flushed on every exit path.
 toplevel_call_synch(Pid, Goal, Answer) :-
     toplevel_call_synch(Pid, Goal, Answer, []).
 
 toplevel_call_synch(Pid, Goal, Answer, Options0) :-
     synchronous_options(call, Options0, Caller, QueryOptions, ReceiveOptions),
-    toplevel_call(Pid, Goal, QueryOptions),
-    synchronous_answer(Pid, Answer, Caller, ReceiveOptions).
+    setup_call_cleanup(
+        monitor(Pid, Ref),
+        (toplevel_call(Pid, Goal, QueryOptions),
+         synchronous_answer(Pid, Ref, Answer, Caller, ReceiveOptions)),
+        demonitor(Ref, [flush])).
 
 %!  toplevel_next_synch(+Pid, -Answer) is semidet.
 %!  toplevel_next_synch(+Pid, -Answer, :Options) is semidet.
@@ -628,8 +633,11 @@ toplevel_next_synch(Pid, Answer) :-
 
 toplevel_next_synch(Pid, Answer, Options0) :-
     synchronous_options(next, Options0, Caller, QueryOptions, ReceiveOptions),
-    toplevel_next(Pid, QueryOptions),
-    synchronous_answer(Pid, Answer, Caller, ReceiveOptions).
+    setup_call_cleanup(
+        monitor(Pid, Ref),
+        (toplevel_next(Pid, QueryOptions),
+         synchronous_answer(Pid, Ref, Answer, Caller, ReceiveOptions)),
+        demonitor(Ref, [flush])).
 
 synchronous_options(Kind, Options0, Caller, [target(Self)|Query], Receive) :-
     strip_module(Options0, Caller, Options),
@@ -672,7 +680,7 @@ synchronous_option_value(target, Target, Self) :- !,
 synchronous_option_value(term, _, _) :- !.
 synchronous_option_value(Type, Value, _) :- must_be(Type, Value).
 
-synchronous_answer(Pid, Answer, Caller, Options) :-
+synchronous_answer(Pid, MonRef, Answer, Caller, Options) :-
     option(on_timeout(Callback), Options, true),
     exclude(synchronous_timeout_option, Options, WaitOptions),
     % Only protocol answers are selected; I/O and unrelated messages remain
@@ -680,7 +688,8 @@ synchronous_answer(Pid, Answer, Caller, Options) :-
     once(receive({
         success(P,Data,More) if P == Pid -> Answer = success(P,Data,More) ;
         failure(P) if P == Pid -> Answer = failure(P) ;
-        error(P,Error) if P == Pid -> Answer = error(P,Error)
+        error(P,Error) if P == Pid -> Answer = error(P,Error) ;
+        down(_,Ref,Reason) if Ref == MonRef -> throw(toplevel_down(Reason))
     }, [on_timeout(run_wait_callback(Caller,Callback))|WaitOptions])).
 
 synchronous_timeout_option(on_timeout(_)).
