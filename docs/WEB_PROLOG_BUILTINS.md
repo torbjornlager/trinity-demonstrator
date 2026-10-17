@@ -219,9 +219,40 @@ with `Scope` equal to `runtime` or `public`, and declares extension options
 through `actors:hook_spawn_option(Name, Visibility, Validator)`. A declaration
 specifies `public` or `internal` visibility and a module-qualified unary
 validator that succeeds or throws without binding inputs or fetching source.
-Recognition does not grant authority. Specialised wrappers continue to consume
-their own options before forwarding spawn options; validation of their own
-settings remains separate work.
+Recognition does not grant authority. Specialised creation wrappers validate
+their complete option lists before consuming their own options and forwarding
+spawn options:
+
+- `toplevel_spawn/2`: atom `name/1`, boolean `session/1`, and positive numeric
+  or `infinite` values for `time_limit/1` and `idle_limit/1`.
+- `server_spawn/4`: atom `name/1`.
+- `supervisor_spawn/3`: atom `name/1`; `strategy/1` is `one_for_one`,
+  `one_for_all`, or `rest_for_one`; `intensity/1` is a nonnegative integer;
+  `period/1` is a positive number of seconds (fractional values remain valid).
+  Nested supervisors use the same checks for supervisor settings.
+- `statechart_spawn/2`: atom `name/1` and boolean `trace/1`, preserving its
+  duplicate-trace rejection and exactly-one-XML-source rule. Supplemental
+  Prolog sources remain accepted.
+
+All forwarded options are checked with the existing spawn schema. Unsupported
+options raise `error(domain_error(spawn_option,Option),Context)`; malformed
+values raise type, domain, or instantiation errors. The context identifies
+the creation wrapper. Unbound values are rejected without binding them.
+Every occurrence is validated; ordinary settings still use the first
+occurrence and source options retain their order and sharing. No wrapper
+schema extends the option vocabulary of plain `spawn/3`. Native metadata is
+preserved; recognition still does not bypass authority checks. Composition
+uses `actors:validate_spawn_wrapper_options/4` with a wrapper-local list of
+`Name=UnaryValidator` entries alongside the existing spawn schema.
+
+Caller-side toplevel validation precedes local setup, source copying, and
+remote dispatch. Receiving HTTP/WebSocket toplevel endpoints validate raw
+client options before source preparation and metadata injection; internal
+metadata cannot be supplied as raw client options. Existing HTTP session
+defaults, reserved WebSocket routing, and owner ceilings are unchanged.
+Name validation only checks its type; registration still follows creation.
+Child-specification validation, atomic naming, and lifecycle changes remain
+separate work.
 
 ### Actor Messaging
 
@@ -347,8 +378,10 @@ text contract.
 Native `yield/3` accepts only `timeout(Number)` and `on_timeout(Callable)`;
 the first occurrence of each takes effect. A negative wait timeout returns
 immediately if no answer is available. Validation never runs the callback
-or consumes the promise. Broader actor/wrapper option validation and
-synchronous-wrapper answer routing remain separate work.
+or consumes the promise. Actor spawning and the specialised creation wrappers
+also validate options; native synchronous toplevel wrappers enforce caller
+routing as described above. Validation of other option-bearing APIs remains
+separate work.
 
 Promise references are opaque ten-digit integers, minted securely and never reused.
 Native `yield/3` returns `timeout` when its wait expires and retains the promise

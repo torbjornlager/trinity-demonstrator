@@ -124,6 +124,9 @@ inject_statechart_io_prelude :-
 %   loaded into the statechart actor's private module.
 statechart_spawn(Pid, OptionsSpec) :-
     strip_module(OptionsSpec, SourceModule, Options0),
+    actors:validate_spawn_wrapper_options(Options0, runtime,
+        statechart_actor:statechart_spawn/2,
+        [name=error:must_be(atom),trace=statechart_actor:validate_trace_option]),
     exclude(is_statechart_spawn_local_option, Options0, Options1),
     select_option(trace(Trace), Options1, Options2, true),
     (   option(trace(_), Options2)
@@ -140,6 +143,9 @@ statechart_spawn(Pid, OptionsSpec) :-
     maybe_register_statechart_name(Options0, Pid).
 
 is_statechart_spawn_local_option(name(_)).
+
+validate_trace_option(Trace) :-
+    must_be(nonvar, Trace), validate_statechart_trace(Trace).
 
 ensure_statechart_source_module(_, Options, Options) :-
     option(source_module(_), Options),

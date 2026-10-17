@@ -8148,6 +8148,50 @@ test(ws_bare_spawn_validates_before_source_fetch) :-
              assertion(sub_string(JSON.details,_,_,_,"domain_error(spawn_option,monitr(true))"))),
             catch(ws_close(WS,1000,done),_,true))).
 
+test(ws_toplevel_spawn_validates_before_source_fetch,
+     [forall(member(Option-Needle,[session(maybe)-"boolean",time_limit(0)-"time_limit",
+                                  idle_limit(0)-"idle_limit",name(17)-"atom",
+                                  typo(1)-"spawn_option"]))]) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        setup_call_cleanup(ws_open(URI,WS),
+            (term_string([src_uri('/no-such-wrapper-source'),Option],Text,[quoted(true)]),
+             ws_send_json(WS,json{command:toplevel_spawn,options:Text}),
+             ws_receive_json_first_of(WS,["error","spawned"],JSON),
+             assertion(JSON.type=="error"),
+             assertion(sub_string(JSON.details,_,_,_,Needle))),
+            catch(ws_close(WS,1000,done),_,true))).
+
+test(http_toplevel_spawn_validates_before_source_fetch,
+     [forall(member(Option-Needle,[session(maybe)-"boolean",time_limit(0)-"time_limit",
+                                  idle_limit(0)-"idle_limit",name(17)-"atom",
+                                  typo(1)-"spawn_option"]))]) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        (atom_concat(URI,'/toplevel_spawn',URL),
+         term_string([src_uri('/no-such-wrapper-source'),Option],Text,[quoted(true)]),
+         read_json_post(URL,_{options:Text},JSON),assertion(JSON.type=="error"),
+         assertion(sub_string(JSON.details,_,_,_,Needle)))).
+
+test(toplevel_remote_spawn_checks_own_options_before_source_or_connection) :-
+    catch(toplevel_spawn(Pid,[node('http://127.0.0.1:1'),
+                              src_predicates([missing_wrapper_predicate/0]),name(17)]),Error,true),
+    assertion(Error=error(type_error(atom,17),context(toplevel_actors:toplevel_spawn/2,_))),
+    assertion(var(Pid)).
+
+test(remote_toplevel_spawn_rejects_raw_metadata,
+     [forall(member(Transport,[http,ws]))]) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        (Transport==http
+         -> atom_concat(URI,'/toplevel_spawn',URL),
+            read_json_post(URL,_{options:"[source_module(test_node)]"},JSON),
+            assertion(JSON.type=="error"),
+            assertion(sub_string(JSON.details,_,_,_,"internal_spawn_option"))
+         ;  setup_call_cleanup(ws_open(URI,WS),
+                (ws_send_json(WS,json{command:toplevel_spawn,options:"[source_module(test_node)]"}),
+                 ws_receive_json_first_of(WS,["error","spawned"],JSON),
+                 assertion(JSON.type=="error"),
+                 assertion(sub_string(JSON.details,_,_,_,"internal_spawn_option"))),
+                catch(ws_close(WS,1000,done),_,true)))).
+
 test(ws_bare_spawn_rejects_framework_metadata,
      [forall(member(Option,[source_module(test_node),inherit_goal_module(false),
                            isolation_io(generated),monitor_target(main),monitor_ref(123)]))]) :-

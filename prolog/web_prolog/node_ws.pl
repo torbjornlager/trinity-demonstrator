@@ -718,6 +718,7 @@ ws_action_toplevel_spawn(Dict, Queue, Principal) :-
     require_ws_command_access(Principal, toplevel_spawn),
     effective_profile_for_route(ws, EffectiveProfile),
     ws_parse_spawn_options(Dict, UserOptions),
+    toplevel_actors:validate_toplevel_spawn_options(UserOptions, public),
     ws_get_spawn_trace_enabled(Dict, TraceEnabled),
     require_source_options_access(Principal, UserOptions),
     sandbox_prepare_source_options(EffectiveProfile, node_ws,

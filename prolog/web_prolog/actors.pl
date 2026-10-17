@@ -3,6 +3,7 @@
      spawn/2,                % :Goal, -Pid
      spawn/3,                % :Goal, -Pid, +Options
      validate_spawn_options/2, % +Options, +Scope (runtime composition API)
+     validate_spawn_wrapper_options/4, % +Options, +Scope, +PI, +ExtraSpecs
      actors/1,               % -List of actors
      self/1,                 % -Pid
      monitor/2,              % +Pid, -Ref
@@ -348,6 +349,24 @@ validate_spawn_options(Options, Scope) :-
     catch((must_be(list, Options), maplist(validate_spawn_option(Scope), Options)),
           error(Formal, _),
           throw(error(Formal, context(actors:spawn/3, 'invalid spawn option')))).
+
+% Wrapper-owned schemas are local to each wrapper, not global extensions
+% of spawn/3. ExtraSpecs contains Name=UnaryValidator pairs. The complete
+% list is checked before the wrapper consumes any options or starts work.
+validate_spawn_wrapper_options(Options, Scope, PI, ExtraSpecs) :-
+    must_be(oneof([public,runtime]), Scope),
+    catch((must_be(list, Options),
+           maplist(validate_spawn_wrapper_option(Scope,ExtraSpecs), Options)),
+          error(Formal, _),
+          throw(error(Formal, context(PI, 'invalid spawn wrapper option')))).
+
+validate_spawn_wrapper_option(Scope, ExtraSpecs, Option) :-
+    must_be(nonvar, Option),
+    (   compound(Option), compound_name_arity(Option, Name, 1),
+        memberchk(Name=Validator, ExtraSpecs)
+    ->  arg(1, Option, Value), call(Validator, Value)
+    ;   validate_spawn_option(Scope, Option)
+    ).
 
 validate_spawn_option(Scope, Option) :-
     must_be(nonvar, Option),

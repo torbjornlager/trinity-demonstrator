@@ -109,6 +109,7 @@ supervisor_spawn(ChildSpecs, Pid) :-
     supervisor_spawn(ChildSpecs, Pid, []).
 
 supervisor_spawn(ChildSpecs0, Pid, Options) :-
+    validate_supervisor_options(Options),
     strip_module(ChildSpecs0, Caller, ChildSpecs),
     execution_source_module(Caller, SourceModule),
     option(strategy(Strategy), Options, one_for_one),
@@ -128,6 +129,25 @@ is_sup_option(strategy(_)).
 is_sup_option(intensity(_)).
 is_sup_option(period(_)).
 is_sup_option(name(_)).
+
+validate_supervisor_options(Options) :-
+    actors:validate_spawn_wrapper_options(Options, runtime,
+        supervisor_actor:supervisor_spawn/3,
+        [name=error:must_be(atom),
+         strategy=supervisor_actor:validate_strategy,
+         intensity=error:must_be(nonneg),
+         period=supervisor_actor:validate_period]).
+
+validate_strategy(Strategy) :-
+    must_be(nonvar, Strategy),
+    (   memberchk(Strategy, [one_for_one,one_for_all,rest_for_one])
+    ->  true
+    ;   domain_error(supervisor_strategy, Strategy)
+    ).
+
+validate_period(Period) :-
+    must_be(number, Period),
+    (Period > 0 -> true ; domain_error(supervisor_period, Period)).
 
 ensure_source_module(_, Options, Options) :-
     option(source_module(_), Options),
@@ -151,6 +171,7 @@ ensure_source_module(Module, Options, [source_module(Module)|Options]).
 %%   ])
 
 start_sub_supervisor(ChildSpecs0, Options) :-
+    validate_supervisor_options(Options),
     strip_module(ChildSpecs0, Caller, ChildSpecs),
     option(strategy(Strategy), Options, one_for_one),
     option(intensity(MaxR), Options, 1),

@@ -14,7 +14,8 @@
      toplevel_stop/1,
      toplevel_abort/1,
      toplevel_abort/2,
-     normalize_ptcp_limit/3
+     normalize_ptcp_limit/3,
+     validate_toplevel_spawn_options/2 % runtime composition API
    ]).
 
 /** <module> Toplevel Actors (layer 2)
@@ -118,10 +119,21 @@ toplevel_spawn(Pid) :-
 
 toplevel_spawn(Pid, Options0) :-
     strip_module(Options0, SourceModule, Options),
+    validate_toplevel_spawn_options(Options, runtime),
     (   hook_toplevel_spawn(Pid, SourceModule, Options)
     ->  true
     ;   local_toplevel_spawn(Pid, SourceModule, Options)
     ).
+
+validate_toplevel_spawn_options(Options, Scope) :-
+    actors:validate_spawn_wrapper_options(Options, Scope,
+        toplevel_actors:toplevel_spawn/2,
+        [name=error:must_be(atom), session=error:must_be(boolean),
+         time_limit=toplevel_actors:validate_spawn_limit(time_limit),
+         idle_limit=toplevel_actors:validate_spawn_limit(idle_limit)]).
+
+validate_spawn_limit(Kind, Value) :-
+    must_be(nonvar, Value), normalize_ptcp_limit(Kind, Value, _).
 
 local_toplevel_spawn(Pid, SourceModule, Options) :-
     self(Self),

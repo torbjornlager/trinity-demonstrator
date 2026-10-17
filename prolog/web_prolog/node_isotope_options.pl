@@ -17,6 +17,7 @@ Parse and normalize spawn options for ISOTOPE endpoints.
 ]).
 :- use_module(node_auth, [require_source_options_access/2]).
 :- use_module(node_session_limits, [apply_node_ptcp_limits/2]).
+:- use_module(toplevel_actors, [validate_toplevel_spawn_options/2]).
 
 :- use_module(library(error)).
 :- use_module(library(http/http_json)).
@@ -36,6 +37,7 @@ isotope_spawn_options(Request, Principal, EffectiveProfile, SpawnOptions, Initia
     ->  spawn_options_from_dict(Dict, SpawnOptions0, ExplicitLoadText, TraceEnabled)
     ;   spawn_options_from_query(Request, SpawnOptions0, ExplicitLoadText, TraceEnabled)
     ),
+    validate_toplevel_spawn_options(SpawnOptions0, public),
     require_source_options_access(Principal, SpawnOptions0),
     sandbox_prepare_source_options(EffectiveProfile, node_isotope_controller,
                                    SpawnOptions0, PreparedSpawnOptions),

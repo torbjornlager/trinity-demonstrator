@@ -61,6 +61,8 @@ server_spawn(Pred, State, Pid) :-
     server_spawn(Pred, State, Pid, []).
 
 server_spawn(Pred0, State, Pid, Options) :-
+    actors:validate_spawn_wrapper_options(Options, runtime,
+        server_actor:server_spawn/4, [name=error:must_be(atom)]),
     normalize_server_callback(Pred0, Pred1),
     strip_module(Pred1, CallbackModule, PlainPred),
     server_callback_source_module(CallbackModule, PlainPred, SourceModule),
