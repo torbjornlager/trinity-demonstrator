@@ -14,6 +14,7 @@
    ]).
 
 :- dynamic promise_queue_store/2.
+:- multifile prepare_timeout_callback/3.
 
 /** <module> Web Prolog RPC Client (layer 3, HTTP-only)
 
@@ -26,14 +27,14 @@ WebSocket; loadable on its own next to bare actors.pl.
   - shared text/timeout/boolean normalization helpers.
 
 Note on Promise cleanup: Each call to `promise/3-4` creates an internal
-message queue stored in a dynamic predicate. Cleanup is guaranteed to happen
-when `yield/2-3` collects an answer. A timed-out yield deliberately retains
-the queue so a later yield can collect the pending answer. Manual
-`promise_cleanup/1` is available when the caller abandons a promise.
+message queue stored in a dynamic predicate. Collection removes its lookup
+entry; a timed-out yield retains it for retry. Coordinated reclamation of
+queues/workers and concurrent collection/expiry remain lifecycle work.
+`promise_cleanup/1` removes the lookup entry when a caller abandons a promise.
 */
 
 :- use_module(pid_utils, [localhost_node/1]).
-:- use_module(isolation, [load_options_text/3]).
+:- use_module(isolation, [load_options_text/3, prepared_goal/3]).
 
 :- use_module(library(apply)).
 :- use_module(library(option)).
@@ -69,7 +70,8 @@ runtime_property(hard_termination(true)).
     rpc(+, :),
     rpc(+, :, +),
     promise(+, :, -),
-    promise(+, :, -, +).
+    promise(+, :, -, +),
+    yield(+, -, :).
 
 %!  rpc(+URI, :Goal) is nondet.
 %!  rpc(+URI, :Goal, +Options) is nondet.
@@ -254,15 +256,15 @@ promise_queue_key(Reference, QueueKey) :-
 
 
 %!  promise_auto_cleanup_thread(+QueueKey, +TimeoutSeconds) is det.
-%   Background thread that auto-cleans a promise queue after the timeout.
-%   If yield consumed it, the fact won't exist. If not, we clean it up.
+%   Remove an unconsumed promise lookup after the retention interval.
+%   This does not reclaim its queue/worker or cancel the remote request.
 promise_auto_cleanup_thread(QueueKey, TimeoutSeconds) :-
     sleep(TimeoutSeconds),
     retractall(promise_queue_store(QueueKey, _)).
 
 %!  promise_cleanup(+Reference) is det.
-%   Clean up the message queue and internal state for a promise.
-%   Only needed if yield/2-3 was never called (normally auto-cleanup handles this).
+%   Remove the lookup entry for an abandoned promise. Queue/worker
+%   reclamation remains separate lifecycle work.
 promise_cleanup(Reference) :-
     must_be(integer, Reference),
     promise_queue_key(Reference, QueueKey),
@@ -300,6 +302,21 @@ promise(URI, Goal0, Reference, Options) :-
 
 promise(URI, Goal, Template, Offset, Limit,
         HTTPOptions, LoadText, RemoteTimeout, Once, Queue) :-
+    catch(
+        (   once(promise_answer(URI, Goal, Template, Offset, Limit,
+                               HTTPOptions, LoadText, RemoteTimeout, Once, Answer))
+        ->  Message = Answer
+        ;   Message = error(error(promise_worker_failed,
+                                  context(rpc:promise/4, 'request produced no answer')))
+        ),
+        Error, Message = error(Error)),
+    % Delivery to a queue already disposed by lifecycle management cannot
+    % be recovered here; that is separate from request/response failures.
+    catch(thread_send_message(Queue, Message), SendError,
+          print_message(warning, SendError)).
+
+promise_answer(URI, Goal, Template, Offset, Limit,
+               HTTPOptions, LoadText, RemoteTimeout, Once, Answer) :-
     goal_template_texts(Goal, Template, GoalAtom, TemplateAtom),
     parse_url(URI, Parts),
     rpc_search_params(GoalAtom, TemplateAtom, Offset, Limit,
@@ -309,40 +326,56 @@ promise(URI, Goal, Template, Offset, Limit,
         search(Search)
       | Parts
     ]),
-    catch((
-        http_read_answer(ExpandedURI, HTTPOptions, Message),
-        catch(thread_send_message(Queue, Message), SendError,
-              format(user_error, 'promise: thread_send_message error: ~w~n', [SendError]))
-    ), HTTPError,
-        format(user_error, 'promise: HTTP or read error: ~w~n', [HTTPError])).
-
-
-%!  yield(+Reference, ?Message) is det.
-%!  yield(+Reference, ?Message, +Options) is det.
-yield(Reference, Message) :-
-    must_be(integer, Reference),
-    promise_queue_key(Reference, QueueKey),
-    setup_call_cleanup(
-        promise_queue_store(QueueKey, Queue),
-        thread_get_message(Queue, Message),
-        retract(promise_queue_store(QueueKey, Queue))
+    http_read_answer(ExpandedURI, HTTPOptions, Answer),
+    (   valid_promise_answer(Answer)
+    ->  true
+    ;   throw(error(domain_error(promise_answer, Answer),
+                    context(rpc:promise/4, 'expected success(Data,More), failure, or error(Error)')))
     ).
 
-yield(Reference, Message, Options) :-
+valid_promise_answer(Answer) :-
+    nonvar(Answer),
+    (   Answer == failure
+    ;   Answer = success(Data, More), is_list(Data),
+        (More == true ; More == false)
+    ;   Answer = error(Error), nonvar(Error)
+    ).
+
+
+%!  yield(+Reference, -Message) is det.
+%!  yield(+Reference, -Message, :Options) is det.
+yield(Reference, Message) :-
+    yield(Reference, Message, []).
+
+yield(Reference, Message, Options0) :-
     must_be(integer, Reference),
+    strip_module(Options0, Caller, Options),
+    must_be(list, Options),
     promise_queue_key(Reference, QueueKey),
     (   promise_queue_store(QueueKey, Queue)
-    ->  (   thread_get_message(Queue, Msg, Options)
-        ->  Message = Msg,
-            retract(promise_queue_store(QueueKey, Queue))
-        ;   % Timed out; leave the queue mapping in place so a later
-            % yield/2-3 call can still pick the message up.
-            option(on_timeout(Goal), Options, true),
-            call(Goal)
+    ->  exclude(yield_timeout_callback, Options, WaitOptions),
+        (   thread_get_message(Queue, Msg, WaitOptions)
+        ->  retractall(promise_queue_store(QueueKey, Queue)),
+            Message = Msg
+        ;   % A timeout leaves the promise available for another attempt.
+            yield_timeout(Reference, Message, Caller, Options)
         )
-    ;   % Promise doesn't exist; treat as immediate timeout
-        option(on_timeout(Goal), Options, true),
-        call(Goal)
+    ;   throw(error(existence_error(promise, Reference),
+                    context(rpc:yield/3, 'unknown, consumed, or expired promise')))
+    ).
+
+yield_timeout_callback(on_timeout(_)).
+
+yield_timeout(Reference, Message, Caller, Options) :-
+    option(on_timeout(Goal), Options, true),
+    (   prepare_timeout_callback(Caller, Goal, SafeGoal)
+    ->  true
+    ;   prepared_goal(Caller, Goal, SafeGoal)
+    ),
+    (   once(call(Caller:SafeGoal))
+    ->  (var(Message) -> Message = timeout ; true)
+    ;   throw(error(timeout_callback_failed(Reference),
+                    context(rpc:yield/3, 'on_timeout goal failed')))
     ).
 
 

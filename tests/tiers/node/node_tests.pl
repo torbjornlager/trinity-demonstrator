@@ -8029,12 +8029,48 @@ test(promise_4_load_uri,
         )
     ).
 
-test(yield_3_timeout_default_succeeds_with_unbound, true(var(Message))) :-
-    yield(4242424242, Message, [timeout(0.01)]).
+test(yield_3_rejects_unknown_reference,
+     [throws(error(existence_error(promise,Ref),_))]) :-
+    rpc:make_reference(Ref), yield(Ref,_,[timeout(0)]).
 
-test(yield_3_timeout_on_timeout_goal, true(Result == timed_out)) :-
-    yield(4242424242, _Message,
-          [timeout(0.01), on_timeout(Result = timed_out)]).
+test(isobase_yield_timeout_callback_uses_loaded_context) :-
+    with_node_server_options([profile(isobase),sandbox(blacklist)], URI,
+        (format(atom(Goal),
+             'promise(~q,sleep(0.1),Ref),yield(Ref,Answer,[timeout(0),on_timeout(timeout_value(Answer))]),yield(Ref,Final)',[URI]),
+         json_call_url_with_load_text(URI,Goal,
+             "timeout_value(Answer) :- Answer=timed_out.",URL),
+         read_json_answer(URL,JSON), assertion(JSON.type=="success"),
+         JSON.data=[Row], get_dict('Answer',Row,Answer), assertion(Answer=="timed_out"))).
+
+test(isobase_yield_timeout_callback_is_sandboxed) :-
+    with_node_server_options([profile(isobase),sandbox(blacklist)], URI,
+        (format(atom(Goal),
+             'promise(~q,sleep(0.1),Ref),yield(Ref,_,[timeout(0),on_timeout(nb_getval(secret,_))])',[URI]),
+         json_call_url(URI,Goal,0,1,URL), read_json_answer(URL,JSON),
+         assertion(JSON.type=="error"),
+         assertion(sub_string(JSON.data,_,_,_,"sandboxed")))).
+
+test(whitelist_yield_inspects_timeout_callback) :-
+    with_sandbox_mode(whitelist,
+        (sandbox_check_goal_in_module(isobase,test_node,
+             yield(1,Answer,[on_timeout(Answer=timeout)])),
+         catch(sandbox_check_goal_in_module(isobase,test_node,
+             yield(1,_,[on_timeout(open('/tmp/nope',read,_))])),Error,true),
+         assertion(nonvar(Error)))).
+
+test(ws_shipped_yield_callback_uses_destination_context) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)], URI,
+        setup_call_cleanup(ws_open(URI,WS),
+            (ws_send_json(WS,json{command:toplevel_spawn,
+                 options:"[session(true),src_text('cb(A) :- A=local_timeout. collect(R,A) :- yield(R,A,[timeout(0),on_timeout(cb(A))]).')]"}),
+             ws_receive_json_first_of(WS,["spawned"],Spawned),
+             format(atom(Goal),
+                 'promise(~q,sleep(0.1),R),self(S),spawn((collect(R,A),S ! result(A)),C,[src_predicates([collect/2,cb/1]),monitor(true)]),receive({result(Answer) -> true; down(C,_,exception(E)) -> throw(E)}),yield(R,_)',[URI]),
+             ws_send_json(WS,json{command:toplevel_call,pid:Spawned.pid,goal:Goal}),
+             ws_receive_json_first_of(WS,["success","error"],JSON),
+             assertion(JSON.type=="success"),
+             JSON.data=[Row],get_dict('Answer',Row,Answer),assertion(Answer=="local_timeout")),
+            catch(ws_close(WS,1000,done),_,true))).
 
 %  ---- WebSocket remote spawn tests ----
 

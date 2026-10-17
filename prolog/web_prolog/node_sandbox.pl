@@ -1243,7 +1243,10 @@ sandbox:safe_meta(rpc:rpc(_, _, _), []).
 sandbox:safe_meta(rpc:promise(_, _, _), []).
 sandbox:safe_meta(rpc:promise(_, _, _, _), []).
 sandbox:safe_primitive(rpc:yield(_, _)).
-sandbox:safe_primitive(rpc:yield(_, _, _)).
+sandbox:safe_meta(rpc:yield(_, _, Options0), Calls) :-
+    strip_module(Options0, Module, Options),
+    receive_option_calls(Options, Goals),
+    maplist(qualify_sandbox_goal(Module), Goals, Calls).
 sandbox:safe_primitive(rpc:runtime_property(_)).
 
 %  Statechart behaviour entry points.  statechart_spawn/2 routes through

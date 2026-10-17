@@ -34,6 +34,7 @@ inline.
     rewrite_source_text_if_needed/3
 ]).
 :- use_module(node_sandbox, []).
+:- use_module(rpc, []).
 :- use_module(node_session, []).
 :- use_module(node_session_limits, [apply_node_ptcp_limits/2]).
 :- use_module(node_ws, []).
@@ -228,6 +229,14 @@ statechart_runtime:hook_check_chart_goal(Module, Goal) :-
 :- multifile isolation:prepare_goal/3.
 isolation:prepare_goal(Module, Goal0, Goal) :-
     rewrite_goal_if_needed(Module, Goal0, Goal).
+
+% Timeout callbacks execute in the collector's context and must cross the
+% same public policy boundary as other runtime-selected goals.
+:- multifile rpc:prepare_timeout_callback/3.
+rpc:prepare_timeout_callback(Module, Goal0, Goal) :-
+    current_public_execution_profile(Profile),
+    node_sandbox:sandbox_check_goal_in_module(Profile, Module, Goal0),
+    isolation:prepared_goal(Module, Goal0, Goal).
 
 %  Sandbox vetting of load options (was prepare_runtime_source_options
 %  in actor_source.pl).
