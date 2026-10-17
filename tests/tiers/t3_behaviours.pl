@@ -32,12 +32,14 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 :- use_module('wrapper_options_tests.pl', []).
 :- use_module('supervisor_child_spec_tests.pl', []).
 :- use_module('named_creation_tests.pl', []).
+:- use_module('server_promise_cleanup_tests.pl', []).
 
 run_tier :-
     layer_honesty,
     run_tests([ server_actor,
                 wrapper_options,
                 supervisor_child_specs,
+                server_promise_cleanup,
                 named_creation,
                 supervisor,
                 parallel,

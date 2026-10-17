@@ -192,13 +192,16 @@ server_promise(To, Request, Ref) :-
 %   server before sending the request; MonRef must be passed to
 %   server_yield/4 so the monitor can be cancelled on receipt of the
 %   reply and a server_down/1 exception can be raised if the server
-%   dies.
+%   dies. Setup/send exceptions remove and flush this monitor before the
+%   original exception is rethrown.
 
 server_promise(To, Request, Ref, MonRef) :-
     self(Self),
     monitor(To, MonRef),
-    make_ref(Ref),
-    To ! '$call'(Self, Ref, Request).
+    catch(
+        (make_ref(Ref), To ! '$call'(Self, Ref, Request)),
+        Error,
+        (demonitor(MonRef, [flush]), throw(Error))).
 
 
 %!  server_yield(+Ref, -Response) is det.

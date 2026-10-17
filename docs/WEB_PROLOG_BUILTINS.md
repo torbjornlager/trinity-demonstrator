@@ -485,6 +485,14 @@ an implementation extension and is not placement-independent.
 `server_yield/2`, `server_yield/3`, `server_yield/4`,
 `server_upgrade/2`, `server_halt/2`.
 
+`server_promise/4` installs its monitor before request setup and sending.
+If reference creation or sending raises an exception, it removes that monitor
+with `demonitor(MonRef, [flush])` and rethrows the original exception. Unrelated
+monitors and mailbox messages are preserved. On success, the returned monitor
+remains available for `server_yield/4`, which performs the normal cleanup.
+Abandonment after a successful send and a live server that never replies remain
+separate lifecycle concerns.
+
 ### Supervisors
 
 `supervisor_spawn/2`, `supervisor_spawn/3`,

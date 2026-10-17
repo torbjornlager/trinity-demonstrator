@@ -46,6 +46,7 @@ http_status(URL, Status) :-
 :- use_module('wrapper_options_tests.pl', []).
 :- use_module('supervisor_child_spec_tests.pl', []).
 :- use_module('named_creation_tests.pl', []).
+:- use_module('server_promise_cleanup_tests.pl', []).
 :- use_module('node/remote_alias_cleanup_tests.pl', []).
 :- use_module('node/namespace_teardown_tests.pl', []).
 :- user:load_files('node/generic_actor_tests.pl', []).
@@ -64,6 +65,7 @@ run_tier :-
                 spawn_options, spawn_source_options,
                 wrapper_options,
                 supervisor_child_specs,
+                server_promise_cleanup,
                 named_creation, remote_alias_cleanup, namespace_teardown,
                 goal_walker,
                 generic_actor_api,
