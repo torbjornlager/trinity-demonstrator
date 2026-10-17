@@ -842,7 +842,10 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
     ->  CompoundPid = RemotePid@NodeURL,
         (   node_controller:current_remote_target(CompoundPid, _)
         ->  deliver_remote_down_via_controller(CompoundPid, Dict)
-        ;   assertz(ws_pending_event(NodeURL, RemotePid, Dict))
+        ;   %  Even a buffered retirement is already observed locally.
+            with_mutex(actors_registry,
+                       retractall(actors:registered(_, _, CompoundPid))),
+            assertz(ws_pending_event(NodeURL, RemotePid, Dict))
         )
     ;   get_dict(type, Dict, "spawned"),
         get_dict(pid, Dict, RawPid),
@@ -895,17 +898,21 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
     ->  true
     ;   Reason = unknown
     ),
-    with_mutex(actors_monitor_lifecycle,
-        (   node_controller:take_remote_monitors_for_pid(CompoundPid, Entries),
-            retractall(actors:monitor(_, CompoundPid, _)),
-            %  The remote pid is gone, so its target registration and any
-            %  link records that pointed to it are now stale.
-            forall(hook_remote_retired(CompoundPid), true),
-            node_controller:forget_remote_target(CompoundPid),
-            retractall(node_controller:remote_link_(_, CompoundPid)),
-            retractall(actors:link(_, CompoundPid)),
-            forall(member(monitor(Watcher, Ref), Entries),
-                   actors:send_system(Watcher, down(CompoundPid, Ref, Reason)))
+    %  Alias withdrawal precedes monitor notification.  Use the same lock
+    %  order as local retirement: registry, then monitor lifecycle.
+    with_mutex(actors_registry,
+        (   retractall(actors:registered(_, _, CompoundPid)),
+            with_mutex(actors_monitor_lifecycle,
+                (   node_controller:take_remote_monitors_for_pid(CompoundPid, Entries),
+                    retractall(actors:monitor(_, CompoundPid, _)),
+                    %  The remote pid is gone; retire target and link state.
+                    forall(hook_remote_retired(CompoundPid), true),
+                    node_controller:forget_remote_target(CompoundPid),
+                    retractall(node_controller:remote_link_(_, CompoundPid)),
+                    retractall(actors:link(_, CompoundPid)),
+                    forall(member(monitor(Watcher, Ref), Entries),
+                           actors:send_system(Watcher, down(CompoundPid, Ref, Reason)))
+                ))
         )).
 
 normalize_remote_pid(Pid0, Pid) :-
@@ -947,13 +954,19 @@ remote_ws_connection_closed(NodeURL) :-
     %  reason=connection_closed to every watcher; drop target/link
     %  state for the disconnected node.  Also drain the actor
     %  module's monitor/3 table for those pids.
-    with_mutex(actors_monitor_lifecycle,
-        (   node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
-            forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
-                   ( retractall(actors:monitor(_, CompoundPid, _)),
-                     actors:send_system(Watcher, down(CompoundPid, Ref, connection_closed))
-                   )),
-            node_controller:drop_remote_state_for_node(NodeURL)
+    pid_utils:normalize_node_url(NodeURL, CanonNode),
+    with_mutex(actors_registry,
+        (   %  Include aliases with no monitor or controller target.
+            %  Loss of contact withdraws names; it does not prove death.
+            retractall(actors:registered(_, _, _@CanonNode)),
+            with_mutex(actors_monitor_lifecycle,
+                (   node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),
+                    forall(member(monitor(Watcher, CompoundPid, Ref), MonitorEntries),
+                           ( retractall(actors:monitor(_, CompoundPid, _)),
+                             actors:send_system(Watcher, down(CompoundPid, Ref, connection_closed))
+                           )),
+                    node_controller:drop_remote_state_for_node(NodeURL)
+                ))
         )).
 
 ws_mutex(NodeURL, Prefix, Mutex) :-

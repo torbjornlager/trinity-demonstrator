@@ -294,8 +294,20 @@ missing local actor raises `error(existence_error(process, Pid), Context)`.
 This includes local URL-qualified pids and their accepted textual forms;
 `main` remains supported. Registration before retirement is removed by cleanup;
 registration after retirement is rejected. Success does not guarantee continued
-liveness. Remote aliases remain unchecked, with explicit client cleanup.
-Broader lifecycle work is unchanged.
+liveness. Remote registration remains unchecked and installs no implicit monitor.
+When an existing transport observes a remote `down`, ordinary aliases for that
+exact pid are withdrawn across local namespaces, including when the event is
+buffered during startup. On observed connection loss, aliases for all pids on
+that node are withdrawn, including unmonitored aliases. This withdraws local
+names without establishing remote actor death. Cleanup shares the registry
+mutex with registration and precedes monitor notifications, using registry
+before monitor lifecycle lock order. Termination cleanup preserves other
+pids; connection-loss cleanup preserves other nodes. A name reused for another
+pid survives old termination events. Names for local actors are unaffected.
+No retirement records prevent later remote registration from recreating an
+alias. Without an observed event, clients must explicitly unregister aliases.
+Implicit monitoring, namespace teardown, and broader lifecycle work remain
+separate.
 
 ### Owner Service Publication
 

@@ -59,6 +59,24 @@ test(remote_spawn_monitor_fires_down,
         )).
 
 
+test(remote_retirement_withdraws_registered_alias,
+     [setup(flush_mailbox)]) :-
+    with_test_nodes(
+        [node_spec(b, [profile(actor), auth(open)])],
+        (   remote_only_actor_url(URLB),
+            spawn(sleep(60), Pid, [node(URLB), monitor(true), link(false)]),
+            gensym(remote_retired_alias_, Name),
+            setup_call_cleanup(register(Name, Pid),
+                (   whereis(Name, Before), assertion(Before == Pid),
+                    exit(Pid, alias_test_done),
+                    receive({down(Pid,Pid,alias_test_done) -> true},
+                            [timeout(5), on_timeout(fail)]),
+                    whereis(Name, After), assertion(After == undefined)
+                ),
+                unregister(Name))
+        )).
+
+
 %  ------------------ cross-node link propagation --------------------
 %
 %  Spawn a parent actor on node A whose body is "spawn a child on
