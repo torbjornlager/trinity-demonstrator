@@ -18,6 +18,26 @@ Tests for the actor-based parallel predicate generics.
 flush_parallel_mailbox :-
     receive({_ -> flush_parallel_mailbox}, [timeout(0.05), on_timeout(true)]).
 
+% A worker waits until its sibling has actually terminated. This establishes
+% result/down ordering without relying on sleep timings.
+parallel_wait_for_peer(Queue) :-
+    thread_get_message(Queue, Peer),
+    actors:monitor(Peer, Ref),
+    receive({down(Peer, Ref, _) -> true}).
+
+parallel_report_peer(Queue) :-
+    self(Peer), thread_send_message(Queue, Peer).
+
+assert_worker_exit(Error, Reason) :-
+    Error = worker_exit(Pid, Actual),
+    assertion(ground(Pid)), assertion(Actual == Reason).
+
+assert_parallel_mailbox_empty :-
+    receive({
+        down(Pid, Ref, Reason) -> throw(leaked_worker_down(Pid, Ref, Reason));
+        Pid-Result -> throw(leaked_worker_result(Pid, Result))
+    }, [timeout(0)]).
+
 :- begin_tests(parallel).
 
 
@@ -221,6 +241,57 @@ test(ignores_down_with_unbound_pid, [timeout(2)]) :-
     receive({down(P, _, false) -> true}, [timeout(0), on_timeout(fail)]),
     assertion(var(P)).
 
+test(unexplained_exit_is_error,
+     [forall(member(Reason,[true,kill,shutdown(custom)])),
+      setup(flush_parallel_mailbox), timeout(2)]) :-
+    catch(parallel([actors:exit(Reason)]), Error, true),
+    assert_worker_exit(Error, Reason), assert_parallel_mailbox_empty.
+
+test(later_worker_unexplained_exit_is_fast,
+     [setup(flush_parallel_mailbox),timeout(2)]) :-
+    catch(parallel([receive({}),actors:exit(cancelled)]),Error,true),
+    assert_worker_exit(Error,cancelled),assert_parallel_mailbox_empty.
+
+test(out_of_order_normal_completion, [timeout(2)]) :-
+    setup_call_cleanup(message_queue_create(Queue),
+        (parallel([(parallel_wait_for_peer(Queue),X=first),
+                   (parallel_report_peer(Queue),Y=second)]),
+         assertion(X==first),assertion(Y==second)),
+        message_queue_destroy(Queue)).
+
+test(later_normal_exit_without_result,
+     [setup(flush_parallel_mailbox),timeout(2)]) :-
+    setup_call_cleanup(message_queue_create(Queue),
+        (catch(parallel([parallel_wait_for_peer(Queue),
+                         (parallel_report_peer(Queue),actors:exit(true))]),Error,true),
+         assert_worker_exit(Error,true),assert_parallel_mailbox_empty),
+        message_queue_destroy(Queue)).
+
+% Exercise the collector's post-result wait: an external exit could happen
+% between the framework send and normal return. Any reason now confirms stop.
+test(termination_after_accepted_result,
+     [forall(member(Reason,[true,false,exception(after_result),cancelled])),
+      setup(flush_parallel_mailbox),timeout(2)]) :-
+    self(Self),
+    setup_call_cleanup(
+        spawn((self(Worker),send(Self,Worker-[accepted]),actors:exit(Reason)),
+              Pid,[monitor(true),link(false)]),
+        (parallel:par_yield([Pid],Pid,[Value]),assertion(Value==accepted),
+         assert_parallel_mailbox_empty),
+        worker_cleanup:tidy_up_all([Pid])).
+
+test(unrelated_unusual_down_is_preserved, [timeout(2)]) :-
+    self(Self), send(Self,down(unrelated,unrelated_ref,cancelled)),
+    parallel([true]),
+    receive({down(unrelated,unrelated_ref,cancelled) -> true},
+            [timeout(0),on_timeout(fail)]).
+
+test(unbound_pid_unusual_down_is_preserved, [timeout(2)]) :-
+    self(Self), send(Self,down(_,unrelated_ref,cancelled)),
+    parallel([true]),
+    receive({down(P,unrelated_ref,cancelled) -> assertion(var(P))},
+            [timeout(0),on_timeout(fail)]).
+
 :- end_tests(parallel).
 
 
@@ -330,5 +401,46 @@ test(winner_cleanup_leaves_mailbox_empty) :-
     }, [timeout(0)]),
     flush_parallel_mailbox.
 
+
+test(unexplained_exit_uses_default_error_policy,
+     [forall(member(Reason,[true,kill,shutdown(custom)])),
+      setup(flush_parallel_mailbox),timeout(2)]) :-
+    catch(first_solution(_,[actors:exit(Reason),receive({})]),Error,true),
+    assert_worker_exit(Error,Reason),assert_parallel_mailbox_empty.
+
+test(unexplained_exit_on_error_stop,
+     [setup(flush_parallel_mailbox),timeout(2)]) :-
+    catch(first_solution(_,[actors:exit(cancelled),receive({})],
+                         [on_fail(continue),on_error(stop)]),Error,true),
+    assert_worker_exit(Error,cancelled),assert_parallel_mailbox_empty.
+
+test(unexplained_exit_on_error_continue,
+     [forall(member(Reason,[true,kill,shutdown(custom)])),
+      setup(flush_parallel_mailbox),timeout(2)]) :-
+    setup_call_cleanup(message_queue_create(Queue),
+        (first_solution(Solution,
+                        [(parallel_report_peer(Queue),actors:exit(Reason)),
+                         (parallel_wait_for_peer(Queue),Solution=recovered)],
+                        [on_fail(stop),on_error(continue)]),
+         assertion(Solution==recovered),assert_parallel_mailbox_empty),
+        message_queue_destroy(Queue)).
+
+test(all_unexplained_exits_with_continue,
+     [setup(flush_parallel_mailbox),timeout(2)]) :-
+    assertion(\+ first_solution(_,[actors:exit(true),actors:exit(cancelled)],
+                                  [on_error(continue)])),
+    assert_parallel_mailbox_empty.
+
+test(unrelated_unusual_down_is_preserved, [timeout(2)]) :-
+    self(Self), send(Self,down(unrelated,unrelated_ref,cancelled)),
+    first_solution(Solution,[Solution=winner]),assertion(Solution==winner),
+    receive({down(unrelated,unrelated_ref,cancelled) -> true},
+            [timeout(0),on_timeout(fail)]).
+
+test(unbound_pid_unusual_down_is_preserved, [timeout(2)]) :-
+    self(Self), send(Self,down(_,unrelated_ref,cancelled)),
+    first_solution(Solution,[Solution=winner]),assertion(Solution==winner),
+    receive({down(P,unrelated_ref,cancelled) -> assertion(var(P))},
+            [timeout(0),on_timeout(fail)]).
 
 :- end_tests(first_solution).

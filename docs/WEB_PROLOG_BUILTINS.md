@@ -630,11 +630,29 @@ are checked by the model parser.
 
 `parallel/1` has the value semantics of deterministic independent
 conjunction when every worker succeeds: compatible bindings are combined and
-incompatible bindings make the conjunction fail. If several workers fail or
-throw, the first abnormal `down/3` observed by the caller determines the
-outcome; multiple-fault selection is therefore scheduling-dependent rather
-than left-to-right. Remaining workers are terminated before the result is
-returned.
+incompatible bindings make the conjunction fail. Ordinary worker failure
+fails the call; an exception is rethrown with its original term. Other exits
+without a result, including `true`, throw `worker_exit(Pid,Reason)`.
+If several workers have abnormal outcomes, the first abnormal `down/3`
+observed by the caller determines the outcome; multiple-fault selection is
+therefore scheduling-dependent rather than left-to-right.
+
+Results are collected in goal order. A later worker's normal termination is
+left pending until its result is collected, preserving out-of-order worker
+completion. After a result is accepted, that worker's termination notification
+only confirms that it has stopped, regardless of the reason. Remaining
+workers are terminated and worker result/monitor messages are removed before
+the call returns, fails, or throws through these outcome paths.
+
+`first_solution/2-3` returns the first successful solver's result and cleans
+up the other workers. `on_fail(stop|continue)` governs ordinary failure
+(default `continue`); `on_error(stop|continue)` governs both exceptions and
+unexplained exits (default `stop`). With `stop`, exceptions keep their
+original terms and other exits throw `worker_exit(Pid,Reason)`, including
+`true` when no result was delivered. With `continue`, the terminated solver
+is removed and the call keeps waiting while alternatives remain. If all
+alternatives are removed, the call fails. No new options are introduced.
+Notifications from unrelated actors remain in the caller's mailbox.
 
 ### Node Control
 
