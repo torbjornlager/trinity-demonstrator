@@ -923,6 +923,7 @@ ws_action_spawn(Dict, Queue, Principal) :-
     rewrite_isotope_goal(Goal, RewrittenGoal),
     ws_shared_actor_goal(RewrittenGoal, GoalModule, PlainGoal, SpawnGoal),
     ws_parse_spawn_options(Dict, UserOptions),
+    actors:validate_spawn_options(UserOptions, public),
     require_source_options_access(Principal, UserOptions),
     % A bare WebSocket spawn runs in a private actor module.  Import the
     % node's own shared database as its start-goal module: advertised actor

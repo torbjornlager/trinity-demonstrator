@@ -8138,6 +8138,49 @@ test(ws_shipped_yield_callback_uses_destination_context) :-
 
 %  ---- WebSocket remote spawn tests ----
 
+test(ws_bare_spawn_validates_before_source_fetch) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        setup_call_cleanup(ws_open(URI,WS),
+            (ws_send_json(WS,json{command:spawn,goal:"true",
+                 options:"[src_uri('/no-such-spawn-source'),monitr(true)]"}),
+             ws_receive_json_first_of(WS,["error","spawned"],JSON),
+             assertion(JSON.type=="error"),
+             assertion(sub_string(JSON.details,_,_,_,"domain_error(spawn_option,monitr(true))"))),
+            catch(ws_close(WS,1000,done),_,true))).
+
+test(ws_bare_spawn_rejects_framework_metadata,
+     [forall(member(Option,[source_module(test_node),inherit_goal_module(false),
+                           isolation_io(generated),monitor_target(main),monitor_ref(123)]))]) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        setup_call_cleanup(ws_open(URI,WS),
+            (term_string([Option],Text,[quoted(true)]),
+             ws_send_json(WS,json{command:spawn,goal:"true",options:Text}),
+             ws_receive_json_first_of(WS,["error","spawned"],JSON),
+             assertion(JSON.type=="error"),
+             assertion(sub_string(JSON.details,_,_,_,"internal_spawn_option"))),
+            catch(ws_close(WS,1000,done),_,true))).
+
+test(remote_spawn_rejects_invalid_options_before_connection) :-
+    catch(spawn(true,Pid,[node('http://127.0.0.1:1'),monitor(ture)]),Error,true),
+    assertion(Error=error(type_error(boolean,ture),context(actors:spawn/3,_))),
+    assertion(var(Pid)).
+
+test(remote_spawn_source_options_and_monitoring) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        (spawn((findall(X,spawn_option_fact(X),Xs),Xs==[a,b]),Pid,
+               [node(URI),monitor(true),
+                src_text(':- multifile spawn_option_fact/1. spawn_option_fact(a).'),
+                src_list([spawn_option_fact(b)])]),
+         receive({down(Pid,Pid,Reason)->assertion(Reason==true)},
+                 [timeout(3),on_timeout(throw(missing_remote_spawn_down))]))).
+
+test(remote_spawn_keeps_framework_metadata_local) :-
+    with_node_server_options([profile(actor),sandbox(blacklist)],URI,
+        (spawn(true,Pid,[node(URI),monitor(true),source_module(test_node),
+                         inherit_goal_module(false),isolation_io(generated)]),
+         receive({down(Pid,Pid,Reason)->assertion(Reason==true)},
+                 [timeout(3),on_timeout(throw(missing_framework_spawn_down))]))).
+
 %% Test: local session actor can find shared DB predicate q/1
 test(local_session_spawn_shared_db_query,
      true(Data == [a])) :-

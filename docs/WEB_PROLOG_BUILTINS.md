@@ -183,6 +183,46 @@ such in this runtime:
 `self/1`, `spawn/1`, `spawn/2`, `spawn/3`, `actors/1`,
 `exit/1`, `exit/2`, `cancel/1`.
 
+Native `spawn/3` validates every option before local setup or remote dispatch.
+Options must be unary terms in a proper list. Unknown names, wrong arities,
+and misplaced wrapper options (including plain `spawn/3`'s unsupported
+`name/1`) raise `error(domain_error(spawn_option,Option),_)`. Invalid values
+raise type, domain, or instantiation errors with `actors:spawn/3` in the
+context. `link/1` and `monitor/1` require booleans; `node/1` takes an atom or
+string. Isolation declares `src_text/1`, `src_list/1`, `src_uri/1`, and
+`src_predicates/1` through a lower-layer validation hook: text retains the
+native atom/string/codes/chars convention, source lists must be proper
+lists, source URIs atoms/strings, and predicate indicators atom names with
+nonnegative integer arities. Shape validation does not replace source-access,
+sandbox, or ownership policies. The stand-alone actor core does not accept
+source options unless an isolation provider has declared them.
+
+Native local actor I/O accepts nonvariable `target/1` and `io_target/1`
+routing terms, with `io_target/1` taking precedence. Bare WebSocket spawning
+retains connection-owned routing: its reserved target/link settings are still
+supplied by the endpoint. Ordinary options keep their first-occurrence
+semantics; every occurrence is validated. Source options retain their order
+and variable sharing. No value validation fetches source or inspects target
+liveness. Effective local options are validated again after runtime rewriting
+and before pid allocation.
+
+The raw bare-actor WebSocket endpoint validates client options before source
+preparation, capacity reservation, or server metadata injection. Internal
+`source_module/1`, `inherit_goal_module/1`, `isolation_io/1`,
+`monitor_target/1`, and `monitor_ref/1` remain recognized and shape-checked for
+framework setup, but raw remote clients receive
+`error(permission_error(option,internal_spawn_option,Option),_)` for these
+fields. Existing native authority checks remain in force.
+
+Runtime composition uses `actors:validate_spawn_options(Options, Scope)`
+with `Scope` equal to `runtime` or `public`, and declares extension options
+through `actors:hook_spawn_option(Name, Visibility, Validator)`. A declaration
+specifies `public` or `internal` visibility and a module-qualified unary
+validator that succeeds or throws without binding inputs or fetching source.
+Recognition does not grant authority. Specialised wrappers continue to consume
+their own options before forwarding spawn options; validation of their own
+settings remains separate work.
+
 ### Actor Messaging
 
 `send/2`, `send/3`, `!/2`, `receive/1`, `receive/2`,

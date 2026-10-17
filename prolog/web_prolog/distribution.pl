@@ -240,6 +240,7 @@ local_only_spawn_option(monitor(_)).
 local_only_spawn_option(monitor_target(_)).
 local_only_spawn_option(monitor_ref(_)).
 local_only_spawn_option(source_module(_)).
+local_only_spawn_option(inherit_goal_module(_)).
 local_only_spawn_option(isolation_io(_)).
 local_only_spawn_option(io_target(_)).
 

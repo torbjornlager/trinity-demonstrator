@@ -18,6 +18,7 @@
 :- use_module('../../prolog/web_prolog/actors.pl').
 :- use_module('../../prolog/web_prolog/isolation.pl').
 :- use_module(library(plunit)).
+:- use_module('spawn_options_tests.pl', []).
 
 %  The composition glue: every local spawn prepares a private module.
 %  This is the single transformation chain rule from the plan (§2.3):
@@ -29,6 +30,7 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 run_tier :-
     layer_honesty,
     run_tests([ t1_isolation,
+                spawn_options, spawn_source_options,
                 t1_hooks,
                 t1_io_inheritance,
                 t1_load_options
@@ -523,6 +525,9 @@ t1_prepare_probe_goal(Parent) :-
 %  Probe the preparation-pass contract without modifying the actor module.
 %  A source-free actor invokes this hook once; effective source loading
 %  invokes it again during the post-load repair pass.
+:- multifile actors:hook_spawn_option/3.
+actors:hook_spawn_option(t1_prepare_probe, internal, error:must_be(nonvar)).
+
 isolation:prepare_module(_Module, _GoalModule, Options) :-
    memberchk(t1_prepare_probe(Parent), Options),
    actors:send(Parent, prepare_called).

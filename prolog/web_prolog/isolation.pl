@@ -73,6 +73,7 @@ actor-coupled.
 :- use_module(library(modules)).
 :- use_module(library(option)).
 :- use_module(library(memfile)).
+:- use_module(library(error)).
 :- use_module(actors, [
     self/1,
     terminal_output/1
@@ -106,6 +107,38 @@ actor-coupled.
     shared_database_module/1.
 
 :- multifile source_utils:restore_serialized_term/3.
+
+% Declare isolation-owned spawn options without an upward import in actors.
+% This is shape validation only; sandbox/source-access checks still apply.
+:- multifile actors:hook_spawn_option/3.
+actors:hook_spawn_option(src_text, public, isolation:spawn_source_text).
+actors:hook_spawn_option(src_list, public, error:must_be(list)).
+actors:hook_spawn_option(src_uri, public, isolation:spawn_source_uri).
+actors:hook_spawn_option(src_predicates, public, isolation:spawn_predicate_indicators).
+actors:hook_spawn_option(source_module, internal, error:must_be(atom)).
+actors:hook_spawn_option(inherit_goal_module, internal, error:must_be(boolean)).
+actors:hook_spawn_option(isolation_io, internal, isolation:spawn_io_mode).
+
+spawn_source_text(Text) :- text_to_string(Text, _).
+
+spawn_source_uri(URI) :-
+    must_be(nonvar, URI),
+    (uri_atom(URI, _) -> true ; type_error(atom_or_string, URI)).
+
+spawn_predicate_indicators(PIs) :-
+    must_be(list, PIs), maplist(spawn_predicate_indicator, PIs).
+spawn_predicate_indicator(PI) :-
+    must_be(nonvar, PI),
+    (   compound(PI), compound_name_arity(PI, '/', 2)
+    ->  arg(1, PI, Name), arg(2, PI, Arity),
+        must_be(atom, Name), must_be(nonneg, Arity)
+    ;   type_error(predicate_indicator, PI)
+    ).
+
+spawn_io_mode(Mode) :-
+    must_be(nonvar, Mode),
+    (Mode == generated -> true ; Mode == precompiled -> true
+    ; domain_error(isolation_io_mode, Mode)).
 
 source_utils:restore_serialized_term(Module, (Head :- Body0),
                                      (Head :- Body)) :-

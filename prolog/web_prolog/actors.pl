@@ -2,6 +2,7 @@
    [ spawn/1,                % :Goal
      spawn/2,                % :Goal, -Pid
      spawn/3,                % :Goal, -Pid, +Options
+     validate_spawn_options/2, % +Options, +Scope (runtime composition API)
      actors/1,               % -List of actors
      self/1,                 % -Pid
      monitor/2,              % +Pid, -Ref
@@ -104,6 +105,10 @@ Takeover-style (semidet; if a clause succeeds the core path is skipped):
     to be named, let alone imported.
   - hook_spawn_options(:Goal, +Options0, -Options): caller-side spawn
     option rewriting (node-layer policy).
+  - hook_spawn_option(+Name, -Visibility, -Validator): declare an additional
+    unary option, public or internal, with a module-qualified unary value
+    validator. Validators succeed or throw on invalid values; they must not
+    fetch source or instantiate user terms.
   - hook_spawn_context(+Goal0, -Goal): caller-side wrapping of the
     child's start goal (node-layer execution-context propagation).
 
@@ -160,6 +165,7 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     hook_exit/2,
     hook_start_body/7,
     hook_spawn_options/3,
+    hook_spawn_option/3,
     hook_spawn_context/2,
     hook_monitor/3,
     hook_demonitor/1,
@@ -300,7 +306,7 @@ spawn(Goal, Pid) :-
     spawn(Goal, Pid, []).
 
 spawn(Goal, Pid, Options) :-
-    must_be(list, Options),
+    validate_spawn_options(Options, runtime),
     forall(hook_check_spawn(Options), true),
     (   hook_spawn(Goal, Pid, Options)
     ->  true
@@ -319,6 +325,7 @@ spawn(Goal, Pid, Options) :-
 spawn_local(Goal, Pid, Options) :-
     inherit_local_spawn_options(Options, EffectiveOptions0),
     prepare_spawn_options(Goal, EffectiveOptions0, EffectiveOptions),
+    validate_spawn_options(EffectiveOptions, runtime),
     make_pid(LocalPid),
     canonical_pid(LocalPid, Pid),
     %  Admission reserves a slot for LocalPid (under a mutex) and the
@@ -330,6 +337,46 @@ spawn_local(Goal, Pid, Options) :-
         spawn_local_activate(LocalPid, Pid, Goal, EffectiveOptions),
         release_spawn_reservation(LocalPid)
     ).
+
+%!  validate_spawn_options(+Options, +Scope) is det.
+%
+%   Composition helper. runtime admits recognized framework metadata;
+%   public checks raw remote-client options before metadata is injected.
+%   Recognition is not authorization: existing policy hooks still apply.
+validate_spawn_options(Options, Scope) :-
+    must_be(oneof([public,runtime]), Scope),
+    catch((must_be(list, Options), maplist(validate_spawn_option(Scope), Options)),
+          error(Formal, _),
+          throw(error(Formal, context(actors:spawn/3, 'invalid spawn option')))).
+
+validate_spawn_option(Scope, Option) :-
+    must_be(nonvar, Option),
+    (   compound(Option), compound_name_arity(Option, Name, 1),
+        spawn_option_spec(Name, Visibility, Validator)
+    ->  (   Scope == 'public', Visibility == internal
+        ->  permission_error(option, internal_spawn_option, Option)
+        ;   arg(1, Option, Value), call(Validator, Value)
+        )
+    ;   domain_error(spawn_option, Option)
+    ).
+
+spawn_option_spec(Name, Visibility, Validator) :-
+    (   core_spawn_option(Name, Visibility, Validator)
+    ->  true
+    ;   hook_spawn_option(Name, Visibility, Validator)
+    ).
+
+core_spawn_option(link, public, error:must_be(boolean)).
+core_spawn_option(monitor, public, error:must_be(boolean)).
+core_spawn_option(target, public, error:must_be(nonvar)).
+core_spawn_option(io_target, public, error:must_be(nonvar)).
+core_spawn_option(node, public, actors:spawn_node_value).
+core_spawn_option(monitor_target, internal, error:must_be(nonvar)).
+core_spawn_option(monitor_ref, internal, error:must_be(nonvar)).
+
+spawn_node_value(Node) :-
+    must_be(nonvar, Node),
+    (atom(Node) -> true ; string(Node) -> true ; type_error(atom_or_string, Node)).
 
 spawn_local_activate(LocalPid, Pid, Goal, EffectiveOptions) :-
     self(Self),
