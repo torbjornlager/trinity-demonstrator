@@ -60,25 +60,59 @@ compute_answer(Goal, Template, Offset, Limit, LoadText, RequestedTimeout,
     cache_key(GoalId, Gid),
     node:effective_timeout(RequestedTimeout, Timeout),
     setup_call_cleanup(
-        message_queue_create(Queue),
-        compute_answer_with_queue(Queue, Gid, Goal, Template, Offset, Limit,
-                                  LoadText, Timeout, Once, Answer),
-        catch(message_queue_destroy(Queue), _, true)
+        (message_queue_create(Queue), Owner = request_actor(none)),
+        catch(compute_answer_with_queue(Owner, Queue, Gid, Goal, Template,
+                                       Offset, Limit, LoadText, Timeout, Once, Answer),
+              Error, (cleanup_request_actor(Owner), throw(Error))),
+        call_cleanup(cleanup_request_actor(Owner),
+                     catch(message_queue_destroy(Queue), _, true))
     ).
 
-compute_answer_with_queue(Queue, Gid, Goal, Template, Offset, Limit,
+% Creation/checkout and recording form one protected acquisition. Only this
+% short handoff is protected; sending the call and waiting remain interruptible.
+acquire_request_actor(Owner, Gid, Offset, Limit, LoadText, Queue, Pid, Reused) :-
+    setup_call_cleanup(
+        ( (Limit \== none, cache_retract_owned(Owner, Gid, Offset, Pid)
+          -> Reused = true
+          ;  toplevel_spawn_options(LoadText, SpawnOptions0),
+             toplevel_spawn(Pid, [target(Queue)|SpawnOptions0]),
+             Reused = false),
+          nb_setarg(1, Owner, Pid)),
+        true, true).
+
+cache_retract_owned(Owner, Gid, Offset, Pid) :-
+    with_mutex(node_engine_cache,
+        (cache_take(Gid, Offset, Pid, TimerRef), nb_setarg(1, Owner, Pid))),
+    % Record checkout before timer cancellation, which can itself throw.
+    cancel_cache_alarm(TimerRef).
+
+cleanup_request_actor(Owner) :-
+    arg(1, Owner, Pid),
+    (   Pid == none
+    ->  true
+    ;   % HTTP workers need not have an actor mailbox. Use the same
+        % asynchronous termination path as a query timeout, without monitors.
+        exit(Pid, kill),
+        nb_setarg(1, Owner, none)
+    ).
+
+% Publication includes its timer and any eviction. Once complete, the cache
+% owns the actor even if an interrupt arrives before the HTTP reply is sent.
+cache_request_actor(Owner, Gid, Index, Pid) :-
+    setup_call_cleanup(
+        (cache_update(Gid, Index, Pid), nb_setarg(1, Owner, none)),
+        true, true).
+
+compute_answer_with_queue(Owner, Queue, Gid, Goal, Template, Offset, Limit,
                           LoadText, Timeout, Once, Answer) :-
     ( Limit == none -> LimitOptions = [] ; LimitOptions = [limit(Limit)] ),
-    (   Limit \== none,
-        cache_retract(Gid, Offset, Pid)
+    acquire_request_actor(Owner, Gid, Offset, Limit, LoadText, Queue, Pid, Reused),
+    (   Reused == true
     ->  toplevel_next(Pid, [
             limit(Limit),
             target(Queue)
         ])
-    ;   toplevel_spawn_options(LoadText, SpawnOptions0),
-        SpawnOptions = [target(Queue)|SpawnOptions0],
-        toplevel_spawn(Pid, SpawnOptions),
-        append(LimitOptions, [
+    ;   append(LimitOptions, [
             template(Template),
             offset(Offset),
             once(Once),
@@ -86,40 +120,42 @@ compute_answer_with_queue(Queue, Gid, Goal, Template, Offset, Limit,
         ], CallOptions),
         toplevel_call(Pid, Goal, CallOptions)
     ),
-    wait_for_compute_answer(Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer).
+    wait_for_compute_answer(Owner, Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer).
 
-wait_for_compute_answer(Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer) :-
+wait_for_compute_answer(Owner, Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer) :-
     (   thread_get_message(Queue, Message, [timeout(Timeout)])
-    ->  compute_answer_message(Message, Queue, Timeout, Pid, Offset, Limit,
+    ->  compute_answer_message(Message, Owner, Queue, Timeout, Pid, Offset, Limit,
                                Gid, Once, Answer)
     ;   Answer = error(error(resource_error(time), _)),
         exit(Pid, kill)
     ).
 
-compute_answer_message(success(Pid, Slice, true), _Queue, _Timeout, Pid,
+compute_answer_message(success(Pid, Slice, true), Owner, _Queue, _Timeout, Pid,
                        Offset, _Limit, Gid, Once, Answer) :-
     !,
     (   Once == true
     ->  toplevel_stop(Pid),
+        nb_setarg(1, Owner, none),
         Answer = success(Slice, false)
     ;   % Cache the position actually reached, including partial error pages.
         length(Slice, Count),
         Index is Offset + Count,
-        cache_update(Gid, Index, Pid),
+        cache_request_actor(Owner, Gid, Index, Pid),
         Answer = success(Slice, true)
     ).
-compute_answer_message(success(Pid, Slice, false), _Queue, _Timeout, Pid,
+compute_answer_message(success(Pid, Slice, false), Owner, _Queue, _Timeout, Pid,
                        _Offset, _Limit, _Gid, _Once, success(Slice, false)) :-
-    !.
-compute_answer_message(failure(Pid), _Queue, _Timeout, Pid,
+    % Terminal replies are followed by the one-shot actor's normal exit.
+    !, nb_setarg(1, Owner, none).
+compute_answer_message(failure(Pid), Owner, _Queue, _Timeout, Pid,
                        _Offset, _Limit, _Gid, _Once, failure) :-
-    !.
-compute_answer_message(error(Pid, Error), _Queue, _Timeout, Pid,
+    !, nb_setarg(1, Owner, none).
+compute_answer_message(error(Pid, Error), Owner, _Queue, _Timeout, Pid,
                        _Offset, _Limit, _Gid, _Once, error(Error)) :-
-    !.
-compute_answer_message(_Unexpected, Queue, Timeout, Pid, Offset, Limit, Gid,
+    !, nb_setarg(1, Owner, none).
+compute_answer_message(_Unexpected, Owner, Queue, Timeout, Pid, Offset, Limit, Gid,
                        Once, Answer) :-
-    wait_for_compute_answer(Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer).
+    wait_for_compute_answer(Owner, Queue, Timeout, Pid, Offset, Limit, Gid, Once, Answer).
 
 
 %!  toplevel_spawn_options(+LoadText0, -SpawnOptions) is det.

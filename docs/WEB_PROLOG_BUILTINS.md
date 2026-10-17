@@ -449,6 +449,25 @@ and `once(true)` retain their existing behaviour. Client and server must both
 follow the actual-count rule for partial-page cache reuse; no wire fields
 change.
 
+Each native `/call` request owns its newly created or checked-out toplevel
+until it publishes a continuation back to the cache. Failure, exceptions,
+and interruption reclaim an actor still owned by the request and destroy its
+reply queue. Acquisition and cache publication (including expiry setup) are
+protected against interruption; the query wait remains interruptible. A
+completed publication transfers ownership to the cache, so interruption
+before sending the HTTP response does not destroy that continuation.
+Terminal replies retain the one-shot actor's normal exit; `once(true)` still
+stops further enumeration. Timeouts still return
+`error(error(resource_error(time),_))` and terminate the active computation.
+As on timeout, termination is requested asynchronously; cleanup does not wait
+for an actor shutdown acknowledgement. It installs no monitors and leaves
+unrelated monitor messages untouched.
+
+This cleanup applies when the server request exits; it does not add immediate
+client-disconnect detection or remote cancellation. Cutting an RPC enumeration
+after receiving a page still leaves a published continuation subject to the
+existing cache expiry and eviction policy.
+
 The native client validates the complete option list at entry, before URI
 resolution/source fetching in `rpc/3` and `promise/4`, or waiting/collection
 in `yield/3`. Options must be unary terms in a proper list. Unknown names,
