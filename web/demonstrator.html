@@ -13191,7 +13191,7 @@
               "    rpc_transport_options(Opts, RemoteTimeout, Once, HTTPTimeout),",
               "    web_rpc_url(URL, Goal, Template, Offset, Lim, Opts, RemoteTimeout, Once, FinalURL),",
               "    RefText := swiPromiseStart(#FinalURL, #HTTPTimeout),",
-              "    number_string(Ref, RefText).",
+              "    atom_number(RefText, Ref).",
               "",
               "yield(Ref, Message) :- yield(Ref, Message, []).",
               "",

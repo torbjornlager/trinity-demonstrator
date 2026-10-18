@@ -1323,7 +1323,7 @@
       "    rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout),",
       "    collect_rpc_load_text(Options, LoadText),",
       "    RefText := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout),",
-      "    number_string(Ref, RefText).",
+      "    atom_number(RefText, Ref).",
       "",
       "yield(Ref, Message) :- yield(Ref, Message, []).",
       "",
