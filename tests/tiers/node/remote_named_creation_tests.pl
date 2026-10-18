@@ -9,6 +9,7 @@
 :- use_module('../../../prolog/web_prolog/supervisor_actor.pl').
 :- use_module('../../../prolog/web_prolog/statechart_actor.pl').
 :- use_module('multi_node_harness.pl').
+:- use_module('../../../prolog/web_prolog/node_ws.pl', []).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 :- use_module(library(prolog_wrap)).
@@ -301,6 +302,25 @@ test(early_down_buffer_handoff_cannot_miss_initial_flush, [timeout(5)]) :-
               (thread_send_message(Gate,go),thread_join(Reader,_)))),
            (unwrap_predicate(node_controller:current_remote_target/2,handoff),demonitor(Ref,[flush]))))),
       message_queue_destroy(Gate)).
+
+test(command_error_retains_request_id_after_unwinding) :-
+    setup_call_cleanup(message_queue_create(Q),
+      ( node_ws:ws_dispatch_frame('{"command":{},"request_id":"regression-ref"}', Q, anonymous, _{}),
+        thread_get_message(Q, Reply, [timeout(1)]),
+        assertion(Reply = spawn_reply("regression-ref",error(_))) ),
+      message_queue_destroy(Q)).
+
+test(legacy_command_error_remains_untagged) :-
+    setup_call_cleanup(message_queue_create(Q),
+      ( node_ws:ws_dispatch_frame('{"command":{}}', Q, anonymous, _{}),
+        thread_get_message(Q, Reply, [timeout(1)]), assertion(Reply = error(_)) ),
+      message_queue_destroy(Q)).
+
+test(invalid_json_error_remains_untagged) :-
+    setup_call_cleanup(message_queue_create(Q),
+      ( node_ws:ws_dispatch_frame('{invalid', Q, anonymous, _{}),
+        thread_get_message(Q, Reply, [timeout(1)]), assertion(Reply = error(_)) ),
+      message_queue_destroy(Q)).
 
 :- end_tests(remote_named_creation).
 

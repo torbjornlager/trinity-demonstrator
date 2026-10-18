@@ -141,6 +141,7 @@ function createSwiWasmPromiseStore(options) {
   var ptcpTimeLimitTimer = null;
   var ptcpTimeLimitTargetText = "";
   var ptcpTimeLimitPidText = "";
+  var ptcpTimeLimitRequestRefText = "none";
   // PTCP state reported by the toplevel itself (Semantic Contracts D3, D4):
   // its pid and session mode, and the client of the active query ("" when
   // the toplevel is idle in s1).
@@ -780,7 +781,7 @@ function createSwiWasmPromiseStore(options) {
     });
   }
 
-  function actorArmTimeLimit(seconds, targetText, pidText) {
+  function actorArmTimeLimit(seconds, targetText, pidText, refText) {
     var delay = Number(seconds);
     actorDisarmTimeLimit();
     if (!isFinite(delay) || delay <= 0) {
@@ -788,6 +789,7 @@ function createSwiWasmPromiseStore(options) {
     }
     ptcpTimeLimitTargetText = String(targetText || "");
     ptcpTimeLimitPidText = String(pidText || selfPidText);
+    ptcpTimeLimitRequestRefText = String(refText || "none");
     ptcpTimeLimitTimer = setTimeout(function() {
       ptcpTimeLimitTimer = null;
       if (exitReason !== null) {
@@ -815,6 +817,8 @@ function createSwiWasmPromiseStore(options) {
     var targetText = ptcpTimeLimitTargetText;
     var pidText = ptcpTimeLimitPidText || selfPidText;
     var messageText = "error(" + pidText + ",error(resource_error(time),_))";
+    if (ptcpTimeLimitRequestRefText !== "none") messageText = "'$toplevel_reply'(" + ptcpTimeLimitRequestRefText + "," + messageText + ")";
+    ptcpTimeLimitRequestRefText = "none";
     ptcpTimeLimitTargetText = "";
     ptcpTimeLimitPidText = "";
     if (workerRole === "shell_toplevel" && localizePid(targetText) === "terminal") {
@@ -1163,7 +1167,7 @@ function createSwiWasmPromiseStore(options) {
       "    whereis/2, whereis_service/2,",
       "    respond/2,",
       "    toplevel_spawn/1, toplevel_spawn/2,",
-      "    toplevel_call/2, toplevel_call/3,",
+      "    toplevel_call/2, toplevel_call/3, toplevel_call_synch/3, toplevel_call_synch/4, toplevel_next_synch/2, toplevel_next_synch/3,",
       "    toplevel_next/1, toplevel_next/2,",
       "    toplevel_halt/1, toplevel_halt/2,",
       "    toplevel_stop/1, toplevel_abort/1,",
@@ -1188,8 +1192,8 @@ function createSwiWasmPromiseStore(options) {
       ":- op(800, xfx, !).",
       ":- op(200, xfx, @).",
       ":- op(1000, xfy, if).",
-      ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :), with_worker_scope(-, 0), spawn_scoped_worker(+, 0, -).",
-      ":- dynamic deferred/1, io_target/1, retiring_server_monitor/1, retiring_scope_worker/2, closing_worker_scope/1.",
+      ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), toplevel_call_synch(+, :, -), toplevel_call_synch(+, :, -, :), toplevel_next_synch(+, -), toplevel_next_synch(+, -, :), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :), with_worker_scope(-, 0), spawn_scoped_worker(+, 0, -).",
+      ":- dynamic deferred/1, io_target/1, retiring_server_monitor/1, retiring_supervisor_shutdown/1, retiring_scope_worker/2, closing_worker_scope/1.",
       ":- dynamic suppress_shared_override_warnings/0.",
       ":- multifile user:message_hook/3.",
       workerRole === "shell_toplevel" ? "shell_toplevel_role." : "shell_toplevel_role :- fail.",
@@ -2031,16 +2035,15 @@ function createSwiWasmPromiseStore(options) {
       "            ( option(limit(N), Options) -> must_be(positive_integer, N), Limit = count(N) ; Limit = all ),",
       "            option(once(Once), Options, false),",
       "            option(target(Target1), Options, Target0),",
-      "            Target = target(Target1),",
+      "            option('$request_ref'(RequestRef), Options, none), Target = target(Target1,RequestRef),",
       "            ptcp_client(Target1),",
-      "            arm_time_limit(TimeLimit, Target1, Pid),",
+      "            arm_time_limit(TimeLimit, Target, Pid),",
       "            state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),",
       "            disarm_time_limit(TimeLimit),",
-      "            arg(1, Target, Out),",
       "            (   Answer = pending_error(Pid, Slice, Error)",
-      "            ->  send(Out, success(Pid, Slice, true)),",
+      "            ->  send_toplevel_answer(Target, success(Pid, Slice, true)),",
       "                state_3_error(Pid, Error, Target, IdleLimit)",
-      "            ;   send(Out, Answer),",
+      "            ;   send_toplevel_answer(Target, Answer),",
       "                (   arg(3, Answer, true)",
       "                ->  state_3(Limit, Target, IdleLimit, TimeLimit, Pid)",
       "                ;   true",
@@ -2053,21 +2056,21 @@ function createSwiWasmPromiseStore(options) {
       "state_3_error(Pid, Error, Target, IdleLimit) :-",
       "    receive_idle({",
       "        '$next'(Options) ->",
+      "            ptcp_next_ref(Options, Target),",
       "            (   option(target(NewTarget), Options)",
       "            ->  nb_setarg(1, Target, NewTarget),",
       "                ptcp_client(NewTarget)",
       "            ;   true",
       "            ),",
-      "            arg(1, Target, Out),",
-      "            send(Out, error(Pid, Error)) ;",
+      "            send_toplevel_answer(Target, error(Pid, Error)) ;",
       "        '$stop' -> true",
       "    }, IdleLimit).",
       "",
       "arm_time_limit(infinite, _, _) :- !.",
-      "arm_time_limit(TimeLimit, Target, Pid) :-",
-      "    term_string(Target, TargetText),",
+      "arm_time_limit(TimeLimit, TargetBox, Pid) :-",
+      "    arg(1,TargetBox,Target), ptcp_reply_ref(TargetBox,Ref), term_string(Ref,RefText), term_string(Target, TargetText),",
       "    term_string(Pid, PidText),",
-      "    true := actorArmTimeLimit(#TimeLimit, #TargetText, #PidText).",
+      "    true := actorArmTimeLimit(#TimeLimit, #TargetText, #PidText, #RefText).",
       "",
       "disarm_time_limit(infinite) :- !.",
       "disarm_time_limit(_) :- true := actorDisarmTimeLimit().",
@@ -2087,6 +2090,7 @@ function createSwiWasmPromiseStore(options) {
       "state_3(Limit, Target, IdleLimit, TimeLimit, Pid) :-",
       "    receive_idle({",
       "        '$next'(Options2) ->",
+      "            ptcp_next_ref(Options2, Target),",
       "            (   option(limit(NewLimit), Options2)",
       "            ->  must_be(positive_integer, NewLimit), nb_setarg(1, Limit, NewLimit)",
       "            ;   true",
@@ -2096,8 +2100,7 @@ function createSwiWasmPromiseStore(options) {
       "                ptcp_client(NewTarget)",
       "            ;   true",
       "            ),",
-      "            arg(1, Target, ActiveTarget),",
-      "            arm_time_limit(TimeLimit, ActiveTarget, Pid),",
+      "            arm_time_limit(TimeLimit, Target, Pid),",
       "            fail ;",
       "        '$stop' -> true",
       "    }, IdleLimit).",
@@ -2322,6 +2325,11 @@ function createSwiWasmPromiseStore(options) {
       "    ( Pending == true -> abort ; true ).",
       "",
       "% Cleanup must not await: withdraw the monitor and filter until the host barrier.",
+      "supervisor_shutdown_cleanup(Ref) :-",
+      "    catch((assertz(retiring_supervisor_shutdown(Ref)),",
+      "           forall((clause(deferred(Msg), true, Clause), nonvar(Msg),",
+      "                   Msg = Tag-_, Tag == Ref), erase(Clause)),",
+      "           server_monitor_cleanup(Ref)), _, true).",
       "server_monitor_cleanup(Ref) :-",
       "    ( var(Ref) -> true",
       "    ; catch((flush_deferred_server_monitor(Ref),",
@@ -2334,7 +2342,8 @@ function createSwiWasmPromiseStore(options) {
       "",
       "discard_server_monitor_message('$startup_retire'(Refs)) :- !, maplist(server_monitor_cleanup, Refs).",
       "discard_server_monitor_message('$server_monitor_cleaned'(Ref)) :-",
-      "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)).",
+      "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)), retractall(retiring_supervisor_shutdown(Ref)).",
+      "discard_server_monitor_message(Ref-_) :- retiring_supervisor_shutdown(Retired), Ref == Retired.",
       "discard_server_monitor_message(down(_, Ref, _)) :- retiring_server_monitor(Retired), Ref == Retired.",
       "",
       "receive(Clauses) :- receive(Clauses, []).",

@@ -4003,7 +4003,7 @@
     <script src="/vendor/vue.global.prod.js"></script>
     <script src="/vendor/jquery.terminal.min.js"
             crossorigin="anonymous"></script>
-    <script src="/swi_wasm_actor_worker.js?v=20261018-local-names-v16"></script>
+    <script src="/swi_wasm_actor_worker.js?v=20261018-remote-names-v22"></script>
     <script>
       var DEFAULT_PROLOG = "";
 
@@ -10455,9 +10455,7 @@
               return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, from));
             };
             window.swiWasmActorRemoteSpawn = function(nodeText, goalText, sourceText) {
-              return self.spawnSwiWasmRemoteActor(nodeText, goalText, sourceText).then(function(pid) {
-                self.trackSwiWasmStartup("main", pid); return pid;
-              });
+              return self.spawnSwiWasmRemoteActor(nodeText, goalText, sourceText, "main");
             };
             window.swiWasmLoadUriSource = function(uriText) {
               return self.loadSwiWasmUriSource(uriText);
@@ -10465,7 +10463,7 @@
             window.swiWasmRemoteToplevelSpawn = function(nodeText, sourceText, sessionText,
                                                          timeLimitText, idleLimitText) {
               return self.spawnSwiWasmRemoteToplevel(
-                nodeText, sourceText, sessionText, "", timeLimitText, idleLimitText
+                nodeText, sourceText, sessionText, "", timeLimitText, idleLimitText, "main"
               );
             };
             window.swiWasmRemoteToplevelCall = function(pidText, goalText, templateText, limit, offset, once) {
@@ -10604,7 +10602,7 @@
             this.swiWasmStartups = this.swiWasmStartups || Object.create(null);
             var key = JSON.stringify([String(owner), String(token)]);
             if (this.swiWasmStartups[key]) throw new Error("startup already open");
-            this.swiWasmStartups[key] = {owner:String(owner), pids:new Set(), monitors:[]};
+            this.swiWasmStartups[key] = {owner:String(owner), pids:new Set(), monitors:[], finished:false, aborted:false};
           },
           trackSwiWasmStartup: function(owner, pid, ref) {
             // Follow creation ancestry, including detached children. An outer
@@ -10627,6 +10625,14 @@
             var scope = (this.swiWasmStartups || {})[key];
             if (!scope) return true;
             delete this.swiWasmStartups[key]; // Retire before any recursive cleanup.
+            scope.finished = true; scope.aborted = !committed;
+            if (!committed) Object.values(this.swiWasmRemoteActorConnections || {}).forEach(function(entry) {
+              entry.pendingSpawns.forEach(function(op) {
+                if ((op.scopes || []).indexOf(scope) >= 0) {
+                  op.cancelled = true; op.reject(new Error("remote named startup cancelled"));
+                }
+              });
+            });
             if (committed) return true;
             var retired = Object.create(null);
             scope.monitors.forEach(function(m) {
@@ -10662,6 +10668,7 @@
             name = String(name);
             var reservation = (this.swiWasmNameReservations || {})[name];
             if (!reservation || reservation.owner !== String(owner) || reservation.token !== String(token)) return "missing";
+            if (reservation.remoteFailure) return reservation.remoteFailure;
             var pid = this.resolveSwiWasmActorTarget(pidText), entry = this.swiWasmActorWorkers[pid];
             var registry = this.swiWasmActorNames;
             if (Object.keys(registry).some(function(key) { return registry[key] === pid && key !== name; }) ||
@@ -10684,6 +10691,7 @@
             name = String(name);
             var r = (this.swiWasmNameReservations || {})[name];
             if (!r || r.owner !== String(owner) || r.token !== String(token) || r.pid === undefined) return false;
+            if (r.remoteFailure) return r.remoteFailure;
             var isChart = r.pid === "statechart" && String(owner) === "main";
             var live = isChart ? r.chartLive : this.swiWasmActorPidLive(r.pid);
             if (isChart) this.swiWasmStatechartActive = live;
@@ -10793,7 +10801,7 @@
             delete this.swiWasmReservedWorkerActorPids[pid];
             if (startFields && startFields.parentPid && this.trackSwiWasmStartup) this.trackSwiWasmStartup(startFields.parentPid, pid);
             if (nameText) throw new Error("named Worker creation requires a reservation");
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-local-names-v16";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-remote-names-v22";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -11132,9 +11140,17 @@
                   return;
                 }
                 if (message.type === "spawned") {
-                  var waiter = entry.pendingSpawns.shift();
-                  if (waiter) {
+                  var waiter = self.takeSwiWasmSpawnReply(entry,message);
+                  if (waiter && !waiter.untrusted) {
                     var remotePid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
+                    // Record acknowledgement before the caller can resume or be interrupted.
+                    waiter.names.forEach(function(r) { r.remoteNode=node; r.remoteId=String(message.pid); r.remotePid=remotePid; if ((entry.namedEarlyDowns || {})[String(message.pid)]) r.remoteFailure="terminated"; });
+                    if (entry.namedEarlyDowns) { delete entry.namedEarlyDowns[String(message.pid)]; if (!entry.pendingSpawns.some(function(op) { return op.named; })) entry.namedEarlyDowns={}; }
+                    waiter.scopes.forEach(function(scope) { if (!scope.finished) scope.pids.add(remotePid); });
+                    if (waiter.cancelled || waiter.scopes.some(function(scope) { return scope.aborted; })) {
+                      try { socket.send(JSON.stringify({command:"exit",pid:message.pid,reason:"kill",request_id:self.reserveSwiWasmActorRef()})); } catch (_) {}
+                      waiter.reject(new Error("remote named startup cancelled")); return;
+                    }
                     self.swiWasmRemoteActorKinds[remotePid] = waiter.kind;
                     if (waiter.kind === "toplevel" && waiter.target) {
                       entry.toplevelTargets[String(message.pid)] = waiter.target;
@@ -11175,6 +11191,10 @@
                   return;
                 }
                 if (message.type === "down") {
+                  self.invalidateSwiWasmRemoteNames(node,message.pid,"terminated");
+                  if (entry.pendingSpawns.some(function(op) { return op.named; })) {
+                    entry.namedEarlyDowns = entry.namedEarlyDowns || {}; entry.namedEarlyDowns[String(message.pid)] = true;
+                  }
                   var refText = String(message.ref || "");
                   var reasonText = String(message.reason || "true");
                   var monitor = self.takeSwiWasmRemoteMonitor(node, message.pid, refText);
@@ -11188,8 +11208,11 @@
                   return;
                 }
                 if (message.type === "error") {
-                  var pending = entry.pendingSpawns.shift();
+                  var pending = self.takeSwiWasmSpawnReply(entry,message);
+                  if (pending && !entry.pendingSpawns.some(function(op) { return op.named; })) entry.namedEarlyDowns = {};
+                  if (pending && pending.untrusted) return;
                   if (pending) pending.reject(new Error(String(message.data || "remote actor error")));
+                  if (!pending && message.request_id !== undefined) return;
                   if (!pending && message.pid !== undefined) {
                     var errorPid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
                     var errorText = String(message.data || "remote actor error").replace(/\\/g, "\\\\").replace(/'/g, "''");
@@ -11212,6 +11235,7 @@
                 //  Close before open settles the connect promise (no-op once
                 //  opened); a mid-session close falls through to the cleanup.
                 settleReject(new Error("remote actor connection closed before ready: " + node));
+                self.invalidateSwiWasmRemoteNames(node,undefined,"connection_closed");
                 var error = new Error("remote actor connection closed: " + node);
                 while (entry.pendingSpawns.length) entry.pendingSpawns.shift().reject(error);
                 var lostReason = "connection_lost('" + node.replace(/'/g, "''") + "')";
@@ -11251,7 +11275,35 @@
                 request_id: message.request_id, status: status }));
             }
           },
-          spawnSwiWasmRemoteActor: function(nodeText, goalText, sourceText) {
+          swiWasmRemoteSpawnOperation: function(owner, kind, target, resolve, reject) {
+            owner = String(owner || "");
+            var ancestors = new Set(), current = owner;
+            while (current && !ancestors.has(current)) {
+              ancestors.add(current);
+              var actor = this.swiWasmActorWorkers[current]; current = actor ? String(actor.parentPid || "") : "";
+            }
+            var scopes = Object.values(this.swiWasmStartups || {}).filter(function(scope) { return ancestors.has(scope.owner); });
+            var names = Object.values(this.swiWasmNameReservations || {}).filter(function(r) { return r.owner === owner; });
+            return {id:this.reserveSwiWasmActorRef(), kind:kind, target:String(target || ""), owner:owner,
+              scopes:scopes, names:names, named:names.length > 0, resolve:resolve, reject:reject};
+          },
+          takeSwiWasmSpawnReply: function(entry, message) {
+            var index = message.request_id === undefined ? 0 : entry.pendingSpawns.findIndex(function(op) { return op.id === String(message.request_id); });
+            if (index < 0 || !entry.pendingSpawns.length) return null;
+            var op = entry.pendingSpawns.splice(index,1)[0];
+            if (message.request_id === undefined && op.named) {
+              op.reject(new Error("remote_spawn_failed(uncorrelated_spawn_reply)"));
+              if (!entry.pendingSpawns.some(function(item) { return item.named; })) entry.namedEarlyDowns = {};
+              op.untrusted = true; return op; // The pid cannot safely be claimed or killed.
+            }
+            return op;
+          },
+          invalidateSwiWasmRemoteNames: function(node, pid, reason) {
+            Object.values(this.swiWasmNameReservations || {}).forEach(function(r) {
+              if (r.remoteNode === node && (pid === undefined || r.remoteId === String(pid))) r.remoteFailure = reason;
+            });
+          },
+          spawnSwiWasmRemoteActor: function(nodeText, goalText, sourceText, owner) {
             var self = this;
             var node = this.swiWasmRemoteNodeUrl(nodeText);
             // Remote ACTOR nodes execute their advertised predicates.  Do not
@@ -11262,12 +11314,14 @@
             var options = source
               ? "[src_text('" + source.replace(/\\/g, "\\\\").replace(/'/g, "''") + "')]"
               : "[]";
-            return this.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
-              return new Promise(function(resolve, reject) {
-                entry.pendingSpawns.push({ kind: "actor", resolve: resolve, reject: reject });
+            return new Promise(function(resolve, reject) {
+              var op = self.swiWasmRemoteSpawnOperation(owner, "actor", "", resolve, reject);
+              self.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
+                if (op.scopes.some(function(scope) { return scope.aborted; })) throw new Error("remote named startup cancelled");
+                entry.pendingSpawns.push(op);
                 try {
                   entry.socket.send(JSON.stringify({
-                    command: "spawn",
+                    command: "spawn", request_id:op.id,
                     goal: String(goalText || "true"),
                     options: options
                   }));
@@ -11275,21 +11329,23 @@
                   entry.pendingSpawns.pop();
                   reject(error);
                 }
-              });
+              }).catch(reject);
             });
           },
           spawnSwiWasmRemoteToplevel: function(nodeText, sourceText, sessionText, targetPid,
-                                               timeLimitText, idleLimitText) {
+                                               timeLimitText, idleLimitText, owner) {
             var self = this;
             var node = this.swiWasmRemoteNodeUrl(nodeText);
             var source = String(sourceText || "");
             var session = String(sessionText || "false") === "true";
-            return this.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
-              return new Promise(function(resolve, reject) {
-                entry.pendingSpawns.push({ kind: "toplevel", target: String(targetPid || ""), resolve: resolve, reject: reject });
+            return new Promise(function(resolve, reject) {
+              var op = self.swiWasmRemoteSpawnOperation(owner, "toplevel", targetPid, resolve, reject);
+              self.ensureSwiWasmRemoteActorConnection(node).then(function(entry) {
+                if (op.scopes.some(function(scope) { return scope.aborted; })) throw new Error("remote named startup cancelled");
+                entry.pendingSpawns.push(op);
                 try {
                   entry.socket.send(JSON.stringify({
-                    command: "toplevel_spawn",
+                    command: "toplevel_spawn", request_id:op.id,
                     options: self.toplevelSpawnOptionsText(source, session, {
                       timeLimit: timeLimitText || "infinite",
                       idleLimit: idleLimitText || "infinite"
@@ -11299,7 +11355,7 @@
                   entry.pendingSpawns.pop();
                   reject(error);
                 }
-              });
+              }).catch(reject);
             });
           },
           callSwiWasmRemoteToplevel: function(pidText, goalText, templateText, limit, offset, once) {
@@ -11816,14 +11872,12 @@
                 );
                 break;
               case "remote_spawn":
-                result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "").then(function(remotePid) {
-                  this.trackSwiWasmStartup(pid, remotePid); return remotePid;
-                }.bind(this));
+                result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "", pid);
                 break;
               case "remote_toplevel_spawn":
                 result = this.spawnSwiWasmRemoteToplevel(
                   message.node || "", message.source || "", message.session || "false", pid,
-                  message.timeLimit || "infinite", message.idleLimit || "infinite"
+                  message.timeLimit || "infinite", message.idleLimit || "infinite", pid
                 );
                 break;
               case "rpc":
@@ -12253,9 +12307,10 @@
             var remoteActor = this.parseSwiWasmRemoteActorPid(pid);
             if (remoteToplevel || remoteActor) {
               var remote = remoteToplevel || remoteActor;
+              var cleanupRef = this.reserveSwiWasmActorRef();
               return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
                 entry.socket.send(JSON.stringify({
-                  command: "exit",
+                  command: "exit", request_id: cleanupRef,
                   pid: remote.pid,
                   reason: reason
                 }));
@@ -12434,7 +12489,7 @@
               ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), server_upgrade(+, :, +), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -), wasm_startup_scope(0), browser_named_creation(+, -, +, -, 0).",
               "browser_named_creation(Options, Pid, PI, Inner, Goal) :-",
               "    option(node(Node), Options, localhost),",
-              "    ( Node == localhost, option(name(Name), Options)",
+              "    ( option(name(Name), Options)",
               "    -> exclude(browser_wrapper_option([name]), Options, Inner),",
               "       Guard = named(open, none),",
               "       setup_call_cleanup((Token := swiWasmNameToken()),",
@@ -12442,7 +12497,7 @@
               "           Reservation := swiWasmNameReserve(#Token, #NameText),",
               "           browser_name_await(Reservation, Status),",
               "           (Status == \"reserved\" -> true ; throw(error(permission_error(register,actor_name,Name),PI))),",
-              "           (PI == statechart_spawn/2, runtime_property(implementation(swi_wasm_main)),",
+              "           (Node == localhost, PI == statechart_spawn/2, runtime_property(implementation(swi_wasm_main)),",
               "            \\+ statechart_wasm:statechart_running -> nb_setarg(2, Guard, statechart) ; true),",
               "           once(call(Goal)),",
               "           term_string(Pid, PidText),",
@@ -12450,12 +12505,16 @@
               "           Publication := swiWasmNamePublish(#Token, #NameText, #PidText, #ChartLive),",
               "           browser_name_await(Publication, Published),",
               "           (Published == \"published\" -> Committed := swiWasmNameCommit(#Token, #NameText),",
-              "              (Committed == true -> nb_setarg(1, Guard, committed) ; throw(error(permission_error(register,actor_name,Name),PI)))",
-              "           ; throw(error(permission_error(register,actor_name,Name),PI))) ),",
+              "              (Committed == true -> nb_setarg(1, Guard, committed) ; browser_name_error(Committed,Name,PI))",
+              "           ; browser_name_error(Published,Name,PI)) ),",
               "         ( (arg(1,Guard,open),arg(2,Guard,statechart) -> catch((statechart_wasm:statechart_stop,_:=swiWasmNamedChartStopped()),_,true) ; true),",
               "           term_string(Name, ReleaseName),",
               "           catch((_ := swiWasmNameRelease(#Token, #ReleaseName)),_,true) ))",
               "    ; Inner = Options, call(Goal) ).",
+              "browser_name_error(Status, Name, PI) :-",
+              "    ( memberchk(Status, [connection_closed,terminated]) -> throw(error(remote_spawn_failed(Status),PI))",
+              "    ; string(Status), memberchk(Status, [\"connection_closed\",\"terminated\"]) -> atom_string(Reason,Status), throw(error(remote_spawn_failed(Reason),PI))",
+              "    ; throw(error(permission_error(register,actor_name,Name),PI)) ).",
               "browser_name_await(Promise, Value) :-",
               "    ( runtime_property(implementation(swi_wasm_worker))",
               "    -> swi_wasm_actor_bridge:actor_await(Promise, Value)",
@@ -12507,6 +12566,7 @@
               "        ( catch(wasm_prepare_upgrade(PlainPred, Source, Pred1), Error, true),",
               "          ( var(Error) -> send(From, Ref-ok), wasm_server_loop(Pred1, State0)",
               "          ; send(From, Ref-error(Error)), wasm_server_loop(Pred, State0) ) ) ;",
+              "      '$stop'(From, Ref) -> send(From, Ref-true) ;",
               "      '$stop'(From) -> send(From, reply(true))",
               "    }).",
               "wasm_prepare_upgrade(PlainPred, Source, user:PlainPred) :-",
@@ -12520,6 +12580,93 @@
               "wasm_assert_upgrade_term((:- Directive)) :- !, call(Directive).",
               "wasm_assert_upgrade_term(Term) :- assertz(user:Term).",
               "",
+              ":- meta_predicate toplevel_call_synch(+, :, -), toplevel_call_synch(+, :, -, :), toplevel_next_synch(+, -), toplevel_next_synch(+, -, :).",
+              "toplevel_call_synch(Pid, Goal, Answer) :- toplevel_call_synch(Pid, Goal, Answer, []).",
+              "toplevel_call_synch(Pid, Goal, Answer, Options) :-",
+              "    synchronous_options(call, Options, Caller, Query, Wait),",
+              "    local_synchronous_pid(Pid, Key), make_ref(Ref), make_ref(Mon),",
+              "    setup_call_cleanup(true,",
+              "      ( install_monitor(Pid, Mon), toplevel_call(Pid, Goal, ['$request_ref'(Ref)|Query]),",
+              "        synchronous_answer(Key, Mon, Ref, Answer, Caller, Wait) ),",
+              "      server_monitor_cleanup(Mon)).",
+              "toplevel_next_synch(Pid, Answer) :- toplevel_next_synch(Pid, Answer, []).",
+              "toplevel_next_synch(Pid, Answer, Options) :-",
+              "    synchronous_options(next, Options, Caller, Query, Wait),",
+              "    local_synchronous_pid(Pid, Key), make_ref(Ref), make_ref(Mon),",
+              "    setup_call_cleanup(true,",
+              "      ( install_monitor(Pid, Mon), toplevel_next(Pid, ['$request_ref'(Ref)|Query]),",
+              "        synchronous_answer(Key, Mon, Ref, Answer, Caller, Wait) ),",
+              "      server_monitor_cleanup(Mon)).",
+              "local_synchronous_pid(Pid, Key) :-",
+              "    must_be(nonvar, Pid),",
+              "    ( integer(Pid) -> Key = Pid@localhost",
+              "    ; compound(Pid), compound_name_arguments(Pid, @, [Id,Node]), Node == localhost, integer(Id)",
+              "    -> Key = Pid",
+              "    ; throw(error(permission_error(use,toplevel_correlation,Pid),_)) ).",
+              "synchronous_options(Kind, Options0, Caller, [target(Self)|Query], Receive) :-",
+              "    strip_module(Options0, Caller, Options),",
+              "    atom_concat(toplevel_, Kind, Prefix), atom_concat(Prefix, '_synch', Name),",
+              "    (Kind == call -> Arity = 4 ; Arity = 3),",
+              "    catch((must_be(list, Options), self(Self),",
+              "           split_synchronous_options(Options, Kind, Self, Query, Receive)),",
+              "          error(Formal, _),",
+              "          throw(error(Formal, context(Name/Arity,",
+              "                                     'invalid synchronous toplevel option')))).",
+              "",
+              "split_synchronous_options([], _, _, [], []).",
+              "split_synchronous_options([Option|Options], Kind, Self, Query, Receive) :-",
+              "    must_be(nonvar, Option),",
+              "    (   compound(Option), compound_name_arity(Option, Name, 1),",
+              "        synchronous_option(Kind, Name, Destination, Type)",
+              "    ->  arg(1, Option, Value),",
+              "        synchronous_option_value(Type, Value, Self),",
+              "        (   Destination == query -> Query = [Option|Qs], Receive = Rs",
+              "        ;   Destination == receive -> Query = Qs, Receive = [Option|Rs]",
+              "        ;   Query = Qs, Receive = Rs",
+              "        ),",
+              "        split_synchronous_options(Options, Kind, Self, Qs, Rs)",
+              "    ;   atom_concat(toplevel_, Kind, Prefix),",
+              "        atom_concat(Prefix, '_synch_option', Domain), domain_error(Domain, Option)",
+              "    ).",
+              "",
+              "synchronous_option(_, target, routing, target).",
+              "synchronous_option(_, timeout, receive, number).",
+              "synchronous_option(_, on_timeout, receive, callable).",
+              "synchronous_option(_, limit, query, positive_integer).",
+              "synchronous_option(call, template, query, term).",
+              "synchronous_option(call, offset, query, nonneg).",
+              "synchronous_option(call, once, query, boolean).",
+              "",
+              "",
+              "synchronous_option_value(target, Target, Self) :- !,",
+              "    must_be(nonvar, Target),",
+              "    (Target == Self -> true ; domain_error(synchronous_toplevel_target, Target)).",
+              "synchronous_option_value(term, _, _) :- !.",
+              "synchronous_option_value(Type, Value, _) :- must_be(Type, Value).",
+              "",
+              "",
+              "synchronous_answer(Pid, Mon, Ref, Answer, Caller, Options) :-",
+              "    option(timeout(Seconds), Options, -1),",
+              "    ( Seconds > 0 -> get_time(Now), Deadline is Now+Seconds ; Deadline = Seconds ),",
+              "    option(on_timeout(Callback), Options, true),",
+              "    once(synchronous_receive(Pid,Mon,Ref,Answer,Caller,Callback,Seconds,Deadline)).",
+              "synchronous_receive(Pid,Mon,Ref,Answer,Caller,Callback,Seconds,Deadline) :-",
+              "    ( Seconds > 0 -> get_time(Now), Remaining is max(0,Deadline-Now) ; Remaining = Seconds ),",
+              "    receive({",
+              "      '$toplevel_reply'(ReplyRef,Payload) if synchronous_payload(Payload,Pid) ->",
+              "        ( ReplyRef == Ref -> Answer = Payload",
+              "        ; synchronous_receive(Pid,Mon,Ref,Answer,Caller,Callback,Seconds,Deadline) ) ;",
+              "      down(_,Mon,Reason) -> throw(toplevel_down(Reason))",
+              "    }, [timeout(Remaining),on_timeout(once(call(Caller:Callback)))]).",
+              "synchronous_payload(success(P,_,_), Pid) :- P == Pid.",
+              "synchronous_payload(failure(P), Pid) :- P == Pid.",
+              "synchronous_payload(error(P,_), Pid) :- P == Pid.",
+              "ptcp_reply_ref(Target, Ref) :- (functor(Target,_,2) -> arg(2,Target,Ref) ; Ref=none).",
+              "ptcp_next_ref(Options, Target) :-",
+              "    (functor(Target,_,2) -> option('$request_ref'(Ref),Options,none), nb_setarg(2,Target,Ref) ; true).",
+              "send_toplevel_answer(Target, Answer) :-",
+              "    arg(1,Target,Out), ptcp_reply_ref(Target,Ref),",
+              "    ( Ref == none -> send(Out,Answer) ; send(Out,'$toplevel_reply'(Ref,Answer)) ).",
               "server_promise(To, Request, Ref) :- self(Self), make_ref(Ref), send(To, '$call'(Self, Ref, Request)).",
               "server_promise(To, Request, Ref, MonRef) :-",
               "    make_ref(MonRef),",
@@ -12622,14 +12769,14 @@
               "",
               "wasm_supervisor_init(Parent, Specs, State0) :-",
               "    self(Self),",
-              "    catch(",
-              "      ( wasm_startup_scope(wasm_start_specs(Specs, State0, State))",
-              "      -> send(Parent, '$supervisor_ready'(Self)), wasm_supervisor_loop(State)",
-              "      ;  send(Parent, '$supervisor_failed'(Self, start_failed)), exit(start_failed)",
-              "      ),",
-              "      Error,",
-              "      ( send(Parent, '$supervisor_failed'(Self, Error)), exit(exception(Error)) )",
-              "    ).",
+              "    catch((wasm_startup_scope(wasm_start_specs(Specs, State0, State))",
+              "           -> Outcome = ready ; Outcome = failed_plain),",
+              "          Error, Outcome = failed(Error)),",
+              "    ( Outcome == ready",
+              "    -> send(Parent, '$supervisor_ready'(Self)), wasm_supervisor_loop(State)",
+              "    ; Outcome == failed_plain -> send(Parent, '$supervisor_failed'(Self, start_failed)), exit(start_failed)",
+              "    ; Outcome = failed(Reason), send(Parent, '$supervisor_failed'(Self, Reason)),",
+              "      exit(exception(Reason)) ).",
               "wasm_start_specs([], State, State).",
               "wasm_start_specs([Spec|Rest], State0, State) :- wasm_start_child(Spec, State0, State1), wasm_start_specs(Rest, State1, State).",
               "",
@@ -12659,19 +12806,20 @@
               "      Spec = child(_, Options), option(restart(Restart), Options, permanent),",
               "      append(Before, [child(Id,undefined,Spec)|After], Marked),",
               "      ( wasm_should_restart(Restart, Reason)",
-              "      -> wasm_note_restart(Max, Period, Restarts, Restarts1),",
-              "         wasm_apply_strategy(Strategy, Id, Spec, Marked, sup(Strategy,Max,Period,Marked,Restarts1), State)",
+              "      -> ( wasm_note_restart(Max, Period, Restarts, Restarts1)",
+              "         -> wasm_restart_attempt(Strategy, Id, Spec, Marked, sup(Strategy,Max,Period,Marked,Restarts1), State)",
+              "         ; wasm_restart_failure_cleanup(Marked), exit(shutdown) )",
               "      ; ( Restart == temporary -> append(Before, After, Remaining) ; Remaining = Marked ),",
               "        State = sup(Strategy,Max,Period,Remaining,Restarts) )",
               "    ; State = State0 ).",
               "wasm_should_restart(permanent, _).",
               "wasm_should_restart(transient, Reason) :- Reason \\== true.",
-              "wasm_note_restart(Max, Period, Restarts0, Restarts) :- get_time(Now), Cutoff is Now-Period, include(wasm_recent(Cutoff), Restarts0, Recent), length(Recent, Count), (Count >= Max -> exit(shutdown) ; Restarts = [Now|Recent]).",
+              "wasm_note_restart(Max, Period, Restarts0, Restarts) :- get_time(Now), Cutoff is Now-Period, include(wasm_recent(Cutoff), Restarts0, Recent), length(Recent, Count), Count < Max, Restarts = [Now|Recent].",
               "wasm_recent(Cutoff, Time) :- Time > Cutoff.",
               "",
               "wasm_apply_strategy(one_for_one, Id, Spec, Children, sup(Str,Max,Period,_,R), sup(Str,Max,Period,NewChildren,R)) :-",
               "    wasm_child_position(Id, Children, Before, _, _, After),",
-              "    wasm_spawn_child_record(Spec, Child), append(Before, [Child|After], NewChildren).",
+              "    wasm_restart_child_record(child(Id,undefined,Spec), Child), append(Before, [Child|After], NewChildren).",
               "wasm_apply_strategy(one_for_all, _, _, Children, sup(Str,Max,Period,_,R), sup(Str,Max,Period,NewChildren,R)) :-",
               "    wasm_stop_child_list(Children), maplist(wasm_restart_child_record, Children, NewChildren).",
               "wasm_apply_strategy(rest_for_one, Id, _, Children, sup(Str,Max,Period,_,R), sup(Str,Max,Period,NewChildren,R)) :-",
@@ -12679,12 +12827,45 @@
               "    Affected = [child(Id,Pid,Spec)|After],",
               "    wasm_stop_child_list(Affected), maplist(wasm_restart_child_record, Affected, Restarted),",
               "    append(Before, Restarted, NewChildren).",
-              "wasm_restart_child_record(child(_,_,Spec), Child) :- wasm_spawn_child_record(Spec, Child).",
+              "wasm_restart_attempt(Strategy, Id, Spec, Children, State0, State) :-",
+              "    catch(wasm_startup_scope(wasm_apply_strategy(Strategy, Id, Spec, Children, State0, State)),",
+              "          Error, (wasm_restart_failure_cleanup(Children), exit(Error))).",
+              "wasm_restart_child_record(child(Id,_,Spec), Child) :-",
+              "    catch((wasm_spawn_child_record(Spec, Child) -> true ; throw(start_failed)),",
+              "          Error, (wasm_startup_error(Error, Report), throw(restart_failed(Id, Report)))).",
+              "wasm_restart_failure_cleanup(Children) :-",
+              "    reverse(Children, Reverse), maplist(wasm_restart_stop_child, Reverse).",
+              "wasm_restart_stop_child(Child) :- catch((wasm_shutdown_child(Child) -> true ; true), _, true).",
+              "% One private monitor also tags the internal server stop acknowledgement.",
+              "wasm_shutdown_child(child(_, undefined, _)) :- !.",
+              "wasm_shutdown_child(child(_, Pid, child(_, Options))) :-",
+              "    option(start(Start), Options), option(type(Type), Options, worker),",
+              "    ( Type == supervisor -> Default = infinity ; Default = 5 ),",
+              "    option(shutdown(Shutdown), Options, Default),",
+              "    make_ref(Ref),",
+              "    setup_call_cleanup(true,",
+              "      ( swi_wasm_actor_bridge:install_monitor(Pid, Ref),",
+              "        wasm_shutdown_request(Pid, Start, Shutdown, Ref) ),",
+              "      swi_wasm_actor_bridge:supervisor_shutdown_cleanup(Ref)).",
+              "wasm_shutdown_request(Pid, _, brutal_kill, Ref) :- !,",
+              "    exit(Pid, kill), wasm_shutdown_wait(Ref).",
+              "wasm_shutdown_request(Pid, server(_, _), Shutdown, Ref) :- !,",
+              "    self(Self), (send(Pid, '$stop'(Self, Ref)) -> true ; true),",
+              "    ( Shutdown == infinity -> wasm_shutdown_wait(Ref)",
+              "    ; wasm_shutdown_wait(Ref, Shutdown) -> true",
+              "    ; exit(Pid, shutdown), wasm_shutdown_wait(Ref) ).",
+              "wasm_shutdown_request(Pid, _, _, Ref) :-",
+              "    exit(Pid, shutdown), wasm_shutdown_wait(Ref).",
+              "wasm_shutdown_wait(Ref) :- receive({down(_, Ref, _) -> true}).",
+              "wasm_shutdown_wait(Ref, Seconds) :-",
+              "    Got = got(false),",
+              "    receive({down(_, Ref, _) -> nb_setarg(1, Got, true)}, [timeout(Seconds)]),",
+              "    arg(1, Got, true).",
               "wasm_stop_child_list([]).",
-              "wasm_stop_child_list([child(_,Pid,_)|Rest]) :-",
-              "    ( Pid == undefined -> true ; catch(exit(Pid, shutdown), _, true) ),",
-              "    wasm_stop_child_list(Rest).",
-              "wasm_stop_children(sup(_,_,_,Children,_)) :- wasm_stop_child_list(Children).",
+              "wasm_stop_child_list([Child|Rest]) :-",
+              "    wasm_shutdown_child(Child), wasm_stop_child_list(Rest).",
+              "wasm_stop_children(sup(_,_,_,Children,_)) :-",
+              "    reverse(Children, Reverse), wasm_stop_child_list(Reverse).",
               "",
               "wasm_handle_supervisor_call(which_children, Children, State, State) :- State = sup(_,_,_,Children,_).",
               "wasm_handle_supervisor_call(count_children, counts(Total,Active), State, State) :- State = sup(_,_,_,Children,_), length(Children, Total), include(wasm_child_running, Children, Running), length(Running, Active).",
@@ -12699,7 +12880,7 @@
               "wasm_handle_supervisor_call(terminate_child(Id), Reply, State0, State) :-",
               "    State0=sup(Str,Max,Period,Children,R),",
               "    ( wasm_child_position(Id, Children, Before, Pid, Spec, After)",
-              "    -> ( Pid == undefined -> true ; exit(Pid,shutdown) ),",
+              "    -> wasm_shutdown_child(child(Id,Pid,Spec)),",
               "       append(Before, [child(Id,undefined,Spec)|After], NewChildren),",
               "       Reply=ok, State=sup(Str,Max,Period,NewChildren,R)",
               "    ; Reply=error(not_found), State=State0 ).",
@@ -12713,14 +12894,22 @@
               "    State0=sup(Str,Max,Period,Children,R),",
               "    ( wasm_child_position(Id, Children, Before, Pid, Spec, After)",
               "    -> ( Pid == undefined",
-              "       -> ( wasm_spawn_child_record(Spec, Child)",
+              "       -> catch((wasm_startup_scope(wasm_spawn_child_record(Spec, Child)) -> Outcome=ok ; Outcome=error(start_failed)),",
+              "                Error, (wasm_startup_error(Error, Report), Outcome=error(Report))),",
+              "          ( Outcome == ok",
               "          -> append(Before, [Child|After], NewChildren), Reply=ok, State=sup(Str,Max,Period,NewChildren,R)",
-              "          ; Reply=error(start_failed), State=State0 )",
+              "          ; Reply=Outcome, State=State0 )",
               "       ; Reply=error(running), State=State0 )",
               "    ; Reply=error(not_found), State=State0 ).",
               "wasm_child_running(child(_,Pid,_)) :- Pid \\== undefined.",
               "",
-              "wasm_supervisor_call(Sup, Request, Reply) :- self(Self), make_ref(Ref), send(Sup, '$sup'(Self,Ref,Request)), receive({Ref-Reply -> true}, [timeout(10)]).",
+              "wasm_supervisor_call(Sup, Request, Reply) :-",
+              "    self(Self), make_ref(Ref), make_ref(MonRef),",
+              "    setup_call_cleanup(true,",
+              "      ( install_monitor(Sup, MonRef), send(Sup, '$sup'(Self,Ref,Request)),",
+              "        receive({Ref-Answer -> Reply = Answer ; down(_, MonRef, Reason) -> throw(supervisor_down(Reason))},",
+              "                [timeout(10), on_timeout(throw(supervisor_call_timeout(Sup,Request)))]) ),",
+              "      server_monitor_cleanup(MonRef)).",
               "supervisor_spawn_child(Sup, Spec0, Reply) :- browser_validate_child_spec(Spec0, Spec, supervisor_spawn_child/3), wasm_supervisor_call(Sup, start_child(Spec), Reply).",
               "supervisor_terminate_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, terminate_child(Id), Reply).",
               "supervisor_delete_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, delete_child(Id), Reply).",
@@ -12750,7 +12939,7 @@
               "    whereis/2, whereis_service/2,",
               "    respond/2,",
               "    toplevel_spawn/1, toplevel_spawn/2,",
-              "    toplevel_call/2, toplevel_call/3,",
+              "    toplevel_call/2, toplevel_call/3, toplevel_call_synch/3, toplevel_call_synch/4, toplevel_next_synch/2, toplevel_next_synch/3,",
               "    toplevel_next/1, toplevel_next/2,",
               "    toplevel_halt/1, toplevel_halt/2,",
               "    toplevel_stop/1, toplevel_abort/1,",
@@ -12777,8 +12966,8 @@
               ":- use_module(library(error)).",
               ":- use_module(library(lists)).",
               ":- use_module(library(option)).",
-              ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :), with_worker_scope(-, 0), spawn_scoped_worker(+, 0, -).",
-              ":- dynamic deferred/1, io_target/1, retiring_server_monitor/1, retiring_scope_worker/2, closing_worker_scope/1, suppress_shared_override_warnings/0.",
+              ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), toplevel_call_synch(+, :, -), toplevel_call_synch(+, :, -, :), toplevel_next_synch(+, -), toplevel_next_synch(+, -, :), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :), with_worker_scope(-, 0), spawn_scoped_worker(+, 0, -).",
+              ":- dynamic deferred/1, io_target/1, retiring_server_monitor/1, retiring_supervisor_shutdown/1, retiring_scope_worker/2, closing_worker_scope/1, suppress_shared_override_warnings/0.",
               ":- multifile user:message_hook/3.",
               "",
               "self(main@localhost).",
@@ -13337,10 +13526,9 @@
               "            ( option(limit(N), Options) -> must_be(positive_integer, N), Limit = count(N) ; Limit = all ),",
               "            option(once(Once), Options, false),",
               "            option(target(Target1), Options, Target0),",
-              "            Target = target(Target1),",
+              "            option('$request_ref'(RequestRef), Options, none), Target = target(Target1,RequestRef),",
               "            state_2(Goal, Template, Offset, Limit, Once, Target, Pid, Answer),",
-              "            arg(1, Target, Out),",
-              "            send(Out, Answer),",
+              "            send_toplevel_answer(Target, Answer),",
               "            (   arg(3, Answer, true)",
               "            ->  state_3(Limit, Target)",
               "            ;   true",
@@ -13366,6 +13554,7 @@
               "state_3(Limit, Target) :-",
               "    receive({",
               "        '$next'(Options2) ->",
+      "            ptcp_next_ref(Options2, Target),",
               "            (   option(limit(NewLimit), Options2)",
               "            ->  must_be(positive_integer, NewLimit), nb_setarg(1, Limit, NewLimit)",
               "            ;   true",
@@ -13676,6 +13865,11 @@
               "    }, [timeout(0)]).",
               "",
               "% Cleanup must not await: withdraw the monitor and filter until the host barrier.",
+              "supervisor_shutdown_cleanup(Ref) :-",
+              "    catch((assertz(retiring_supervisor_shutdown(Ref)),",
+              "           forall((clause(deferred(Msg), true, Clause), nonvar(Msg),",
+              "                   Msg = Tag-_, Tag == Ref), erase(Clause)),",
+              "           server_monitor_cleanup(Ref)), _, true).",
               "server_monitor_cleanup(Ref) :-",
               "    ( var(Ref) -> true",
               "    ; catch((flush_deferred_server_monitor(Ref),",
@@ -13688,7 +13882,8 @@
               "",
               "discard_server_monitor_message('$startup_retire'(Refs)) :- !, maplist(server_monitor_cleanup, Refs).",
               "discard_server_monitor_message('$server_monitor_cleaned'(Ref)) :-",
-              "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)).",
+              "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)), retractall(retiring_supervisor_shutdown(Ref)).",
+              "discard_server_monitor_message(Ref-_) :- retiring_supervisor_shutdown(Retired), Ref == Retired.",
               "discard_server_monitor_message(down(_, Ref, _)) :- retiring_server_monitor(Retired), Ref == Retired.",
               "",
               "receive(Clauses) :- receive(Clauses, []).",

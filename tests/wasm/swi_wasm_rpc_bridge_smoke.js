@@ -132,7 +132,7 @@ function embeddedWorkbenchMethod(name, nextName) {
 }
 
 // Execute the actual browser acknowledgement handler, including failures.
-const acceptRemoteIo = embeddedWorkbenchMethod("acceptSwiWasmRemoteIo", "spawnSwiWasmRemoteActor");
+const acceptRemoteIo = embeddedWorkbenchMethod("acceptSwiWasmRemoteIo", "swiWasmRemoteSpawnOperation");
 const ioOrder = [];
 const ioSocket = { send(text) { ioOrder.push(JSON.parse(text)); } };
 const ioView = {
@@ -602,7 +602,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20261018-local-names-v16'),
+   includes('/swi_wasm_actor_worker.js?v=20261018-remote-names-v22'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -1187,7 +1187,7 @@ ok(includes('"swi_wasm_actor_bridge:ptcp(" + qualifySwiWasmLocalPid(pid) + ",ter
    "SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor");
 ok(workerSource.includes('option(time_limit(TimeLimit0), Options, infinite)') &&
    workerSource.includes('option(idle_limit(IdleLimit0), Options, infinite)') &&
-   workerSource.includes('actorArmTimeLimit(#TimeLimit, #TargetText, #PidText)') &&
+   workerSource.includes('actorArmTimeLimit(#TimeLimit, #TargetText, #PidText, #RefText)') &&
    workerSource.includes("on_timeout(throw('$ptcp_idle_limit'))") &&
    workerSource.includes('data: "Resource error: time"') &&
    workerSource.includes('details: "error(resource_error(time),_)"') &&
@@ -1455,7 +1455,7 @@ ok(workerSource.includes('"statechart_actor_start :-",') &&
    "a SWI-WASM statechart validates and starts before its worker announces readiness");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20261018-local-names-v16') &&
+   includes('/swi_wasm_actor_worker.js?v=20261018-remote-names-v22') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('message.sourceKind, message.source, pid, message.name') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&

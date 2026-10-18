@@ -39,8 +39,8 @@ binds the answer, keeps the promise available for retry, and reports callback
 failure explicitly. Unknown, consumed, expired or disposed integer references raise
 `existence_error(promise, Ref)`. Worker-side transport rejection becomes an
 `error(rpc_error(Detail))` answer, as main-engine fetch failures already do.
-Worker-scope cleanup is described under Parallel Goals below. Remote atomic naming,
-native-style client ownership, and transport parity with the native runtime
+Worker-scope cleanup is described under Parallel Goals below.
+Native-style client ownership and transport parity with the native runtime
 remain separate work.
 The WASM tier tests these rules using the bundled engine under Node; it does
 not replace interactive browser integration testing.
@@ -241,9 +241,9 @@ raise `domain_error(spawn_option,Option)`. The browser vocabulary is:
 Validation does not bind or copy option terms. Existing first-occurrence
 precedence, source collection order within each runtime, and goal/pid sharing
 are unchanged. Browser remote spawning still forwards goal and source and
-installs a caller-side monitor when requested; this batch does not add remote
-name publication, remote link forwarding, or remote output routing.
-Both SWI-WASM runtimes reserve local `name/1` creation in the page coordinator
+installs a caller-side monitor when requested. Names are browser-local aliases;
+remote link forwarding and remote output routing are unchanged.
+Both SWI-WASM runtimes reserve `name/1` creation in the page coordinator
 before starting an actor. This covers plain spawn, servers, supervisors,
 toplevels, and both statechart routes, preserving the main engine's fixed
 `statechart` pid. The first name option wins, after validation of every duplicate.
@@ -258,7 +258,7 @@ rollback-owned across the publication-approval wait; only Prolog's subsequent
 commit makes the alias visible.
 
 The name is published only after the complete creation call succeeds, including
-monitor setup and a supervisor's initial child startup. Local wrappers strip
+monitor setup and a supervisor's initial child startup. Wrappers strip
 `name/1` internally while they hold its reservation, avoiding a second,
 independent registration. Startup failure, exception or unwinding releases the
 reservation and reclaims the attempt's actors/monitors through the startup
@@ -275,10 +275,38 @@ within each sibling list; forwarding them as names can therefore encounter a
 runtime collision with another live child's name elsewhere in the page.
 Actor/service namespaces, one-name-per-pid rules within each namespace, links,
 monitor references, pid sharing, and successful reply formats are preserved.
-Remote creation retains its existing name behaviour: plain remote spawn does
-not acquire a browser alias, while specialised remote wrappers retain their
-existing post-start registration paths. This adds no remote naming transaction,
-remote cancellation or general lifecycle policy.
+The same reservation now covers existing supported remote creation paths,
+including plain remote spawn and remote toplevels. The name is a browser-local
+alias, not a registration or published service on the remote node. A collision
+fails before connection or dispatch. Existing remote wrapper capabilities,
+source-loading rules, monitor references and unnamed behavior are preserved.
+
+Remote spawn commands carry the existing `request_id` field. A reply with an id
+settles only that request, including reordered replies and errors. Unnamed
+requests retain FIFO compatibility when a peer omits the id; named requests
+reject an uncorrelated reply with a diagnostic containing
+`remote_spawn_failed(uncorrelated_spawn_reply)`. Its ambiguous pid is not claimed
+or terminated. The native reader preserves this existing field on command errors as well as
+acknowledgements; no new wire fields or capability negotiation are added. Cleanup exit commands also carry request ids,
+so their errors cannot be mistaken for later spawn replies from supporting peers.
+
+Acknowledgements enter the exact startup journals before resolving the caller's
+wait. Failure, output mismatch, interruption or creator termination releases the
+reservation, withdraws startup-owned monitors, and requests termination of known
+remote pids, preserving unrelated monitors and the original outcome. An abandoned
+attempt retains its pending reply record until acknowledgement or connection
+close; a correlated late acknowledgement receives a best-effort termination
+request and cannot publish a name. Cancellation before connection readiness
+prevents late dispatch. Publication approval remains rollback-owned until commit.
+Observed termination or connection loss before commit prevents publication with
+`error(remote_spawn_failed(terminated),PI)` or
+`error(remote_spawn_failed(connection_closed),PI)`.
+
+These guards end at commit. This does not add implicit ongoing monitoring,
+general remote-alias cleanup, remote activation handshakes or guaranteed
+cancellation. Remote application effects may occur before alias publication and
+are not undone. Connection loss before a correlated acknowledgement can leave
+an unknown remote outcome. Broader lifecycle work remains separate.
 
 The shared server/supervisor implementation removes its own unary fields
 (`initial_state/1`, or `strategy/1`, `intensity/1`, and `period/1`) before
@@ -621,6 +649,39 @@ is sent, even with `timeout(0)`. The receive timeout still starts after
 sending; it does not bound connection setup. Older peers remain usable for
 asynchronous operations. Synchronous return terms are unchanged; the private
 reply envelope is removed by the wrapper.
+
+Both SWI-WASM runtimes also export `toplevel_call_synch/3-4` and
+`toplevel_next_synch/2-3` for concrete local toplevel pids (an integer or
+`Integer@localhost`). Remote pids and aliases are rejected before monitoring or
+sending with `error(permission_error(use,toplevel_correlation,Pid),_)`.
+Remote synchronous transport support is separate work.
+
+Browser call query options are `template/1`, `offset/1`, `limit/1` and `once/1`;
+next accepts `limit/1`. Both accept `timeout/1`, `on_timeout/1` and a `target/1`
+identical to the waiting caller. Every option occurrence is validated before
+sending; first occurrence wins, and templates/callbacks retain variable sharing.
+Lists, values and conflicting targets follow the native validation rules above.
+Browser `io_target/1` is not supported by these wrappers and raises the appropriate
+synchronous option domain error. Goal variables remain independent in the caller.
+
+Each command supplies the caller as answer target and a fresh private request
+reference. Replies, including partial-page deferred errors and execution-time-limit
+errors, retain correlation until the wrapper removes the private envelope.
+A synchronous wait discards obsolete tagged answers for that same concrete pid;
+it preserves ordinary asynchronous answers, I/O and other actors' messages.
+Discarding stale answers does not restart a positive wait deadline. An ordinary
+asynchronous call or next clears correlation for its own answer.
+
+The default wait is unbounded. A receive timeout without callback succeeds with
+`Answer` unbound; a callback runs once in its caller's context, preserving its
+bindings, failure and exception. Timeout does not stop the query. Query failure
+and exceptions remain `failure(Pid)` and `error(Pid,Error)` answer terms, while
+observed termination throws `toplevel_down(Reason)`. Payload selection precedes
+output unification, so a mismatch consumes its answer and fails. A fresh private
+monitor is installed before sending and is withdrawn and flushed on success,
+failure, mismatch, exception, interruption or cut, using non-awaiting browser
+cleanup. Existing explicit monitors remain available. These wrappers add no
+multi-client coordination, automatic cancellation or ownership transfer.
 
 ### Remote Queries
 
@@ -990,7 +1051,7 @@ exit reasons trigger a restart, subject to the existing intensity limit.
 Successful completion (`true`) does not. `permanent` children restart for any
 reason; `temporary` children never restart. Regression tests exercise the shared
 supervisor down handler and replacement startup in each bundled WASM engine.
-Shutdown handling is unchanged; browser ordering and bookkeeping are described below.
+Browser ordering, bookkeeping and shutdown are described below.
 
 Both browser runtimes retain children in their original start order. Automatic
 `one_for_one` restart replaces a record in place; `one_for_all` restarts the
@@ -1005,8 +1066,21 @@ termination retains a stopped record in place and succeeds without another
 exit signal if already stopped. Deletion and explicit respawn reject a running
 child with `error(running)`; deletion removes an inactive record, and respawn
 replaces it in place. Missing ids retain `error(not_found)`. Stopping children
-skips inactive pids. Automatic restart failure handling and shutdown signaling otherwise retain
-their existing behavior.
+skips inactive pids. Automatic restart failure handling is described below.
+
+In both browser runtimes, exhausting the restart intensity budget marks the
+triggering child inactive, starts no replacements, and shuts down the remaining
+recorded children in reverse start order before exiting with reason `shutdown`.
+This applies to all three strategies and includes detached children
+(`link(false)`). Existing period pruning, counting and threshold rules are
+unchanged: zero intensity permits no restart, and only qualifying restart events
+count. Cleanup uses the existing child shutdown policies and private monitor
+cleanup. An exception or failure during one child's cleanup does not replace the
+intended exit reason or prevent attempts for other children; termination of that
+child is then not guaranteed. Unrelated actors, messages and explicit monitors
+are preserved. `infinity` can delay the supervisor's exit; forced Worker and
+remote-observation qualifications still apply. This does not add cleanup for
+arbitrary supervisor exits or recursive cooperative shutdown.
 
 Browser reply formats are unchanged: successful dynamic start, termination,
 deletion and respawn return `ok` (browser respawn does not return `ok(NewPid)`).
@@ -1017,10 +1091,72 @@ not `undefined`, respectively. These reflect the supervisor's processed state,
 not an independent instantaneous liveness check. The native inspection formats
 remain `info(Id,Pid,Type,Restart)` and the keyed counts list.
 
-Validation does not implement additional lifecycle behavior. Browser
-`shutdown/1`, `type/1`, and `significant/1` remain metadata; in particular the
-native shutdown timeout/escalation behavior described above does not apply to
-these browser supervisors.
+Both SWI-WASM runtimes use one child-shutdown helper for explicit termination,
+normal supervisor halt and the stopping phases of `one_for_all`/`rest_for_one`.
+It installs a fresh private monitor before sending a stop or exit request, and
+waits for that monitor's down notification before recording the child inactive
+or starting replacements. Already inactive records need no shutdown action.
+Normal supervisor halt stops children in reverse start order; group restart
+stopping order and replacement start order are preserved.
+
+`shutdown(brutal_kill)` terminates immediately with reason `kill`. For a
+recognised `start(server(Pred,Options))`, numeric shutdown sends a private tagged
+server-stop request, waits up to that many seconds for termination, then forces
+termination with reason `shutdown` if necessary. Zero and fractional timeouts
+are supported. `infinity` sends the same stop request and waits without an
+internal deadline. Omitted shutdown defaults to 5 seconds for `type(worker)`
+(the default type), or `infinity` for `type(supervisor)`. Ordinary actors and
+nested supervisors retain direct termination with reason `shutdown`, followed
+by the private wait; this does not add recursive cooperative supervisor stop.
+The existing public untagged server-stop protocol and all public reply formats
+are unchanged. Only the private monitor notification establishes completion;
+the tagged acknowledgement alone does not.
+
+Cleanup withdraws and flushes the private monitor and its tagged stop reply on
+success, exception, interruption or cut. Existing monitors, application messages,
+public stop replies and pending request replies remain available. Cleanup uses
+the existing local monitor barrier without awaiting transport. An interrupted
+wait does not introduce a new forced-termination policy for the child.
+
+Browser supervisor requests for addition, termination, deletion, respawn and
+inspection install a fresh private monitor before sending. They select a reply
+into a fresh variable before unifying the caller's output: a mismatch consumes
+the selected reply and fails. Successful reply formats are unchanged. Observed
+termination raises `supervisor_down(Reason)`; expiration of the existing
+10-second reply wait raises `supervisor_call_timeout(Sup,Request)`. That wait
+starts after sending and does not bound connection setup or cancel the requested
+operation. A late reply is not cancelled or collected by this repair.
+
+Cleanup removes and flushes only the private monitor on success, mismatch,
+failure, exception, interruption or cut, using the existing non-awaiting browser
+cleanup path. Application messages and unrelated explicit monitors remain
+available. Remote `connection_closed` reports loss of observation, not proven
+remote death. These request waits are separate from internal child shutdown
+deadlines; a caller's timed-out wait does not cancel shutdown in the supervisor.
+`supervisor_halt/1` retains its `reply(true)` protocol;
+its acknowledgement follows child shutdown, but observing the supervisor's own
+termination still requires a monitor. Forced Worker termination does not promise
+execution of Prolog cleanup handlers. Remote down reasons can report connection
+loss rather than proven death. Automatic supervisor-exit cleanup, recursive
+graceful shutdown and stronger remote guarantees remain separate. `significant/1` remains compatibility metadata; `type/1` selects the
+shutdown default without adding other type-specific lifecycle behaviour.
+
+Browser explicit respawn also uses a startup journal: a failed replacement is
+rolled back, its inactive specification stays in place, and the supervisor
+returns `error(start_failed)` for failure or `error(Error)` for an exception.
+Success retains the browser `ok` reply. The caller can retry the inactive child.
+
+Automatic replacement starts for one restart event share a startup journal.
+If a replacement fails, newly created actors and monitors are rolled back,
+then the remaining recorded children are shut down in reverse order using their
+shutdown policies. The supervisor exits with `restart_failed(Id,Reason)`, naming
+the replacement whose startup failed; no partial group is kept running and no
+additional retry loop is introduced. Cleanup errors must not replace that
+original reason. Unrelated actors and explicit monitors remain untouched.
+An `infinity` shutdown policy can delay this failure exit, and existing remote
+termination qualifications still apply. Initial readiness reporting ends before
+the running loop begins, so a restart error does not send a second startup-failure
+notification to the original creator. General supervisor exit handling remains separate.
 
 Initial browser supervisor startup and dynamic child additions now use temporary
 startup journals. Local reservations and actors are recorded before Worker
@@ -1047,9 +1183,9 @@ message. Successful additions still append and return `ok`.
 This rollback covers startup, not later failure of a successfully running child;
 it does not establish application-level readiness. Known remote pids receive
 best-effort exit requests. A connection failure before a remote pid is returned
-can leave the remote outcome unknown. Automatic restart failures, shutdown
-waiting/escalation, remote name reservation and broader lifecycle work remain
-separate.
+can leave the remote outcome unknown. Startup rollback remains a separate,
+immediate cleanup path from the orderly child shutdown described above.
+Broader lifecycle work remains separate.
 Regression tests exercise both bundled runtimes with real Worker/coordinator
 paths and controlled startup faults; UI checks exercise initial and dynamic
 publication failures and subsequent successful additions.

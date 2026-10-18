@@ -599,17 +599,20 @@ ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta) :-
     (   Frame.opcode == close
     ->  true
     ;   Frame.opcode == text
-    ->  catch(
-            (   check_ws_frame_size(Frame.data),
-                atom_json_dict(Frame.data, Dict, []),
-                ws_dispatch(Dict, Queue, Principal, ConnectionMeta)
-            ),
-            Error,
-            ws_send_command_reply(Queue, Dict, error(Error))
-        ),
+    ->  ws_dispatch_frame(Frame.data, Queue, Principal, ConnectionMeta),
         ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta)
     ;   ws_read_loop(WebSocket, Queue, Principal, ConnectionMeta)
     ).
+
+
+% Keep Dict outside the dispatch catch: bindings made inside a throwing goal
+% unwind, including the request id needed to correlate a command error.
+ws_dispatch_frame(Text, Queue, Principal, ConnectionMeta) :-
+    catch(
+        ( check_ws_frame_size(Text), atom_json_dict(Text, Dict, []),
+          catch(ws_dispatch(Dict, Queue, Principal, ConnectionMeta),
+                Error, ws_send_command_reply(Queue, Dict, error(Error))) ),
+        ParseError, ws_send_error(Queue, ParseError)).
 
 
                 /*******************************
