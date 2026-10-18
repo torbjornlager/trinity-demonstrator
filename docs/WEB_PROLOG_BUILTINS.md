@@ -36,11 +36,12 @@ notifications can remain deferred while earlier results are collected.
 
 Browser `yield/2-3` returns `timeout` on an elapsed wait unless its callback
 binds the answer, keeps the promise available for retry, and reports callback
-failure explicitly. Unknown or consumed integer references raise
+failure explicitly. Unknown, consumed, expired or disposed integer references raise
 `existence_error(promise, Ref)`. Worker-side transport rejection becomes an
 `error(rpc_error(Detail))` answer, as main-engine fetch failures already do.
-Worker-scope cleanup is described under Parallel Goals below. Atomic naming,
-ownership, and transport parity with the native runtime remain separate work.
+Worker-scope cleanup is described under Parallel Goals below. Remote atomic naming,
+native-style client ownership, and transport parity with the native runtime
+remain separate work.
 The WASM tier tests these rules using the bundled engine under Node; it does
 not replace interactive browser integration testing.
 
@@ -242,6 +243,43 @@ precedence, source collection order within each runtime, and goal/pid sharing
 are unchanged. Browser remote spawning still forwards goal and source and
 installs a caller-side monitor when requested; this batch does not add remote
 name publication, remote link forwarding, or remote output routing.
+Both SWI-WASM runtimes reserve local `name/1` creation in the page coordinator
+before starting an actor. This covers plain spawn, servers, supervisors,
+toplevels, and both statechart routes, preserving the main engine's fixed
+`statechart` pid. The first name option wins, after validation of every duplicate.
+An occupied or pending name raises
+`error(permission_error(register,actor_name,Name),PI)`, with the creation predicate
+in `PI`; no actor is created for that collision. Reservations occupy only the
+ordinary actor namespace and remain hidden from `whereis/2`. Explicit register
+cannot steal them, and unregister cannot release them. Publication and rollback
+require the creating engine's matching token; late cleanup cannot erase a
+committed binding or a different creator's reservation. The reservation stays
+rollback-owned across the publication-approval wait; only Prolog's subsequent
+commit makes the alias visible.
+
+The name is published only after the complete creation call succeeds, including
+monitor setup and a supervisor's initial child startup. Local wrappers strip
+`name/1` internally while they hold its reservation, avoiding a second,
+independent registration. Startup failure, exception or unwinding releases the
+reservation and reclaims the attempt's actors/monitors through the startup
+journal, including detached and nested children. Caller termination releases its
+pending reservations. Normal early actor termination still returns the pid and
+its requested monitor notification, but publishes no stale alias. Main-thread
+statechart halt/completion removes that chart's aliases; halt permits name reuse
+within the same query. Names do not establish application-level readiness or
+continued actor liveness after return.
+
+The page's ordinary-name namespace is shared by browser actors, rather than
+being separate for each supervisor. Child ids are still structurally validated
+within each sibling list; forwarding them as names can therefore encounter a
+runtime collision with another live child's name elsewhere in the page.
+Actor/service namespaces, one-name-per-pid rules within each namespace, links,
+monitor references, pid sharing, and successful reply formats are preserved.
+Remote creation retains its existing name behaviour: plain remote spawn does
+not acquire a browser alias, while specialised remote wrappers retain their
+existing post-start registration paths. This adds no remote naming transaction,
+remote cancellation or general lifecycle policy.
+
 The shared server/supervisor implementation removes its own unary fields
 (`initial_state/1`, or `strategy/1`, `intensity/1`, and `period/1`) before
 calling plain spawn. Child creation similarly separates `start/1`, `restart/1`,
@@ -510,6 +548,14 @@ the runtime now supports per-node exact-origin allowlists through
 local paths, `file://` URIs, and arbitrary HTTP(S) origins are rejected, while
 node-relative URIs continue to work only if they resolve to an allowed origin.
 
+Local browser server/supervisor startup marks the internally supplied behavior
+block while loading it into a Worker. Only the resulting weak-import warnings
+for actor-bridge definitions are suppressed. Genuine user overrides before or
+after that block, redefinitions, syntax errors, and other diagnostics remain
+visible. Suppression is scoped to the active load and cleared on every exit,
+including incomplete or interrupted loads. Definitions, module placement,
+source order, and remote source delivery are unchanged.
+
 ### Actor I/O
 
 `output/1`, `output/2`, `input/2`, `input/3`, `respond/2`.
@@ -761,6 +807,53 @@ namespace/connection close hooks; `rpc:dispose_promises_for_owner/1` is an
 internal teardown helper, not a public client predicate. Ownership transfer,
 remote cancellation, and a portable ownership contract remain separate work.
 
+In SWI-WASM, a promise belongs to the engine that created it. Each Worker has
+its own store; the compatibility main engine has one store shared across its
+successive queries. Spawned actors have separate Worker stores, including actors
+spawned from the main engine. Later queries in the same surviving engine may
+collect or dispose of its promises, subject to collection and expiry rules.
+
+A numeric reference is meaningful only in that engine. Sending it to another
+actor does not transfer access: yield and cleanup consult the receiving engine's
+store. If no local record exists, yield raises `existence_error(promise,Ref)` and
+cleanup is a no-op. Reference numbers are not globally unique; a coincident
+number denotes only the receiving engine's own record. Collection or disposal
+cannot affect the other engine's record or transport resources. These store
+boundaries do not constitute a security sandbox against trusted JavaScript with
+access to the main engine's page. Native client-owner identities are not imposed
+on browser engines. Isolation regressions exercise the real main and Worker
+bridges in separate JavaScript contexts, including forced equal references.
+
+Both SWI-WASM runtimes use the same local promise lifecycle store implementation.
+A reference expires 300 seconds after creation, whether its request is pending or
+its answer is ready. A timer performs expiry, and every collection operation
+also checks the deadline so delayed background timers do not extend validity.
+Only one collector may claim a reference; another yield raises
+`permission_error(collect,promise,Ref)`. The answer remains stored until the
+waiting Prolog computation resumes and commits collection. Timeout, interruption
+or an exception before commit releases the claim without consuming the answer.
+The timeout callback runs after release, preserving retry, callback bindings,
+and callback failure/exception behavior. An output mismatch after collection
+still consumes the selected answer, as before.
+
+Browser `promise_cleanup/1` requires an integer reference and is idempotent,
+including for unknown, consumed or expired references. Collection and disposal
+remove records and expiry timers. Disposal wakes an existing collector with
+`existence_error(promise,Ref)`, without invoking its timeout callback; it also
+clears wait timers and interrupts pending local fetch/request resources. Worker
+fetch handles are scoped to their existing Worker entry, and reaping that Worker
+releases those handles. Completion after disposal cannot recreate a record.
+Uncollected large answers and timed-out wait callbacks are not retained beyond
+their necessary lifetime. Small reference non-reuse bookkeeping remains.
+
+These are local resource rules: aborting an HTTP fetch does not establish that
+remote execution stopped. Engine ownership preserves existing reference
+visibility/sharing boundaries. Ownership transfer, native-style client namespace
+teardown and guaranteed remote cancellation remain separate work. A cooperative
+wait interruption keeps the promise available in its existing engine; destroying/replacing a Worker also
+destroys that engine's local references. Lifecycle regressions use shortened,
+controlled deadlines; UI checks exercise public retry/callback/disposal behavior.
+
 `runtime_property/1` reports host capabilities rather than changing language
 semantics. Its properties are `implementation/1`, `persistent/1`,
 `inbound_addressable/1`, `dom/1`, `actor_isolation/1`, and
@@ -897,13 +990,69 @@ exit reasons trigger a restart, subject to the existing intensity limit.
 Successful completion (`true`) does not. `permanent` children restart for any
 reason; `temporary` children never restart. Regression tests exercise the shared
 supervisor down handler and replacement startup in each bundled WASM engine.
-Ordering, inactive-child bookkeeping, and shutdown handling are unchanged.
+Shutdown handling is unchanged; browser ordering and bookkeeping are described below.
+
+Both browser runtimes retain children in their original start order. Automatic
+`one_for_one` restart replaces a record in place; `one_for_all` restarts the
+whole list in that order; `rest_for_one` restarts only the failed child and
+later siblings, preserving earlier records and pids. The failed child's old
+pid is marked inactive before the strategy runs; later notifications for
+replaced pids are ignored. New dynamic children append to the list.
+
+A normally completed transient child retains its original specification with
+`Pid = undefined`; temporary children are removed on termination. Explicit
+termination retains a stopped record in place and succeeds without another
+exit signal if already stopped. Deletion and explicit respawn reject a running
+child with `error(running)`; deletion removes an inactive record, and respawn
+replaces it in place. Missing ids retain `error(not_found)`. Stopping children
+skips inactive pids. Automatic restart failure handling and shutdown signaling otherwise retain
+their existing behavior.
+
+Browser reply formats are unchanged: successful dynamic start, termination,
+deletion and respawn return `ok` (browser respawn does not return `ok(NewPid)`).
+`supervisor_which_children/2` returns ordered `child(Id,Pid,OriginalSpec)` terms,
+including inactive records. `supervisor_count_children/2` returns
+`counts(Total,Active)`, counting stored specifications and records whose pid is
+not `undefined`, respectively. These reflect the supervisor's processed state,
+not an independent instantaneous liveness check. The native inspection formats
+remain `info(Id,Pid,Type,Restart)` and the keyed counts list.
 
 Validation does not implement additional lifecycle behavior. Browser
 `shutdown/1`, `type/1`, and `significant/1` remain metadata; in particular the
 native shutdown timeout/escalation behavior described above does not apply to
-these browser supervisors. Runtime startup failures can still occur after
-validation; startup rollback and broader lifecycle changes remain separate.
+these browser supervisors.
+
+Initial browser supervisor startup and dynamic child additions now use temporary
+startup journals. Local reservations and actors are recorded before Worker
+construction/readiness and monitor setup. An outer attempt also tracks actors
+created by nested supervisors while that attempt is open, including detached
+children (`link(false)`). Success commits the attempt without changing links or
+actor lifetimes. On failure, exception or unwinding, rollback rejects late local
+startup of retired reservations, stops the attempt's actors in reverse creation
+order, and withdraws its monitors. Existing actors and unrelated explicit monitors
+are preserved. Cleanup runs without awaiting transport and must not replace the
+original startup error. Small retired-reservation markers prevent late reuse.
+
+Initial child errors still reach the caller as
+`error(supervisor_start_failed(Pid,Reason),supervisor_spawn/3)`; the existing
+readiness timeout is unchanged and also rolls back the caller's attempt.
+Dynamic startup failure returns `error(start_failed)`, and an exception returns
+`error(Error)`, keeping the previous supervisor state and allowing that id to be
+tried again. Existing more specific child-start errors are preserved. Prolog
+exception terms are retained; JavaScript exception objects, which cannot cross
+mailboxes as blobs, are reported as
+`error(supervisor_startup_error(Message),supervisor_spawn/3)` with the original
+message. Successful additions still append and return `ok`.
+
+This rollback covers startup, not later failure of a successfully running child;
+it does not establish application-level readiness. Known remote pids receive
+best-effort exit requests. A connection failure before a remote pid is returned
+can leave the remote outcome unknown. Automatic restart failures, shutdown
+waiting/escalation, remote name reservation and broader lifecycle work remain
+separate.
+Regression tests exercise both bundled runtimes with real Worker/coordinator
+paths and controlled startup faults; UI checks exercise initial and dynamic
+publication failures and subsequent successful additions.
 
 ### Statechart Actors
 

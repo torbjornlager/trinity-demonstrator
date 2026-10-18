@@ -602,7 +602,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20261018-wrapper-options-v12'),
+   includes('/swi_wasm_actor_worker.js?v=20261018-local-names-v16'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -1055,6 +1055,7 @@ ok(includes("finalizeSwiWasmWorkerActor: function") &&
     parseSwiWasmRemoteToplevelPid: function() { return null; },
     parseSwiWasmRemoteActorPid: function() { return null; },
     terminateLinkedSwiWasmChildren: function() {},
+    disposeSwiWasmPromiseRequest: function() {},
     notifySwiWasmActorMonitors: function(pid, reason) {
       notified = { pid, reason };
     },
@@ -1366,7 +1367,7 @@ ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout)') &&
    workerSource.includes('member(src_predicates(Indicators), Options)') &&
    includes('case "rpc":') &&
-   includes('requestSwiWasmWorkerRpc: function(message)') &&
+   includes('requestSwiWasmWorkerRpc: function(message, ownerPid)') &&
    includes('url.searchParams.set("once", "true")') &&
    includes('setTimeout(function() { controller.abort(); }, httpTimeout * 1000)'),
    "both SWI-WASM rpc/3 models keep initial transport offset internal");
@@ -1375,7 +1376,7 @@ ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
    workerSource.includes('option(offset(Offset), Options, 0)') &&
    includes('(member(offset(Offset), Opts) -> true ; Offset = 0)') &&
    workerSource.includes('Promise := actorPromiseWait(') &&
-   includes('finish(null, false)') &&
+   workerSource.includes('settleWait(entry, null)') &&
    workerSource.includes('option(on_timeout(OnTimeout), Options, true)'),
    "both browser models provide non-consuming yield timeouts with the common default");
 ok(workerSource.includes('runtime_property(implementation(swi_wasm_worker)).') &&
@@ -1454,7 +1455,7 @@ ok(workerSource.includes('"statechart_actor_start :-",') &&
    "a SWI-WASM statechart validates and starts before its worker announces readiness");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20261018-wrapper-options-v12') &&
+   includes('/swi_wasm_actor_worker.js?v=20261018-local-names-v16') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('message.sourceKind, message.source, pid, message.name') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
@@ -1522,6 +1523,7 @@ ok(workerSource.includes('option(link(Link), Options, true)') &&
       unlinked: { worker: worker("unlinked"), done: false, parentPid: "parent", linked: false }
     },
     terminateLinkedSwiWasmChildren: terminateLinkedChildren,
+    disposeSwiWasmPromiseRequest: function() {},
     closeSwiWasmWorkerScopes: embeddedWorkbenchMethod("closeSwiWasmWorkerScopes", "closeSwiWasmWorkerScope"),
     exitSwiWasmActor: exitActor,
     resolveSwiWasmActorTarget: function(pid) { return String(pid); },

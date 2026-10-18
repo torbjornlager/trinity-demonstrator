@@ -4003,6 +4003,7 @@
     <script src="/vendor/vue.global.prod.js"></script>
     <script src="/vendor/jquery.terminal.min.js"
             crossorigin="anonymous"></script>
+    <script src="/swi_wasm_actor_worker.js?v=20261018-local-names-v16"></script>
     <script>
       var DEFAULT_PROLOG = "";
 
@@ -9718,6 +9719,9 @@
               // engine from observing abort() until that promise settles. A
               // rejected wait is sufficient to unwind the current query;
               // abort() here would remain pending and kill the next query.
+              if (typeof window.swiAbortPromiseWaits === "function" && window.swiAbortPromiseWaits() > 0) {
+                resumedSuspendedQuery = true;
+              }
               if (this.cancelSwiWasmMainActorWaiters("swi_wasm_abort") > 0) {
                 resumedSuspendedQuery = true;
               }
@@ -9771,6 +9775,7 @@
               var actor = this.swiWasmActorWorkers[pid];
               return pid !== String(this.swiWasm2ShellPid) && actor && actor.worker && !actor.done;
             }.bind(this)).sort();
+            this.disposeSwiWasmPromiseRequest(this.swiWasm2ShellPid);
             try { entry.worker.terminate(); } catch (_error) {}
             delete this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             this.swiWasm2ShellReady = false;
@@ -10220,62 +10225,35 @@
               return new URL(String(uri || ""), window.location.origin).href;
             };
             this.installSwiWasmActorBridge();
-            window._swiPromiseStore = window._swiPromiseStore || { items: {} };
+            window._swiPromiseStore = createSwiWasmPromiseStore({
+              mint: function() { return self.makeBrowserPromiseRef(window._swiPromiseStore.items); },
+              errorText: function() { return "error(rpc_error(fetch_failed))."; }
+            });
             window.swiPromiseStart = function(url, httpTimeout) {
-              var ref = self.makeBrowserPromiseRef(window._swiPromiseStore.items);
-              var entry = { status: "pending", text: null, promise: null };
-              window._swiPromiseStore.items[String(ref)] = entry;
-              var controller = new AbortController();
-              var timeout = httpTimeout === null || httpTimeout === undefined
-                ? NaN
-                : Number(httpTimeout);
-              var timer = isFinite(timeout) && timeout >= 0
-                ? setTimeout(function() { controller.abort(); }, timeout * 1000)
-                : null;
-              entry.promise = fetch(url, { signal: controller.signal })
-                .then(function(response) { return response.text(); })
-                .then(function(text) {
-                  entry.status = "done";
-                  entry.text = text;
-                  return text;
-                })
-                .catch(function(error) {
-                  entry.status = "done";
-                  entry.text = controller.signal.aborted
-                    ? "error(rpc_error(http_timeout))."
-                    : "error(rpc_error(fetch_failed)).";
-                  return entry.text;
-                }).finally(function() {
+              return window._swiPromiseStore.create(function() {
+                var controller = new AbortController();
+                var timeout = httpTimeout === null || httpTimeout === undefined ? NaN : Number(httpTimeout);
+                var timer = isFinite(timeout) && timeout >= 0
+                  ? setTimeout(function() { controller.abort(); }, timeout*1000) : null;
+                var promise;
+                try {
+                  promise = fetch(url, {signal:controller.signal}).then(function(response) { return response.text(); })
+                    .catch(function() { return controller.signal.aborted
+                      ? "error(rpc_error(http_timeout))." : "error(rpc_error(fetch_failed))."; })
+                    .finally(function() { if (timer !== null) clearTimeout(timer); });
+                } catch (error) { if (timer !== null) clearTimeout(timer); controller.abort(); throw error; }
+                return {promise:promise, cancel:function() {
                   if (timer !== null) clearTimeout(timer);
-                });
-              return ref;
-            };
-            window.swiPromiseWait = function(ref, timeout) {
-              var key = String(ref);
-              var entry = window._swiPromiseStore.items[key];
-              if (!entry) return Promise.resolve("missing_promise");
-              return new Promise(function(resolve) {
-                var settled = false;
-                var timer = null;
-                function finish(value, consume) {
-                  if (settled) return;
-                  settled = true;
-                  if (timer !== null) clearTimeout(timer);
-                  if (consume !== false) delete window._swiPromiseStore.items[key];
-                  resolve(value);
-                }
-                if (entry.status === "done") {
-                  finish(entry.text, true);
-                  return;
-                }
-                if (typeof timeout === "number" && isFinite(timeout) && timeout >= 0) {
-                  timer = setTimeout(function() { finish(null, false); }, timeout * 1000);
-                }
-                entry.promise.then(function() {
-                  finish(entry.text, true);
-                });
+                  controller.abort();
+                }};
               });
             };
+            window.swiPromiseWait = function(ref, token, timeout) { return window._swiPromiseStore.wait(String(ref),String(token),Number(timeout)); };
+            window.swiPromiseClaim = function(ref) { return window._swiPromiseStore.claim(String(ref)); };
+            window.swiPromiseCommit = function(ref, token) { return window._swiPromiseStore.commit(String(ref),String(token)); };
+            window.swiPromiseRelease = function(ref, token) { return window._swiPromiseStore.release(String(ref),String(token)); };
+            window.swiPromiseCleanup = function(ref) { return window._swiPromiseStore.dispose(String(ref)); };
+            window.swiAbortPromiseWaits = function() { return window._swiPromiseStore.interruptCollectors(); };
             var el = document.createElement("script");
             el.src = "/swipl-bundle.js";
             el.onload = function() {
@@ -10408,7 +10386,22 @@
               return self.spawnSwiWasmWorkerActorReady(goalText, extraSourceText);
             };
             window.swiWasmActorReservePid = function() {
-              return self.reserveSwiWasmWorkerActorPid();
+              return self.reserveSwiWasmWorkerActorPid("main");
+            };
+            window.swiWasmNameToken = function() { return "name-" + (self.swiWasmNextName = (self.swiWasmNextName || 0) + 1); };
+            window.swiWasmNameReserve = function(token, name) { return Promise.resolve(self.reserveSwiWasmName("main", token, name)); };
+            window.swiWasmNamePublish = function(token, name, pid, live) { return Promise.resolve(self.publishSwiWasmName("main", token, name, pid, live)); };
+            window.swiWasmNamedChartStopped = function() { self.swiWasmStatechartActive = false; self.clearSwiWasmActorNamesForPid("statechart"); return true; };
+            window.swiWasmNameCommit = function(token, name) { return self.commitSwiWasmName("main", token, name); };
+            window.swiWasmNameRelease = function(token, name) { return self.releaseSwiWasmName("main", token, name); };
+            window.swiWasmStartupErrorText = function(error) { return String(error && error.message || error); };
+            window.swiWasmStartupOpen = function() {
+              var token = "startup-" + (self.swiWasmNextStartup = (self.swiWasmNextStartup || 0) + 1);
+              self.openSwiWasmStartup("main", token);
+              return token;
+            };
+            window.swiWasmStartupFinish = function(token, committed) {
+              return self.finishSwiWasmStartup("main", token, committed === true || String(committed) === "true");
             };
             window.swiWasmWorkerScopeOpen = function() {
               var token = "scope-" + (self.swiWasmNextWorkerScope = (self.swiWasmNextWorkerScope || 0) + 1);
@@ -10449,7 +10442,7 @@
                 sourceKind, sourceText, "statechart", nameText,
                 String(linkText === undefined ? "true" : linkText) !== "false",
                 supportSourceText, ioTargetText,
-                String(traceText === undefined ? "true" : traceText) !== "false"
+                String(traceText === undefined ? "true" : traceText) !== "false", "main"
               ).then(function(pid) {
                 return "statechart_spawn_ok(" + JSON.stringify(String(pid)) + ")";
               }, function(error) {
@@ -10462,7 +10455,9 @@
               return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, from));
             };
             window.swiWasmActorRemoteSpawn = function(nodeText, goalText, sourceText) {
-              return self.spawnSwiWasmRemoteActor(nodeText, goalText, sourceText);
+              return self.spawnSwiWasmRemoteActor(nodeText, goalText, sourceText).then(function(pid) {
+                self.trackSwiWasmStartup("main", pid); return pid;
+              });
             };
             window.swiWasmLoadUriSource = function(uriText) {
               return self.loadSwiWasmUriSource(uriText);
@@ -10586,13 +10581,14 @@
             } while (value >= 1098000000000);
             return String(1000000000 + (value % 9000000000));
           },
-          reserveSwiWasmWorkerActorPid: function() {
+          reserveSwiWasmWorkerActorPid: function(owner) {
             var pid;
             this.swiWasmIssuedIdentities = this.swiWasmIssuedIdentities || {};
             do { pid = this.randomSwiIdentity(); }
             while (this.swiWasmIssuedIdentities[pid]);
             this.swiWasmIssuedIdentities[pid] = true;
             this.swiWasmReservedWorkerActorPids[pid] = true;
+            if (owner !== undefined) this.trackSwiWasmStartup(owner, pid);
             return pid;
           },
           reserveSwiWasmActorRef: function() {
@@ -10603,6 +10599,112 @@
             this.swiWasmIssuedIdentities[ref] = true;
             this.swiWasmReservedActorRefs[ref] = true;
             return ref;
+          },
+          openSwiWasmStartup: function(owner, token) {
+            this.swiWasmStartups = this.swiWasmStartups || Object.create(null);
+            var key = JSON.stringify([String(owner), String(token)]);
+            if (this.swiWasmStartups[key]) throw new Error("startup already open");
+            this.swiWasmStartups[key] = {owner:String(owner), pids:new Set(), monitors:[]};
+          },
+          trackSwiWasmStartup: function(owner, pid, ref) {
+            // Follow creation ancestry, including detached children. An outer
+            // attempt still owns a nested supervisor's starts until it commits.
+            var ancestors = new Set(), current = String(owner || "");
+            while (current && !ancestors.has(current)) {
+              ancestors.add(current);
+              var entry = this.swiWasmActorWorkers[current];
+              current = entry ? String(entry.parentPid || "") : "";
+            }
+            Object.keys(this.swiWasmStartups || {}).forEach(function(key) {
+              var scope = this.swiWasmStartups[key];
+              if (!ancestors.has(scope.owner)) return;
+              if (ref === undefined) scope.pids.add(String(pid));
+              else scope.monitors.push({watcher:String(owner), ref:String(ref)});
+            }.bind(this));
+          },
+          finishSwiWasmStartup: function(owner, token, committed) {
+            var key = JSON.stringify([String(owner), String(token)]);
+            var scope = (this.swiWasmStartups || {})[key];
+            if (!scope) return true;
+            delete this.swiWasmStartups[key]; // Retire before any recursive cleanup.
+            if (committed) return true;
+            var retired = Object.create(null);
+            scope.monitors.forEach(function(m) {
+              try { Promise.resolve(this.demonitorSwiWasmActor(m.watcher, m.ref)).catch(function() {}); } catch (_) {}
+              (retired[m.watcher] || (retired[m.watcher] = [])).push(m.ref);
+            }.bind(this));
+            Object.keys(retired).forEach(function(watcher) {
+              try { this.sendSwiWasmActorMessage(watcher, "'$startup_retire'([" + retired[watcher].join(",") + "])"); } catch (_) {}
+            }.bind(this));
+            Array.from(scope.pids).reverse().forEach(function(pid) {
+              this.swiWasmReservedWorkerActorPids[pid] = false; // Reject late startup of a rolled-back reservation.
+              var entry = this.swiWasmActorWorkers[pid];
+              if (entry && entry.rejectReady) {
+                entry.rejectReady(new Error("supervisor startup rolled back"));
+                entry.resolveReady = null; entry.rejectReady = null;
+              }
+              try { Promise.resolve(this.exitSwiWasmActor(pid, "kill")).catch(function() {}); } catch (_) {}
+              if (entry && entry.worker) { try { entry.worker.terminate(); } catch (_) {} }
+            }.bind(this));
+            return true;
+          },
+          reserveSwiWasmName: function(owner, token, name) {
+            this.swiWasmNameReservations = this.swiWasmNameReservations || Object.create(null);
+            var registry = this.swiWasmActorNames, reservations = this.swiWasmNameReservations;
+            name = String(name); owner = String(owner); token = String(token);
+            if (!this.swiWasmActorPidLive(owner)) return "missing";
+            if (Object.prototype.hasOwnProperty.call(registry, name) || reservations[name]) return "collision";
+            this.openSwiWasmStartup(owner, token);
+            reservations[name] = {owner:owner, token:token};
+            return "reserved";
+          },
+          publishSwiWasmName: function(owner, token, name, pidText, chartLive) {
+            name = String(name);
+            var reservation = (this.swiWasmNameReservations || {})[name];
+            if (!reservation || reservation.owner !== String(owner) || reservation.token !== String(token)) return "missing";
+            var pid = this.resolveSwiWasmActorTarget(pidText), entry = this.swiWasmActorWorkers[pid];
+            var registry = this.swiWasmActorNames;
+            if (Object.keys(registry).some(function(key) { return registry[key] === pid && key !== name; }) ||
+                Object.keys(this.swiWasmNameReservations).some(function(key) { return key !== name && this.swiWasmNameReservations[key].pid === pid; }.bind(this))) return "collision";
+            // Normal early termination still succeeds as a spawn, but must not
+            // publish a dead actor or interfere with its down notification.
+            var isChart = pid === "statechart" && String(owner) === "main";
+            var live = isChart ? chartLive !== false && String(chartLive) !== "false" : this.swiWasmActorPidLive(pid);
+            if (!live) {
+              if (!isChart && (!entry || !entry.done)) return "missing";
+            } else {
+              if (Object.prototype.hasOwnProperty.call(registry, name)) return "collision";
+            }
+            // Keep rollback ownership until Prolog has resumed after this reply.
+            // No alias is visible during that interruptible wait.
+            reservation.pid = pid; reservation.chartLive = live;
+            return "published";
+          },
+          commitSwiWasmName: function(owner, token, name) {
+            name = String(name);
+            var r = (this.swiWasmNameReservations || {})[name];
+            if (!r || r.owner !== String(owner) || r.token !== String(token) || r.pid === undefined) return false;
+            var isChart = r.pid === "statechart" && String(owner) === "main";
+            var live = isChart ? r.chartLive : this.swiWasmActorPidLive(r.pid);
+            if (isChart) this.swiWasmStatechartActive = live;
+            if (live) Object.defineProperty(this.swiWasmActorNames, name, {value:r.pid, configurable:true, writable:true, enumerable:true});
+            this.finishSwiWasmStartup(owner, token, true);
+            delete this.swiWasmNameReservations[name];
+            return true;
+          },
+          releaseSwiWasmName: function(owner, token, name) {
+            var reservation = (this.swiWasmNameReservations || {})[String(name)];
+            if (!reservation || reservation.owner !== String(owner) || reservation.token !== String(token)) return true;
+            // Keep the name occupied until rollback has withdrawn actors.
+            this.finishSwiWasmStartup(owner, token, false);
+            delete this.swiWasmNameReservations[String(name)];
+            return true;
+          },
+          releaseSwiWasmNamesForOwner: function(owner) {
+            Object.keys(this.swiWasmNameReservations || {}).forEach(function(name) {
+              var r = this.swiWasmNameReservations[name];
+              if (r.owner === String(owner)) this.releaseSwiWasmName(owner, r.token, name);
+            }.bind(this));
           },
           swiWasmWorkerScopeKey: function(watcher, token) {
             return JSON.stringify([String(watcher), String(token)]);
@@ -10684,11 +10786,14 @@
             var pid = pidText ? String(pidText) : this.reserveSwiWasmWorkerActorPid();
             var worker;
             var entry;
+            if (this.swiWasmReservedWorkerActorPids[pid] === false) throw new Error("supervisor startup rolled back");
             if (this.swiWasmActorWorkers[pid]) {
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-wrapper-options-v12";
+            if (startFields && startFields.parentPid && this.trackSwiWasmStartup) this.trackSwiWasmStartup(startFields.parentPid, pid);
+            if (nameText) throw new Error("named Worker creation requires a reservation");
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-local-names-v16";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10719,9 +10824,6 @@
             });
             entry.readyPromise.catch(function() {});
             this.swiWasmActorWorkers[pid] = entry;
-            if (nameText) {
-              this.registerSwiWasmActorName("actor", nameText, pid);
-            }
             worker.onmessage = this.handleSwiWasmWorkerActorMessage.bind(this, pid);
             worker.onerror = function(error) {
               var message = error && error.message ? error.message : String(error);
@@ -10822,7 +10924,7 @@
           },
           spawnSwiWasmStatechartActor: function(sourceKind, sourceText, parentPid,
                                                 nameText, linked, supportSourceText,
-                                                ioTargetText, traceEnabled) {
+                                                ioTargetText, traceEnabled, startupOwner) {
             var self = this;
             var parent = String(parentPid || (this.isSwiWasm2Mode ? this.swiWasm2ShellPid : "main"));
             var parentEntry = this.swiWasmActorWorkers[parent];
@@ -10839,8 +10941,9 @@
               ? Promise.resolve(String(sourceText || ""))
               : this.loadSwiWasmAssetSource(sourceText);
             return sourcePromise.then(function(xml) {
+              var candidate = self.reserveSwiWasmWorkerActorPid(startupOwner || parent);
               return self.spawnSwiWasmWorkerActorReady(
-                "statechart_actor_loop", " ", "", String(nameText || ""), "statechart_actor",
+                "statechart_actor_loop", " ", candidate, String(nameText || ""), "statechart_actor",
                 {
                   statechartXml: xml,
                   statechartSupportSource: String(supportSourceText || ""),
@@ -10852,7 +10955,20 @@
               );
             });
           },
-          requestSwiWasmWorkerRpc: function(message) {
+          disposeSwiWasmPromiseRequest: function(pid, ref) {
+            var entry = this.swiWasmActorWorkers[pid];
+            var requests = entry && entry.promiseRequests;
+            if (!requests) return;
+            var refs = ref === undefined ? Object.keys(requests) : [String(ref)];
+            refs.forEach(function(key) {
+              var resource = requests[key];
+              if (!resource) return;
+              delete requests[key];
+              if (resource.timer !== null) clearTimeout(resource.timer);
+              resource.controller.abort();
+            });
+          },
+          requestSwiWasmWorkerRpc: function(message, ownerPid) {
             var node = resolveBrowserRpcBaseUri(message.node || "");
             var url = new URL(node, window.location.origin);
             var path = url.pathname.replace(/\/$/, "");
@@ -10877,16 +10993,27 @@
               url.searchParams.set("once", "true");
             }
             var controller = new AbortController();
+            var owner = this.swiWasmActorWorkers && this.swiWasmActorWorkers[ownerPid];
+            var ref = message.promise_ref ? String(message.promise_ref) : null;
+            if (ref && owner && owner.done) return Promise.reject(new Error("promise Worker has stopped"));
+            var resource = {controller:controller, timer:null};
+            if (ref && owner) {
+              owner.promiseRequests = owner.promiseRequests || Object.create(null);
+              owner.promiseRequests[ref] = resource;
+            }
             var httpTimeout = message.httpTimeout === null || message.httpTimeout === undefined
               ? NaN
               : Number(message.httpTimeout);
             var timer = isFinite(httpTimeout) && httpTimeout >= 0
               ? setTimeout(function() { controller.abort(); }, httpTimeout * 1000)
               : null;
-            return fetch(url.href, {
+            resource.timer = timer;
+            return Promise.resolve().then(function() {
+              if (controller.signal.aborted) throw new Error("promise request disposed");
+              return fetch(url.href, {
               credentials: "same-origin",
               signal: controller.signal
-            }).then(function(response) {
+            }); }).then(function(response) {
               return response.text().then(function(text) {
                 if (!response.ok) {
                   var detail = String(text || "").replace(/\s+/g, " ").trim();
@@ -10902,6 +11029,7 @@
               throw error;
             }).finally(function() {
               if (timer !== null) clearTimeout(timer);
+              if (ref && owner && owner.promiseRequests[ref] === resource) delete owner.promiseRequests[ref];
             });
           },
           swiWasmRemoteWsUrl: function(nodeText) {
@@ -11238,6 +11366,7 @@
               entry.retireTimer = null;
             }
             if (entry.worker) {
+              this.disposeSwiWasmPromiseRequest(pid);
               try { entry.worker.terminate(); } catch (_error) {}
             }
             delete this.swiWasmActorWorkers[pid];
@@ -11513,12 +11642,32 @@
               this.sendSwiWasmActorMessageDelayed(message.to, message.message, message.delay, message.id);
               return;
             }
+            if (message.type === "promise_dispose") {
+              this.disposeSwiWasmPromiseRequest(pid, message.ref);
+              return;
+            }
             if (message.type === "cancel") {
               this.cancelSwiWasmActorMessage(message.id);
               return;
             }
             if (message.type === "monitor") {
               this.monitorSwiWasmActor(pid, message.target, message.ref);
+              return;
+            }
+            if (message.type === "name_commit") {
+              this.commitSwiWasmName(pid, message.token, message.name);
+              return;
+            }
+            if (message.type === "name_release") {
+              this.releaseSwiWasmName(pid, message.token, message.name);
+              return;
+            }
+            if (message.type === "startup_open") {
+              this.openSwiWasmStartup(pid, message.token);
+              return;
+            }
+            if (message.type === "startup_finish") {
+              this.finishSwiWasmStartup(pid, message.token, message.committed === true);
               return;
             }
             if (message.type === "worker_scope_open") {
@@ -11570,6 +11719,7 @@
               // itself) - reap its worker so a finished actor does not
               // keep a whole SWI-WASM engine alive.
               if (pid !== "main" && entry.worker) {
+                this.disposeSwiWasmPromiseRequest(pid);
                 try { entry.worker.terminate(); } catch (_reapError) {}
               }
               if (entry.role === "shell_toplevel" &&
@@ -11622,6 +11772,12 @@
             var error = "";
             try {
               switch (String(message.action || "")) {
+              case "name_reserve":
+                result = this.reserveSwiWasmName(pid, message.token, message.name);
+                break;
+              case "name_publish":
+                result = this.publishSwiWasmName(pid, message.token, message.name, message.pid);
+                break;
               case "worker_scope_reserve":
                 result = this.reserveSwiWasmScopedWorker(pid, message.scope);
                 break;
@@ -11633,7 +11789,7 @@
                 result = true;
                 break;
               case "reserve_pid":
-                result = this.reserveSwiWasmWorkerActorPid();
+                result = this.reserveSwiWasmWorkerActorPid(pid);
                 break;
               case "make_ref":
                 result = this.reserveSwiWasmActorRef();
@@ -11660,7 +11816,9 @@
                 );
                 break;
               case "remote_spawn":
-                result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "");
+                result = this.spawnSwiWasmRemoteActor(message.node || "", message.goal || "true", message.source || "").then(function(remotePid) {
+                  this.trackSwiWasmStartup(pid, remotePid); return remotePid;
+                }.bind(this));
                 break;
               case "remote_toplevel_spawn":
                 result = this.spawnSwiWasmRemoteToplevel(
@@ -11669,7 +11827,7 @@
                 );
                 break;
               case "rpc":
-                result = this.requestSwiWasmWorkerRpc(message);
+                result = this.requestSwiWasmWorkerRpc(message, pid);
                 break;
               case "src_uri":
                 result = this.loadSwiWasmUriSource(message.uri || "");
@@ -11911,7 +12069,9 @@
             if (!name || !this.swiWasmActorPidLive(pid)) {
               return false;
             }
-            if (registry[name] && registry[name] !== pid) {
+            if ((String(kind || "actor") !== "service" && ((this.swiWasmNameReservations || Object.create(null))[name] ||
+                 Object.keys(this.swiWasmNameReservations || {}).some(function(key) { return this.swiWasmNameReservations[key].pid === pid; }.bind(this)))) ||
+                (Object.prototype.hasOwnProperty.call(registry, name) && registry[name] !== pid)) {
               return false;
             }
             if (Object.keys(registry).some(function(existing) {
@@ -11922,7 +12082,7 @@
             })) {
               return false;
             }
-            registry[name] = pid;
+            Object.defineProperty(registry, name, {value:pid, configurable:true, writable:true, enumerable:true});
             return true;
           },
           unregisterSwiWasmActorName: function(kind, nameText) {
@@ -11937,7 +12097,7 @@
           whereisSwiWasmActorName: function(kind, nameText) {
             var registry = String(kind || "actor") === "service" ? this.swiWasmActorServices : this.swiWasmActorNames;
             var name = String(nameText || "");
-            return registry[name] ? qualifySwiWasmLocalPid(registry[name]) : "undefined";
+            return Object.prototype.hasOwnProperty.call(registry, name) ? qualifySwiWasmLocalPid(registry[name]) : "undefined";
           },
           swiWasmActorPidLive: function(pidText) {
             var pid = String(pidText || "");
@@ -11974,6 +12134,7 @@
             var pid = this.resolveSwiWasmActorTarget(pidText);
             var ref = String(refText || "");
             var localEntry;
+            if (this.trackSwiWasmStartup) this.trackSwiWasmStartup(watcher, pid, ref);
             if (!ref || !this.swiWasmActorPidLive(watcher)) {
               return false;
             }
@@ -12066,7 +12227,14 @@
           },
           terminateLinkedSwiWasmChildren: function(parentPid) {
             var parent = String(parentPid);
+            if (this.releaseSwiWasmNamesForOwner) this.releaseSwiWasmNamesForOwner(parent);
             this.closeSwiWasmWorkerScopes(parent);
+            Object.keys(this.swiWasmStartups || {}).forEach(function(key) {
+              var scope = this.swiWasmStartups[key];
+              if (scope && scope.owner === parent) {
+                this.finishSwiWasmStartup(parent, JSON.parse(key)[1], false);
+              }
+            }.bind(this));
             Object.keys(this.swiWasmActorWorkers || {}).forEach(function(pid) {
               var child = this.swiWasmActorWorkers[pid];
               if (child && child.worker && !child.done && child.linked &&
@@ -12100,6 +12268,7 @@
             }
             entry.done = true;
             entry.reason = reason;
+            this.disposeSwiWasmPromiseRequest(pid);
             this.terminateLinkedSwiWasmChildren(pid);
             try {
               entry.worker.postMessage({ command: "terminate", reason: reason });
@@ -12154,6 +12323,7 @@
           //  an uncaught worker error (worker.onerror), which would otherwise
           //  leave a ghost actor live in actors/1, names, and monitors.
           finalizeSwiWasmWorkerActor: function(pid, reason) {
+            this.disposeSwiWasmPromiseRequest(pid);
             var entry = this.swiWasmActorWorkers[pid];
             if (!entry) return;
             if (!entry.done) {
@@ -12207,6 +12377,7 @@
           resetSwiWasmActorWorkers: function() {
             Object.keys(this.swiWasmActorWorkers || {}).forEach(function(pid) {
               var entry = this.swiWasmActorWorkers[pid];
+              this.disposeSwiWasmPromiseRequest(pid);
               if (entry && entry.worker) {
                 try {
                   entry.worker.postMessage({ command: "terminate" });
@@ -12260,7 +12431,35 @@
           swiWasmBehaviourProlog: function() {
             return [
               "% Browser-worker implementation of generic servers and supervisors.",
-              ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), server_upgrade(+, :, +), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -).",
+              ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), server_upgrade(+, :, +), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -), wasm_startup_scope(0), browser_named_creation(+, -, +, -, 0).",
+              "browser_named_creation(Options, Pid, PI, Inner, Goal) :-",
+              "    option(node(Node), Options, localhost),",
+              "    ( Node == localhost, option(name(Name), Options)",
+              "    -> exclude(browser_wrapper_option([name]), Options, Inner),",
+              "       Guard = named(open, none),",
+              "       setup_call_cleanup((Token := swiWasmNameToken()),",
+              "         ( term_string(Name, NameText),",
+              "           Reservation := swiWasmNameReserve(#Token, #NameText),",
+              "           browser_name_await(Reservation, Status),",
+              "           (Status == \"reserved\" -> true ; throw(error(permission_error(register,actor_name,Name),PI))),",
+              "           (PI == statechart_spawn/2, runtime_property(implementation(swi_wasm_main)),",
+              "            \\+ statechart_wasm:statechart_running -> nb_setarg(2, Guard, statechart) ; true),",
+              "           once(call(Goal)),",
+              "           term_string(Pid, PidText),",
+              "           (Pid == statechart -> (statechart_wasm:statechart_running -> ChartLive=true ; ChartLive=false) ; ChartLive=true),",
+              "           Publication := swiWasmNamePublish(#Token, #NameText, #PidText, #ChartLive),",
+              "           browser_name_await(Publication, Published),",
+              "           (Published == \"published\" -> Committed := swiWasmNameCommit(#Token, #NameText),",
+              "              (Committed == true -> nb_setarg(1, Guard, committed) ; throw(error(permission_error(register,actor_name,Name),PI)))",
+              "           ; throw(error(permission_error(register,actor_name,Name),PI))) ),",
+              "         ( (arg(1,Guard,open),arg(2,Guard,statechart) -> catch((statechart_wasm:statechart_stop,_:=swiWasmNamedChartStopped()),_,true) ; true),",
+              "           term_string(Name, ReleaseName),",
+              "           catch((_ := swiWasmNameRelease(#Token, #ReleaseName)),_,true) ))",
+              "    ; Inner = Options, call(Goal) ).",
+              "browser_name_await(Promise, Value) :-",
+              "    ( runtime_property(implementation(swi_wasm_worker))",
+              "    -> swi_wasm_actor_bridge:actor_await(Promise, Value)",
+              "    ; await(Promise, Value) ).",
               "server_spawn(Pred, State, Pid) :- server_spawn(Pred, State, Pid, []).",
               "% Strip only wrapper-owned unary options, preserving all other terms and sharing.",
               "browser_wrapper_spawn_options(Names, Options, SpawnOptions) :-",
@@ -12272,6 +12471,8 @@
               "",
               "server_spawn(Pred0, State, Pid, Options) :-",
               "    validate_browser_wrapper_options(server, server_spawn/4, Options),",
+              "    browser_named_creation(Options, Pid, server_spawn/4, Inner, server_spawn_options(Pred0, State, Pid, Inner)).",
+              "server_spawn_options(Pred0, State, Pid, Options) :-",
               "    strip_module(Pred0, Module, PlainPred), Pred = Module:PlainPred,",
               "    browser_wrapper_spawn_options([initial_state], Options, BaseOptions),",
               "    ( behaviour_spawn_options(PlainPred, 4, BaseOptions, SpawnOptions) -> true ; throw(error(server_spawn_source_failed(PlainPred), server_spawn/4)) ),",
@@ -12279,12 +12480,24 @@
               "    ( option(name(Name), Options) -> ( register(Name, Pid) -> true ; throw(error(server_registration_failed(Name, Pid), server_spawn/4)) ) ; true ).",
               "",
               "behaviour_spawn_options(Pred, Arity, Options, SpawnOptions) :-",
-              "    wasm_behaviour_source(Behaviour),",
+              "    wasm_behaviour_source(Options, Behaviour),",
               "    ( callback_source_option(Options, Pred/Arity) -> CallbackOptions = [] ; CallbackOptions = [src_predicates([Pred/Arity])] ),",
               "    append([src_text(Behaviour)|CallbackOptions], Options, SpawnOptions).",
               "callback_source_option(Options, PI) :- member(src_predicates(PIs), Options), memberchk(PI, PIs).",
               "",
               "wasm_behaviour_source(Source) :- Source := swiWasmBehaviourSource().",
+              "% Local Workers already import these definitions. Mark only our added copy;",
+              "% remote source is unchanged and has no dependency on browser loader helpers.",
+              "wasm_behaviour_source(Options, Source) :-",
+              "    wasm_behaviour_source(Behaviour), option(node(Node), Options, localhost),",
+              "    ( string_length(Behaviour, 0) -> Source = Behaviour",
+              "    ; Node == localhost",
+              "    -> atomic_list_concat([",
+              "         ':- swi_wasm_actor_bridge:behaviour_source_boundary(begin).',",
+              "         Behaviour,",
+              "         ':- swi_wasm_actor_bridge:behaviour_source_boundary(end).'",
+              "       ], '\\n', Source)",
+              "    ; Source = Behaviour ).",
               "",
               "wasm_server_loop(Pred, State0) :-",
               "    receive({",
@@ -12376,18 +12589,33 @@
               "    ( Value == brutal_kill -> true ; Value == infinity -> true",
               "    ; number(Value), Value >= 0 -> true ; domain_error(supervisor_child_shutdown, Value) ).",
               "",
+              "% JavaScript exception objects cannot cross actor mailboxes as blobs.",
+              "wasm_startup_error(Error, error(supervisor_startup_error(Message), supervisor_spawn/3)) :-",
+              "    blob(Error, Type), Type \\== text, Type \\== reserved_symbol, !,",
+              "    Message := swiWasmStartupErrorText(#Error).",
+              "wasm_startup_error(Error, Error).",
+              "",
+              "wasm_startup_scope(Goal) :-",
+              "    setup_call_cleanup((Token := swiWasmStartupOpen()),",
+              "        ( catch(once(call(Goal)), Error, (wasm_startup_error(Error, Report), throw(Report))),",
+              "          _ := swiWasmStartupFinish(#Token, #true) ),",
+              "        catch((_ := swiWasmStartupFinish(#Token, #false)), _, true)).",
+              "",
               "supervisor_spawn(Specs, Pid) :- supervisor_spawn(Specs, Pid, []).",
               "supervisor_spawn(Specs0, Pid, Options) :-",
               "    validate_browser_wrapper_options(supervisor, supervisor_spawn/3, Options),",
               "    browser_validate_child_specs(Specs0, supervisor_spawn/3),",
+              "    browser_named_creation(Options, Pid, supervisor_spawn/3, Inner, supervisor_spawn_options(Specs0, Pid, Inner)).",
+              "supervisor_spawn_options(Specs0, Pid, Options) :-",
               "    strip_module(Specs0, _Caller, Specs),",
               "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
-              "    wasm_behaviour_source(Behaviour),",
+              "    wasm_behaviour_source(Options, Behaviour),",
               "    self(Parent),",
               "    browser_wrapper_spawn_options([strategy,intensity,period], Options, SpawnOptions),",
-              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [src_text(Behaviour)|SpawnOptions]),",
-              "    wasm_wait_supervisor_ready(Pid),",
-              "    ( option(name(Name), Options) -> register(Name, Pid) ; true ).",
+              "    wasm_startup_scope((",
+              "        spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [src_text(Behaviour)|SpawnOptions]),",
+              "        wasm_wait_supervisor_ready(Pid),",
+              "        ( option(name(Name), Options) -> register(Name, Pid) ; true ) )).",
               "",
               "wasm_wait_supervisor_ready(Pid) :-",
               "    receive({'$supervisor_ready'(Pid) -> true ; '$supervisor_failed'(Pid, Reason) -> throw(error(supervisor_start_failed(Pid, Reason), supervisor_spawn/3))}, [timeout(10), on_timeout(throw(error(timeout_error(supervisor_start, Pid), supervisor_spawn/3)))]).",
@@ -12395,7 +12623,7 @@
               "wasm_supervisor_init(Parent, Specs, State0) :-",
               "    self(Self),",
               "    catch(",
-              "      ( wasm_start_specs(Specs, State0, State)",
+              "      ( wasm_startup_scope(wasm_start_specs(Specs, State0, State))",
               "      -> send(Parent, '$supervisor_ready'(Self)), wasm_supervisor_loop(State)",
               "      ;  send(Parent, '$supervisor_failed'(Self, start_failed)), exit(start_failed)",
               "      ),",
@@ -12405,12 +12633,13 @@
               "wasm_start_specs([], State, State).",
               "wasm_start_specs([Spec|Rest], State0, State) :- wasm_start_child(Spec, State0, State1), wasm_start_specs(Rest, State1, State).",
               "",
-              "wasm_start_child(child(Id, ChildOptions), sup(Str, Max, Period, Children, Restarts), sup(Str, Max, Period, Children1, Restarts)) :-",
+              "wasm_start_child(Spec, sup(Str, Max, Period, Children, Restarts), sup(Str, Max, Period, Children1, Restarts)) :-",
+              "    wasm_spawn_child_record(Spec, Child), append(Children, [Child], Children1).",
+              "wasm_spawn_child_record(child(Id, ChildOptions), child(Id, Pid, child(Id, ChildOptions))) :-",
               "    ( option(start(Start), ChildOptions) -> true ; throw(error(child_missing_start(Id), wasm_start_child/3)) ),",
               "    browser_wrapper_spawn_options([start,restart,shutdown,type,significant], ChildOptions, SpawnOptions),",
               "    ( wasm_child_start(Start, Id, SpawnOptions, Pid) -> true ; throw(error(child_spawn_failed(Id, Start), wasm_start_child/3)) ),",
-              "    ( monitor(Pid, _) -> true ; throw(error(child_monitor_failed(Id, Pid), wasm_start_child/3)) ),",
-              "    append(Children, [child(Id, Pid, child(Id, ChildOptions))], Children1).",
+              "    ( monitor(Pid, _) -> true ; throw(error(child_monitor_failed(Id, Pid), wasm_start_child/3)) ).",
               "wasm_child_start(server(Pred, ServerOptions), Id, ChildOptions, Pid) :- !, option(initial_state(State), ServerOptions, []), append(ServerOptions, [name(Id)|ChildOptions], Options), server_spawn(Pred, State, Pid, Options).",
               "wasm_child_start(start_sub_supervisor(Specs, SupOptions), Id, ChildOptions, Pid) :- !, append(SupOptions, [name(Id)|ChildOptions], Options), supervisor_spawn(Specs, Pid, Options).",
               "wasm_child_start(Goal, Id, ChildOptions, Pid) :- spawn(Goal, Pid, [name(Id)|ChildOptions]).",
@@ -12421,39 +12650,75 @@
               "    '$sup_stop'(From) -> wasm_stop_children(State0), send(From, reply(true))",
               "  }).",
               "",
+              "% Keep stopped/replaced records at their original positions.",
+              "wasm_child_position(Id, Children, Before, Pid, Spec, After) :-",
+              "    append(Before, [child(Id,Pid,Spec)|After], Children), !.",
               "wasm_handle_down(Pid, Reason, State0, State) :-",
               "    State0 = sup(Strategy, Max, Period, Children, Restarts),",
-              "    ( select(child(Id, Pid, Spec), Children, Remaining) ->",
+              "    ( Pid \\== undefined, append(Before, [child(Id,Pid,Spec)|After], Children) ->",
               "      Spec = child(_, Options), option(restart(Restart), Options, permanent),",
-              "      ( wasm_should_restart(Restart, Reason) -> wasm_note_restart(Max, Period, Restarts, Restarts1), wasm_apply_strategy(Strategy, Id, Spec, Remaining, sup(Strategy, Max, Period, Remaining, Restarts1), State) ; State = sup(Strategy, Max, Period, Remaining, Restarts) )",
+              "      append(Before, [child(Id,undefined,Spec)|After], Marked),",
+              "      ( wasm_should_restart(Restart, Reason)",
+              "      -> wasm_note_restart(Max, Period, Restarts, Restarts1),",
+              "         wasm_apply_strategy(Strategy, Id, Spec, Marked, sup(Strategy,Max,Period,Marked,Restarts1), State)",
+              "      ; ( Restart == temporary -> append(Before, After, Remaining) ; Remaining = Marked ),",
+              "        State = sup(Strategy,Max,Period,Remaining,Restarts) )",
               "    ; State = State0 ).",
               "wasm_should_restart(permanent, _).",
               "wasm_should_restart(transient, Reason) :- Reason \\== true.",
               "wasm_note_restart(Max, Period, Restarts0, Restarts) :- get_time(Now), Cutoff is Now-Period, include(wasm_recent(Cutoff), Restarts0, Recent), length(Recent, Count), (Count >= Max -> exit(shutdown) ; Restarts = [Now|Recent]).",
               "wasm_recent(Cutoff, Time) :- Time > Cutoff.",
               "",
-              "wasm_apply_strategy(one_for_one, _Id, Spec, Children, sup(Str,Max,Period,_,Restarts), State) :- wasm_start_child(Spec, sup(Str,Max,Period,Children,Restarts), State).",
-              "wasm_apply_strategy(one_for_all, _Id, Spec, Children, sup(Str,Max,Period,_,Restarts), State) :- wasm_stop_child_list(Children), wasm_specs_from_children(Children, Existing), append([Spec], Existing, Specs), wasm_start_specs(Specs, sup(Str,Max,Period,[],Restarts), State).",
-              "wasm_apply_strategy(rest_for_one, _Id, Spec, Children, sup(Str,Max,Period,_,Restarts), State) :- wasm_restart_from(Spec, Children, Specs), wasm_stop_child_list(Children), wasm_start_specs(Specs, sup(Str,Max,Period,[],Restarts), State).",
-              "wasm_specs_from_children([], []).",
-              "wasm_specs_from_children([child(_,_,Spec)|Rest], [Spec|Specs]) :- wasm_specs_from_children(Rest, Specs).",
-              "wasm_restart_from(Spec, Children, Specs) :- wasm_specs_from_children(Children, Existing), append([Spec], Existing, Specs).",
+              "wasm_apply_strategy(one_for_one, Id, Spec, Children, sup(Str,Max,Period,_,R), sup(Str,Max,Period,NewChildren,R)) :-",
+              "    wasm_child_position(Id, Children, Before, _, _, After),",
+              "    wasm_spawn_child_record(Spec, Child), append(Before, [Child|After], NewChildren).",
+              "wasm_apply_strategy(one_for_all, _, _, Children, sup(Str,Max,Period,_,R), sup(Str,Max,Period,NewChildren,R)) :-",
+              "    wasm_stop_child_list(Children), maplist(wasm_restart_child_record, Children, NewChildren).",
+              "wasm_apply_strategy(rest_for_one, Id, _, Children, sup(Str,Max,Period,_,R), sup(Str,Max,Period,NewChildren,R)) :-",
+              "    wasm_child_position(Id, Children, Before, Pid, Spec, After),",
+              "    Affected = [child(Id,Pid,Spec)|After],",
+              "    wasm_stop_child_list(Affected), maplist(wasm_restart_child_record, Affected, Restarted),",
+              "    append(Before, Restarted, NewChildren).",
+              "wasm_restart_child_record(child(_,_,Spec), Child) :- wasm_spawn_child_record(Spec, Child).",
               "wasm_stop_child_list([]).",
-              "wasm_stop_child_list([child(_,Pid,_)|Rest]) :- catch(exit(Pid, shutdown), _, true), wasm_stop_child_list(Rest).",
+              "wasm_stop_child_list([child(_,Pid,_)|Rest]) :-",
+              "    ( Pid == undefined -> true ; catch(exit(Pid, shutdown), _, true) ),",
+              "    wasm_stop_child_list(Rest).",
               "wasm_stop_children(sup(_,_,_,Children,_)) :- wasm_stop_child_list(Children).",
               "",
               "wasm_handle_supervisor_call(which_children, Children, State, State) :- State = sup(_,_,_,Children,_).",
-              "wasm_handle_supervisor_call(count_children, counts(Total,Active), State, State) :- State = sup(_,_,_,Children,_), length(Children, Total), Active = Total.",
+              "wasm_handle_supervisor_call(count_children, counts(Total,Active), State, State) :- State = sup(_,_,_,Children,_), length(Children, Total), include(wasm_child_running, Children, Running), length(Running, Active).",
               "wasm_handle_supervisor_call(start_child(Spec0), Reply, State0, State) :-",
               "    catch((browser_validate_child_spec(Spec0, Spec, supervisor_spawn_child/3), Valid=true), Error, Valid=error(Error)),",
               "    ( Valid = error(Invalid) -> Reply=error(Invalid), State=State0",
               "    ; State0=sup(_,_,_,Children,_), Spec=child(Id,_),",
               "      ( memberchk(child(Id,_,_), Children) -> Reply=error(already_present), State=State0",
-              "      ; wasm_start_child(Spec, State0, State) -> Reply=ok",
-              "      ; Reply=error(start_failed), State=State0 ) ).",
-              "wasm_handle_supervisor_call(terminate_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,Spec),Children,Rest) -> exit(Pid,shutdown), Reply=ok, State=sup(Str,Max,Period,[child(Id,undefined,Spec)|Rest],R) ; Reply=error(not_found), State=State0).",
-              "wasm_handle_supervisor_call(delete_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,_Spec),Children,Rest) -> catch(exit(Pid,shutdown),_,true), Reply=ok, State=sup(Str,Max,Period,Rest,R) ; Reply=error(not_found), State=State0).",
-              "wasm_handle_supervisor_call(restart_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,Spec),Children,Rest) -> catch(exit(Pid,shutdown),_,true), wasm_start_child(Spec,sup(Str,Max,Period,Rest,R),State), Reply=ok ; Reply=error(not_found),State=State0).",
+              "      ; catch((wasm_startup_scope(wasm_start_child(Spec, State0, NewState)) -> Outcome=ok ; Outcome=error(start_failed)),",
+              "              StartError, (wasm_startup_error(StartError, Report), Outcome=error(Report))),",
+              "        ( Outcome == ok -> Reply=ok, State=NewState ; Reply=Outcome, State=State0 ) ) ).",
+              "wasm_handle_supervisor_call(terminate_child(Id), Reply, State0, State) :-",
+              "    State0=sup(Str,Max,Period,Children,R),",
+              "    ( wasm_child_position(Id, Children, Before, Pid, Spec, After)",
+              "    -> ( Pid == undefined -> true ; exit(Pid,shutdown) ),",
+              "       append(Before, [child(Id,undefined,Spec)|After], NewChildren),",
+              "       Reply=ok, State=sup(Str,Max,Period,NewChildren,R)",
+              "    ; Reply=error(not_found), State=State0 ).",
+              "wasm_handle_supervisor_call(delete_child(Id), Reply, State0, State) :-",
+              "    State0=sup(Str,Max,Period,Children,R),",
+              "    ( wasm_child_position(Id, Children, Before, Pid, _, After)",
+              "    -> ( Pid == undefined -> append(Before, After, NewChildren), Reply=ok, State=sup(Str,Max,Period,NewChildren,R)",
+              "       ; Reply=error(running), State=State0 )",
+              "    ; Reply=error(not_found), State=State0 ).",
+              "wasm_handle_supervisor_call(restart_child(Id), Reply, State0, State) :-",
+              "    State0=sup(Str,Max,Period,Children,R),",
+              "    ( wasm_child_position(Id, Children, Before, Pid, Spec, After)",
+              "    -> ( Pid == undefined",
+              "       -> ( wasm_spawn_child_record(Spec, Child)",
+              "          -> append(Before, [Child|After], NewChildren), Reply=ok, State=sup(Str,Max,Period,NewChildren,R)",
+              "          ; Reply=error(start_failed), State=State0 )",
+              "       ; Reply=error(running), State=State0 )",
+              "    ; Reply=error(not_found), State=State0 ).",
+              "wasm_child_running(child(_,Pid,_)) :- Pid \\== undefined.",
               "",
               "wasm_supervisor_call(Sup, Request, Reply) :- self(Self), make_ref(Ref), send(Sup, '$sup'(Self,Ref,Request)), receive({Ref-Reply -> true}, [timeout(10)]).",
               "supervisor_spawn_child(Sup, Spec0, Reply) :- browser_validate_child_spec(Spec0, Spec, supervisor_spawn_child/3), wasm_supervisor_call(Sup, start_child(Spec), Reply).",
@@ -12500,7 +12765,7 @@
               "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
               "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
               "    parallel/1, first_solution/2, first_solution/3,",
-              "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3, runtime_property/1",
+              "    rpc/2, rpc/3, promise/3, promise/4, promise_cleanup/1, yield/2, yield/3, runtime_property/1",
               "]).",
               ":- op(800, xfx, !).",
               ":- op(200, xfx, @).",
@@ -12524,10 +12789,33 @@
               "runtime_property(actor_isolation(cooperative_engine)).",
               "runtime_property(hard_termination(false)).",
               "",
+              ":- dynamic behaviour_source_load/1, behaviour_source_block/1.",
+              "% The active load's clause reference scopes markers across nested loads and",
+              "% is erased on success, exception or interruption, even without an end marker.",
+              "load_behaviour_source(File) :-",
+              "    atom_string(Path, File),",
+              "    setup_call_cleanup(",
+              "        asserta(behaviour_source_load(Path), Ref),",
+              "        user:consult(File),",
+              "        (erase(Ref), retractall(behaviour_source_block(Ref)))",
+              "    ).",
+              "behaviour_source_boundary(Boundary) :-",
+              "    prolog_load_context(file, File),",
+              "    clause(behaviour_source_load(File), true, Ref), !,",
+              "    ( Boundary == begin -> assertz(behaviour_source_block(Ref))",
+              "    ; retractall(behaviour_source_block(Ref)) ).",
+              "behaviour_source_boundary(_).",
+              "internal_behaviour_loading :-",
+              "    prolog_load_context(file, File),",
+              "    clause(behaviour_source_load(File), true, Ref),",
+              "    behaviour_source_block(Ref).",
+              "user:message_hook(ignored_weak_import(user, swi_wasm_actor_bridge:_), warning, _) :-",
+              "    swi_wasm_actor_bridge:internal_behaviour_loading.",
+              "",
               "load_private_source(File) :-",
               "    setup_call_cleanup(",
               "        asserta(suppress_shared_override_warnings, Ref),",
-              "        user:consult(File),",
+              "        load_behaviour_source(File),",
               "        erase(Ref)",
               "    ),",
               "    restore_shared_db_imports.",
@@ -12616,6 +12904,8 @@
               "",
               "spawn(Goal, Pid, Options) :-",
               "    validate_browser_spawn_options(Options),",
+              "    browser_named_creation(Options, Pid, spawn/3, Inner, browser_spawn_options(Goal, Pid, Inner)).",
+              "browser_spawn_options(Goal, Pid, Options) :-",
               "    option(node(Node), Options, localhost),",
               "    %  Bind Pid BEFORE term_string(Goal, ...): the spawned goal must",
               "    %  carry the qualified local pid, not an unbound variable.",
@@ -12992,6 +13282,8 @@
               "",
               "toplevel_spawn(Pid, Options) :-",
               "    validate_browser_wrapper_options(toplevel, toplevel_spawn/2, Options),",
+              "    browser_named_creation(Options, Pid, toplevel_spawn/2, Inner, browser_toplevel_spawn_options(Pid, Inner)).",
+              "browser_toplevel_spawn_options(Pid, Options) :-",
               "    collect_spawn_source(Options, ExtraSource),",
               "    option(node(Node), Options, localhost),",
               "    option(time_limit(TimeLimit0), Options, infinite),",
@@ -13168,6 +13460,8 @@
               "",
               "statechart_spawn(Pid, Options) :-",
               "    validate_browser_wrapper_options(statechart, statechart_spawn/2, Options),",
+              "    browser_named_creation(Options, Pid, statechart_spawn/2, Inner, browser_statechart_spawn_options(Pid, Inner)).",
+              "browser_statechart_spawn_options(Pid, Options) :-",
               "    statechart_spawn_source(Options, SourceKind, Source),",
               "    validate_statechart_text_source(SourceKind, Source),",
               "    collect_statechart_support_source(Options, SupportSource),",
@@ -13217,6 +13511,7 @@
               "statechart_halt(statechart, Reply, _Timeout) :-",
               "    !,",
               "    statechart_wasm:statechart_stop,",
+              "    _ := swiWasmNamedChartStopped(),",
               "    Reply = stopped.",
               "statechart_halt(Pid, _, _) :-",
               "    throw(error(existence_error(statechart, Pid), statechart_halt/3)).",
@@ -13391,6 +13686,7 @@
               "    forall((clause(deferred(Msg), true, Clause), nonvar(Msg),",
               "            Msg = down(_, MessageRef, _), MessageRef == Ref), erase(Clause)).",
               "",
+              "discard_server_monitor_message('$startup_retire'(Refs)) :- !, maplist(server_monitor_cleanup, Refs).",
               "discard_server_monitor_message('$server_monitor_cleaned'(Ref)) :-",
               "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)).",
               "discard_server_monitor_message(down(_, Ref, _)) :- retiring_server_monitor(Retired), Ref == Retired.",
@@ -13612,6 +13908,9 @@
               "    RefText := swiPromiseStart(#FinalURL, #HTTPTimeout),",
               "    atom_number(RefText, Ref).",
               "",
+              "promise_cleanup(Ref) :-",
+              "    must_be(integer, Ref), number_string(Ref, RefText), _ := swiPromiseCleanup(#RefText).",
+              "",
               "yield(Ref, Message) :- yield(Ref, Message, []).",
               "",
               "yield(Ref, Message, Options0) :-",
@@ -13620,8 +13919,18 @@
               "    validate_rpc_client_options(yield, Options),",
               "    option(timeout(Timeout), Options, -1),",
               "    number_string(Ref, RefText),",
-              "    Promise := swiPromiseWait(#RefText, #Timeout),",
-              "    await(Promise, ResponseText),",
+              "    setup_call_cleanup(",
+              "      ( Claim := swiPromiseClaim(#RefText),",
+              "        ( Claim == missing_promise -> throw(error(existence_error(promise, Ref), context(yield/3, 'unknown, consumed or expired promise')))",
+              "        ; Claim == busy_promise -> throw(error(permission_error(collect,promise,Ref), context(yield/3, 'promise already has a collector')))",
+              "        ; true ) ),",
+              "      ( Promise := swiPromiseWait(#RefText, #Claim, #Timeout),",
+              "        await(Promise, ResponseText),",
+              "        ( ResponseText == null -> true ; ResponseText == \"missing_promise\" -> true",
+              "        ; Status := swiPromiseCommit(#RefText, #Claim),",
+              "          ( Status == committed -> true",
+              "          ; throw(error(existence_error(promise, Ref), context(yield/3, 'promise disposed before collection'))) ) ) ),",
+              "      (_ := swiPromiseRelease(#RefText, #Claim))),",
               "    (   ResponseText == \"missing_promise\"",
               "    ->  throw(error(existence_error(promise, Ref), context(yield/3, 'unknown or consumed promise')))",
               "    ;   ResponseText = null",
@@ -13974,6 +14283,7 @@
             } catch (_) {
               return;
             }
+            if (this.swiWasmStatechartActive && !running) this.clearSwiWasmActorNamesForPid("statechart");
             this.swiWasmStatechartActive = running;
             if (running) {
               if (!Object.prototype.hasOwnProperty.call(this.lastBindings, "Pid")) {

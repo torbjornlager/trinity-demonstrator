@@ -1,5 +1,120 @@
+// Shared by the browser page and Worker. The page loads this existing asset
+// for the lifecycle store; only a Worker runs the actor bootstrap below.
+function createSwiWasmPromiseStore(options) {
+  "use strict";
+  var items = Object.create(null), nextCollector = 1;
+  var now = options.now || Date.now;
+  var schedule = options.setTimer || setTimeout;
+  var unschedule = options.clearTimer || clearTimeout;
+  var lifetime = options.ttlMs === undefined ? 300000 : options.ttlMs;
+  function settleWait(entry, value) {
+    var collector = entry.collector;
+    if (!collector || !collector.waiter) return;
+    var waiter = collector.waiter;
+    collector.waiter = null;
+    if (waiter.timer !== null) unschedule(waiter.timer);
+    waiter.resolve(value);
+  }
+  function dispose(ref) {
+    var entry = items[ref];
+    if (!entry) return true;
+    delete items[ref];
+    unschedule(entry.timer);
+    settleWait(entry, "missing_promise");
+    entry.collector = null;
+    entry.result = null;
+    if (entry.cancel) {
+      var cancel = entry.cancel; entry.cancel = null;
+      try { cancel(); } catch (_) {} // Disposal must not mask an earlier exception.
+    }
+    return true;
+  }
+  function get(ref) {
+    var entry = items[String(ref)];
+    if (entry && now() >= entry.deadline) { dispose(String(ref)); return null; }
+    return entry;
+  }
+  function create(start) {
+    var ref = String(options.mint());
+    var entry = {deadline:now()+lifetime, timer:null, ready:false, result:null, collector:null, cancel:null};
+    items[ref] = entry;
+    function expire() {
+      if (items[ref] !== entry) return;
+      if (now() >= entry.deadline) dispose(ref);
+      else entry.timer = schedule(expire, entry.deadline-now());
+    }
+    try {
+      entry.timer = schedule(expire, lifetime);
+      var request = start(ref);
+      entry.cancel = request.cancel || null;
+      // Observe rejection immediately, even when nobody ever calls yield/3.
+      Promise.resolve(request.promise).then(function(value) { complete(value); }, function(error) {
+        complete(options.errorText(error));
+      });
+    } catch (error) { dispose(ref); throw error; }
+    function complete(value) {
+      if (get(ref) !== entry) return; // Disposal wins over late completion.
+      entry.ready = true;
+      entry.result = value;
+      // A settled request no longer needs cancellation. Its own finally
+      // releases transport timers and request bookkeeping.
+      entry.cancel = null;
+      settleWait(entry, value);
+    }
+    return ref;
+  }
+  function claim(ref) {
+    var entry = get(ref);
+    if (!entry) return "missing_promise";
+    if (entry.collector) return "busy_promise";
+    var token = "promise_collector("+(nextCollector++)+")";
+    entry.collector = {token:token, waiter:null};
+    return token;
+  }
+  function wait(ref, token, timeout) {
+    var entry = get(ref);
+    if (!entry || !entry.collector || entry.collector.token !== token) return Promise.resolve("missing_promise");
+    if (entry.ready) return Promise.resolve(entry.result);
+    return new Promise(function(resolve) {
+      var collector = entry.collector;
+      var waiter = {resolve:resolve, timer:null};
+      collector.waiter = waiter;
+      if (typeof timeout === "number" && isFinite(timeout) && timeout >= 0) {
+        waiter.timer = schedule(function() {
+          if (entry.collector === collector && collector.waiter === waiter) settleWait(entry, null);
+        }, timeout*1000);
+      }
+    });
+  }
+  function release(ref, token) {
+    var entry = get(ref);
+    if (entry && entry.collector && entry.collector.token === token) {
+      settleWait(entry, "missing_promise");
+      entry.collector = null;
+    }
+    return true;
+  }
+  function commit(ref, token) {
+    var entry = get(ref);
+    if (!entry || !entry.collector || entry.collector.token !== token || !entry.ready) return "missing_promise";
+    dispose(String(ref));
+    return "committed";
+  }
+  function interruptCollectors() {
+    var count = 0;
+    Object.keys(items).forEach(function(ref) {
+      var entry = items[ref];
+      if (entry.collector) { count++; release(ref, entry.collector.token); }
+    });
+    return count;
+  }
+  return {items:items, create:create, claim:claim, wait:wait, commit:commit, release:release,
+    dispose:dispose, interruptCollectors:interruptCollectors};
+}
+
 (function() {
   "use strict";
+  if (typeof document !== "undefined") return;
 
   var selfPidText = "";
   var mailbox = [];
@@ -8,7 +123,13 @@
   var started = false;
   var nextRequestId = 1;
   var pendingRequests = {};
-  var pendingRpcPromises = {};
+  var pendingRpcPromises = createSwiWasmPromiseStore({
+    mint: makePromiseRef,
+    errorText: function(error) {
+      var detail = error && error.message ? error.message : String(error);
+      return "error(rpc_error("+JSON.stringify(detail)+"))";
+    }
+  });
   var Prolog = null;
   var Module = null;
   var exitReason = null;
@@ -274,9 +395,11 @@
         if (pendingRequests[id]) {
           delete pendingRequests[id];
           reject(new Error("actor request timed out: " + action));
+          if (fields && fields.promise_ref) post("promise_dispose", {ref:String(fields.promise_ref)});
         }
       }, REQUEST_TIMEOUT_MS);
       pendingRequests[id] = {
+        promiseRef: fields && fields.promise_ref ? String(fields.promise_ref) : null,
         resolve: function(value) { if (timer) clearTimeout(timer); resolve(value); },
         reject: function(error) { if (timer) clearTimeout(timer); reject(error); }
       };
@@ -400,8 +523,9 @@
   }
 
   function actorRpc(nodeText, goalText, templateText, offset, limit, loadText,
-                    remoteTimeout, once, httpTimeout) {
+                    remoteTimeout, once, httpTimeout, promiseRef) {
     return actorRequest("rpc", {
+      promise_ref: promiseRef || null,
       node: String(nodeText || ""),
       goal: String(goalText || "true"),
       template: String(templateText || "true"),
@@ -416,18 +540,22 @@
 
   function actorPromiseStart(nodeText, goalText, templateText, offset, limit,
                              loadText, remoteTimeout, once, httpTimeout) {
-    var ref = makePromiseRef();
-    // Attach a rejection handler immediately so an HTTP failure cannot become
-    // an unhandled promise rejection while Prolog is doing other work.
-    pendingRpcPromises[ref] = actorRpc(
-      nodeText, goalText, templateText, offset, limit, loadText,
-      remoteTimeout, once, httpTimeout
-    ).then(function(value) {
-      return { ok: true, value: value };
-    }, function(error) {
-      return { ok: false, error: error && error.message ? error.message : String(error) };
+    return pendingRpcPromises.create(function(ref) {
+      return {promise: actorRpc(nodeText, goalText, templateText, offset, limit,
+        loadText, remoteTimeout, once, httpTimeout, ref),
+        cancel: function() { cancelPromiseRequest(ref); }};
     });
-    return ref;
+  }
+
+  function cancelPromiseRequest(ref) {
+    Object.keys(pendingRequests).forEach(function(id) {
+      var request = pendingRequests[id];
+      if (request.promiseRef !== String(ref)) return;
+      delete pendingRequests[id];
+      request.reject(new Error("promise disposed"));
+    });
+    post("promise_dispose", {ref:String(ref)});
+    return true;
   }
 
   var issuedPromiseRefs = Object.create(null);
@@ -456,28 +584,8 @@
     return actorRequest("src_uri", { uri: String(uriText || "") });
   }
 
-  function actorPromiseWait(refValue, timeoutSeconds) {
-    var ref = String(refValue);
-    var pending = pendingRpcPromises[ref];
-    var timeout = Number(timeoutSeconds);
-    if (!pending) return Promise.resolve("missing_promise");
-    var timeoutMarker = {};
-    var waited = pending;
-    if (isFinite(timeout) && timeout >= 0) {
-      waited = new Promise(function(resolve) {
-        var timer = setTimeout(function() { resolve(timeoutMarker); }, timeout * 1000);
-        pending.then(function(outcome) {
-          clearTimeout(timer);
-          resolve(outcome);
-        });
-      });
-    }
-    return waited.then(function(outcome) {
-      if (outcome === timeoutMarker) return null;
-      delete pendingRpcPromises[ref];
-      if (!outcome.ok) return "error(rpc_error(" + JSON.stringify(outcome.error) + "))";
-      return outcome.value;
-    });
+  function actorPromiseWait(ref, token, timeout) {
+    return pendingRpcPromises.wait(String(ref), String(token), Number(timeout));
   }
 
   function actorStatechartSpawn(sourceKind, sourceText, supportSourceText,
@@ -598,6 +706,7 @@
       });
       Object.keys(pendingRequests).forEach(function(id) {
         var request = pendingRequests[id];
+        if (request.promiseRef) return; // Interrupt the collector, not its request.
         delete pendingRequests[id];
         request.reject(new Error("query interrupted"));
       });
@@ -917,6 +1026,23 @@
   self.actorSendDelayed = actorSendDelayed;
   self.actorCancel = actorCancel;
   self.actorSpawn = actorSpawn;
+  var nextName = 0;
+  self.swiWasmNameToken = function() { return "name-" + (++nextName); };
+  self.swiWasmNameReserve = function(token, name) { return actorRequest("name_reserve", {token:String(token), name:String(name)}); };
+  self.swiWasmNamePublish = function(token, name, pid, live) { return actorRequest("name_publish", {token:String(token), name:String(name), pid:String(pid), chartLive:live}); };
+  self.swiWasmNameCommit = function(token, name) { post("name_commit", {token:String(token), name:String(name)}); return true; };
+  self.swiWasmNameRelease = function(token, name) { post("name_release", {token:String(token), name:String(name)}); return true; };
+  self.swiWasmStartupErrorText = function(error) { return String(error && error.message || error); };
+  var nextStartup = 0;
+  self.swiWasmStartupOpen = function() {
+    var token = "startup-" + (++nextStartup);
+    post("startup_open", {token:token});
+    return token;
+  };
+  self.swiWasmStartupFinish = function(token, committed) {
+    post("startup_finish", {token:String(token), committed:committed === true || String(committed) === "true"});
+    return true;
+  };
   self.actorReservePid = actorReservePid;
   self.actorWorkerScopeOpen = actorWorkerScopeOpen;
   self.actorWorkerScopeReserve = actorWorkerScopeReserve;
@@ -931,6 +1057,10 @@
   self.actorPromiseStart = actorPromiseStart;
   self.actorLoadUri = actorLoadUri;
   self.actorPromiseWait = actorPromiseWait;
+  self.actorPromiseClaim = function(ref) { return pendingRpcPromises.claim(String(ref)); };
+  self.actorPromiseCommit = function(ref, token) { return pendingRpcPromises.commit(String(ref),String(token)); };
+  self.actorPromiseRelease = function(ref, token) { return pendingRpcPromises.release(String(ref),String(token)); };
+  self.actorPromiseCleanup = function(ref) { return pendingRpcPromises.dispose(String(ref)); };
   self.actorStatechartSpawn = actorStatechartSpawn;
   self.actorActors = actorActors;
   self.actorRegister = actorRegister;
@@ -1048,7 +1178,7 @@
       "    supervisor_terminate_child/3, supervisor_delete_child/3, supervisor_respawn_child/3,",
       "    supervisor_which_children/2, supervisor_count_children/2, supervisor_halt/1, supervisor_stop/1,",
       "    parallel/1, first_solution/2, first_solution/3,",
-      "    rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3, runtime_property/1",
+      "    rpc/2, rpc/3, promise/3, promise/4, promise_cleanup/1, yield/2, yield/3, runtime_property/1",
       "]).",
       ":- use_module(library(wasm)).",
       ":- use_module(library(apply)).",
@@ -1133,6 +1263,8 @@
       "",
       "spawn(Goal, Pid, Options) :-",
       "    validate_browser_spawn_options(Options),",
+      "    browser_named_creation(Options, Pid, spawn/3, Inner, browser_spawn_options(Goal, Pid, Inner)).",
+      "browser_spawn_options(Goal, Pid, Options) :-",
       "    option(node(Node), Options, localhost),",
       "    (   Node == localhost",
       "    ->  collect_spawn_source(Options, ExtraSource),",
@@ -1311,6 +1443,8 @@
       "",
       "statechart_spawn(Pid, Options) :-",
       "    validate_browser_wrapper_options(statechart, statechart_spawn/2, Options),",
+      "    browser_named_creation(Options, Pid, statechart_spawn/2, Inner, browser_statechart_spawn_options(Pid, Inner)).",
+      "browser_statechart_spawn_options(Pid, Options) :-",
       "    ( source_option_member(src_text(Source), Options) -> SourceKind = text",
       "    ; source_option_member(src_uri(Source), Options) -> SourceKind = uri",
       "    ; throw(error(domain_error(statechart_source_option, src_text_or_src_uri), statechart_spawn/2))",
@@ -1520,6 +1654,9 @@
       "    RefText := actorPromiseStart(#NodeText, #GoalText, #TemplateText, #Offset, #Limit, #LoadText, #RemoteTimeout, #Once, #HTTPTimeout),",
       "    atom_number(RefText, Ref).",
       "",
+      "promise_cleanup(Ref) :-",
+      "    must_be(integer, Ref), number_string(Ref, RefText), _ := actorPromiseCleanup(#RefText).",
+      "",
       "yield(Ref, Message) :- yield(Ref, Message, []).",
       "",
       "yield(Ref, Message, Options0) :-",
@@ -1528,8 +1665,18 @@
       "    validate_rpc_client_options(yield, Options),",
       "    option(timeout(Timeout), Options, -1),",
       "    number_string(Ref, RefText),",
-      "    Promise := actorPromiseWait(#RefText, #Timeout),",
-      "    actor_await(Promise, ResponseText),",
+      "    setup_call_cleanup(",
+      "      ( Claim := actorPromiseClaim(#RefText),",
+      "        ( Claim == missing_promise -> throw(error(existence_error(promise, Ref), context(yield/3, 'unknown, consumed or expired promise')))",
+      "        ; Claim == busy_promise -> throw(error(permission_error(collect,promise,Ref), context(yield/3, 'promise already has a collector')))",
+      "        ; true ) ),",
+      "      ( Promise := actorPromiseWait(#RefText, #Claim, #Timeout),",
+      "        actor_await(Promise, ResponseText),",
+      "        ( ResponseText == null -> true ; ResponseText == \"missing_promise\" -> true",
+      "        ; Status := actorPromiseCommit(#RefText, #Claim),",
+      "          ( Status == committed -> true",
+      "          ; throw(error(existence_error(promise, Ref), context(yield/3, 'promise disposed before collection'))) ) ) ),",
+      "      (_ := actorPromiseRelease(#RefText, #Claim))),",
       "    (   ResponseText == \"missing_promise\"",
       "    ->  throw(error(existence_error(promise, Ref), context(yield/3, 'unknown or consumed promise')))",
       "    ;   ResponseText = null",
@@ -1776,6 +1923,8 @@
       "",
       "toplevel_spawn(Pid, Options) :-",
       "    validate_browser_wrapper_options(toplevel, toplevel_spawn/2, Options),",
+      "    browser_named_creation(Options, Pid, toplevel_spawn/2, Inner, browser_toplevel_spawn_options(Pid, Inner)).",
+      "browser_toplevel_spawn_options(Pid, Options) :-",
       "    option(node(Node), Options, localhost),",
       "    option(session(Session), Options, false),",
       "    option(time_limit(TimeLimit0), Options, infinite),",
@@ -2101,10 +2250,33 @@
       "        term_string(Answer, AnswerText)",
       "    ).",
       "",
+      ":- dynamic behaviour_source_load/1, behaviour_source_block/1.",
+      "% The active load's clause reference scopes markers across nested loads and",
+      "% is erased on success, exception or interruption, even without an end marker.",
+      "load_behaviour_source(File) :-",
+      "    atom_string(Path, File),",
+      "    setup_call_cleanup(",
+      "        asserta(behaviour_source_load(Path), Ref),",
+      "        user:consult(File),",
+      "        (erase(Ref), retractall(behaviour_source_block(Ref)))",
+      "    ).",
+      "behaviour_source_boundary(Boundary) :-",
+      "    prolog_load_context(file, File),",
+      "    clause(behaviour_source_load(File), true, Ref), !,",
+      "    ( Boundary == begin -> assertz(behaviour_source_block(Ref))",
+      "    ; retractall(behaviour_source_block(Ref)) ).",
+      "behaviour_source_boundary(_).",
+      "internal_behaviour_loading :-",
+      "    prolog_load_context(file, File),",
+      "    clause(behaviour_source_load(File), true, Ref),",
+      "    behaviour_source_block(Ref).",
+      "user:message_hook(ignored_weak_import(user, swi_wasm_actor_bridge:_), warning, _) :-",
+      "    swi_wasm_actor_bridge:internal_behaviour_loading.",
+      "",
       "load_private_source(File) :-",
       "    setup_call_cleanup(",
       "        asserta(suppress_shared_override_warnings, Ref),",
-      "        user:consult(File),",
+      "        load_behaviour_source(File),",
       "        erase(Ref)",
       "    ),",
       "    restore_shared_db_imports.",
@@ -2160,6 +2332,7 @@
       "    forall((clause(deferred(Msg), true, Clause), nonvar(Msg),",
       "            Msg = down(_, MessageRef, _), MessageRef == Ref), erase(Clause)).",
       "",
+      "discard_server_monitor_message('$startup_retire'(Refs)) :- !, maplist(server_monitor_cleanup, Refs).",
       "discard_server_monitor_message('$server_monitor_cleaned'(Ref)) :-",
       "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)).",
       "discard_server_monitor_message(down(_, Ref, _)) :- retiring_server_monitor(Retired), Ref == Retired.",

@@ -240,6 +240,8 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
     </ul>
     <p>Both SWI-WASM runtimes validate plain <code>spawn/3</code> options before collecting source, reserving a pid, creating a worker, dispatching remotely, or installing a monitor. Options must be unary terms in a proper list. Unknown names and wrong arities raise <code>error(domain_error(spawn_option,Option),context(spawn/3,_))</code>; invalid values raise type, domain, or instantiation errors with the same context. Every occurrence is checked, including later duplicates. The first ordinary option still wins, source options remain additive with each runtime's existing collection order, and validation does not bind or copy option variables.</p>
     <p>Browser <code>node/1</code> requires an atom or string, and <code>link/1</code> and <code>monitor/1</code> require booleans. Browser spawning also retains local <code>name(+Atom)</code>, which plain native <code>spawn/3</code> does not accept. <code>src_text/1</code> requires an atom or string, <code>src_list/1</code> a proper list, and <code>src_predicates/1</code> a proper list of indicators with atom names and nonnegative integer arities. The compatibility main engine accepts atom/string <code>src_uri/1</code>; ordinary worker-engine <code>spawn/3</code> has no URI-loading path and rejects that option explicitly. URI support in specialised creation predicates and the RPC/promise APIs is unchanged.</p>
+    <p>Both SWI-WASM runtimes reserve a local <code>name/1</code> before creation and publish its pid only after the complete call succeeds. This also applies to local server, supervisor, toplevel and statechart creation. An occupied or pending name raises <code>error(permission_error(register,actor_name,Name),PI)</code>, with the creation predicate in <code>PI</code>, without creating an actor. Pending reservations are hidden from <code>whereis/2</code>. Startup failure or exception releases the reservation and reclaims actors and monitors created by that attempt, including detached and nested children. Links, pid sharing, monitor references, duplicate-option precedence and successful reply formats are preserved. Normal early termination still returns the pid and requested down notification, but leaves no stale name. Publication does not guarantee continued actor liveness or application-level readiness.</p>
+    <p>Browser actors share the page’s ordinary-name namespace; each pid may have one ordinary name and independently one service name. Local wrappers remove their name option internally while holding the reservation. Remote naming is unchanged: plain remote spawning does not acquire a browser alias, and specialised remote wrappers retain their existing post-start registration paths.</p>
     <p>Nonvariable <code>target/1</code> and <code>io_target/1</code> remain accepted compatibility options; plain browser spawn retains its existing coordinator output routing. Remote browser spawn continues to send the goal and source and can install a caller-side monitor. It does not gain remote name publication, link forwarding, or output redirection. The shared browser server/supervisor wrappers separate their own settings and child-specification fields before forwarding spawn options, preserving the original child specifications. Wrapper entry validation is described under each creation predicate; child-specification validation is described under supervisor creation.</p>
     <p><span class="note-label">Note:</span> In <code>spawn(+Goal,-Pid,+Options)</code>, the option <code>monitor(true)</code> installs monitoring as part of process creation. When the child terminates, the parent receives a message <code>down(Pid,Ref,Reason)</code> where <code>Pid</code> is the terminated actor, <code>Reason</code> is its exit reason, and <code>Ref</code> identifies the monitor instance. For monitoring created via <code>monitor(true)</code>, the current implementation uses <code>Ref = Pid</code>.</p>
     <p><span class="note-label">Note:</span> The semantics of <code>link(true)</code> are directional: if a parent spawns a child with linking enabled, termination of the parent causes linked children to be terminated. The link does not imply symmetric bidirectional exit propagation.</p>
@@ -288,6 +290,7 @@ demonitor(+Ref, +Options) is det.</pre>
     </div>
     <pre>register(+Name, +Pid) is det.</pre>
     <p>Registers an actor process under a name, where <code>Name</code> is an atom and <code>Pid</code> identifies the actor. The association between the name and the pid is removed when the process terminates.</p>
+    <p>In SWI-WASM, an ordinary name reserved by a pending local creation is unavailable to explicit registration, including from another actor. The separate service namespace is unaffected. Unregister cannot remove a pending creation reservation; only its creating engine’s matching token can publish or release it. Normal late cleanup cannot remove a committed name.</p>
 </article>
 
 <article class="predicate-entry" id="whereis/2">
@@ -297,6 +300,7 @@ demonitor(+Ref, +Options) is det.</pre>
     </div>
     <pre>whereis(+Name, -Pid) is det.</pre>
     <p>Binds <code>Pid</code> to the actor process associated with <code>Name</code>, or to <code>undefined</code> if no such registration exists.</p>
+    <p>In SWI-WASM, a name reserved by a pending local creation returns <code>undefined</code> until publication.</p>
 </article>
 
 <article class="predicate-entry" id="unregister/1">
@@ -640,6 +644,7 @@ server_upgrade(+To, +Pred, +Options) is det.</pre>
         <div class="predicate-family">actor</div>
     </div>
     <pre>statechart_spawn(-Pid, +Options) is det.</pre>
+    <p>For local SWI-WASM creation, <code>name/1</code> uses the reservation and rollback rules described under <code>spawn/3</code>. The compatibility main engine retains its fixed <code>statechart</code> pid when starting a chart in that engine. Halt or completion clears that chart’s aliases; a later local creation may reuse its name. Worker statecharts retain their existing pid and monitor-reference formats.</p>
     <p>Spawns a statechart actor and binds <code>Pid</code> to its pid.</p>
     <p><code>statechart_spawn/2</code> requires exactly one source option:</p>
     <ul>
@@ -713,9 +718,12 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
         <li><code>type(+Type)</code><br><code>worker</code> (default) or <code>supervisor</code>.</li>
     </ul>
     <p>Both SWI-WASM runtimes validate the complete creation option list before source preparation or startup. <code>strategy/1</code> must be <code>one_for_one</code>, <code>one_for_all</code>, or <code>rest_for_one</code>; <code>intensity/1</code> requires a nonnegative integer, and <code>period/1</code> a positive number of seconds, including fractional values. Names and forwarded settings use the browser spawn schema. Errors identify <code>supervisor_spawn/3</code>. Every duplicate is checked while existing defaults and first-occurrence precedence remain unchanged. Nested supervisor creation uses these same checks; the worker retains its existing lack of URI source loading for this wrapper.</p>
-    <p>In both SWI-WASM runtimes, a <code>transient</code> child restarts after failure (<code>false</code>), an exception, or an explicit abnormal exit, but not after successful completion (<code>true</code>). A <code>permanent</code> child restarts for any reason; a <code>temporary</code> child never restarts. Restarts remain subject to the configured intensity limit. This policy does not change browser child ordering, inactive-child bookkeeping, or shutdown handling.</p>
+    <p>In both SWI-WASM runtimes, a <code>transient</code> child restarts after failure (<code>false</code>), an exception, or an explicit abnormal exit, but not after successful completion (<code>true</code>). A <code>permanent</code> child restarts for any reason; a <code>temporary</code> child never restarts. Restarts remain subject to the configured intensity limit. Browser shutdown handling is unchanged; ordering and bookkeeping are described below.</p>
+    <p>Both SWI-WASM runtimes preserve child start order across restarts. <code>one_for_one</code> replaces the failed child in place; <code>one_for_all</code> restarts all children in order; <code>rest_for_one</code> restarts only the failed child and later siblings, leaving earlier records and pids unchanged. New dynamic children append to the list. A successfully completed transient child retains its specification with pid <code>undefined</code>; a temporary child is removed after termination. Later notifications for replaced pids are ignored.</p>
     <p>Both SWI-WASM runtimes also validate the complete initial child list before source preparation or creating any actors, including recognised nested <code>server(Pred,ServerOptions)</code> and <code>start_sub_supervisor(Specs,SupOptions)</code> starts. Lists must be proper and specifications acyclic <code>child(Id,Options)</code> terms. Browser child ids must be atoms and unique among siblings; duplicate initial ids raise <code>permission_error(duplicate,supervisor_child_id,Id)</code>. A missing <code>start/1</code> raises <code>missing_start_option(Id)</code>. Start goals and server callbacks must be callable, with atom module qualifiers; their arguments and arbitrary initial states can contain shared variables. Validation does not execute goals or check predicate availability.</p>
     <p>Browser child options accept the restart policies, types and shutdown values above (numeric shutdown timeouts must be nonnegative), boolean <code>significant/1</code> compatibility metadata, and forwarded browser spawn options. Unknown names or wrong arities raise <code>domain_error(spawn_option,Option)</code>. Every duplicate is checked without copying or binding values; defaults, first-occurrence precedence, original restart specifications and variable sharing remain unchanged. Nested server/supervisor options retain precedence over the generated child name and child-level spawn settings. Browser <code>shutdown/1</code>, <code>type/1</code>, and <code>significant/1</code> remain metadata: validation adds no shutdown escalation or automatic shutdown behavior. Runtime startup failures and rollback remain separate from validation.</p>
+    <p>Both SWI-WASM runtimes roll back a failed initial startup: actors created by the attempt are stopped, local reservations retired, and its monitors withdrawn. This includes nested starts and detached children (<code>link(false)</code>); success preserves their existing links and lifetimes. Tracking begins before local Worker creation/readiness and monitor setup, so errors after actor creation are covered. A child startup exception is reported as <code>error(supervisor_start_failed(Pid,Reason),supervisor_spawn/3)</code>. The existing readiness timeout also rolls back the caller’s startup attempt. Cleanup errors do not replace the startup error. Prolog exception terms are preserved; JavaScript exception objects are reported as <code>error(supervisor_startup_error(Message),supervisor_spawn/3)</code> with their original message.</p>
+    <p>Startup success does not establish application-level readiness. Known remote pids receive best-effort termination requests; a lost connection before a pid is returned can leave the remote outcome unknown. Automatic restart failures, remote name reservation, and shutdown waiting/escalation remain separate.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_spawn_child/3">
@@ -726,6 +734,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <pre>supervisor_spawn_child(+Pid, +ChildSpec, -Reply) is det.</pre>
     <p>Dynamically adds and starts one child. On success, <code>Reply</code> is <code>ok</code>. If a child with the same <code>Id</code> is already present, it is <code>error(already_present)</code>. If startup fails, it is <code>error(start_failed)</code>.</p>
     <p>Both SWI-WASM runtimes validate the specification before sending, with errors identifying <code>supervisor_spawn_child/3</code>. The supervisor rechecks received additions; malformed requests return <code>error(Error)</code> and duplicate ids return <code>error(already_present)</code>, without starting a child or changing supervisor state.</p>
+    <p>In both SWI-WASM runtimes, a failed dynamic startup rolls back only that attempt. A startup exception returns <code>error(Error)</code> instead of escaping the request handler. The supervisor continues with its previous children and state; the failed id remains available for a later addition. Actors created before a later setup error, including nested and detached children, are reclaimed and the attempt’s monitors withdrawn. Existing children and unrelated monitors are preserved. Successful additions retain the browser <code>ok</code> reply and append in start order. The startup error and remote-cleanup qualifications under <code>supervisor_spawn/2-3</code> also apply here.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_terminate_child/3">
@@ -735,6 +744,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>supervisor_terminate_child(+Pid, +Id, -Reply) is det.</pre>
     <p>Stops child <code>Id</code> but keeps its specification. <code>Reply</code> is <code>ok</code> or <code>error(not_found)</code>.</p>
+    <p>Both SWI-WASM runtimes retain the stopped record at its original position. Terminating an already stopped child returns <code>ok</code> without sending another exit signal.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_delete_child/3">
@@ -753,6 +763,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>supervisor_respawn_child(+Pid, +Id, -Reply) is det.</pre>
     <p>Restarts a previously terminated child from its stored specification. <code>Reply</code> is either <code>ok(NewPid)</code>, <code>error(running)</code>, <code>error(not_found)</code>, or <code>error(start_failed)</code>.</p>
+    <p>Both SWI-WASM runtimes preserve the record position and original specification. Their existing success reply is <code>ok</code>; use <code>supervisor_which_children/2</code> to obtain the new pid. A running child is rejected with <code>error(running)</code>.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_which_children/2">
@@ -764,6 +775,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <p>Returns a list of:</p>
     <pre>info(Id, Pid, Type, Restart)</pre>
     <p>where <code>Pid</code> may be <code>undefined</code> for stopped children.</p>
+    <p>Both SWI-WASM runtimes retain their browser format: <code>child(Id,Pid,OriginalSpec)</code>, in child start order, with <code>undefined</code> for retained stopped children.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_count_children/2">
@@ -774,6 +786,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <pre>supervisor_count_children(+Pid, -Counts) is det.</pre>
     <p>Returns:</p>
     <pre>[specs-N, active-N, supervisors-N, workers-N]</pre>
+    <p>Both SWI-WASM runtimes retain their browser format: <code>counts(Total,Active)</code>. Total counts stored child specifications; Active counts records whose pid is not <code>undefined</code>. Counts reflect processed supervisor state rather than an independent instantaneous liveness check.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_halt/1">
@@ -866,6 +879,8 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
     </ul>
     <p>The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the single answer term. Programs must not infer meaning from its digits or construct references themselves.</p>
     <p>Both SWI-WASM runtimes validate options before source loading or promise creation, using the browser subset described under <code>rpc/3</code>, plus <code>template/1</code> and <code>offset/1</code>. Unknown options or wrong arities raise <code>error(domain_error(promise_option, Option), Context)</code>. Template variables remain shared with the goal; validation does not copy or bind them.</p>
+    <p>Both SWI-WASM runtimes expire a reference 300 seconds after creation, including pending requests and ready but uncollected answers. Expiry is checked on access as well as by timer, so background timer delays do not extend validity. Collection and disposal reclaim the local record and timers; disposal also releases pending local transport resources. Late completion cannot recreate a disposed reference.</p>
+    <p>In SWI-WASM, promises belong to the engine that created them. Each Worker has its own store; the compatibility main engine shares one store across successive queries. Spawned actors use separate Worker stores, including actors spawned from the main engine. A later query in the same surviving engine may collect or dispose of its promises. Passing a reference to another actor does not transfer access. Numeric references are not globally unique: a coincident number denotes only the receiving engine’s own promise. These boundaries preserve existing behaviour; ownership transfer remains unsupported. Store isolation is not a security sandbox against trusted JavaScript with access to the main engine’s page.</p>
 </article>
 
 <article class="predicate-entry" id="yield/2-3">
@@ -875,13 +890,23 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
     </div>
     <pre>yield(+Ref, -Answer) is det.
 yield(+Ref, -Answer, +Options) is det.</pre>
-    <p>Waits for the answer term from a previous call to <code>promise/3-4</code>. The reference is local to the runtime that created it. The answer is one of <code>success(Data,More)</code>, <code>failure</code>, or <code>error(Error)</code>, as returned by the stateless call endpoint. Valid options are:</p>
+    <p>Waits for the answer term from a previous call to <code>promise/3-4</code>. The reference is local to the runtime that created it; in SWI-WASM this means the creating engine, as described under <code>promise/3-4</code>. The answer is one of <code>success(Data,More)</code>, <code>failure</code>, or <code>error(Error)</code>, as returned by the stateless call endpoint. Valid options are:</p>
     <ul>
         <li><code>timeout(+Number)</code><br>Waits at most <code>Number</code> seconds for the promised answer. Default is no timeout.</li>
         <li><code>on_timeout(+Goal)</code><br>Calls <code>Goal</code> if the timeout expires before the answer is available.</li>
     </ul>
-    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>. A callback may bind the answer itself; otherwise it defaults to <code>timeout</code>. A failing callback raises <code>error(timeout_callback_failed(Ref), Context)</code>. Unknown or consumed references raise <code>error(existence_error(promise, Ref), Context)</code>; references must be integers. Browser transport failures are delivered as <code>error(rpc_error(Detail))</code> answers.</p>
+    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>. A callback may bind the answer itself; otherwise it defaults to <code>timeout</code>. A failing callback raises <code>error(timeout_callback_failed(Ref), Context)</code>. Unknown, consumed, expired or explicitly disposed references raise <code>error(existence_error(promise, Ref), Context)</code>; references must be integers. Browser transport failures are delivered as <code>error(rpc_error(Detail))</code> answers.</p>
     <p>Both SWI-WASM runtimes validate the complete option list before waiting or collecting an answer. <code>timeout/1</code> must contain a number and <code>on_timeout/1</code> a callable goal. Unknown options or wrong arities raise <code>error(domain_error(yield_option, Option), Context)</code>. Invalid options leave a valid promise available for a later yield and do not execute the callback. Callback qualification and sharing with the answer variable are preserved.</p>
+    <p>Both SWI-WASM runtimes allow one active collector per reference; a competing yield raises <code>permission_error(collect,promise,Ref)</code>. Timeout, interruption or an exception before collection commits releases the claim and retains the answer. The claim is released before the timeout callback runs. Collection commits when Prolog resumes after the wait; a later output mismatch still consumes that selected answer. Disposal or expiry wakes an existing collector with <code>existence_error(promise,Ref)</code>, without invoking the timeout callback. A cooperative interruption preserves the reference in its existing engine; destroying or replacing a Worker destroys its local references.</p>
+</article>
+
+<article class="predicate-entry" id="promise_cleanup/1">
+    <div class="predicate-head">
+        <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">promise_cleanup/1</span></div>
+        <div class="predicate-family">isobase</div>
+    </div>
+    <pre>promise_cleanup(+Ref) is det.</pre>
+    <p>In both SWI-WASM runtimes, explicitly disposes of a local promise, releasing its stored answer, timers, waiters and pending local transport resources. The reference must be an integer. Cleanup is idempotent, including for unknown or already consumed, expired or disposed references. A subsequent yield raises <code>existence_error(promise,Ref)</code>. Aborting the browser-side HTTP fetch does not guarantee cancellation of execution on the remote node. In SWI-WASM, cleanup consults only the calling engine’s store; it cannot dispose of another engine’s promise. If the same number exists locally, it denotes that local promise. Ownership transfer and native-style client namespace teardown remain separate.</p>
 </article>
 
 <article class="predicate-entry" id="runtime_property/1">

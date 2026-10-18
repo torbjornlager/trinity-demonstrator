@@ -43,7 +43,7 @@ function bootWorker() {
         if (control.request) { control.request(m); return; }
         if (control.hold.includes(m.action)) { control.held.push(m); return; }
         setImmediate(function() {
-          const reply = control.reply ? control.reply(m) : { result: true };
+          const reply = m.action === "name_reserve" ? {result:"reserved"} : m.action === "name_publish" ? {result:"published"} : control.reply ? control.reply(m) : { result: true };
           S.onmessage({ data: Object.assign({ command: "reply", id: m.id, ok: true }, reply) });
         });
       }
@@ -75,9 +75,9 @@ async function until(pred, ms) {
   return true;
 }
 
-async function startToplevel(W, lifecycle) {
+async function startToplevel(W, lifecycle, source = behaviourSource) {
   W.S.onmessage({ data: {
-    command: "start", pid: PID, behaviourSource: behaviourSource,
+    command: "start", pid: PID, behaviourSource: source,
     goal: "swi_wasm_actor_bridge:ptcp(" + QPID + ", " + CLIENT + "@localhost, " + (lifecycle || "true") + ")"
   } });
   if (!await until(function() { return W.posted.some(function(m) { return m.type === "started"; }); }, 20000)) {
@@ -183,6 +183,7 @@ function scopedWorkerCoordinator(W, owner = PID) {
         const root=${JSON.stringify(ROOT)};
         global.self={postMessage:m=>parentPort.postMessage(m),close:()=>process.exit(0),crypto:require('crypto').webcrypto};
         global.window=global.self;
+        global.self.startupTestReject=()=>Promise.reject(new Error('startup_js_original'));
         global.importScripts=()=>{global.SWIPL=require(path.join(root,'web/swipl-bundle.js'));};
         global.fetch=async url=>({ok:true,text:async()=>fs.readFileSync(path.join(root,'prolog/web_prolog',String(url).replace(/^\\//,'')),'utf8')});
         (0,eval)(fs.readFileSync(path.join(root,'web/swi_wasm_actor_worker.js'),'utf8'));
@@ -199,12 +200,17 @@ function scopedWorkerCoordinator(W, owner = PID) {
     terminate() { threads.delete(this); return this.thread.terminate(); }
   };
   const methods={
+    openSwiWasmStartup:"trackSwiWasmStartup",trackSwiWasmStartup:"finishSwiWasmStartup",finishSwiWasmStartup:"reserveSwiWasmName",
+    reserveSwiWasmName:"publishSwiWasmName",publishSwiWasmName:"commitSwiWasmName",commitSwiWasmName:"releaseSwiWasmName",releaseSwiWasmName:"releaseSwiWasmNamesForOwner",releaseSwiWasmNamesForOwner:"swiWasmWorkerScopeKey",
     swiWasmWorkerScopeKey:"openSwiWasmWorkerScope", openSwiWasmWorkerScope:"reserveSwiWasmScopedWorker",
     reserveSwiWasmScopedWorker:"spawnSwiWasmScopedWorker",spawnSwiWasmScopedWorker:"releaseSwiWasmScopedWorker",
     releaseSwiWasmScopedWorker:"closeSwiWasmWorkerScopes",closeSwiWasmWorkerScopes:"closeSwiWasmWorkerScope",closeSwiWasmWorkerScope:"spawnSwiWasmWorkerActor",
     spawnSwiWasmWorkerActor:"spawnSwiWasmWorkerActorReady",spawnSwiWasmWorkerActorReady:"swiWasmRemoteNodeUrl",
+    spawnSwiWasmStatechartActor:"disposeSwiWasmPromiseRequest",whereisSwiWasmActorName:"swiWasmActorPidLive",
+    disposeSwiWasmPromiseRequest:"requestSwiWasmWorkerRpc",
     handleSwiWasmWorkerActorMessage:"handleSwiWasmActorRequest",handleSwiWasmActorRequest:"requestSwiWasmActorInput",
     notifySwiWasmActorMonitors:"deliverSwiWasmActorDown",deliverSwiWasmActorDown:"clearSwiWasmActorNamesForPid",
+    registerSwiWasmActorName:"unregisterSwiWasmActorName",unregisterSwiWasmActorName:"whereisSwiWasmActorName",
     clearSwiWasmActorNamesForPid:"terminateLinkedSwiWasmChildren",terminateLinkedSwiWasmChildren:"exitSwiWasmActor",
     exitSwiWasmActor:"abortSwiWasmActor",finalizeSwiWasmWorkerActor:"receiveSwiWasmActorMessage",
     swiWasmActorListText:"sendSwiWasmActorMessage",
@@ -214,8 +220,9 @@ function scopedWorkerCoordinator(W, owner = PID) {
   host.swiWasmReservedWorkerActorPids={};host.swiWasmActorNames={};host.swiWasmActorServices={};
   host.swiWasmBehaviourProlog=()=>behaviourSource;
   host.resolveSwiWasmActorTarget=text=>String(text).replace(/^@\((\d+),\s*localhost\)$/, '$1').replace(/@localhost$/,'');
-  let nextPid=7000000000;
-  host.reserveSwiWasmWorkerActorPid=()=>{const pid=String(nextPid++);host.swiWasmReservedWorkerActorPids[pid]=true;return pid;};
+  let nextPid=7000000000,nextRef=8900000000;
+  host.reserveSwiWasmActorRef=()=>String(nextRef++);
+  host.reserveSwiWasmWorkerActorPid=watcher=>{const pid=String(nextPid++);host.swiWasmReservedWorkerActorPids[pid]=true;if(watcher!==undefined)host.trackSwiWasmStartup(watcher,pid);return pid;};
   host.log=()=>{};host.logSwiWasmWorkerTraffic=()=>{};
   host.swiWasmActorWorkers[owner]={worker:{postMessage:data=>{
     if (host.options.holdReservation && data.id===host.reservingRequest) {host.heldReservation=data;return;}
@@ -305,6 +312,13 @@ function spawnOptionMainHarness() {
   const calls=[];let next=7200000000;const mailbox=[];
   function record(action,args,result){calls.push({action,args});return result;}
   Object.assign(global.self,{
+    swiWasmNameToken:()=>"mock-name",
+    swiWasmNameReserve:(...args)=>Promise.resolve(record("name_reserve",args,"reserved")),
+    swiWasmNamePublish:(...args)=>Promise.resolve(record("name_publish",args,"published")),
+    swiWasmNameCommit:()=>true,
+    swiWasmNameRelease:()=>true,
+    swiWasmStartupOpen:()=>"mock-startup",
+    swiWasmStartupFinish:()=>true,
     swiWasmActorReservePid:()=>record("reserve",[],String(next++)),
     swiWasmActorSpawnWithPid:(...args)=>{
       if(args[1].includes("wasm_supervisor_init"))mailbox.push("'$supervisor_ready'("+args[0]+"@localhost)");
@@ -405,6 +419,67 @@ async function supervisorRestartPolicyContract(run, spawnCount, check) {
       check(spawnCount()-before===(restart?1:0),policy+" / "+reason+(restart?" starts one replacement":" starts no replacement"));
     }
   }
+}
+
+
+async function behaviourWarningContract(run, check, incomingSource) {
+  const b="swi_wasm_actor_bridge:";
+  check(await run("assertz((user:message_hook(M,warning,_) :- assertz(user:observed_warning(M)))),assertz((user:message_hook(M,error,_) :- assertz(user:observed_error(M))))"),"install observer after production warning hooks");
+  async function load(file,text,assertion){
+    const goal="setup_call_cleanup(open('"+file+"',write,S),format(S,'~s',["+text+"]),close(S)),"+b+"load_private_source("+JSON.stringify(file)+"),"+assertion;
+    check(await run(goal),file);
+  }
+  check(await run(b+"wasm_behaviour_source([node('https://example.org')],Remote),"+b+"wasm_behaviour_source(Raw),Remote==Raw"),"remote behavior source remains byte-for-byte unchanged");
+  check(await run(b+"wasm_behaviour_source(Raw),(string_length(Raw,0)->"+b+"wasm_behaviour_source([],Local),Local==Raw;true)"),"empty internal source stays unchanged");
+  const pre=JSON.stringify("parallel(_) :- true.\n");
+  const post=JSON.stringify("\nfirst_solution(_,_) :- true.\n");
+  const file="/warning_probe.pl";
+  const loadGoal=(incomingSource?"B="+JSON.stringify(incomingSource):b+"wasm_behaviour_source([],B)")+",atomics_to_string(["+pre+",B,"+post+"],Text),"+
+    "setup_call_cleanup(open('"+file+"',write,S),format(S,'~s',[Text]),close(S)),"+b+"load_private_source("+JSON.stringify(file)+"),"+
+    "findall(PI,user:observed_warning(ignored_weak_import(user,swi_wasm_actor_bridge:PI)),PIs),sort(PIs,[first_solution/2,parallel/1]),"+
+    "user:wasm_should_restart(transient,killed),findall(R,"+b+"behaviour_source_load(R),[]),findall(R,"+b+"behaviour_source_block(R),[])";
+  check(await run(loadGoal),"only genuine user overrides before/after internal behavior remain visible; definitions still load");
+  check(await run("retractall(user:observed_warning(_)),retractall(user:observed_error(_))"),"reset warning observer");
+  // A marked block suppresses only weak-import warnings from the actor bridge.
+  // Other diagnostics remain observable, and an omitted end marker is retired
+  // when that load ends, so subsequent user loads cannot inherit suppression.
+  const marked=JSON.stringify(":- swi_wasm_actor_bridge:behaviour_source_boundary(begin).\n:- print_message(warning,internal_warning_probe).\nbroken( .\n");
+  await load("/warning_unterminated.pl",marked,
+    "user:observed_warning(internal_warning_probe),user:observed_error(error(syntax_error(_),_)),"+
+    "findall(R,"+b+"behaviour_source_load(R),[]),findall(R,"+b+"behaviour_source_block(R),[])");
+  await load("/warning_user_override.pl",JSON.stringify("yield(_,_) :- true.\n"),
+    "user:observed_warning(ignored_weak_import(user,swi_wasm_actor_bridge:yield/2))");
+  await load("/warning_same_api_override.pl",JSON.stringify("server_spawn(_,_,_) :- true.\n"),
+    "user:observed_warning(redefined_procedure(_,server_spawn/3))");
+}
+
+
+async function supervisorOrderContract(run, events, check) {
+  const b="swi_wasm_actor_bridge:";
+  const seed="A=child(a,[start(true)]),B=child(b,[start(goal(X)),src_list([fact(X)])]),C=child(c,[start(true)]),Children=[child(a,101,A),child(b,202,B),child(c,303,C)],";
+  for(const strategy of ["one_for_one","one_for_all","rest_for_one"]) {
+    const before=events();
+    const pids=strategy==="one_for_one"?"PA==101,PC==303":strategy==="rest_for_one"?"PA==101,PC\\==303":"PA\\==101,PC\\==303";
+    check(await run(seed+b+"wasm_handle_down(202,killed,sup("+strategy+",10,5,Children,[]),State),State=sup("+strategy+",10,5,[child(a,PA,SA),child(b,PB,SB),child(c,PC,SC)],[_]),SA==A,SB==B,SC==C,var(X),PB\\==202,"+pids+","+b+"wasm_handle_down(202,shutdown,State,Unchanged),Unchanged==State"),strategy+" preserves order, specs, sharing, unaffected pids and ignores stale down");
+    const after=events();
+    const names=strategy==="one_for_one"?["b"]:strategy==="rest_for_one"?["b","c"]:["a","b","c"];
+    const exits=strategy==="one_for_one"?[]:strategy==="rest_for_one"?["303"]:["101","303"];
+    check(JSON.stringify(after.spawn.slice(before.spawn.length))===JSON.stringify(names),strategy+" starts replacements in original order");
+    check(JSON.stringify(after.exit.slice(before.exit.length))===JSON.stringify(exits),strategy+" stops only affected live siblings");
+  }
+  check(await run(seed+b+"wasm_handle_down(202,killed,sup(one_for_one,10,5,Children,[]),S1),S1=sup(_,_,_,[child(a,101,_),child(b,P1,_),child(c,303,_)],_),"+b+"wasm_handle_down(P1,killed,S1,S2),S2=sup(_,_,_,[child(a,101,_),child(b,P2,_),child(c,303,_)],_),P2\\==P1"),"repeated restarts retain position");
+  let before=events();
+  check(await run(seed+"S0=sup(one_for_one,10,5,Children,[]),"+b+"wasm_handle_supervisor_call(terminate_child(b),ok,S0,S1),S1=sup(_,_,_,[child(a,101,A),child(b,undefined,B),child(c,303,C)],[]),"+b+"wasm_handle_supervisor_call(count_children,counts(3,2),S1,S1),"+b+"wasm_handle_supervisor_call(terminate_child(b),ok,S1,Same),Same==S1,"+b+"wasm_handle_down(202,shutdown,S1,Same),"+b+"wasm_handle_supervisor_call(delete_child(a),error(running),S1,Same),"+b+"wasm_handle_supervisor_call(restart_child(c),error(running),S1,Same),"+b+"wasm_handle_supervisor_call(start_child(B),error(already_present),S1,Same),"+b+"wasm_handle_supervisor_call(which_children,Info,S1,S1),S1=sup(_,_,_,Stored,_),Info==Stored,var(X),"+b+"wasm_handle_supervisor_call(restart_child(b),ok,S1,S2),S2=sup(_,_,_,[child(a,101,A),child(b,NewPid,SavedB),child(c,303,C)],[]),SavedB==B,var(X),NewPid\\==202,"+b+"wasm_handle_supervisor_call(count_children,counts(3,3),S2,S2),"+b+"wasm_handle_down(202,shutdown,S2,Same2),Same2==S2,"+b+"wasm_handle_supervisor_call(terminate_child(b),ok,S2,S3),"+b+"wasm_handle_supervisor_call(delete_child(b),ok,S3,S4),S4=sup(_,_,_,[child(a,101,A),child(c,303,C)],[]),"+b+"wasm_handle_supervisor_call(count_children,counts(2,2),S4,S4)"),"terminate/count/respawn/delete preserve records, reply formats and variable sharing");
+  let after=events();
+  check(after.spawn.length-before.spawn.length===1&&after.exit.length-before.exit.length===2,"idempotent termination and running/duplicate rejections have no extra side effects");
+  for(const op of ["terminate_child","delete_child","restart_child"])check(await run("S=sup(one_for_one,1,5,[],[]),"+b+"wasm_handle_supervisor_call("+op+"(missing),error(not_found),S,T),T==S"),op+" preserves missing-child reply");
+  before=events();
+  check(await run("Spec=child(stopped,[start(goal(X)),restart(transient)]),"+b+"wasm_handle_down(202,true,sup(one_for_one,10,5,[child(stopped,202,Spec)],[]),S1),S1=sup(_,_,_,[child(stopped,undefined,Saved)],[]),Saved==Spec,var(X),"+b+"wasm_handle_supervisor_call(count_children,counts(1,0),S1,S1),"+b+"wasm_handle_supervisor_call(restart_child(stopped),ok,S1,S2),S2=sup(_,_,_,[child(stopped,Pid,Again)],[]),Again==Spec,nonvar(Pid),var(X)"),"successful transient child retains its specification and can respawn");
+  check(events().spawn.length-before.spawn.length===1,"transient success starts no replacement until explicit respawn");
+  for(const reason of ["true","killed"])check(await run("Spec=child(temp,[start(true),restart(temporary)]),"+b+"wasm_handle_down(202,"+reason+",sup(one_for_one,10,5,[child(temp,202,Spec)],[]),S),S=sup(_,_,_,[],[]),"+b+"wasm_handle_supervisor_call(count_children,counts(0,0),S,S)"),"temporary child removed after "+reason);
+  before=events();
+  check(await run(seed+"Stopped=[child(a,undefined,A),child(b,202,B),child(c,303,C)],"+b+"wasm_handle_down(202,killed,sup(rest_for_one,10,5,Stopped,[]),State),State=sup(_,_,_,[child(a,undefined,A),child(b,_,B),child(c,_,C)],[_]),"+b+"wasm_handle_supervisor_call(count_children,counts(3,2),State,State),"+b+"wasm_stop_child_list([child(a,undefined,A)])"),"rest_for_one preserves an earlier inactive child and stopping skips undefined pids");
+  after=events();check(JSON.stringify(after.exit.slice(before.exit.length))===JSON.stringify(["303"]),"inactive records never receive exit signals");
 }
 
 const wrapperKinds={toplevel:"toplevel_spawn/2",server:"server_spawn/4",supervisor:"supervisor_spawn/3",statechart:"statechart_spawn/2"};
@@ -515,7 +590,7 @@ function compatibilityClientHarness() {
   global.self.swiRpcGet=url=>{calls.source.push(url);return "uri_fact(ok).";};
   global.self.swiRpcGetAsync=url=>{calls.rpc.push(url);return Promise.resolve("success([v(ok)],false)");};
   global.self._swiPromiseStore={items:{}};
-  const text=html.slice(html.indexOf("            window.swiPromiseStart = function"),html.indexOf('            var el = document.createElement("script");',html.indexOf("            window.swiPromiseStart = function")));
+  const text=html.slice(html.indexOf("            window._swiPromiseStore = createSwiWasmPromiseStore"),html.indexOf('            var el = document.createElement("script");',html.indexOf("            window.swiPromiseStart = function")));
   const fetchMock=(url,options)=>{
     calls.promise.push({url,options});
     if(calls.hold)return new Promise(resolve=>{calls.complete=()=>resolve({text:()=>Promise.resolve("success([done],false)")});});
@@ -525,6 +600,158 @@ function compatibilityClientHarness() {
   const wait=global.self.swiPromiseWait;
   global.self.swiPromiseWait=(...args)=>{calls.wait++;return wait(...args);};
   return calls;
+}
+
+// Separate VM globals model separate browser engines. Run the actual bridge
+// code and force one identical numeric reference per engine: identity is local,
+// so isolation must not depend on random reference values being distinct.
+function isolatedPromiseEngine(mode) {
+  const vm=require("vm"), requests=[];
+  const context=vm.createContext({setTimeout,clearTimeout,AbortController,console});
+  context.self=context;context.window=context;
+  if(mode==="main")context.document={}; // Page loads only the shared factory.
+  context.crypto={getRandomValues:bytes=>{bytes.fill(0);return bytes;}};
+  context.postMessage=m=>{if(m.type==="request")requests.push(m);};
+  const workerSource=fs.readFileSync(path.join(ROOT,"web/swi_wasm_actor_worker.js"),"utf8");
+  vm.runInContext(workerSource,context);
+  let start,complete,cancelled;
+  if(mode==="worker") {
+    start=()=>context.actorPromiseStart("https://example.org","true","true",0,1,"",0,false,100);
+    complete=value=>context.onmessage({data:{command:"reply",id:requests[0].id,ok:true,result:value}});
+    cancelled=()=>context.disposals>0;
+    context.disposals=0;
+    context.postMessage=m=>{if(m.type==="request")requests.push(m);if(m.type==="promise_dispose")context.disposals++;};
+  } else {
+    context.makeBrowserPromiseRef=()=>"1000000000";
+    context.fetch=(url,options)=>new Promise(resolve=>requests.push({resolve,signal:options.signal}));
+    const text=html.slice(html.indexOf("            window._swiPromiseStore = createSwiWasmPromiseStore"),html.indexOf('            var el = document.createElement("script");',html.indexOf("            window.swiPromiseStart = function")));
+    vm.runInContext(text,context);
+    start=()=>context.swiPromiseStart("https://example.org",100);
+    complete=value=>requests[0].resolve({text:()=>Promise.resolve(value)});
+    cancelled=()=>requests[0].signal.aborted;
+  }
+  const prefix=mode==="worker"?"actorPromise":"swiPromise";
+  return {start,complete,cancelled,
+    claim:ref=>context[prefix+"Claim"](ref),wait:(...args)=>context[prefix+"Wait"](...args),
+    commit:(...args)=>context[prefix+"Commit"](...args),cleanup:ref=>context[prefix+"Cleanup"](ref)};
+}
+
+async function promiseEngineIsolationContract(mode,check,otherMode="worker") {
+  const a=isolatedPromiseEngine(mode),b=isolatedPromiseEngine(otherMode);
+  const ref=a.start();
+  try {
+    check(b.claim(ref)==="missing_promise","another engine cannot claim an absent local reference");
+    b.cleanup(ref);
+    const ac=a.claim(ref);
+    check(ac!=="missing_promise","foreign cleanup leaves the originating engine's promise intact");
+    const other=b.start();
+    check(ref===other,"test forces identical reference numbers in separate engines");
+    const bc=b.claim(other),aw=a.wait(ref,ac,-1);
+    a.complete("success([origin],false)");
+    check(await aw==="success([origin],false)"&&a.commit(ref,ac)==="committed","originating engine collects its own answer");
+    a.cleanup(ref);
+    check(b.claim(other)==="busy_promise"&&!b.cancelled(),"collection and later cleanup do not alter the other engine's collector or transport");
+    const bw=b.wait(other,bc,-1);b.complete("success([other],false)");
+    check(await bw==="success([other],false)"&&b.commit(other,bc)==="committed","same-number reference collects only the receiving engine's own answer");
+  } finally {a.cleanup(ref);b.cleanup(ref);}
+  const c=isolatedPromiseEngine(mode),d=isolatedPromiseEngine(otherMode);
+  const cr=c.start(),dr=d.start();
+  try {
+    c.cleanup(cr);
+    check(c.cancelled()&&!d.cancelled(),"disposing a pending local promise cancels only its own transport");
+    const dc=d.claim(dr),dw=d.wait(dr,dc,-1);d.complete("success([survived],false)");
+    check(await dw==="success([survived],false)"&&d.commit(dr,dc)==="committed","other engine remains collectable after same-number disposal");
+  } finally {c.cleanup(cr);d.cleanup(dr);}
+}
+
+// Inject Prolog failures at controlled startup boundaries while retaining the
+// real spawn, monitor, supervisor loop and coordinator implementation.
+const startupFaultSource=behaviourSource
+  .replace("wasm_child_start(Goal, Id, ChildOptions, Pid) :-",`
+wasm_child_start(startup_fault, _, _, _) :- !, throw(startup_original).
+wasm_child_start(startup_fail, _, _, _) :- !, fail.
+wasm_child_start(startup_js_fault, _, _, _) :- !, P := startupTestReject(), actor_await(P,_).
+wasm_child_start(startup_after_spawn, Id, Options, Pid) :- !,
+    spawn(receive({never->true}),Pid,[name(Id)|Options]), throw(startup_after_spawn_error).
+wasm_child_start(startup_monitor_fault, Id, Options, Pid) :- !,
+    spawn(receive({never->true}),Pid,[name(Id)|Options]).
+wasm_child_start(Goal, Id, ChildOptions, Pid) :-`)
+  .replace("( monitor(Pid, _) -> true ;", "( monitor(Pid, _) -> (Start == startup_monitor_fault -> throw(startup_monitor_error) ; true) ;");
+
+async function supervisorStartupContract(run,host,check) {
+  const idle="receive({never->true})";
+  check(await run("catch((supervisor_spawn([child(good,[start("+idle+"),link(false)]),child(bad,[start(startup_fault),link(false)])],_,[link(false)]),fail),error(supervisor_start_failed(_,startup_original),_),true)"),"initial failure preserves original Prolog error");
+  check(await until(()=>host.live().length===0),"initial rollback stops earlier detached children and supervisor");
+  check(Object.keys(host.swiWasmStartups||{}).length===0&&host.swiWasmActorMonitors.length===0,"initial rollback retires journals and monitors");
+  check(await run("catch((supervisor_spawn([child(nested,[start(start_sub_supervisor([child(grandchild,[start("+idle+"),link(false)])],[])),link(false)]),child(bad,[start(startup_after_spawn),link(false)])],_,[link(false)]),fail),error(supervisor_start_failed(_,startup_after_spawn_error),_),true)"),"nested startup preserves error after a child was created");
+  check(await until(()=>host.live().length===0),"outer rollback includes committed nested starts and detached grandchildren");
+  check(await run("catch((supervisor_spawn([child(prior,[start("+idle+"),link(false)]),child(bad,[start(startup_js_fault),link(false)])],_,[link(false)]),fail),error(supervisor_start_failed(_,error(supervisor_startup_error(_),supervisor_spawn/3)),_),true)"),"initial JavaScript exception is reported as a portable startup error");
+  check(await until(()=>host.live().length===0),"JavaScript startup failure also rolls back prior actors");
+  check(await run("supervisor_spawn([child(stable,[start("+idle+"),link(false)])],Sup,[link(false)]),assertz(user:startup_sup(Sup))"),"successful initial startup commits without stopping children");
+  const before=host.live().slice().sort();
+  host.monitorSwiWasmActor(host.swiWasmActorWorkers.main?"main":PID,before.at(-1),"8989898989");
+  const monitors=host.swiWasmActorMonitors.length;
+  for(const [goal,error] of [["startup_fail","error(child_spawn_failed(attempt,startup_fail),wasm_start_child/3)"],["startup_fault","startup_original"],["startup_after_spawn","startup_after_spawn_error"],["startup_monitor_fault","startup_monitor_error"],["startup_js_fault","error(supervisor_startup_error(_),supervisor_spawn/3)"]]) {
+    check(await run("user:startup_sup(Sup),supervisor_spawn_child(Sup,child(attempt,[start("+goal+"),link(false)]),Reply),Reply=error("+error+"),supervisor_count_children(Sup,counts(1,1))"),"dynamic "+goal+" returns original error and preserves supervisor state");
+    check(await until(()=>JSON.stringify(host.live().slice().sort())===JSON.stringify(before)),"dynamic "+goal+" reclaims only its attempted child");
+    check(host.swiWasmActorMonitors.length===monitors&&Object.keys(host.swiWasmStartups||{}).length===0,"dynamic "+goal+" leaves no new monitor or journal");
+  }
+  const exit=host.exitSwiWasmActor;
+  host.exitSwiWasmActor=function(...args){exit.apply(this,args);throw new Error("cleanup_secondary");};
+  try {
+    check(await run("user:startup_sup(Sup),supervisor_spawn_child(Sup,child(attempt,[start(startup_after_spawn),link(false)]),error(startup_after_spawn_error)),supervisor_count_children(Sup,counts(1,1))"),"secondary cleanup error does not replace startup error");
+  } finally {host.exitSwiWasmActor=exit;}
+  check(host.swiWasmActorMonitors.some(m=>m.ref==="8989898989"),"unrelated explicit monitor survives failed additions");
+  check(await run("user:startup_sup(Sup),supervisor_spawn_child(Sup,child(attempt,[start(server(startup_callback,[name(stable),src_text('startup_callback(_,S,ok,S).')])),link(false)]),error(error(permission_error(register,actor_name,stable),_))),supervisor_count_children(Sup,counts(1,1))"),"server wrapper collision returns the name error before creation");
+  check(await until(()=>JSON.stringify(host.live().slice().sort())===JSON.stringify(before)),"server name collision leaves no new actor");
+  check(await run("user:startup_sup(Sup),supervisor_spawn_child(Sup,child(attempt,[start("+idle+"),link(false)]),ok),supervisor_count_children(Sup,counts(2,2)),supervisor_which_children(Sup,[child(stable,A,_),child(attempt,B,_)]),supervisor_halt(Sup),exit(A,kill),exit(B,kill)"),"failed id is reusable and successful dynamic addition retains ordering and ok reply");
+  check(await until(()=>host.live().length===0),"test actors stopped");
+}
+
+async function namedCreationContract(run,host,check,main=false) {
+  const idle="receive({stop->true})";
+  check(await run("spawn("+idle+",P,[name(held),name(ignored),link(false),monitor(true)]),whereis(held,P),whereis(ignored,undefined),register_service(held,P),whereis_service(held,P),assertz(user:named_pid(P))"),"first name wins, monitor and separate service namespace retained");
+  const before=host.live().slice().sort(),created=host.created.length;
+  for(const [goal,pi] of [["spawn(true,_,[name(held),link(false)])","spawn/3"],["server_spawn(unused,[],_,[name(held),link(false)])","server_spawn/4"],["supervisor_spawn([],_,[name(held),link(false)])","supervisor_spawn/3"],["toplevel_spawn(_,[name(held),link(false)])","toplevel_spawn/2"],["statechart_spawn(_,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),name(held)])","statechart_spawn/2"]]) {
+    check(await run("catch(("+goal+",fail),error(permission_error(register,actor_name,held),"+pi+"),true),user:named_pid(P),whereis(held,P)"),pi+" collision preserves existing binding");
+  }
+  check(host.created.length===created&&JSON.stringify(host.live().slice().sort())===JSON.stringify(before),"collisions create no Workers, including detached wrappers");
+  check(await run("user:named_pid(P),P!stop,receive({down(P,P,true)->true}),whereis(held,undefined),whereis_service(held,undefined)"),"termination removes actor and service names and preserves spawn-time monitor reference");
+  check(await run("supervisor_spawn([child(ok,[start(receive({never->true})),link(false)]),child(bad,[start(startup_fault),link(false)])],_,[name(retry),link(false)])").catch(()=>false)===false,"failed named supervisor does not succeed");
+  check(await until(()=>host.live().length===0),"failed named supervisor rolls back detached descendants");
+  check(Object.keys(host.swiWasmNameReservations||{}).length===0&&Object.keys(host.swiWasmStartups||{}).length===0,"failure releases reservation and startup journals");
+  check(await run("spawn("+idle+",P,[name(retry),link(false)]),whereis(retry,P),exit(P,kill),whereis(retry,undefined)"),"name reusable immediately after failed supervisor startup");
+  const faultAt=host.calls+1;host.options.failAt=faultAt;
+  check(await run("catch((spawn("+idle+",_,[name(retry),link(false)]),fail),_,true),whereis(retry,undefined)"),"exception after Worker construction rolls back the named attempt");
+  host.options.failAt=0;
+  check(await until(()=>host.live().length===0)&&Object.keys(host.swiWasmNameReservations||{}).length===0,"post-construction failure leaves no actor or reservation");
+  // Check pid sharing without allowing an unbound destination into the child.
+  check(await run("self(Parent),spawn(Parent!seen(P),P,[name(pid_share),monitor(true)]),receive({seen(Seen)->true}),receive({down(P,P,true)->true}),Seen==P,whereis(pid_share,undefined)"),"pid sharing and early successful termination do not leave a stale alias");
+  const publication=host.publishSwiWasmName;
+  host.publishSwiWasmName=function(owner,token,name,...rest){return name==="publication_fault"?"collision":publication.call(this,owner,token,name,...rest);};
+  try {
+    check(await run("catch((spawn("+idle+",_,[name(publication_fault),link(false),monitor(true)]),fail),error(permission_error(register,actor_name,publication_fault),spawn/3),true),whereis(publication_fault,undefined)"),"publication failure after monitoring raises the name error");
+    check(await until(()=>host.live().length===0&&host.swiWasmActorMonitors.length===0)&&Object.keys(host.swiWasmNameReservations).length===0,"publication rollback stops detached actor, withdraws monitor and releases name");
+  } finally {host.publishSwiWasmName=publication;}
+  const commit=global.self.swiWasmNameCommit;
+  global.self.swiWasmNameCommit=function(token,name){if(name==="commit_boundary")throw new Error("commit_interrupted");return commit(token,name);};
+  try {
+    check(await run("catch((spawn("+idle+",_,[name(commit_boundary),link(false),monitor(true)]),E=unexpected_success),E,true),term_string(E,Text),sub_string(Text,_,_,_,commit_interrupted),whereis(commit_boundary,undefined)"),"interruption after publication approval retains rollback ownership");
+    check(await until(()=>host.live().length===0&&host.swiWasmActorMonitors.length===0)&&Object.keys(host.swiWasmNameReservations).length===0,"interrupted commit leaves no actor, monitor, alias or reservation");
+  } finally {global.self.swiWasmNameCommit=commit;}
+  const raceStart=host.created.length;
+  const racer="catch((spawn(receive({never->true}),Winner,[name(race_name),link(false)]),Outcome=won(Winner)),error(permission_error(register,actor_name,race_name),_),Outcome=lost),Parent!race_result(Outcome)";
+  check(await run("self(Parent),spawn(("+racer+"),A,[monitor(true)]),spawn(("+racer+"),B,[monitor(true)]),receive({race_result(One)->true}),receive({race_result(Two)->true}),(One=won(W),Two==lost;Two=won(W),One==lost),whereis(race_name,W),exit(W,kill),receive({down(A,A,_)->true}),receive({down(B,B,_)->true}),whereis(race_name,undefined)"),"two real creator Workers yield one winner and one collision");
+  check(host.created.length===raceStart+3&&await until(()=>host.live().length===0),"competing creators start exactly one named child and leave no actors");
+  check(await run("toplevel_spawn(P,[name(named_top),session(true),monitor(true)]),whereis(named_top,P),toplevel_halt(P),receive({down(P,P,_)->true}),whereis(named_top,undefined)"),"named toplevel publishes and removes its alias");
+  check(await run("server_spawn(named_callback,[],P,[name(named_server),src_text('named_callback(_,S,ok,S).'),monitor(true)]),whereis(named_server,P),server_request(P,ping,ok),server_halt(P,_),receive({down(P,P,_)->true}),whereis(named_server,undefined)"),"named server retains request and shutdown behaviour");
+  if(main) {
+    check(await run("\\+ statechart_spawn(wrong_pid,[name(bound_chart),trace(false),src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>')]),\\+ statechart_wasm:statechart_running,whereis(bound_chart,undefined)"),"main chart output mismatch rolls back chart and reservation");
+    check(await run("statechart_spawn(P,[name(named_chart),trace(false),src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>')]),P==statechart,whereis(named_chart,P),statechart_halt(P,stopped),whereis(named_chart,undefined)"),"main-engine chart retains fixed pid and releases its name on halt");
+  } else {
+    check(await run("statechart_spawn(P,[name(named_chart),trace(false),monitor(true),src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>') ]),canonical_pid(P,CP),whereis(named_chart,CP),exit(P,kill),receive({down(CP,P,_)->true}),whereis(named_chart,undefined)"),"Worker chart publishes and releases its name");
+  }
+  check(await until(()=>host.live().length===0)&&Object.keys(host.swiWasmNameReservations||{}).length===0,"all named test actors and reservations reclaimed");
 }
 
 // ---------------------------------------------------------------- scenarios
@@ -541,6 +768,299 @@ const scenarios = {
 
 
 
+
+
+
+  async behaviour_warning_server_startup(W, check) {
+    const source=":- swi_wasm_actor_bridge:behaviour_source_boundary(begin).\n"+behaviourSource+
+      "\n:- swi_wasm_actor_bridge:behaviour_source_boundary(end).\ncallback(_,S,ok,S).\n";
+    W.S.onmessage({data:{command:"start",pid:PID,behaviourSource,source,goal:"wasm_server_loop(user:callback,[])"}});
+    check(await until(()=>W.posted.some(m=>m.type==="started")),"server worker starts with internal behavior source");
+    deliver(W,"'$stop'("+CLIENT+"@localhost)");
+    check(await until(()=>done(W).length===1),"server stops normally");
+    check(messages(W).includes("reply(true)"),"server behavior remains callable");
+    check(!JSON.stringify(W.posted.filter(m=>m.type==="output")).includes("overrides weak import"),"actual startup loader is quiet for runtime definitions");
+  },
+  async behaviour_warning_supervisor_startup(W, check) {
+    const source=":- swi_wasm_actor_bridge:behaviour_source_boundary(begin).\n"+behaviourSource+
+      "\n:- swi_wasm_actor_bridge:behaviour_source_boundary(end).\n";
+    W.S.onmessage({data:{command:"start",pid:PID,behaviourSource,source,goal:"wasm_supervisor_init("+CLIENT+"@localhost,[],sup(one_for_one,1,5,[],[]))"}});
+    check(await until(()=>W.sends.some(m=>m.message.includes("supervisor_ready"))),"supervisor reports readiness");
+    deliver(W,"'$sup_stop'("+CLIENT+"@localhost)");
+    check(await until(()=>done(W).length===1),"supervisor stops normally");
+    check(messages(W).includes("reply(true)"),"supervisor behavior remains callable");
+    check(!JSON.stringify(W.posted.filter(m=>m.type==="output")).includes("overrides weak import"),"actual supervisor startup loader is quiet for runtime definitions");
+  },
+
+  async behaviour_source_warnings(W, check) {
+    await startToplevel(W);
+    async function run(goal){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);const ok=/\[checked\],false\)/.test(m[n]||"");if(!ok)console.log("warning probe reply: "+m[n]);return ok;}
+    await behaviourWarningContract(run,check,":- swi_wasm_actor_bridge:behaviour_source_boundary(begin).\n"+behaviourSource+"\n:- swi_wasm_actor_bridge:behaviour_source_boundary(end).");
+  },
+  async compatibility_behaviour_source_warnings(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_behaviour_warnings.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_behaviour_warnings.pl')").once(),"main source loader engine loaded");
+    global.self.swiWasmBehaviourSource=()=>behaviourSource;
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    await behaviourWarningContract(run,check);
+  },
+
+
+
+  async named_creation_worker(W,check) {
+    const host=scopedWorkerCoordinator(W);host.swiWasmBehaviourProlog=()=>startupFaultSource;
+    try {
+      await startToplevel(W,undefined,startupFaultSource);
+      async function run(goal){
+        const replies=()=>W.sends.filter(m=>m.to===CLIENT).map(m=>m.message),n=replies().length;
+        deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");
+        await until(()=>replies().length>n,20000);const m=replies()[n]||"";
+        if(/^error\(/.test(m))throw new Error(m);
+        const ok=/\[checked\],false\)/.test(m);if(!ok)console.log("named reply: "+m);return ok;
+      }
+      await namedCreationContract(run,host,check);
+    } finally {await host.stop();}
+  },
+  async compatibility_named_creation(W,check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>startupFaultSource});
+    const dummy={S:{onmessage:()=>{}},control:{}};
+    const host=scopedWorkerCoordinator(dummy,"main");host.swiWasmBehaviourProlog=()=>startupFaultSource;
+    try {
+      const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+      engine.FS.writeFile("/compat_named.pl",source);engine.prolog.query("use_module('/compat_named.pl')").once();
+      check(await loadCompatibilityStatecharts(engine),"main statechart modules loaded");
+      host.swiWasmActorMainMailbox=[];host.swiWasmActorMainWaiters=[];
+      host.deliverSwiWasmMainActorMessage=workbenchMethod("deliverSwiWasmMainActorMessage","deliverSwiWasmRemoteResult");
+      host.receiveSwiWasmActorMessage=workbenchMethod("receiveSwiWasmActorMessage","cancelSwiWasmMainActorWaiters");
+      dummy.S.onmessage=({data})=>{if(data.command==="deliver")host.deliverSwiWasmMainActorMessage(data.message);};
+      host.swiWasmStatechartOwnsActorTraffic=()=>false;
+      workbenchMethod("installSwiWasmActorBridge","randomSwiIdentity").call(host);
+      global.self.swiWasmBehaviourSource=()=>startupFaultSource;
+      global.self.setTimeout=setTimeout;global.self.clearTimeout=clearTimeout;
+      async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+      await namedCreationContract(run,host,check,true);
+    } finally {await host.stop();}
+  },
+  async named_creation_reservations(W,check) {
+    const host=scopedWorkerCoordinator(W);
+    try {
+      const a=host.reserveSwiWasmWorkerActorPid(),b=host.reserveSwiWasmWorkerActorPid();
+      host.swiWasmActorWorkers[a]={worker:{terminate(){}},ready:true,done:false};host.swiWasmActorWorkers[b]={worker:{terminate(){}},ready:true,done:false};
+      check(host.reserveSwiWasmName(PID,"owner","held")==="reserved"&&host.whereisSwiWasmActorName("actor","held")==="undefined","pending reservation is hidden from lookup");
+      check(host.reserveSwiWasmName(a,"competitor","held")==="collision"&&!host.registerSwiWasmActorName("actor","held",b),"competing creation and explicit registration cannot steal a reservation");
+      check(!host.unregisterSwiWasmActorName("actor","held"),"unregister does not remove pending reservation");
+      host.releaseSwiWasmName(a,"owner","held");host.releaseSwiWasmName(PID,"wrong","held");
+      check(host.publishSwiWasmName(a,"owner","held",a)==="missing"&&host.publishSwiWasmName(PID,"wrong","held",a)==="missing","publication requires matching owner and token");
+      check(host.registerSwiWasmActorName("service","held",b),"service namespace remains independent of actor reservation");
+      check(host.publishSwiWasmName(PID,"owner","held",a)==="published"&&host.whereisSwiWasmActorName("actor","held")==="undefined","approval remains hidden until Prolog confirms commit");
+      check(!host.registerSwiWasmActorName("actor","other",a)&&!host.commitSwiWasmName(a,"owner","held"),"another registration or owner cannot invalidate an approved creation");
+      check(host.publishSwiWasmName(PID,"owner","held",a)==="published"&&host.commitSwiWasmName(PID,"owner","held")&&host.whereisSwiWasmActorName("actor","held")===a+"@localhost","owner publishes the intended pid");
+      host.releaseSwiWasmName(PID,"owner","held");
+      check(host.whereisSwiWasmActorName("actor","held")===a+"@localhost","late cleanup cannot erase a committed binding");
+      check(host.reserveSwiWasmName(PID,"second","other")==="reserved"&&host.publishSwiWasmName(PID,"second","other",a)==="collision","one actor name per pid is preserved");host.releaseSwiWasmName(PID,"second","other");
+      check(host.reserveSwiWasmName(PID,"early","early")==="reserved","early termination fixture reserved");host.swiWasmActorWorkers[b].done=true;
+      check(host.publishSwiWasmName(PID,"early","early",b)==="published"&&host.commitSwiWasmName(PID,"early","early")&&host.whereisSwiWasmActorName("actor","early")==="undefined","early termination commits without publishing a stale name");
+      host.reserveSwiWasmName(PID,"late","late");host.releaseSwiWasmNamesForOwner(PID);
+      check(host.reserveSwiWasmName(a,"reuse","late")==="reserved","owner teardown releases only its pending reservations");host.releaseSwiWasmName(a,"reuse","late");
+      check(Object.keys(host.swiWasmNameReservations).length===0&&Object.keys(host.swiWasmStartups).length===0,"all reservation journals reclaimed");
+    } finally {await host.stop();}
+  },
+  async supervisor_startup_reservation_cleanup(W,check) {
+    const host=scopedWorkerCoordinator(W),OriginalWorker=global.Worker;
+    let constructions=0;
+    global.Worker=class {constructor(){constructions++;throw new Error("constructor_original");}};
+    try {
+      host.openSwiWasmStartup(PID,"construction");
+      const pid=host.reserveSwiWasmWorkerActorPid(PID);
+      let original;
+      try {host.spawnSwiWasmWorkerActor("true","",pid,"","actor",{parentPid:PID,linked:false});} catch(e){original=e;}
+      check(original&&original.message==="constructor_original","Worker constructor failure retains original error");
+      check(!host.swiWasmActorWorkers[pid],"constructor failed before actor entry existed");
+      host.finishSwiWasmStartup(PID,"construction",false);
+      check(host.swiWasmReservedWorkerActorPids[pid]===false&&Object.keys(host.swiWasmStartups).length===0,"rollback retires reservation even without an actor record");
+      const count=constructions;let late;
+      try {host.spawnSwiWasmWorkerActor("true","",pid,"","actor",{parentPid:PID,linked:false});} catch(e){late=e;}
+      check(late&&late.message==="supervisor startup rolled back"&&constructions===count,"late startup cannot construct a Worker from the retired reservation");
+      check(host.finishSwiWasmStartup(PID,"construction",false)===true,"repeated rollback is harmless");
+    } finally {global.Worker=OriginalWorker;await host.stop();}
+  },
+  async supervisor_startup_cleanup(W,check) {
+    const host=scopedWorkerCoordinator(W);
+    host.swiWasmBehaviourProlog=()=>startupFaultSource;
+    if(process.env.STARTUP_DEBUG)host.log=(...args)=>console.log("STARTUP",...args);
+    try {
+      await startToplevel(W,undefined,startupFaultSource);
+      async function run(goal) {
+        const replies=()=>W.sends.filter(m=>m.to===CLIENT).map(m=>m.message),n=replies().length;
+        deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");
+        await until(()=>replies().length>n,20000);
+        const m=replies(),ok=/\[checked\],false\)/.test(m[n]||"");
+        if(!ok)console.log("startup reply: "+m[n]);return ok;
+      }
+      await supervisorStartupContract(run,host,check);
+    } finally {await host.stop();}
+  },
+  async compatibility_supervisor_startup_cleanup(W,check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>startupFaultSource});
+    const dummy={S:{onmessage:()=>{}},control:{}};
+    const host=scopedWorkerCoordinator(dummy,"main");host.swiWasmBehaviourProlog=()=>startupFaultSource;
+    try {
+      const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+      engine.FS.writeFile("/compat_startup.pl",source);
+      check(!!engine.prolog.query("use_module('/compat_startup.pl')").once(),"main runtime loaded");
+      host.swiWasmActorMainMailbox=[];host.swiWasmActorMainWaiters=[];
+      host.deliverSwiWasmMainActorMessage=workbenchMethod("deliverSwiWasmMainActorMessage","deliverSwiWasmRemoteResult");
+      host.receiveSwiWasmActorMessage=workbenchMethod("receiveSwiWasmActorMessage","cancelSwiWasmMainActorWaiters");
+      dummy.S.onmessage=({data})=>{if(data.command==="deliver")host.deliverSwiWasmMainActorMessage(data.message);};
+      host.swiWasmStatechartOwnsActorTraffic=()=>false;
+      const bridge=workbenchMethod("installSwiWasmActorBridge","randomSwiIdentity");bridge.call(host);
+      global.self.swiWasmBehaviourSource=()=>startupFaultSource;
+      global.self.setTimeout=setTimeout;global.self.clearTimeout=clearTimeout;
+      async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+      await supervisorStartupContract(run,host,check);
+    } finally {await host.stop();}
+  },
+  async promise_worker_engine_isolation(W, check) {
+    await promiseEngineIsolationContract("worker",check);
+  },
+  async compatibility_promise_engine_isolation(W, check) {
+    await promiseEngineIsolationContract("main",check);
+    await promiseEngineIsolationContract("main",(ok,label)=>check(ok,"separate main engines: "+label),"main");
+  },
+  async promise_store_lifecycle(W, check) {
+    let clock=0,next=1,timerId=0;const timers=new Map();let cancelled=0;
+    const store=createSwiWasmPromiseStore({mint:()=>String(next++),ttlMs:300,now:()=>clock,
+      setTimer:(fn,delay)=>{const id=++timerId;timers.set(id,{at:clock+delay,fn});return id;},
+      clearTimer:id=>timers.delete(id),errorText:e=>"error("+e.message+")"});
+    const tick=ms=>{clock+=ms;for(const [id,t] of [...timers])if(t.at<=clock&&timers.delete(id))t.fn();};
+    let finish;
+    const ref=store.create(()=>({promise:new Promise(resolve=>finish=resolve),cancel:()=>cancelled++}));
+    let claim=store.claim(ref);check(store.claim(ref)==="busy_promise","only one collector is admitted");
+    for(let i=0;i<50;i++){
+      const wait=store.wait(ref,claim,0);tick(0);if(await wait!==null)throw new Error("timeout consumed a promise");
+      store.release(ref,claim);claim=store.claim(ref);
+    }
+    check(timers.size===1&&store.items[ref].collector.waiter===null,"timeouts retain only expiry timer, no completion callbacks/waiters");
+    const first=store.wait(ref,claim,-1);finish("success([ok],false)");
+    check(await first==="success([ok],false)","completion wakes collector without consuming record");
+    store.release(ref,claim);const retry=store.claim(ref);
+    check(await store.wait(ref,retry,-1)==="success([ok],false)","interruption before commit preserves ready answer");
+    check(store.commit(ref,claim)==="missing_promise"&&store.items[ref].collector.token===retry,"late old collector cannot consume a new collection");
+    check(store.commit(ref,retry)==="committed"&&store.claim(ref)==="missing_promise"&&timers.size===0,"commit consumes reference and clears expiry");
+    let late;const pending=store.create(()=>({promise:new Promise(resolve=>late=resolve),cancel:()=>cancelled++}));
+    claim=store.claim(pending);const waiting=store.wait(pending,claim,10);
+    store.dispose(pending);store.dispose(pending);
+    check(await waiting==="missing_promise"&&cancelled===1&&timers.size===0,"idempotent disposal cancels pending transport and wakes collector");
+    late("late answer");await Promise.resolve();
+    check(!store.items[pending],"late completion cannot recreate disposed record");
+    const expired=store.create(()=>({promise:new Promise(()=>{}),cancel:()=>cancelled++}));
+    claim=store.claim(expired);const expWait=store.wait(expired,claim,-1);tick(300);
+    check(await expWait==="missing_promise"&&cancelled===2&&timers.size===0,"expiry disposes pending request and wakes waiting collector");
+    const throttled=store.create(()=>({promise:new Promise(()=>{}),cancel:()=>cancelled++}));
+    clock+=301;check(store.claim(throttled)==="missing_promise"&&timers.size===0,"access enforces deadline even when background timer is delayed");
+    let error;try{store.create(()=>{throw new Error("start failed");});}catch(e){error=e;}
+    check(error&&error.message==="start failed"&&Object.keys(store.items).length===0&&timers.size===0,"setup failure rolls back records and timers");
+    const readyExpiry=store.create(()=>({promise:Promise.resolve("cached answer")}));await Promise.resolve();
+    tick(299);const cachedClaim=store.claim(readyExpiry);check(cachedClaim!=="missing_promise","ready answer retained before creation deadline");store.release(readyExpiry,cachedClaim);
+    tick(1);check(store.claim(readyExpiry)==="missing_promise"&&timers.size===0,"ready answer expires at creation deadline without resetting lifetime");
+    const cancelThrows=store.create(()=>({promise:new Promise(()=>{}),cancel:()=>{throw new Error("cancel failed");}}));
+    check(store.dispose(cancelThrows)===true&&!store.items[cancelThrows]&&timers.size===0,"local cancellation failure cannot undo disposal or mask caller errors");
+    const bad=store.create(()=>({promise:Promise.reject(new Error("failed"))}));await Promise.resolve();claim=store.claim(bad);
+    check(await store.wait(bad,claim,-1)==="error(failed)","worker rejection becomes a stored answer");store.commit(bad,claim);
+    const aborted=store.create(()=>({promise:new Promise(()=>{}),cancel:()=>cancelled++}));claim=store.claim(aborted);
+    const abortWait=store.wait(aborted,claim,-1);check(store.interruptCollectors()===1,"main abort releases its active collector");
+    check(await abortWait==="missing_promise"&&store.items[aborted]&&store.claim(aborted)!=="busy_promise","abort leaves promise available to retry");store.dispose(aborted);
+    check(timers.size===0,"all test resources reclaimed");
+  },
+  async promise_worker_lifecycle(W, check) {
+    W.control.hold=["rpc"];await startToplevel(W);
+    async function query(goal,template="R") {const n=W.sends.length;deliver(W,"'$call'(("+goal+"),[template("+template+")])");const m=await nSends(W,n+1);return m[n]||"";}
+    check(/waiting/.test(await query("promise('https://example.org',true,Ref),assertz(user:promise_ref(Ref)),yield(Ref,R,[timeout(0),on_timeout(R=waiting)])")),"public timeout callback preserves pending reference");
+    check(/checked/.test(await query("user:promise_ref(Ref),number_string(Ref,T),C:=actorPromiseClaim(#T),catch((yield(Ref,_),fail),error(permission_error(collect,promise,Ref),_),R=checked),_:=actorPromiseRelease(#T,#C)")),"public yield rejects competing collector");
+    check(/checked/.test(await query("user:promise_ref(Ref),catch((yield(Ref,_,[timeout(0),on_timeout(fail)]),fail),error(timeout_callback_failed(Ref),_),R=checked)")),"failed timeout callback releases collection claim");
+    check(/checked/.test(await query("user:promise_ref(Ref),yield(Ref,Outer,[timeout(0),on_timeout((yield(Ref,Inner,[timeout(0)]),Outer=waiting))]),Outer==waiting,Inner==timeout,R=checked")),"timeout callback can re-enter yield after claim release");
+    const before=W.sends.length;deliver(W,"'$call'((user:promise_ref(Ref),yield(Ref,R)),[template(R)])");
+    await sleep(40);abort(W);let m=await nSends(W,before+1);check(/^abort\(/.test(m[before]||""),"pending yield interrupted");
+    const request=W.control.held.shift();W.S.onmessage({data:{command:"reply",id:request.id,ok:true,result:"success([ok],false)"}});
+    check(/success\(\[ok\],false\)/.test(await query("user:promise_ref(Ref),yield(Ref,R)")),"retry after interruption collects original answer");
+    check(/checked/.test(await query("user:promise_ref(Ref),catch((yield(Ref,_),fail),error(existence_error(promise,Ref),_),R=checked)")),"collected reference invalidated");
+    check(/checked/.test(await query("promise('https://example.org',true,Ref),promise_cleanup(Ref),promise_cleanup(Ref),catch((yield(Ref,_),fail),error(existence_error(promise,Ref),_),R=checked)")),"explicit cleanup is idempotent and invalidates reference");
+    check(W.posted.some(x=>x.type==="promise_dispose"),"cleanup requests coordinator fetch disposal");
+    check(/checked/.test(await query("catch((promise_cleanup(bad),fail),error(type_error(integer,bad),_),R=checked)")),"cleanup validates reference type");
+  },
+  async promise_worker_ready_interrupt(W, check) {
+    W.control.hold=["rpc"];await startToplevel(W);
+    deliver(W,"'$call'((promise('https://example.org',true,Ref),assertz(user:ready_ref(Ref)),yield(Ref,R)),[template(R)])");
+    check(await until(()=>W.control.held.length===1),"request awaiting completion");
+    const original=W.S.actorPromiseWait;let interrupted=false;
+    // The wait was already created; interrupt in the next task immediately
+    // after the RPC reply wakes it, via the Prolog commit boundary instead.
+    const commit=W.S.actorPromiseCommit;
+    W.S.actorPromiseCommit=(...args)=>{if(!interrupted){interrupted=true;throw new Error("interrupt before commit");}return commit(...args);};
+    const request=W.control.held.shift();W.S.onmessage({data:{command:"reply",id:request.id,ok:true,result:"success([kept],false)"}});
+    let m=await nSends(W,1);check(/error\(/.test(m[0]||""),"exception before collection commit unwinds yield");
+    W.S.actorPromiseCommit=commit;W.S.actorPromiseWait=original;
+    deliver(W,"'$call'((user:ready_ref(Ref),yield(Ref,R)),[template(R)])");m=await nSends(W,2);
+    check(/success\(\[kept\],false\)/.test(m[1]||""),"ready answer survives interrupted commit boundary");
+  },
+  async compatibility_promise_lifecycle(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_promise_lifecycle.pl",source);engine.prolog.query("use_module('/compat_promise_lifecycle.pl')").once();
+    const calls=compatibilityClientHarness();calls.hold=true;
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    check(await run("promise('https://example.org',true,Ref),assertz(user:life_ref(Ref)),yield(Ref,R,[timeout(0),on_timeout(R=waiting)]),R==waiting"),"main timeout callback preserves reference");
+    check(await run("user:life_ref(Ref),number_string(Ref,T),C:=swiPromiseClaim(#T),catch((yield(Ref,_),fail),error(permission_error(collect,promise,Ref),_),true),_:=swiPromiseRelease(#T,#C)"),"main rejects competing collector");
+    check(await run("user:life_ref(Ref),catch((yield(Ref,_,[timeout(0),on_timeout(throw(callback_error))]),fail),callback_error,true)"),"main callback exception releases claim");
+    check(await run("user:life_ref(Ref),yield(Ref,Outer,[timeout(0),on_timeout((yield(Ref,Inner,[timeout(0)]),Outer=waiting))]),Outer==waiting,Inner==timeout"),"main timeout callback can re-enter yield after claim release");
+    check(await run("user:life_ref(Ref),yield(Ref,R,[timeout(0),on_timeout((promise_cleanup(Ref),R=disposed))]),R==disposed,catch((yield(Ref,_),fail),error(existence_error(promise,Ref),_),true),promise_cleanup(Ref)"),"main cleanup inside callback is idempotent");
+    check(Object.keys(global.self._swiPromiseStore.items).length===0,"main disposal removes stored resources");
+    let next=9000000000;global.self._swiPromiseStore=createSwiWasmPromiseStore({ttlMs:20,mint:()=>String(next++),errorText:()=>"error(failed)"});
+    check(await run("promise('https://example.org',true,Ref),catch((yield(Ref,_,[on_timeout(throw(wrong_callback))]),fail),error(existence_error(promise,Ref),_),true)"),"main expiry wakes yield with existence error, not timeout callback");
+    check(calls.promise.at(-1).options.signal.aborted&&Object.keys(global.self._swiPromiseStore.items).length===0,"main expiry aborts local fetch and reclaims record");
+    calls.complete();await Promise.resolve();await Promise.resolve();check(Object.keys(global.self._swiPromiseStore.items).length===0,"main late fetch completion ignored");
+  },
+  async promise_coordinator_disposal(W, check) {
+    global.resolveBrowserRpcBaseUri=x=>x;global.window.location={origin:"https://example.org"};
+    const host={swiWasmActorWorkers:{a:{},b:{}}};
+    host.requestSwiWasmWorkerRpc=workbenchMethod("requestSwiWasmWorkerRpc","swiWasmRemoteWsUrl");
+    host.disposeSwiWasmPromiseRequest=workbenchMethod("disposeSwiWasmPromiseRequest","requestSwiWasmWorkerRpc");
+    const requests=[];global.fetch=(url,options)=>new Promise((resolve,reject)=>{
+      requests.push({resolve,signal:options.signal});options.signal.addEventListener("abort",()=>reject(new Error("aborted")),{once:true});
+    });
+    const message={node:"https://example.org",goal:"true",promise_ref:"123",httpTimeout:100};
+    const a=host.requestSwiWasmWorkerRpc(message,"a").catch(e=>e);const b=host.requestSwiWasmWorkerRpc(message,"b");await Promise.resolve();
+    host.disposeSwiWasmPromiseRequest("a","123");await a;
+    check(requests[0].signal.aborted&&!requests[1].signal.aborted&&Object.keys(host.swiWasmActorWorkers.a.promiseRequests).length===0,"disposal aborts only the matching Worker's fetch");
+    requests[1].resolve({ok:true,text:()=>Promise.resolve("success([ok],false)")});await b;
+    check(Object.keys(host.swiWasmActorWorkers.b.promiseRequests).length===0,"normal completion releases transport registry");
+    global.fetch=()=>{throw new Error("setup failure");};
+    const err=await host.requestSwiWasmWorkerRpc(message,"a").catch(e=>e);
+    check(err.message==="setup failure"&&Object.keys(host.swiWasmActorWorkers.a.promiseRequests).length===0,"synchronous fetch failure clears timer and registry");
+  },
+
+  async supervisor_ordering_bookkeeping(W, check) {
+    wrapperWorkerReplies(W);await startToplevel(W);
+    async function run(goal){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);const ok=/\[checked\],false\)/.test(m[n]||"");if(!ok)console.log("supervisor order reply: "+m[n]);return ok;}
+    const events=()=>({spawn:W.posted.filter(m=>m.action==="name_reserve").map(m=>m.name),exit:W.posted.filter(m=>m.action==="exit").map(m=>m.pid)});
+    await supervisorOrderContract(run,events,check);
+  },
+  async compatibility_supervisor_ordering_bookkeeping(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_supervisor_order.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_supervisor_order.pl')").once(),"main supervisor engine loaded");
+    const calls=spawnOptionMainHarness();global.self.swiWasmActorExit=(...args)=>{calls.push({action:"exit",args});return Promise.resolve(true);};
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    await supervisorOrderContract(run,()=>({spawn:calls.filter(m=>m.action==="name_reserve").map(m=>m.args[1]),exit:calls.filter(m=>m.action==="exit").map(m=>m.args[0])}),check);
+  },
 
   async supervisor_restart_policy(W, check) {
     wrapperWorkerReplies(W);await startToplevel(W);
@@ -578,7 +1098,7 @@ const scenarios = {
     await childSpecContract(run,check,()=>W.posted.filter(m=>m.type==="request"&&!["send","receive","make_ref"].includes(m.action)).length,false);
     const spawn=W.posted.filter(m=>m.action==="spawn");
     check(spawn.some(m=>m.goal.includes("sup(one_for_one,1,5")),"worker default supervisor settings preserved");
-    check(spawn.some(m=>m.name==="first"),"worker nested server option precedence preserved");
+    check(W.posted.some(m=>m.action==="name_reserve"&&m.name==="first"),"worker nested server option precedence preserved");
     check(spawn.some(m=>m.goal.includes("sup(rest_for_one,0,0.25")),"worker nested supervisor settings preserved");
   },
 
@@ -644,7 +1164,7 @@ const scenarios = {
     }
     await childSpecContract(run,check,()=>calls.length,true);
     check(calls.some(m=>m.action==="spawn"&&m.args[1].includes("sup(one_for_one,1,5")),"main default supervisor settings preserved");
-    check(calls.some(m=>m.action==="register"&&m.args.includes("first")),"main nested server option precedence preserved");
+    check(calls.some(m=>m.action==="name_reserve"&&m.args.includes("first")),"main nested server option precedence preserved");
     const mailbox=["'$sup'(caller,901,start_child(child(a,[])))","'$sup'(caller,902,count_children)","'$sup_stop'(caller)"];
     const replies=[];
     global.self.swiWasmActorReceive=()=>Promise.resolve(mailbox.shift()||null);
@@ -726,13 +1246,13 @@ const scenarios = {
         let items=calls.slice(start);
         check(outgoing(items).length===0,kind+" root creates no worker and sends no remote request");
         check(items.filter(m=>m.action==="get").length===(kind==="uri"?1:0),kind+" root fetches URI only when selected");
-        check(items.some(m=>m.action==="register"&&m.args[1]==="root_chart"&&m.args[2]==="statechart"),kind+" root retains name registration");
+        check(items.some(m=>m.action==="name_publish"&&m.args[1]==="root_chart"&&m.args[2]==="statechart"),kind+" root retains name registration");
 
         start=calls.length;
         check(await succeeds("statechart_wasm:statechart_configuration(Before),statechart_spawn(Pid,[node(localhost),"+sourceOption(kind)+",trace(false),trace(true),name(nested_chart),link(false),io_target(child_client),monitor(true),src_list([child_support("+kind+")])]),Pid\\==statechart,statechart_wasm:statechart_configuration(After),Before==After,statechart_wasm:routing_support("+kind+")"),kind+" nested local chart preserves the running parent");
         items=calls.slice(start);let req=items.find(m=>m.action==="statechart");
         check(outgoing(items).length===1&&!!req,kind+" nested chart uses worker path exclusively");
-        check(!!req&&req.args[0]===kind&&req.args[1]===(kind==="text"?simpleChart:"https://example.org/chart.xml")&&req.args[2].includes("child_support("+kind+")")&&req.args[3]==="nested_chart"&&req.args[4]==="false"&&req.args[5]==="child_client"&&req.args[6]==="false",kind+" nested worker receives source, name, link, I/O and first trace");
+        check(!!req&&req.args[0]===kind&&req.args[1]===(kind==="text"?simpleChart:"https://example.org/chart.xml")&&req.args[2].includes("child_support("+kind+")")&&req.args[3]===""&&items.some(m=>m.action==="name_reserve"&&m.args[1]==="nested_chart")&&req.args[4]==="false"&&req.args[5]==="child_client"&&req.args[6]==="false",kind+" nested worker receives source, name, link, I/O and first trace");
         check(!items.some(m=>m.action==="get"),kind+" nested source is passed to worker without main-engine fetching");
         check(!!req&&items.some(m=>m.action==="monitor"&&m.args[0]===req.pid&&m.args[1]===req.pid),kind+" nested spawn monitor targets worker pid");
 
@@ -809,7 +1329,7 @@ const scenarios = {
     async function succeeds(goal,label){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);check(/\[checked\],false\)/.test(m[n]||""),label+": "+m[n]);}
     await succeeds("assertz(user:spawn_fact(ok)),spawn(X=Pid,Pid,"+validSpawnOptions+"),var(X),var(T)","worker local spawn preserves goal/pid sharing and option variables");
     let spawns=W.posted.filter(m=>m.type==="request"&&m.action==="spawn");const first=spawns[0];
-    check(first.name==="first"&&first.link===false,"worker first duplicate name/link wins");
+    check(first.name===""&&W.posted.some(m=>m.action==="name_reserve"&&m.name==="first")&&first.link===false,"worker first duplicate name/link wins");
     check(first.goal.includes(first.pid),"worker binds goal's shared pid before serialization");
     check(["first(a)","second(b)","list_fact(ok)","spawn_fact(ok)"].every(x=>first.source.includes(x)),"worker repeated and mixed sources retained");
     check(W.posted.some(m=>m.action==="monitor"&&m.target===first.pid+"@localhost"&&m.ref===m.target),"worker first monitor(true) installs spawn monitor");
@@ -838,7 +1358,7 @@ const scenarios = {
     check(calls.length===0,"main invalid options allocate no pid, spawn, remote request, monitor or source fetch");
     check(await succeeds("assertz(user:spawn_fact(ok)),spawn(X=Pid,Pid,"+validSpawnOptions+"),var(X),var(T)"),"main valid spawn retains variable sharing");
     const first=calls.find(m=>m.action==="spawn").args;
-    check(first[3]==="first"&&first[4]==="false"&&first[1].includes(first[0]),"main first name/link and shared goal pid preserved");
+    check(first[3]===""&&calls.some(m=>m.action==="name_reserve"&&m.args[1]==="first")&&first[4]==="false"&&first[1].includes(first[0]),"main first name/link and shared goal pid preserved");
     check(["first(a)","second(b)","list_fact(ok)","spawn_fact(ok)"].every(x=>first[2].includes(x)),"main repeated and mixed source transfer retained");
     check(calls.some(m=>m.action==="monitor"&&m.args[0]===first[0]+"@localhost"&&m.args[1]===m.args[0]),"main first monitor(true) retained");
     check(await succeeds("spawn(true,Pid,[node('https://example.org'),link(false),monitor(true),src_uri('https://example.org/source.pl')]),Pid=8800000000@'https://example.org'"),"main remote spawn and URI source retained");
@@ -1372,6 +1892,9 @@ const scenarios = {
     check(await succeeds("findall(X,swi_wasm_actor_bridge:web_rpc_page(v(X),0,5,'https://example.org',p,'v(X)',[],-1,false,-1),[a,b,c])"),"compatibility paging retains short-page answers");
     check(JSON.stringify(offsets)==="[0,2]","compatibility paging uses actual length: "+offsets);
     global.self.swiPromiseStart = () => "1234567891";
+    global.self.swiPromiseClaim = () => "test_collector";
+    global.self.swiPromiseCommit = () => "committed";
+    global.self.swiPromiseRelease = () => true;
     global.self.swiResolveRpcBase = () => "https://example.org";
     check(await succeeds("promise('https://example.org',p,1234567891)"),"compatibility promise reference converts from JavaScript atom");
     global.self.swiPromiseWait = () => Promise.resolve(null);

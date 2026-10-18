@@ -260,6 +260,16 @@ async function main() {
   S.onmessage({ data: { command: "reply", id: loadUriReq.id, ok: true, result: "p(a)." } });
   ok((await loadUriP) === "p(a).", "RPC src_uri source returns to the worker");
 
+  // Mirror the Prolog collector's claim/wait/commit/finally-release boundary.
+  async function collectPromise(ref, timeout) {
+    const claim=S.actorPromiseClaim(ref);
+    if(claim==="missing_promise"||claim==="busy_promise")return claim;
+    try {
+      const result=await S.actorPromiseWait(ref,claim,timeout);
+      if(result!==null&&result!=="missing_promise")S.actorPromiseCommit(ref,claim);
+      return result;
+    } finally {S.actorPromiseRelease(ref,claim);}
+  }
   // Promise/yield starts the same RPC request without blocking Prolog, then
   // consumes its response through an opaque ten-digit reference.
   const promiseRef = S.actorPromiseStart("'https://n2.example'", "mortal(Who)", "mortal(Who)", 0, 10, "");
@@ -270,7 +280,7 @@ async function main() {
      Number(promiseRef) <= 9999999999 &&
      promiseReq.goal === "mortal(Who)",
      "promise starts RPC and returns an opaque ten-digit reference");
-  const promiseWait = S.actorPromiseWait(promiseRef, -1);
+  const promiseWait = collectPromise(promiseRef, -1);
   S.onmessage({ data: { command: "reply", id: promiseReq.id, ok: true, result: "success([mortal(socrates)],false)" } });
   ok((await promiseWait) === "success([mortal(socrates)],false)",
      "yield wait consumes the promised RPC response");
@@ -281,20 +291,20 @@ async function main() {
   }).pop();
   ok(Number(retainedRef) <= 9999999999 && retainedRef !== promiseRef,
      "separate worker promises receive distinct ten-digit references");
-  ok((await S.actorPromiseWait(retainedRef, 0)) === null,
+  ok((await collectPromise(retainedRef, 0)) === null,
      "timed-out yield leaves the promise pending");
   S.onmessage({ data: { command: "reply", id: retainedReq.id, ok: true, result: "success([slow(done)],false)" } });
-  ok((await S.actorPromiseWait(retainedRef, -1)) === "success([slow(done)],false)",
+  ok((await collectPromise(retainedRef, -1)) === "success([slow(done)],false)",
      "a later yield consumes a previously timed-out promise");
 
-  ok((await S.actorPromiseWait(retainedRef, 0)) === "missing_promise",
+  ok((await collectPromise(retainedRef, 0)) === "missing_promise",
      "consumed promise is distinct from a timeout");
-  ok((await S.actorPromiseWait("42", 0)) === "missing_promise",
+  ok((await collectPromise("42", 0)) === "missing_promise",
      "unknown promise is distinct from a timeout");
   const failedRef = S.actorPromiseStart("'https://n2.example'", "p", "p", 0, 10, "");
   const failedRequest = S._posted.filter(m => m.action === "rpc").pop();
   S.onmessage({data:{command:"reply", id:failedRequest.id, ok:false, error:'network "failure"'}});
-  const failureAnswer = await S.actorPromiseWait(failedRef, -1);
+  const failureAnswer = await collectPromise(failedRef, -1);
   ok(failureAnswer === 'error(rpc_error("network \\"failure\\""))',
      "rejected promise delivers a quoted error answer: " + failureAnswer);
 
