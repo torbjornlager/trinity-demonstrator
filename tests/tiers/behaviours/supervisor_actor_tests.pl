@@ -23,6 +23,8 @@
 :- use_module('../../../prolog/web_prolog/actors.pl', [receive/1, receive/2, monitor/2, exit/1, exit/2]).
 :- use_module('../../../prolog/web_prolog/server_actor.pl', [server_request/3, server_halt/2]).
 
+:- use_module('supervisor_halt_tests.pl', []).
+
 :- use_module(library(debug)).
 :- use_module(library(plunit), [run_tests/1]).
 
@@ -97,6 +99,9 @@ run_tests :-
 %% -------------------------------------------------------------------
 
 :- begin_tests(supervisor).
+
+test(halt_ordering_and_deadlines) :-
+    supervisor_halt_tests:run.
 
 test(basic_startup) :-
     test_basic_startup.

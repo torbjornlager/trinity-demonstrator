@@ -283,7 +283,7 @@ supervisor_count_children(Sup, Counts) :-
     sup_call(Sup, count_children, Counts).
 
 supervisor_halt(Sup) :-
-    sup_call(Sup, stop, _).
+    sup_halt_call(Sup).
 
 supervisor_stop(Sup) :-
     supervisor_halt(Sup).
@@ -314,6 +314,35 @@ sup_call(Sup, Request, Reply) :-
     ;   demonitor(MonRef),
         throw(supervisor_call_timeout(Sup, Request))
     ).
+
+% A normal down can overtake the acknowledgement on another connection.
+% Only halt waits tolerate that ordering; retain one deadline and require ack.
+sup_halt_call(Supervisor) :-
+    self(Self),
+    make_ref(Ref),
+    setup_call_cleanup(
+        monitor(Supervisor, MonitorRef),
+        ( Supervisor ! '$sup'(Self, Ref, stop),
+          get_time(Now), Deadline is Now + 10,
+          sup_halt_wait(Supervisor, Ref, MonitorRef, Deadline, pending)
+        ),
+        demonitor(MonitorRef, [flush])).
+
+sup_halt_wait(Supervisor, Ref, MonitorRef, Deadline, Outcome) :-
+    get_time(Now), Remaining is max(0, Deadline - Now),
+    receive({
+        Ref-_ -> true ;
+        down(_, MonitorRef, Reason) ->
+            ( Reason == true
+            -> sup_halt_wait(Supervisor, Ref, MonitorRef, Deadline, normal_down)
+            ; throw(supervisor_down(Reason)) )
+    }, [timeout(Remaining),
+        on_timeout(sup_halt_timeout(Supervisor, Outcome))]).
+
+sup_halt_timeout(_, normal_down) :- !,
+    throw(supervisor_down(true)).
+sup_halt_timeout(Supervisor, pending) :-
+    throw(supervisor_call_timeout(Supervisor, stop)).
 
 sup_reply(From, Ref, Reply) :-
     From ! Ref-Reply.

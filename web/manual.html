@@ -825,6 +825,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>supervisor_halt(+Pid) is det.</pre>
     <p>Stops the supervisor and shuts down children in reverse start order.</p>
+    <p>Native SWI and Trealla acknowledge acceptance of the halt request before child shutdown completes. A normal <code>down(..., true)</code> event can arrive before that acknowledgement over another connection. Their halt waits continue waiting for the matching reply within the original ten-second deadline, which starts after sending; normal termination does not extend it. Success still requires the acknowledgement. If the deadline expires after normal termination was observed, the call throws <code>supervisor_down(true)</code>; without an observed termination it throws <code>supervisor_call_timeout(Sup,stop)</code>. Abnormal termination raises <code>supervisor_down(Reason)</code> immediately. Cleanup withdraws and flushes only the private wait monitor, preserving unrelated monitors and messages. A separate application monitor is required to observe completed shutdown. Other supervisor request waits and shutdown policies are unchanged. Browser shutdown acknowledgement timing remains as described above.</p>
 </article>
 
 <h3>Note on synchronous supervisor calls</h3>
