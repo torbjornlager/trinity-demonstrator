@@ -121,7 +121,7 @@ answer_to_json(halted(Pid, Reply),
 answer_to_json(down(Pid, Ref, Reason),
                json{type:down, pid:JsonPid, ref:JsonRef, reason:ReasonString}) :-
     json_pid_value(Pid, JsonPid),
-    json_pid_value(Ref, JsonRef),
+    json_monitor_reference(Ref, JsonRef),
     down_reason_to_json_string(Reason, ReasonString).
 %  Legacy 2-arity form: kept as a fallback during transition.  Any new
 %  producer should emit down/3 with a sentinel Ref (e.g. Ref = Pid, the
@@ -129,6 +129,17 @@ answer_to_json(down(Pid, Ref, Reason),
 answer_to_json(down(Pid, Reason), json{type:down, pid:JsonPid, reason:ReasonString}) :-
     json_pid_value(Pid, JsonPid),
     down_reason_to_json_string(Reason, ReasonString).
+
+% References are opaque terms, not addresses. Preserve node qualifiers and
+% arbitrary compound structure; pid normalization and display formatting would
+% change the reference a client must match. Keep existing atomic wire values.
+json_monitor_reference(Ref, JSONRef) :-
+    integer(Ref), !, json_integer_identity(Ref, JSONRef).
+json_monitor_reference(Ref, Text) :-
+    compound(Ref), !,
+    with_output_to(atom(Text),
+                   write_term(Ref, [quoted(true), numbervars(false), module(node_response)])).
+json_monitor_reference(Ref, Ref).
 
 down_reason_to_json_string(exception(Error0), ReasonString) :-
     !,

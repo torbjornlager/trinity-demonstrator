@@ -5796,6 +5796,7 @@
             swiWasmMorePending: null,
             swiWasmMoreRequested: false,
             swiWasmLastDet: "false",
+            swiWasmQueryException: null,
             swiWasmFinalized: false,
             swiWasmPagingStopped: false,
             swiWasmActorWorkers: {},
@@ -10545,6 +10546,12 @@
             //  last) or ' ; ' (more may follow).  swiWasmAwaitMore parks the
             //  driver between solutions; nextSwiWasmSolution resolves it on ';'
             //  and stopPaging/abort reject it to unwind the suspended search.
+            // Keep the original exception before the WASM query API reduces it
+            // to message_to_string/2. The terminal applies its display setting.
+            window.swiWasmNoteException = function(text) {
+              self.swiWasmQueryException = String(text);
+              return true;
+            };
             window.swiWasmNoteDet = function(detText) {
               self.swiWasmLastDet = String(detText) === "true" ? "true" : "false";
               return true;
@@ -10681,7 +10688,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-spawn-options-v11";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-wrapper-options-v12";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -12264,6 +12271,7 @@
               "    memberchk(Name, Names).",
               "",
               "server_spawn(Pred0, State, Pid, Options) :-",
+              "    validate_browser_wrapper_options(server, server_spawn/4, Options),",
               "    strip_module(Pred0, Module, PlainPred), Pred = Module:PlainPred,",
               "    browser_wrapper_spawn_options([initial_state], Options, BaseOptions),",
               "    ( behaviour_spawn_options(PlainPred, 4, BaseOptions, SpawnOptions) -> true ; throw(error(server_spawn_source_failed(PlainPred), server_spawn/4)) ),",
@@ -12320,8 +12328,58 @@
               "server_halt(To, Reply) :- self(Self), send(To, '$stop'(Self)), receive({reply(Reply) -> true}).",
               "server_stop(To, Reply) :- server_halt(To, Reply).",
               "",
+              "% Validate in place: never normalise/copy child goals, states or source terms.",
+              "browser_child_acyclic(Term) :-",
+              "    ( acyclic_term(Term) -> true ; representation_error(cyclic_term) ).",
+              "browser_validate_child_specs(Specs0, PI) :-",
+              "    catch((browser_child_acyclic(Specs0), strip_module(Specs0, _, Specs),",
+              "           browser_child_specs(Specs)),",
+              "          error(Formal, _), throw(error(Formal, context(PI, 'invalid child specification')))).",
+              "browser_child_specs(Specs) :-",
+              "    must_be(list, Specs), maplist(browser_child_spec, Specs), browser_child_ids(Specs, []).",
+              "browser_child_ids([], _).",
+              "browser_child_ids([child(Id,_)|Rest], Seen) :-",
+              "    ( memberchk(Id, Seen) -> permission_error(duplicate, supervisor_child_id, Id)",
+              "    ; browser_child_ids(Rest, [Id|Seen]) ).",
+              "browser_validate_child_spec(Spec0, Spec, PI) :-",
+              "    catch((browser_child_acyclic(Spec0), strip_module(Spec0, _, Spec), browser_child_spec(Spec)),",
+              "          error(Formal, _), throw(error(Formal, context(PI, 'invalid child specification')))).",
+              "browser_child_spec(Spec) :-",
+              "    must_be(nonvar, Spec),",
+              "    ( compound(Spec), compound_name_arity(Spec, child, 2)",
+              "    -> arg(1, Spec, Id), arg(2, Spec, Options)",
+              "    ; type_error(supervisor_child_spec, Spec) ),",
+              "    must_be(atom, Id), must_be(list, Options), maplist(browser_child_option, Options),",
+              "    ( option(start(_), Options) -> true ; throw(error(missing_start_option(Id), supervisor)) ).",
+              "browser_child_option(Option) :-",
+              "    must_be(nonvar, Option),",
+              "    ( compound(Option), compound_name_arity(Option, Name, 1),",
+              "      memberchk(Name, [start,restart,shutdown,type,significant])",
+              "    -> arg(1, Option, Value), browser_child_value(Name, Value)",
+              "    ; validate_browser_spawn_option(Option) ).",
+              "browser_child_callable(Goal) :-",
+              "    must_be(callable, Goal),",
+              "    ( Goal = Module:Inner -> must_be(atom, Module), browser_child_callable(Inner) ; true ).",
+              "browser_child_value(start, Start) :-",
+              "    browser_child_callable(Start),",
+              "    ( Start = server(Pred, Options)",
+              "    -> browser_child_callable(Pred), validate_browser_wrapper_options(server, supervisor_spawn/3, Options)",
+              "    ; Start = start_sub_supervisor(Specs, Options)",
+              "    -> validate_browser_wrapper_options(supervisor, supervisor_spawn/3, Options),",
+              "       browser_validate_child_specs(Specs, supervisor_spawn/3)",
+              "    ; true ).",
+              "browser_child_value(restart, Value) :- must_be(oneof([permanent,transient,temporary]), Value).",
+              "browser_child_value(type, Value) :- must_be(oneof([worker,supervisor]), Value).",
+              "browser_child_value(significant, Value) :- validate_rpc_client_value(spawn_boolean, Value).",
+              "browser_child_value(shutdown, Value) :-",
+              "    must_be(nonvar, Value),",
+              "    ( Value == brutal_kill -> true ; Value == infinity -> true",
+              "    ; number(Value), Value >= 0 -> true ; domain_error(supervisor_child_shutdown, Value) ).",
+              "",
               "supervisor_spawn(Specs, Pid) :- supervisor_spawn(Specs, Pid, []).",
               "supervisor_spawn(Specs0, Pid, Options) :-",
+              "    validate_browser_wrapper_options(supervisor, supervisor_spawn/3, Options),",
+              "    browser_validate_child_specs(Specs0, supervisor_spawn/3),",
               "    strip_module(Specs0, _Caller, Specs),",
               "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
               "    wasm_behaviour_source(Behaviour),",
@@ -12370,7 +12428,7 @@
               "      ( wasm_should_restart(Restart, Reason) -> wasm_note_restart(Max, Period, Restarts, Restarts1), wasm_apply_strategy(Strategy, Id, Spec, Remaining, sup(Strategy, Max, Period, Remaining, Restarts1), State) ; State = sup(Strategy, Max, Period, Remaining, Restarts) )",
               "    ; State = State0 ).",
               "wasm_should_restart(permanent, _).",
-              "wasm_should_restart(transient, Reason) :- Reason \== true.",
+              "wasm_should_restart(transient, Reason) :- Reason \\== true.",
               "wasm_note_restart(Max, Period, Restarts0, Restarts) :- get_time(Now), Cutoff is Now-Period, include(wasm_recent(Cutoff), Restarts0, Recent), length(Recent, Count), (Count >= Max -> exit(shutdown) ; Restarts = [Now|Recent]).",
               "wasm_recent(Cutoff, Time) :- Time > Cutoff.",
               "",
@@ -12386,13 +12444,19 @@
               "",
               "wasm_handle_supervisor_call(which_children, Children, State, State) :- State = sup(_,_,_,Children,_).",
               "wasm_handle_supervisor_call(count_children, counts(Total,Active), State, State) :- State = sup(_,_,_,Children,_), length(Children, Total), Active = Total.",
-              "wasm_handle_supervisor_call(start_child(Spec), Reply, State0, State) :- (wasm_start_child(Spec, State0, State) -> Reply=ok ; Reply=error(start_failed), State=State0).",
+              "wasm_handle_supervisor_call(start_child(Spec0), Reply, State0, State) :-",
+              "    catch((browser_validate_child_spec(Spec0, Spec, supervisor_spawn_child/3), Valid=true), Error, Valid=error(Error)),",
+              "    ( Valid = error(Invalid) -> Reply=error(Invalid), State=State0",
+              "    ; State0=sup(_,_,_,Children,_), Spec=child(Id,_),",
+              "      ( memberchk(child(Id,_,_), Children) -> Reply=error(already_present), State=State0",
+              "      ; wasm_start_child(Spec, State0, State) -> Reply=ok",
+              "      ; Reply=error(start_failed), State=State0 ) ).",
               "wasm_handle_supervisor_call(terminate_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,Spec),Children,Rest) -> exit(Pid,shutdown), Reply=ok, State=sup(Str,Max,Period,[child(Id,undefined,Spec)|Rest],R) ; Reply=error(not_found), State=State0).",
               "wasm_handle_supervisor_call(delete_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,_Spec),Children,Rest) -> catch(exit(Pid,shutdown),_,true), Reply=ok, State=sup(Str,Max,Period,Rest,R) ; Reply=error(not_found), State=State0).",
               "wasm_handle_supervisor_call(restart_child(Id), Reply, State0, State) :- State0=sup(Str,Max,Period,Children,R), (select(child(Id,Pid,Spec),Children,Rest) -> catch(exit(Pid,shutdown),_,true), wasm_start_child(Spec,sup(Str,Max,Period,Rest,R),State), Reply=ok ; Reply=error(not_found),State=State0).",
               "",
               "wasm_supervisor_call(Sup, Request, Reply) :- self(Self), make_ref(Ref), send(Sup, '$sup'(Self,Ref,Request)), receive({Ref-Reply -> true}, [timeout(10)]).",
-              "supervisor_spawn_child(Sup, Spec, Reply) :- wasm_supervisor_call(Sup, start_child(Spec), Reply).",
+              "supervisor_spawn_child(Sup, Spec0, Reply) :- browser_validate_child_spec(Spec0, Spec, supervisor_spawn_child/3), wasm_supervisor_call(Sup, start_child(Spec), Reply).",
               "supervisor_terminate_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, terminate_child(Id), Reply).",
               "supervisor_delete_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, delete_child(Id), Reply).",
               "supervisor_respawn_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, restart_child(Id), Reply).",
@@ -12516,6 +12580,39 @@
               "browser_spawn_option_type(src_list, list).",
               "browser_spawn_option_type(src_predicates, predicate_indicators).",
               "browser_spawn_option_type(src_uri, atom_or_string).",
+              "",
+              "% Wrapper schemas extend recognition only at their own public entry points.",
+              "validate_browser_wrapper_options(Kind, PI, Options) :-",
+              "    catch((must_be(list, Options), maplist(validate_browser_wrapper_option(Kind), Options)),",
+              "          error(Formal, _), throw(error(Formal, context(PI, 'invalid wrapper option')))).",
+              "validate_browser_wrapper_option(Kind, Option) :-",
+              "    must_be(nonvar, Option),",
+              "    ( compound(Option), compound_name_arity(Option, Name, 1),",
+              "      ( browser_wrapper_option_type(Kind, Name, Type) -> true",
+              "      ; browser_spawn_option_type(Name, Type) )",
+              "    -> arg(1, Option, Value), validate_browser_wrapper_value(Type, Value)",
+              "    ; domain_error(spawn_option, Option) ).",
+              "",
+              "browser_wrapper_option_type(toplevel, session, spawn_boolean).",
+              "browser_wrapper_option_type(toplevel, time_limit, ptcp_limit(time_limit)).",
+              "browser_wrapper_option_type(toplevel, idle_limit, ptcp_limit(idle_limit)).",
+              "browser_wrapper_option_type(server, initial_state, template).",
+              "browser_wrapper_option_type(supervisor, strategy, supervisor_strategy).",
+              "browser_wrapper_option_type(supervisor, intensity, nonneg).",
+              "browser_wrapper_option_type(supervisor, period, supervisor_period).",
+              "browser_wrapper_option_type(statechart, trace, spawn_boolean).",
+              "browser_wrapper_option_type(statechart, src_uri, atom_or_string).",
+              "",
+              "validate_browser_wrapper_value(ptcp_limit(Kind), Value) :- !,",
+              "    must_be(nonvar, Value), normalize_ptcp_limit(Kind, Value, _).",
+              "validate_browser_wrapper_value(supervisor_strategy, Value) :- !,",
+              "    must_be(nonvar, Value),",
+              "    ( memberchk(Value, [one_for_one,one_for_all,rest_for_one]) -> true",
+              "    ; domain_error(supervisor_strategy, Value) ).",
+              "validate_browser_wrapper_value(supervisor_period, Value) :- !,",
+              "    must_be(number, Value),",
+              "    ( Value > 0 -> true ; domain_error(supervisor_period, Value) ).",
+              "validate_browser_wrapper_value(Type, Value) :- validate_rpc_client_value(Type, Value).",
               "",
               "spawn(Goal, Pid, Options) :-",
               "    validate_browser_spawn_options(Options),",
@@ -12894,6 +12991,7 @@
               "toplevel_spawn(Pid) :- toplevel_spawn(Pid, []).",
               "",
               "toplevel_spawn(Pid, Options) :-",
+              "    validate_browser_wrapper_options(toplevel, toplevel_spawn/2, Options),",
               "    collect_spawn_source(Options, ExtraSource),",
               "    option(node(Node), Options, localhost),",
               "    option(time_limit(TimeLimit0), Options, infinite),",
@@ -13069,12 +13167,13 @@
               "    Aborted == true.",
               "",
               "statechart_spawn(Pid, Options) :-",
+              "    validate_browser_wrapper_options(statechart, statechart_spawn/2, Options),",
               "    statechart_spawn_source(Options, SourceKind, Source),",
               "    validate_statechart_text_source(SourceKind, Source),",
               "    collect_statechart_support_source(Options, SupportSource),",
               "    option(trace(Trace), Options, true), term_string(Trace, TraceText),",
               "    option(node(Node), Options, localhost),",
-              "    (   Node \== localhost",
+              "    (   Node \\== localhost",
               "    ->  statechart_remote_goal(SourceKind, Source, Trace, Options, Goal),",
               "        term_string(Goal, GoalText), term_string(Node, NodeText),",
               "        Promise := swiWasmActorRemoteSpawn(#NodeText, #GoalText, #SupportSource),",
@@ -13248,10 +13347,15 @@
               "%  after the goal so the final, choicepoint-free solution prints '.'",
               "%  instead of ' ; false'.",
               "swi_wasm_drive(Goal) :-",
-              "    call(Goal),",
+              "    catch(call(Goal), Error, swi_wasm_query_exception(Error)),",
               "    deterministic(Det),",
               "    swi_wasm_note_det(Det),",
               "    swi_wasm_more_gate(Det).",
+              "",
+              "swi_wasm_query_exception(Error) :-",
+              "    term_to_atom(Error, Text),",
+              "    _ := swiWasmNoteException(#Text),",
+              "    throw(Error).",
               "",
               "swi_wasm_more_gate(true) :- !.",
               "swi_wasm_more_gate(false).",
@@ -13916,6 +14020,7 @@
             this.swiWasmFinalized = false;
             this.swiWasmPagingStopped = false;
             this.swiWasmOutputBuffer = "";
+            this.swiWasmQueryException = null;
             this.swiWasmQueryPending = true;
             this.swiWasmQueryAbortRequested = false;
             var Module = this.swiWasmModule;
@@ -14042,7 +14147,8 @@
                 self.swiWasmQueryAbortRequested = false;
                 self.finishError(term, "Computation aborted.");
               } else {
-                self.finishError(term, normalizeRuntimeErrorMessage("Query error: " + message));
+                self.finishError(term, self.swiWasmQueryException ||
+                  normalizeRuntimeErrorMessage("Query error: " + message));
               }
               self.resumeTerm(term);
             });

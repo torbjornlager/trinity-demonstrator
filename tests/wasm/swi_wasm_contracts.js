@@ -323,6 +323,141 @@ function spawnOptionMainHarness() {
 const validSpawnOptions="[name(first),name(second),link(false),link(true),monitor(true),monitor(false),target(route(T)),io_target(route(T)),src_text('first(a).'),src_text(\"second(b).\"),src_list([list_fact(ok)]),src_predicates([spawn_fact/1])]";
 const wrapperSetup="assertz(user:spawn_callback(_,S,ok,S)),";
 
+
+
+// Run the same child-specification contract against both real WASM engines.
+const invalidChildSpecs = [
+  ["_", "instantiation_error"],
+  ["[child(a,[start(true)])|bad]", "type_error(list,_)"],
+  ["[_]", "instantiation_error"],
+  ["[child(a,[start(true)])|_]", "instantiation_error"],
+  ["[child(a,[start(true)|_])]", "instantiation_error"],
+  ["[child(a,[start(true),_])]", "instantiation_error"],
+  ["[child(a,[start(true),restart(_)])]", "instantiation_error"],
+  ["[child(a,[start(true),start(true,false)])]", "domain_error(spawn_option,start(true,false))"],
+  ["[wrong(a)]", "type_error(supervisor_child_spec,_)"],
+  ["[child(_,[start(true)])]", "instantiation_error"],
+  ["[child(42,[start(true)])]", "type_error(atom,42)"],
+  ["[child(a,_)]", "instantiation_error"],
+  ["[child(a,[start(true)|bad])]", "type_error(list,_)"],
+  ["[child(a,[])]", "missing_start_option(a)"],
+  ["[child(a,[start(_)])]", "instantiation_error"],
+  ["[child(a,[start(42)])]", "type_error(callable,42)"],
+  ["[child(a,[start(_:true)])]", "instantiation_error"],
+  ["[child(a,[start(true),start(42)])]", "type_error(callable,42)"],
+  ["[child(a,[start(true),restart(sometimes)])]", "type_error(oneof(_),sometimes)"],
+  ["[child(a,[start(true),type(other)])]", "type_error(oneof(_),other)"],
+  ["[child(a,[start(true),shutdown(-1)])]", "domain_error(supervisor_child_shutdown,-1)"],
+  ["[child(a,[start(true),significant(maybe)])]", "type_error(boolean,maybe)"],
+  ["[child(a,[start(true),unknown(1)])]", "domain_error(spawn_option,unknown(1))"],
+  ["[child(a,[start(true),monitor(maybe)])]", "type_error(boolean,maybe)"],
+  ["[child(a,[start(true)]),child(a,[start(true)])]", "permission_error(duplicate,supervisor_child_id,a)"],
+  ["[child(a,[start(server(_,[]))])]", "instantiation_error"],
+  ["[child(a,[start(server(cb,[initial_state(_),unknown(1)]))])]", "domain_error(spawn_option,unknown(1))"],
+  ["[child(a,[start(start_sub_supervisor([child(b,[])],[]))])]", "missing_start_option(b)"],
+  ["[child(a,[start(start_sub_supervisor([],[period(0)]))])]", "domain_error(supervisor_period,0)"],
+  ["[child(a,[start(true)]),child(b,[])]", "missing_start_option(b)"]
+];
+async function childSpecContract(run, check, sideEffects, main) {
+  for(const [spec,error] of invalidChildSpecs) {
+    const goal="Specs="+spec+",catch((supervisor_spawn(Specs,Pid),fail),error("+error+",context(supervisor_spawn/3,_)),Caught=true),Caught==true,var(Pid)";
+    check(await run(goal),"rejects initial specs "+spec);
+  }
+  const dynamic="catch((supervisor_spawn_child(sup,child(a,[]),Reply),fail),error(missing_start_option(a),context(supervisor_spawn_child/3,_)),Caught=true),Caught==true,var(Reply)";
+  check(await run(dynamic),"invalid dynamic API request rejected before send");
+  check(await run("Specs=[child(a,[start(true)])|Specs],catch((supervisor_spawn(Specs,_),fail),error(representation_error(cyclic_term),_),Caught=true),Caught==true"),"cyclic initial list rejected");
+  check(await run("Specs=[child(a,[start(start_sub_supervisor(Specs,[]))])],catch((supervisor_spawn(Specs,_),fail),error(representation_error(cyclic_term),_),Caught=true),Caught==true"),"recursive child specification rejected");
+  check(sideEffects()===0,"all invalid initial/dynamic specs rejected before any transport or startup");
+  const b="swi_wasm_actor_bridge:";
+  check(await run("S=sup(one_for_one,1,5,[],[]),"+b+"wasm_handle_supervisor_call(start_child(child(a,[])),error(error(missing_start_option(a),_)),S,After),After==S,"+b+"wasm_handle_supervisor_call(count_children,counts(0,0),After,After)"),"malformed receiver request leaves supervisor responsive and unchanged");
+  check(await run("S=sup(one_for_one,1,5,[child(a,pid,child(a,[start(true)]))],[]),"+b+"wasm_handle_supervisor_call(start_child(child(a,[start(true)])),error(already_present),S,After),After==S"),"duplicate dynamic ID rejected without spawning");
+  check(sideEffects()===0,"receiver validation and duplicates have no startup side effects");
+  const valid="Specs=[child(a,[start(goal(X)),start(other(X)),restart(temporary),restart(permanent),shutdown(0.25),type(worker),significant(false),src_list([fact(X)])]),child(b,[start(server(cb,[initial_state(X),initial_state(other),name(first),name(second)]))]),child(c,[start(start_sub_supervisor([child(n,[start(goal(X))])],[strategy(rest_for_one),intensity(0),period(0.25)])),type(supervisor),shutdown(infinity)]),child(d,[start(true),shutdown(brutal_kill)])]";
+  check(await run(valid+",copy_term(Specs,Before),"+b+"browser_validate_child_specs(Specs,supervisor_spawn/3),Specs =@= Before,var(X),Specs=[child(_,[start(goal(A)),start(other(B))|_]),child(_,[start(server(_,[initial_state(C)|_]))])|_],A==X,B==X,C==X"),"nested goals, metadata, duplicate settings and shared arbitrary state remain unchanged");
+  check(await run("supervisor_spawn([child(a,[start(goal(X))])],_,[]),var(X)"),"valid initial startup preserves defaults and goal variables");
+  check(await run(b+"browser_validate_child_specs([child(a,[start(true)]),child(b,[start(start_sub_supervisor([child(a,[start(true)])],[]))])],supervisor_spawn/3)"),"duplicate IDs in different supervisor lists are allowed");
+  check(await run(b+"wasm_child_start(server(cb,[initial_state(X),initial_state(other),name(first)]),a,[name(child_name),src_list([fact(X)])],_),var(X)"),"server special form keeps arbitrary initial state and forwarded source sharing");
+  check(await run(b+"wasm_child_start(start_sub_supervisor([],[strategy(rest_for_one),strategy(one_for_all),intensity(0),period(0.25)]),nested,[],_)"),"nested supervisor creation retains option precedence");
+  check(await run("Original=child(plain,[start(goal(X)),start(other(X)),restart(temporary),shutdown(5),type(worker),significant(false),monitor(false)]),"+b+"wasm_handle_supervisor_call(start_child(Original),ok,sup(one_for_one,1,5,[],[]),sup(one_for_one,1,5,[child(plain,_,Saved)],[])),Saved==Original,var(X)"),"valid dynamic child retains original shared specification");
+  // URI capability remains a runtime difference even inside nested specs.
+  const uriSpec="[child(a,[start(server(cb,[src_uri('https://example.org/support.pl')]))])]";
+  const uriGoal=main?b+"browser_validate_child_specs("+uriSpec+",supervisor_spawn/3)":
+    "catch(("+b+"browser_validate_child_specs("+uriSpec+",supervisor_spawn/3),fail),error(domain_error(spawn_option,src_uri(_)),_),Caught=true),Caught==true";
+  check(await run(uriGoal),"nested source options retain runtime URI capability");
+}
+
+
+// Exercise the actual supervisor down handler and spawn path in each engine;
+// only coordinator startup/monitoring is mocked. Do not pin deferred ordering
+// or inactive-child bookkeeping behavior in these policy tests.
+async function supervisorRestartPolicyContract(run, spawnCount, check) {
+  const reasons=["true","false","exception(test_error)","killed","shutdown"];
+  for(const policy of ["transient","permanent","temporary"]) {
+    for(const reason of reasons) {
+      const restart=policy==="permanent"||(policy==="transient"&&reason!=="true");
+      const before=spawnCount();
+      const expected=restart?
+        "State=sup(one_for_one,10,5,Children,[_]),memberchk(child(policy_child,NewPid,Saved),Children),nonvar(NewPid),Saved==Spec":
+        "State=sup(one_for_one,10,5,_,[])";
+      const goal="Spec=child(policy_child,[start(receive({stop->true})),restart("+policy+")]),"+
+        "swi_wasm_actor_bridge:wasm_handle_down(7000000000,"+reason+",sup(one_for_one,10,5,[child(policy_child,7000000000,Spec)],[]),State),"+expected;
+      check(await run(goal),policy+" / "+reason+" preserves the expected restart record");
+      check(spawnCount()-before===(restart?1:0),policy+" / "+reason+(restart?" starts one replacement":" starts no replacement"));
+    }
+  }
+}
+
+const wrapperKinds={toplevel:"toplevel_spawn/2",server:"server_spawn/4",supervisor:"supervisor_spawn/3",statechart:"statechart_spawn/2"};
+function wrapperCall(kind, opts="Opts") {
+  return {toplevel:"toplevel_spawn(Pid,"+opts+")", server:"server_spawn(spawn_callback,State,Pid,"+opts+")",
+    supervisor:"supervisor_spawn([],Pid,"+opts+")",statechart:"statechart_spawn(Pid,"+opts+")"}[kind];
+}
+function wrapperOptionCases(kind, main=false) {
+  let cases=spawnOptionCases(main).filter(([opts])=>!(kind==="server"&&opts.includes("initial_state("))&&
+    !(kind==="supervisor"&&opts.includes("strategy("))&&!(kind==="statechart"&&opts.includes("src_uri(")));
+  const specific={
+    toplevel:[["[session(_)]","instantiation_error"],["[session(maybe)]","type_error(boolean,maybe)"],
+      ["[session(true),session(1)]","type_error(boolean,1)"],
+      ["[time_limit(_)]","instantiation_error"],["[time_limit(0)]","domain_error(time_limit,0)"],
+      ["[time_limit(1),time_limit(-1)]","domain_error(time_limit,-1)"],
+      ["[idle_limit(_)]","instantiation_error"],["[idle_limit(0)]","domain_error(idle_limit,0)"],
+      ["[idle_limit(fast)]","type_error(number,fast)"],["[trace(true)]","domain_error(spawn_option,trace(true))"]],
+    server:[["[session(true)]","domain_error(spawn_option,session(true))"],
+      ["[initial_state(a,b)]","domain_error(spawn_option,initial_state(a,b))"]],
+    supervisor:[["[strategy(_)]","instantiation_error"],["[strategy(random)]","domain_error(supervisor_strategy,random)"],
+      ["[strategy(one_for_one),strategy(random)]","domain_error(supervisor_strategy,random)"],
+      ["[intensity(_)]","instantiation_error"],["[intensity(-1)]","type_error(nonneg,-1)"],
+      ["[intensity(1.5)]","type_error(nonneg,1.5)"],["[period(_)]","instantiation_error"],
+      ["[period(0)]","domain_error(supervisor_period,0)"],["[period(fast)]","type_error(number,fast)"],
+      ["[period(0.5),period(-1)]","domain_error(supervisor_period,-1)"]],
+    statechart:[["[trace(_)]","instantiation_error"],["[trace(maybe)]","type_error(boolean,maybe)"],
+      ["[trace(true),trace(1)]","type_error(boolean,1)"],["[src_uri(_)]","instantiation_error"],
+      ["[src_uri(42)]","type_error(atom_or_string,42)"],
+      ["[src_uri('https://example.org/chart.xml'),unknown(1)]","domain_error(spawn_option,unknown(1))"],
+      ["[src_text('<invalid/>'),trace(maybe)]","type_error(boolean,maybe)"],
+      ["[src_text('<invalid/>'),src_text(42)]","type_error(atom_or_string,42)"]]
+  }[kind];
+  return cases.concat(specific,specific.map(([opts,err])=>["[node('https://example.org')|"+opts+"]",err]));
+}
+function invalidWrapperGoal(kind,[options,error]) {
+  return "(Opts="+options+",term_variables(Opts,Vars),catch(("+wrapperCall(kind)+",Status=accepted),error(Formal,context("+wrapperKinds[kind]+",_)),Status=rejected),Status==rejected,nonvar(Formal),Formal="+error+",var(Pid),var(State),maplist(var,Vars))";
+}
+const simpleChart='<statechart version="0.2" initial="s"><state id="s"/></statechart>';
+function wrapperWorkerReplies(W) {
+  spawnOptionWorkerReplies(W);const previous=W.control.reply;
+  W.control.reply=m=>{
+    if(m.action==="remote_toplevel_spawn")return {result:"8800000000@'https://example.org'"};
+    if(m.action==="statechart_spawn")return {result:"7300000000@localhost"};
+    return previous(m);
+  };
+}
+async function loadCompatibilityStatecharts(engine) {
+  engine.FS.mkdir("/wasm");
+  for(const name of ["sxml_schema.pl","statechart_wasm_runtime.pl","statechart_wasm_model.pl","statechart_wasm_exec.pl","statechart_wasm.pl"])
+    engine.FS.writeFile("/wasm/"+name,fs.readFileSync(path.join(ROOT,"prolog/web_prolog/wasm",name),"utf8"));
+  return !!engine.prolog.query("use_module('/wasm/statechart_wasm.pl')").once();
+}
+
 function clientOptionCases() {
   const cases=[];
   for(const kind of ["rpc","promise","yield"]){
@@ -403,6 +538,259 @@ const scenarios = {
 
 
 
+
+
+
+
+  async supervisor_restart_policy(W, check) {
+    wrapperWorkerReplies(W);await startToplevel(W);
+    async function run(goal){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);return /\[checked\],false\)/.test(m[n]||"");}
+    await supervisorRestartPolicyContract(run,()=>W.posted.filter(m=>m.type==="request"&&m.action==="spawn").length,check);
+  },
+  async compatibility_supervisor_restart_policy(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_restart_policy.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_restart_policy.pl')").once(),"main supervisor policy engine loaded");
+    const calls=spawnOptionMainHarness();
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    await supervisorRestartPolicyContract(run,()=>calls.filter(m=>m.action==="spawn").length,check);
+  },
+
+  async child_spec_supervisor_loop(W, check) {
+    await startToplevel(W);
+    deliver(W,"'$call'((swi_wasm_actor_bridge:wasm_supervisor_loop(sup(one_for_one,1,5,[],[])),R=stopped),[template(R)])");
+    deliver(W,"'$sup'("+CLIENT+"@localhost,901,start_child(child(a,[])))");
+    deliver(W,"'$sup'("+CLIENT+"@localhost,902,start_child(child(a,[start(start_sub_supervisor([child(b,[])],[]))])))");
+    deliver(W,"'$sup'("+CLIENT+"@localhost,903,count_children)");
+    deliver(W,"'$sup_stop'("+CLIENT+"@localhost)");
+    const m=await nSends(W,5);
+    check(m.some(x=>/^-\(901,error\(error\(missing_start_option\(a\)/.test(x)),"malformed request delivers a validation error: "+JSON.stringify(m));
+    check(m.some(x=>/^-\(902,error\(error\(missing_start_option\(b\)/.test(x)),"nested invalid request delivers a validation error");
+    check(m.includes("-(903,counts(0,0))"),"supervisor remains responsive with no children after invalid requests");
+    check(m.some(x=>/\[stopped\],false\)/.test(x)),"supervisor loop stops normally after invalid additions");
+    check(!W.posted.some(x=>x.type==="request"&&["spawn","reserve_pid","monitor"].includes(x.action)),"invalid additions start no children");
+  },
+  async child_spec_validation(W, check) {
+    wrapperWorkerReplies(W);await startToplevel(W);
+    async function run(goal){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);return /\[checked\],false\)/.test(m[n]||"");}
+    await childSpecContract(run,check,()=>W.posted.filter(m=>m.type==="request"&&!["send","receive","make_ref"].includes(m.action)).length,false);
+    const spawn=W.posted.filter(m=>m.action==="spawn");
+    check(spawn.some(m=>m.goal.includes("sup(one_for_one,1,5")),"worker default supervisor settings preserved");
+    check(spawn.some(m=>m.name==="first"),"worker nested server option precedence preserved");
+    check(spawn.some(m=>m.goal.includes("sup(rest_for_one,0,0.25")),"worker nested supervisor settings preserved");
+  },
+
+  async compatibility_query_exception_display(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    // Use the terminal's actual query runner and display formatter. Only UI
+    // rendering and paging input are substituted; Prolog executes normally.
+    const helpers=Function(html.slice(html.indexOf("function splitTopLevelArgs"),html.indexOf("function isDollarVarStartChar"))+
+      "\nreturn {exceptionDisplayTerm, normalizeErrorText, normalizeRuntimeErrorMessage};")();
+    Object.assign(global,helpers);
+    const displayed=[],solutions=[],dets=[];
+    const noop=()=>{};
+    let completed;
+    const host={swiWasmProlog:engine.prolog,swiWasmModule:engine,
+      swiWasmRpcProlog:()=>source,currentLoadText:()=>"",swiWasmGoalNeedsStatechart:()=>false,
+      pauseTerm:noop,recordSessionEvent:noop,clipText:x=>x,log:noop,
+      startSwiWasmOutputStreaming:noop,stopSwiWasmOutputStreaming:noop,drainSwiWasmStatechartEventQueue:noop,
+      echoSwiWasmOutput:(_,text)=>displayed.push(text),terminal:{},
+      formatDisplayText:x=>x,formatErrorDisplay:Function("return (function(message) {"+html.split("formatErrorDisplay: function(message) {")[1].split("protocolLogFieldOrder:")[0].replace(/},\s*$/, "")+"})")(),
+      presentSwiWasmSolution:(_,answer,det)=>{solutions.push(answer);dets.push(det);if(det){host.swiWasmFinalized=true;completed();}},
+      finishError:(_,text)=>displayed.push(host.formatErrorDisplay(text)),
+      finishFailure:()=>displayed.push("false"),resumeTerm:()=>completed(),
+      resetQueryState:noop,appendQueryCompletionSpacing:noop};
+    // Extract the production recorder instead of recreating its behavior.
+    const recorder=html.slice(html.indexOf("window.swiWasmNoteException = function(text) {"),html.indexOf("window.swiWasmNoteDet = function(detText) {"));
+    Function("self","window",recorder)(host,global.self);
+    global.self.swiWasmNoteDet=text=>{host.swiWasmLastDet=String(text);return true;};
+    global.self.swiWasmAwaitMore=()=>Promise.resolve("more");
+    const run=workbenchMethod("runSwiWasmQuery","presentSwiWasmSolution");
+    async function query(goal,mode="exception"){
+      displayed.length=0;solutions.length=0;dets.length=0;
+      host.activeGoal=goal;host.errorMessageDetail=mode;
+      const end=new Promise(resolve=>{completed=resolve;});run.call(host,null);
+      await end;await sleep(0);return displayed.slice();
+    }
+    check((await query("supervisor_spawn([child(a,[])],_)"))[0]==="error(missing_start_option(a),_)","main terminal honors exception-term setting for missing start");
+    check((await query("supervisor_spawn([child(a,[start(true)]),child(a,[start(true)])],_)"))[0]==="error(permission_error(duplicate,supervisor_child_id,a),_)","main terminal preserves duplicate-id exception term");
+    check((await query("spawn(true,_,[monitor(maybe)])"))[0]==="error(type_error(boolean,maybe),_)","other wrapper exceptions use the same setting");
+    const concise=await query("spawn(true,_,[monitor(maybe)])","concise");
+    check(concise.length===1&&concise[0].includes("Type error:")&&!concise[0].startsWith("error("),"unchecked setting still produces concise diagnostics");
+    check((await query("throw(custom('a b', '$VAR'(1)))"))[0]==="custom('a b','$VAR'(1))","arbitrary thrown terms preserve quoting and literal $VAR data");
+    check((await query("catch(throw(internal),internal,true)")).length===0&&solutions.length===1&&host.swiWasmQueryException===null,"caught exceptions and subsequent successes do not reuse stale errors");
+    check(dets[0]===true,"deterministic success remains deterministic through exception capture");
+    await query("(X=first;throw(error(test_later,context(test/0,detail))))");
+    check(solutions.length===1&&solutions[0].X==="first"&&dets[0]===false&&displayed[0]==="error(test_later,_)","paged answer is preserved before a later exception");
+    check((await query("fail"))[0]==="false"&&host.swiWasmQueryException===null,"failure clears the preceding query exception");
+  },
+
+  async compatibility_child_spec_validation(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_children.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_children.pl')").once(),"main child validation engine loaded");
+    const calls=spawnOptionMainHarness();
+    async function run(goal){
+      // Keep cyclic test inputs inside Prolog rather than serialising query bindings.
+      engine.prolog.query("assertz((user:browser_child_case :- ("+goal+")))").once();
+      try {let n=0;await engine.prolog.forEach("user:browser_child_case",()=>n++);return n===1;}
+      finally {engine.prolog.query("retractall(user:browser_child_case)").once();}
+    }
+    await childSpecContract(run,check,()=>calls.length,true);
+    check(calls.some(m=>m.action==="spawn"&&m.args[1].includes("sup(one_for_one,1,5")),"main default supervisor settings preserved");
+    check(calls.some(m=>m.action==="register"&&m.args.includes("first")),"main nested server option precedence preserved");
+    const mailbox=["'$sup'(caller,901,start_child(child(a,[])))","'$sup'(caller,902,count_children)","'$sup_stop'(caller)"];
+    const replies=[];
+    global.self.swiWasmActorReceive=()=>Promise.resolve(mailbox.shift()||null);
+    global.self.swiWasmActorSend=(pid,msg)=>{replies.push(msg);return Promise.resolve(true);};
+    check(await run("swi_wasm_actor_bridge:wasm_supervisor_loop(sup(one_for_one,1,5,[],[]))"),"main supervisor loop survives malformed addition and stops normally");
+    check(replies.some(x=>/^-\(901,error\(error\(missing_start_option\(a\)/.test(x))&&replies.includes("-(902,counts(0,0))"),"main loop replies with validation error and unchanged child count: "+JSON.stringify(replies));
+
+    check(calls.some(m=>m.action==="spawn"&&m.args[1].includes("sup(rest_for_one,0,0.25")),"main nested supervisor settings preserved");
+  },
+
+  async wrapper_option_validation(W, check) {
+    wrapperWorkerReplies(W);await startToplevel(W);
+    for(const kind of Object.keys(wrapperKinds)) {
+      for(const c of wrapperOptionCases(kind)) {
+        const n=W.sends.length;deliver(W,"'$call'(("+invalidWrapperGoal(kind,c)+"->R=checked;R=wrong),[template(R)])");
+        const m=await nSends(W,n+1);
+        check(/\[checked\],false\)/.test(m[n]||""),kind+" rejects "+c[0]+" without binding inputs: "+m[n]);
+      }
+      const n=W.sends.length;
+      deliver(W,"'$call'((Opts=[link(true)|Opts],catch("+wrapperCall(kind)+",error(type_error(list,_),context("+wrapperKinds[kind]+",_)),R=checked)),[template(R)])");
+      const m=await nSends(W,n+1);check(/\[checked\],false\)/.test(m[n]||""),kind+" rejects cyclic options");
+    }
+    const n=W.sends.length;
+    deliver(W,"'$call'((catch((swi_wasm_actor_bridge:wasm_child_start(start_sub_supervisor([],[period(0)]),child,[],_),fail),error(domain_error(supervisor_period,0),context(supervisor_spawn/3,_)),R=checked)),[template(R)])");
+    const m=await nSends(W,n+1);check(/\[checked\],false\)/.test(m[n]||""),"nested supervisor reaches the same public validation before startup");
+    check(!W.posted.some(m=>m.type==="request"&&["reserve_pid","spawn","remote_spawn","remote_toplevel_spawn","statechart_spawn","monitor","register","src_uri"].includes(m.action)),"worker wrapper validation precedes all creation, source, registration and monitor side effects");
+  },
+  async wrapper_valid_options(W, check) {
+    wrapperWorkerReplies(W);await startToplevel(W);
+    async function succeeds(goal,label){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);check(/\[checked\],false\)/.test(m[n]||""),label+": "+m[n]);}
+    await succeeds("toplevel_spawn(_,[session(true),session(false),time_limit(0.5),idle_limit(infinite),target(client),name(ptcp_test),monitor(true)])","worker valid toplevel settings");
+    let req=W.posted.find(m=>m.action==="spawn");
+    check(req.goal.includes("ptcp_options(true,0.5,infinite)")&&req.goal.includes("client"),"worker toplevel first session and fractional limit retained");
+    await succeeds("toplevel_spawn(_,[node('https://example.org'),session(false),time_limit(infinite),idle_limit(0.25)])","worker remote toplevel supported settings");
+    req=W.posted.find(m=>m.action==="remote_toplevel_spawn");
+    check(req.session==="false"&&req.timeLimit==="infinite"&&req.idleLimit==="0.25","worker remote lifecycle settings serialized unchanged");
+    await succeeds(wrapperSetup+"server_spawn(spawn_callback,Explicit,_,[initial_state(Other),src_list([fact(Explicit,Other)])]),var(Explicit),var(Other)","worker server compatibility metadata keeps arbitrary shared variables");
+    await succeeds("supervisor_spawn([],_,[strategy(rest_for_one),strategy(one_for_all),intensity(0),period(0.25)])","worker supervisor zero intensity and fractional period");
+    check(W.posted.some(m=>m.action==="spawn"&&m.goal.includes("sup(rest_for_one,0,0.25")),"worker supervisor first strategy retained");
+    const chart="'"+simpleChart+"'";
+    await succeeds("statechart_spawn(_,[src_uri('https://example.org/chart.xml'),trace(false),trace(true),src_list([support(ok)]),name(chart_test),monitor(true)])","worker statechart URI and duplicate trace remain supported");
+    req=W.posted.filter(m=>m.action==="statechart_spawn").at(-1);
+    check(req.sourceKind==="uri"&&req.source==="https://example.org/chart.xml"&&req.trace===false&&req.supportSource.includes("support(ok)"),"worker URI selection, supplemental source and first trace preserved");
+    await succeeds("statechart_spawn(_,[src_uri('https://example.org/ignored.xml'),src_text("+chart+"),src_text('<ignored/>'),trace(true)])","worker multiple valid sources retain text-first selection");
+    req=W.posted.filter(m=>m.action==="statechart_spawn").at(-1);
+    check(req.sourceKind==="text"&&req.source===simpleChart,"worker first text source wins even after URI");
+    await succeeds("statechart_spawn(_,[node('https://example.org'),src_uri('https://example.org/remote.xml'),trace(false),io_target(client)])","worker remote statechart URI still accepted");
+    req=W.posted.filter(m=>m.action==="remote_spawn").at(-1);
+    check(req.goal.includes("interpret_trace(false")&&req.goal.includes("remote.xml")&&req.goal.includes("with_io_target(client"),"worker remote statechart goal and routing unchanged");
+  },
+
+  async compatibility_statechart_routing(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_routing.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_routing.pl')").once(),"compatibility runtime loaded");
+    check(await loadCompatibilityStatecharts(engine),"real statechart parser/interpreter loaded");
+    const calls=spawnOptionMainHarness();
+    global.self.swiResolveAssetUrl=uri=>{calls.push({action:"resolve",uri});return uri;};
+    global.self.swiRpcGet=uri=>{calls.push({action:"get",uri});return simpleChart;};
+    let next=7400000000;
+    global.self.swiWasmStatechartSpawnWorker=(...args)=>{
+      // The real main-engine coordinator currently returns a bare local id.
+      // Monitor references retain that handle; down/3 qualifies its pid field.
+      const pid=String(next++);
+      calls.push({action:"statechart",args,pid});
+      return Promise.resolve("statechart_spawn_ok("+JSON.stringify(pid)+")");
+    };
+    async function succeeds(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    const chart="'"+simpleChart+"'";
+    const sourceOption=kind=>kind==="text" ? "src_text("+chart+")" : "src_uri('https://example.org/chart.xml')";
+    const outgoing=items=>items.filter(m=>["remote","statechart","spawn","reserve","remote_toplevel"].includes(m.action));
+    try {
+      for(const kind of ["text","uri"]) {
+        check(await succeeds("statechart_wasm:statechart_stop"),kind+" begins without a local chart");
+        let start=calls.length;
+        check(await succeeds("statechart_spawn(Pid,["+sourceOption(kind)+",trace(false),trace(true),io_target(client),name(root_chart),src_list([routing_support("+kind+")])]),Pid=statechart,statechart_wasm:statechart_in(s),statechart_wasm:routing_support("+kind+"),statechart_wasm:trace_disabled,swi_wasm_actor_bridge:io_target(client)"),kind+" local root runs in main engine with source, first trace and I/O settings");
+        let items=calls.slice(start);
+        check(outgoing(items).length===0,kind+" root creates no worker and sends no remote request");
+        check(items.filter(m=>m.action==="get").length===(kind==="uri"?1:0),kind+" root fetches URI only when selected");
+        check(items.some(m=>m.action==="register"&&m.args[1]==="root_chart"&&m.args[2]==="statechart"),kind+" root retains name registration");
+
+        start=calls.length;
+        check(await succeeds("statechart_wasm:statechart_configuration(Before),statechart_spawn(Pid,[node(localhost),"+sourceOption(kind)+",trace(false),trace(true),name(nested_chart),link(false),io_target(child_client),monitor(true),src_list([child_support("+kind+")])]),Pid\\==statechart,statechart_wasm:statechart_configuration(After),Before==After,statechart_wasm:routing_support("+kind+")"),kind+" nested local chart preserves the running parent");
+        items=calls.slice(start);let req=items.find(m=>m.action==="statechart");
+        check(outgoing(items).length===1&&!!req,kind+" nested chart uses worker path exclusively");
+        check(!!req&&req.args[0]===kind&&req.args[1]===(kind==="text"?simpleChart:"https://example.org/chart.xml")&&req.args[2].includes("child_support("+kind+")")&&req.args[3]==="nested_chart"&&req.args[4]==="false"&&req.args[5]==="child_client"&&req.args[6]==="false",kind+" nested worker receives source, name, link, I/O and first trace");
+        check(!items.some(m=>m.action==="get"),kind+" nested source is passed to worker without main-engine fetching");
+        check(!!req&&items.some(m=>m.action==="monitor"&&m.args[0]===req.pid&&m.args[1]===req.pid),kind+" nested spawn monitor targets worker pid");
+
+        for(const running of [true,false]) {
+          if(!running)check(await succeeds("statechart_wasm:statechart_stop"),kind+" stops parent before remote-only case");
+          start=calls.length;
+          const stateCheck=running?"statechart_wasm:statechart_in(s),statechart_wasm:routing_support("+kind+"),statechart_wasm:trace_disabled,swi_wasm_actor_bridge:io_target(client)":"\\+ statechart_wasm:statechart_running";
+          check(await succeeds("statechart_wasm:statechart_configuration(Before),statechart_spawn(Pid,[node('https://example.org'),"+sourceOption(kind)+",trace(false),trace(true),io_target(remote_client),name(remote_chart),monitor(true),src_list([remote_support("+kind+")])]),Pid=8800000000@'https://example.org',statechart_wasm:statechart_configuration(After),Before==After,"+stateCheck),kind+" explicit remote node preserves local state (running="+running+")");
+          items=calls.slice(start);req=items.find(m=>m.action==="remote");
+          check(outgoing(items).length===1&&!!req,kind+" remote uses remote path exclusively (running="+running+")");
+          check(!!req&&req.args[0].includes("https://example.org")&&req.args[1].includes(kind==="text"?"interpret_text_trace(false":"interpret_trace(false")&&req.args[1].includes(kind==="text"?simpleChart:"https://example.org/chart.xml")&&req.args[1].includes("with_io_target(remote_client")&&req.args[2].includes("remote_support("+kind+")"),kind+" remote node receives source, support, I/O and first trace (running="+running+")");
+          check(!items.some(m=>m.action==="get"),kind+" remote URI remains for remote node to fetch (running="+running+")");
+          check(items.some(m=>m.action==="register"&&m.args[1]==="remote_chart"&&m.args[2].includes("8800000000"))&&items.some(m=>m.action==="monitor"&&m.args[0].includes("8800000000")&&m.args[1]===m.args[0]),kind+" remote name and caller-side monitor retained (running="+running+")");
+        }
+      }
+    } finally { await succeeds("statechart_wasm:statechart_stop"); }
+  },
+
+  async compatibility_wrapper_options(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_wrapper_options.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_wrapper_options.pl')").once(),"main wrapper engine loaded");
+    const calls=spawnOptionMainHarness();
+    global.self.swiWasmBehaviourSource=()=>{calls.push({action:"behaviour"});return behaviourSource;};
+    global.self.swiWasmRemoteToplevelSpawn=(...args)=>{calls.push({action:"remote_toplevel",args});return Promise.resolve("8800000000@'https://example.org'");};
+    global.self.swiWasmStatechartSpawnWorker=(...args)=>{calls.push({action:"statechart",args});return Promise.resolve('statechart_spawn_ok("7400000000@localhost")');};
+    global.self.swiResolveAssetUrl=uri=>{calls.push({action:"resolve",uri});return uri;};
+    global.self.swiRpcGet=uri=>{calls.push({action:"get",uri});return simpleChart;};
+    async function succeeds(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    for(const kind of Object.keys(wrapperKinds)) {
+      for(const c of wrapperOptionCases(kind,true))check(await succeeds(invalidWrapperGoal(kind,c)),"main "+kind+" rejects "+c[0]+" without binding inputs");
+      engine.prolog.query("assertz((user:wrapper_cycle_"+kind+" :- (Opts=[link(true)|Opts],catch(("+wrapperCall(kind)+",fail),error(type_error(list,_),context("+wrapperKinds[kind]+",_)),true))))").once();
+      check(await succeeds("user:wrapper_cycle_"+kind),"main "+kind+" rejects cyclic options");
+    }
+    check(await succeeds("catch((swi_wasm_actor_bridge:wasm_child_start(start_sub_supervisor([],[period(0)]),child,[],_),fail),error(domain_error(supervisor_period,0),context(supervisor_spawn/3,_)),true)"),"main nested supervisor reaches public validation before startup");
+    check(calls.length===0,"main validates before behaviour/source collection, reservation, dispatch, monitor and registration");
+    check(await succeeds("toplevel_spawn(_,[session(true),session(false),time_limit(0.5),idle_limit(infinite),target(client),name(ptcp_test),monitor(true)])"),"main valid toplevel settings");
+    let req=calls.find(m=>m.action==="spawn");
+    check(req.args[1].includes("ptcp_options(true,0.5,infinite)")&&req.args[1].includes("client"),"main first session and fractional limit preserved");
+    check(await succeeds("toplevel_spawn(_,[node('https://example.org'),session(false),time_limit(infinite),idle_limit(0.25),src_uri('https://example.org/support.pl')])"),"main remote toplevel with URI source");
+    req=calls.find(m=>m.action==="remote_toplevel");
+    check(req.args[2]==="false"&&req.args[3]==="infinite"&&req.args[4]==="0.25","main remote toplevel lifecycle preserved");
+    check(await succeeds(wrapperSetup+"server_spawn(spawn_callback,Explicit,_,[initial_state(Other),src_list([fact(Explicit,Other)])]),var(Explicit),var(Other)"),"main server state and compatibility metadata stay unbound");
+    check(await succeeds("supervisor_spawn([],_,[strategy(rest_for_one),strategy(one_for_all),intensity(0),period(0.25)])"),"main supervisor supports zero intensity and fractional periods");
+    check(calls.some(m=>m.action==="spawn"&&m.args[1].includes("sup(rest_for_one,0,0.25")),"main first supervisor strategy retained");
+    check(await loadCompatibilityStatecharts(engine),"main real statechart interpreter loaded");
+    const chart="'"+simpleChart+"'";
+    // Source-selection checks complement the separate three-path routing regression.
+    check(await succeeds("statechart_spawn(_,[src_uri('https://example.org/ignored.xml'),src_text("+chart+"),src_text('<ignored/>'),trace(false),trace(true),src_list([support(ok)])])"),"main chart accepts duplicate sources/trace and supplemental source");
+    check(!calls.some(m=>m.action==="get"),"main text selection does not fetch preceding URI");
+    check(await succeeds("swi_wasm_actor_bridge:statechart_spawn_source([src_uri('https://example.org/ignored.xml'),src_text("+chart+"),src_text('<ignored/>')],text,"+chart+")"),"main first text source wins even after URI");
+    check(await succeeds("statechart_wasm:statechart_stop,statechart_spawn(Pid,[src_uri('https://example.org/chart.xml'),trace(false)]),Pid=statechart,statechart_wasm:statechart_in(s)"),"main statechart URI accepted through local dispatch");
+    check(await succeeds("statechart_spawn(_,[node('https://example.org'),src_text("+chart+"),trace(false)]),statechart_wasm:statechart_stop"),"main explicit-node chart settings accepted through existing dispatch");
+    check(await succeeds("statechart_spawn(_,[node('https://example.org'),src_uri('https://example.org/chart.xml'),trace(false)]),statechart_wasm:statechart_stop"),"main explicit-node URI settings accepted through existing dispatch");
+    check(calls.some(m=>m.action==="get"&&m.uri.includes("chart.xml")),"main existing URI-loading path retained");
+  },
 
   async spawn_option_validation(W, check) {
     spawnOptionWorkerReplies(W);await startToplevel(W);
@@ -777,6 +1165,31 @@ const scenarios = {
         check(host.swiWasmActorMonitors.length===0,"abandoned worker monitors removed");
       }
     } finally {await host.stop();}
+  },
+
+
+  async remote_monitor_reference_wire(W, check) {
+    // Feed actual native response JSON into the unchanged browser matcher.
+    const node="http://monitor.test:3053",pid="123@'"+node+"'";
+    const responseFile=path.join(ROOT,"prolog/web_prolog/node_response.pl").replace(/'/g,"''");
+    const goal="use_module('"+responseFile+"'),node_runtime_state:register_node_runtime(-77124,_{url:'"+node+"'}),node_runtime_state:with_node_port_context(-77124,findall(JSON,(member(Ref,[@(123,'"+node+"'),456,9007199254740993]),node_response:answer_to_json(down(@(123,'"+node+"'),Ref,true),JSON)),Frames)),http_json:atom_json_dict(Text,Frames,[]),writeln(Text)";
+    const result=spawnSync(process.env.SWIPL||"swipl",["-q","-g",goal,"-t","halt"],{encoding:"utf8",timeout:10000});
+    if(result.status!==0)throw new Error("native reference fixture failed: "+(result.stderr||result.error));
+    const frames=JSON.parse(result.stdout.trim());
+    check(frames.every(frame=>frame.pid===123),"native actor pid retains local integer representation");
+    check(frames[0].ref===pid,"native pid-shaped reference retains full node");
+    check(frames[1].ref===456&&frames[2].ref==="9007199254740993","ordinary and large integer references retain their wire conventions");
+    const host=serverMonitorCoordinator(()=>{});
+    host.parseSwiWasmRemoteActorPid=text=>text===pid ? {node,pid:123}:null;
+    host.takeSwiWasmRemoteMonitor=workbenchMethod("takeSwiWasmRemoteMonitor","monitorSwiWasmActor");
+    host.swiWasmActorMonitors=[{watcher:"main",pid,ref:pid},{watcher:"worker",pid,ref:"456"}];
+    check(!host.takeSwiWasmRemoteMonitor(node,123,"123")&&host.swiWasmActorMonitors.length===2,"shortened stale reference cannot select a different monitor");
+    check(!host.takeSwiWasmRemoteMonitor("http://other.test",123,frames[0].ref),"monitor remains restricted to its connection");
+    const first=host.takeSwiWasmRemoteMonitor(node,frames[0].pid,frames[0].ref);
+    check(first&&first.watcher==="main"&&host.swiWasmActorMonitors.length===1,"spawn reference matches and removes only its own monitor");
+    check(!host.takeSwiWasmRemoteMonitor(node,frames[0].pid,frames[0].ref)&&host.swiWasmActorMonitors.length===1,"late notification for removed reference leaves other monitor intact");
+    const second=host.takeSwiWasmRemoteMonitor(node,frames[1].pid,String(frames[1].ref));
+    check(second&&second.watcher==="worker"&&host.swiWasmActorMonitors.length===0,"independent monitor on same actor still matches and cleans up");
   },
 
   async server_monitor_pending_install(W, check) {

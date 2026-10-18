@@ -248,8 +248,9 @@ calling plain spawn. Child creation similarly separates `start/1`, `restart/1`,
 `shutdown/1`, `type/1`, and `significant/1`, retaining the original specification
 in supervisor state. All other options remain available to the spawn validator;
 filtering neither copies terms nor discards unknown options. This is an
-internal separation, not full browser wrapper or child-specification validation,
-and it does not introduce new semantics for previously unused metadata.
+internal separation; wrapper entry validation is described below. Child-specification
+validation remains separate, and no new semantics are introduced for previously
+unused metadata.
 
 Native local actor I/O accepts nonvariable `target/1` and `io_target/1`
 routing terms, with `io_target/1` taking precedence. Bare WebSocket spawning
@@ -299,6 +300,49 @@ preserved; recognition still does not bypass authority checks. Composition
 uses `actors:validate_spawn_wrapper_options/4` with a wrapper-local list of
 `Name=UnaryValidator` entries alongside the existing spawn schema.
 
+Both SWI-WASM runtimes validate `toplevel_spawn/2`, `server_spawn/4`,
+`supervisor_spawn/3`, and `statechart_spawn/2` at entry, before option extraction,
+source fetching/copying, pid reservation, startup, registration, or monitoring.
+Lists must be proper and every element a recognised unary option. All forwarded
+spawn settings use the browser schema above. Unknown/misplaced names and wrong
+arities raise `domain_error(spawn_option,Option)`; malformed values raise type,
+domain, or instantiation errors. The context identifies the public wrapper.
+Every occurrence is validated, including later duplicates, without binding or
+copying option values. Ordinary defaults, first-occurrence precedence, variable
+sharing, and each runtime's source collection remain unchanged.
+
+Browser wrapper additions are boolean `session/1` and positive numeric or
+`infinite` lifecycle limits for toplevels; the three supervisor strategies,
+nonnegative integer intensity and positive numeric period (fractional seconds
+accepted); and boolean statechart `trace/1`. Server `initial_state/1` remains
+arbitrary compatibility metadata: validation does not bind it or replace the
+explicit state argument. Nested supervisor creation reaches the same wrapper
+checks; browser child-specification validation is described under Supervisors.
+
+Statechart wrappers accept atom/string `src_uri/1` in both runtimes, including
+the worker. Other wrappers retain their existing source capability: worker
+server/supervisor/toplevel creation has no URI-loading path and rejects URI
+source options; the compatibility main engine accepts them. Browser statecharts
+retain first-text selection (even if a URI precedes it), otherwise first-URI
+selection, and first-occurrence trace behavior. Unlike native statecharts, the
+browser wrappers do not reject multiple well-typed XML sources or traces.
+Supplemental Prolog source remains accepted; missing XML source still raises
+the existing `statechart_source_option` error. Wrapper validation does not
+change lifecycle or source-selection semantics.
+
+The compatibility main engine's statechart routing now uses the intended
+nonidentity test: `localhost` starts a chart in the main interpreter if none
+is running, or creates a separate statechart worker if a chart is already
+active. An explicit remote node always uses remote dispatch, whether or not
+a local chart is running. Nested and remote creation preserve the active local
+chart. Text/URI selection, first trace setting, supplemental source, names,
+link handling and caller-side spawn monitoring retain their existing behavior
+on each path. For URI XML, the main interpreter fetches its own local chart's
+source, a nested worker receives the URI for its loading path, and the remote
+node fetches its remote chart's XML. Regression tests execute the generated
+Prolog with the real WASM parser/interpreter and mocked external transports;
+they check both source kinds on all three paths.
+
 Caller-side toplevel validation precedes local setup, source copying, and
 remote dispatch. Receiving HTTP/WebSocket toplevel endpoints validate raw
 client options before source preparation and metadata injection; internal
@@ -313,6 +357,18 @@ creation also reserves caller-side aliases, with the qualifications below.
 
 `send/2`, `send/3`, `!/2`, `receive/1`, `receive/2`,
 `monitor/2`, `demonitor/1`, `demonitor/2`, `flush/0`.
+
+Native JSON `down` events serialize monitor references independently of actor
+addresses. A reference is opaque: a pid-shaped reference retains its complete
+node qualifier, including when that node is the sender itself, and its node
+text is not normalized. Other compound references are quoted Prolog term text;
+integer and atomic references retain their existing JSON forms. Integers outside
+the JavaScript exact-integer range remain decimal strings. The event's `pid`
+field keeps its existing address normalization and local-id abbreviation;
+reference serialization uses neither pid normalization nor display formatting.
+This preserves browser correlation for remote `monitor(true)` without a
+pid-only matching fallback. Distinct references on the same actor, withdrawn
+references, and connection boundaries continue to be matched independently.
 
 ### Actor Naming
 
@@ -803,6 +859,51 @@ preserved, and validation does not bind input variables. Other callable start
 goals remain runtime code: validation does not execute them, fetch source,
 check predicate availability, reserve names, or guarantee startup success.
 Monitor installation, shutdown, and other lifecycle behavior are unchanged.
+
+Both SWI-WASM runtimes also validate the complete initial child list before
+source preparation or supervisor creation, including recognised nested server
+and supervisor starts. `supervisor_spawn_child/3` validates before sending;
+its validation errors identify that predicate (initial errors identify
+`supervisor_spawn/3`). The receiver rechecks dynamic additions: malformed
+requests return `error(Error)` without changing supervisor state, and an
+already-present id returns `error(already_present)` without starting a child.
+
+Browser child lists and option lists must be proper and specifications acyclic
+`child(Id,Options)` terms. All browser child ids must be atoms, since each is
+passed as a name. Initial sibling ids must be unique (the same id can occur
+under a different nested supervisor); duplicates raise
+`permission_error(duplicate,supervisor_child_id,Id)`. A missing `start/1` raises
+`missing_start_option(Id)`. Every option occurrence is checked, including
+unused duplicates. Start goals and server callbacks must be callable, with
+atom module qualifiers; goal arguments and arbitrary server states can retain
+shared variables. Recognised `server(Pred,ServerOptions)` and
+`start_sub_supervisor(Specs,SupOptions)` forms validate their nested options and
+specifications before any startup. Other goals are not executed or checked for
+predicate availability during validation.
+
+Browser child options accept the same restart policies, types and shutdown
+values listed above, plus boolean `significant/1` compatibility metadata and
+forwarded browser spawn settings. Nested server/supervisor settings use their
+existing wrapper schemas, including the worker's lack of URI source loading.
+Unknown names and wrong arities raise `domain_error(spawn_option,Option)`.
+Defaults, first-occurrence precedence, option order, source sharing and the
+original specifications saved for restarts are preserved without copying or
+binding input variables. Nested server/supervisor options still precede the
+generated child name and child-level spawn settings.
+
+In both SWI-WASM runtimes, `transient` children restart only when their exit
+reason differs from `true`: failure (`false`), exceptions, and explicit abnormal
+exit reasons trigger a restart, subject to the existing intensity limit.
+Successful completion (`true`) does not. `permanent` children restart for any
+reason; `temporary` children never restart. Regression tests exercise the shared
+supervisor down handler and replacement startup in each bundled WASM engine.
+Ordering, inactive-child bookkeeping, and shutdown handling are unchanged.
+
+Validation does not implement additional lifecycle behavior. Browser
+`shutdown/1`, `type/1`, and `significant/1` remain metadata; in particular the
+native shutdown timeout/escalation behavior described above does not apply to
+these browser supervisors. Runtime startup failures can still occur after
+validation; startup rollback and broader lifecycle changes remain separate.
 
 ### Statechart Actors
 
