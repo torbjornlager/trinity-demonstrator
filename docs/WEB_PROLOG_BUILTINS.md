@@ -233,10 +233,20 @@ raise `domain_error(spawn_option,Option)`. The browser vocabulary is:
   accepting these terms does not implement per-spawn output redirection.
 - `src_text/1`: an atom or string; `src_list/1`: a proper list;
   `src_predicates/1`: a proper list of atom/nonnegative-integer indicators.
-- `src_uri/1`: an atom or string in the compatibility main engine. Ordinary
-  worker-engine `spawn/3` has no URI-loading path and now rejects this option
-  explicitly, rather than silently ignoring it. This does not affect URI
-  support in `rpc/3`, `promise/4`, or specialised creation predicates.
+- `src_uri/1`: an atom or string in both browser runtimes. The creating
+  engine asks the page coordinator to fetch Prolog source before child creation;
+  remote spawning forwards the fetched text, rather than asking the remote node
+  to fetch the URI. Server, supervisor and toplevel wrappers use the same path.
+
+Worker source collection retains its groups: all `src_text/1` entries, then
+`src_list/1`, then `src_predicates/1`, followed by `src_uri/1`. Entries within
+each group retain their option order. Repeated URIs are fetched separately.
+The compatibility main engine retains source-option list order. URI fetching
+uses the existing explicit origin allowlist, `credentials: same-origin` and
+browser CORS rules; this adds no arbitrary-origin, file or authentication support.
+Fetch errors propagate without creating a child, and a failed or interrupted
+creation releases its reserved name. A late fetch completion cannot resume an
+abandoned creation. This does not add cancellation of an in-flight source fetch.
 
 Validation does not bind or copy option terms. Existing first-occurrence
 precedence, source collection order within each runtime, and goal/pid sharing
@@ -403,9 +413,8 @@ explicit state argument. Nested supervisor creation reaches the same wrapper
 checks; browser child-specification validation is described under Supervisors.
 
 Statechart wrappers accept atom/string `src_uri/1` in both runtimes, including
-the worker. Other wrappers retain their existing source capability: worker
-server/supervisor/toplevel creation has no URI-loading path and rejects URI
-source options; the compatibility main engine accepts them. Browser statecharts
+the worker. Prolog source loading for ordinary spawn and server/supervisor/toplevel
+wrappers is supported in both runtimes as described above. Browser statecharts
 retain first-text selection (even if a URI precedes it), otherwise first-URI
 selection, and first-occurrence trace behavior. Unlike native statecharts, the
 browser wrappers do not reject multiple well-typed XML sources or traces.
@@ -669,9 +678,25 @@ reply envelope is removed by the wrapper.
 
 Both SWI-WASM runtimes also export `toplevel_call_synch/3-4` and
 `toplevel_next_synch/2-3` for concrete local toplevel pids (an integer or
-`Integer@localhost`). Remote pids and aliases are rejected before monitoring or
-sending with `error(permission_error(use,toplevel_correlation,Pid),_)`.
-Remote synchronous transport support is separate work.
+`Integer@localhost`) and concrete remote `Integer@Node` pids with an atom node
+URI. Aliases and experimental legacy pid forms remain outside this interface.
+Remote waits require `web-prolog-sync-v1` on the actual WebSocket. Unsupported
+peers raise `error(permission_error(use,toplevel_correlation,Node),_)` before
+starting or advancing a query, including with `timeout(0)`. The capability is
+checked before monitoring and again on the socket used to send the command.
+Connection setup is outside the receive timeout.
+
+The browser offers the existing native subprotocol when connecting. If that
+upgrade fails before opening, it retries the legacy connection without a
+subprotocol for asynchronous compatibility; such a connection cannot execute
+synchronous requests. Existing asynchronous command and reply paths are unchanged.
+Synchronous commands use the actor-term transport with the waiting engine as
+answer target. The complete tagged Prolog answer returns to that same engine,
+preserving nonground sharing and exception terms without display-text reconstruction.
+Timeout does not cancel remote computation; a later synchronous wait for the same
+pid discards stale tagged answers while preserving asynchronous answers and I/O.
+Cancellation, concurrent-client coordination, aliases and browser `io_target/1`
+support remain separate work.
 
 Browser call query options are `template/1`, `offset/1`, `limit/1` and `once/1`;
 next accepts `limit/1`. Both accept `timeout/1`, `on_timeout/1` and a `target/1`
@@ -1055,7 +1080,7 @@ predicate availability during validation.
 Browser child options accept the same restart policies, types and shutdown
 values listed above, plus boolean `significant/1` compatibility metadata and
 forwarded browser spawn settings. Nested server/supervisor settings use their
-existing wrapper schemas, including the worker's lack of URI source loading.
+existing wrapper schemas, including URI source loading in both runtimes.
 Unknown names and wrong arities raise `domain_error(spawn_option,Option)`.
 Defaults, first-occurrence precedence, option order, source sharing and the
 original specifications saved for restarts are preserved without copying or

@@ -4003,7 +4003,7 @@
     <script src="/vendor/vue.global.prod.js"></script>
     <script src="/vendor/jquery.terminal.min.js"
             crossorigin="anonymous"></script>
-    <script src="/swi_wasm_actor_worker.js?v=20261018-supervisor-halt-v24"></script>
+    <script src="/swi_wasm_actor_worker.js?v=20261018-remote-sync-v26"></script>
     <script>
       var DEFAULT_PROLOG = "";
 
@@ -10466,6 +10466,14 @@
                 nodeText, sourceText, sessionText, "", timeLimitText, idleLimitText, "main"
               );
             };
+            window.swiWasmToplevelCorrelation = function(nodeText) {
+              return self.ensureSwiWasmRemoteActorConnection(nodeText).then(function(entry) {
+                return entry.socket.protocol === "web-prolog-sync-v1";
+              });
+            };
+            window.swiWasmSynchronousSend = function(pidText, messageText) {
+              return Promise.resolve(self.sendSwiWasmActorMessage(pidText, messageText, "main", true));
+            };
             window.swiWasmRemoteToplevelCall = function(pidText, goalText, templateText, limit, offset, once) {
               return self.callSwiWasmRemoteToplevel(pidText, goalText, templateText, limit, offset, once);
             };
@@ -10801,7 +10809,7 @@
             delete this.swiWasmReservedWorkerActorPids[pid];
             if (startFields && startFields.parentPid && this.trackSwiWasmStartup) this.trackSwiWasmStartup(startFields.parentPid, pid);
             if (nameText) throw new Error("named Worker creation requires a reservation");
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-supervisor-halt-v24";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-remote-sync-v26";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -11084,7 +11092,6 @@
               //  that closes without the expected error ordering left the
               //  `connecting` promise pending forever, parking every remote
               //  spawn/call/monitor awaiting it.
-              var socket;
               var settled = false;
               var connectTimer = null;
               function clearConnectTimer() {
@@ -11100,16 +11107,28 @@
               }
               connectTimer = window.setTimeout(function() {
                 settleReject(new Error("remote actor connection timed out: " + node));
-                try { if (socket) socket.close(); } catch (_timeoutClose) {}
+                try { if (entry.socket) entry.socket.close(); } catch (_timeoutClose) {}
               }, 15000);
+              function openSocket(offerSync) {
+              var socket, opened = false;
+              function retryLegacy() {
+                if (settled || opened || !offerSync) return false;
+                socket.onclose = socket.onerror = null;
+                try { socket.close(); } catch (_) {}
+                openSocket(false);
+                return true;
+              }
               try {
-                socket = new WebSocket(self.swiWasmRemoteWsUrl(node));
+                socket = offerSync
+                  ? new WebSocket(self.swiWasmRemoteWsUrl(node), ["web-prolog-sync-v1"])
+                  : new WebSocket(self.swiWasmRemoteWsUrl(node));
               } catch (error) {
                 settleReject(error);
                 return;
               }
               entry.socket = socket;
               socket.onopen = function() {
+                opened = true;
                 entry.protocol = null;
                 socket.send(JSON.stringify({
                   command: "transport_hello",
@@ -11232,6 +11251,7 @@
                 }
               };
               socket.onclose = function() {
+                if (retryLegacy()) return;
                 //  Close before open settles the connect promise (no-op once
                 //  opened); a mid-session close falls through to the cleanup.
                 settleReject(new Error("remote actor connection closed before ready: " + node));
@@ -11253,10 +11273,13 @@
                 delete self.swiWasmRemoteActorConnections[node];
               };
               socket.onerror = function() {
+                if (retryLegacy()) return;
                 if (socket.readyState !== WebSocket.OPEN) {
                   settleReject(new Error("unable to connect to remote actor node " + node));
                 }
               };
+              }
+              openSocket(true);
             });
             return entry.connecting;
           },
@@ -11893,6 +11916,12 @@
               case "src_uri":
                 result = this.loadSwiWasmUriSource(message.uri || "");
                 break;
+              case "toplevel_correlation":
+                result = this.ensureSwiWasmRemoteActorConnection(message.node).then(function(connection) { return connection.socket.protocol === "web-prolog-sync-v1"; });
+                break;
+              case "synchronous_send":
+                result = this.sendSwiWasmActorMessage(message.to, message.message, pid, true);
+                break;
               case "send":
                 result = this.sendSwiWasmActorMessage(message.to, message.message, message.from || pid);
                 break;
@@ -12044,7 +12073,7 @@
             }.bind(this));
             return "[" + pids.join(",") + "]";
           },
-          sendSwiWasmActorMessage: function(pidText, messageText, fromPid) {
+          sendSwiWasmActorMessage: function(pidText, messageText, fromPid, correlated) {
             var self = this;
             var pid = this.resolveSwiWasmActorTarget(pidText);
             var sender = String(fromPid || (this.isSwiWasm2Mode ? this.swiWasm2ShellPid : "main"));
@@ -12064,6 +12093,7 @@
               this.parseSwiWasmRemoteActorPid(pid);
             if (remote) {
               return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+                if (correlated && entry.socket.protocol !== "web-prolog-sync-v1") return false;
                 entry.socket.send(JSON.stringify({
                   command: "send",
                   pid: remote.pid,
@@ -12591,24 +12621,27 @@
               "toplevel_call_synch(Pid, Goal, Answer) :- toplevel_call_synch(Pid, Goal, Answer, []).",
               "toplevel_call_synch(Pid, Goal, Answer, Options) :-",
               "    synchronous_options(call, Options, Caller, Query, Wait),",
-              "    local_synchronous_pid(Pid, Key), make_ref(Ref), make_ref(Mon),",
+              "    synchronous_pid(Pid, Key), make_ref(Ref), make_ref(Mon),",
               "    setup_call_cleanup(true,",
-              "      ( install_monitor(Pid, Mon), toplevel_call(Pid, Goal, ['$request_ref'(Ref)|Query]),",
+              "      ( install_monitor(Pid, Mon), synchronous_send(Pid, '$call'(Goal, ['$request_ref'(Ref)|Query])),",
               "        synchronous_answer(Key, Mon, Ref, Answer, Caller, Wait) ),",
               "      server_monitor_cleanup(Mon)).",
               "toplevel_next_synch(Pid, Answer) :- toplevel_next_synch(Pid, Answer, []).",
               "toplevel_next_synch(Pid, Answer, Options) :-",
               "    synchronous_options(next, Options, Caller, Query, Wait),",
-              "    local_synchronous_pid(Pid, Key), make_ref(Ref), make_ref(Mon),",
+              "    synchronous_pid(Pid, Key), make_ref(Ref), make_ref(Mon),",
               "    setup_call_cleanup(true,",
-              "      ( install_monitor(Pid, Mon), toplevel_next(Pid, ['$request_ref'(Ref)|Query]),",
+              "      ( install_monitor(Pid, Mon), synchronous_send(Pid, '$next'(['$request_ref'(Ref)|Query])),",
               "        synchronous_answer(Key, Mon, Ref, Answer, Caller, Wait) ),",
               "      server_monitor_cleanup(Mon)).",
-              "local_synchronous_pid(Pid, Key) :-",
+              "synchronous_pid(Pid, Key) :-",
               "    must_be(nonvar, Pid),",
               "    ( integer(Pid) -> Key = Pid@localhost",
               "    ; compound(Pid), compound_name_arguments(Pid, @, [Id,Node]), Node == localhost, integer(Id)",
               "    -> Key = Pid",
+              "    ; compound(Pid), compound_name_arguments(Pid, @, [Id,Node]), integer(Id), atom(Node)",
+              "    -> synchronous_remote_support(Node, Supported),",
+              "       ( Supported == true -> Key = Pid ; throw(error(permission_error(use,toplevel_correlation,Node),_)) )",
               "    ; throw(error(permission_error(use,toplevel_correlation,Pid),_)) ).",
               "synchronous_options(Kind, Options0, Caller, [target(Self)|Query], Receive) :-",
               "    strip_module(Options0, Caller, Options),",
@@ -13622,6 +13655,12 @@
               "        await(Promise, true)",
               "    ;   send(Pid, '$call'(Goal, Options))",
               "    ).",
+              "synchronous_remote_support(Node, Supported) :-",
+              "    term_string(Node, NodeText), Promise := swiWasmToplevelCorrelation(#NodeText), await(Promise, Supported).",
+              "synchronous_send(Pid, Message) :-",
+              "    term_string(Pid, PidText), term_string(Message, MessageText),",
+              "    Promise := swiWasmSynchronousSend(#PidText, #MessageText), await(Promise, Sent),",
+              "    ( Sent == true -> true ; Pid = _@Node, throw(error(permission_error(use,toplevel_correlation,Node),_)) ).",
               "remote_toplevel_pid_text(Text) :-",
               "    ( sub_string(Text, 0, _, _, \"remote_toplevel(\")",
               "    ; sub_string(Text, _, _, _, \"@'\")",

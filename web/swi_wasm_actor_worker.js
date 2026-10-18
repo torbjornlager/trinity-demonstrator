@@ -581,6 +581,13 @@ function createSwiWasmPromiseStore(options) {
     return ref;
   }
 
+  function actorToplevelCorrelation(nodeText) {
+    return actorRequest("toplevel_correlation", {node: String(nodeText)});
+  }
+  function actorSynchronousSend(pidText, messageText) {
+    return actorRequest("synchronous_send", {to: localizePid(pidText), message: String(messageText)});
+  }
+
   function actorLoadUri(uriText) {
     return actorRequest("src_uri", { uri: String(uriText || "") });
   }
@@ -1029,6 +1036,8 @@ function createSwiWasmPromiseStore(options) {
   self.actorSend = actorSend;
   self.actorSendDelayed = actorSendDelayed;
   self.actorCancel = actorCancel;
+  self.actorToplevelCorrelation = actorToplevelCorrelation;
+  self.actorSynchronousSend = actorSynchronousSend;
   self.actorSpawn = actorSpawn;
   var nextName = 0;
   self.swiWasmNameToken = function() { return "name-" + (++nextName); };
@@ -1229,6 +1238,7 @@ function createSwiWasmPromiseStore(options) {
       "browser_spawn_option_type(target, nonvar).",
       "browser_spawn_option_type(io_target, nonvar).",
       "browser_spawn_option_type(src_text, atom_or_string).",
+      "browser_spawn_option_type(src_uri, atom_or_string).",
       "browser_spawn_option_type(src_list, list).",
       "browser_spawn_option_type(src_predicates, predicate_indicators).",
       "",
@@ -1549,6 +1559,13 @@ function createSwiWasmPromiseStore(options) {
       "            ),",
       "            ClauseTexts),",
       "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "",
+      "% Preserve Worker source groups: text, lists, predicates, then URI texts.",
+      "spawn_source_option(Options, Text) :-",
+      "    source_option_member(src_uri(URI), Options),",
+      "    term_string(URI, URIText),",
+      "    Promise := actorLoadUri(#URIText),",
+      "    actor_await(Promise, Text).",
       "",
       "clause_source_text(Clause, Text) :-",
       "    copy_term(Clause, Copy),",
@@ -2178,6 +2195,12 @@ function createSwiWasmPromiseStore(options) {
       "",
       "solution_limit(Options, Limit) :- ( option(limit(Limit), Options) -> must_be(positive_integer, Limit) ; Limit = none ).",
       "validate_solution_limit(Options) :- solution_limit(Options, _).",
+      "synchronous_remote_support(Node, Supported) :-",
+      "    term_string(Node, NodeText), Promise := actorToplevelCorrelation(#NodeText), actor_await(Promise, Supported).",
+      "synchronous_send(Pid, Message) :-",
+      "    wire_text(Pid, PidText), wire_text(Message, MessageText),",
+      "    Promise := actorSynchronousSend(#PidText, #MessageText), actor_await(Promise, Sent),",
+      "    ( Sent == true -> true ; Pid = _@Node, throw(error(permission_error(use,toplevel_correlation,Node),_)) ).",
       "toplevel_call(Pid, Goal) :- toplevel_call(Pid, Goal, []).",
       "toplevel_call(Pid, Goal, Options) :- validate_solution_limit(Options), send(Pid, '$call'(Goal, Options)).",
       "",

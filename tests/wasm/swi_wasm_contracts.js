@@ -284,9 +284,9 @@ function spawnOptionCases(main=false) {
     ["[monitor_ref(42)]","domain_error(spawn_option,monitor_ref(42))"],
     ["[src_text('fact(ok).'),unknown(1)]","domain_error(spawn_option,unknown(1))"]
   ];
-  if(main)cases.push(["[src_uri(_)]","instantiation_error"], ["[src_uri(42)]","type_error(atom_or_string,42)"],
+  cases.push(["[src_uri(_)]","instantiation_error"], ["[src_uri(42)]","type_error(atom_or_string,42)"],
+    ["[src_uri('https://example.org/source.pl'),src_uri(42)]","type_error(atom_or_string,42)"],
     ["[src_uri('https://example.org/source.pl'),unknown(1)]","domain_error(spawn_option,unknown(1))"]);
-  else cases.push(["[src_uri('https://example.org/source.pl')]","domain_error(spawn_option,src_uri('https://example.org/source.pl'))"]);
   // Validate the whole list even when a remote dispatch is selected.
   return cases.concat(cases.slice(1).map(([opts,err])=>["[node('https://example.org')|"+opts+"]",err]));
 }
@@ -400,11 +400,8 @@ async function childSpecContract(run, check, sideEffects, main) {
   check(await run(b+"wasm_child_start(server(cb,[initial_state(X),initial_state(other),name(first)]),a,[name(child_name),src_list([fact(X)])],_),var(X)"),"server special form keeps arbitrary initial state and forwarded source sharing");
   check(await run(b+"wasm_child_start(start_sub_supervisor([],[strategy(rest_for_one),strategy(one_for_all),intensity(0),period(0.25)]),nested,[],_)"),"nested supervisor creation retains option precedence");
   check(await run("Original=child(plain,[start(goal(X)),start(other(X)),restart(temporary),shutdown(5),type(worker),significant(false),monitor(false)]),"+b+"wasm_handle_supervisor_call(start_child(Original),ok,sup(one_for_one,1,5,[],[]),sup(one_for_one,1,5,[child(plain,_,Saved)],[])),Saved==Original,var(X)"),"valid dynamic child retains original shared specification");
-  // URI capability remains a runtime difference even inside nested specs.
   const uriSpec="[child(a,[start(server(cb,[src_uri('https://example.org/support.pl')]))])]";
-  const uriGoal=main?b+"browser_validate_child_specs("+uriSpec+",supervisor_spawn/3)":
-    "catch(("+b+"browser_validate_child_specs("+uriSpec+",supervisor_spawn/3),fail),error(domain_error(spawn_option,src_uri(_)),_),Caught=true),Caught==true";
-  check(await run(uriGoal),"nested source options retain runtime URI capability");
+  check(await run(b+"browser_validate_child_specs("+uriSpec+",supervisor_spawn/3)"),"nested source options accept URI loading in both runtimes");
 }
 
 
@@ -752,7 +749,7 @@ function remoteNamingPeer(host) {
   global.window.setTimeout=setTimeout;global.window.clearTimeout=clearTimeout;
   class Socket {
     static OPEN=1;
-    constructor(){this.readyState=1;state.sockets.push(this);setImmediate(()=>this.onopen());}
+    constructor(_url,protocols){this.protocol=state.sync&&protocols ? "web-prolog-sync-v1" : "";this.readyState=1;state.sockets.push(this);setImmediate(()=>{if(this.onopen)this.onopen();});}
     emit(m){this.onmessage({data:JSON.stringify(m)});}
     send(text){const m=JSON.parse(text);state.commands.push(m);
       if(m.command==="transport_hello")return setImmediate(()=>this.emit({type:"transport_welcome",protocol:"web_prolog_browser_actor",version:1,io_ack:true,browser_pids:true}));
@@ -770,6 +767,86 @@ function remoteNamingPeer(host) {
   global.WebSocket=Socket;
   return {...state,state,restore(){global.WebSocket=originalWS;}};
 }
+function remoteSynchronousPeer(host) {
+  const peer=remoteNamingPeer(host),state=peer.state,Socket=global.WebSocket;
+  state.sync=true;state.answers=[];state.requests=[];
+  host.callSwiWasmRemoteToplevel=workbenchMethod("callSwiWasmRemoteToplevel","nextSwiWasmRemoteToplevel");
+  host.nextSwiWasmRemoteToplevel=workbenchMethod("nextSwiWasmRemoteToplevel","swiWasmStructuredCompound");
+  host.toplevelCallOptionsText=()=>"[]";
+  const localSend=host.sendSwiWasmActorMessage,remoteSend=workbenchMethod("sendSwiWasmActorMessage","sendSwiWasmActorMessageDelayed");
+  global.parseSwiWasmQualifiedServiceAddress=()=>null;
+  host.sendSwiWasmActorMessage=function(to,...args){return this.parseSwiWasmRemoteActorPid(this.resolveSwiWasmActorTarget(to))?remoteSend.call(this,to,...args):localSend.call(this,to,...args);};
+  host.routeSwiWasmActorMessage=(_from,to,message)=>host.sendSwiWasmActorMessage(to,message);
+  host.deliverSwiWasmRemoteResult=(message,target)=>host.sendSwiWasmActorMessage(target||state.owner,message);
+  const send=Socket.prototype.send;
+  Socket.prototype.send=function(text){
+    const m=JSON.parse(text);send.call(this,text);
+    if((m.command==="send"&&/\$call|\$next/.test(m.message))||m.command==="toplevel_call"||m.command==="toplevel_next") {
+      state.requests.push(m);host.shutdownStopSeen=true;
+      const plan=state.answers.shift();if(!plan)return;
+      const ref=/['"]?\$request_ref['"]?\((\d+)\)/.exec(m.message||"");
+      const node=new URL(state.node||"http://sync.test").origin;
+      const pid=m.pid+"@'"+node+"'";
+      setTimeout(()=>{
+        if(plan.close){this.close();return;}
+        if(plan.down){state.live.delete(String(m.pid));host.swiWasmActorMonitors.slice().filter(w=>host.parseSwiWasmRemoteActorPid(w.pid)?.pid===String(m.pid)).forEach(w=>this.emit({type:"down",pid:m.pid,ref:w.ref,reason:plan.down}));return;}
+        const payload=plan.payload.replaceAll("PID",pid);
+        if(m.command!=="send")this.emit({type:"success",pid:m.pid,data:["async_ok"],more:false});
+        else this.emit({type:"actor_message",target:m.browser_from,message:ref?"'$toplevel_reply'("+ref[1]+","+payload+")":payload});
+      },plan.delay||0);
+    }
+  };
+  return peer;
+}
+async function remoteSynchronousContract(run,host,check) {
+  const peer=remoteSynchronousPeer(host),state=peer.state,node="http://sync.test",Socket=global.WebSocket;
+  state.owner=host.testOwner;state.node=node;
+  const answer=(payload,delay=0)=>({payload,delay});
+  try {
+    check(await run("spawn(receive({stop->true}),Other,[link(false)]),monitor(Other,OtherRef),assertz(user:remote_other(Other,OtherRef)),toplevel_spawn(P,[node('"+node+"'),session(true)]),assertz(user:remote_sync_pid(P))"),"remote fixture shares an ordinary browser transport and preserves unrelated local monitor");
+    state.answers=[answer("success(PID,[a,b],true)"),answer("success(PID,[c],false)")];
+    check(await run("user:remote_sync_pid(P),toplevel_call_synch(P,member(X,[a,b,c]),success(P,[a,b],true),[template(X),limit(2)]),toplevel_next_synch(P,success(P,[c],false)),var(X)"),"remote synchronous call and next preserve paging and caller variable independence");
+    check(state.sockets[0].protocol==="web-prolog-sync-v1"&&state.requests.every(m=>m.command==="send"&&m.browser_from===state.owner&&m.message.includes("$request_ref")),"correlated commands use negotiated socket and caller-targeted actor transport");
+    state.answers=[answer("success(PID,[pair(V,V)],false)"),answer("failure(PID)"),answer("error(PID,error(probe_error,context(remote,Detail)))")];
+    check(await run("user:remote_sync_pid(P),toplevel_call_synch(P,pair(X,Y),success(P,[pair(A,B)],false),[template(pair(X,Y))]),A==B,var(A),var(X),var(Y),toplevel_call_synch(P,fail,failure(P)),toplevel_call_synch(P,throw(probe_error),error(P,error(probe_error,context(remote,Detail)))),var(Detail)"),"canonical actor messages retain nonground sharing, failure and exception terms");
+    state.answers=[answer("success(PID,[old],false)",30),answer("success(PID,[fresh],false)",60)];
+    check(await run("user:remote_sync_pid(P),self(Self),Self!unrelated(kept),Self!success(P,[async_kept],false),toplevel_call_synch(P,sleep(1),Early,[timeout(0)]),var(Early),toplevel_call_synch(P,true,success(P,[fresh],false),[timeout(1)]),receive({success(P,[async_kept],false)->true}),receive({unrelated(kept)->true})"),"remote timeout leaves query running and next wait discards stale tagged reply");
+    state.answers=[answer("success(PID,[old],false)",5),answer("success(PID,[old],false)",5),answer("success(PID,[old],false)",5),answer("success(PID,[ok],false)",20)];
+    check(await run("user:remote_sync_pid(P),toplevel_call_synch(P,true,Early,[timeout(0),on_timeout(Early=waiting)]),Early==waiting,\\+toplevel_call_synch(P,true,_,[timeout(0),on_timeout(fail)]),catch(toplevel_call_synch(P,true,_,[timeout(0),on_timeout(throw(callback_error))]),callback_error,true),toplevel_call_synch(P,true,success(P,[ok],false),[timeout(1)])"),"remote wait callbacks preserve bindings, failure and exceptions");
+    state.answers=[answer("success(PID,[ok],false)"),answer("success(PID,[async_ok],false)")];
+    check(await run("user:remote_sync_pid(P),\\+toplevel_call_synch(P,true,wrong),self(Self),toplevel_call(P,true,[target(Self)]),receive({success(P,[async_ok],false)->true})"),"output mismatch consumes tagged reply and asynchronous call remains untagged");
+    state.sync=false;
+    check(await run("toplevel_spawn(Old,[node('http://legacy.test'),session(true)]),assertz(user:legacy_sync_pid(Old))"),"legacy peer remains usable for asynchronous creation");
+    const requests=state.requests.length,monitors=host.swiWasmActorMonitors.length;
+    check(await run("user:legacy_sync_pid(P),catch((toplevel_call_synch(P,true,_,[timeout(0)]),fail),error(permission_error(use,toplevel_correlation,'http://legacy.test'),_),true),catch((toplevel_next_synch(P,_,[timeout(0)]),fail),error(permission_error(use,toplevel_correlation,'http://legacy.test'),_),true)"),"unsupported peer rejects call and next before query even with zero timeout");
+    check(state.requests.length===requests&&host.swiWasmActorMonitors.length===monitors,"unsupported peer sends no query or private monitor");
+    // An old server may reject the offered subprotocol before opening. Retry a plain socket for async use only.
+    global.WebSocket=class {
+      static OPEN=1;
+      constructor(url,protocols){if(!protocols)return new Socket(url);this.readyState=0;setImmediate(()=>this.onerror?.());}
+      close(){this.readyState=3;}
+    };
+    const legacy=await host.ensureSwiWasmRemoteActorConnection('http://fallback.test');
+    check(legacy.ioAck&&legacy.socket.protocol==="","failed subprotocol upgrade falls back to legacy asynchronous transport");
+    global.WebSocket=Socket;
+    const active=host.swiWasmRemoteActorConnections[node].socket;
+    const protocol=active.protocol;active.protocol="";
+    const before=state.requests.length;
+    check(await host.sendSwiWasmActorMessage("4001@'"+node+"'","'$call'(true,[])",state.owner,true)===false&&state.requests.length===before,"send rechecks actual socket capability before dispatch");
+    active.protocol=protocol;
+    state.answers=[{down:"probe_down"}];
+    check(await run("user:remote_sync_pid(P),monitor(P,Explicit),catch((toplevel_call_synch(P,true,_),fail),toplevel_down(probe_down),true),receive({down(P,Explicit,probe_down)->true})"),"observed remote death raises toplevel_down and preserves explicit monitor");
+    state.sync=true;
+    check(await run("toplevel_spawn(P,[node('"+node+"'),session(true)]),retractall(user:remote_sync_pid(_)),assertz(user:remote_sync_pid(P))"),"replacement remote fixture starts");
+    state.answers=[{close:true}];
+    check(await run("user:remote_sync_pid(P),catch((toplevel_call_synch(P,true,_),fail),toplevel_down(connection_lost('"+node+"')),true),user:remote_other(Other,OtherRef),Other!stop,receive({down(Other,OtherRef,true)->true})"),"connection loss interrupts synchronous wait and preserves unrelated monitor");
+    check(host.swiWasmActorMonitors.length===0,"all synchronous waits remove their private monitors");
+    state.sync=true;
+    check(await run("toplevel_spawn(P,[node('"+node+"'),session(true)]),retractall(user:remote_sync_pid(_)),assertz(user:remote_sync_pid(P))"),"remote interruption fixture starts");
+    return peer;
+  } catch(error) {peer.restore();throw error;}
+}
+
 async function remoteAliasCleanupContract(run,host,check) {
   const peer=remoteNamingPeer(host),state=peer.state;
   const node="http://alias.test",other="http://other.test";
@@ -934,7 +1011,7 @@ async function synchronousToplevelContract(run,host,check) {
   for(const [options,error] of [["[target(other)]","domain_error(synchronous_toplevel_target,other)"],["[target(_)]","instantiation_error"],["[limit(1),limit(0)]","type_error(positive_integer,0)"],["[unknown(x)]","domain_error(toplevel_call_synch_option,unknown(x))"],["[io_target(other)]","domain_error(toplevel_call_synch_option,io_target(other))"],["[timeout(bad)]","type_error(number,bad)"],["[once(true)|bad]","type_error(list,_)"]]) {
     check(await run("user:sync_pid(P),catch((toplevel_call_synch(P,true,_,"+options+"),fail),error("+error+",_),true)"),"reject invalid synchronous options "+options);
   }
-  check(await run("catch((toplevel_call_synch(123@'http://localhost:3053',true,_,[timeout(0)]),fail),error(permission_error(use,toplevel_correlation,_),_),true),catch((toplevel_next_synch(remote_toplevel(node,123),_,[timeout(0)]),fail),error(permission_error(use,toplevel_correlation,_),_),true)"),"remote targets rejected before dispatch");
+  check(await run("catch((toplevel_next_synch(remote_toplevel(node,123),_,[timeout(0)]),fail),error(permission_error(use,toplevel_correlation,_),_),true)"),"unsupported pid forms rejected before dispatch");
   check(host.created.length===created,"invalid calls have no creation side effects");
   check(await run("toplevel_spawn(T,[session(true),time_limit(0.05),link(false)]),toplevel_call_synch(T,receive({never->true}),error(T,error(resource_error(time),_))),toplevel_call_synch(T,true,success(T,[true],false)),toplevel_call_synch(T,(X=first;receive({never->true}),X=late),success(T,[first],true),[template(X),limit(1)]),toplevel_next_synch(T,error(T,error(resource_error(time),_))),monitor(T,MT),toplevel_halt(T),receive({down(T,MT,_)->true})"),"execution time-limit error is correlated and session remains usable");
   check(await run("self(Self),spawn(receive({'$call'(_,_)->exit(sync_down)}),D,[link(false)]),catch((toplevel_call_synch(D,true,_),fail),toplevel_down(sync_down),true),Self!kept(data),user:sync_pid(P),toplevel_call_synch(P,true,success(P,[true],false)),receive({kept(data)->true}),monitor(P,MP),toplevel_halt(P),receive({down(P,MP,_)->true}),user:sync_other(Other,OR),Other!stop,receive({down(Other,OR,true)->true})"),"termination reported and unrelated actor, monitor and message preserved");
@@ -976,6 +1053,10 @@ async function supervisorHaltContract(run,host,check) {
 function supervisorHaltInterruptProbe(host) {
   const probe=supervisorWaitInterruptProbe(host);
   return {...probe,goal:probe.goal.replace("supervisor_count_children(P,_)","supervisor_halt(P)")};
+}
+function remoteSynchronousInterruptProbe(host) {
+  host.shutdownStopSeen=false;
+  return {goal:"user:remote_sync_pid(P),toplevel_call_synch(P,true,_)",restore:()=>{}};
 }
 function synchronousWaitInterruptProbe(host) {
   const send=host.sendSwiWasmActorMessage;
@@ -1180,6 +1261,69 @@ const scenarios = {
         check(await run("receive({never->true},[timeout(0)]),findall(R,swi_wasm_actor_bridge:retiring_supervisor_shutdown(R),[]),user:shutdown_wait_pid(P),exit(P,kill)"),"main interruption drains private reply filters and leaves engine usable");
       } finally {probe.restore();}
     } finally {await host.stop();}
+  },
+  async remote_synchronous_worker(W,check) {
+    const host=scopedWorkerCoordinator(W);host.testOwner=PID;let peer;
+    try {
+      await startToplevel(W);
+      async function run(goal){
+        const replies=()=>W.sends.filter(m=>m.to===CLIENT).map(m=>m.message),n=replies().length;
+        deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");
+        await until(()=>replies().length>n,20000);const m=replies()[n]||"";
+        if(/^error\(/.test(m))throw new Error(m);
+        const ok=/\[checked\],false\)/.test(m);if(!ok)console.log("shutdown reply: "+m);return ok;
+      }
+      peer=await remoteSynchronousContract(run,host,check);
+      check(W.posted.filter(m=>m.action==="synchronous_send").every(m=>!m.to.startsWith("@(")),"Worker synchronous sends normalize canonical pid notation before coordination");
+      for(const makeProbe of [remoteSynchronousInterruptProbe]) {
+      host.swiWasmQueryPending=true;
+      const probe=makeProbe(host);
+      try {
+        const replies=()=>W.sends.filter(m=>m.to===CLIENT).map(m=>m.message),n=replies().length;
+        deliver(W,"'$call'(("+probe.goal+"),[])");
+        check(await until(()=>host.shutdownStopSeen&&host.swiWasmActorMonitors.length===1),"worker supervisor request wait is suspended with one private monitor");
+        abort(W);await until(()=>replies().length>n);
+        check(/^abort\(/.test(replies()[n]||"")&&host.swiWasmActorMonitors.length===0,"worker interruption withdraws the supervisor request monitor");
+        check(await run("receive({never->true},[timeout(0)]),findall(R,swi_wasm_actor_bridge:retiring_server_monitor(R),[]),user:remote_sync_pid(P),toplevel_halt(P)"),"worker interruption drains private reply filters and leaves engine usable");
+      } finally {probe.restore();}
+      }
+    } finally {if(peer)peer.restore();await host.stop();}
+  },
+  async remote_synchronous_main(W,check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const dummy={S:{onmessage:()=>{}},control:{}};
+    const host=scopedWorkerCoordinator(dummy,"main");host.testOwner="main";let peer;
+    try {
+      const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+      engine.FS.writeFile("/compat_shutdown.pl",source);engine.prolog.query("use_module('/compat_shutdown.pl')").once();
+      host.swiWasmActorMainMailbox=[];host.swiWasmActorMainWaiters=[];
+      host.deliverSwiWasmMainActorMessage=workbenchMethod("deliverSwiWasmMainActorMessage","deliverSwiWasmRemoteResult");
+      host.receiveSwiWasmActorMessage=workbenchMethod("receiveSwiWasmActorMessage","cancelSwiWasmMainActorWaiters");
+      dummy.S.onmessage=({data})=>{if(data.command==="deliver")host.deliverSwiWasmMainActorMessage(data.message);};
+      host.swiWasmStatechartOwnsActorTraffic=()=>false;
+      workbenchMethod("installSwiWasmActorBridge","randomSwiIdentity").call(host);
+      global.self.swiWasmBehaviourSource=()=>behaviourSource;
+      global.self.setTimeout=setTimeout;global.self.clearTimeout=clearTimeout;
+      global.self.workerTestError=e=>e.message;
+      async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+      peer=await remoteSynchronousContract(run,host,check);
+      host.cancelSwiWasmMainActorWaiters=workbenchMethod("cancelSwiWasmMainActorWaiters","resetSwiWasmActorWorkers");
+      host.abortSwiWasmQuery=workbenchMethod("abortSwiWasmQuery","abortSwiWasm2Query");
+      host.swiWasmProlog=engine.prolog;host.swiWasmQueryPending=true;
+      host.setPendingCompletionMessage=()=>{};host.recordSessionEvent=()=>{};
+      for(const makeProbe of [remoteSynchronousInterruptProbe]) {
+      host.swiWasmQueryPending=true;
+      const probe=makeProbe(host);
+      try {
+        const running=run(probe.goal).then(()=>false,()=>true);
+        check(await until(()=>host.shutdownStopSeen&&host.swiWasmActorMainWaiters.length>0),"main supervisor request wait is suspended");
+        host.abortSwiWasmQuery(null);
+        check(await running&&host.swiWasmActorMonitors.length===0,"main interruption withdraws the supervisor request monitor");
+        check(await run("receive({never->true},[timeout(0)]),findall(R,swi_wasm_actor_bridge:retiring_server_monitor(R),[]),user:remote_sync_pid(P),toplevel_halt(P)"),"main interruption drains private reply filters and leaves engine usable");
+      } finally {probe.restore();}
+      }
+    } finally {if(peer)peer.restore();await host.stop();}
   },
   async supervisor_request_wait_worker(W,check) {
     const host=scopedWorkerCoordinator(W);
@@ -1753,6 +1897,62 @@ const scenarios = {
     check(await succeeds("statechart_spawn(_,[node('https://example.org'),src_text("+chart+"),trace(false)]),statechart_wasm:statechart_stop"),"main explicit-node chart settings accepted through existing dispatch");
     check(await succeeds("statechart_spawn(_,[node('https://example.org'),src_uri('https://example.org/chart.xml'),trace(false)]),statechart_wasm:statechart_stop"),"main explicit-node URI settings accepted through existing dispatch");
     check(calls.some(m=>m.action==="get"&&m.uri.includes("chart.xml")),"main existing URI-loading path retained");
+  },
+
+  async worker_uri_spawn_sources(W, check) {
+    const host=scopedWorkerCoordinator(W), originalFetch=global.fetch;
+    const fixtures=new Map([
+      ["/actor.pl","uri_order(uri)."],
+      ["/server.pl","uri_callback(ping,State,pong,State)."],
+      ["/top.pl","uri_value(ok)."]
+    ]);
+    const fetched=[];let releaseFetch;
+    const base="https://n3.elfenbenstornet.se";
+    global.resolveBrowserRpcLoadUri=Function(html.slice(html.indexOf("function normalizeNodeUrl"),html.indexOf("function currentNodeReferenceUrls"))+"\nreturn resolveBrowserRpcLoadUri;")();
+    global.window.location={origin:"http://localhost:3053"};
+    host.loadSwiWasmUriSource=workbenchMethod("loadSwiWasmUriSource","loadSwiWasmAssetSource");
+    global.fetch=async (url,options)=>{
+      if(!String(url).startsWith(base))return originalFetch(url,options);
+      fetched.push({url,options});const path=new URL(url).pathname;
+      if(path==="/held.pl")return new Promise(resolve=>{releaseFetch=()=>resolve({ok:true,text:async()=>"late_fact(ok)."});});
+      if(path==="/network.pl")throw new Error("uri_network_original");
+      return {ok:fixtures.has(path),status:fixtures.has(path)?200:404,text:async()=>fixtures.get(path)};
+    };
+    const uri=name=>"src_uri('"+base+name+"')";
+    async function run(goal){
+      const n=W.sends.filter(m=>m.to===CLIENT).length;
+      deliver(W,"'$call'(("+goal+"->TestResult=checked;TestResult=wrong),[template(TestResult)])");
+      await until(()=>W.sends.filter(m=>m.to===CLIENT).length>n,20000);
+      const answer=W.sends.filter(m=>m.to===CLIENT)[n]?.message||"";
+      if(!/\[checked\],false\)/.test(answer))console.log("URI reply: "+answer);
+      return /\[checked\],false\)/.test(answer);
+    }
+    try {
+      await startToplevel(W);
+      check(await run("assertz(user:uri_order(copied)),self(Parent),spawn((findall(Item,uri_order(Item),Items),Parent!order(Items)),Child,["+uri("/actor.pl")+",src_list([uri_order(list)]),src_text('uri_order(text1).'),src_predicates([uri_order/1]),"+uri("/actor.pl")+",src_text(\"uri_order(text2).\"),monitor(true)]),receive({order([text1,text2,list,copied,uri,uri])->true}),receive({down(Child,Child,true)->true})"),"real child loads mixed/repeated URI sources after existing Worker source groups");
+      check(fetched.length===2&&fetched.every(f=>f.options.credentials==="same-origin"),"repeated URIs fetch separately with existing credential policy");
+      check(await run("server_spawn(uri_callback,initial,Server,["+uri("/server.pl")+"]),server_request(Server,ping,pong),monitor(Server,Watch),exit(Server,kill),receive({down(Server,Watch,kill)->true})"),"server callback source loads from URI");
+      check(await run("supervisor_spawn([child(probe,[start(server(uri_callback,["+uri("/server.pl")+"]))])],Sup,["+uri("/top.pl")+"]),supervisor_which_children(Sup,[child(probe,Server,_)]),server_request(Server,ping,pong),monitor(Sup,Watch),supervisor_halt(Sup),receive({down(Sup,Watch,true)->true})"),"supervisor and nested child server accept URI source loading");
+      check(await run("toplevel_spawn(Top,[session(true),"+uri("/top.pl")+"]),toplevel_call_synch(Top,uri_value(X),success(Top,[ok],false),[template(X)]),var(X),monitor(Top,Watch),toplevel_halt(Top),receive({down(Top,Watch,_)->true})"),"toplevel URI source executes with independent goal variables");
+      const remote=[];
+      host.spawnSwiWasmRemoteActor=(_node,goal,source)=>{remote.push({goal,source,fetched:fetched.length});return Promise.resolve("8800000000@'https://example.org'");};
+      check(await run("spawn(uri_order(uri),Remote,[node('https://example.org'),"+uri("/actor.pl")+"]),Remote=8800000000@'https://example.org'"),"remote spawn fetches source in browser before forwarding");
+      check(remote.length===1&&remote[0].source==="uri_order(uri)."&&remote[0].fetched===fetched.length,"remote transport receives fetched text only");
+      for(const [url,label] of [["https://example.org/blocked.pl","origin"],["file:///tmp/blocked.pl","file"],[base+"/missing.pl","HTTP"],[base+"/network.pl","network"]]) {
+        const count=host.created.length,fetches=fetched.length;
+        check(await run("catch((spawn(true,Child,[name(uri_failed),monitor(true),src_uri('"+url+"')]),fail),Error,nonvar(Error)),var(Child),whereis(uri_failed,undefined)"),label+" fetch failure leaves pid unbound and releases reserved name");
+        check(host.created.length===count&&Object.keys(host.swiWasmNameReservations).length===0,label+" failure creates no child and leaves no reservation");
+        if(label==="origin"||label==="file")check(fetched.length===fetches,"disallowed "+label+" is rejected before fetch");
+      }
+      const created=host.created.length,n=W.sends.filter(m=>m.to===CLIENT).length;
+      deliver(W,"'$call'(spawn(true,_,[name(uri_interrupted),"+uri("/held.pl")+"]),[])");
+      check(await until(()=>!!releaseFetch),"URI fetch suspends creation while name is reserved");
+      abort(W);check(await until(()=>W.sends.filter(m=>m.to===CLIENT).length>n),"interrupted fetch acknowledges abort");
+      releaseFetch();
+      check(await run("whereis(uri_interrupted,undefined),receive({never->true},[timeout(0)])"),"late fetch completion cannot publish interrupted name and engine remains usable");
+      check(host.created.length===created&&Object.keys(host.swiWasmNameReservations).length===0,"interrupted source loading creates no child or reservation leak");
+      check(await until(()=>host.live().length===0)&&host.swiWasmActorMonitors.length===0,"URI source tests reclaim children and monitors");
+    } finally {global.fetch=originalFetch;await host.stop();}
   },
 
   async spawn_option_validation(W, check) {
