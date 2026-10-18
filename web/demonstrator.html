@@ -9720,6 +9720,9 @@
               if (this.cancelSwiWasmMainActorWaiters("swi_wasm_abort") > 0) {
                 resumedSuspendedQuery = true;
               }
+              if (this.closeSwiWasmWorkerScopes("main")) {
+                resumedSuspendedQuery = true;
+              }
               if (!resumedSuspendedQuery) {
                 this.swiWasmProlog.abort();
               }
@@ -9744,6 +9747,14 @@
             };
             this.logSwiWasmWorkerTraffic(abortEnvelope, "request");
             entry.worker.postMessage(abortEnvelope);
+            // The UI hard reset cannot rely on the shell's Prolog finalizer.
+            // Stop its combinator-owned workers before counting survivors;
+            // ordinary actors outside those scopes retain their lifetimes.
+            // Queued callbacks from this discarded shell must not reopen scopes
+            // or act on the replacement entry, which reuses the same pid.
+            entry.worker.onmessage = null;
+            entry.worker.onerror = null;
+            this.closeSwiWasmWorkerScopes(String(this.swiWasm2ShellPid));
             // A Worker cannot process an abort message while Prolog is inside
             // a yield-free goal.  Replacing only the shell Worker provides a
             // hard pre-emption boundary while leaving child actor Workers and
@@ -9753,9 +9764,8 @@
             // the shell is the user's toplevel, not a monitored child, and Abort
             // is a hard reset rather than a normal exit -- firing down/3 to
             // (non-existent) watchers or reaping by reason would misrepresent it.
-            // Any actors the shell spawned are intentionally left running
-            // (Abort stops the shell goal, not the whole node); they simply
-            // outlive the toplevel that started them, exactly as on a node.
+            // Ordinary actors the shell spawned outside combinator scopes are
+            // intentionally left running; Abort does not stop the whole node.
             survivingPids = Object.keys(this.swiWasmActorWorkers || {}).filter(function(pid) {
               var actor = this.swiWasmActorWorkers[pid];
               return pid !== String(this.swiWasm2ShellPid) && actor && actor.worker && !actor.done;
@@ -10399,6 +10409,25 @@
             window.swiWasmActorReservePid = function() {
               return self.reserveSwiWasmWorkerActorPid();
             };
+            window.swiWasmWorkerScopeOpen = function() {
+              var token = "scope-" + (self.swiWasmNextWorkerScope = (self.swiWasmNextWorkerScope || 0) + 1);
+              self.openSwiWasmWorkerScope("main", token);
+              return token;
+            };
+            window.swiWasmWorkerScopeReserve = function(token) {
+              return Promise.resolve(self.reserveSwiWasmScopedWorker("main", token));
+            };
+            window.swiWasmWorkerScopeSpawn = function(token, pid, goal) {
+              return self.spawnSwiWasmScopedWorker("main", token, pid, goal);
+            };
+            window.swiWasmWorkerScopeRelease = function(token, pid) {
+              self.releaseSwiWasmScopedWorker("main", token, pid);
+              return true;
+            };
+            window.swiWasmWorkerScopeClose = function(token) {
+              try { self.closeSwiWasmWorkerScope("main", token); return Promise.resolve(true); }
+              catch (_) { return Promise.resolve(false); }
+            };
             window.swiWasmActorSpawnWithPid = function(pidText, goalText, extraSourceText, nameText, linkText) {
               return self.spawnSwiWasmWorkerActorReady(
                 goalText,
@@ -10478,6 +10507,10 @@
             };
             window.swiWasmActorDemonitor = function(refText) {
               return Promise.resolve(self.demonitorSwiWasmActor("main", refText));
+            };
+            window.swiWasmServerMonitorCleanup = function(refText) {
+              self.cleanupSwiWasmServerMonitor("main", refText);
+              return true;
             };
             //  Chart-watcher variants: a chart's monitor/2 records `statechart`
             //  as the watcher (not `main`), so a monitored child's down event
@@ -10564,6 +10597,81 @@
             this.swiWasmReservedActorRefs[ref] = true;
             return ref;
           },
+          swiWasmWorkerScopeKey: function(watcher, token) {
+            return JSON.stringify([String(watcher), String(token)]);
+          },
+          openSwiWasmWorkerScope: function(watcher, token) {
+            this.swiWasmWorkerScopes = this.swiWasmWorkerScopes || Object.create(null);
+            var key = this.swiWasmWorkerScopeKey(watcher, token);
+            if (this.swiWasmWorkerScopes[key]) throw new Error("worker scope already exists");
+            this.swiWasmWorkerScopes[key] = { watcher: String(watcher), token: String(token), pids: new Set(), started: new Set(), closed: false };
+          },
+          reserveSwiWasmScopedWorker: function(watcher, token) {
+            var scope = (this.swiWasmWorkerScopes || {})[this.swiWasmWorkerScopeKey(watcher, token)];
+            if (!scope || scope.closed) throw new Error("worker scope is closed");
+            var pid = this.reserveSwiWasmWorkerActorPid();
+            scope.pids.add(String(pid));
+            return pid;
+          },
+          spawnSwiWasmScopedWorker: function(watcher, token, pidText, goal) {
+            var pid = String(pidText);
+            var scope = (this.swiWasmWorkerScopes || {})[this.swiWasmWorkerScopeKey(watcher, token)];
+            if (!scope || scope.closed || !scope.pids.has(pid) || scope.started.has(pid)) {
+              throw new Error("invalid scoped worker reservation");
+            }
+            // Ownership precedes Worker construction and the readiness wait.
+            scope.started.add(pid);
+            return this.spawnSwiWasmWorkerActorReady(goal, "", pid, "", "actor",
+              { parentPid: String(watcher), linked: true }).then(function() {
+                if (scope.closed) throw new Error("worker scope is closed");
+                this.monitorSwiWasmActor(watcher, pid, qualifySwiWasmLocalPid(pid));
+                return pid;
+              }.bind(this));
+          },
+          releaseSwiWasmScopedWorker: function(watcher, token, pidText) {
+            var scope = (this.swiWasmWorkerScopes || {})[this.swiWasmWorkerScopeKey(watcher, token)];
+            if (scope) { var pid = this.resolveSwiWasmActorTarget(pidText); scope.pids.delete(String(pid)); scope.started.delete(String(pid)); }
+          },
+          closeSwiWasmWorkerScopes: function(watcher) {
+            var resumedStartup = false;
+            Object.keys(this.swiWasmWorkerScopes || {}).forEach(function(key) {
+              var scope = this.swiWasmWorkerScopes[key];
+              if (!scope || scope.watcher !== String(watcher)) return;
+              scope.started.forEach(function(pid) {
+                var entry = this.swiWasmActorWorkers[pid];
+                if (entry && entry.rejectReady) resumedStartup = true;
+              }.bind(this));
+              this.closeSwiWasmWorkerScope(watcher, scope.token);
+            }.bind(this));
+            return resumedStartup;
+          },
+          closeSwiWasmWorkerScope: function(watcher, token) {
+            var key = this.swiWasmWorkerScopeKey(watcher, token);
+            var scope = (this.swiWasmWorkerScopes || {})[key];
+            if (!scope) return;
+            if (scope) {
+              scope.closed = true;
+              // Delete admission first. Late startup cannot install a monitor
+              // or recreate a worker after the scope has been closed.
+              delete this.swiWasmWorkerScopes[key];
+              scope.pids.forEach(function(pid) {
+                delete this.swiWasmReservedWorkerActorPids[pid];
+                try { Promise.resolve(this.demonitorSwiWasmActor(watcher, qualifySwiWasmLocalPid(pid))).catch(function() {}); } catch (_) {}
+                if (!scope.started.has(pid)) return;
+                var entry = this.swiWasmActorWorkers[pid];
+                if (entry && entry.rejectReady) {
+                  entry.rejectReady(new Error("worker scope is closed"));
+                  entry.resolveReady = null; entry.rejectReady = null;
+                }
+                try { this.exitSwiWasmActor(pid, "kill"); } catch (_) {}
+                // Even failed notification/postMessage must not retain the local Worker.
+                if (entry && entry.worker) { try { entry.worker.terminate(); } catch (_) {} }
+              }.bind(this));
+            }
+            // Same channel as worker results/down: preceding messages can be
+            // discarded before this barrier retires the temporary filters.
+            this.sendSwiWasmActorMessage(watcher, "'$worker_scope_closed'('" + String(token).replace(/'/g, "''") + "')");
+          },
           spawnSwiWasmWorkerActor: function(goalText, extraSourceText, pidText, nameText, roleText, startFields) {
             var self = this;
             var pid = pidText ? String(pidText) : this.reserveSwiWasmWorkerActorPid();
@@ -10573,7 +10681,7 @@
               throw new Error("worker actor already exists: " + pid);
             }
             delete this.swiWasmReservedWorkerActorPids[pid];
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20260911-browser-pids-v8";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-spawn-options-v11";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -10934,15 +11042,8 @@
                 if (message.type === "down") {
                   var refText = String(message.ref || "");
                   var reasonText = String(message.reason || "true");
-                  var normalizedRef = refText.replace(/'/g, "");
-                  var monitor = self.swiWasmActorMonitors.filter(function(item) {
-                    var remote = self.parseSwiWasmRemoteToplevelPid(item.pid) || self.parseSwiWasmRemoteActorPid(item.pid);
-                    return item.ref === refText ||
-                      item.ref.replace(/'/g, "") === normalizedRef ||
-                      (remote && String(remote.pid) === String(message.pid));
-                  })[0];
+                  var monitor = self.takeSwiWasmRemoteMonitor(node, message.pid, refText);
                   if (monitor) {
-                    self.swiWasmActorMonitors = self.swiWasmActorMonitors.filter(function(item) { return item !== monitor; });
                     self.deliverSwiWasmActorDown(monitor.watcher, monitor.ref, monitor.pid, reasonText);
                   }
                   return;
@@ -11413,6 +11514,18 @@
               this.monitorSwiWasmActor(pid, message.target, message.ref);
               return;
             }
+            if (message.type === "worker_scope_open") {
+              this.openSwiWasmWorkerScope(pid, message.scope);
+              return;
+            }
+            if (message.type === "worker_scope_release") {
+              this.releaseSwiWasmScopedWorker(pid, message.scope, message.worker);
+              return;
+            }
+            if (message.type === "server_monitor_cleanup") {
+              this.cleanupSwiWasmServerMonitor(pid, message.ref);
+              return;
+            }
             if (message.type === "demonitor") {
               this.demonitorSwiWasmActor(pid, message.ref);
               return;
@@ -11502,6 +11615,16 @@
             var error = "";
             try {
               switch (String(message.action || "")) {
+              case "worker_scope_reserve":
+                result = this.reserveSwiWasmScopedWorker(pid, message.scope);
+                break;
+              case "worker_scope_spawn":
+                result = this.spawnSwiWasmScopedWorker(pid, message.scope, message.worker, message.goal);
+                break;
+              case "worker_scope_close":
+                this.closeSwiWasmWorkerScope(pid, message.scope);
+                result = true;
+                break;
               case "reserve_pid":
                 result = this.reserveSwiWasmWorkerActorPid();
                 break;
@@ -11825,6 +11948,20 @@
             var entry = this.swiWasmActorWorkers[pid];
             return !!(entry && entry.worker && !entry.done);
           },
+          takeSwiWasmRemoteMonitor: function(node, pid, refText) {
+            var normalizedRef = String(refText || "").replace(/'/g, "");
+            var monitor = this.swiWasmActorMonitors.filter(function(item) {
+              var remote = this.parseSwiWasmRemoteToplevelPid(item.pid) || this.parseSwiWasmRemoteActorPid(item.pid);
+              if (!remote || remote.node !== node) return false;
+              // A late event for a withdrawn reference must not consume a
+              // different monitor on the same actor. Keep legacy pid fallback
+              // only for peers that omit the reference entirely.
+              return normalizedRef ? item.ref.replace(/'/g, "") === normalizedRef
+                : String(remote.pid) === String(pid);
+            }.bind(this))[0];
+            if (monitor) this.swiWasmActorMonitors = this.swiWasmActorMonitors.filter(function(item) { return item !== monitor; });
+            return monitor;
+          },
           monitorSwiWasmActor: function(watcherText, pidText, refText) {
             var watcher = this.resolveSwiWasmActorTarget(watcherText);
             var pid = this.resolveSwiWasmActorTarget(pidText);
@@ -11835,11 +11972,14 @@
             }
             var remote = this.parseSwiWasmRemoteToplevelPid(pid) || this.parseSwiWasmRemoteActorPid(pid);
             if (remote) {
-              this.swiWasmActorMonitors.push({ watcher: watcher, pid: pid, ref: ref });
+              var pendingMonitor = { watcher: watcher, pid: pid, ref: ref };
+              this.swiWasmActorMonitors.push(pendingMonitor);
               return this.ensureSwiWasmRemoteActorConnection(remote.node).then(function(entry) {
+                // Cleanup may have withdrawn it while the connection was opening.
+                if (this.swiWasmActorMonitors.indexOf(pendingMonitor) < 0) return false;
                 entry.socket.send(JSON.stringify({ command: "monitor", pid: remote.pid, ref: ref }));
                 return true;
-              });
+              }.bind(this));
             }
             localEntry = this.swiWasmActorWorkers[pid];
             if (!this.swiWasmActorPidLive(pid)) {
@@ -11879,6 +12019,16 @@
               return true;
             });
           },
+          cleanupSwiWasmServerMonitor: function(watcherText, refText) {
+            // Local removal happens synchronously. Do not await remote transport
+            // in a Prolog cleanup; retain the original result/error on failure.
+            try {
+              Promise.resolve(this.demonitorSwiWasmActor(watcherText, refText)).catch(function() {});
+            } catch (_) {}
+            // Same coordinator/worker channel as down delivery: all earlier
+            // notifications precede this barrier; later ones cannot find the monitor.
+            this.sendSwiWasmActorMessage(watcherText, "'$server_monitor_cleaned'(" + refText + ")");
+          },
           notifySwiWasmActorMonitors: function(pidText, reasonText) {
             var pid = String(pidText || "");
             var monitors = this.swiWasmActorMonitors.filter(function(monitor) {
@@ -11909,6 +12059,7 @@
           },
           terminateLinkedSwiWasmChildren: function(parentPid) {
             var parent = String(parentPid);
+            this.closeSwiWasmWorkerScopes(parent);
             Object.keys(this.swiWasmActorWorkers || {}).forEach(function(pid) {
               var child = this.swiWasmActorWorkers[pid];
               if (child && child.worker && !child.done && child.linked &&
@@ -12104,9 +12255,18 @@
               "% Browser-worker implementation of generic servers and supervisors.",
               ":- meta_predicate server_spawn(:, +, -), server_spawn(:, +, -, +), server_upgrade(+, :), server_upgrade(+, :, +), supervisor_spawn(:, -), supervisor_spawn(:, -, +), supervisor_spawn_child(+, :, -).",
               "server_spawn(Pred, State, Pid) :- server_spawn(Pred, State, Pid, []).",
+              "% Strip only wrapper-owned unary options, preserving all other terms and sharing.",
+              "browser_wrapper_spawn_options(Names, Options, SpawnOptions) :-",
+              "    must_be(list, Options),",
+              "    exclude(browser_wrapper_option(Names), Options, SpawnOptions).",
+              "browser_wrapper_option(Names, Option) :-",
+              "    nonvar(Option), compound(Option), compound_name_arity(Option, Name, 1),",
+              "    memberchk(Name, Names).",
+              "",
               "server_spawn(Pred0, State, Pid, Options) :-",
               "    strip_module(Pred0, Module, PlainPred), Pred = Module:PlainPred,",
-              "    ( behaviour_spawn_options(PlainPred, 4, Options, SpawnOptions) -> true ; throw(error(server_spawn_source_failed(PlainPred), server_spawn/4)) ),",
+              "    browser_wrapper_spawn_options([initial_state], Options, BaseOptions),",
+              "    ( behaviour_spawn_options(PlainPred, 4, BaseOptions, SpawnOptions) -> true ; throw(error(server_spawn_source_failed(PlainPred), server_spawn/4)) ),",
               "    ( spawn(wasm_server_loop(Pred, State), Pid, SpawnOptions) -> true ; throw(error(server_worker_spawn_failed(PlainPred), server_spawn/4)) ),",
               "    ( option(name(Name), Options) -> ( register(Name, Pid) -> true ; throw(error(server_registration_failed(Name, Pid), server_spawn/4)) ) ; true ).",
               "",
@@ -12140,10 +12300,15 @@
               "wasm_assert_upgrade_term(Term) :- assertz(user:Term).",
               "",
               "server_promise(To, Request, Ref) :- self(Self), make_ref(Ref), send(To, '$call'(Self, Ref, Request)).",
-              "server_promise(To, Request, Ref, MonRef) :- monitor(To, MonRef), server_promise(To, Request, Ref).",
+              "server_promise(To, Request, Ref, MonRef) :-",
+              "    make_ref(MonRef),",
+              "    call_cleanup((install_monitor(To, MonRef), server_promise(To, Request, Ref), Sent = true),",
+              "                 (Sent == true -> true ; server_monitor_cleanup(MonRef))).",
               "server_yield(Ref, Reply) :- server_yield(Ref, Reply, []).",
               "server_yield(Ref, Reply, Options) :- receive({Ref-Answer -> Reply = Answer}, Options).",
-              "server_yield(Ref, MonRef, Reply, Options) :- receive({Ref-Reply0 -> demonitor(MonRef), Reply = Reply0 ; down(_, MonRef, Reason) -> throw(server_down(Reason))}, Options).",
+              "server_yield(Ref, MonRef, Reply, Options) :-",
+              "    call_cleanup(receive({Ref-Reply0 -> Reply = Reply0 ; down(_, MonRef, Reason) -> throw(server_down(Reason))}, Options),",
+              "                 server_monitor_cleanup(MonRef)).",
               "server_request(To, Request, Reply) :- server_request(To, Request, Reply, []).",
               "server_request(To, Request, Reply, Options) :- server_promise(To, Request, Ref, MonRef), server_yield(Ref, MonRef, Reply, Options).",
               "server_upgrade(To, Pred0) :- server_upgrade_source(To, Pred0, '').",
@@ -12161,7 +12326,8 @@
               "    option(strategy(Strategy), Options, one_for_one), option(intensity(Max), Options, 1), option(period(Period), Options, 5),",
               "    wasm_behaviour_source(Behaviour),",
               "    self(Parent),",
-              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [src_text(Behaviour)|Options]),",
+              "    browser_wrapper_spawn_options([strategy,intensity,period], Options, SpawnOptions),",
+              "    spawn(wasm_supervisor_init(Parent, Specs, sup(Strategy, Max, Period, [], [])), Pid, [src_text(Behaviour)|SpawnOptions]),",
               "    wasm_wait_supervisor_ready(Pid),",
               "    ( option(name(Name), Options) -> register(Name, Pid) ; true ).",
               "",
@@ -12183,7 +12349,8 @@
               "",
               "wasm_start_child(child(Id, ChildOptions), sup(Str, Max, Period, Children, Restarts), sup(Str, Max, Period, Children1, Restarts)) :-",
               "    ( option(start(Start), ChildOptions) -> true ; throw(error(child_missing_start(Id), wasm_start_child/3)) ),",
-              "    ( wasm_child_start(Start, Id, ChildOptions, Pid) -> true ; throw(error(child_spawn_failed(Id, Start), wasm_start_child/3)) ),",
+              "    browser_wrapper_spawn_options([start,restart,shutdown,type,significant], ChildOptions, SpawnOptions),",
+              "    ( wasm_child_start(Start, Id, SpawnOptions, Pid) -> true ; throw(error(child_spawn_failed(Id, Start), wasm_start_child/3)) ),",
               "    ( monitor(Pid, _) -> true ; throw(error(child_monitor_failed(Id, Pid), wasm_start_child/3)) ),",
               "    append(Children, [child(Id, Pid, child(Id, ChildOptions))], Children1).",
               "wasm_child_start(server(Pred, ServerOptions), Id, ChildOptions, Pid) :- !, option(initial_state(State), ServerOptions, []), append(ServerOptions, [name(Id)|ChildOptions], Options), server_spawn(Pred, State, Pid, Options).",
@@ -12281,8 +12448,8 @@
               ":- use_module(library(error)).",
               ":- use_module(library(lists)).",
               ":- use_module(library(option)).",
-              ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :).",
-              ":- dynamic deferred/1, io_target/1, suppress_shared_override_warnings/0.",
+              ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :), with_worker_scope(-, 0), spawn_scoped_worker(+, 0, -).",
+              ":- dynamic deferred/1, io_target/1, retiring_server_monitor/1, retiring_scope_worker/2, closing_worker_scope/1, suppress_shared_override_warnings/0.",
               ":- multifile user:message_hook/3.",
               "",
               "self(main@localhost).",
@@ -12327,7 +12494,31 @@
               "",
               "spawn(Goal, Pid) :- spawn(Goal, Pid, []).",
               "",
+              "% Validate original terms before source loading or actor setup; do not copy options.",
+              "validate_browser_spawn_options(Options) :-",
+              "    catch((must_be(list, Options), maplist(validate_browser_spawn_option, Options)),",
+              "          error(Formal, _), throw(error(Formal, context(spawn/3, 'invalid spawn option')))).",
+              "",
+              "validate_browser_spawn_option(Option) :-",
+              "    must_be(nonvar, Option),",
+              "    ( compound(Option), compound_name_arity(Option, Name, 1),",
+              "      browser_spawn_option_type(Name, Type)",
+              "    -> arg(1, Option, Value), validate_rpc_client_value(Type, Value)",
+              "    ; domain_error(spawn_option, Option) ).",
+              "",
+              "browser_spawn_option_type(node, atom_or_string).",
+              "browser_spawn_option_type(link, spawn_boolean).",
+              "browser_spawn_option_type(monitor, spawn_boolean).",
+              "browser_spawn_option_type(name, atom).",
+              "browser_spawn_option_type(target, nonvar).",
+              "browser_spawn_option_type(io_target, nonvar).",
+              "browser_spawn_option_type(src_text, atom_or_string).",
+              "browser_spawn_option_type(src_list, list).",
+              "browser_spawn_option_type(src_predicates, predicate_indicators).",
+              "browser_spawn_option_type(src_uri, atom_or_string).",
+              "",
               "spawn(Goal, Pid, Options) :-",
+              "    validate_browser_spawn_options(Options),",
               "    option(node(Node), Options, localhost),",
               "    %  Bind Pid BEFORE term_string(Goal, ...): the spawned goal must",
               "    %  carry the qualified local pid, not an unbound variable.",
@@ -12363,27 +12554,29 @@
               "    must_be(list, Goals0),",
               "    maplist(qualify_actor_goal(Module), Goals0, Goals),",
               "    maplist(goal_template, Goals, Templates),",
-              "    maplist(par_solve, Goals, Templates, Pids),",
-              "    maplist(par_yield(Pids), Pids, Templates).",
+              "    ( Goals == [] -> true ; with_worker_scope(Scope,",
+              "        (maplist(par_solve(Scope), Goals, Templates, Pids),",
+              "         maplist(par_yield(Scope, Pids), Pids, Templates)))).",
               "",
               "qualify_actor_goal(Module, Goal, Module:Goal).",
               "",
               "goal_template(Goal, Template) :- term_variables(Goal, Template).",
               "",
-              "par_solve(Goal, Template, Pid) :-",
+              "par_solve(Scope, Goal, Template, Pid) :-",
               "    self(Self),",
-              "    spawn((call(Goal), send(Self, Pid-Template)), Pid, [monitor(true)]).",
+              "    spawn_scoped_worker(Scope, (call(Goal), send(Self, Pid-Template)), Pid).",
               "",
-              "par_yield(Pids, Pid, Template) :-",
+              "par_yield(Pids, Pid, Template) :- par_yield(none, Pids, Pid, Template).",
+              "par_yield(Scope, Pids, Pid, Template) :-",
               "    receive({",
               "        Pid-Answer ->",
               "            ( Template = Answer",
-              "            -> receive({down(Pid, _, _) -> true})",
-              "            ; worker_tidy_all(Pids), !, fail ) ;",
-              "        down(FailedPid, _, false) if known_worker(FailedPid, Pids) ->",
-              "            worker_tidy_all(Pids), !, fail ;",
-              "        down(FailedPid, _, Reason) if (known_worker(FailedPid, Pids), (Reason \\== true ; FailedPid == Pid)) ->",
-              "            worker_tidy_all(Pids), worker_error(FailedPid, Reason, Error), throw(Error)",
+              "            -> receive({down(Pid, Ref, _) if scoped_worker_ref(Scope, Pid, Ref) -> release_scoped_worker(Scope, Pid)})",
+              "            ; tidy_worker_scope(Scope, Pids), !, fail ) ;",
+              "        down(FailedPid, Ref, false) if (known_worker(FailedPid, Pids), scoped_worker_ref(Scope, FailedPid, Ref)) ->",
+              "            tidy_worker_scope(Scope, Pids), !, fail ;",
+              "        down(FailedPid, Ref, Reason) if (known_worker(FailedPid, Pids), scoped_worker_ref(Scope, FailedPid, Ref), (Reason \\== true ; FailedPid == Pid)) ->",
+              "            tidy_worker_scope(Scope, Pids), worker_error(FailedPid, Reason, Error), throw(Error)",
               "    }).",
               "",
               "%  A guard tests a worker pid; it never binds one (Semantic Contracts D1).",
@@ -12404,36 +12597,87 @@
               "    strip_module(QualifiedGoals, Module, Goals0),",
               "    must_be(list, Goals0),",
               "    maplist(qualify_actor_goal(Module), Goals0, Goals),",
-              "    maplist(first_solve(Solution), Goals, Pids),",
-              "    wait_first(Pids, Solution, OnFail, OnError).",
+              "    ( Goals == [] -> fail ; with_worker_scope(Scope,",
+              "        (maplist(first_solve(Scope, Solution), Goals, Pids),",
+              "         wait_first(Scope, Pids, Solution, OnFail, OnError)))).",
               "",
               "valid_first_solution_option(on_fail(_)) :- !.",
               "valid_first_solution_option(on_error(_)) :- !.",
               "valid_first_solution_option(Option) :-",
               "    throw(error(domain_error(first_solution_option, Option), first_solution/3)).",
               "",
-              "first_solve(Solution, Goal, Pid) :-",
+              "first_solve(Scope, Solution, Goal, Pid) :-",
               "    self(Self),",
-              "    spawn((call(Goal), send(Self, Pid-Solution)), Pid, [monitor(true)]).",
+              "    spawn_scoped_worker(Scope, (call(Goal), send(Self, Pid-Solution)), Pid).",
               "",
-              "wait_first([], _, _, _) :- !, fail.",
-              "wait_first(Pids, Solution, OnFail, OnError) :-",
+              "wait_first(Pids, Solution, OnFail, OnError) :- wait_first(none, Pids, Solution, OnFail, OnError).",
+              "wait_first(_, [], _, _, _) :- !, fail.",
+              "wait_first(Scope, Pids, Solution, OnFail, OnError) :-",
               "    receive({",
               "        Winner-Answer if known_worker(Winner, Pids) ->",
-              "            worker_tidy_all(Pids), Solution = Answer ;",
-              "        down(FailedPid, _, false) if known_worker(FailedPid, Pids) ->",
-              "            ( OnFail == continue -> selectchk(FailedPid, Pids, Rest),",
-              "              wait_first(Rest, Solution, OnFail, OnError)",
-              "            ; worker_tidy_all(Pids), !, fail ) ;",
-              "        down(FailedPid, _, Reason) if known_worker(FailedPid, Pids) ->",
-              "            ( OnError == continue -> selectchk(FailedPid, Pids, Rest),",
-              "              wait_first(Rest, Solution, OnFail, OnError)",
-              "            ; worker_tidy_all(Pids), worker_error(FailedPid, Reason, Error), throw(Error) )",
+              "            tidy_worker_scope(Scope, Pids), Solution = Answer ;",
+              "        down(FailedPid, Ref, false) if (known_worker(FailedPid, Pids), scoped_worker_ref(Scope, FailedPid, Ref)) ->",
+              "            ( OnFail == continue -> release_scoped_worker(Scope, FailedPid), selectchk(FailedPid, Pids, Rest),",
+              "              wait_first(Scope, Rest, Solution, OnFail, OnError)",
+              "            ; tidy_worker_scope(Scope, Pids), !, fail ) ;",
+              "        down(FailedPid, Ref, Reason) if (known_worker(FailedPid, Pids), scoped_worker_ref(Scope, FailedPid, Ref)) ->",
+              "            ( OnError == continue -> release_scoped_worker(Scope, FailedPid), selectchk(FailedPid, Pids, Rest),",
+              "              wait_first(Scope, Rest, Solution, OnFail, OnError)",
+              "            ; tidy_worker_scope(Scope, Pids), worker_error(FailedPid, Reason, Error), throw(Error) )",
               "    }).",
               "",
               "% An accepted result establishes success; an unexplained exit is an error.",
               "worker_error(Pid, Reason, Error) :-",
               "    ( nonvar(Reason), Reason = exception(E) -> Error = E ; Error = worker_exit(Pid, Reason) ).",
+              "",
+              "% Private scopes own only workers started by the two combinators.",
+              "with_worker_scope(Scope, Goal) :-",
+              "    Token := swiWasmWorkerScopeOpen(),",
+              "    Scope = workers(Token, [], open, _),",
+              "    call_cleanup(call(Goal), close_worker_scope(Scope)).",
+              "",
+              "spawn_scoped_worker(Scope, Goal, Pid) :-",
+              "    arg(1, Scope, Token),",
+              "    Reservation := swiWasmWorkerScopeReserve(#Token),",
+              "    await(Reservation, PidText),",
+              "    term_string(LocalPid, PidText), Pid = LocalPid@localhost,",
+              "    arg(2, Scope, Pids), nb_setarg(2, Scope, [Pid|Pids]),",
+              "    wire_text(Goal, GoalText),",
+              "    Startup := swiWasmWorkerScopeSpawn(#Token, #PidText, #GoalText),",
+              "    await(Startup, _).",
+              "",
+              "scoped_worker_ref(none, _, _) :- !.",
+              "scoped_worker_ref(_, Pid, Ref) :- Ref == Pid.",
+              "",
+              "release_scoped_worker(none, _) :- !.",
+              "release_scoped_worker(Scope, Pid) :-",
+              "    arg(2, Scope, Pids), selectchk(Pid, Pids, Rest), nb_setarg(2, Scope, Rest),",
+              "    arg(1, Scope, Token), term_string(Pid, PidText),",
+              "    _ := swiWasmWorkerScopeRelease(#Token, #PidText).",
+              "",
+              "tidy_worker_scope(none, Pids) :- !, worker_tidy_all(Pids).",
+              "tidy_worker_scope(Scope, _) :-",
+              "    close_worker_scope(Scope), arg(4, Scope, Closed),",
+              "    await(Closed, _).",
+              "",
+              "close_worker_scope(Scope) :-",
+              "    ( arg(3, Scope, open)",
+              "    -> nb_setarg(3, Scope, closing),",
+              "       arg(1, Scope, Token), arg(2, Scope, Pids), assertz(closing_worker_scope(Token)),",
+              "       forall(member(Pid, Pids),",
+              "              (assertz(retiring_scope_worker(Token, Pid)), flush_scoped_worker_messages(Pid))),",
+              "       Closed := swiWasmWorkerScopeClose(#Token), nb_linkarg(4, Scope, Closed)",
+              "    ; true ).",
+              "",
+              "flush_scoped_worker_messages(Pid) :-",
+              "    forall((clause(deferred(Msg), true, Clause), scoped_worker_message(Pid, Msg)), erase(Clause)).",
+              "scoped_worker_message(Pid, Msg) :- nonvar(Msg), Msg = Worker-_, Worker == Pid.",
+              "scoped_worker_message(Pid, Msg) :- nonvar(Msg), Msg = down(Worker, Ref, _), Worker == Pid, Ref == Pid.",
+              "discard_worker_scope_message('$worker_scope_closed'(Token)) :-",
+              "    closing_worker_scope(Closing), Token == Closing, !,",
+              "    retractall(closing_worker_scope(Token)), retractall(retiring_scope_worker(Token, _)).",
+              "discard_worker_scope_message(Msg) :-",
+              "    retiring_scope_worker(_, Pid), scoped_worker_message(Pid, Msg).",
               "",
               "worker_tidy_all(Pids) :- maplist(worker_tidy, Pids).",
               "worker_tidy(Pid) :-",
@@ -12582,8 +12826,9 @@
               "    ;   throw(error(existence_error(actor, Pid), send/2))",
               "    ).",
               "",
-              "monitor(Pid, Ref) :-",
-              "    make_ref(Ref),",
+              "monitor(Pid, Ref) :- make_ref(Ref), install_monitor(Pid, Ref).",
+              "",
+              "install_monitor(Pid, Ref) :-",
               "    term_string(Pid, PidText),",
               "    term_string(Ref, RefText),",
               "    Promise := swiWasmActorMonitor(#PidText, #RefText),",
@@ -13031,6 +13276,21 @@
               "        flush",
               "    }, [timeout(0)]).",
               "",
+              "% Cleanup must not await: withdraw the monitor and filter until the host barrier.",
+              "server_monitor_cleanup(Ref) :-",
+              "    ( var(Ref) -> true",
+              "    ; catch((flush_deferred_server_monitor(Ref),",
+              "             (retiring_server_monitor(Ref) -> true ; assertz(retiring_server_monitor(Ref))),",
+              "             term_string(Ref, RefText), _ := swiWasmServerMonitorCleanup(#RefText)), _, true) ).",
+              "",
+              "flush_deferred_server_monitor(Ref) :-",
+              "    forall((clause(deferred(Msg), true, Clause), nonvar(Msg),",
+              "            Msg = down(_, MessageRef, _), MessageRef == Ref), erase(Clause)).",
+              "",
+              "discard_server_monitor_message('$server_monitor_cleaned'(Ref)) :-",
+              "    retiring_server_monitor(Retired), Ref == Retired, !, retractall(retiring_server_monitor(Ref)).",
+              "discard_server_monitor_message(down(_, Ref, _)) :- retiring_server_monitor(Retired), Ref == Retired.",
+              "",
               "receive(Clauses) :- receive(Clauses, []).",
               "",
               "receive(Clauses, Options) :-",
@@ -13056,12 +13316,13 @@
               "        clauses_module(Clauses, Module),",
               "        call(Module:Goal)",
               "    ;   wire_read(MessageText, Msg),",
-              "        assertz(deferred(Msg), Ref),",
+              "        ( (discard_server_monitor_message(Msg) ; discard_worker_scope_message(Msg)) -> receive_loop(Clauses, Options)",
+              "        ; assertz(deferred(Msg), Ref),",
               "        (   select_body(Clauses, Msg, Module, Body)",
               "        ->  erase(Ref),",
               "            call(Module:Body)",
               "        ;   receive_loop(Clauses, Options)",
-              "        )",
+              "        ) )",
               "    ).",
               "",
               "%  A new message is recorded as deferred before its guards run, and the",
@@ -13130,9 +13391,62 @@
               "        Head = Message",
               "    ).",
               "",
+              "% Inspect the original options: template and callback variables must stay shared.",
+              "validate_rpc_client_options(Kind, Options) :-",
+              "    rpc_client_option_context(Kind, PI),",
+              "    catch((must_be(list, Options), maplist(validate_rpc_client_option(Kind), Options)),",
+              "          error(Formal, _), throw(error(Formal, context(PI, 'invalid client option')))).",
+              "",
+              "rpc_client_option_context(rpc, rpc/3).",
+              "rpc_client_option_context(promise, promise/4).",
+              "rpc_client_option_context(yield, yield/3).",
+              "",
+              "validate_rpc_client_option(Kind, Option) :-",
+              "    must_be(nonvar, Option),",
+              "    ( compound(Option), compound_name_arity(Option, Name, 1),",
+              "      rpc_client_option_type(Kind, Name, Type)",
+              "    -> arg(1, Option, Value), validate_rpc_client_value(Type, Value)",
+              "    ; atom_concat(Kind, '_option', Domain), domain_error(Domain, Option) ).",
+              "",
+              "rpc_client_option_type(rpc, Name, Type) :- rpc_query_option_type(Name, Type).",
+              "rpc_client_option_type(promise, template, template).",
+              "rpc_client_option_type(promise, offset, nonneg).",
+              "rpc_client_option_type(promise, Name, Type) :- rpc_query_option_type(Name, Type).",
+              "rpc_client_option_type(yield, timeout, number).",
+              "rpc_client_option_type(yield, on_timeout, callable).",
+              "",
+              "rpc_query_option_type(limit, positive_integer).",
+              "rpc_query_option_type(once, boolean).",
+              "rpc_query_option_type(timeout, query_timeout).",
+              "rpc_query_option_type(http_timeout, query_timeout).",
+              "rpc_query_option_type(src_text, atom_or_string).",
+              "rpc_query_option_type(src_uri, atom_or_string).",
+              "rpc_query_option_type(src_list, list).",
+              "rpc_query_option_type(src_predicates, predicate_indicators).",
+              "",
+              "validate_rpc_client_value(spawn_boolean, Value) :- !, must_be(boolean, Value).",
+              "validate_rpc_client_value(template, _) :- !.",
+              "validate_rpc_client_value(query_timeout, Value) :- !,",
+              "    must_be(nonvar, Value), normalize_optional_timeout(Value, _).",
+              "validate_rpc_client_value(boolean, Value) :- !,",
+              "    must_be(nonvar, Value), normalize_boolean(Value, _).",
+              "validate_rpc_client_value(atom_or_string, Value) :- !,",
+              "    must_be(nonvar, Value),",
+              "    ( atom(Value) -> true ; string(Value) -> true ; type_error(atom_or_string, Value) ).",
+              "validate_rpc_client_value(predicate_indicators, Value) :- !,",
+              "    must_be(list, Value), maplist(validate_rpc_client_pi, Value).",
+              "validate_rpc_client_value(Type, Value) :- must_be(Type, Value).",
+              "",
+              "validate_rpc_client_pi(PI) :-",
+              "    must_be(nonvar, PI),",
+              "    ( compound(PI), compound_name_arity(PI, '/', 2)",
+              "    -> arg(1, PI, Name), arg(2, PI, Arity), must_be(atom, Name), must_be(nonneg, Arity)",
+              "    ; type_error(predicate_indicator, PI) ).",
+              "",
               "rpc(URL, Goal) :- rpc(URL, Goal, []).",
               "",
               "rpc(URL, Goal, Opts) :-",
+              "    validate_rpc_client_options(rpc, Opts),",
               "    term_variables(Goal, Vars),",
               "    Template =.. [v|Vars],",
               "    wire_texts([Goal, Template], [GoalAtom, TplAtom]),",
@@ -13185,6 +13499,7 @@
               "promise(URL, Goal, Ref) :- promise(URL, Goal, Ref, []).",
               "",
               "promise(URL, Goal, Ref, Opts) :-",
+              "    validate_rpc_client_options(promise, Opts),",
               "    (member(template(Template), Opts) -> true ; Template = Goal),",
               "    (member(offset(Offset), Opts) -> true ; Offset = 0),",
               "    solution_limit(Opts, Lim),",
@@ -13198,6 +13513,7 @@
               "yield(Ref, Message, Options0) :-",
               "    must_be(integer, Ref),",
               "    strip_module(Options0, Caller, Options),",
+              "    validate_rpc_client_options(yield, Options),",
               "    option(timeout(Timeout), Options, -1),",
               "    number_string(Ref, RefText),",
               "    Promise := swiPromiseWait(#RefText, #Timeout),",

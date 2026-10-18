@@ -602,7 +602,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
-   includes('/swi_wasm_actor_worker.js?v=20260911-browser-pids-v8'),
+   includes('/swi_wasm_actor_worker.js?v=20261018-spawn-options-v11'),
    "Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term");
 ok(exceptionDisplayTerm(
      "error(existence_error(procedure,q/1),context(solution_sequences:offset/2,_14802))"
@@ -1413,8 +1413,8 @@ ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
    workerSource.includes('parallel(QualifiedGoals) :-') &&
    workerSource.includes('maplist(goal_template, Goals, Templates)') &&
    workerSource.includes('goal_template(Goal, Template) :- term_variables(Goal, Template).') &&
-   workerSource.includes('maplist(par_solve, Goals, Templates, Pids)') &&
-   workerSource.includes('spawn((call(Goal), send(Self, Pid-Template)), Pid, [monitor(true)])') &&
+   workerSource.includes('maplist(par_solve(Scope), Goals, Templates, Pids)') &&
+   workerSource.includes('spawn_scoped_worker(Scope, (call(Goal), send(Self, Pid-Template)), Pid)') &&
    workerSource.includes('Pid-Answer ->') &&
    workerSource.includes('( Template = Answer') &&
    !workerSource.includes('send(Self, Pid-Goal)') &&
@@ -1425,8 +1425,8 @@ ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
    includes('parallel(QualifiedGoals) :-') &&
    includes('maplist(goal_template, Goals, Templates)') &&
    includes('goal_template(Goal, Template) :- term_variables(Goal, Template).') &&
-   includes('maplist(par_solve, Goals, Templates, Pids)') &&
-   includes('spawn((call(Goal), send(Self, Pid-Template)), Pid, [monitor(true)])') &&
+   includes('maplist(par_solve(Scope), Goals, Templates, Pids)') &&
+   includes('spawn_scoped_worker(Scope, (call(Goal), send(Self, Pid-Template)), Pid)') &&
    includes('Pid-Answer ->') &&
    includes('( Template = Answer') &&
    !includes('send(Self, Pid-Goal)') &&
@@ -1454,7 +1454,7 @@ ok(workerSource.includes('"statechart_actor_start :-",') &&
    "a SWI-WASM statechart validates and starts before its worker announces readiness");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
-   includes('/swi_wasm_actor_worker.js?v=20260911-browser-pids-v8') &&
+   includes('/swi_wasm_actor_worker.js?v=20261018-spawn-options-v11') &&
    includes('parentPid: startFields && startFields.parentPid') &&
    includes('message.sourceKind, message.source, pid, message.name') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
@@ -1522,6 +1522,7 @@ ok(workerSource.includes('option(link(Link), Options, true)') &&
       unlinked: { worker: worker("unlinked"), done: false, parentPid: "parent", linked: false }
     },
     terminateLinkedSwiWasmChildren: terminateLinkedChildren,
+    closeSwiWasmWorkerScopes: embeddedWorkbenchMethod("closeSwiWasmWorkerScopes", "closeSwiWasmWorkerScope"),
     exitSwiWasmActor: exitActor,
     resolveSwiWasmActorTarget: function(pid) { return String(pid); },
     parseSwiWasmRemoteToplevelPid: function() { return null; },

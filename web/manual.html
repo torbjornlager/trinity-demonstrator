@@ -238,6 +238,9 @@ spawn(+Goal, -Pid, +Options) is det.</pre>
         <li><code>src_uri(+URI)</code><br>Loads the clauses specified by a file path, file URI, or HTTP(S) URI into the actor's private Prolog database before calling <code>Goal</code>.</li>
         <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Loads the local predicates denoted by <code>ListOfPredicateIndicators</code> into the actor's private Prolog database before calling <code>Goal</code>.</li>
     </ul>
+    <p>Both SWI-WASM runtimes validate plain <code>spawn/3</code> options before collecting source, reserving a pid, creating a worker, dispatching remotely, or installing a monitor. Options must be unary terms in a proper list. Unknown names and wrong arities raise <code>error(domain_error(spawn_option,Option),context(spawn/3,_))</code>; invalid values raise type, domain, or instantiation errors with the same context. Every occurrence is checked, including later duplicates. The first ordinary option still wins, source options remain additive with each runtime's existing collection order, and validation does not bind or copy option variables.</p>
+    <p>Browser <code>node/1</code> requires an atom or string, and <code>link/1</code> and <code>monitor/1</code> require booleans. Browser spawning also retains local <code>name(+Atom)</code>, which plain native <code>spawn/3</code> does not accept. <code>src_text/1</code> requires an atom or string, <code>src_list/1</code> a proper list, and <code>src_predicates/1</code> a proper list of indicators with atom names and nonnegative integer arities. The compatibility main engine accepts atom/string <code>src_uri/1</code>; ordinary worker-engine <code>spawn/3</code> has no URI-loading path and rejects that option explicitly. URI support in specialised creation predicates and the RPC/promise APIs is unchanged.</p>
+    <p>Nonvariable <code>target/1</code> and <code>io_target/1</code> remain accepted compatibility options; plain browser spawn retains its existing coordinator output routing. Remote browser spawn continues to send the goal and source and can install a caller-side monitor. It does not gain remote name publication, link forwarding, or output redirection. The shared browser server/supervisor wrappers separate their own settings and child-specification fields before forwarding spawn options, preserving the original child specifications. This separation does not add full wrapper or child-specification validation.</p>
     <p><span class="note-label">Note:</span> In <code>spawn(+Goal,-Pid,+Options)</code>, the option <code>monitor(true)</code> installs monitoring as part of process creation. When the child terminates, the parent receives a message <code>down(Pid,Ref,Reason)</code> where <code>Pid</code> is the terminated actor, <code>Reason</code> is its exit reason, and <code>Ref</code> identifies the monitor instance. For monitoring created via <code>monitor(true)</code>, the current implementation uses <code>Ref = Pid</code>.</p>
     <p><span class="note-label">Note:</span> The semantics of <code>link(true)</code> are directional: if a parent spawns a child with linking enabled, termination of the parent causes linked children to be terminated. The link does not imply symmetric bidirectional exit propagation.</p>
     <p><span class="note-label">Note:</span> It is possible to pass an arbitrary number of the <code>src_*</code> options to <code>spawn/3</code>, and possibly more than one instance of each variant. To ensure that clauses end up in a well-defined order, they are converted into Prolog source text before being loaded into the database. The order of clauses and directives in the resulting source text is determined by the order of the <code>src_*</code> options in the option list.</p>
@@ -588,7 +591,7 @@ server_request(+To, +Request, -Response, +Options) is det.</pre>
     <pre>server_promise(+To, +Request, -Ref) is det.
 server_promise(+To, +Request, -Ref, -MonRef) is det.</pre>
     <p>Sends <code>Request</code> to the server <code>To</code> and returns a correlation reference <code>Ref</code>. The reply must later be collected with <code>server_yield/2-4</code>.</p>
-    <p>The four-argument variant additionally installs a monitor and returns its reference in <code>MonRef</code>.</p>
+    <p>The four-argument variant additionally installs a monitor and returns its reference in <code>MonRef</code>. In both SWI-WASM runtimes, failure or an exception during monitor installation, request setup, or sending withdraws that monitor and flushes notifications for its reference. The original failure or exception is preserved. A successful send retains the monitor for <code>server_yield/4</code>.</p>
 </article>
 
 <article class="predicate-entry" id="server_yield/2-4">
@@ -600,7 +603,8 @@ server_promise(+To, +Request, -Ref, -MonRef) is det.</pre>
 server_yield(+Ref, -Response, +Options) is det.
 server_yield(+Ref, +MonRef, -Response, +Options) is det.</pre>
     <p>Waits for the response matching <code>Ref</code>. The three-argument variant accepts the options of <code>receive/2</code>.</p>
-    <p>The four-argument variant uses <code>MonRef</code> to detect server termination and throws <code>server_down(Reason)</code> if the server dies before replying. When the wait finishes, fails, or throws, it removes the monitor and flushes pending notifications for that reference. This includes timeout paths. Alternatives supplied by <code>on_timeout/1</code> remain available; cleanup occurs when the call finishes.</p>
+    <p>The four-argument variant uses <code>MonRef</code> to detect server termination and throws <code>server_down(Reason)</code> if the server dies before replying. When the wait finishes, fails, or throws, it removes the monitor and flushes pending notifications for that reference. This includes timeout paths. Alternatives supplied by <code>on_timeout/1</code> remain available; cleanup occurs when the call finishes, exhausts its alternatives, or is cut.</p>
+    <p>In both SWI-WASM runtimes, cleanup also covers interruption and a reply that conflicts with an instantiated output. It withdraws only <code>MonRef</code> and preserves unrelated monitors and messages. Browser cleanup does not suspend Prolog unwinding: notifications for the withdrawn reference are filtered until the coordinator confirms local removal. Remote monitor withdrawal is best effort. Cleanup does not cancel the server request or discard a later reply.</p>
 </article>
 
 <article class="predicate-entry" id="server_upgrade/2-3">
@@ -789,6 +793,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     <pre>parallel(+Goals) is semidet.</pre>
     <p>Runs the proper list of independent goals <code>Goals</code> concurrently, using one monitored worker actor per goal. The call succeeds when every goal has produced its first solution and returns the resulting variable bindings. <code>parallel([])</code> succeeds immediately. Further solutions are not enumerated on backtracking.</p>
     <p>If any goal fails, the remaining workers are terminated and the call fails. If any goal throws an exception, the remaining workers are terminated and the exception is rethrown. Result and monitor messages belonging to the workers are removed before the predicate returns, fails, or throws.</p>
+    <p>Both SWI-WASM runtimes track these workers in a private scope before launch. A later startup failure reclaims workers already created and preserves the original error. Caller interruption, including Stop in the UI, and cuts also initiate cleanup of the remaining scoped workers. Cleanup preserves unrelated actors, monitors, and messages. Normal collection waits for coordinator cleanup where needed; cleanup during unwinding does not await JavaScript promises. This covers local workers and does not cancel remote work they may already have requested. In the worker-based UI, hard Abort closes the shell's combinator scopes before replacing the shell. Ordinary actors created outside those scopes remain alive and are listed in the survivor notice.</p>
     <p>The goals must not depend on bindings or side effects produced by sibling goals. Actor creation and message copying add overhead, and the one-worker-per-goal model gives large goal lists a correspondingly large resource footprint.</p>
     <p>A non-list <code>Goals</code> raises <code>type_error(list, Goals)</code>. An element that is not callable raises the corresponding callable type error from its worker, which is propagated to the caller.</p>
 </article>
@@ -808,6 +813,7 @@ first_solution(?Solution, +Goals, +Options) is semidet.</pre>
     </ul>
     <p>If all alternatives are removed under a <code>continue</code> policy, the predicate fails. Goals should not depend on side effects produced by sibling solvers.</p>
     <p>A non-list <code>Goals</code> or <code>Options</code> raises <code>type_error(list, Term)</code>. An action other than <code>stop</code> or <code>continue</code> raises <code>type_error(oneof([stop,continue]), Action)</code>. An unknown option raises <code>domain_error(first_solution_option, Option)</code>.</p>
+    <p>The same private worker-scope cleanup as <code>parallel/1</code> applies in both SWI-WASM runtimes, including partial startup failure and caller interruption. The selected winner is returned only after coordinator cleanup of its remaining scoped workers. The <code>on_fail/1</code> and <code>on_error/1</code> policies are unchanged.</p>
 </article>
 
 <h2 id="sec:synchronous-predicate-api">Predicates for remote Prolog-style calls</h2>
@@ -831,6 +837,9 @@ rpc(+URI, +Goal, +Options) is nondet.</pre>
         <li><code>src_uri(+URI)</code><br>Fetches source from <code>URI</code> and loads it into the temporary private database. This URI is a source location only.</li>
         <li><code>src_predicates(+ListOfPredicateIndicators)</code><br>Copies the caller's indicated predicates into the temporary private database.</li>
     </ul>
+    <p>Both SWI-WASM runtimes validate the complete option list before URI resolution, source fetching, or sending a request. Options must be recognised unary terms in a proper list. Unknown names and wrong arities raise <code>error(domain_error(rpc_option, Option), Context)</code>; invalid values raise type, domain, or instantiation errors with <code>rpc/3</code> in the context. Limits must be positive integers; <code>once/1</code> requires <code>true</code> or <code>false</code>; source URIs and source text must be atoms or strings. Predicate indicators have atom names and nonnegative integer arities.</p>
+    <p>Browser clients support only the options listed above. Native HTTP options <code>request_header/1</code>, <code>authorization/1</code>, and <code>user_agent/1</code> are rejected by the browser runtimes. The <code>template/1</code> and <code>offset/1</code> options belong to <code>promise/4</code> and are rejected by <code>rpc/3</code>.</p>
+    <p>Every duplicate option is validated; existing first-occurrence precedence and additive source loading are preserved. Negative execution and HTTP timeouts retain their existing normalization to zero. The worker runtime also retains <code>none</code> as an unspecified execution/HTTP timeout; the main-engine compatibility runtime continues to require numbers for explicitly supplied timeouts. Omission retains the defaults in both runtimes.</p>
 </article>
 
 <article class="predicate-entry" id="promise/3-4">
@@ -843,9 +852,10 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
     <p>Starts one asynchronous stateless call to node <code>URI</code> with <code>Goal</code> and returns a local promise reference in <code>Ref</code>. As with <code>rpc/2-3</code>, the first argument selects the execution node and <code>localhost</code> denotes the current node. Source-loading options populate the promised call's temporary private database; they do not change its execution node. It accepts the same <code>limit/1</code>, <code>once/1</code>, <code>timeout/1</code>, <code>http_timeout/1</code>, and <code>src_*/1</code> options as <code>rpc/3</code>, together with:</p>
     <ul>
         <li><code>template(+Template)</code><br><code>Template</code> is a term sharing variables with the goal. By default, the template is identical to the goal.</li>
-        <li><code>offset(+Integer)</code><br>Selects the starting offset of the single solution slice collected by the promise. Default is <code>0</code>.</li>
+        <li><code>offset(+Integer)</code><br>A nonnegative integer selecting the starting offset of the single solution slice collected by the promise. Default is <code>0</code>.</li>
     </ul>
     <p>The reference returned in <code>Ref</code> can later be used by <code>yield/2-3</code> to collect the single answer term. Programs must not infer meaning from its digits or construct references themselves.</p>
+    <p>Both SWI-WASM runtimes validate options before source loading or promise creation, using the browser subset described under <code>rpc/3</code>, plus <code>template/1</code> and <code>offset/1</code>. Unknown options or wrong arities raise <code>error(domain_error(promise_option, Option), Context)</code>. Template variables remain shared with the goal; validation does not copy or bind them.</p>
 </article>
 
 <article class="predicate-entry" id="yield/2-3">
@@ -861,6 +871,7 @@ yield(+Ref, -Answer, +Options) is det.</pre>
         <li><code>on_timeout(+Goal)</code><br>Calls <code>Goal</code> if the timeout expires before the answer is available.</li>
     </ul>
     <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>. A callback may bind the answer itself; otherwise it defaults to <code>timeout</code>. A failing callback raises <code>error(timeout_callback_failed(Ref), Context)</code>. Unknown or consumed references raise <code>error(existence_error(promise, Ref), Context)</code>; references must be integers. Browser transport failures are delivered as <code>error(rpc_error(Detail))</code> answers.</p>
+    <p>Both SWI-WASM runtimes validate the complete option list before waiting or collecting an answer. <code>timeout/1</code> must contain a number and <code>on_timeout/1</code> a callable goal. Unknown options or wrong arities raise <code>error(domain_error(yield_option, Option), Context)</code>. Invalid options leave a valid promise available for a later yield and do not execute the callback. Callback qualification and sharing with the answer variable are preserved.</p>
 </article>
 
 <article class="predicate-entry" id="runtime_property/1">

@@ -39,7 +39,7 @@ binds the answer, keeps the promise available for retry, and reports callback
 failure explicitly. Unknown or consumed integer references raise
 `existence_error(promise, Ref)`. Worker-side transport rejection becomes an
 `error(rpc_error(Detail))` answer, as main-engine fetch failures already do.
-These are local correctness repairs; broader worker cleanup, atomic naming,
+Worker-scope cleanup is described under Parallel Goals below. Atomic naming,
 ownership, and transport parity with the native runtime remain separate work.
 The WASM tier tests these rules using the bundled engine under Node; it does
 not replace interactive browser integration testing.
@@ -217,6 +217,39 @@ lists, source URIs atoms/strings, and predicate indicators atom names with
 nonnegative integer arities. Shape validation does not replace source-access,
 sandbox, or ownership policies. The stand-alone actor core does not accept
 source options unless an isolation provider has declared them.
+
+Both SWI-WASM runtimes now validate plain `spawn/3` options before source
+collection, pid reservation, worker startup, remote dispatch, or monitor setup.
+The proper-list/unary-term rule applies to every occurrence, including later
+duplicates. Errors have `spawn/3` in the context; unknown or misplaced options
+raise `domain_error(spawn_option,Option)`. The browser vocabulary is:
+
+- `node/1`: an atom or string; `link/1` and `monitor/1`: booleans.
+- `name/1`: an atom, retaining the browser's existing local naming convenience
+  (plain native `spawn/3` does not accept this option).
+- `target/1` and `io_target/1`: nonvariable compatibility routing terms. Plain
+  browser spawning continues to use its existing coordinator output routing;
+  accepting these terms does not implement per-spawn output redirection.
+- `src_text/1`: an atom or string; `src_list/1`: a proper list;
+  `src_predicates/1`: a proper list of atom/nonnegative-integer indicators.
+- `src_uri/1`: an atom or string in the compatibility main engine. Ordinary
+  worker-engine `spawn/3` has no URI-loading path and now rejects this option
+  explicitly, rather than silently ignoring it. This does not affect URI
+  support in `rpc/3`, `promise/4`, or specialised creation predicates.
+
+Validation does not bind or copy option terms. Existing first-occurrence
+precedence, source collection order within each runtime, and goal/pid sharing
+are unchanged. Browser remote spawning still forwards goal and source and
+installs a caller-side monitor when requested; this batch does not add remote
+name publication, remote link forwarding, or remote output routing.
+The shared server/supervisor implementation removes its own unary fields
+(`initial_state/1`, or `strategy/1`, `intensity/1`, and `period/1`) before
+calling plain spawn. Child creation similarly separates `start/1`, `restart/1`,
+`shutdown/1`, `type/1`, and `significant/1`, retaining the original specification
+in supervisor state. All other options remain available to the spawn validator;
+filtering neither copies terms nor discards unknown options. This is an
+internal separation, not full browser wrapper or child-specification validation,
+and it does not introduce new semantics for previously unused metadata.
 
 Native local actor I/O accepts nonvariable `target/1` and `io_target/1`
 routing terms, with `io_target/1` taking precedence. Bare WebSocket spawning
@@ -537,6 +570,32 @@ wrong arities, and options belonging to another operation raise
 instantiation errors with the public predicate in the context. Every supplied
 option is validated, even if a later duplicate would otherwise be ignored.
 
+Both SWI-WASM clients now perform the same entry checks for their supported
+subset. `rpc/3` accepts `limit/1`, `once/1`, `timeout/1`, `http_timeout/1`, and
+`src_text/1`, `src_list/1`, `src_uri/1`, `src_predicates/1`; `promise/4` adds
+`template/1` and `offset/1`. `yield/3` accepts only `timeout/1` and
+`on_timeout/1`. Unknown names, wrong arities and cross-operation options raise
+the corresponding `rpc_option`, `promise_option`, or `yield_option` domain
+error. Values are checked without copying or binding template/callback
+variables. Offset is nonnegative, limit is positive, source text/URIs are
+atoms or strings, and predicate indicators have atom names and nonnegative
+integer arities. This enforces the documented browser text forms; it does not
+migrate experimental character-list representations or change source conversion.
+
+Every duplicate is validated before any work begins; first-occurrence
+precedence and repeated source loading remain unchanged. Numeric execution
+and HTTP timeouts retain their existing clamping of negative values to zero.
+The worker's explicit `none` sentinel remains accepted for those two timeouts;
+the main-engine compatibility runtime still requires explicit numbers.
+Negative yield timeouts retain their existing wait behavior. Invalid yield
+options neither start a wait nor consume a pending/ready promise or execute
+a timeout callback. An explicitly module-qualified callback retains its
+caller and sharing with the answer variable.
+
+Browser `rpc/3` and `promise/4` reject `request_header/1`, `authorization/1`,
+and `user_agent/1`; those native options are outside the current browser
+transport subset. No transport, wrapper or ownership extension is implied.
+
 Native `rpc/3` and `promise/4` support this HTTP subset in addition to
 `http_timeout/1`:
 
@@ -681,6 +740,25 @@ references and messages remain available. The monitored `server_yield/4`
 already uses this selection-before-unification rule. Existing reference
 handling and timeout/callback behaviour are unchanged.
 
+In both SWI-WASM runtimes, monitored server setup and waits use an internal
+cleanup path that does not await JavaScript promises during Prolog unwinding.
+`server_promise/4` allocates its monitor reference before the protected
+installation/setup/send operation, so failure or an exception can still
+withdraw it after bindings in that operation unwind. The original outcome is
+preserved, including when remote cleanup fails. Successful setup retains the
+monitor for `server_yield/4`.
+
+The monitored wait removes its monitor on success, output mismatch, failure,
+exception, interruption, and cut. Timeout callbacks retain their alternatives;
+cleanup runs when those alternatives finish or are discarded. Cleanup flushes
+matching deferred notifications and filters queued notifications until an
+internal coordinator barrier confirms local removal. Unrelated references and
+messages remain available. A pending remote installation cannot recreate a
+withdrawn monitor; a late remote down with an explicit reference cannot consume
+a different monitor on the same actor. Remote withdrawal remains best effort.
+This work does not cancel server computations, correlate late server replies,
+or change the lifecycle of an abandoned successful `server_promise/4`.
+
 ### Supervisors
 
 `supervisor_spawn/2`, `supervisor_spawn/3`,
@@ -804,6 +882,30 @@ Result bindings, out-of-order completion, first-solution selection, and
 `on_fail`/`on_error` policies are unchanged. Unrelated actors, monitors and
 messages are preserved. This scope applies to the native worker generics;
 it adds no paging cleanup or remote-cancellation mechanism.
+
+Both SWI-WASM runtimes also scope `parallel/1` and `first_solution/2-3` workers.
+The coordinator records a reserved pid before launch; the caller records that
+pid before dispatching startup. Consequently, interruption while a reservation
+or readiness reply is pending cannot leave an unowned local worker. Closing a
+scope removes admission, reclaims outstanding reservations, stops remaining
+workers, and removes only its own spawn monitors. Late readiness cannot install
+a monitor after closure. Settled workers are released promptly.
+
+Normal early-result/error paths await coordinator cleanup before returning or
+unifying the selected output. The enclosing Prolog finalizer initiates closure
+without awaiting, so startup errors, interruption and cuts can unwind safely.
+Temporary receive filters and a coordinator barrier remove scoped worker
+results and monitor notifications already queued across the browser bridge;
+unrelated messages and explicit monitor references remain available. The main
+engine's Stop handler also closes its scopes to unblock suspended startup.
+The worker-based UI's hard Abort closes the discarded shell's scopes in the
+coordinator before terminating and replacing that shell. It detaches the old
+shell's event handlers so queued events cannot reopen scopes or affect the
+replacement. Ordinary actors outside combinator scopes remain alive, and the
+survivor notice counts those actors after scoped cleanup.
+A terminating worker owner closes its scopes through existing containment.
+The ownership records are private to these combinators; public spawn options
+and ordinary spawning are unchanged. This adds no remote cancellation.
 
 ### Node Control
 
