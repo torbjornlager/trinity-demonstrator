@@ -302,11 +302,28 @@ Observed termination or connection loss before commit prevents publication with
 `error(remote_spawn_failed(terminated),PI)` or
 `error(remote_spawn_failed(connection_closed),PI)`.
 
-These guards end at commit. This does not add implicit ongoing monitoring,
-general remote-alias cleanup, remote activation handshakes or guaranteed
-cancellation. Remote application effects may occur before alias publication and
+Startup guards end at commit. Published ordinary remote aliases are cleaned up
+on observed events as described below. This does not add implicit ongoing
+monitoring, remote activation handshakes or guaranteed cancellation. Remote application effects may occur before alias publication and
 are not undone. Connection loss before a correlated acknowledgement can leave
 an unknown remote outcome. Broader lifecycle work remains separate.
+
+Both SWI-WASM runtimes withdraw ordinary remote aliases when their existing
+transport observes a `down` for that exact pid, including notifications with no
+matching local monitor. On connection loss, ordinary aliases for that node are
+withdrawn. Removal precedes delivery of monitor notifications, allowing immediate
+name reuse in their handlers. Cleanup checks each current binding: a delayed
+termination event cannot erase a name reassigned to another pid. Local names,
+other nodes, service registrations, application messages and unrelated monitors
+are preserved. Pending startup guards continue to prevent late publication.
+
+This uses existing observations only; no implicit monitors, probes or retirement
+records are installed. Without an observed event, explicit `unregister/1` may
+still be needed. Connection loss removes aliases without establishing remote
+actor death. Explicit registration after the event can recreate an alias under
+the existing remote registration rules; no new admission or ownership policy is
+introduced.
+
 
 The shared server/supervisor implementation removes its own unary fields
 (`initial_state/1`, or `strategy/1`, `intensity/1`, and `period/1`) before
@@ -1118,8 +1135,8 @@ public stop replies and pending request replies remain available. Cleanup uses
 the existing local monitor barrier without awaiting transport. An interrupted
 wait does not introduce a new forced-termination policy for the child.
 
-Browser supervisor requests for addition, termination, deletion, respawn and
-inspection install a fresh private monitor before sending. They select a reply
+Browser supervisor requests for addition, termination, deletion, respawn,
+inspection and halt install a fresh private monitor before sending. They select a reply
 into a fresh variable before unifying the caller's output: a mismatch consumes
 the selected reply and fails. Successful reply formats are unchanged. Observed
 termination raises `supervisor_down(Reason)`; expiration of the existing
@@ -1133,9 +1150,13 @@ cleanup path. Application messages and unrelated explicit monitors remain
 available. Remote `connection_closed` reports loss of observation, not proven
 remote death. These request waits are separate from internal child shutdown
 deadlines; a caller's timed-out wait does not cancel shutdown in the supervisor.
-`supervisor_halt/1` retains its `reply(true)` protocol;
-its acknowledgement follows child shutdown, but observing the supervisor's own
-termination still requires a monitor. Forced Worker termination does not promise
+`supervisor_halt/1` (and `supervisor_stop/1`) uses a tagged stop request and
+succeeds after child shutdown. Its ten-second wait can raise
+`supervisor_call_timeout(Sup,stop)` without cancelling shutdown; several child
+deadlines or `shutdown(infinity)` can exceed that caller wait. Observing the
+supervisor's own termination still requires a separate monitor. Legacy direct
+`'$sup_stop'(From)` requests retain their `reply(true)` acknowledgement.
+Forced Worker termination does not promise
 execution of Prolog cleanup handlers. Remote down reasons can report connection
 loss rather than proven death. Automatic supervisor-exit cleanup, recursive
 graceful shutdown and stronger remote guarantees remain separate. `significant/1` remains compatibility metadata; `type/1` selects the

@@ -4003,7 +4003,7 @@
     <script src="/vendor/vue.global.prod.js"></script>
     <script src="/vendor/jquery.terminal.min.js"
             crossorigin="anonymous"></script>
-    <script src="/swi_wasm_actor_worker.js?v=20261018-remote-names-v22"></script>
+    <script src="/swi_wasm_actor_worker.js?v=20261018-supervisor-halt-v24"></script>
     <script>
       var DEFAULT_PROLOG = "";
 
@@ -10801,7 +10801,7 @@
             delete this.swiWasmReservedWorkerActorPids[pid];
             if (startFields && startFields.parentPid && this.trackSwiWasmStartup) this.trackSwiWasmStartup(startFields.parentPid, pid);
             if (nameText) throw new Error("named Worker creation requires a reservation");
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-remote-names-v22";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-supervisor-halt-v24";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -11299,6 +11299,13 @@
             return op;
           },
           invalidateSwiWasmRemoteNames: function(node, pid, reason) {
+            // Withdraw ordinary aliases before notifying observers. Compare the
+            // current binding so a delayed down cannot erase a reused name.
+            Object.keys(this.swiWasmActorNames || {}).forEach(function(name) {
+              var value = String(this.swiWasmActorNames[name]);
+              var remote = this.parseSwiWasmRemoteToplevelPid(value) || this.parseSwiWasmRemoteActorPid(value);
+              if (remote && remote.node === node && (pid === undefined || String(remote.pid) === String(pid))) delete this.swiWasmActorNames[name];
+            }.bind(this));
             Object.values(this.swiWasmNameReservations || {}).forEach(function(r) {
               if (r.remoteNode === node && (pid === undefined || r.remoteId === String(pid))) r.remoteFailure = reason;
             });
@@ -12793,6 +12800,7 @@
               "",
               "wasm_supervisor_loop(State0) :- receive({",
               "    down(Pid, _, Reason) -> wasm_handle_down(Pid, Reason, State0, State1), wasm_supervisor_loop(State1) ;",
+              "    '$sup'(From, Ref, stop) -> wasm_stop_children(State0), send(From, Ref-true) ;",
               "    '$sup'(From, Ref, Request) -> wasm_handle_supervisor_call(Request, Reply, State0, State1), send(From, Ref-Reply), wasm_supervisor_loop(State1) ;",
               "    '$sup_stop'(From) -> wasm_stop_children(State0), send(From, reply(true))",
               "  }).",
@@ -12916,7 +12924,7 @@
               "supervisor_respawn_child(Sup, Id, Reply) :- wasm_supervisor_call(Sup, restart_child(Id), Reply).",
               "supervisor_which_children(Sup, Children) :- wasm_supervisor_call(Sup, which_children, Children).",
               "supervisor_count_children(Sup, Counts) :- wasm_supervisor_call(Sup, count_children, Counts).",
-              "supervisor_halt(Sup) :- self(Self), send(Sup, '$sup_stop'(Self)), receive({reply(true) -> true}).",
+              "supervisor_halt(Sup) :- wasm_supervisor_call(Sup, stop, _).",
               "supervisor_stop(Sup) :- supervisor_halt(Sup)."
             ].join("\n");
           },

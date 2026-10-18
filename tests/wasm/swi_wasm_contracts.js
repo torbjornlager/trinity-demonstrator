@@ -770,6 +770,40 @@ function remoteNamingPeer(host) {
   global.WebSocket=Socket;
   return {...state,state,restore(){global.WebSocket=originalWS;}};
 }
+async function remoteAliasCleanupContract(run,host,check) {
+  const peer=remoteNamingPeer(host),state=peer.state;
+  const node="http://alias.test",other="http://other.test";
+  const shadow={swiWasmActorNames:{local:"123",123:"99@'http://alias.test'"},swiWasmNameReservations:{},
+    resolveSwiWasmActorTarget(p){return this.swiWasmActorNames[p]||p;},
+    parseSwiWasmRemoteActorPid:host.parseSwiWasmRemoteActorPid,parseSwiWasmRemoteToplevelPid:host.parseSwiWasmRemoteToplevelPid};
+  host.invalidateSwiWasmRemoteNames.call(shadow,node,undefined,"connection_closed");
+  check(shadow.swiWasmActorNames.local==="123"&&!Object.hasOwn(shadow.swiWasmActorNames,"123"),"cleanup inspects stored pids without resolving a numeric alias over a local pid");
+  const delivery=host.deliverSwiWasmActorDown;let notifications=[];
+  host.deliverSwiWasmActorDown=function(w,r,p,reason){notifications.push({pid:p,reason,primary:this.swiWasmActorNames.primary,spare:this.swiWasmActorNames.spare});return delivery.call(this,w,r,p,reason);};
+  try {
+    check(await run("spawn(receive({stop->true}),L,[name(local_kept),link(false)]),monitor(L,RL),spawn(true,P,[node('"+node+"')]),register(primary,P),register_service(service_kept,P),monitor(P,RP),spawn(true,S,[node('"+node+"')]),register(spare,S),spawn(true,Q,[node('"+other+"')]),register(other_kept,Q),monitor(Q,RQ),assertz(user:alias_fixture(P,S,Q,L,RP,RQ,RL))"),"alias cleanup fixture includes local, same-node and other-node names, service and explicit monitors");
+    const primary=host.swiWasmActorNames.primary,spare=host.swiWasmActorNames.spare,q=host.swiWasmActorNames.other_kept;
+    const remote=host.parseSwiWasmRemoteActorPid(primary),monitor=host.swiWasmActorMonitors.find(m=>m.pid===primary);
+    const socket=host.swiWasmRemoteActorConnections[node].socket;
+    socket.emit({type:"down",pid:remote.pid,ref:monitor.ref,reason:"observed_exit"});
+    check(notifications.length===1&&notifications[0].primary===undefined&&notifications[0].spare===spare,"exact-pid removal precedes first observer notification");
+    check(await run("user:alias_fixture(P,S,Q,L,RP,RQ,RL),receive({down(P,RP,observed_exit)->whereis(primary,undefined)}),whereis(spare,S),whereis(other_kept,Q),whereis(local_kept,L),whereis_service(service_kept,P),unregister(spare),register(primary,S),monitor(S,RS),assertz(user:alias_spare_ref(RS))"),"observed death removes only matching ordinary alias and permits immediate name reuse");
+    socket.emit({type:"down",pid:remote.pid,ref:monitor.ref,reason:"late_old_down"});
+    check(host.swiWasmActorNames.primary===spare,"late old down preserves alias reassigned to another pid");
+    // Death reported without a matching explicit monitor still withdraws aliases.
+    const aliasId=host.parseSwiWasmRemoteActorPid(spare).pid;
+    host.swiWasmActorNames.unmonitored_alias=String(9999)+"@'"+node+"'";
+    socket.emit({type:"down",pid:"9999",ref:"unknown-ref",reason:"observed_exit"});
+    check(!Object.hasOwn(host.swiWasmActorNames,"unmonitored_alias")&&host.swiWasmActorMonitors.some(m=>m.pid===spare),"unmatched down cleans exact alias without consuming another pid's monitor");
+    socket.close();
+    check(notifications.at(-1).primary===undefined&&notifications.at(-1).spare===undefined,"connection cleanup precedes connection-loss notification");
+    check(await run("user:alias_fixture(P,S,Q,L,RP,RQ,RL),user:alias_spare_ref(RS),receive({down(S,RS,connection_lost(_))->whereis(primary,undefined)}),whereis(other_kept,Q),whereis(local_kept,L),whereis_service(service_kept,P),unregister(other_kept),register(primary,Q),whereis(primary,Q)"),"connection loss clears its node and preserves local names, other nodes and services");
+    check(host.swiWasmActorMonitors.length===2&&host.swiWasmActorMonitors.some(m=>m.pid===q),"other-node and local explicit monitors survive connection loss");
+    check(await run("user:alias_fixture(_,_,Q,L,_,RQ,RL),exit(Q,kill),receive({down(Q,RQ,kill)->true}),whereis(primary,undefined),L!stop,receive({down(L,RL,true)->true}),unregister_service(service_kept)"),"reused other-node name cleans on its own event and unrelated local monitor still delivers");
+    check(host.swiWasmActorMonitors.length===0&&Object.keys(host.swiWasmActorNames).length===0,"alias cleanup tests leave no ordinary names or monitors");
+  } finally {host.deliverSwiWasmActorDown=delivery;peer.restore();}
+}
+
 async function remoteNamedCreationContract(run,host,check,owner) {
   const peer=remoteNamingPeer(host),state=peer.state,node="http://remote.test";
   try {
@@ -923,6 +957,25 @@ async function supervisorWaitContract(run,host,check) {
   } finally {host.sendSwiWasmActorMessage=send;}
   check(await run("user:wait_sup(Sup),supervisor_count_children(Sup,counts(0,0)),monitor(Sup,SR),supervisor_halt(Sup),receive({down(Sup,SR,_)->true}),user:wait_unrelated(U,UR),U!stop,receive({down(U,UR,true)->true})"),"supervisor remains usable and unrelated explicit monitor still delivers");
   check(await until(()=>host.live().length===0)&&host.swiWasmActorMonitors.length===0,"request tests leave no actors or monitors");
+}
+async function supervisorHaltContract(run,host,check) {
+  check(await run("self(Self),Self!reply(true),spawn(receive({stop->true}),U,[link(false)]),monitor(U,UR),supervisor_spawn([child(waiter,[start(receive({never->true})),link(false)])],Sup,[link(false)]),monitor(Sup,SR),supervisor_halt(Sup),receive({reply(true)->true}),receive({down(Sup,SR,true)->true}),U!stop,receive({down(U,UR,true)->true})"),"tagged halt stops detached child and preserves unrelated reply and monitors");
+  check(await run("spawn(receive({'$sup'(_,_,stop)->exit(halt_probe_down)}),P,[link(false)]),monitor(P,Watch),catch((supervisor_halt(P),fail),supervisor_down(halt_probe_down),true),receive({down(P,Watch,halt_probe_down)->true})"),"halt reports observed termination while preserving explicit monitor");
+  check(await run("spawn(receive({stop->true}),P,[link(false)]),monitor(P,Watch),catch((supervisor_halt(P),fail),supervisor_call_timeout(P,stop),true),actors(Actors),memberchk(P,Actors),P!stop,receive({down(P,Watch,true)->true})"),"halt timeout does not cancel target or consume its explicit monitor");
+  const server="server(shutdown_probe,[initial_state(Parent),src_text("+JSON.stringify(shutdownProbeSource)+")])";
+  check(await run("self(Parent),supervisor_spawn([child(probe,[start("+server+"),shutdown(infinity),link(false)])],Sup,[link(false)]),supervisor_which_children(Sup,[child(probe,P,_)]),monitor(P,Watch),monitor(Sup,SR),server_promise(P,work(10.2,halt_slow),Request),receive({entered(halt_slow)->true}),catch((supervisor_stop(Sup),fail),supervisor_call_timeout(Sup,stop),true),receive({Request-done(halt_slow)->true}),receive({down(P,Watch,true)->true}),receive({down(Sup,SR,true)->true})"),"stop alias timeout leaves infinity-policy shutdown running to completion");
+  const send=host.sendSwiWasmActorMessage;
+  host.sendSwiWasmActorMessage=function(to,text,...rest){if(String(text).includes("$sup"))throw new Error("halt_send_original");return send.call(this,to,text,...rest);};
+  try {
+    check(await run("spawn(receive({stop->true}),P,[link(false)]),catch((supervisor_halt(P),fail),E,(term_string(E,T),(sub_string(T,_,_,_,halt_send_original)->true;M:=workerTestError(#E),M==halt_send_original))),P!stop"),"halt preserves original send exception");
+    check(host.swiWasmActorMonitors.length===0,"halt send exception removes private monitor");
+  } finally {host.sendSwiWasmActorMessage=send;}
+  check(await run("self(Self),supervisor_spawn([],Sup,[link(false)]),monitor(Sup,Watch),send(Sup,'$sup_stop'(Self)),receive({reply(true)->true}),receive({down(Sup,Watch,true)->true})"),"legacy untagged stop request retains reply(true)");
+  check(await until(()=>host.live().length===0)&&host.swiWasmActorMonitors.length===0,"halt tests reclaim actors and private monitors");
+}
+function supervisorHaltInterruptProbe(host) {
+  const probe=supervisorWaitInterruptProbe(host);
+  return {...probe,goal:probe.goal.replace("supervisor_count_children(P,_)","supervisor_halt(P)")};
 }
 function synchronousWaitInterruptProbe(host) {
   const send=host.sendSwiWasmActorMessage;
@@ -1141,7 +1194,8 @@ const scenarios = {
       }
       await synchronousToplevelContract(run,host,check);
       await supervisorWaitContract(run,host,check);
-      for(const makeProbe of [supervisorWaitInterruptProbe,synchronousWaitInterruptProbe]) {
+      await supervisorHaltContract(run,host,check);
+      for(const makeProbe of [supervisorWaitInterruptProbe,supervisorHaltInterruptProbe,synchronousWaitInterruptProbe]) {
       host.swiWasmQueryPending=true;
       const probe=makeProbe(host);
       try {
@@ -1175,11 +1229,12 @@ const scenarios = {
       async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
       await synchronousToplevelContract(run,host,check);
       await supervisorWaitContract(run,host,check);
+      await supervisorHaltContract(run,host,check);
       host.cancelSwiWasmMainActorWaiters=workbenchMethod("cancelSwiWasmMainActorWaiters","resetSwiWasmActorWorkers");
       host.abortSwiWasmQuery=workbenchMethod("abortSwiWasmQuery","abortSwiWasm2Query");
       host.swiWasmProlog=engine.prolog;host.swiWasmQueryPending=true;
       host.setPendingCompletionMessage=()=>{};host.recordSessionEvent=()=>{};
-      for(const makeProbe of [supervisorWaitInterruptProbe,synchronousWaitInterruptProbe]) {
+      for(const makeProbe of [supervisorWaitInterruptProbe,supervisorHaltInterruptProbe,synchronousWaitInterruptProbe]) {
       host.swiWasmQueryPending=true;
       const probe=makeProbe(host);
       try {
@@ -1205,6 +1260,7 @@ const scenarios = {
       }
       await namedCreationContract(run,host,check);
       await remoteNamedCreationContract(run,host,check,host.swiWasmActorWorkers.main?"main":PID);
+      await remoteAliasCleanupContract(run,host,check);
     } finally {await host.stop();}
   },
   async compatibility_named_creation(W,check) {
@@ -1227,6 +1283,7 @@ const scenarios = {
       async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
       await namedCreationContract(run,host,check,true);
       await remoteNamedCreationContract(run,host,check,"main");
+      await remoteAliasCleanupContract(run,host,check);
     } finally {await host.stop();}
   },
   async named_creation_reservations(W,check) {
