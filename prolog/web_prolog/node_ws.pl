@@ -397,8 +397,8 @@ normalize_origin_text(Value0, Norm) :-
 %   A connecting node announces itself with the X-Web-Prolog-Protocol
 %   header.  Such a peer receives toplevel answers and errors also as
 %   canonical term text (the `term` field), so that it can restore the
-%   exact terms (Semantic Contracts D5).  Browsers, which do not send the
-%   header, get the display fields only.
+%   exact terms (Semantic Contracts D5). Browsers may opt in later through
+%   transport_hello; without either opt-in, display fields remain the default.
 peer_answer_terms(Request, true) :-
     memberchk(x_web_prolog_protocol(_), Request),
     !.
@@ -566,11 +566,14 @@ ws_relay_message(WebSocket, browser_message(BrowserPid, Message)) :-
     ws_send(WebSocket, text(Text)).
 
 ws_relay_message(WebSocket, transport_welcome(Version)) :-
+    ws_relay_message(WebSocket, transport_welcome(Version,false)).
+ws_relay_message(WebSocket, transport_welcome(Version,AnswerTerms)) :-
     atom_json_dict(Text, json{
         type:"transport_welcome",
         protocol:"web_prolog_browser_actor",
         io_ack:true,
         browser_pids:true,
+        answer_terms:AnswerTerms,
         version:Version
     }, []),
     ws_send(WebSocket, text(Text)).
@@ -722,7 +725,11 @@ ws_action_transport_hello(Dict, Queue) :-
         -> with_mutex(browser_terminal_io,
                ( ws_browser_io(Queue) -> true ; assertz(ws_browser_io(Queue)) ))
         ;  true ),
-        thread_send_message(Queue, transport_welcome(1))
+        ( get_dict(answer_terms, Dict, true)
+        -> ( ws_answer_terms(Queue) -> true ; assertz(ws_answer_terms(Queue)) )
+        ;  true ),
+        ( ws_answer_terms(Queue) -> AnswerTerms = true ; AnswerTerms = false ),
+        thread_send_message(Queue, transport_welcome(1,AnswerTerms))
     ;   throw(error(domain_error(browser_actor_transport_version, Version),
                     context(node_ws:ws_action_transport_hello/2,
                             'supported browser actor transport version is 1')))

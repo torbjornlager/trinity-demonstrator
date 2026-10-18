@@ -4003,7 +4003,7 @@
     <script src="/vendor/vue.global.prod.js"></script>
     <script src="/vendor/jquery.terminal.min.js"
             crossorigin="anonymous"></script>
-    <script src="/swi_wasm_actor_worker.js?v=20261018-remote-sync-v26"></script>
+    <script src="/swi_wasm_actor_worker.js?v=20261018-answer-terms-v27"></script>
     <script>
       var DEFAULT_PROLOG = "";
 
@@ -8341,6 +8341,7 @@
             if (value.once !== undefined) {
               terms.push("once(" + (value.once === true || value.once === "true" ? "true" : "false") + ")");
             }
+            if (value.format !== undefined) terms.push("format(" + String(value.format) + ")");
             return "[" + terms.join(",") + "]";
           },
           reportEditorPlaceholderError: function(term, message) {
@@ -10809,7 +10810,7 @@
             delete this.swiWasmReservedWorkerActorPids[pid];
             if (startFields && startFields.parentPid && this.trackSwiWasmStartup) this.trackSwiWasmStartup(startFields.parentPid, pid);
             if (nameText) throw new Error("named Worker creation requires a reservation");
-            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-remote-sync-v26";
+            var workerUrl = "/swi_wasm_actor_worker.js?v=20261018-answer-terms-v27";
             try {
               worker = new Worker(workerUrl, { name: pid });
             } catch (_error) {
@@ -11135,7 +11136,8 @@
                   protocol: "web_prolog_browser_actor",
                   version: 1,
                   io_ack: true,
-                  browser_pids: true
+                  browser_pids: true,
+                  answer_terms: true
                 }));
                 self.log("transport", "SWI-WASM connected to remote actor node " + node + ".", "swi-wasm");
               };
@@ -11151,6 +11153,7 @@
                   }
                   entry.protocol = message.version;
                   entry.ioAck = true;
+                  entry.answerTerms = message.answer_terms === true;
                   settleResolve(entry);
                   return;
                 }
@@ -11176,6 +11179,17 @@
                     }
                     waiter.resolve(remotePid);
                   }
+                  return;
+                }
+                // Negotiate exact payloads; parse them in the receiving Prolog engine.
+                // Spawn/command errors retain their existing request-id handling.
+                if (entry.answerTerms && (message.type === "success" ||
+                    (message.type === "error" && message.pid !== undefined && message.request_id === undefined))) {
+                  var exactPid = String(message.pid) + "@'" + node.replace(/'/g, "''") + "'";
+                  var exactMessage = typeof message.term === "string"
+                    ? "'$remote_answer'(" + message.type + "," + exactPid + "," + JSON.stringify(message.term) + "," + (message.more === true ? "true" : "false") + ")"
+                    : "error(" + exactPid + ",remote_answer_protocol_error(missing_term))";
+                  self.deliverSwiWasmRemoteResult(exactMessage, entry.toplevelTargets[String(message.pid)]);
                   return;
                 }
                 if (message.type === "success" || message.type === "failure" || message.type === "timeout") {
@@ -11400,6 +11414,7 @@
                 goal: String(goalText || "true"),
                 options: self.toplevelCallOptionsText({
                   template: String(templateText || goalText || "true"),
+                  format: entry.answerTerms ? "prolog" : undefined,
                   limit: String(limit) === "none" ? undefined : Number(limit),
                   offset: Number(offset || 0),
                   once: once === true
@@ -13957,7 +13972,7 @@
               "    ->  option(on_timeout(Goal), Options, true),",
               "        clauses_module(Clauses, Module),",
               "        call(Module:Goal)",
-              "    ;   wire_read(MessageText, Msg),",
+              "    ;   remote_answer_message(MessageText, Msg),",
               "        ( (discard_server_monitor_message(Msg) ; discard_worker_scope_message(Msg)) -> receive_loop(Clauses, Options)",
               "        ; assertz(deferred(Msg), Ref),",
               "        (   select_body(Clauses, Msg, Module, Body)",
@@ -13995,6 +14010,16 @@
               "    format(atom(Name), '_~d', [N]), N1 is N + 1,",
               "    wire_variable_names(Vars, N1, Names).",
               "wire_read(Text, Term) :- term_string(Term, Text, [double_quotes(string)]).",
+              "remote_answer_message(Text, Msg) :-",
+              "    wire_read(Text, Raw),",
+              "    ( nonvar(Raw), Raw = '$remote_answer'(Kind,Pid,Body,More)",
+              "    -> ( catch((string(Body), wire_read(Body,Payload),",
+              "                 must_be_transportable_term(Payload), remote_answer_payload(Kind,Payload)), _, fail)",
+              "       -> (Kind == success -> Msg = success(Pid,Payload,More) ; Msg = error(Pid,Payload))",
+              "       ; Msg = error(Pid,remote_answer_protocol_error(invalid_term)) )",
+              "    ; Msg = Raw ).",
+              "remote_answer_payload(success, Payload) :- is_list(Payload).",
+              "remote_answer_payload(error, _).",
               "",
               "receive_timeout(Options, Timeout) :-",
               "    (   option(timeout(Timeout0), Options)",

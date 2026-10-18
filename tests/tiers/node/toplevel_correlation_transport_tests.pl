@@ -40,6 +40,19 @@ answer_peer(WS) :-
            node_ws:ws_relay_message(WS,unused,'$toplevel_reply'(12345,Answer))),
     ws_receive(WS,_,[]).
 
+:- http_handler('/test_browser_answer_terms', browser_answer_upgrade, []).
+browser_answer_upgrade(Request) :-
+    http_upgrade_to_websocket(browser_answer_peer, [], Request).
+browser_answer_peer(WS) :-
+    setup_call_cleanup(message_queue_create(Q),
+        ( ws_receive(WS,Hello,[format(json)]),
+          node_ws:ws_action_transport_hello(Hello.data,Q),
+          thread_get_message(Q,Welcome),node_ws:ws_relay_message(WS,Q,Welcome),
+          node_ws:ws_relay_message(WS,Q,success(42,[pair(X,X),pair(_Y,_Z),'a b',"text",'$VAR'(1)],false)),
+          node_ws:ws_relay_message(WS,Q,error(42,error(probe,context(remote,_Detail)))),
+          ws_receive(WS,_,[]) ),
+        (retractall(node_ws:ws_answer_terms(Q)),message_queue_destroy(Q))).
+
 unsupported_request(call, Pid) :- toplevel_call_synch(Pid,true,_,[timeout(0)]).
 unsupported_request(next, Pid) :- toplevel_next_synch(Pid,_,[timeout(0)]).
 
@@ -128,5 +141,23 @@ test(decoder_preserves_failure_reference) :-
     remote_protocol:ws_json_to_actor_event(
         json{type:"failure",toplevel_correlation:"12345"},42@remote,Event),
     assertion(Event == '$toplevel_reply'(12345,failure(42@remote))).
+
+test(browser_answer_terms_negotiation_and_legacy_fallback,
+     [forall(member(Exact,[true,false]))]) :-
+    with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
+        ( nb_getval(node_url_b,URL),atom_concat(URL,'/test_browser_answer_terms',Endpoint),
+          setup_call_cleanup(http_open_websocket(Endpoint,WS,[]),
+              ( (Exact == true -> Hello=json{version:1,answer_terms:true};Hello=json{version:1}),
+                atom_json_dict(Text,Hello,[]),ws_send(WS,text(Text)),
+                ws_receive(WS,Welcome,[format(json)]),assertion(Welcome.data.answer_terms == Exact),
+                ws_receive(WS,Success,[format(json)]),ws_receive(WS,Error,[format(json)]),
+                ( Exact == true
+                -> term_string(Rows,Success.data.term,[double_quotes(string)]),
+                   Rows=[pair(A,B),pair(C,D),'a b',"text",'$VAR'(1)],
+                   assertion(var(A)),assertion(A==B),assertion(var(C)),assertion(var(D)),
+                   assertion(C\==D),assertion(A\==C),
+                   term_string(error(probe,context(remote,Detail)),Error.data.term),assertion(var(Detail))
+                ; assertion(\+get_dict(term,Success.data,_)),assertion(\+get_dict(term,Error.data,_)) ) ),
+              ws_close(WS,1000,done)) )).
 
 :- end_tests(toplevel_correlation_transport).

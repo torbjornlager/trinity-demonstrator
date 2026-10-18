@@ -689,7 +689,7 @@ Connection setup is outside the receive timeout.
 The browser offers the existing native subprotocol when connecting. If that
 upgrade fails before opening, it retries the legacy connection without a
 subprotocol for asynchronous compatibility; such a connection cannot execute
-synchronous requests. Existing asynchronous command and reply paths are unchanged.
+synchronous requests. Asynchronous routing and paging are unchanged; negotiated answer fidelity is described below.
 Synchronous commands use the actor-term transport with the waiting engine as
 answer target. The complete tagged Prolog answer returns to that same engine,
 preserving nonground sharing and exception terms without display-text reconstruction.
@@ -697,6 +697,28 @@ Timeout does not cancel remote computation; a later synchronous wait for the sam
 pid discards stale tagged answers while preserving asynchronous answers and I/O.
 Cancellation, concurrent-client coordination, aliases and browser `io_target/1`
 support remain separate work.
+
+Both SWI-WASM runtimes request `answer_terms:true` in the existing browser
+transport hello. Supporting nodes acknowledge `answer_terms:true` and enable the
+existing canonical `term` field for queue-targeted successes and query errors.
+For negotiated peers, main-engine asynchronous calls request the existing
+`format(prolog)` so the supplied template is retained rather than replaced by
+a display bindings dictionary. Worker actor-term calls already retain it.
+The receiving engine parses the whole solution list or exception term once,
+preserving shared and distinct variables, quoted atoms, strings and literal
+`'$VAR'/1` terms. Public asynchronous answers remain `success(Pid,Slice,More)`,
+`failure(Pid)` and `error(Pid,Error)`. Actor-message replies already carry complete
+terms and are unchanged. I/O, monitor delivery, synchronous correlation and
+connection ownership are unchanged; no new waits or cancellation are added.
+
+Without an acknowledgement, the browser retains its legacy display-field
+reconstruction and `remote_error(Text)` exception fallback, with their existing
+fidelity limitations. Once canonical answers are negotiated, a missing/nontext
+payload returns `error(Pid,remote_answer_protocol_error(missing_term))`; an
+unparseable payload or a non-list success payload returns
+`error(Pid,remote_answer_protocol_error(invalid_term))`. These are ordinary
+mailbox answers, rather than silent fallback or an indefinitely pending reply.
+The existing portable wire-term subset still applies.
 
 Browser call query options are `template/1`, `offset/1`, `limit/1` and `once/1`;
 next accepts `limit/1`. Both accept `timeout/1`, `on_timeout/1` and a `target/1`

@@ -752,7 +752,7 @@ function remoteNamingPeer(host) {
     constructor(_url,protocols){this.protocol=state.sync&&protocols ? "web-prolog-sync-v1" : "";this.readyState=1;state.sockets.push(this);setImmediate(()=>{if(this.onopen)this.onopen();});}
     emit(m){this.onmessage({data:JSON.stringify(m)});}
     send(text){const m=JSON.parse(text);state.commands.push(m);
-      if(m.command==="transport_hello")return setImmediate(()=>this.emit({type:"transport_welcome",protocol:"web_prolog_browser_actor",version:1,io_ack:true,browser_pids:true}));
+      if(m.command==="transport_hello")return setImmediate(()=>this.emit({type:"transport_welcome",protocol:"web_prolog_browser_actor",version:1,io_ack:true,browser_pids:true,answer_terms:state.answerTerms===true}));
       if(m.command==="spawn"||m.command==="toplevel_spawn") {
         const id=String(++state.next),reply={type:"spawned",pid:id,request_id:m.request_id};state.live.add(id);
         if(state.mode==="omit")delete reply.request_id;
@@ -772,7 +772,7 @@ function remoteSynchronousPeer(host) {
   state.sync=true;state.answers=[];state.requests=[];
   host.callSwiWasmRemoteToplevel=workbenchMethod("callSwiWasmRemoteToplevel","nextSwiWasmRemoteToplevel");
   host.nextSwiWasmRemoteToplevel=workbenchMethod("nextSwiWasmRemoteToplevel","swiWasmStructuredCompound");
-  host.toplevelCallOptionsText=()=>"[]";
+  host.toplevelCallOptionsText=workbenchMethod("toplevelCallOptionsText","reportEditorPlaceholderError");
   const localSend=host.sendSwiWasmActorMessage,remoteSend=workbenchMethod("sendSwiWasmActorMessage","sendSwiWasmActorMessageDelayed");
   global.parseSwiWasmQualifiedServiceAddress=()=>null;
   host.sendSwiWasmActorMessage=function(to,...args){return this.parseSwiWasmRemoteActorPid(this.resolveSwiWasmActorTarget(to))?remoteSend.call(this,to,...args):localSend.call(this,to,...args);};
@@ -790,17 +790,63 @@ function remoteSynchronousPeer(host) {
       setTimeout(()=>{
         if(plan.close){this.close();return;}
         if(plan.down){state.live.delete(String(m.pid));host.swiWasmActorMonitors.slice().filter(w=>host.parseSwiWasmRemoteActorPid(w.pid)?.pid===String(m.pid)).forEach(w=>this.emit({type:"down",pid:m.pid,ref:w.ref,reason:plan.down}));return;}
+        if(plan.frame){this.emit({...plan.frame,pid:m.pid});return;}
         const payload=plan.payload.replaceAll("PID",pid);
-        if(m.command!=="send")this.emit({type:"success",pid:m.pid,data:["async_ok"],more:false});
+        if(m.command!=="send")this.emit({type:"success",pid:m.pid,data:["async_ok"],more:false,...(state.answerTerms?{term:"[async_ok]"}:{})});
         else this.emit({type:"actor_message",target:m.browser_from,message:ref?"'$toplevel_reply'("+ref[1]+","+payload+")":payload});
       },plan.delay||0);
     }
   };
   return peer;
 }
+async function asynchronousAnswerContract(run,host,check) {
+  const peer=remoteSynchronousPeer(host),state=peer.state;
+  state.owner=host.testOwner;state.answerTerms=true;
+  const frame=(type,term,extra={})=>({frame:{type,term,more:false,data:["wrong_display"],...extra}});
+  async function request(expected,label,next=false) {
+    const command=next?"toplevel_next(P)":"toplevel_call(P,true)";
+    check(await run("user:answer_pid(P),"+command+",receive({"+expected+"->true},[timeout(1),on_timeout(fail)])"),label);
+  }
+  try {
+    check(await run("toplevel_spawn(P,[node('http://sync.test'),session(true)]),assertz(user:answer_pid(P))"),"asynchronous answer fixture negotiates canonical payloads");
+    check(host.swiWasmRemoteActorConnections['http://sync.test'].answerTerms&&state.commands.some(m=>m.command==="transport_hello"&&m.answer_terms===true),"canonical capability is requested and acknowledged");
+    state.answers=[frame("success",String.raw`[row(pair(X,X),'a b',"ab",'$VAR'(1),f('x(y)')),row(pair(Y,Z),plain,"ab",literal,f(ok))]`,{more:true})];
+    check(await run("user:answer_pid(P),toplevel_call(P,true),receive({success(P,[row(pair(A,B),'a b',Text,'$VAR'(1),f('x(y)')),row(pair(C,D),plain,Text2,literal,f(ok))],true)->true},[timeout(1),on_timeout(fail)]),A==B,var(A),var(C),var(D),C\\==D,A\\==C,string(Text),Text==\"ab\",Text2==Text"),"whole canonical solution list preserves sharing, fresh variables, atoms, strings and literal VAR terms");
+    const escaped=String.raw`["a\nb","C:\\tmp\\x","quote\"here"]`;
+    state.answers=[frame("success",escaped)];
+    await request('success(P,'+escaped+',false)',"canonical strings retain newlines, backslashes and escaped quotes");
+    state.answers=[frame("success",'[next("tail")]')];
+    await request('success(P,[next("tail")],false)',"paging continuation decodes canonical payload",true);
+    state.answers=[frame("error","error(probe(pair(X,X)),context('a b',Y))",{data:"wrong exception"})];
+    check(await run("user:answer_pid(P),toplevel_call(P,true),receive({error(P,error(probe(pair(A,B)),context('a b',Detail)))->true},[timeout(1),on_timeout(fail)]),A==B,var(A),var(Detail),A\\==Detail"),"query exception term retains structure and variable sharing");
+    state.answers=[frame("failure",undefined),frame("timeout",undefined)];
+    await request('failure(P)',"failure remains an ordinary asynchronous answer");
+    await request('timeout(P)',"timeout event remains unchanged");
+    for(const bad of [undefined,42,{}]) {
+      state.answers=[frame("success",bad)];
+      await request('error(P,remote_answer_protocol_error(missing_term))',"missing/nontext canonical payload reports explicit error without legacy reconstruction");
+    }
+    for(const [type,term] of [["success","["],["success","not_a_list"],["error","["]]) {
+      state.answers=[frame(type,term)];
+      await request('error(P,remote_answer_protocol_error(invalid_term))',"invalid "+type+" canonical payload is reported as an ordinary error answer");
+    }
+    state.answers=[frame("success",'[ok]')];
+    await request('success(P,[ok],false)',"engine remains usable after malformed canonical replies");
+    // No acknowledgement means the existing display-field decoder remains in use.
+    state.answerTerms=false;
+    check(await run("toplevel_spawn(P,[node('http://legacy-answers.test'),session(true)]),retractall(user:answer_pid(_)),assertz(user:answer_pid(P))"),"legacy peer without canonical capability still starts");
+    state.answers=[frame("success","[ignored]",{data:["legacy_ok"]}),frame("error",undefined,{data:"legacy error"})];
+    await request('success(P,[legacy_ok],false)',"legacy success display fields retain their existing interpretation");
+    await request("error(P,remote_error('legacy error'))","legacy exception fallback remains remote_error text");
+    const calls=state.commands.filter(m=>m.command==="toplevel_call");
+    if(calls.length)check(calls.filter(m=>String(m.pid)==="4001").every(m=>m.options.includes("format(prolog)"))&&calls.filter(m=>String(m.pid)==="4002").every(m=>!m.options.includes("format(")),"main requests Prolog templates only after canonical negotiation and leaves legacy format unchanged");
+    check(host.swiWasmActorMonitors.length===0,"asynchronous decoding introduces no monitors or waits");
+  } finally {peer.restore();}
+}
+
 async function remoteSynchronousContract(run,host,check) {
   const peer=remoteSynchronousPeer(host),state=peer.state,node="http://sync.test",Socket=global.WebSocket;
-  state.owner=host.testOwner;state.node=node;
+  state.owner=host.testOwner;state.node=node;state.answerTerms=true;
   const answer=(payload,delay=0)=>({payload,delay});
   try {
     check(await run("spawn(receive({stop->true}),Other,[link(false)]),monitor(Other,OtherRef),assertz(user:remote_other(Other,OtherRef)),toplevel_spawn(P,[node('"+node+"'),session(true)]),assertz(user:remote_sync_pid(P))"),"remote fixture shares an ordinary browser transport and preserves unrelated local monitor");
@@ -1260,6 +1306,41 @@ const scenarios = {
         check(await running&&host.swiWasmActorMonitors.length===0,"main interruption withdraws the shutdown monitor");
         check(await run("receive({never->true},[timeout(0)]),findall(R,swi_wasm_actor_bridge:retiring_supervisor_shutdown(R),[]),user:shutdown_wait_pid(P),exit(P,kill)"),"main interruption drains private reply filters and leaves engine usable");
       } finally {probe.restore();}
+    } finally {await host.stop();}
+  },
+  async asynchronous_answers_worker(W,check) {
+    const host=scopedWorkerCoordinator(W);host.testOwner=PID;
+    try {
+      await startToplevel(W);
+      async function run(goal){
+        const replies=()=>W.sends.filter(m=>m.to===CLIENT).map(m=>m.message),n=replies().length;
+        deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");
+        await until(()=>replies().length>n,20000);const m=replies()[n]||"";
+        if(/^error\(/.test(m))throw new Error(m);
+        const ok=/\[checked\],false\)/.test(m);if(!ok)console.log("shutdown reply: "+m);return ok;
+      }
+      await asynchronousAnswerContract(run,host,check);
+    } finally {await host.stop();}
+  },
+  async asynchronous_answers_main(W,check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const dummy={S:{onmessage:()=>{}},control:{}};
+    const host=scopedWorkerCoordinator(dummy,"main");host.testOwner="main";
+    try {
+      const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+      engine.FS.writeFile("/compat_shutdown.pl",source);engine.prolog.query("use_module('/compat_shutdown.pl')").once();
+      host.swiWasmActorMainMailbox=[];host.swiWasmActorMainWaiters=[];
+      host.deliverSwiWasmMainActorMessage=workbenchMethod("deliverSwiWasmMainActorMessage","deliverSwiWasmRemoteResult");
+      host.receiveSwiWasmActorMessage=workbenchMethod("receiveSwiWasmActorMessage","cancelSwiWasmMainActorWaiters");
+      dummy.S.onmessage=({data})=>{if(data.command==="deliver")host.deliverSwiWasmMainActorMessage(data.message);};
+      host.swiWasmStatechartOwnsActorTraffic=()=>false;
+      workbenchMethod("installSwiWasmActorBridge","randomSwiIdentity").call(host);
+      global.self.swiWasmBehaviourSource=()=>behaviourSource;
+      global.self.setTimeout=setTimeout;global.self.clearTimeout=clearTimeout;
+      global.self.workerTestError=e=>e.message;
+      async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+      await asynchronousAnswerContract(run,host,check);
     } finally {await host.stop();}
   },
   async remote_synchronous_worker(W,check) {
