@@ -83,6 +83,13 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
 :- dynamic io_endpoint_target/2.
 :- dynamic pending_io_prompt/3.
 :- dynamic pending_io_request/3. % NodeURL, RequestId, private reply queue
+:- dynamic remote_named_start/5. % Token, Node, RequestId, Pid|pending, active|failed(Reason)
+:- thread_local remote_named_scope/1.
+:- meta_predicate with_remote_name(+,+,-,0), named_start_transaction(0).
+
+% Protect only short local handoffs, never the transport wait.
+named_start_transaction(Goal) :-
+    setup_call_cleanup(with_mutex(actors_registry,Goal),true,true).
 
 best_effort(Goal) :-
     catch(Goal, _, true).
@@ -174,11 +181,123 @@ actors:hook_spawn(Goal, Pid, Options) :-
     !,
     (   localhost_node(Node)
     ->  actors:spawn(Goal, Pid, RestOptions)
-    ;   spawn_remote(Goal, Pid, Node, Options)
+    ;   (remote_named_scope(_)
+        -> (spawn_remote(Goal, Pid, Node, Options) -> true; remote_named_start_failed)
+        ;  spawn_remote(Goal, Pid, Node, Options))
     ).
 
 % Keep local named creation local even when the caller names this node by URL.
 actors:hook_local_spawn_node(Node) :- localhost_node(Node).
+
+:- multifile actors:hook_remote_named_spawn/4.
+actors:hook_remote_named_spawn(Goal, Pid, Options, Name) :-
+    option(node(Node), Options),
+    node_url_atom(Node,NodeURL),
+    % Keep the ordinary spawn validation, admission and distribution hooks.
+    with_remote_name(Name,NodeURL,Pid,spawn(Goal,Pid,Options)).
+
+remote_named_start_failed :-
+    throw(error(remote_spawn_failed(startup_failed),
+                context(distribution, 'remote named startup failed'))).
+
+% Reserve only the caller's ordinary name. The application on the peer can
+% already be running; this is not a distributed activation transaction.
+with_remote_name(Name, Node, Pid, Goal) :-
+    setup_call_catcher_cleanup(
+        (actors:reserve_spawn_name(Name,Token),
+         assertz(remote_named_start(Token,Node,none,pending,active)),
+         asserta(remote_named_scope(Token),ScopeRef)),
+        ((call(Goal) -> true; remote_named_start_failed),
+         publish_remote_name(Token,Pid)),
+        Catcher,
+        finish_remote_name(Token,ScopeRef,Catcher)).
+
+publish_remote_name(Token, Pid) :-
+    self(Self), canonical_pid(Pid,AliasPid),
+    named_start_transaction(
+        (ensure_remote_name_active(Token),
+         actors:current_registry_namespace(NS),
+         ((actors:ordinary_registered_pid(NS,AliasPid);actors:reserved_spawn_pid(NS,AliasPid))
+         -> throw(process_already_has_a_name(Pid));true),
+         actors:attach_spawn_name([name_reservation(Token)],AliasPid),
+         actors:publish_spawn_name(Self,AliasPid,[name_reservation(Token)]))).
+
+ensure_remote_name_active(Token) :-
+    remote_named_start(Token,_,_,_,State),
+    (State == active -> true; State=failed(Reason),
+     throw(error(remote_spawn_failed(Reason),context(distribution, 'remote named startup ended')))).
+
+check_remote_name_active :-
+    (remote_named_scope(Token)
+    -> named_start_transaction(
+         (ensure_remote_name_active(Token),remote_named_start(Token,_,_,Known,_),
+          (Known \== pending -> true
+          ;throw(error(remote_spawn_failed(uncorrelated_spawn_reply),
+                       context(distribution, 'no correlated spawn acknowledgement'))))))
+    ; true).
+
+same_remote_node(A,B) :-
+    pid_utils:normalize_node_url(A,Node),pid_utils:normalize_node_url(B,Node).
+
+finish_remote_name(Token, ScopeRef, Catcher) :-
+    erase(ScopeRef),
+    with_mutex(actors_registry,
+        (findall(Node-Pid,retract(remote_named_start(Token,Node,_,Pid,_)),Owned),
+         actors:finish_spawn_name(Token,Catcher))),
+    (Catcher == exit -> true
+    ; maplist(stop_failed_named_spawn,Owned)).
+
+stop_failed_named_spawn(_-pending) :- !.
+stop_failed_named_spawn(Node-Pid) :-
+    % Runtime-owned cleanup uses the existing exit command even if failure
+    % preceded installation of the caller's remote ownership/routing rows.
+    best_effort(
+        (make_id(Request),number_string(Request,RequestId),
+         safe_remote_kill_send(Node,Pid,kill,
+             json{command:exit,pid:Pid,reason:kill,request_id:RequestId}))),
+    self(Self), Compound=Pid@Node,
+    with_mutex(actors_registry,with_mutex(actors_monitor_lifecycle,
+        (retractall(actors:monitor(Self,Compound,Compound)),
+         node_controller:remove_remote_monitor_by_ref(Compound),
+         retractall(actors:link(Self,Compound)),
+         retractall(node_controller:remote_link_(Self,Compound))))),
+    % Leave transport routing/ownership to its normal lifecycle. Sending an
+    % exit is not evidence of remote death.
+    (actors:actor_terminating -> true
+    ; best_effort(actors:demonitor(Compound,[flush]))).
+
+record_named_request(Node0, RequestId) :-
+    (remote_named_scope(Token)
+    -> named_start_transaction(
+         (retract(remote_named_start(Token,Node,_,Pid,State)),
+          same_remote_node(Node0,Node),
+          assertz(remote_named_start(Token,Node,RequestId,Pid,State))))
+    ; true).
+
+clear_named_request(Node0, RequestId) :-
+    (remote_named_scope(Token)
+    -> named_start_transaction(
+         (retract(remote_named_start(Token,Node,RequestId,Pid,State))
+         -> same_remote_node(Node0,Node),assertz(remote_named_start(Token,Node,none,Pid,State));true))
+    ; true).
+
+% The reader records acknowledged pids before waking the creator. If the
+% creator is interrupted immediately, its finalizer still knows what to stop.
+record_named_ack(Node0, Dict, Pid) :-
+    named_start_transaction(
+      forall((remote_named_start(Token,Node,Request,pending,State),Request\==none,
+              same_remote_node(Node0,Node),
+              (get_dict(request_id,Dict,Id) -> Id==Request;true)),
+        (retract(remote_named_start(Token,Node,Request,pending,State)),
+         (get_dict(request_id,Dict,_)
+         -> assertz(remote_named_start(Token,Node,Request,Pid,State))
+         ;  assertz(remote_named_start(Token,Node,Request,pending,failed(uncorrelated_spawn_reply))))))).
+
+fail_remote_names(Node0, Pid, Reason) :-
+    named_start_transaction(
+      forall((remote_named_start(Token,Node,Request,Pid,active),same_remote_node(Node0,Node)),
+           (retract(remote_named_start(Token,Node,Request,Pid,active)),
+            assertz(remote_named_start(Token,Node,Request,Pid,failed(Reason)))))).
 
 %!  spawn_remote(:Goal, -Pid, +Node0, +Options) is det.
 %
@@ -199,6 +318,7 @@ spawn_remote(Goal, RemotePid@NodeURL, Node0, Options) :-
         options: RemoteOptionsAtom
     }, SpawnCommand),
     remote_request_spawn(NodeURL, SpawnCommand, RemotePid),
+    check_remote_name_active,
     CompoundPid = RemotePid@NodeURL,
     %  No per-pid proxy actor.  Set up monitor and link FIRST, then
     %  register_remote_pid (which sets the controller's target row --
@@ -574,6 +694,12 @@ toplevel_actors:hook_toplevel_spawn(RemotePid@NodeURL, SourceModule, Options) :-
     option(node(NodeURL), Options),
     \+ localhost_node(NodeURL),
     !,
+    (option(name(Name),Options)
+    -> with_remote_name(Name,NodeURL,RemotePid@NodeURL,
+            spawn_remote_toplevel(RemotePid,NodeURL,SourceModule,Options))
+    ; spawn_remote_toplevel(RemotePid,NodeURL,SourceModule,Options)).
+
+spawn_remote_toplevel(RemotePid, NodeURL, SourceModule, Options) :-
     self(Self),
     option(target(Target), Options, Self),
     remote_toplevel_spawn_options(Options, SourceModule, RemoteOptions),
@@ -583,11 +709,11 @@ toplevel_actors:hook_toplevel_spawn(RemotePid@NodeURL, SourceModule, Options) :-
         options: RemoteOptionsAtom
     }, SpawnCommand),
     remote_request_spawn(NodeURL, SpawnCommand, RemotePid),
+    check_remote_name_active,
     CompoundPid = RemotePid@NodeURL,
     %  Install monitor + link first, then register the target (the
     %  readiness marker for inbound dispatch), then flush.  See
     %  spawn_remote/4 for the rationale.
-    maybe_register_toplevel_name(Options, CompoundPid),
     (   option(monitor(true), Options)
     ->  assertz(actors:monitor(Self, CompoundPid, CompoundPid)),
         node_controller:add_remote_monitor(Self, CompoundPid, CompoundPid)
@@ -619,12 +745,6 @@ remote_toplevel_local_option(source_module(_)).
 remote_toplevel_local_option(name(_)).
 remote_toplevel_local_option(io_target(_)).
 
-maybe_register_toplevel_name(Options, Pid) :-
-    (   option(name(Name), Options)
-    ->  actors:register(Name, Pid)
-    ;   true
-    ).
-
                 /*******************************
                 *        WS WIRE CLIENT        *
                 *******************************/
@@ -648,8 +768,11 @@ remote_request_spawn(NodeURL, Command0, RemotePid) :-
     catch(with_mutex(Mutex,
                setup_call_cleanup(
                    acquire_spawn_connection(NodeURL, Socket, SpawnQueue),
-                   (ws_send_json(Socket, Command),
-                    remote_wait_spawned(SpawnQueue, RequestId, RemotePid)),
+                   call_cleanup(
+                     (record_named_request(NodeURL, RequestId),
+                      ws_send_json(Socket, Command),
+                     remote_wait_spawned(SpawnQueue, RequestId, RemotePid)),
+                    clear_named_request(NodeURL,RequestId)),
                    release_spawn_queue(SpawnQueue))), Error, remote_spawn_error(Error)).
 
 % Reserve the reply queue before connection cleanup can destroy it.
@@ -732,8 +855,9 @@ remote_send_command(NodeURL, Command) :-
 %   flush_pending_for_pid/2 so that any buffered down events have the
 %   correct monitor entries to deliver against.
 register_remote_pid(RemotePid@NodeURL, Target) :-
-    forall(hook_remote_actor(RemotePid@NodeURL), true),
-    node_controller:register_remote_target(RemotePid@NodeURL, Target).
+    named_start_transaction(
+        (forall(hook_remote_actor(RemotePid@NodeURL), true),
+         node_controller:register_remote_target(RemotePid@NodeURL, Target))).
 
 
 %!  flush_pending_for_pid(+NodeURL, +RemotePid) is det.
@@ -863,18 +987,21 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
         %  flush_pending_for_pid replay it later.
         get_dict(type, Dict, "down"),
         remote_event_pid(Dict, RemotePid)
-    ->  CompoundPid = RemotePid@NodeURL,
-        (   node_controller:current_remote_target(CompoundPid, _)
-        ->  deliver_remote_down_via_controller(CompoundPid, Dict)
-        ;   %  Even a buffered retirement is already observed locally.
-            with_mutex(actors_registry,
-                       retractall(actors:registered(_, _, CompoundPid))),
-            assertz(ws_pending_event(NodeURL, RemotePid, Dict))
-        )
+    ->  CompoundPid = RemotePid@NodeURL, canonical_pid(CompoundPid,AliasPid),
+        % The no-target decision and buffer insertion must precede target
+        % registration together; otherwise its initial flush can miss down.
+        named_start_transaction(
+            (fail_remote_names(NodeURL,RemotePid,terminated),
+             retractall(actors:registered(_, _, AliasPid)),
+             (node_controller:current_remote_target(CompoundPid, _)
+             -> Deliver=true
+             ; assertz(ws_pending_event(NodeURL,RemotePid,Dict)),Deliver=false))),
+        (Deliver==true -> deliver_remote_down_via_controller(CompoundPid,Dict);true)
     ;   get_dict(type, Dict, "spawned"),
         get_dict(pid, Dict, RawPid),
         normalize_remote_pid(RawPid, RemotePid)
-    ->  remote_queue_spawn_reply(SpawnQueue, Dict, spawned(RemotePid))
+    ->  record_named_ack(NodeURL,Dict,RemotePid),
+        remote_queue_spawn_reply(SpawnQueue, Dict, spawned(RemotePid))
     ;   get_dict(type, Dict, "error"),
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
@@ -925,7 +1052,9 @@ deliver_remote_down_via_controller(CompoundPid, Dict) :-
     %  Alias withdrawal precedes monitor notification.  Use the same lock
     %  order as local retirement: registry, then monitor lifecycle.
     with_mutex(actors_registry,
-        (   retractall(actors:registered(_, _, CompoundPid)),
+        (   CompoundPid=Id@Node, canonical_pid(CompoundPid,AliasPid),
+            fail_remote_names(Node,Id,terminated),
+            retractall(actors:registered(_, _, AliasPid)),
             with_mutex(actors_monitor_lifecycle,
                 (   node_controller:take_remote_monitors_for_pid(CompoundPid, Entries),
                     retractall(actors:monitor(_, CompoundPid, _)),
@@ -982,6 +1111,7 @@ remote_ws_connection_closed(NodeURL) :-
     with_mutex(actors_registry,
         (   %  Include aliases with no monitor or controller target.
             %  Loss of contact withdraws names; it does not prove death.
+            fail_remote_names(CanonNode,_,connection_closed),
             retractall(actors:registered(_, _, _@CanonNode)),
             with_mutex(actors_monitor_lifecycle,
                 (   node_controller:take_remote_monitors_on_node(NodeURL, MonitorEntries),

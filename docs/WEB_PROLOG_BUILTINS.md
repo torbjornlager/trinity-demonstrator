@@ -252,8 +252,8 @@ metadata cannot be supplied as raw client options. Existing HTTP session
 defaults, reserved WebSocket routing, and owner ceilings are unchanged.
 In addition to name-type validation, local named creation now uses a
 reservation/publication protocol, described below. Supervisor
-child-specification validation is described in its own section. Remote
-naming and broader lifecycle changes remain separate work.
+child-specification validation is described in its own section. Remote named
+creation also reserves caller-side aliases, with the qualifications below.
 
 ### Actor Messaging
 
@@ -286,8 +286,45 @@ initialisation; effects after activation are not rolled back by this protocol.
 Composition uses `actors:spawn_with_name/4`, with an internal
 `name_reservation/1` option. Raw remote clients cannot supply that metadata.
 The distribution hook recognises local node URL aliases; plain `spawn/3`
-still rejects `name/1`. Requests that actually create remote actors retain
-post-spawn alias registration, without a cross-node atomicity guarantee.
+still rejects `name/1`. Remote named creation through the same four wrappers
+reserves the caller's ordinary alias before sending the spawn request. This
+does not register a name or publish a service on the remote node. Pending
+reservations remain hidden and count as occupied; concurrent creators and
+`register/2` cannot take them, and `unregister/1` does not cancel them.
+Generic named wrappers retain ordinary spawn validation and admission checks
+before remote dispatch.
+
+After acknowledgement, routing, link and monitor setup and buffered-event
+processing precede publication under the registry mutex. Observed remote
+termination or connection loss during pending startup prevents publication,
+as does namespace closure. These failures release the reservation and report
+the original error; observed termination/loss uses
+`error(remote_spawn_failed(terminated),_)` or
+`error(remote_spawn_failed(connection_closed),_)`. An unexpected plain failure
+during startup raises `error(remote_spawn_failed(startup_failed),_)` rather
+than falling back to another creation path. Failure or interruption
+requests termination of an acknowledged pid using the existing exit command,
+withdraws the startup alias and creator's startup monitor/link state, and
+flushes its spawn-monitor notification. Unrelated explicit monitors are
+preserved. Reader-side acknowledgement recording allows cleanup even if the
+creator is interrupted before consuming the spawn reply. Connection-loss
+guards apply only during startup; ordinary late remote registration remains
+unchanged.
+Existing transport ownership/routing bookkeeping follows its normal
+lifecycle; sending an exit does not establish remote death. A peer must echo
+the existing spawn `request_id` for named
+creation. A reply omitting it raises
+`error(remote_spawn_failed(uncorrelated_spawn_reply),_)` without claiming its
+ambiguous pid. Unnamed spawning retains its existing legacy-peer behaviour.
+Cleanup exit commands also carry an existing `request_id`, so a rejection
+cannot be mistaken for a later spawn reply.
+
+The remote application may run before the caller's alias is published, and
+its effects are not rolled back. Publication does not guarantee continued
+liveness. If interruption or transport loss prevents acknowledgement, the
+remote outcome can remain unknown. Termination is best effort and no new
+activation handshake, cancellation guarantee, implicit ongoing monitor, or
+wire fields are introduced.
 Ordinary `register/2` checks local actor existence under the same registry
 mutex as insertion and retirement. After the existing collision checks, a
 missing local actor raises `error(existence_error(process, Pid), Context)`.

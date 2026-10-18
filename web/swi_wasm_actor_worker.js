@@ -440,7 +440,7 @@
     var ref = String(refValue);
     var pending = pendingRpcPromises[ref];
     var timeout = Number(timeoutSeconds);
-    if (!pending) return Promise.resolve(null);
+    if (!pending) return Promise.resolve("missing_promise");
     var timeoutMarker = {};
     var waited = pending;
     if (isFinite(timeout) && timeout >= 0) {
@@ -455,7 +455,7 @@
     return waited.then(function(outcome) {
       if (outcome === timeoutMarker) return null;
       delete pendingRpcPromises[ref];
-      if (!outcome.ok) throw new Error(outcome.error);
+      if (!outcome.ok) return "error(rpc_error(" + JSON.stringify(outcome.error) + "))";
       return outcome.value;
     });
   }
@@ -1027,7 +1027,7 @@
       ":- op(800, xfx, !).",
       ":- op(200, xfx, @).",
       ":- op(1000, xfy, if).",
-      ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +).",
+      ":- meta_predicate spawn(:), spawn(:, -), spawn(:, -, +), toplevel_call(+, :), toplevel_call(+, :, +), receive(:), receive(:, +), with_io_target(+, 0), parallel(:), first_solution(?, :), first_solution(?, :, +), yield(+, -, :).",
       ":- dynamic deferred/1, io_target/1.",
       ":- dynamic suppress_shared_override_warnings/0.",
       ":- multifile user:message_hook/3.",
@@ -1091,12 +1091,12 @@
       "    receive({",
       "        Pid-Answer ->",
       "            ( Template = Answer",
-      "            -> receive({down(Pid, _, true) -> true})",
+      "            -> receive({down(Pid, _, _) -> true})",
       "            ; worker_tidy_all(Pids), !, fail ) ;",
       "        down(FailedPid, _, false) if known_worker(FailedPid, Pids) ->",
       "            worker_tidy_all(Pids), !, fail ;",
-      "        down(FailedPid, _, exception(Error)) if known_worker(FailedPid, Pids) ->",
-      "            worker_tidy_all(Pids), throw(Error)",
+      "        down(FailedPid, _, Reason) if (known_worker(FailedPid, Pids), (Reason \\== true ; FailedPid == Pid)) ->",
+      "            worker_tidy_all(Pids), worker_error(FailedPid, Reason, Error), throw(Error)",
       "    }).",
       "",
       "%  A guard tests a worker pid; it never binds one (Semantic Contracts D1).",
@@ -1132,17 +1132,21 @@
       "wait_first([], _, _, _) :- !, fail.",
       "wait_first(Pids, Solution, OnFail, OnError) :-",
       "    receive({",
-      "        Winner-Solution if known_worker(Winner, Pids) ->",
-      "            worker_tidy_all(Pids) ;",
+      "        Winner-Answer if known_worker(Winner, Pids) ->",
+      "            worker_tidy_all(Pids), Solution = Answer ;",
       "        down(FailedPid, _, false) if known_worker(FailedPid, Pids) ->",
       "            ( OnFail == continue -> selectchk(FailedPid, Pids, Rest),",
       "              wait_first(Rest, Solution, OnFail, OnError)",
       "            ; worker_tidy_all(Pids), !, fail ) ;",
-      "        down(FailedPid, _, exception(Error)) if known_worker(FailedPid, Pids) ->",
+      "        down(FailedPid, _, Reason) if known_worker(FailedPid, Pids) ->",
       "            ( OnError == continue -> selectchk(FailedPid, Pids, Rest),",
       "              wait_first(Rest, Solution, OnFail, OnError)",
-      "            ; worker_tidy_all(Pids), throw(Error) )",
+      "            ; worker_tidy_all(Pids), worker_error(FailedPid, Reason, Error), throw(Error) )",
       "    }).",
+      "",
+      "% An accepted result establishes success; an unexplained exit is an error.",
+      "worker_error(Pid, Reason, Error) :-",
+      "    ( nonvar(Reason), Reason = exception(E) -> Error = E ; Error = worker_exit(Pid, Reason) ).",
       "",
       "worker_tidy_all(Pids) :- maplist(worker_tidy, Pids).",
       "worker_tidy(Pid) :-",
@@ -1296,7 +1300,7 @@
       "    (   Response = success(Slice, true)",
       "    ->  ( member(Bound, Slice), Template = Bound",
       "        ; Once == false,",
-      "          NextOffset is Offset + Limit,",
+      "          length(Slice, Count), NextOffset is Offset + Count,",
       "          worker_rpc_page(NodeText, GoalText, TemplateText, Template, NextOffset, Limit, LoadText, RemoteTimeout, Once, HTTPTimeout)",
       "        )",
       "    ;   Response = success(Slice, false)",
@@ -1323,14 +1327,20 @@
       "",
       "yield(Ref, Message) :- yield(Ref, Message, []).",
       "",
-      "yield(Ref, Message, Options) :-",
+      "yield(Ref, Message, Options0) :-",
+      "    must_be(integer, Ref),",
+      "    strip_module(Options0, Caller, Options),",
       "    option(timeout(Timeout), Options, -1),",
       "    number_string(Ref, RefText),",
       "    Promise := actorPromiseWait(#RefText, #Timeout),",
       "    actor_await(Promise, ResponseText),",
-      "    (   ResponseText = null",
+      "    (   ResponseText == \"missing_promise\"",
+      "    ->  throw(error(existence_error(promise, Ref), context(yield/3, 'unknown or consumed promise')))",
+      "    ;   ResponseText = null",
       "    ->  option(on_timeout(OnTimeout), Options, true),",
-      "        call(OnTimeout)",
+      "        ( once(call(Caller:OnTimeout))",
+      "        -> (var(Message) -> Message = timeout ; true)",
+      "        ; throw(error(timeout_callback_failed(Ref), context(yield/3, 'on_timeout goal failed'))) )",
       "    ;   catch(wire_read(ResponseText, Message), _, throw(rpc_error(parse_failed)))",
       "    ).",
       "",

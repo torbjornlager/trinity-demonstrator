@@ -52,6 +52,7 @@ http_status(URL, Status) :-
 :- use_module('server_promise_cleanup_tests.pl', []).
 :- use_module('worker_scope_tests.pl', []).
 :- use_module('node/remote_alias_cleanup_tests.pl', []).
+:- use_module('node/remote_named_creation_tests.pl', []).
 :- use_module('node/toplevel_correlation_transport_tests.pl', []).
 :- use_module('node/namespace_teardown_tests.pl', []).
 :- user:load_files('node/generic_actor_tests.pl', []).
@@ -71,7 +72,7 @@ run_tier :-
                 wrapper_options,
                 supervisor_child_specs,
                 server_promise_cleanup, worker_scope,
-                named_creation, remote_alias_cleanup, namespace_teardown,
+                named_creation, remote_alias_cleanup, remote_named_creation, namespace_teardown,
                 goal_walker,
                 generic_actor_api,
                 actor_remote_exit_failure,

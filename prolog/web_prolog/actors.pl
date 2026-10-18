@@ -331,8 +331,10 @@ spawn(Goal, Pid, Options) :-
         )
     ).
 
-% Composition helper for naming wrappers. Remote creation retains its
-% historical post-spawn alias registration; only local startup is reserved.
+:- multifile hook_remote_named_spawn/4.
+
+% Composition helper for naming wrappers. Distribution reserves caller-side
+% aliases separately from the local child's readiness handshake.
 spawn_with_name(Goal, Pid, Options, WrapperOptions) :-
     (   option(name(Name), WrapperOptions)
     ->  must_be(atom, Name),
@@ -342,7 +344,9 @@ spawn_with_name(Goal, Pid, Options, WrapperOptions) :-
                 reserve_spawn_name(Name, Token),
                 spawn(Goal, Pid, [name_reservation(Token)|Options]),
                 Catcher, finish_spawn_name(Token, Catcher))
-        ;   spawn(Goal, Pid, Options), register(Name, Pid)
+        ;   (predicate_property(hook_remote_named_spawn(_,_,_,_),number_of_clauses(N)),N>0
+            -> hook_remote_named_spawn(Goal, Pid, Options, Name)
+            ;  spawn(Goal, Pid, Options), register(Name, Pid))
         )
     ;   spawn(Goal, Pid, Options)
     ).
