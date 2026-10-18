@@ -21,22 +21,27 @@ const ROOT = path.join(__dirname, "..", "..");
 const PID = "1234567890";
 const QPID = PID + "@localhost";
 const CLIENT = "9999999999";
+const html = fs.readFileSync(path.join(ROOT, "web", "demonstrator.html"), "utf8");
+const behaviourBody = html.split("swiWasmBehaviourProlog: function() {")[1].split("\n          },")[0];
+const behaviourSource = Function(behaviourBody)();
 
 // ------------------------------------------------------------------ harness
 
 function bootWorker() {
   const posted = [];
   const sends = [];
-  const control = { hold: [], held: [] };
+  const control = { hold: [], held: [], reply: null };
   let S = null;
   global.self = {
+    crypto: require("crypto").webcrypto,
     postMessage: function(m) {
       posted.push(m);
       if (m.type === "request") {
         if (m.action === "send") sends.push({ to: m.to, message: m.message });
         if (control.hold.includes(m.action)) { control.held.push(m); return; }
         setImmediate(function() {
-          S.onmessage({ data: { command: "reply", id: m.id, ok: true, result: true } });
+          const reply = control.reply ? control.reply(m) : { result: true };
+          S.onmessage({ data: Object.assign({ command: "reply", id: m.id, ok: true }, reply) });
         });
       }
     },
@@ -69,7 +74,7 @@ async function until(pred, ms) {
 
 async function startToplevel(W, lifecycle) {
   W.S.onmessage({ data: {
-    command: "start", pid: PID,
+    command: "start", pid: PID, behaviourSource: behaviourSource,
     goal: "swi_wasm_actor_bridge:ptcp(" + QPID + ", " + CLIENT + "@localhost, " + (lifecycle || "true") + ")"
   } });
   if (!await until(function() { return W.posted.some(function(m) { return m.type === "started"; }); }, 20000)) {
@@ -91,9 +96,111 @@ function messages(W) { return W.sends.map(function(s) { return s.message; }); }
 async function nSends(W, n, ms) { await until(function() { return W.sends.length >= n; }, ms || 5000); return messages(W); }
 function done(W) { return W.posted.filter(function(m) { return m.type === "done"; }); }
 
+// Deterministic coordinator stand-in for the existing worker cleanup handshake.
+function installCleanupReplies(W) {
+  const monitors = {};
+  W.control.reply = m => {
+    if (m.action === "make_ref") return {result:"8765432100"};
+    if (m.action === "monitor") monitors[m.target] = m.ref;
+    if (m.action === "exit") {
+      const ref = monitors[m.pid];
+      setImmediate(()=>deliver(W,"down("+m.pid+","+ref+",killed)"));
+    }
+    return {result:true};
+  };
+}
+
 // ---------------------------------------------------------------- scenarios
 
 const scenarios = {
+
+
+  async rpc_short_pages(W, check) {
+    const offsets = [];
+    W.control.reply = m => {
+      if (m.action !== "rpc") return {result:true};
+      offsets.push(m.offset);
+      return {result: offsets.length === 1 ? "success([v(a),v(b)],true)" : "success([v(c)],false)"};
+    };
+    await startToplevel(W);
+    deliver(W, "'$call'(findall(X,rpc('https://example.org',p(X),[template(X),limit(5)]),Xs),[template(Xs)])");
+    const m = await nSends(W, 1);
+    check(/\[\[a,b,c\]\],false\)/.test(m[0] || ""), "all answers survive a short page: " + m[0]);
+    check(JSON.stringify(offsets) === "[0,2]", "offset follows actual page length: " + offsets);
+  },
+
+  async promise_timeout_retry_and_callback(W, check) {
+    W.control.hold = ["rpc"];
+    await startToplevel(W);
+    deliver(W, "'$call'((promise('https://example.org',p,Ref),assertz(user:saved_ref(Ref)),yield(Ref,R,[timeout(0)])),[template(R)])");
+    const m = await nSends(W, 1);
+    check(/\[timeout\],false\)/.test(m[0] || ""), "default wait answer is timeout: " + m[0]);
+    deliver(W, "'$call'((user:saved_ref(Ref),yield(Ref,R,[timeout(0),on_timeout(R=custom)])),[template(R)])");
+    const m2 = await nSends(W, 2);
+    check(/\[custom\],false\)/.test(m2[1] || ""), "callback can bind the answer: " + m2[1]);
+    deliver(W, "'$call'((user:saved_ref(Ref),catch(yield(Ref,_,[timeout(0),on_timeout(fail)]),E,true)),[template(E)])");
+    const m3 = await nSends(W, 3);
+    check(/timeout_callback_failed/.test(m3[2] || ""), "failing callback reports an error: " + m3[2]);
+    const request = W.control.held.shift();
+    W.S.onmessage({data:{command:"reply",id:request.id,ok:true,result:"success([p],false)"}});
+    deliver(W, "'$call'((user:saved_ref(Ref),yield(Ref,R)),[template(R)])");
+    const m4 = await nSends(W, 4);
+    check(/success\(\[p\],false\)/.test(m4[3] || ""), "retry collects the original promise: " + m4[3]);
+    deliver(W, "'$call'((user:saved_ref(Ref),catch(yield(Ref,_),E,true)),[template(E)])");
+    const m5 = await nSends(W, 5);
+    check(/existence_error\(promise,/.test(m5[4] || ""), "consumed reference is rejected: " + m5[4]);
+  },
+
+  async promise_error_answer_and_invalid_refs(W, check) {
+    W.control.reply = m => m.action === "rpc" ? {ok:false,error:'network "failure"'} : {result:true};
+    await startToplevel(W);
+    deliver(W, "'$call'((promise('https://example.org',p,Ref),yield(Ref,R)),[template(R)])");
+    const m = await nSends(W, 1);
+    check(/\[error\(rpc_error\(/.test(m[0] || ""), "transport failure is an answer term: " + m[0]);
+    deliver(W, "'$call'(catch(yield(42,_),E,true),[template(E)])");
+    deliver(W, "'$call'(catch(yield(bogus,_),E,true),[template(E)])");
+    const all = await nSends(W, 3);
+    check(/existence_error\(promise,42\)/.test(all[1] || ""), "unknown reference rejected: " + all[1]);
+    check(/type_error\(integer,bogus\)/.test(all[2] || ""), "noninteger reference rejected: " + all[2]);
+  },
+
+  async first_solution_reply_mismatch_consumed(W, check) {
+    installCleanupReplies(W);
+    await startToplevel(W);
+    deliver(W, "'$call'((self(S),send(S,worker-wrong),(swi_wasm_actor_bridge:wait_first([worker],wanted,continue,stop)->R=unexpected;R=mismatch),receive({worker-_ -> Left=leftover},[timeout(0),on_timeout(Left=empty)])),[template(R-Left)])");
+    const m = await nSends(W, 2);
+    check(/\[-\(mismatch,empty\)\],false\)/.test(m[m.length-1] || ""), "reply selected and workers cleaned before output mismatch: " + m.join(" | "));
+    check(W.posted.some(x=>x.action==="exit"), "cleanup requested before failure");
+  },
+
+  async server_yield_reply_mismatch_consumed(W, check) {
+    await startToplevel(W);
+    deliver(W, "'$call'((self(S),send(S,42-wrong),(server_yield(42,wanted)->R=unexpected;R=mismatch),receive({42-_ -> Left=leftover},[timeout(0),on_timeout(Left=empty)])),[template(R-Left)])");
+    const m = await nSends(W, 2);
+    check(/\[-\(mismatch,empty\)\],false\)/.test(m[m.length-1] || ""), "server reply consumed before mismatch: " + m.join(" | "));
+  },
+
+  async worker_exit_policy(W, check) {
+    installCleanupReplies(W);
+    await startToplevel(W);
+    deliver(W, "'$call'((self(S),send(S,down(worker,r,killed)),catch(swi_wasm_actor_bridge:wait_first([worker],_,continue,stop),E,true)),[template(E)])");
+    const m = await nSends(W, 2);
+    check(/worker_exit\(worker,killed\)/.test(m[m.length-1] || ""), "unexplained first-solution exit is an error: " + m.join(" | "));
+    deliver(W, "'$call'((self(S),send(S,down(worker,r,killed)),send(S,other-ok),swi_wasm_actor_bridge:wait_first([worker,other],R,continue,continue)),[template(R)])");
+    const n = W.sends.length;
+    await until(()=>messages(W).some(x=>/\[ok\],false\)/.test(x)));
+    check(messages(W).some(x=>/\[ok\],false\)/.test(x)), "on_error(continue) accepts a later winner: " + messages(W).slice(n-1).join(" | "));
+    deliver(W, "'$call'((self(S),send(S,down(worker,r,true)),catch(swi_wasm_actor_bridge:par_yield([worker],worker,_),E,true)),[template(E)])");
+    await until(()=>messages(W).some(x=>/worker_exit\(worker,true\)/.test(x)));
+    check(messages(W).some(x=>/worker_exit\(worker,true\)/.test(x)), "normal exit without an answer is an error");
+  },
+
+  async parallel_out_of_order_and_post_answer_exit(W, check) {
+    await startToplevel(W);
+    deliver(W, "'$call'((self(S),send(S,down(later,r,true)),send(S,later-[b]),send(S,first-[a]),send(S,down(first,r,killed)),swi_wasm_actor_bridge:par_yield([first,later],first,A),swi_wasm_actor_bridge:par_yield([first,later],later,B)),[template(A-B)])");
+    await until(()=>messages(W).some(x=>/\[-\(\[a\],\[b\]\)\],false\)/.test(x)));
+    check(messages(W).some(x=>/\[-\(\[a\],\[b\]\)\],false\)/.test(x)), "later normal down deferred; accepted result survives termination reason: " + messages(W).join(" | "));
+  },
 
   async paging(W, check) {
     await startToplevel(W);
