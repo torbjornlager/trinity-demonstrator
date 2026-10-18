@@ -23,6 +23,27 @@ Primary basis:
 - [node_sandbox.pl](../prolog/web_prolog/node_sandbox.pl)
 - [BLACKLIST_SANDBOX_NOTES.md](policy/BLACKLIST_SANDBOX_NOTES.md)
 
+## SWI-WASM correctness coverage
+
+The browser worker and main-engine compatibility runtimes advance RPC paging
+by the actual slice length. Their worker collectors select replies before
+unifying caller outputs; `first_solution/2-3` cleans up its workers before an
+output mismatch fails. Unexplained exits use `worker_exit(Pid, Reason)` and
+`first_solution/3` applies its existing `on_error/1` policy. Worker exceptions
+retain their original term. Once a parallel worker's answer is accepted, its
+termination notification only confirms completion; later workers' normal
+notifications can remain deferred while earlier results are collected.
+
+Browser `yield/2-3` returns `timeout` on an elapsed wait unless its callback
+binds the answer, keeps the promise available for retry, and reports callback
+failure explicitly. Unknown or consumed integer references raise
+`existence_error(promise, Ref)`. Worker-side transport rejection becomes an
+`error(rpc_error(Detail))` answer, as main-engine fetch failures already do.
+These are local correctness repairs; broader worker cleanup, atomic naming,
+ownership, and transport parity with the native runtime remain separate work.
+The WASM tier tests these rules using the bundled engine under Node; it does
+not replace interactive browser integration testing.
+
 ## Notes on Scope
 
 - This is a predicate catalog, not a full catalog of flags, error classes,

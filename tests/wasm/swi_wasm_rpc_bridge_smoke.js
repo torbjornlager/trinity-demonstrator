@@ -1405,7 +1405,7 @@ ok(manualSource.includes('id="runtime_property/1"') &&
      manualSource.indexOf('<article class="predicate-entry" id="promise/3-4">'),
      manualSource.indexOf('<article class="predicate-entry" id="yield/2-3">')
    ).includes('offset(+Integer)') &&
-   manualSource.includes('If <code>on_timeout/1</code> is omitted, the timeout path succeeds.') &&
+   manualSource.includes('If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>.') &&
    !manualSource.includes('The native runtime additionally accepts') &&
    !manualSource.includes('The SWI-WASM runtimes additionally accept'),
    "the HTML manual presents one common browser/native programming contract");

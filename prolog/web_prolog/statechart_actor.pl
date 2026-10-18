@@ -159,7 +159,7 @@ validate_statechart_trace(Trace) :-
                         'trace must be true or false'))).
 
 traced_statechart_source_goal(Trace, statechart_actor:interpret(Source),
-                              statechart_actor:interpret_trace(Trace, Source)).
+                              statechart_actor:interpret_trace(Trace, Source)) :- !.
 traced_statechart_source_goal(Trace, statechart_actor:interpret_text(Text),
                               statechart_actor:interpret_text_trace(Trace, Text)).
 

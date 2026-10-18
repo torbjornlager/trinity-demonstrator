@@ -853,14 +853,14 @@ promise(+URI, +Goal, -Ref, +Options) is det.</pre>
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">yield/2-3</span></div>
         <div class="predicate-family">isobase</div>
     </div>
-    <pre>yield(+Ref, ?Answer) is det.
-yield(+Ref, ?Answer, +Options) is det.</pre>
+    <pre>yield(+Ref, -Answer) is det.
+yield(+Ref, -Answer, +Options) is det.</pre>
     <p>Waits for the answer term from a previous call to <code>promise/3-4</code>. The reference is local to the runtime that created it. The answer is one of <code>success(Data,More)</code>, <code>failure</code>, or <code>error(Error)</code>, as returned by the stateless call endpoint. Valid options are:</p>
     <ul>
         <li><code>timeout(+Number)</code><br>Waits at most <code>Number</code> seconds for the promised answer. Default is no timeout.</li>
         <li><code>on_timeout(+Goal)</code><br>Calls <code>Goal</code> if the timeout expires before the answer is available.</li>
     </ul>
-    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds.</p>
+    <p>A timeout does not cancel or consume the promise; a later call with the same reference may collect an answer that arrives afterward. If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>. A callback may bind the answer itself; otherwise it defaults to <code>timeout</code>. A failing callback raises <code>error(timeout_callback_failed(Ref), Context)</code>. Unknown or consumed references raise <code>error(existence_error(promise, Ref), Context)</code>; references must be integers. Browser transport failures are delivered as <code>error(rpc_error(Detail))</code> answers.</p>
 </article>
 
 <article class="predicate-entry" id="runtime_property/1">

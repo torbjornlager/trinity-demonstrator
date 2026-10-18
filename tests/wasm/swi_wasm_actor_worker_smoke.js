@@ -287,6 +287,17 @@ async function main() {
   ok((await S.actorPromiseWait(retainedRef, -1)) === "success([slow(done)],false)",
      "a later yield consumes a previously timed-out promise");
 
+  ok((await S.actorPromiseWait(retainedRef, 0)) === "missing_promise",
+     "consumed promise is distinct from a timeout");
+  ok((await S.actorPromiseWait("42", 0)) === "missing_promise",
+     "unknown promise is distinct from a timeout");
+  const failedRef = S.actorPromiseStart("'https://n2.example'", "p", "p", 0, 10, "");
+  const failedRequest = S._posted.filter(m => m.action === "rpc").pop();
+  S.onmessage({data:{command:"reply", id:failedRequest.id, ok:false, error:'network "failure"'}});
+  const failureAnswer = await S.actorPromiseWait(failedRef, -1);
+  ok(failureAnswer === 'error(rpc_error("network \\"failure\\""))',
+     "rejected promise delivers a quoted error answer: " + failureAnswer);
+
   // 11. Statechart creation is coordinated from JS so src_uri and Worker
   // placement stay node-controller responsibilities.
   const chartP = S.actorStatechartSpawn(

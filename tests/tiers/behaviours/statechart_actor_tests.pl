@@ -371,6 +371,26 @@ test(all_demonstrator_examples_validate) :-
 
 :- begin_tests(statechart_profile_runtime).
 
+test(spawn_returns_without_choicepoint,
+     [forall((member(SourceType, [uri,text]),
+              member(TraceOptions, [[],[trace(true)],[trace(false)]])))]) :-
+    (   SourceType == uri
+    ->  resolve_statechart_fixture(
+            'test_statecharts/statechart-parallel-idle.statechart', Source),
+        SourceOption = src_uri(Source)
+    ;   SourceOption = src_text(
+            "<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>")
+    ),
+    setup_call_cleanup(
+        true,
+        ( call_cleanup(
+              statechart_spawn(Pid, [SourceOption,link(false)|TraceOptions]),
+              Det = true),
+          assertion(Det == true)
+        ),
+        catch(exit(Pid, kill), _, true)
+    ).
+
 test(runtime_simple) :-
     init_interpreter('test_statecharts/statechart-simple.statechart'),
     statechart_actor:configuration(Config0),

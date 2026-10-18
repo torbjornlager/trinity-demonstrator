@@ -2,7 +2,7 @@
 // swi_wasm_actor_worker.js), run against the real SWI-WASM engine
 // (web/swipl-bundle.js) under Node.
 //
-// Each scenario boots one Worker in its own Node process with a mock
+// Each scenario runs in its own Node process. Worker scenarios boot a mock
 // coordinator: requests are answered at once, and every message the Worker
 // sends is recorded.  The scenarios pin the decisions recorded in
 // "Semantic Contracts: Decisions Before Repair" (D1-D5) for the browser
@@ -115,6 +115,46 @@ function installCleanupReplies(W) {
 const scenarios = {
 
 
+
+  async compatibility_rpc_and_yield(W, check) {
+    const body = html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source = Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine = await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compatibility.pl",source);
+    check(!!engine.prolog.query("use_module('/compatibility.pl')").once(), "compatibility runtime loads");
+    const offsets = [];
+    global.self.encodeURIComponent = encodeURIComponent;
+    global.self.swiRpcGetAsync = url => {
+      offsets.push(Number(/offset=(\d+)/.exec(url)[1]));
+      return Promise.resolve(offsets.length===1 ? "success([v(a),v(b)],true)" : "success([v(c)],false)");
+    };
+    // Call the paging predicate directly to isolate paging from URL/source setup.
+    async function succeeds(goal) {
+      let count = 0;
+      await engine.prolog.forEach(goal,()=>{count++;});
+      return count === 1;
+    }
+    check(await succeeds("findall(X,swi_wasm_actor_bridge:web_rpc_page(v(X),0,5,'https://example.org',p,'v(X)',[],-1,false,-1),[a,b,c])"),"compatibility paging retains short-page answers");
+    check(JSON.stringify(offsets)==="[0,2]","compatibility paging uses actual length: "+offsets);
+    global.self.swiPromiseStart = () => "1234567891";
+    global.self.swiResolveRpcBase = () => "https://example.org";
+    check(await succeeds("promise('https://example.org',p,1234567891)"),"compatibility promise reference converts from JavaScript atom");
+    global.self.swiPromiseWait = () => Promise.resolve(null);
+    check(await succeeds("yield(1234567891,timeout,[timeout(0)])"),"compatibility default timeout answer");
+    check(await succeeds("yield(1234567891,R,[timeout(0),on_timeout(R=custom)]),R=custom"),"compatibility callback binds answer");
+    check(await succeeds("catch((yield(1234567891,_,[timeout(0),on_timeout(fail)]),fail),error(timeout_callback_failed(1234567891),_),true)"),"compatibility failing callback errors");
+    global.self.swiPromiseWait = () => Promise.resolve("missing_promise");
+    check(await succeeds("catch((yield(42,_),fail),error(existence_error(promise,42),_),true)"),"compatibility missing reference rejected");
+    global.self.swiPromiseWait = () => Promise.resolve("error(rpc_error(fetch_failed)).");
+    check(await succeeds("yield(1234567891,error(rpc_error(fetch_failed)))"),"compatibility failure is an answer term");
+    // Both generated collectors must keep the same rules. Worker scenarios below
+    // exercise those rules against real selective receive and cleanup requests.
+    const workerText = fs.readFileSync(path.join(ROOT,"web/swi_wasm_actor_worker.js"),"utf8");
+    const collectorLines = workerText.split("\n").filter(x=>/^      \"/.test(x)).map(x=>{try{return JSON.parse(x.trim().replace(/,$/,""));}catch(_){return "";}}).join("\n");
+    const block = text => text.slice(text.indexOf("parallel(QualifiedGoals) :-"),text.indexOf("worker_drain(Pid) :-"));
+    check(block(source)===block(collectorLines),"compatibility and worker collector implementations agree");
+  },
+
   async rpc_short_pages(W, check) {
     const offsets = [];
     W.control.reply = m => {
@@ -168,7 +208,7 @@ const scenarios = {
     installCleanupReplies(W);
     await startToplevel(W);
     deliver(W, "'$call'((self(S),send(S,worker-wrong),(swi_wasm_actor_bridge:wait_first([worker],wanted,continue,stop)->R=unexpected;R=mismatch),receive({worker-_ -> Left=leftover},[timeout(0),on_timeout(Left=empty)])),[template(R-Left)])");
-    const m = await nSends(W, 2);
+    const m = await nSends(W, 1);
     check(/\[-\(mismatch,empty\)\],false\)/.test(m[m.length-1] || ""), "reply selected and workers cleaned before output mismatch: " + m.join(" | "));
     check(W.posted.some(x=>x.action==="exit"), "cleanup requested before failure");
   },
@@ -176,7 +216,7 @@ const scenarios = {
   async server_yield_reply_mismatch_consumed(W, check) {
     await startToplevel(W);
     deliver(W, "'$call'((self(S),send(S,42-wrong),(server_yield(42,wanted)->R=unexpected;R=mismatch),receive({42-_ -> Left=leftover},[timeout(0),on_timeout(Left=empty)])),[template(R-Left)])");
-    const m = await nSends(W, 2);
+    const m = await nSends(W, 1);
     check(/\[-\(mismatch,empty\)\],false\)/.test(m[m.length-1] || ""), "server reply consumed before mismatch: " + m.join(" | "));
   },
 
@@ -184,7 +224,7 @@ const scenarios = {
     installCleanupReplies(W);
     await startToplevel(W);
     deliver(W, "'$call'((self(S),send(S,down(worker,r,killed)),catch(swi_wasm_actor_bridge:wait_first([worker],_,continue,stop),E,true)),[template(E)])");
-    const m = await nSends(W, 2);
+    const m = await nSends(W, 1);
     check(/worker_exit\(worker,killed\)/.test(m[m.length-1] || ""), "unexplained first-solution exit is an error: " + m.join(" | "));
     deliver(W, "'$call'((self(S),send(S,down(worker,r,killed)),send(S,other-ok),swi_wasm_actor_bridge:wait_first([worker,other],R,continue,continue)),[template(R)])");
     const n = W.sends.length;
@@ -193,11 +233,14 @@ const scenarios = {
     deliver(W, "'$call'((self(S),send(S,down(worker,r,true)),catch(swi_wasm_actor_bridge:par_yield([worker],worker,_),E,true)),[template(E)])");
     await until(()=>messages(W).some(x=>/worker_exit\(worker,true\)/.test(x)));
     check(messages(W).some(x=>/worker_exit\(worker,true\)/.test(x)), "normal exit without an answer is an error");
+    deliver(W, "'$call'((self(S),send(S,down(worker,r,exception(original))),catch(swi_wasm_actor_bridge:wait_first([worker],_,continue,stop),E,true)),[template(E)])");
+    await until(()=>messages(W).some(x=>/\[original\],false\)/.test(x)));
+    check(messages(W).some(x=>/\[original\],false\)/.test(x)), "worker exceptions preserve their original term");
   },
 
   async parallel_out_of_order_and_post_answer_exit(W, check) {
     await startToplevel(W);
-    deliver(W, "'$call'((self(S),send(S,down(later,r,true)),send(S,later-[b]),send(S,first-[a]),send(S,down(first,r,killed)),swi_wasm_actor_bridge:par_yield([first,later],first,A),swi_wasm_actor_bridge:par_yield([first,later],later,B)),[template(A-B)])");
+    deliver(W, "'$call'((self(S),send(S,later-[b]),send(S,down(later,r,true)),send(S,first-[a]),send(S,down(first,r,killed)),swi_wasm_actor_bridge:par_yield([first,later],first,A),swi_wasm_actor_bridge:par_yield([first,later],later,B)),[template(A-B)])");
     await until(()=>messages(W).some(x=>/\[-\(\[a\],\[b\]\)\],false\)/.test(x)));
     check(messages(W).some(x=>/\[-\(\[a\],\[b\]\)\],false\)/.test(x)), "later normal down deferred; accepted result survives termination reason: " + messages(W).join(" | "));
   },
