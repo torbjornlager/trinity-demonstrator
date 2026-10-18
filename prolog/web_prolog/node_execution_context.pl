@@ -92,6 +92,7 @@ current_public_execution_namespace(Namespace) :-
 % missing open namespaces reject writes; delegated closure markers live only
 % until their owning connection ends. All access is under actors_registry.
 :- dynamic open_namespace/1, namespace_connection/2, closed_lineage/2.
+:- multifile hook_namespace_closed/1, hook_connection_closed/1.
 
 open_client_namespace(Namespace) :-
     must_be(ground, Namespace),
@@ -104,21 +105,23 @@ open_client_connection(Queue, Namespace) :-
 
 close_client_namespace(Namespace) :-
     must_be(ground, Namespace),
-    with_mutex(actors_registry,
+    setup_call_cleanup(with_mutex(actors_registry,
         (   retractall(open_namespace(Namespace)),
             (Namespace = ws_lineage(Queue, Token), namespace_connection(Queue, _)
             -> (closed_lineage(Queue,Token) -> true; assertz(closed_lineage(Queue,Token)))
             ;  true),
-            actors:retire_registry_namespace(Namespace)
-        )).
+            actors:retire_registry_namespace(Namespace),
+            forall(hook_namespace_closed(Namespace),true)
+        )), true, true).
 
 close_client_connection(Queue) :-
-    with_mutex(actors_registry,
+    setup_call_cleanup(with_mutex(actors_registry,
         (   forall(retract(namespace_connection(Queue, Namespace)),
                    close_client_namespace(Namespace)),
             actors:retire_registry_namespace(ws_lineage(Queue, _)),
-            retractall(closed_lineage(Queue, _))
-        )).
+            retractall(closed_lineage(Queue, _)),
+            forall(hook_connection_closed(Queue),true)
+        )), true, true).
 
 client_namespace_status(Namespace, Status) :-
     managed_namespace(Namespace),

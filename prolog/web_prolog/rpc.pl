@@ -4,6 +4,7 @@
      promise/3,
      promise/4,
      promise_cleanup/1,
+     dispose_promises_for_owner/1,
      yield/2,
      yield/3,
      runtime_property/1,
@@ -14,7 +15,8 @@
    ]).
 
 :- dynamic promise_state/7. % Key, WakeQueue, Worker, ExpiryThread, Collector, Result, Owner
-:- multifile prepare_timeout_callback/3, hook_promise_owner/1.
+:- multifile prepare_timeout_callback/3, hook_promise_owner/1,
+             hook_check_promise_owner/1.
 
 /** <module> Web Prolog RPC Client (layer 3, HTTP-only)
 
@@ -356,6 +358,10 @@ new_promise_state(Key, Queue) :-
     -> throw(error(permission_error(create,promise,client_context),
                    context(rpc:promise/4, 'public execution has no client identity')))
     ; true),
+    % Called under promise_lifecycle. The node checks namespace admission
+    % without acquiring actors_registry: teardown closes admission first,
+    % then takes promise_lifecycle to sweep, in registry -> promise order.
+    forall(hook_check_promise_owner(Owner), true),
     message_queue_create(Queue),
     catch(assertz(promise_state(Key,Queue,none,none,none,pending,Owner)), Error,
           (message_queue_destroy(Queue), throw(Error))).
@@ -414,6 +420,17 @@ promise_owner_context(Owner) :-
 promise_accessible(Key) :-
     promise_owner_context(Current), Current \== unavailable,
     promise_state(Key,_,_,_,_,_,Stored), Stored == Current.
+
+%!  dispose_promises_for_owner(+OwnerPattern) is det.
+%
+%   Runtime-only teardown, independent of the calling client's identity.
+%   Patterns support sweeping all delegated namespaces of one connection.
+dispose_promises_for_owner(OwnerPattern) :-
+    promise_transaction(
+        (findall(Key,
+             (promise_state(Key,_,_,_,_,_,Owner),
+              subsumes_term(OwnerPattern,Owner)), Keys),
+         maplist(dispose_promise_locked,Keys))).
 
 dispose_promise_locked(Key) :-
     (   retract(promise_state(Key,Queue,Worker,Timer,_,_,_))

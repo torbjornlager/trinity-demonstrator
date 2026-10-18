@@ -315,6 +315,8 @@ A surviving actor cannot repopulate a closed namespace. This operation does
 not terminate running actors or change service registrations; existing
 lifetime and ownership policies continue to apply. A pending named startup
 whose publication is rejected follows normal startup failure handling.
+Teardown also disposes of this node-scoped namespace's local promises, as
+described under Remote Queries below.
 
 A WebSocket connection owns its shared `ws_client/1` namespace, closed on
 disconnect. Ending one toplevel leaves that namespace open. An HTTP interactive
@@ -560,10 +562,31 @@ a usable client identity fails closed at promise creation.
 
 Composition uses `rpc:hook_promise_owner/1`; the independent RPC library defaults
 to trusted local sharing. Ownership is unchanged by timeout, interruption or
-retry. Namespace teardown does not automatically dispose of promises: a
-surviving actor with that namespace can still collect its own reference.
-Ownership transfer, automatic disposal on client/namespace teardown, remote
-cancellation, and a portable ownership contract remain separate work.
+retry. Definitive teardown of a WebSocket, HTTP interactive-session, or
+delegated-lineage namespace now disposes of its promises on that node. Closing
+a connection also sweeps every delegated namespace belonging to it. Ordinary
+request completion, bookkeeping replacement, and termination of one toplevel
+in an open shared WebSocket namespace do not trigger this disposal.
+
+Surviving actors remain alive, but their old references become unavailable,
+and creation under the closed namespace raises
+`error(permission_error(create,promise,closed_namespace(Namespace)), Context)`.
+Waiting collectors receive `existence_error(promise, Ref)` without running
+their timeout callback. Collection and teardown serialize: a collection that
+commits first returns its answer; disposal that wins invalidates the reference.
+Creation checks admission under the promise lifecycle mutex; teardown closes
+admission before acquiring that mutex to sweep, so an already admitted
+creation cannot escape disposal. The lock order is registry before promise;
+promise creation does not acquire the registry mutex. Repeated teardown is
+idempotent. Local workers and expiry tasks are stopped using the existing
+disposal path, without waiting for remote execution to finish.
+
+Authenticated and anonymous stateless HTTP owners and trusted local sharing
+retain their existing lifetimes; other namespaces and node scopes are
+unaffected. Runtime composition uses `rpc:hook_check_promise_owner/1` and the
+namespace/connection close hooks; `rpc:dispose_promises_for_owner/1` is an
+internal teardown helper, not a public client predicate. Ownership transfer,
+remote cancellation, and a portable ownership contract remain separate work.
 
 `runtime_property/1` reports host capabilities rather than changing language
 semantics. Its properties are `implementation/1`, `persistent/1`,

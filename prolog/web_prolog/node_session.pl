@@ -36,6 +36,7 @@ Session lifecycle and queue/message normalization for node ISOTOPE endpoints.
 :- use_module(dollar_expansion, [clear_session_bindings/1]).
 :- use_module(node_limits, [forget_isotope_session_owner/1]).
 :- use_module(node_log, [finish_activity/3]).
+:- use_module(node_runtime_state, [current_node_port/1, with_node_port_context/2]).
 :- use_module(node_sandbox, [sandbox_check_source_text/3]).
 :- use_module(node_execution_context, [
     with_public_execution_profile/2,
@@ -46,6 +47,7 @@ Session lifecycle and queue/message normalization for node ISOTOPE endpoints.
 :- dynamic isotope_loaded_text/2.
 :- dynamic isotope_session_profile/2.
 :- dynamic isotope_session_namespace/2.
+:- dynamic isotope_session_namespace_port/2.
 :- dynamic isotope_session_owner/2.
 :- dynamic isotope_session_ended/3.      % SessionPid, OwnerId, EndedAt
 :- dynamic isotope_session_trace/1.
@@ -153,6 +155,9 @@ remember_isotope_session_namespace(Pid, Namespace) :-
     with_mutex(actors_registry,
         (   retractall(isotope_session_namespace(SessionPid, _)),
             assertz(isotope_session_namespace(SessionPid, Namespace)),
+            retractall(isotope_session_namespace_port(SessionPid, _)),
+            (current_node_port(Port)
+            -> assertz(isotope_session_namespace_port(SessionPid,Port)); true),
             (Namespace = isotope_session(_), \+ actors:monitor_target_alive(SessionPid)
             -> node_execution_context:close_client_namespace(Namespace)
             ;  true)
@@ -224,7 +229,8 @@ cleanup_isotope_session(Pid) :-
     session_pid_key(Pid, SessionPid),
     with_mutex(actors_registry,
         (close_http_session_namespace(SessionPid),
-         retractall(isotope_session_namespace(SessionPid, _)))),
+         retractall(isotope_session_namespace(SessionPid, _)),
+         retractall(isotope_session_namespace_port(SessionPid, _)))),
     reset_isotope_session(SessionPid).
 
 % Queue/bookkeeping replacement does not end the namespace.
@@ -256,7 +262,10 @@ actors:hook_registry_retire(Pid) :-
 
 close_http_session_namespace(Pid) :-
     (   isotope_session_namespace(Pid, Namespace), Namespace = isotope_session(_)
-    ->  node_execution_context:close_client_namespace(Namespace)
+    ->  % at_exit runs after the actor's inherited node context has unwound.
+        (isotope_session_namespace_port(Pid,Port)
+        -> with_node_port_context(Port,node_execution_context:close_client_namespace(Namespace))
+        ;  node_execution_context:close_client_namespace(Namespace))
     ;   true
     ).
 

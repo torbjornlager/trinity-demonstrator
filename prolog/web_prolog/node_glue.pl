@@ -247,6 +247,26 @@ rpc:prepare_timeout_callback(Module, Goal0, Goal) :-
 :- multifile rpc:hook_promise_owner/1.
 rpc:hook_promise_owner(Owner) :- promise_client_owner(Owner).
 
+:- multifile rpc:hook_check_promise_owner/1.
+rpc:hook_check_promise_owner(client_namespace(_,Namespace)) :-
+    (   node_execution_context:client_namespace_status(Namespace,closed)
+    ->  throw(error(permission_error(create,promise,closed_namespace(Namespace)),
+                    context(rpc:promise/4, 'client namespace has ended')))
+    ;   true
+    ).
+
+% Namespace status changes before taking promise_lifecycle. A creator that
+% saw the old open status holds that mutex until publication, so this sweep
+% includes it. Promise code must not acquire actors_registry under its mutex.
+:- multifile node_execution_context:hook_namespace_closed/1,
+             node_execution_context:hook_connection_closed/1.
+node_execution_context:hook_namespace_closed(Namespace) :-
+    node_lifetime:scope(Scope),
+    rpc:dispose_promises_for_owner(client_namespace(Scope,Namespace)).
+node_execution_context:hook_connection_closed(Queue) :-
+    node_lifetime:scope(Scope),
+    rpc:dispose_promises_for_owner(client_namespace(Scope,ws_lineage(Queue,_))).
+
 promise_client_owner(Owner) :-
     % Resolve the innermost owner frame before matching its carrier; querying
     % with a constrained context could accidentally select an outer frame.
