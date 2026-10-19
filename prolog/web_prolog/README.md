@@ -304,3 +304,105 @@ HTTP worker so stream cleanup runs. Not-yet-active workers observe retirement
 before starting their request. Partial setup rolls back allocated local resources,
 and late completion cannot deliver to a destroyed queue. These are local resource
 mechanisms; they do not cancel remote execution or transfer promise ownership.
+
+
+## Engineering evidence behind the research agenda
+
+The book's [research and engineering
+agenda](https://github.com/torbjornlager/boken/blob/main/author/appendix-research-agenda.tex)
+records requirements and open questions. The following native SWI implementation reports
+have moved here from its former Section 11.1. They describe bounded engineering work and
+its qualifications, not portable guarantees for every node. The shared language manual
+remains the authority for observable API behaviour and runtime differences; the
+implementation sections above describe the mechanisms.
+
+### Option validation, naming and synchronous calls
+
+Native SWI validates `rpc/3`, `promise/4`, and `yield/3` at entry and restricts their
+HTTP transport options to a documented subset. Extending this treatment to other
+option-bearing APIs remains future work. Native `spawn/3` now validates options before
+local setup or remote dispatch, with isolation-owned options declared through a
+validation hook. The remote bare-actor endpoint validates client options before source
+preparation and separates them from server-supplied framework metadata. Source ordering,
+ordinary option precedence, and existing authority checks are retained. Native toplevel,
+server, supervisor, and statechart creation wrappers also validate their own settings
+and forwarded spawn options before starting work; remote toplevel entry points validate
+before source preparation. These checks preserve framework metadata and existing
+defaults. Native supervisors also validate complete initial child lists, recognised
+server and nested-supervisor start forms, and dynamic additions before startup or
+contact with the supervisor. Defaults, option precedence, and start-goal variable
+sharing are retained.
+
+Local named creation now reserves names and publishes them through
+the startup handshake. Remote named creation now reserves the caller's alias before
+dispatch and coordinates publication with observed lifecycle events. Failed startup
+releases the reservation and requests termination of a known acknowledged pid. Remote
+execution may precede alias publication, and an unacknowledged remote outcome may remain
+unknown; distributed activation and broader lifecycle guarantees remain separate work.
+Native synchronous toplevel wrappers now separate query and receive options, explicitly
+select the calling actor as the answer target, and reject conflicting targets before
+sending. This covers both creation-time defaults and later overrides without tracking
+remote target state. Private monitoring now reports termination during synchronous waits
+as `toplevel_down(Reason)` and is removed and flushed on every exit path, without
+consuming existing monitors. Wait timeouts still leave the query running. Native
+requests now carry fresh references through local execution and remote transport, so
+later synchronous waits discard obsolete tagged replies without extending their
+deadlines. Unsupported peers are rejected before a synchronous query is sent;
+asynchronous operation remains available. Concurrent-client coordination remains
+separate work.
+
+### Ordinary registry lifecycle
+
+Native local named creation now reserves a name in the caller's namespace before launch,
+publishes it before the application goal runs, and releases pending reservations on
+failure or cancellation. Publication and retirement share the registry mutex, so a fast
+child cannot be named after its cleanup. Ordinary native `register/2` now checks local
+actor existence under the same mutex as insertion and retirement, rejecting stale local
+pids without changing remote alias registration. Neither operation guarantees continued
+liveness after returning. Native remote-alias cleanup now withdraws bindings across
+local namespaces on observed termination of the exact pid, or for affected pids known to
+a lost connection. It creates no implicit monitors and retains no retirement records: an
+unobserved termination can leave an alias, and later registration in an open namespace
+can recreate one. Connection loss withdraws local names without proving remote death.
+Explicit unregistration remains necessary where no lifecycle event is observed. Managed
+namespace teardown now closes registration, removes ordinary names, and cancels pending
+name reservations atomically. Late registration and name publication are rejected.
+WebSocket teardown closes its shared namespace; HTTP session cleanup or local
+session-actor retirement closes that session's namespace. Delegated transport namespaces
+also close on explicit lineage closure. Bookkeeping replacement and individual request
+completion do not end a namespace. These changes preserve actor lifetimes, the service
+registry, and the standalone global namespace. Regression tests include namespace
+teardown, surviving actors and pending name publication.
+
+### Promise ownership and local resource lifecycle
+
+Native SWI node composition records owners and checks them before collection or explicit
+cleanup: stateful clients use node-scoped namespaces, authenticated stateless HTTP uses
+node-scoped principal identity, and anonymous stateless HTTP uses individual request
+identity. Trusted local sharing between threads and actors is preserved. Foreign
+collection appears as an unavailable reference; foreign cleanup is a no-op. Tests cover
+client and node isolation, authenticated collection across requests, anonymous request
+isolation, and trusted sharing. Native collection, expiry and explicit local disposal
+are now coordinated: one active collector is allowed, timeout or interruption releases
+its claim, and a timed-out wait remains retryable. Successful collection consumes the
+answer and reclaims the wake queue; expiry or cleanup invalidates the reference and
+wakes an already waiting collector. Local expiry tasks and unfinished HTTP workers are
+stopped, with stream cleanup as workers unwind. Threads not yet activated observe
+disposal before starting work, and late completion cannot deliver to a destroyed queue.
+Initialisation failures also roll back allocated resources. Regression tests cover
+contention, expiry races, interruption, timeout callbacks and retry, and local resource
+disposal. Native managed namespace teardown now disposes of its node-scoped promises,
+wakes waiting collectors with an unavailable-reference error, and rejects new promises
+under the closed namespace. Surviving actors remain alive but lose those references.
+Creation, collection and teardown are coordinated; ordinary request completion and
+ending one toplevel in a shared open WebSocket namespace do not trigger disposal.
+Stateless HTTP owners and trusted local sharing keep their existing lifetimes. Ownership
+transfer remains separate, and local disposal does not establish cancellation of remote
+execution.
+
+
+### Statechart processing model
+
+Timed transitions and explicit event deferral have implementations and stated
+semantics. The research agenda retains the separate task of turning those and
+the rest of the processing model into a portable, testable contract.

@@ -121,3 +121,14 @@ source ordering, monitor cleanup, partial worker startup and interruption,
 supervisor ordering/rollback/restart/shutdown, engine-local promise ownership,
 statechart routing, remote naming, correlation and answer fidelity. Runtime
 repair histories belong here and in test descriptions, not in predicate entries.
+
+
+## Relation to the research agenda
+
+The book’s [research and engineering agenda](https://github.com/torbjornlager/boken/blob/main/author/appendix-research-agenda.tex)
+is maintained separately from this runtime guide.
+
+The source-fetch, worker/supervisor cleanup, naming, monitor and promise-store
+sections above record SWI-WASM implementation status. Browser-engine coverage,
+resource/lifetime guarantees and portable lifecycle contracts remain engineering
+and conformance questions, rather than conclusions implied by those repairs.
