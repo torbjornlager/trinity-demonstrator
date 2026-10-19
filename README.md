@@ -13,6 +13,16 @@ original in-tree `src/` copy has been removed. The migration plan — layer
 map, hook inventory, conformance strategy — is in
 [docs/LAYERED_REAL_NODE_PLAN.md](docs/LAYERED_REAL_NODE_PLAN.md).
 
+## Documentation
+
+The [Web Prolog language manual](web/manual.html) is the single shared API
+reference for native SWI, Trealla and SWI-WASM. Runtime differences remain
+explicit there; this README describes the native SWI implementation and setup.
+The [layered implementation guide](prolog/web_prolog/README.md) covers internals
+and wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
+coordination, and the [Trealla runtime guide](https://github.com/torbjornlager/trealla-port/blob/main/README.md)
+covers that port. Runtime guides do not define separate versions of the language.
+
 ## The layers (target state)
 
 | layer | library | gives you |
