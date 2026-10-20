@@ -2,7 +2,7 @@
     with_owner_context/4, with_connection_spawn/1, wrap_actor_context/3,
     check_spawn/1, check_exit/1, check_monitor/1,
     remember_remote/1, remember_route/1, reclaim_lineage/1, check_term/1,
-    admit_actor/2, forget_actor/1, deliver_message/3, message_consumed/0,
+    admit_actor/2, sample_actor_cpu/1, forget_actor/1, deliver_message/3, message_consumed/0,
     command_context/2, with_wire_context/4, connection_owns/2,
     node_log_output/1, current_owner_context/1, rehome_options/2,
     with_websocket_lease/2
@@ -184,6 +184,13 @@ check_actor_capacity(_).
 
 policy_limit(Name, Limit) :-
     (current_node_value(Name, Value) -> Limit = Value; setting(node_lifetime:Name, Limit)).
+
+% Sample while the pid still resolves, but retain authority through retirement.
+% Removing ownership first would expose a live-looking, unowned local pid to
+% concurrent worker cleanup. Lineage reclamation remains outside actor locks.
+sample_actor_cpu(Pid) :-
+    actor_key(Pid, Key),
+    with_mutex(node_subtree, charge_actor(Key)).
 
 forget_actor(Pid) :-
     actor_key(Pid, Key),

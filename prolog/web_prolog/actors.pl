@@ -127,6 +127,8 @@ Side-effect-style (all solutions are run via forall/2; no clauses = no-op):
   - hook_pid_activated(+Pid): the child thread has registered its pid.
   - hook_spawn_failed(+Pid): a local spawn aborted before activation.
   - hook_stop(+Pid): an actor is going down (cleanup mirrors).
+  - hook_pid_retired(+Pid): pid mappings have been removed; runs outside
+    registry/monitor locks, before the at-exit callback returns.
   - hook_admit_spawn(+LiveCount, +Options): spawn-admission control; a
     clause that throws rejects a local spawn (global concurrency cap).
 
@@ -183,6 +185,7 @@ Transactional triple (semidet prepare; commit/abort run via forall/2):
     hook_pid_activated/1,
     hook_spawn_failed/1,
     hook_stop/1,
+    hook_pid_retired/1,
     hook_spawn_prepare/3,
     hook_spawn_commit/2,
     hook_spawn_abort/1,
@@ -768,7 +771,8 @@ stop(Pid, Parent) :-
                     retractall(thread_pid(_, Pid))
                 ))
         )),
-    retractall(actor_public_namespace(Pid, _)).
+    retractall(actor_public_namespace(Pid, _)),
+    forall(hook_pid_retired(GlobalPid), true).
 
 
 %!  down_reason(+Pid, -Reason) is det.

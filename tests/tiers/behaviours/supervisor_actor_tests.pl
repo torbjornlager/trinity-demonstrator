@@ -20,7 +20,7 @@
 
 
 :- use_module('../../../prolog/web_prolog/supervisor_actor.pl').
-:- use_module('../../../prolog/web_prolog/actors.pl', [receive/1, receive/2, monitor/2, exit/1, exit/2]).
+:- use_module('../../../prolog/web_prolog/actors.pl', [receive/1, receive/2, monitor/2, demonitor/2, exit/1, exit/2]).
 :- use_module('../../../prolog/web_prolog/server_actor.pl', [server_request/3, server_halt/2]).
 
 :- use_module('supervisor_halt_tests.pl', []).
@@ -496,30 +496,35 @@ test_cascade_cleanup :-
         child(deep2, [start(forever)])
     ],
     InnerOpts = [strategy(one_for_one), intensity(3), period(10)],
-    supervisor_spawn([
-        child(inner_sup, [
-            start(start_sub_supervisor(InnerSpecs, InnerOpts)),
-            type(supervisor),
-            restart(permanent),
-            shutdown(infinity)
-        ])
-    ], OuterPid, [strategy(one_for_one), intensity(3), period(10),
-                  name(t16_sup), monitor(true)]),
-    sleep(0.3),
-    %% Get the inner supervisor's pid
-    supervisor_which_children(t16_sup, C1),
-    get_child_pid(inner_sup, C1, InnerPid),
-    assert_true(InnerPid \= undefined, 'inner sup should be running'),
-    monitor(InnerPid, InnerRef),
-    %% Kill the OUTER supervisor
-    exit(OuterPid, kill),
-    GotDown = got(false),
-    receive({
-        down(InnerPid, InnerRef, _Reason) ->
-            nb_setarg(1, GotDown, true)
-    }, [timeout(5)]),
-    arg(1, GotDown, InnerDown),
-    assert_eq(InnerDown, true, 'inner sup should be down after outer killed').
+    setup_call_cleanup(
+        supervisor_spawn([
+            child(inner_sup, [
+                start(start_sub_supervisor(InnerSpecs, InnerOpts)),
+                type(supervisor),
+                restart(permanent),
+                shutdown(infinity)
+            ])
+        ], OuterPid, [strategy(one_for_one), intensity(3), period(10),
+                      name(t16_sup), monitor(true)]),
+        ( sleep(0.3),
+          %% Get the inner supervisor's pid.
+          supervisor_which_children(t16_sup, C1),
+          get_child_pid(inner_sup, C1, InnerPid),
+          assert_true(InnerPid \= undefined, 'inner sup should be running'),
+          setup_call_cleanup(
+              monitor(InnerPid, InnerRef),
+              ( exit(OuterPid, kill),
+                receive({down(InnerPid, InnerRef, InnerReason) -> true},
+                        [timeout(5), on_timeout(fail)]),
+                assert_eq(InnerReason, kill, 'inner sup should be killed with outer'),
+                %% Spawn-time monitor(true) uses the pid as its reference.
+                receive({down(OuterPid, OuterPid, OuterReason) -> true},
+                        [timeout(5), on_timeout(fail)]),
+                assert_eq(OuterReason, kill, 'outer sup should be killed')
+              ),
+              demonitor(InnerRef, [flush]))
+        ),
+        demonitor(OuterPid, [flush])).
 
 
 %% 14. Server child halted via server_halt: permanent restarts.

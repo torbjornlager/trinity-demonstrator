@@ -397,6 +397,10 @@ validate_and_load_source_text(Profile, Module, SourceText0, SourceId) :-
     load_source_text_checked(SourceText, Module, SourceId).
 
 load_source_text_checked(SourceText, Module, SourceId) :-
+    % SWI treats a stream's source name as a file identity, independent of
+    % the destination module. Keep logical labels stable within one module,
+    % but distinct across overlapping temporary validation modules.
+    format(atom(PrivateSourceId), '~w_~w', [Module, SourceId]),
     sandbox_mode(Mode),
     load_source_text_mode_options(Mode, ModeOptions),
     append([ stream(Stream),
@@ -407,7 +411,7 @@ load_source_text_checked(SourceText, Module, SourceId) :-
            LoadOptions),
     setup_call_cleanup(
         open_chars_stream(SourceText, Stream),
-        load_files(Module:SourceId, LoadOptions),
+        load_files(Module:PrivateSourceId, LoadOptions),
         close(Stream)).
 
 load_source_text_mode_options(whitelist, [sandboxed(true)]) :-

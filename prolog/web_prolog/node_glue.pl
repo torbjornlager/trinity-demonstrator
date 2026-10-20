@@ -382,7 +382,7 @@ distribution:hook_ws_endpoint_override(NodeURL, WsURL) :-
 :- multifile actors:hook_check_spawn/1, actors:hook_check_exit/1,
              actors:hook_check_monitor/1, actors:hook_admit_spawn/3,
              actors:hook_deliver_message/3, actors:hook_message_consumed/0,
-             actors:hook_stop/1, actors:hook_spawn_failed/1,
+             actors:hook_stop/1, actors:hook_pid_retired/1, actors:hook_spawn_failed/1,
              distribution:hook_command_context/2.
 actors:hook_check_spawn(Options) :- node_lifetime:check_spawn(Options).
 actors:hook_check_exit(Pid) :- node_lifetime:check_exit(Pid).
@@ -391,8 +391,16 @@ actors:hook_admit_spawn(Pid, _, Options) :- node_lifetime:admit_actor(Pid, Optio
 actors:hook_deliver_message(Pid, Thread, Message) :-
     node_lifetime:deliver_message(Pid, Thread, Message).
 actors:hook_message_consumed :- node_lifetime:message_consumed.
-actors:hook_stop(Pid) :- node_lifetime:forget_actor(Pid).
-actors:hook_spawn_failed(Pid) :- node_lifetime:forget_actor(Pid).
+actors:hook_stop(Pid) :- node_lifetime:sample_actor_cpu(Pid).
+actors:hook_pid_retired(Pid) :- node_lifetime:forget_actor(Pid).
+% A failure after activation can leave a live provisional child for its
+% creator to reclaim. Keep its authority until normal pid retirement; only
+% reservations which never activated can be forgotten immediately.
+actors:hook_spawn_failed(Pid) :-
+    (   actors:resolve_actor_thread(Pid, _)
+    ->  node_lifetime:sample_actor_cpu(Pid)
+    ;   node_lifetime:forget_actor(Pid)
+    ).
 distribution:hook_command_context(Command0, Command) :-
     node_lifetime:command_context(Command0, Command).
 

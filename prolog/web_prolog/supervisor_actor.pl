@@ -51,6 +51,7 @@ comment block below.
 
 :- use_module(actors).
 :- use_module(server_actor).
+:- use_module(supervisor_startup, [with_startup_scope/1, remember_monitor/2]).
 :- use_module(isolation, [execution_source_module/2]).
 
 :- meta_predicate
@@ -293,27 +294,22 @@ supervisor_stop(Sup) :-
 %% Synchronous call infrastructure
 %% -------------------------------------------------------------------
 
+% Own the private wait monitor across sending and every exit from receive.
+% Flushing this reference leaves application monitors and late replies alone.
 sup_call(Sup, Request, Reply) :-
     self(Self),
     make_ref(Ref),
-    monitor(Sup, MonRef),
-    Sup ! '$sup'(Self, Ref, Request),
-    Replied = replied(false),
-    receive({
-        Ref-Reply0 ->
-            demonitor(MonRef),
-            nb_setarg(1, Replied, true),
-            Reply = Reply0
-        ;
-        down(_, MonRef, Reason) ->
-            nb_setarg(1, Replied, true),
-            throw(supervisor_down(Reason))
-    }, [timeout(10)]),
-    (   arg(1, Replied, true)
-    ->  true
-    ;   demonitor(MonRef),
-        throw(supervisor_call_timeout(Sup, Request))
-    ).
+    setup_call_cleanup(
+        monitor(Sup, MonRef),
+        ( Sup ! '$sup'(Self, Ref, Request),
+          receive({
+              Ref-Reply0 -> Reply = Reply0
+          ;
+              down(_, MonRef, Reason) -> throw(supervisor_down(Reason))
+          }, [timeout(10),
+              on_timeout(throw(supervisor_call_timeout(Sup, Request)))])
+        ),
+        demonitor(MonRef, [flush])).
 
 % A normal down can overtake the acknowledgement on another connection.
 % Only halt waits tolerate that ordering; retain one deadline and require ack.
@@ -353,19 +349,15 @@ sup_reply(From, Ref, Reply) :-
 %% -------------------------------------------------------------------
 
 sup_init(Specs, State0) :-
-    (   start_children(Specs, State0, State)
+    (   with_startup_scope(start_children(Specs, State0, State))
     ->  sup_loop(State)
     ;   exit(init_failed)
     ).
 
 start_children([], State, State).
 start_children([Spec | Rest], State0, State) :-
-    (   do_start_child(Spec, State0, State1)
-    ->  start_children(Rest, State1, State)
-    ;   sup(_, _, _, Children, _) = State0,
-        shutdown_children(Children),
-        fail
-    ).
+    do_start_child(Spec, State0, State1),
+    start_children(Rest, State1, State).
 
 
 %% -------------------------------------------------------------------
@@ -377,8 +369,9 @@ do_start_child(spec(Id, Start, Restart, Shutdown, Type),
                sup(Str, MR, MT, Children1, RL)) :-
     \+ member(ch(Id, _, _), Children),
     Spec = spec(Id, Start, Restart, Shutdown, Type),
-    do_spawn_child(Start, Id, Pid),
-    monitor(Pid, _),
+    supervisor_startup:start_child(Spec, Start, Id, Pid),
+    monitor(Pid, MonitorRef),
+    remember_monitor(Pid, MonitorRef),
     append(Children, [ch(Id, Pid, Spec)], Children1),
     debug(supervisor, '[sup] Started ~w  pid=~w', [Id, Pid]).
 
@@ -712,11 +705,11 @@ handle_call(start_child(NormSpec), From, Ref, State0, State) :-
     (   member(ch(Id, _, _), Children)
     ->  sup_reply(From, Ref, error(already_present)),
         State = State0
-    ;   (   do_start_child(NormSpec, State0, State)
-        ->  sup_reply(From, Ref, ok)
-        ;   sup_reply(From, Ref, error(start_failed)),
-            State = State0
-        )
+    ;   catch((with_startup_scope(do_start_child(NormSpec, State0, NewState))
+               -> Result=ok ; Result=error(start_failed)),
+              Error, startup_error_reply(Error, Result)),
+        (Result == ok -> State=NewState ; State=State0),
+        sup_reply(From, Ref, Result)
     ).
 
 handle_call(terminate_child(Id), From, Ref, State0, State) :-
@@ -788,6 +781,10 @@ handle_call(stop, From, Ref, State, State) :-
     self(Self),
     Self ! '$sup_exit'.
 
+
+startup_error_reply(Error, _) :-
+    actors:guard_control_exception(Error), !, throw(Error).
+startup_error_reply(Error, error(Error)).
 
 ch_to_info(ch(Id, Pid, spec(_, _, Restart, _, Type)),
            info(Id, Pid, Type, Restart)).

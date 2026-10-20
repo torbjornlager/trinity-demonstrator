@@ -56,6 +56,7 @@ behaviours.
 | [term_display.pl](term_display.pl) | User-facing term rendering. |
 | [server_actor.pl](server_actor.pl) | Generic server (`gen_server`-style) behaviour: synchronous request/reply, hot code swap, fail-fast monitoring. |
 | [supervisor_actor.pl](supervisor_actor.pl) | OTP-style supervisor: start/monitor/restart child actors by spec and strategy. |
+| [supervisor_startup.pl](supervisor_startup.pl) | Provisional-child journal and shutdown-policy rollback for initial startup and dynamic additions. |
 | [parallel.pl](parallel.pl) | Parallel conjunction: run goals concurrently, fail fast. |
 | [first_solution.pl](first_solution.pl) | Race alternative goals and return the first successful solution. |
 | [statechart_model.pl](statechart_model.pl) | Statechart model parsing. |
@@ -262,15 +263,51 @@ swept during client teardown. Promise workers, timers and collector claims are
 managed separately from actor lifetimes. These mechanics implement the public
 ownership rules; trusted standalone use retains its existing sharing model.
 
-Supervisor request waits are not all at the same cleanup level: the native halt
-wait has all-exit private-monitor cleanup and handles normal termination arriving
-before acknowledgement within the original deadline. Ordinary native SWI
-supervisor request waits and detached-child rollback retain the gaps called out
-in the shared manual. The Trealla/browser scoped journals should not be assumed
-to exist in this runtime.
+Local actor ownership is retained through the registry/monitor pid-retirement
+transaction. The pre-retirement stop hook takes the final CPU sample; a separate
+post-retirement hook removes ownership, mailbox and CPU records and reclaims
+unused lineage outside the actor locks. Worker cleanup can therefore stop a
+worker during shutdown without observing a resolvable but unowned pid. Exit
+authority checks remain unchanged, including rejection of live actors in another
+owner tree. A controlled retirement-barrier regression covers this ordering.
+An activated local spawn that subsequently fails also retains its ownership
+until pid retirement, allowing its creator to reclaim the provisional actor.
+A failed reservation that never activated is still reclaimed immediately.
+
+Ordinary supervisor requests scope their private monitor with
+`setup_call_cleanup/3`, covering send exceptions, reply mismatches, interruption,
+supervisor death and the existing ten-second timeout after sending. Cleanup uses
+`demonitor(Ref, [flush])`; it preserves application monitors, unrelated messages
+and late replies. The native halt wait has its own all-exit cleanup and handles
+normal termination arriving before acknowledgement within the original deadline.
+Initial startup and dynamic additions now use the private journal in
+`supervisor_startup.pl`. Local admission records provisional pids before
+activation; acknowledged remote pids are recorded during the protected creation
+handoff. Monitor references are tracked separately from copied rollback specs;
+live specs and their variable sharing remain unchanged. Commit releases the
+journal. Failure rolls it back in reverse order with the child's shutdown policy,
+a private cleanup monitor and reference-specific flushing. Cleanup attempts all
+entries while retaining the original startup outcome; committed actor exits keep
+normal parent-link containment instead of waiting on a dying mailbox. Dynamic
+startup exceptions become error replies without discarding existing state.
+Explicit respawn, automatic restart failures and intensity exhaustion still use
+the older paths and retain the gaps described in the shared manual. Unknown
+remote creation outcomes and remote cancellation remain separate work.
 
 
 ### Namespace admission, source setup and promise disposal
+
+Sandbox validation loads streamed source under an identity scoped to its unique
+temporary module, retaining the logical source label and option index within
+that scope. SWI's loader tracks source identities independently of destination
+modules: shared names such as `sandbox_source_1` previously collided when
+validations overlapped during nested startup. The common loading helper scopes
+both numbered option sources and the unnumbered goal/source validation path.
+Prechecks, whitelist loading options, source order and same-module reloading are
+unchanged. The temporary-module lifetime and stream cleanup remain the existing
+`setup_call_cleanup/3` paths. Regression tests keep two modules live together in
+both sandbox modes, and check isolation, reloading, ordered source options,
+forbidden directives and module reclamation after success and exceptions.
 
 Public WebSocket endpoints validate client creation options before preparing
 source or reserving actor slots, then attach their own monitor and I/O metadata.
@@ -406,3 +443,15 @@ execution.
 Timed transitions and explicit event deferral have implementations and stated
 semantics. The research agenda retains the separate task of turning those and
 the rest of the processing model into a portable, testable contract.
+
+### Nested supervisor specifications at query admission
+
+The external ACTOR Behaviours BH-009 probe passes when its nested child list
+is explicit in the submitted specification. The formerly reported timeout was
+an admission-time `instantiation_error`, hidden by the external harness waiting
+only for success. A list variable bound by an earlier conjunction is still
+unbound during static checking: `supervisor_child_specs_calls/3` exposes it as
+an unknown executable meta-call, which admission rejects. Trealla accepts that
+runtime-bound form. Supporting it here needs runtime validation of the resolved
+child starts before execution; simply skipping the static check would be
+insufficient. No supervisor lifecycle code changed for this investigation.

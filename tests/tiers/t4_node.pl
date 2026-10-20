@@ -39,6 +39,7 @@ http_status(URL, Status) :-
 
 :- user:load_files('node/goal_walker_tests.pl', []).
 :- use_module('node/public_goal_guard_tests.pl', []).
+:- use_module('node/sandbox_source_names_tests.pl', []).
 :- use_module('node/promise_yield_tests.pl', []).
 :- use_module('node/promise_lifecycle_tests.pl', []).
 :- use_module('node/promise_ownership_tests.pl', []).
@@ -50,7 +51,11 @@ http_status(URL, Status) :-
 :- use_module('supervisor_child_spec_tests.pl', []).
 :- use_module('named_creation_tests.pl', []).
 :- use_module('server_promise_cleanup_tests.pl', []).
+:- use_module('supervisor_request_cleanup_tests.pl', []).
+:- use_module('supervisor_startup_tests.pl', []).
 :- use_module('worker_scope_tests.pl', []).
+:- use_module('node/worker_ownership_cleanup_tests.pl', []).
+:- use_module('node/supervisor_startup_ownership_tests.pl', []).
 :- use_module('node/remote_alias_cleanup_tests.pl', []).
 :- use_module('node/remote_named_creation_tests.pl', []).
 :- use_module('node/toplevel_correlation_transport_tests.pl', []).
@@ -66,12 +71,12 @@ http_status(URL, Status) :-
 
 run_tier :-
     layer_honesty,
-    run_tests([ lifetime_authority, node, public_goal_guard, promise_yield, promise_lifecycle, promise_ownership, rpc_options, native_paging,
+    run_tests([ lifetime_authority, node, public_goal_guard, sandbox_source_names, promise_yield, promise_lifecycle, promise_ownership, rpc_options, native_paging,
                 toplevel_synch, toplevel_correlation_transport,
                 spawn_options, spawn_source_options,
                 wrapper_options,
                 supervisor_child_specs,
-                server_promise_cleanup, worker_scope,
+                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_startup_ownership, worker_scope, worker_ownership_cleanup,
                 named_creation, remote_alias_cleanup, remote_named_creation, namespace_teardown,
                 goal_walker,
                 generic_actor_api,
