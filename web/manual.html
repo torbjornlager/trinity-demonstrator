@@ -759,7 +759,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>supervisor_spawn_child(+Pid, +ChildSpec, -Reply) is det.</pre>
     <p>Dynamically adds and starts one child. On success, <code>Reply</code> is <code>ok</code>. If a child with the same <code>Id</code> is already present, it is <code>error(already_present)</code>. If startup fails, it is <code>error(start_failed)</code>.</p>
-    <p>The child specification is validated before sending. In Trealla and SWI-WASM a startup exception returns <code>error(Error)</code>; failed setup rolls back only that addition and leaves existing children and state intact. A failed id remains available for retry. The browser supervisor also validates directly received additions. See <a href="#supervisor_spawn/2-3">supervisor_spawn/2-3</a> for rollback qualifications.</p>
+    <p>The child specification is validated before sending. A startup exception returns <code>error(Error)</code>; failed setup rolls back only that addition and leaves existing children and state intact. A failed id remains available for retry. The browser supervisor also validates directly received additions. See <a href="#supervisor_spawn/2-3">supervisor_spawn/2-3</a> for rollback qualifications.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_terminate_child/3">
@@ -769,7 +769,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>supervisor_terminate_child(+Pid, +Id, -Reply) is det.</pre>
     <p>Stops child <code>Id</code> but keeps its specification. <code>Reply</code> is <code>ok</code> or <code>error(not_found)</code>.</p>
-    <p>The stopped specification retains its position with pid <code>undefined</code>; terminating an already stopped child returns <code>ok</code>. Trealla and SWI-WASM apply its shutdown policy and wait for termination before replying.</p>
+    <p>The stopped specification retains its position with pid <code>undefined</code>; terminating an already stopped child returns <code>ok</code>. The supervisor applies its shutdown policy and waits for termination before replying.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_delete_child/3">
@@ -788,7 +788,7 @@ supervisor_spawn(+ChildSpecs, -Pid, +Options) is det.</pre>
     </div>
     <pre>supervisor_respawn_child(+Pid, +Id, -Reply) is det.</pre>
     <p>Restarts a previously terminated child from its stored specification. <code>Reply</code> is either <code>ok(NewPid)</code>, <code>error(running)</code>, <code>error(not_found)</code>, or <code>error(start_failed)</code>.</p>
-    <p>Trealla and SWI-WASM return <code>error(Error)</code> for a startup exception and retain the inactive specification after a failed replacement. Native success is <code>ok(NewPid)</code>; browser success is <code>ok</code>, with the new pid available through <code>supervisor_which_children/2</code>. Browser replacements retain the record’s original position.</p>
+    <p>A startup exception returns <code>error(Error)</code>; a failed replacement retains the inactive specification. Native success is <code>ok(NewPid)</code>; browser success is <code>ok</code>, with the new pid available through <code>supervisor_which_children/2</code>. Browser replacements retain the record’s original position.</p>
 </article>
 
 <article class="predicate-entry" id="supervisor_which_children/2">

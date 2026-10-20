@@ -57,6 +57,7 @@ http_status(URL, Status) :-
 :- use_module('supervisor_intensity_tests.pl', []).
 :- use_module('worker_scope_tests.pl', []).
 :- use_module('node/worker_ownership_cleanup_tests.pl', []).
+:- use_module('node/zero_poll_accounting_tests.pl', []).
 :- use_module('node/supervisor_startup_ownership_tests.pl', []).
 :- use_module('node/supervisor_restart_ownership_tests.pl', []).
 :- use_module('node/remote_alias_cleanup_tests.pl', []).
@@ -79,7 +80,7 @@ run_tier :-
                 spawn_options, spawn_source_options,
                 wrapper_options,
                 supervisor_child_specs,
-                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, supervisor_startup_ownership, supervisor_restart_ownership, worker_scope, worker_ownership_cleanup,
+                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, supervisor_startup_ownership, supervisor_restart_ownership, worker_scope, worker_ownership_cleanup, zero_poll_accounting,
                 named_creation, remote_alias_cleanup, remote_named_creation, namespace_teardown,
                 goal_walker,
                 generic_actor_api,

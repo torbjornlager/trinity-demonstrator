@@ -306,6 +306,34 @@ reason intact while allowing the remaining cleanup attempts. Unknown
 remote creation outcomes and remote cancellation remain separate work.
 
 
+Public WebSocket checks traced the apparent supervisor replacement-cleanup
+timeouts to final monitor flushing in the caller. SWI 10.1.17 can loop in
+`thread_get_message/3` with `timeout(0)` when a signal is pending inside
+signal-masked cleanup. The native actor receive path now peeks at its own
+mailbox and reads only when a message is available, protecting the pair from
+signal-handler re-entry with `sig_atomic/1`. The actor thread is the
+sole consumer of that mailbox. Deferred selection, one-sided matching,
+control-exception preservation, body alternatives and mailbox accounting
+continue through the existing scan path.
+
+This shortcut covers integer/float zero with the documented receive options.
+Normal finite/negative waits, malformed lists, mixed duplicate timeouts and
+host-specific option extensions keep the original native option handling.
+It is not a general workaround for every timed host wait in a protected
+context. Pending-signal regressions run in watchdog-protected subprocesses;
+a node-level regression checks that deferred messages keep their quota and
+consumed/flushed messages release it exactly once. The public repeated-cleanup
+and three replacement-failure diagnostics now pass, including thirty further
+replacement checks (ten per strategy). The runtime-bound nested-specification
+admission difference remains separate.
+
+The standalone [upstream draft](../../docs/upstream/swi-zero-time-poll-pending-signal.md)
+and [reproducer](../../docs/upstream/repro-zero-time-poll.pl) require no Web Prolog
+code and have not been submitted. Shared conformance coverage and dated raw
+results remain in `trinity-conformance` under `profiles/actor-supervisors-0.1.md`
+and `reports/2026-10-20-zero-poll-repair.md`.
+
+
 ### Namespace admission, source setup and promise disposal
 
 Sandbox validation loads streamed source under an identity scoped to its unique

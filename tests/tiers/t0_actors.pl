@@ -17,10 +17,11 @@
 :- use_module('../../prolog/web_prolog/actors.pl').
 :- use_module(library(plunit)).
 :- use_module('spawn_options_tests.pl', []).
+:- use_module('zero_poll_tests.pl', []).
 
 run_tier :-
     layer_honesty,
-    run_tests([ t0_receive,
+    run_tests([ t0_receive, zero_poll,
                 spawn_options,
                 t0_actors,
                 t0_postmortem,

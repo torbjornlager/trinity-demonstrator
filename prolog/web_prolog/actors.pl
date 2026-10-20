@@ -1542,7 +1542,7 @@ receive(Mailbox, Clauses, Options) :-
 % escapes from a guard therefore leaves the message in the mailbox, in its
 % original position.
 receive_scan(Mailbox, Clauses, GetOptions, Options) :-
-    (   thread_get_message(Mailbox, Msg, GetOptions)
+    (   receive_message(Mailbox, Msg, GetOptions)
     ->  assertz(deferred(Msg), Ref),
         (   select_body(Clauses, Msg, Module, Body)
         ->  erase(Ref),
@@ -1554,6 +1554,26 @@ receive_scan(Mailbox, Clauses, GetOptions, Options) :-
         clauses_module(Clauses, Module),
         call(Module:Goal)
     ).
+
+% A zero-time poll must not enter a timed wait. SWI 10.1.17 can retry
+% forever if a signal is pending while cleanup masks signal handling, even
+% with timeout(0). Only this thread consumes its actor mailbox, so a peek
+% followed by an unbounded read cannot wait for a message that was absent.
+% Protect the pair from signal-handler re-entry between peeking and reading.
+% Restrict the shortcut to the documented receive options; host extensions,
+% mixed duplicate timeouts and malformed lists retain native option handling.
+receive_message(Mailbox, Msg, Options) :-
+    (   is_list(Options),
+        memberchk(timeout(Seconds), Options),
+        number(Seconds), Seconds =:= 0,
+        maplist(zero_poll_option, Options)
+    ->  sig_atomic((thread_peek_message(Mailbox, _),
+                    thread_get_message(Mailbox, Msg)))
+    ;   thread_get_message(Mailbox, Msg, Options)
+    ).
+
+zero_poll_option(timeout(Seconds)) :- number(Seconds), Seconds =:= 0.
+zero_poll_option(on_timeout(_)).
 
 %!  clauses_module(+Clauses, -Module) is det.
 %
