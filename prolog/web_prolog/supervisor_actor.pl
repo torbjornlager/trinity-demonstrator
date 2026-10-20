@@ -519,15 +519,17 @@ handle_exit(Pid, Reason, State0, State) :-
         debug(supervisor, '[sup] Child ~w (~w) exited: ~w',
               [Id, Pid, Reason]),
         (   should_restart(Restart, Reason)
-        ->  check_intensity(MaxR, MaxT, RL, RL1),
-            %% Mark the crashed child as dead so that
-            %% shutdown_running (used by one_for_all and
+        ->  %% Mark the crashed child as dead so that
+            %% group shutdown (used by one_for_all and
             %% rest_for_one) will skip it — its down message
             %% has already been consumed.
             replace_child(Id, ch(Id, undefined, Spec),
                           Children, MarkedChildren),
-            apply_strategy(Strategy, Id, Spec, MarkedChildren,
-                           MaxR, MaxT, RL1, State)
+            (   check_intensity(MaxR, MaxT, RL, RL1)
+            ->  restart_attempt(Strategy, Id, Spec, MarkedChildren,
+                                MaxR, MaxT, RL1, State)
+            ;   intensity_exhausted(MarkedChildren)
+            )
         ;   debug(supervisor, '[sup] Not restarting ~w', [Id]),
             (   Restart == temporary
             ->  select(ch(Id, Pid, _), Children, Children1)
@@ -562,9 +564,15 @@ check_intensity(MaxR, MaxT, RL0, RL) :-
     (   N >= MaxR
     ->  debug(supervisor, '[sup] Intensity exceeded: ~w restarts in ~ws',
               [N, MaxT]),
-        exit(shutdown)
+        fail
     ;   RL = [Now | Recent]
     ).
+
+% Decide exhaustion before starting any replacement, and clean up while the
+% supervisor mailbox is still usable. Preserve the public shutdown reason.
+intensity_exhausted(Children) :-
+    supervisor_startup:cleanup_children(Children),
+    (actor_terminating -> abort ; exit(shutdown)).
 
 is_recent(Cutoff, T) :- T > Cutoff.
 
@@ -573,11 +581,38 @@ is_recent(Cutoff, T) :- T > Cutoff.
 %% Restart strategies
 %% -------------------------------------------------------------------
 
+% Each strategy owns its provisional replacements until the entire attempt
+% commits. Intensity checking remains outside this scope.
+restart_attempt(Strategy, Id, Spec, Children, MaxR, MaxT, RL, State) :-
+    catch((with_startup_scope(
+               apply_strategy(Strategy, Id, Spec, Children, MaxR, MaxT, RL, State))
+           -> true ; throw(restart_failed(Id, start_failed))),
+          Error, restart_attempt_failed(Id, Children, Error)).
+
+restart_attempt_failed(_, _, Error) :-
+    actors:guard_control_exception(Error), !, throw(Error).
+restart_attempt_failed(_, _, _) :- actor_terminating, !, abort.
+restart_attempt_failed(Id, Children, Error) :-
+    supervisor_startup:cleanup_children(Children),
+    (actor_terminating -> abort ; true),
+    (Error = restart_failed(_, _) -> Reason=Error ; Reason=restart_failed(Id, Error)),
+    exit(Reason).
+
+start_replacement(Spec, Pid) :-
+    Spec=spec(Id, Start, _, _, _),
+    supervisor_startup:start_child(Spec, Start, Id, Pid),
+    monitor(Pid, MonitorRef), remember_monitor(Pid, MonitorRef).
+
+restart_child_record(Id, Spec, Pid) :-
+    catch((start_replacement(Spec, Pid) -> true ; throw(start_failed)),
+          Error, restart_child_error(Id, Error)).
+restart_child_error(_, Error) :-
+    actors:guard_control_exception(Error), !, throw(Error).
+restart_child_error(Id, Error) :- throw(restart_failed(Id, Error)).
+
 apply_strategy(one_for_one, Id, Spec, Children,
                MaxR, MaxT, RL, State) :-
-    spec(_, Start, _, _, _) = Spec,
-    do_spawn_child(Start, Id, NewPid),
-    monitor(NewPid, _),
+    restart_child_record(Id, Spec, NewPid),
     replace_child(Id, ch(Id, NewPid, Spec), Children, Children1),
     debug(supervisor, '[sup] Restarted ~w  pid=~w (one_for_one)',
           [Id, NewPid]),
@@ -586,7 +621,7 @@ apply_strategy(one_for_one, Id, Spec, Children,
 apply_strategy(one_for_all, _Id, _Spec, AllChildren,
                MaxR, MaxT, RL, State) :-
     debug(supervisor, '[sup] one_for_all: restarting all', []),
-    shutdown_running(AllChildren),
+    supervisor_startup:stop_children(AllChildren),
     restart_all(AllChildren, [], Children1),
     State = sup(one_for_all, MaxR, MaxT, Children1, RL).
 
@@ -594,7 +629,7 @@ apply_strategy(rest_for_one, Id, _Spec, AllChildren,
                MaxR, MaxT, RL, State) :-
     split_at_child(Id, AllChildren, Before, CrashedAndAfter),
     debug(supervisor, '[sup] rest_for_one: restarting ~w and later', [Id]),
-    shutdown_running(CrashedAndAfter),
+    supervisor_startup:stop_children(CrashedAndAfter),
     restart_all(CrashedAndAfter, [], Restarted),
     append(Before, Restarted, Children1),
     State = sup(rest_for_one, MaxR, MaxT, Children1, RL).
@@ -607,9 +642,7 @@ apply_strategy(rest_for_one, Id, _Spec, AllChildren,
 restart_all([], Acc, Children) :-
     reverse(Acc, Children).
 restart_all([ch(Id, _, Spec) | Rest], Acc, Children) :-
-    spec(_, Start, _, _, _) = Spec,
-    do_spawn_child(Start, Id, NewPid),
-    monitor(NewPid, _),
+    restart_child_record(Id, Spec, NewPid),
     restart_all(Rest, [ch(Id, NewPid, Spec) | Acc], Children).
 
 
@@ -742,15 +775,15 @@ handle_call(delete_child(Id), From, Ref, State0, State) :-
 handle_call(restart_child(Id), From, Ref, State0, State) :-
     sup(Str, MR, MT, Children, RL) = State0,
     (   member(ch(Id, undefined, Spec), Children)
-    ->  spec(_, Start, _, _, _) = Spec,
-        (   do_spawn_child(Start, Id, NewPid)
-        ->  monitor(NewPid, _),
-            replace_child(Id, ch(Id, NewPid, Spec), Children, Children1),
-            sup_reply(From, Ref, ok(NewPid)),
-            State = sup(Str, MR, MT, Children1, RL)
-        ;   sup_reply(From, Ref, error(start_failed)),
-            State = State0
-        )
+    ->  catch((with_startup_scope(start_replacement(Spec, NewPid))
+               -> Result=ok(NewPid) ; Result=error(start_failed)),
+              Error, startup_error_reply(Error, Result)),
+        (   Result=ok(Pid)
+        ->  replace_child(Id, ch(Id, Pid, Spec), Children, Children1),
+            State=sup(Str, MR, MT, Children1, RL)
+        ;   State=State0
+        ),
+        sup_reply(From, Ref, Result)
     ;   member(ch(Id, Pid, _), Children), Pid \= undefined
     ->  sup_reply(From, Ref, error(running)),
         State = State0

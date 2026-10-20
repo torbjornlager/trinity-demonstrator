@@ -1,11 +1,12 @@
 :- module(supervisor_startup,
-          [with_startup_scope/1, start_child/4, remember_monitor/2]).
+          [with_startup_scope/1, start_child/4, remember_monitor/2,
+           stop_children/1, cleanup_children/1]).
 
 /** <module> Provisional children during supervisor startup
 
-The journal owns only the current initial-start or dynamic-addition attempt.
+The journal owns only the current startup, dynamic-addition or replacement attempt.
 Copies of specifications are for rollback; live state and variable sharing are
-not replaced by journal copies. Restart paths do not enter this scope.
+not replaced by journal copies. Successful attempts release their journal.
 */
 :- use_module(actors).
 :- use_module(library(gensym)).
@@ -110,3 +111,23 @@ force_stop(Pid, Policy, Ref) :-
 
 cleanup_error(Error) :- actors:guard_control_exception(Error), !, throw(Error).
 cleanup_error(_).
+
+% Successful group restarts retain forward stopping order. Their old pids may
+% already be retired when a later replacement fails; fresh private monitors
+% let failure cleanup handle both live and retired entries without consuming
+% application down messages or waiting on a previously consumed notification.
+stop_children([]).
+stop_children([ch(_, undefined, _)|Rest]) :- !, stop_children(Rest).
+stop_children([ch(_, Pid, Spec)|Rest]) :-
+    rollback_child(owned(Pid, Spec, none)), stop_children(Rest).
+
+cleanup_children(Children) :-
+    reverse(Children, Reverse), cleanup_children_(Reverse).
+cleanup_children_([]).
+cleanup_children_([ch(_, Pid, Spec)|Rest]) :-
+    (   Pid == undefined
+    ->  true
+    ;   catch((rollback_child(owned(Pid, Spec, none)) -> true ; true),
+              Error, cleanup_error(Error))
+    ),
+    cleanup_children_(Rest).

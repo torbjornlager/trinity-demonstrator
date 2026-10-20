@@ -35,6 +35,8 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 :- use_module('server_promise_cleanup_tests.pl', []).
 :- use_module('supervisor_request_cleanup_tests.pl', []).
 :- use_module('supervisor_startup_tests.pl', []).
+:- use_module('supervisor_restart_tests.pl', []).
+:- use_module('supervisor_intensity_tests.pl', []).
 :- use_module('worker_scope_tests.pl', []).
 
 run_tier :-
@@ -42,7 +44,7 @@ run_tier :-
     run_tests([ server_actor,
                 wrapper_options,
                 supervisor_child_specs,
-                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, worker_scope,
+                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, worker_scope,
                 named_creation,
                 supervisor,
                 parallel,

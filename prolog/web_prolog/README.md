@@ -56,7 +56,7 @@ behaviours.
 | [term_display.pl](term_display.pl) | User-facing term rendering. |
 | [server_actor.pl](server_actor.pl) | Generic server (`gen_server`-style) behaviour: synchronous request/reply, hot code swap, fail-fast monitoring. |
 | [supervisor_actor.pl](supervisor_actor.pl) | OTP-style supervisor: start/monitor/restart child actors by spec and strategy. |
-| [supervisor_startup.pl](supervisor_startup.pl) | Provisional-child journal and shutdown-policy rollback for initial startup and dynamic additions. |
+| [supervisor_startup.pl](supervisor_startup.pl) | Provisional-child journal and shutdown-policy rollback for startup, dynamic additions and replacement attempts. |
 | [parallel.pl](parallel.pl) | Parallel conjunction: run goals concurrently, fail fast. |
 | [first_solution.pl](first_solution.pl) | Race alternative goals and return the first successful solution. |
 | [statechart_model.pl](statechart_model.pl) | Statechart model parsing. |
@@ -280,7 +280,7 @@ supervisor death and the existing ten-second timeout after sending. Cleanup uses
 `demonitor(Ref, [flush])`; it preserves application monitors, unrelated messages
 and late replies. The native halt wait has its own all-exit cleanup and handles
 normal termination arriving before acknowledgement within the original deadline.
-Initial startup and dynamic additions now use the private journal in
+Initial startup, dynamic additions and replacement attempts use the private journal in
 `supervisor_startup.pl`. Local admission records provisional pids before
 activation; acknowledged remote pids are recorded during the protected creation
 handoff. Monitor references are tracked separately from copied rollback specs;
@@ -290,8 +290,19 @@ a private cleanup monitor and reference-specific flushing. Cleanup attempts all
 entries while retaining the original startup outcome; committed actor exits keep
 normal parent-link containment instead of waiting on a dying mailbox. Dynamic
 startup exceptions become error replies without discarding existing state.
-Explicit respawn, automatic restart failures and intensity exhaustion still use
-the older paths and retain the gaps described in the shared manual. Unknown
+Explicit respawn failures retain the inactive specification and existing siblings
+for retry. Automatic restart failures roll back provisional replacements, then
+stop remaining recorded children in reverse order and exit with
+`restart_failed(Id, Reason)`, naming the replacement that failed. Group restarts
+retain their forward stopping order on the successful path. Fresh private
+cleanup monitors handle both live and already retired original pids without
+consuming application notifications. Intensity exhaustion uses the same reverse
+policy cleanup before committing
+`exit(shutdown)`. The exited child is marked inactive before checking the budget;
+no excess replacement is started. Restart timestamps, strict window boundary
+and permitted restart count are unchanged. Private cleanup monitors preserve
+application notifications, and ordinary cleanup errors leave the shutdown
+reason intact while allowing the remaining cleanup attempts. Unknown
 remote creation outcomes and remote cancellation remain separate work.
 
 

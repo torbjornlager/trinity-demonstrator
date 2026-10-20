@@ -53,9 +53,12 @@ http_status(URL, Status) :-
 :- use_module('server_promise_cleanup_tests.pl', []).
 :- use_module('supervisor_request_cleanup_tests.pl', []).
 :- use_module('supervisor_startup_tests.pl', []).
+:- use_module('supervisor_restart_tests.pl', []).
+:- use_module('supervisor_intensity_tests.pl', []).
 :- use_module('worker_scope_tests.pl', []).
 :- use_module('node/worker_ownership_cleanup_tests.pl', []).
 :- use_module('node/supervisor_startup_ownership_tests.pl', []).
+:- use_module('node/supervisor_restart_ownership_tests.pl', []).
 :- use_module('node/remote_alias_cleanup_tests.pl', []).
 :- use_module('node/remote_named_creation_tests.pl', []).
 :- use_module('node/toplevel_correlation_transport_tests.pl', []).
@@ -76,7 +79,7 @@ run_tier :-
                 spawn_options, spawn_source_options,
                 wrapper_options,
                 supervisor_child_specs,
-                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_startup_ownership, worker_scope, worker_ownership_cleanup,
+                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, supervisor_startup_ownership, supervisor_restart_ownership, worker_scope, worker_ownership_cleanup,
                 named_creation, remote_alias_cleanup, remote_named_creation, namespace_teardown,
                 goal_walker,
                 generic_actor_api,
