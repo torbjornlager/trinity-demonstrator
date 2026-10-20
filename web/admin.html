@@ -921,6 +921,7 @@
             <div class="runtime-title">Resource Ceilings &amp; Log Rotation</div>
             <button class="config-help-button" type="button" data-help-id="resource_ceilings" aria-label="Help for Resource Ceilings and Log Rotation">?</button>
           </div>
+          <p>Callers choose result-page sizes with <code>limit(N)</code>. Configured resource limits may stop a computation; they do not silently reduce its page size.</p>
           <div class="config-grid">
             <div class="field">
               <label for="config-max-actors" class="field-label-row"><span>Max Actors</span><button class="config-help-button" type="button" data-help-id="max_actors" aria-label="Help for Max Actors">?</button></label>
@@ -1253,10 +1254,10 @@
           max_call_requests_per_window: "Maximum number of /call requests one principal may issue during one rate window. Use it to throttle rapid stateless querying.",
           max_session_spawns_per_window: "Maximum number of session spawns one principal may request during one rate window. This limits repeated toplevel_spawn churn.",
           max_ws_commands_per_window: "Maximum number of WebSocket commands one principal may send during one rate window. Use it to contain high-rate stateful traffic.",
-          resource_ceilings: "Resource ceilings and log rotation are startup-configured and read-only here - set them with node/2 options or the WP_* environment variables. 0 means unlimited / off.",
+          resource_ceilings: "Resource ceilings and log rotation are startup-configured and read-only here - set them with node/2 options or the WP_* environment variables. 0 means unlimited / off. Result-page sizes follow the caller's limit(N); there is no owner solution-count cap.",
           max_actors: "Global cap on the number of live actors on this node (backpressure). A spawn beyond the cap is refused with resource_error(actors). 0 = unlimited.",
           max_call_inferences: "Per-/call inference ceiling. Bounds a single query's work so a fast-but-infinite goal (e.g. between(1, inf, _), fail) cannot hog the node past the wall-clock timeout. 0 = unlimited.",
-          max_actor_stack_bytes: "Per-actor thread stack cap in bytes, applied at spawn. With Max Actors this bounds worst-case node memory (roughly Max Actors x this value). 0 = SWI's default (about 1 GiB per thread).",
+          max_actor_stack_bytes: "Per-actor thread stack cap in bytes, applied at spawn. This does not bound total node memory or response bytes. 0 = SWI's default (about 1 GiB per thread).",
           max_interaction_log_bytes: "Rotate the durable interaction/audit JSONL once it reaches this size in bytes. 0 = no rotation (the file can grow unbounded).",
           max_interaction_log_backups: "How many rotated interaction-log files to keep (interactions.jsonl.1 ... .N) after each rotation.",
           security_posture: "Security and operations settings configured outside the editable Config form (or startup-only): the registered tier, anonymous per-IP identity, source_load_uri origins, advertised RELATION patterns, IP allow/block/auto-ban, and the in-memory event-log capacity/retention. Read-only here, so the active posture can be audited from one place.",
