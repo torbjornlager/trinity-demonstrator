@@ -949,7 +949,7 @@ yield(+Ref, -Answer, +Options) is det.</pre>
     <pre>runtime_property(?Property) is nondet.</pre>
     <p>Enumerates properties of the host runtime. This predicate reports capabilities; it does not alter the Web Prolog profile or the semantics of the predicates above. Defined properties are:</p>
     <ul>
-        <li><code>implementation(swi_native|swi_wasm_worker|swi_wasm_main)</code></li>
+        <li><code>implementation(swi_native|trealla_native|swi_wasm_worker|swi_wasm_main)</code></li>
         <li><code>persistent(+Boolean)</code></li>
         <li><code>inbound_addressable(+Boolean)</code></li>
         <li><code>dom(+Boolean)</code></li>
@@ -957,7 +957,7 @@ yield(+Ref, -Answer, +Options) is det.</pre>
         <li><code>hard_termination(+Boolean)</code></li>
     </ul>
     <p>Native nodes are persistent and inbound-addressable and use native threads with hard termination, but have no DOM. Worker SWI-WASM actors have Web-Worker isolation and hard termination but share the page's lifetime, are not inbound-addressable, and have no DOM. The optional main-thread SWI-WASM engine has DOM access but cooperative engine isolation and no hard termination; it too shares the page's lifetime and initiates rather than accepts remote connections.</p>
-    <p><strong>Availability gap:</strong> This capability predicate is implemented by native SWI and both SWI-WASM runtimes; native Trealla does not currently expose it.</p>
+    <p>An unbound argument enumerates the properties; unsupported properties and non-matching values fail. Native SWI reports <code>implementation(swi_native)</code> and native Trealla reports <code>implementation(trealla_native)</code>; their other listed properties agree. Hard termination does not guarantee execution of Prolog cleanup handlers.</p>
 </article>
 
 <h2 id="sec:manual-errors">Common error contract</h2>
