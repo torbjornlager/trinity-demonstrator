@@ -582,7 +582,8 @@ actors:hook_send(Id@Node, Message) :-
 % without changing target or I/O semantics. Check support on the actual
 % connection before sending a synchronous query; async sends remain compatible.
 remote_actor_send(Node, Pid, Message) :-
-    term_to_wire_atom(Message, MsgAtom),
+    outgoing_toplevel_message(Message, WireMessage),
+    term_to_wire_atom(WireMessage, MsgAtom),
     Command = json{command:send, pid:Pid, message:MsgAtom},
     (   correlated_toplevel_message(Message)
     ->  ws_mutex(Node, ws_send_lock, Mutex),
@@ -592,6 +593,17 @@ remote_actor_send(Node, Pid, Message) :-
              ws_send_json(Socket, Command)))
     ;   best_effort(remote_send_command(Node, Command))
     ).
+
+% A caller's actor module is private to this node. The receiver executes the
+% query in its own toplevel module (as the native receiver already does).
+% Keep nested qualifications and the original options, sharing their variables
+% with the goal until the complete envelope is serialized.
+outgoing_toplevel_message(Message, '$call'(Goal, Options)) :-
+    nonvar(Message),
+    Message = '$call'(Goal0, Options),
+    !,
+    strip_module(Goal0, _, Goal).
+outgoing_toplevel_message(Message, Message).
 
 correlated_toplevel_message('$call'(_, Options)) :-
     option('$request_ref'(_), Options), !.

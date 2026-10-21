@@ -87,6 +87,11 @@ The full topology, environment setup, operational commands, and SSO-gated
 That guide also contains an opt-in, immediately reversible Trealla N5
 override for private interoperability testing.
 
+Outgoing remote toplevel calls remove the caller's outer module qualification
+before serialization: private actor modules belong to the sending node. Nested
+goal qualifications, options and goal/template variable sharing are preserved.
+This applies to asynchronous and synchronous calls; local calls are unchanged.
+
 Validate a configuration without starting the server:
 
 ```bash

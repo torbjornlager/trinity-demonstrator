@@ -1040,6 +1040,11 @@ async function namedCreationContract(run,host,check,main=false) {
 
 const shutdownProbeSource="shutdown_probe(work(Delay,Tag),Parent,done(Tag),Parent) :- Parent!entered(Tag),sleep(Delay),Parent!completed(Tag).\nshutdown_probe(ping,Parent,pong,Parent).";
 async function synchronousToplevelContract(run,host,check) {
+  const tutorial=fs.readFileSync(path.join(ROOT,"web/actor-profile-tutorial.html"),"utf8");
+  const example=tutorial.match(/<pre id="toplevel-synchronous-pages">([\s\S]*?)<\/pre>/)[1]
+    .replace(/^\?\-\s*/,"").trim().replace(/\.$/,"");
+  check(await run(example+",First==success(Top,[a,b],true),Last==success(Top,[c],false),var(X)"),
+    "tutorial synchronous paging example returns both pages and keeps caller variables independent");
   check(await run("self(Self),spawn(receive({stop->true}),Other,[link(false)]),monitor(Other,OR),assertz(user:sync_other(Other,OR)),toplevel_spawn(P,[session(true),target(Other),link(false)]),assertz(user:sync_pid(P)),toplevel_call_synch(P,X=ok,success(P,[ok],false),[template(X)]),var(X)"),"synchronous call overrides retained target and keeps caller goal variables independent");
   check(await run("user:sync_pid(P),toplevel_call_synch(P,member(X,[a,b,c]),success(P,[a,b],true),[template(X),limit(2)]),toplevel_next_synch(P,success(P,[c],_),[limit(1)])"),"synchronous paging correlates call and next answers");
   check(await run("user:sync_pid(P),toplevel_call_synch(P,fail,failure(P)),toplevel_call_synch(P,throw(probe_error),error(P,probe_error))"),"failure and query exception retain answer terms");

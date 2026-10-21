@@ -78,6 +78,45 @@ restore_self_url(none) :- retractall(pid_utils:self_node(_)).
 
 :- begin_tests(toplevel_correlation_transport).
 
+test(outgoing_query_preserves_nested_qualifications_options_and_sharing) :-
+    Options = [template(pair(X,X)),target(caller),'$request_ref'(12345),limit(2)],
+    distribution:outgoing_toplevel_message(
+        '$call'(private_actor:(member(X,[a,b]),helper:check(X)),Options), Wire),
+    Wire = '$call'(Goal, SentOptions),
+    assertion(Goal == (member(X,[a,b]),helper:check(X))),
+    assertion(SentOptions == Options),
+    remote_protocol:term_to_wire_atom(Wire, Text),
+    read_term_from_atom(Text, Decoded, []),
+    Decoded = '$call'((member(A,[a,b]),helper:check(B)),
+                     [template(pair(C,D)),target(caller),'$request_ref'(12345),limit(2)]),
+    assertion(var(A)),assertion(A==B),assertion(A==C),assertion(A==D),
+    assertion(var(X)).
+
+test(outgoing_other_messages_unchanged,
+     [forall(member(Message, ['$next'([limit(2)]),data(private_actor:goal(X),X),
+                             '$call'(member(X,[a,b]),[template(X)])]))]) :-
+    distribution:outgoing_toplevel_message(Message, Wire),
+    assertion(Wire == Message).
+
+test(outgoing_variable_message_unchanged) :-
+    distribution:outgoing_toplevel_message(Message, Wire),
+    assertion(var(Message)),assertion(Wire == Message).
+
+test(outgoing_async_query_normalized_on_actual_transport,
+     [cleanup(retractall(test_toplevel_correlation_transport:legacy_command(_)))]) :-
+    with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
+        (nb_getval(node_url_b,URL),atom_concat(URL,'/test_correlation_legacy',Endpoint),
+         setup_call_cleanup(assertz(test_toplevel_correlation_transport:legacy_endpoint(Endpoint)),
+             (Pid=4242424242@'http://correlation-legacy.invalid',
+              toplevel_call(Pid,private_actor:(X=ok,helper:check(X)),[template(X)]),
+              wait_until((legacy_command(D),D.command=="send"),2),
+              legacy_command(Sent),Sent.command=="send",
+              term_string(Message,Sent.message),
+              Message='$call'((A=ok,helper:check(B)),[template(C)]),
+              assertion(var(A)),assertion(A==B),assertion(A==C),assertion(var(X))),
+             (distribution:remote_drop_connection('http://correlation-legacy.invalid'),
+              retractall(test_toplevel_correlation_transport:legacy_endpoint(_)))))).
+
 test(unsupported_peer_rejected_before_query,
      [forall(member(Kind,[call,next])),cleanup(retractall(test_toplevel_correlation_transport:legacy_command(_)))]) :-
     with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
