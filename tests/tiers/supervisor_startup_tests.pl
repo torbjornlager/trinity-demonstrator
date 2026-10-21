@@ -5,6 +5,13 @@
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 
+:- multifile isolation:prepare_module/3.
+% Fail preparation after provisional child admission, without a URL fetch.
+% Relative-URL errors vary between platforms and available local services.
+isolation:prepare_module(_, _, Options) :-
+    memberchk(src_text('% supervisor startup failure probe'), Options),
+    throw(error(startup_source_probe, test_supervisor_startup)).
+
 :- multifile actors:hook_admit_spawn/3, actors:hook_check_monitor/1,
              actors:hook_check_send/2, actors:hook_spawn_commit/2.
 actors:hook_admit_spawn(Pid0, _, _) :-
@@ -47,7 +54,7 @@ stop_actor(Pid) :-
         demonitor(Ref, [flush])).
 
 server_spec(Id, Policy, spec(Id,server(test_supervisor_startup:callback,[]),temporary,Policy,worker)).
-bad_start(server(test_supervisor_startup:callback,[src_uri('/no-such-supervisor-startup-source')])).
+bad_start(server(test_supervisor_startup:callback,[src_text('% supervisor startup failure probe')])).
 reserved(Events, Pid) :-
     thread_get_message(Events, reserved(Pid), [timeout(3)]).
 stopped(Events, Pid) :- thread_get_message(Events, stop_seen(Pid), [timeout(3)]).
@@ -68,7 +75,7 @@ test(initial_exception_reclaims_prior_children_in_reverse_order) :-
            [monitor(true),src_list([(:- test_supervisor_startup:enable(Events))])]),
        receive({down(Sup,Sup,exception(Error)) -> true}, [timeout(4),on_timeout(fail)]),
        assertion(nonvar(Error)),
-       assertion(Error=error(domain_error(url,'/no-such-supervisor-startup-source'),_)),
+       assertion(Error=error(startup_source_probe,_)),
        reserved(Events,A), reserved(Events,B), reserved(Events,C),
        stopped(Events,C), stopped(Events,B), stopped(Events,A),
        maplist(assert_dead,[A,B,C]),
@@ -156,7 +163,7 @@ test(dynamic_exception_preserves_siblings_and_allows_retry) :-
        (supervisor_which_children(Sup,Before),bad_start(Bad),
         supervisor_spawn_child(Sup,test_supervisor_startup:child(startup_retry,[start(Bad)]),Reply),
         assertion(nonvar(Reply)),
-        assertion(Reply=error(error(domain_error(url,'/no-such-supervisor-startup-source'),_))),
+        assertion(Reply=error(error(startup_source_probe,_))),
         supervisor_which_children(Sup,After),assertion(Before==After),
         supervisor_spawn_child(Sup,test_supervisor_startup:child(startup_retry,[start(server(callback,[]))]),Added),
         assertion(Added==ok),supervisor_count_children(Sup,Counts),assertion(memberchk(active-2,Counts))),

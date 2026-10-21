@@ -299,6 +299,7 @@ LAYERS = {
     _WP + "term_display.pl": 2,
     _WP + "server_actor.pl": 2,
     _WP + "supervisor_actor.pl": 2,
+    _WP + "supervisor_startup.pl": 2,
     _WP + "parallel.pl": 2,
     _WP + "first_solution.pl": 2,
     _WP + "statechart_model.pl": 2,
