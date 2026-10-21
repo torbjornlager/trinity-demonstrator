@@ -1346,6 +1346,7 @@ send(Pid, Message, Options) :-
 %   native and SWI-WASM runtimes: an acyclic ordinary Prolog term without
 %   attributed variables, streams, or other blob values. Plain variables are
 %   allowed and arrive as fresh variables in the receiver's copied term.
+%   SWI's text and ucs_text blob types both represent ordinary text atoms.
 transportable_term(Term) :-
     acyclic_term(Term),
     term_attvars(Term, []),
@@ -1353,6 +1354,7 @@ transportable_term(Term) :-
          nonvar(Sub),
          blob(Sub, BlobType),
          BlobType \== text,
+         BlobType \== ucs_text,
          BlobType \== reserved_symbol
        ).
 

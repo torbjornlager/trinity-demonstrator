@@ -238,6 +238,18 @@ names. The portable subset excludes attributed variables, streams and non-text
 blobs; the language manual defines application-visible constraints and string
 semantics. Monitor references are serialised independently of pid abbreviation.
 
+Native SWI accepts ordinary Unicode text atoms, including its internal
+`ucs_text` representation, in messages and canonical success/error payloads.
+Previously the filter admitted `text` but rejected `ucs_text`, suppressing the
+canonical payload for answers containing atoms such as `€`, `漢字` or `😀`.
+The existing serializer already handles these atoms; wire formats are unchanged.
+Cycles, attributed variables, streams and other resource blobs remain rejected.
+Native actor and cross-node answer regressions cover this boundary. The shared
+`unicode_answer_tests.pl` interoperability fixture in the Trealla checkout tests
+asynchronous and synchronous answers, paging, exceptions and variable sharing
+against disposable native SWI/Trealla nodes. Browser filters are unchanged by
+this native repair.
+
 Synchronous toplevel calls negotiate `web-prolog-sync-v1`; the request reference
 is carried through commands and replies independently of ordinary asynchronous
 answers. A private wait monitor is installed before sending, and stale tagged

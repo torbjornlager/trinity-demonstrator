@@ -654,6 +654,14 @@ test(portable_wire_term_rejects_cycles, [fail]) :-
    Cyclic = loop(Cyclic),
    transportable_term(Cyclic).
 
+test(portable_wire_term_accepts_unicode_atoms) :-
+   transportable_term(row('é', '€', '漢字', '😀', nested('€', X, X))),
+   var(X).
+
+test(portable_wire_term_rejects_clause_references,
+     [setup(assertz(wire_term_probe, Ref)), cleanup(erase(Ref)), fail]) :-
+   transportable_term(nested('€', Ref)).
+
 test(portable_wire_term_rejects_attributed_variables, [fail]) :-
    put_attr(Variable, test_wire_term, marked),
    transportable_term(Variable).
