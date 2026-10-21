@@ -1,9 +1,12 @@
 # Web Prolog Cross-Node Architecture
 
-A porting guide for implementers building a Web Prolog–compatible
-cross-node actor layer in another Prolog system.  Defines the wire
-protocol, the local data structures, the dispatch algorithm, and the
-lifecycle invariants that a port must satisfy.
+A guide to the native SWI cross-node actor architecture and its wire protocol.
+Internal tables, the node controller and dispatch algorithms describe this
+implementation; other runtimes may use different mechanisms. The
+[interoperability baseline 0.1](https://github.com/torbjornlager/trinity-conformance/blob/main/baselines/0.1.md)
+defines the selected observable requirements and their executable coverage.
+This guide concerns the ACTOR surface, not GNU Prolog's ISOBASE-only node or a
+requirement that browser engines host an HTTP/WebSocket server.
 
 The document is self-contained.  It assumes the host Prolog system
 already provides a local actor model in the style of Chapter 2–3 of
@@ -40,8 +43,12 @@ negotiate optional features. Bump `protocol_version/1` only on an incompatible
 wire change.
 
 Native peers additionally offer and select the optional WebSocket subprotocol
-`web-prolog-sync-v1`. Its selection promises correlated PTCP replies. A peer
-that selects no such subprotocol remains usable for asynchronous operations;
+`web-prolog-sync-spawn-v1`, which promises correlated PTCP replies and IDs on
+spawn successes and failures. The older `web-prolog-sync-v1` promises only PTCP
+correlation. Neither selection is inferred from protocol version 1 alone.
+Untagged command errors on the combined subprotocol are transport diagnostics,
+not failures of a later spawn. Legacy spawning retains the ambiguity of
+untagged errors. A peer selecting neither remains usable for asynchronous operations;
 native synchronous wrappers raise
 `error(permission_error(use,toplevel_correlation,Node),_)` before sending the
 query. Support is recorded per connection during its upgrade and removed on
@@ -68,12 +75,14 @@ The architecture rests on three properties:
    mailbox.  An implementation may collapse the two steps locally;
    across the network the in-flight phase is realised by the WS
    connection between the two nodes.
-3. **Containment.**  Default `link(true)` for every cross-node spawn
-   means a parent's death deterministically tears down its remote
-   children.  Combined with controller cleanup on connection drop,
-   no orphan can outlive its causal context.
+3. **Qualified containment.** Directional links and ownership request child
+   termination on the compatible paths described below. Connection loss is not
+   cancellation and can leave the remote outcome unknown. Legacy peers and
+   Trealla's missing `lineage_close` support do not provide a blanket no-orphan
+   guarantee. Application readiness is also distinct from successful creation.
 
-These three are testable invariants; see §11.
+The baseline tests selected observations of these properties, not every failure
+interleaving or an unconditional remote-reclamation guarantee; see §11.
 
 ---
 

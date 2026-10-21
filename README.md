@@ -23,6 +23,12 @@ and wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
 coordination, and the [Trealla runtime guide](https://github.com/torbjornlager/trealla-port/blob/main/README.md)
 covers that port. Runtime guides do not define separate versions of the language.
 
+The [interoperability baseline 0.1](https://github.com/torbjornlager/trinity-conformance/blob/main/baselines/0.1.md)
+and its [coverage matrix](https://github.com/torbjornlager/trinity-conformance/blob/main/reports/2026-10-21-baseline-0.1/COVERAGE.md)
+select tested common behavior, including GNU Prolog at ISOBASE level. They keep
+unresolved and unmeasured behavior explicit; passing a selection is not complete
+profile certification.
+
 ## The layers (target state)
 
 | layer | library | gives you |

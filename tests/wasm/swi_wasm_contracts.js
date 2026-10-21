@@ -2965,6 +2965,52 @@ const scenarios = {
   }
 };
 
+// Thin test-only entry point for the implementation-neutral baseline adapter.
+// Assertions are supplied by trinity-conformance, not duplicated in this repo.
+async function runExternalContractCases(mode, cases) {
+  const W=bootWorker();let host,engine,run;
+  if(mode==='worker') {
+    host=scopedWorkerCoordinator(W);await startToplevel(W);
+    run=async goal=>{
+      const replies=()=>W.sends.filter(m=>m.to===CLIENT&&/^(success|failure|error)\(/.test(m.message)).map(m=>m.message);
+      const before=replies().length;
+      deliver(W,"'$call'(("+goal+",BaselineResult=passed),[template(BaselineResult),limit(1)])");
+      if(!await until(()=>replies().length>before,20000))throw new Error('query did not answer');
+      const reply=replies()[before];
+      if(!/\[passed\],false\)/.test(reply))throw new Error(reply);
+      return reply;
+    };
+  } else {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const dummy={S:{onmessage:()=>{}},control:{}};
+    host=scopedWorkerCoordinator(dummy,'main');
+    engine=await require(path.join(ROOT,'web/swipl-bundle.js'))({arguments:['-q','--nosignals']});
+    engine.FS.writeFile('/baseline_compat.pl',source);engine.prolog.query("use_module('/baseline_compat.pl')").once();
+    host.swiWasmActorMainMailbox=[];host.swiWasmActorMainWaiters=[];
+    host.deliverSwiWasmMainActorMessage=workbenchMethod('deliverSwiWasmMainActorMessage','deliverSwiWasmRemoteResult');
+    host.receiveSwiWasmActorMessage=workbenchMethod('receiveSwiWasmActorMessage','cancelSwiWasmMainActorWaiters');
+    dummy.S.onmessage=({data})=>{if(data.command==='deliver')host.deliverSwiWasmMainActorMessage(data.message);};
+    host.swiWasmStatechartOwnsActorTraffic=()=>false;
+    workbenchMethod('installSwiWasmActorBridge','randomSwiIdentity').call(host);
+    global.self.swiWasmBehaviourSource=()=>behaviourSource;
+    global.self.setTimeout=setTimeout;global.self.clearTimeout=clearTimeout;
+    run=async goal=>{let count=0;await engine.prolog.forEach(goal,()=>count++);
+      if(count!==1)throw new Error('expected one solution, observed '+count);return {solutions:count};};
+  }
+  const results=[];
+  try {
+    for(const c of cases) {
+      const t=Date.now();let row={id:c.id,title:c.title};
+      try {row.observation=await run(c.goal);row.status='pass';}
+      catch(e) {row.status='fail';row.detail=String(e&&e.message||e);}
+      row.duration_ms=Date.now()-t;results.push(row);
+    }
+  } finally {await host.stop();}
+  return results;
+}
+module.exports={runExternalContractCases};
+
 // ------------------------------------------------------------------- runner
 
 async function runOne(name) {
@@ -2980,14 +3026,14 @@ async function runOne(name) {
   return failures;
 }
 
-if (process.argv[2]) {
+if (require.main === module && process.argv[2]) {
   runOne(process.argv[2]).then(function(failures) {
     process.exit(failures ? 1 : 0);
   }, function(error) {
     console.log("  FAIL " + process.argv[2] + ": " + (error && error.stack || error));
     process.exit(1);
   });
-} else {
+} else if (require.main === module) {
   let failed = 0;
   Object.keys(scenarios).forEach(function(name) {
     const r = spawnSync(process.execPath, [__filename, name], { encoding: "utf8", timeout: 60000 });
