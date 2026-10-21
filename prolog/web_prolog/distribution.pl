@@ -77,6 +77,7 @@ Own hooks (multifile, implemented by the node layer in Phase 6):
 
 :- dynamic ws_connection/4.
 :- dynamic ws_sync_connection/1.
+:- dynamic spawn_correlated_queue/1.
 :- dynamic ws_pending_event/3.
 :- dynamic spawn_queue_user/1.
 :- dynamic closed_spawn_queue/1.
@@ -806,7 +807,8 @@ close_spawn_queue(Queue) :-
 
 destroy_closed_spawn_queue(Queue) :-
     (closed_spawn_queue(Queue), \+ spawn_queue_user(Queue)
-    -> retractall(closed_spawn_queue(Queue)), best_effort(message_queue_destroy(Queue))
+    -> retractall(closed_spawn_queue(Queue)), retractall(spawn_correlated_queue(Queue)),
+       best_effort(message_queue_destroy(Queue))
     ; true).
 
 remote_spawn_error(error(remote_spawn_failed(Reason), Context)) :- !,
@@ -831,6 +833,8 @@ remote_wait_spawned(SpawnQueue, RequestId, RemotePid) :-
         ->  remote_spawn_reply(Reply, SpawnQueue, RequestId, RemotePid)
         ;   remote_wait_spawned(SpawnQueue, RequestId, RemotePid)
         )
+    ;   spawn_correlated_queue(SpawnQueue), Message \== connection_closed
+    ->  remote_wait_spawned(SpawnQueue, RequestId, RemotePid)
     ;   remote_spawn_reply(Message, SpawnQueue, RequestId, RemotePid)
     ).
 
@@ -922,9 +926,12 @@ remote_connection_locked(NodeURL, Socket, SpawnQueue) :-
         append(ExtraWSOptions, DefaultWSOptions, WSOptions),
         http_open_websocket(WsURL, Socket, WSOptions),
         % Read the stream property before the reader owns its input lock.
-        (ws_property(Socket, subprotocol('web-prolog-sync-v1'))
+        (ws_property(Socket, subprotocol(Protocol)),
+         memberchk(Protocol,['web-prolog-sync-spawn-v1','web-prolog-sync-v1'])
         -> assertz(ws_sync_connection(Socket)) ; true),
         message_queue_create(SpawnQueue),
+        (ws_property(Socket,subprotocol('web-prolog-sync-spawn-v1'))
+        -> assertz(spawn_correlated_queue(SpawnQueue)) ; true),
         %  The node layer wraps the reader goal with its logging scope
         %  through hook_connection_context/2.  Module-qualified so the
         %  wrapper cannot strand it in a foreign calling context.
@@ -941,7 +948,7 @@ remote_connection_locked(NodeURL, Socket, SpawnQueue) :-
 
 
 internal_transport_ws_options([
-    subprotocols(['web-prolog-sync-v1']),
+    subprotocols(['web-prolog-sync-spawn-v1','web-prolog-sync-v1']),
     request_header('X-Web-Prolog-User'=PrincipalId),
     request_header('X-Web-Prolog-Capabilities'=CapabilityHeader),
     request_header('X-Web-Prolog-Protocol'=ProtocolVersion)
@@ -1017,7 +1024,9 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
     ;   get_dict(type, Dict, "error"),
         \+ get_dict(pid, Dict, _)
     ->  (get_dict(data, Dict, Data) -> ErrorData = Data ; ErrorData = "remote error"),
-        remote_queue_spawn_reply(SpawnQueue, Dict, spawn_error(ErrorData))
+        (spawn_correlated_queue(SpawnQueue), \+get_dict(request_id,Dict,_)
+        -> remote_transport_error(NodeURL, ErrorData)
+        ; remote_queue_spawn_reply(SpawnQueue, Dict, spawn_error(ErrorData)))
     ;   %  Compatibility with older peers that serialized the private
         %  source:"io" marker.  Current peers suppress terminal I/O at
         %  the originating relay and never put that marker on the wire.
@@ -1039,6 +1048,13 @@ remote_ws_dispatch(NodeURL, SpawnQueue, Dict) :-
     ->  route_remote_event(NodeURL, RemotePid, Dict)
     ;   true
     ).
+
+% Untagged command errors on correlated connections never belong to a spawn.
+% Retain them in observability, without delivering them as application replies.
+remote_transport_error(NodeURL, Error) :-
+    Event = _{event_type:"remote_transport_error",node:NodeURL,error:Error},
+    debug(distribution(remote), 'remote_transport_error: ~p', [Event]),
+    forall(hook_event(Event), true).
 
 remote_queue_spawn_reply(Queue, Dict, Reply) :-
     (get_dict(request_id, Dict, Id) -> Message = spawn_reply(Id, Reply); Message = Reply),

@@ -255,7 +255,7 @@ ws_handler_open(Request, NodePort) :-
         peer_answer_terms(Request, AnswerTerms),
         http_upgrade_to_websocket(
             ws_main(NodePort, Principal, ClientMeta, AnswerTerms),
-            [subprotocols(['web-prolog-sync-v1'])],
+            [subprotocols(['web-prolog-sync-spawn-v1','web-prolog-sync-v1'])],
             Request
         )
     ;   ws_profile_error_reply(Error)

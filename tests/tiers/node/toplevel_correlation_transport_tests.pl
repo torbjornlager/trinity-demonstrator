@@ -76,6 +76,48 @@ stop_native_peer(Process) :-
 restore_self_url(some(URL)) :- pid_utils:register_node_self(URL).
 restore_self_url(none) :- retractall(pid_utils:self_node(_)).
 
+% Dedicated mock peers exercise capability negotiation and actual reader routing.
+:- dynamic spawn_endpoint/2, transport_diagnostic/1.
+:- multifile distribution:hook_event/1.
+distribution:hook_event(Event) :-
+    get_dict(event_type,Event,"remote_transport_error"),
+    get_dict(node,Event,'http://spawn-correlation.invalid'),
+    assertz(test_toplevel_correlation_transport:transport_diagnostic(Event)).
+distribution:hook_ws_endpoint_override(Node,URL) :-
+    test_toplevel_correlation_transport:spawn_endpoint(Node,URL).
+:- http_handler('/test_spawn_correlated', spawn_upgrade(correlated), []).
+:- http_handler('/test_spawn_legacy', spawn_upgrade(legacy), []).
+spawn_upgrade(Mode,Request) :-
+    (Mode==correlated -> Protocols=['web-prolog-sync-spawn-v1','web-prolog-sync-v1']
+    ; Protocols=['web-prolog-sync-v1']),
+    http_upgrade_to_websocket(spawn_peer(Mode),[subprotocols(Protocols)],Request).
+spawn_peer(Mode,WS) :-
+    (Mode==correlated -> ws_send(WS,json(json{type:error,data:"before spawn"}));true),
+    spawn_peer_loop(Mode,WS).
+spawn_peer_loop(Mode,WS) :-
+    ws_receive(WS,Frame,[format(json)]),
+    (Frame.opcode==close -> true
+    ; Dict=Frame.data,
+      (Dict.goal=="close" -> ws_close(WS,1000,"test loss")
+      ; (Dict.goal=="fail" -> Reply=json{type:error,data:"startup rejected"}
+        ; Reply=json{type:spawned,pid:42}),
+        (Mode==correlated ->
+            ws_send(WS,json(json{type:error,data:"during spawn"})),
+            ws_send(WS,json(json{type:error,data:"old request",request_id:"old"})),
+            put_dict(request_id,Reply,Dict.request_id,Tagged)
+        ; Tagged=Reply),
+        ws_send(WS,json(Tagged)),spawn_peer_loop(Mode,WS))).
+
+:- meta_predicate with_spawn_peer(+,-,0).
+with_spawn_peer(Mode,Node,Goal) :-
+    with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
+        (nb_getval(node_url_b,URL),
+         (Mode==correlated -> Path='/test_spawn_correlated';Path='/test_spawn_legacy'),
+         atom_concat(URL,Path,Endpoint),Node='http://spawn-correlation.invalid',
+         setup_call_cleanup(assertz(spawn_endpoint(Node,Endpoint)),Goal,
+             (distribution:remote_drop_connection(Node),retractall(spawn_endpoint(Node,_)),
+              retractall(transport_diagnostic(_)))))).
+
 :- begin_tests(toplevel_correlation_transport).
 
 test(outgoing_query_preserves_nested_qualifications_options_and_sharing) :-
@@ -116,6 +158,33 @@ test(outgoing_async_query_normalized_on_actual_transport,
               assertion(var(A)),assertion(A==B),assertion(A==C),assertion(var(X))),
              (distribution:remote_drop_connection('http://correlation-legacy.invalid'),
               retractall(test_toplevel_correlation_transport:legacy_endpoint(_)))))).
+
+test(spawn_errors_isolated_on_negotiated_connection) :-
+    with_spawn_peer(correlated,Node,
+        (distribution:remote_request_spawn(Node,json{command:spawn,goal:"ok"},P1),
+         assertion(P1==42),
+         distribution:remote_request_spawn(Node,json{command:spawn,goal:"ok"},P2),
+         assertion(P2==42),
+         findall(E,transport_diagnostic(E),Diagnostics),assertion(length(Diagnostics,3)),
+         distribution:ws_connection(Node,_,_,Q),
+         assertion(distribution:spawn_correlated_queue(Q)))).
+
+test(matching_startup_failure_and_legacy_fallback,
+     [forall(member(Mode,[correlated,legacy]))]) :-
+    with_spawn_peer(Mode,Node,
+        (catch(distribution:remote_request_spawn(Node,json{command:spawn,goal:"fail"},_),Error,true),
+         assertion(Error=error(remote_spawn_failed("startup rejected"),_)))).
+
+test(spawn_transport_loss_preserved,
+     [forall(member(Mode,[correlated,legacy]))]) :-
+    with_spawn_peer(Mode,Node,
+        (catch(distribution:remote_request_spawn(Node,json{command:spawn,goal:"close"},_),Error,true),
+         assertion(Error=error(remote_spawn_failed(connection_closed),_)))).
+
+test(legacy_untagged_success_preserved) :-
+    with_spawn_peer(legacy,Node,
+        (distribution:remote_request_spawn(Node,json{command:spawn,goal:"ok"},Pid),
+         assertion(Pid==42))).
 
 test(unsupported_peer_rejected_before_query,
      [forall(member(Kind,[call,next])),cleanup(retractall(test_toplevel_correlation_transport:legacy_command(_)))]) :-
@@ -200,3 +269,26 @@ test(browser_answer_terms_negotiation_and_legacy_fallback,
               ws_close(WS,1000,done)) )).
 
 :- end_tests(toplevel_correlation_transport).
+
+% Optional real-peer check, also run against the separate Trealla test node.
+live_spawn_correlation(Node) :-
+    spawn(receive({stop -> true}),Other,[link(false),monitor(true)]),
+    setup_call_cleanup(true,
+      (forall(member(_,[first,second]),live_spawn(Node)),
+       catch(toplevel_spawn(_,[node(Node),session(true),src_text('broken(')]),Error,true),
+       assertion(Error=error(remote_spawn_failed(_),_)),live_spawn(Node),
+       send(Other,stop),
+       receive({down(Other,Other,true) -> true},[timeout(3),on_timeout(fail)])),
+      (exit(Other,kill),demonitor(Other,[flush]),distribution:remote_drop_connection(Node))),
+    writeln('Live spawn correlation: unrelated errors, genuine startup failure and monitors: ok').
+live_spawn(Node) :-
+    distribution:remote_send_command(Node,json{command:toplevel_call,pid:99999999999,goal:"true",options:"[]"}),
+    distribution:ws_connection(Node,_,_,Queue),
+    assertion(distribution:spawn_correlated_queue(Queue)),
+    toplevel_spawn(P,[node(Node),session(true),link(false),monitor(true)]),
+    setup_call_cleanup(true,
+      (toplevel_call_synch(P,X=ok,A,[template(X-X),timeout(3)]),
+       assertion(A==success(P,[ok-ok],false)),assertion(var(X)),
+       exit(P,kill),
+       receive({down(P,P,_) -> true},[timeout(3),on_timeout(fail)])),
+      (exit(P,kill),demonitor(P,[flush]))).

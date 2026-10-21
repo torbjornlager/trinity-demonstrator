@@ -92,6 +92,17 @@ before serialization: private actor modules belong to the sending node. Nested
 goal qualifications, options and goal/template variable sharing are preserved.
 This applies to asynchronous and synchronous calls; local calls are unchanged.
 
+Native SWI and Trealla prefer the optional WebSocket subprotocol
+`web-prolog-sync-spawn-v1`, which guarantees both correlated toplevel replies
+and request IDs on spawn successes and failures. With that selection, the
+client accepts only the current spawn's ID; untagged command errors go to the
+`distribution(remote)` debug topic and `distribution:hook_event/1` as
+`remote_transport_error` events. They cannot become a later spawn failure.
+The older `web-prolog-sync-v1` offer and unnegotiated peers retain serialized
+legacy spawning; untagged errors on those connections remain ambiguous.
+Connection loss still reports an unknown remote startup outcome. This does
+not implement Trealla's missing `lineage_close` handling.
+
 Validate a configuration without starting the server:
 
 ```bash
