@@ -40,6 +40,21 @@ answer_peer(WS) :-
            node_ws:ws_relay_message(WS,unused,'$toplevel_reply'(12345,Answer))),
     ws_receive(WS,_,[]).
 
+:- http_handler('/test_validation_answers', validation_upgrade, []).
+validation_upgrade(Request) :-
+    http_upgrade_to_websocket(validation_peer, [], Request).
+validation_peer(WS) :-
+    ws_receive(WS,_,[]),
+    forall(member(Dict,[
+        json{type:"success",pid:42,term:"[",data:["wrong"],more:false},
+        json{type:"error",pid:42,data:"wrong",toplevel_correlation:"701"},
+        json{type:"success",pid:42,term:"scalar",data:["wrong"],toplevel_correlation:"702"},
+        json{type:"success",pid:42,data:["legacy"],more:false},
+        json{type:"success",pid:42,term:"[row('€',pair(X,X),'$VAR'(1))]",more:false},
+        json{type:"error",pid:42,term:"error(probe,context(remote,_))",toplevel_correlation:"703"},
+        json{type:"failure",pid:42,toplevel_correlation:"704"}]),ws_send(WS,json(Dict))),
+    ws_receive(WS,_,[]).
+
 :- http_handler('/test_browser_answer_terms', browser_answer_upgrade, []).
 browser_answer_upgrade(Request) :-
     http_upgrade_to_websocket(browser_answer_peer, [], Request).
@@ -119,6 +134,9 @@ with_spawn_peer(Mode,Node,Goal) :-
               retractall(transport_diagnostic(_)))))).
 
 :- begin_tests(toplevel_correlation_transport).
+
+bad_canonical_payload(_,Payload) :- member(Payload,[42,true,json{},"["]).
+bad_canonical_payload("success",Payload) :- member(Payload,["scalar","[a|Tail]","_"]).
 
 test(outgoing_query_preserves_nested_qualifications_options_and_sharing) :-
     Options = [template(pair(X,X)),target(caller),'$request_ref'(12345),limit(2)],
@@ -245,10 +263,67 @@ test(decoder_restores_reference_and_shared_payload) :-
     assertion(Ref == 12345),assertion(Pid == 42@remote),
     assertion(var(A)),assertion(A == B).
 
+test(decoder_rejects_present_invalid_canonical_payload,
+     [forall((member(Type,["success","error"]),
+              bad_canonical_payload(Type,Payload),member(Tagged,[false,true])))]) :-
+    Plain=json{type:Type,term:Payload,data:["must_not_be_used"],more:false},
+    Error=error(42@remote,remote_answer_protocol_error(invalid_term)),
+    (Tagged==true
+    -> put_dict(toplevel_correlation,Plain,"ref(17)",Dict),
+       Expected='$toplevel_reply'(ref(17),Error)
+    ; Dict=Plain,Expected=Error),
+    remote_protocol:ws_json_to_actor_event(Dict,42@remote,Event),
+    assertion(Event==Expected).
+
+test(decoder_rejects_missing_correlated_payload,
+     [forall(member(Type,["success","error"]))]) :-
+    remote_protocol:ws_json_to_actor_event(
+        json{type:Type,data:["must_not_be_used"],more:false,
+             toplevel_correlation:"ref(17)"},42@remote,Event),
+    assertion(Event=='$toplevel_reply'(ref(17),
+                  error(42@remote,remote_answer_protocol_error(missing_term)))).
+
+test(decoder_retains_uncorrelated_legacy_success) :-
+    remote_protocol:ws_json_to_actor_event(
+        json{type:"success",data:["pair(X,X)"],more:true},42@remote,Event),
+    Event=success(42@remote,[pair(A,B)],true),assertion(var(A)),assertion(A==B).
+
+test(decoder_retains_uncorrelated_legacy_error) :-
+    remote_protocol:ws_json_to_actor_event(
+        json{type:"error",data:"legacy diagnostic"},42@remote,Event),
+    assertion(Event==error(42@remote,remote_error("legacy diagnostic"))).
+
 test(decoder_preserves_failure_reference) :-
     remote_protocol:ws_json_to_actor_event(
         json{type:"failure",toplevel_correlation:"12345"},42@remote,Event),
     assertion(Event == '$toplevel_reply'(12345,failure(42@remote))).
+
+test(reader_recovers_after_malformed_answers,
+     [forall(member(Delivery,[immediate,buffered])),timeout(10)]) :-
+    with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
+      (nb_getval(node_url_b,URL),atom_concat(URL,'/test_validation_answers',Endpoint),
+       Node='http://answer-validation.invalid',self(Self),Pid=42@Node,
+       setup_call_cleanup(assertz(test_toplevel_correlation_transport:spawn_endpoint(Node,Endpoint)),
+         (distribution:remote_connection(Node,_,_),
+          (Delivery==immediate -> distribution:register_remote_pid(Pid,Self);true),
+          send(Self,validation_kept),
+          distribution:remote_send_command(Node,json{command:probe}),
+          (Delivery==buffered
+          -> wait_until((findall(D,distribution:ws_pending_event(Node,42,D),Ds),length(Ds,7)),3),
+             distribution:register_remote_pid(Pid,Self),distribution:flush_pending_for_pid(Node,42)
+          ; true),
+          receive({error(Pid,remote_answer_protocol_error(invalid_term)) -> true},[timeout(3),on_timeout(fail)]),
+          receive({'$toplevel_reply'(701,error(Pid,remote_answer_protocol_error(missing_term))) -> true},[timeout(3),on_timeout(fail)]),
+          receive({'$toplevel_reply'(702,error(Pid,remote_answer_protocol_error(invalid_term))) -> true},[timeout(3),on_timeout(fail)]),
+          receive({success(Pid,[legacy],false) -> true},[timeout(3),on_timeout(fail)]),
+          receive({success(Pid,[row('€',pair(A,B),'$VAR'(1))],false) -> true},[timeout(3),on_timeout(fail)]),
+          assertion(var(A)),assertion(A==B),
+          receive({'$toplevel_reply'(703,error(Pid,error(probe,context(remote,Detail)))) -> true},[timeout(3),on_timeout(fail)]),
+          assertion(var(Detail)),
+          receive({'$toplevel_reply'(704,failure(Pid)) -> true},[timeout(3),on_timeout(fail)]),
+          receive({validation_kept -> true},[timeout(0),on_timeout(fail)])),
+         (distribution:remote_drop_connection(Node),
+          retractall(test_toplevel_correlation_transport:spawn_endpoint(Node,_)))))).
 
 test(browser_answer_terms_negotiation_and_legacy_fallback,
      [forall(member(Exact,[true,false]))]) :-

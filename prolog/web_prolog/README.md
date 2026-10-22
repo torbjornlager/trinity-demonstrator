@@ -267,6 +267,24 @@ Malformed negotiated payloads produce explicit answer-protocol errors rather
 than falling back. Trealla implements the same negotiated extension; its
 receiver and outbound-client details belong to its own README.
 
+Native SWI's decoder now treats a present `term` field on a success/error event
+as authoritative: non-text or unparsable values, and success payloads that are
+not proper lists, yield `error(Pid,remote_answer_protocol_error(invalid_term))`.
+A correlated success/error without that field yields
+`remote_answer_protocol_error(missing_term)`, wrapped with the original request
+reference. It never substitutes display data for these rejected payloads.
+Failure events still require no payload. Uncorrelated answers without `term`
+retain legacy decoding, including `remote_error(Text)`, because the native client
+does not record an explicit canonical-capability acknowledgement. This repair
+adds no handshake or connection capability state.
+
+The `toplevel_correlation_transport` regressions cover malformed/non-text/scalar
+and partial-list payloads, request references, legacy decoding, and recovery of
+the actual reader after bad frames. Immediate and buffered routing both preserve
+subsequent valid answers and unrelated messages. The focused group and live
+Unicode/exception/sharing/paging checks against native SWI and Trealla passed;
+installed engines, live nodes and browser runtimes were unchanged.
+
 ### Native implementation boundaries
 
 Registry updates and named-startup reservations are serialised under the actor

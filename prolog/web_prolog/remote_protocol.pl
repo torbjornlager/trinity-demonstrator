@@ -85,34 +85,39 @@ ws_json_is_io_output(Dict) :-
 %   A peer node that received our X-Web-Prolog-Protocol header adds a
 %   `term` field with the canonical text of the solution list or the
 %   exception (Semantic Contracts D5); the exact terms are then restored.
-%   Without it (older peers), rows are rebuilt from their display text and
-%   an error is reported as remote_error(Text).
+%   A present canonical field must be valid; correlated success/error replies
+%   require it. Only uncorrelated answers without it retain legacy decoding.
 ws_json_to_actor_event(Dict, CompoundPid, '$toplevel_reply'(Ref, Answer)) :-
     get_dict(toplevel_correlation, Dict, RefText), !,
     wire_text_to_term(RefText, Ref), ground(Ref),
     del_dict(toplevel_correlation, Dict, _, Plain),
-    ws_json_to_actor_event(Plain, CompoundPid, Answer).
+    (   get_dict(type, Plain, Type), memberchk(Type, ["success", "error"]),
+        \+ get_dict(term, Plain, _)
+    ->  Answer = error(CompoundPid, remote_answer_protocol_error(missing_term))
+    ;   ws_json_to_actor_event(Plain, CompoundPid, Answer)
+    ).
+ws_json_to_actor_event(Dict, CompoundPid, Event) :-
+    get_dict(type, Dict, Type), memberchk(Type, ["success", "error"]),
+    get_dict(term, Dict, _), !,
+    (   event_term(Dict, Payload),
+        canonical_answer(Type, Dict, CompoundPid, Payload, Parsed)
+    ->  Event = Parsed
+    ;   Event = error(CompoundPid, remote_answer_protocol_error(invalid_term))
+    ).
 ws_json_to_actor_event(Dict, CompoundPid, success(CompoundPid, Rows, More)) :-
     get_dict(type, Dict, "success"),
     !,
     (get_dict(more, Dict, true) -> More = true ; More = false),
-    (   event_term(Dict, Rows0),
-        is_list(Rows0)
-    ->  Rows = Rows0
-    ;   get_dict(data, Dict, DataList),
-        maplist(reify_json_row, DataList, Rows)
-    ).
+    get_dict(data, Dict, DataList),
+    maplist(reify_json_row, DataList, Rows).
 ws_json_to_actor_event(Dict, CompoundPid, failure(CompoundPid)) :-
     get_dict(type, Dict, "failure"),
     !.
 ws_json_to_actor_event(Dict, CompoundPid, error(CompoundPid, Error)) :-
     get_dict(type, Dict, "error"),
     !,
-    (   event_term(Dict, Error)
-    ->  true
-    ;   (get_dict(data, Dict, ErrorStr) -> true ; ErrorStr = "Unknown remote error"),
-        Error = remote_error(ErrorStr)
-    ).
+    (get_dict(data, Dict, ErrorStr) -> true ; ErrorStr = "Unknown remote error"),
+    Error = remote_error(ErrorStr).
 ws_json_to_actor_event(Dict, CompoundPid, output(CompoundPid, Term)) :-
     get_dict(type, Dict, "output"),
     !,
@@ -140,6 +145,11 @@ ws_json_to_actor_event(Dict, CompoundPid, responded(CompoundPid)) :-
     get_dict(type, Dict, "responded"),
     !.
 
+
+canonical_answer("success", Dict, Pid, Rows, success(Pid, Rows, More)) :-
+    is_list(Rows),
+    (get_dict(more, Dict, true) -> More = true ; More = false).
+canonical_answer("error", _, Pid, Error, error(Pid, Error)).
 
 event_term(Dict, Term) :-
     get_dict(term, Dict, Text),
