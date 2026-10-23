@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "-q",
+    "-g",
+    "use_module('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/prolog/web_prolog/node_assets.pl'),((node_assets:node_asset_file('web/manual.html',F),F=='/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-env-0wzojkf5/demonstrator/web/manual.html',findall(D,node_assets:node_wasm_source_directory(D),Ds),Ds==['/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-env-0wzojkf5/browser-sources'])->writeln('environment asset locations: ok'),halt;halt(1))"
+  ],
+  "environment": {
+    "WP_ASSET_ROOT": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-env-0wzojkf5/demonstrator",
+    "WP_WASM_SOURCE_DIR": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-env-0wzojkf5/browser-sources"
+  },
+  "exit_code": 0,
+  "output": "environment asset locations: ok\n"
+}

@@ -1,0 +1,6 @@
+% [1/6] node_assets:defau..erve_checkout_paths ...... passed (0.001 sec)
+% [2/6] node_assets:reloc..erves_existing_urls ...... passed (0.043 sec)
+% [3/6] node_assets:expli..ry_is_authoritative ...... passed (0.030 sec)
+% [4/6] node_assets:expli..ll_back_to_checkout ...... passed (0.012 sec)
+% [5/6] node_assets:defau..f_working_directory ...... passed (0.000 sec)
+% [6/6] node_assets:prefi..ist_remain_in_force ...... passed (0.000 sec)

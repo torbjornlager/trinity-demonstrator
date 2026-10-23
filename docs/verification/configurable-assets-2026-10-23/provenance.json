@@ -1,0 +1,26 @@
+{
+  "base_revision": "7926b56f28b6cc3f59318467ab3e556563ad78e9",
+  "installed_binary_hashes_unchanged": true,
+  "binaries": {
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179",
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl": "34cbf9796d4c4310b2f6bb122d2e820fc446089173b2ab39e5a6faa48ef56563"
+  },
+  "live_nodes_unchanged": true,
+  "nodes": "30612 /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl -g consult('distribution.pl'),web_prolog:web_prolog_node(3061,[bind_address('127.0.0.1'),node_url('http://localhost:3061'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3061'])])\n42134 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /tmp/web-prolog-local-ui/n5_frontend.py\n55051 /Applications/swipl-win.app/Contents/MacOS/swipl -q -s /tmp/web-prolog-local-ui/start_local_node_reuse.pl -- n3\n",
+  "separate_swi": {
+    "path": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "sha256": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f"
+  },
+  "source_sha256": {
+    "README.md": "3a5784880895ff6cd57bd49c0e72d1c86dc055c0686e5de2379a19fcfd418add",
+    "prolog/web_prolog/node.pl": "8470184c321b61f5baa860339024bb4c328d9705fc85ceb7da96338ca9936917",
+    "prolog/web_prolog/node_admin.pl": "524f64214aa69128368a1b57a7b7ea5bec726794cd7011214e5f8ccfc272f32b",
+    "tests/tiers/t4_node.pl": "3c961669a47b10583ca02eb14e9599227387ec8e876f16f56b741711835988da",
+    "prolog/web_prolog/node_assets.pl": "d07481fb35c38ee8cbbb2897d6ff5954c4d92b044a9ac2cbc72ba189f3987a07",
+    "tests/tiers/node/node_assets_tests.pl": "06cb07533b5b1c18cec4c2025654fb0fc56f1c14a2d283697c3214ed623efbe4",
+    "docs/SWI_NODE_EXTRACTION_MAP.md": "2149be765579738931e578d0cf68c6def90e8adf1a5cf4aba7b3026bbc1188d7"
+  },
+  "new_asset_tests_pass": true,
+  "full_t4_pass": false
+}

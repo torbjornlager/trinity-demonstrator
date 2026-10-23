@@ -1,0 +1,344 @@
+[
+  {
+    "label": "transport-baseline-01",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.495
+  },
+  {
+    "label": "transport-changed-01",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.49
+  },
+  {
+    "label": "transport-baseline-02",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.436
+  },
+  {
+    "label": "transport-changed-02",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.439
+  },
+  {
+    "label": "transport-baseline-03",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.427
+  },
+  {
+    "label": "transport-changed-03",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.432
+  },
+  {
+    "label": "transport-baseline-04",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.43
+  },
+  {
+    "label": "transport-changed-04",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.433
+  },
+  {
+    "label": "transport-baseline-05",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.442
+  },
+  {
+    "label": "transport-changed-05",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.433
+  },
+  {
+    "label": "transport-baseline-06",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.426
+  },
+  {
+    "label": "transport-changed-06",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.42
+  },
+  {
+    "label": "transport-baseline-07",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.425
+  },
+  {
+    "label": "transport-changed-07",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.434
+  },
+  {
+    "label": "transport-baseline-08",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.423
+  },
+  {
+    "label": "transport-changed-08",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.436
+  },
+  {
+    "label": "transport-baseline-09",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.437
+  },
+  {
+    "label": "transport-changed-09",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.385
+  },
+  {
+    "label": "transport-baseline-10",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 0.443
+  },
+  {
+    "label": "transport-changed-10",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.431
+  },
+  {
+    "label": "t4-baseline",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4"
+    ],
+    "cwd": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/swi-asset-baseline-6n_knr5y/checkout",
+    "exit_code": 0,
+    "seconds": 53.74
+  },
+  {
+    "label": "t4-repeat",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 1,
+    "seconds": 51.407
+  }
+]

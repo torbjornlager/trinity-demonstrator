@@ -72,6 +72,26 @@ Then try:
 - the stateless API:
   `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 
+## Demonstrator asset locations
+
+The native node can serve a demonstrator tree from a separate location while
+keeping the existing portal, tutorial, manual, example and browser-runtime URLs:
+
+```bash
+WP_ASSET_ROOT=/path/to/trinity-demonstrator swipl load.pl
+```
+
+`WP_WASM_SOURCE_DIR` optionally selects the directory of the six browser Prolog
+sources. Without that override, an explicit asset root uses its current
+`prolog/web_prolog/wasm/` layout. With neither variable set, all lookups retain
+the existing checkout defaults. Explicit locations do not fall back to another
+checkout when a file is missing. These are process-wide operator settings;
+all nodes in one SWI process share them.
+
+The [native extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) records file
+ownership, dependencies, configuration settings and the remaining extraction
+steps. No repository separation has been performed yet.
+
 ## Deploying as a production node
 
 The node **executes untrusted code from clients** — that is the product —

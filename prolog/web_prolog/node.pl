@@ -39,6 +39,7 @@ Design notes:
                  
 :- use_module(actor_api).
 :- use_module(node_glue).
+:- use_module(node_assets, [node_asset_file/2, node_wasm_source_directory/1]).
 :- use_module(actor_io_support, [actor_io_prelude_text/1]).
 :- use_module(toplevel_actors).
 :- use_module(statechart_actor, []).
@@ -2054,9 +2055,7 @@ node_vendor_page(Request) :-
     http_reply_file(File, [unsafe(true), mime_type(Mime)], Request).
 
 node_vendor_dir(Dir) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, ModuleDir),
-    directory_file_path(ModuleDir, '../../web/vendor', Dir).
+    node_asset_file('web/vendor', Dir).
 
 vendor_asset_mime(RelPath, Mime) :-
     file_name_extension(_, Ext, RelPath),
@@ -2099,9 +2098,8 @@ node_wasm_modules_page(Request) :-
 
 %!  node_wasm_module_file(+RelPath, -File) is semidet.
 %
-%   Resolve an allowlisted SWI-WASM source.  The node can be
-%   loaded from prolog/web_prolog/, src/, or an interactive working
-%   directory; try the known repo layouts before giving up.
+%   Resolve an allowlisted SWI-WASM source using node_assets settings.
+%   Only the default layout retains the historical working-directory fallback.
 node_wasm_module_file(RelPath, File) :-
     wasm_module_file_name(RelPath),
     node_wasm_modules_dir(Dir),
@@ -2124,111 +2122,77 @@ wasm_module_file_name('statechart_wasm_runtime.pl').
 %
 %   Resolve absolute path to `demonstrator.html` shipped with this module.
 node_demonstrator_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/demonstrator.html', File).
+    node_asset_file('web/demonstrator.html', File).
 
 %!  node_discovery_hub_file(-File) is det.
 %
 %   Resolve absolute path to `discovery-hub.html` shipped with this module.
 node_discovery_hub_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/discovery-hub.html', File).
+    node_asset_file('web/discovery-hub.html', File).
 
 %!  node_tutorial_file(-File) is det.
 %
 %   Resolve absolute path to `tutorial.html` shipped with this module.
 node_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/tutorial.html', File).
+    node_asset_file('web/tutorial.html', File).
 
 node_swi_wasm_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/swi-wasm-tutorial.html', File).
+    node_asset_file('web/swi-wasm-tutorial.html', File).
 
 node_isobase_profile_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/isobase-profile-tutorial.html', File).
+    node_asset_file('web/isobase-profile-tutorial.html', File).
 
 node_isotope_profile_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/isotope-profile-tutorial.html', File).
+    node_asset_file('web/isotope-profile-tutorial.html', File).
 
 node_actor_profile_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/actor-profile-tutorial.html', File).
+    node_asset_file('web/actor-profile-tutorial.html', File).
 
 node_isobase_api_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/isobase-api-tutorial.html', File).
+    node_asset_file('web/isobase-api-tutorial.html', File).
 
 node_isotope_api_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/isotope-api-tutorial.html', File).
+    node_asset_file('web/isotope-api-tutorial.html', File).
 
 node_actor_api_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/actor-api-tutorial.html', File).
+    node_asset_file('web/actor-api-tutorial.html', File).
 
 node_jev_sxml_tutorial_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/jev-sxml-tutorial.html', File).
+    node_asset_file('web/jev-sxml-tutorial.html', File).
 
 %!  node_manual_file(-File) is det.
 %
 %   Resolve absolute path to `manual.html` shipped with this module.
 node_manual_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/manual.html', File).
+    node_asset_file('web/manual.html', File).
 
 %!  node_editor_frame_file(-File) is det.
 %
 %   Resolve absolute path to `editor_frame.html` shipped with this module.
 node_editor_frame_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/editor_frame.html', File).
+    node_asset_file('web/editor_frame.html', File).
 
 %!  node_swi_wasm_actor_worker_file(-File) is det.
 %
 %   Resolve absolute path to the experimental SWI-WASM actor worker.
 node_swi_wasm_actor_worker_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/swi_wasm_actor_worker.js', File).
+    node_asset_file('web/swi_wasm_actor_worker.js', File).
 
 %!  node_swipl_bundle_file(-File) is det.
 node_swipl_bundle_file(File) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../web/swipl-bundle.js', File).
+    node_asset_file('web/swipl-bundle.js', File).
 
 %!  node_image_dir(-Dir) is det.
 %
 %   Resolve absolute path to the `img` asset directory shipped with this module.
 node_image_dir(Dir) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, '../../img', Dir).
+    node_asset_file('img', Dir).
 
 %!  node_examples_dir(-Dir) is det.
 %
 %   Resolve absolute path to the `examples` directory shipped with this module.
 node_examples_dir(Dir) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, '../../examples', Dir).
+    node_asset_file('examples', Dir).
 
 %!  node_actor_examples_dir(-Dir) is det.
 %
@@ -2249,12 +2213,7 @@ node_statecharts_dir(Dir) :-
 %   Resolve absolute path to the directory containing the SWI-WASM
 %   statechart modules served to the in-browser SWI-Prolog.
 node_wasm_modules_dir(Dir) :-
-    module_property(node, file(ThisFile)),
-    file_directory_name(ThisFile, Dir0),
-    directory_file_path(Dir0, 'wasm', Dir).
-node_wasm_modules_dir(Dir) :-
-    working_directory(Cwd, Cwd),
-    directory_file_path(Cwd, 'prolog/web_prolog/wasm', Dir).
+    node_wasm_source_directory(Dir).
 
 %!  node_sxml_dtd_file(-File) is det.
 %

@@ -39,6 +39,7 @@ http_status(URL, Status) :-
 
 :- user:load_files('node/goal_walker_tests.pl', []).
 :- use_module('node/public_goal_guard_tests.pl', []).
+:- use_module('node/node_assets_tests.pl', []).
 :- use_module('node/sandbox_source_names_tests.pl', []).
 :- use_module('node/promise_yield_tests.pl', []).
 :- use_module('node/promise_lifecycle_tests.pl', []).
@@ -82,6 +83,7 @@ run_tier :-
                 supervisor_child_specs,
                 server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, supervisor_startup_ownership, supervisor_restart_ownership, worker_scope, worker_ownership_cleanup, zero_poll_accounting,
                 named_creation, remote_alias_cleanup, remote_named_creation, namespace_teardown,
+                node_assets,
                 goal_walker,
                 generic_actor_api,
                 actor_remote_exit_failure,

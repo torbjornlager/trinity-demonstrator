@@ -126,6 +126,7 @@ as startup configuration across node restarts.
 ]).
 :- use_module(pid_utils, [parse_pid_or_throw/4]).
 :- use_module(library(settings)).
+:- use_module(node_assets, [node_asset_file/2]).
 
 
 %!  node_admin_page(+Request) is det.
@@ -139,7 +140,7 @@ node_admin_page(Request) :-
 %   Serve the vendored Tabler stylesheet for the admin panel. Static,
 %   no secrets, so it is not admin-gated.
 node_admin_tabler_css_page(Request) :-
-    node_admin_asset_file('../../web/tabler.min.css', File),
+    node_admin_asset_file('web/tabler.min.css', File),
     http_reply_file(File, [unsafe(true), mime_type('text/css; charset=UTF-8')], Request).
 
 
@@ -377,12 +378,10 @@ admin_error_status(_, 500).
 
 
 node_admin_file(File) :-
-    node_admin_asset_file('../../web/admin.html', File).
+    node_admin_asset_file('web/admin.html', File).
 
 node_admin_asset_file(RelPath, File) :-
-    module_property(node_admin, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, RelPath, File).
+    node_asset_file(RelPath, File).
 
 
 admin_config_response(Request, JSON) :-
