@@ -32,6 +32,36 @@ SWI-Prolog is available to actor goals.
 |---|---|
 | [actors.pl](actors.pl) | Minimal Erlang-style actors: `spawn`/`send`/`receive`, links, monitors with `down`, name registration. Opaque pids; all higher-layer behaviour attaches through its hooks. |
 
+### Candidate native receive handoff
+
+The receive adapter now acquires a native message and records its thread-local
+`deferred/1` fact in the same `sig_atomic/1` region. Guards and selected bodies
+run after that region, preserving one-sided matching, message ordering and body
+alternatives. Moving to deferred storage does not release mailbox quota; the
+existing consumption hook still runs only on selection or explicit discard.
+
+Default blocking/timed reads use at most 50 ms native wait slices. Between
+slices, signal handling resumes; a message arrival still wakes the native wait
+immediately. The original overall deadline is retained and the public timeout
+callback runs only when that deadline expires. Zero-time polling protects
+peek, read and recording without waiting. An explicitly supplied native host
+`signals(false)` retains its requested suppression of signal checks while
+waiting; it is an exception to the default interruptible-wait policy.
+
+**Engine prerequisite:** this candidate requires SWI-Prolog commit
+[`09b6299`](https://github.com/SWI-Prolog/swipl-devel/commit/09b6299f696574c9230f23e53b1ab041a942b6f3)
+or a later build containing that protected-wait fix. The official macOS
+10.1.18 package predates it and can spin in these protected timed waits with a
+pending signal. The candidate was verified using the separate build containing
+Jan's fix, without replacing the installed engine or restarting N3. Do not
+deploy this adapter on that unpatched package. This is a runtime prerequisite,
+not a new Web Prolog option or language-level predicate.
+
+See [the verification record](../../docs/verification/swi-receive-handoff-2026-10-23/REPORT.md)
+for regression commands, the before/after control, repeated worker cleanup and
+exact engine/source hashes. Periodic wakeups are the cost of keeping the wait
+bounded; no scalability or performance benchmark is claimed.
+
 ## Layer 1 — isolation
 
 Per-actor private modules and controlled source loading.

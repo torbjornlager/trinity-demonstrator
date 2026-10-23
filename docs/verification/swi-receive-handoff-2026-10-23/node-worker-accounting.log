@@ -1,0 +1,31 @@
+% [1-1/10] worker_scope:part.._and_cleans_workers ... passed (0.111 sec)
+% [1-2/10] worker_scope:part.._and_cleans_workers ... passed (0.055 sec)
+% [1-3/10] worker_scope:part.._and_cleans_workers ... passed (0.110 sec)
+% [1-4/10] worker_scope:part.._and_cleans_workers ... passed (0.056 sec)
+% [1-5/10] worker_scope:part.._and_cleans_workers ... passed (0.111 sec)
+% [1-6/10] worker_scope:part.._and_cleans_workers ... passed (0.060 sec)
+% [2-1/10] worker_scope:inte..ile_caller_survives ... passed (0.220 sec)
+% [2-2/10] worker_scope:inte..ile_caller_survives ... passed (0.161 sec)
+% [2-3/10] worker_scope:inte..ile_caller_survives ... passed (0.109 sec)
+% [3-1/10] worker_scope:inte.._cannot_lose_worker ... passed (0.052 sec)
+% [3-2/10] worker_scope:inte.._cannot_lose_worker ... passed (0.059 sec)
+% [3-3/10] worker_scope:inte.._cannot_lose_worker ... passed (0.055 sec)
+% [4-1/10] worker_scope:thre..shes_before_rethrow ... passed (0.055 sec)
+% [4-2/10] worker_scope:thre..shes_before_rethrow ... passed (0.108 sec)
+% [4-3/10] worker_scope:thre..shes_before_rethrow ... passed (0.166 sec)
+% [5-1/10] worker_scope:acto..on_reclaims_workers ... passed (0.111 sec)
+% [5-2/10] worker_scope:acto..on_reclaims_workers ... passed (0.110 sec)
+% [5-3/10] worker_scope:acto..on_reclaims_workers ... passed (0.109 sec)
+% [6-1/10] worker_scope:unre..sages_are_preserved ... passed (0.109 sec)
+% [6-2/10] worker_scope:unre..sages_are_preserved ... passed (0.113 sec)
+% [6-3/10] worker_scope:unre..sages_are_preserved ... passed (0.110 sec)
+% [7/10] worker_scope:scop..claims_owned_worker ..... passed (0.055 sec)
+% [8/10] worker_ownership_..ntil_pid_retirement ..... passed (0.002 sec)
+% [9/10] worker_ownership_.._original_exception ..... passed (0.001 sec)
+% [10/10] zero_poll_account..es_are_counted_once .... passed (0.001 sec)
+ERROR: [Thread main] -g run_tests([worker_scope,worker_ownership_cleanup,zero_poll_accounting]),ensure_mailbox_empty: Unknown procedure: ensure_mailbox_empty/0
+ERROR: [Thread main] In:
+ERROR: [Thread main]   [12] ensure_mailbox_empty
+ERROR: [Thread main]   [11] '<meta-call>'('<garbage_collected>') <foreign>
+ERROR: [Thread main]   [10] catch(user:(...,ensure_mailbox_empty),_216,'$toplevel':true) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build/home/boot/init.pl:565
+ERROR: [Thread main]    [9] catch_with_backtrace('<garbage_collected>','<garbage_collected>','<garbage_collected>') at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build/home/boot/init.pl:658

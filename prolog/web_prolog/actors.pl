@@ -1544,9 +1544,8 @@ receive(Mailbox, Clauses, Options) :-
 % escapes from a guard therefore leaves the message in the mailbox, in its
 % original position.
 receive_scan(Mailbox, Clauses, GetOptions, Options) :-
-    (   receive_message(Mailbox, Msg, GetOptions)
-    ->  assertz(deferred(Msg), Ref),
-        (   select_body(Clauses, Msg, Module, Body)
+    (   receive_message(Mailbox, Msg, GetOptions, Ref)
+    ->  (   select_body(Clauses, Msg, Module, Body)
         ->  erase(Ref),
             forall(hook_message_consumed, true),
             call(Module:Body)
@@ -1561,17 +1560,82 @@ receive_scan(Mailbox, Clauses, GetOptions, Options) :-
 % forever if a signal is pending while cleanup masks signal handling, even
 % with timeout(0). Only this thread consumes its actor mailbox, so a peek
 % followed by an unbounded read cannot wait for a message that was absent.
-% Protect the pair from signal-handler re-entry between peeking and reading.
+% Protect peek, read and deferred recording together. Guards and bodies remain
+% outside this region. Other waits use protected 50 ms slices and return to
+% ordinary signal handling between slices. This candidate requires SWI's
+% 09b6299 protected-wait fix; the official 10.1.18 package predates that fix.
 % Restrict the shortcut to the documented receive options; host extensions,
 % mixed duplicate timeouts and malformed lists retain native option handling.
-receive_message(Mailbox, Msg, Options) :-
+receive_message(Mailbox, Msg, Options, Ref) :-
     (   is_list(Options),
         memberchk(timeout(Seconds), Options),
         number(Seconds), Seconds =:= 0,
         maplist(zero_poll_option, Options)
     ->  sig_atomic((thread_peek_message(Mailbox, _),
-                    thread_get_message(Mailbox, Msg)))
-    ;   thread_get_message(Mailbox, Msg, Options)
+                    thread_get_message(Mailbox, Msg),
+                    assertz(deferred(Msg), Ref)))
+    ;   receive_wait_options(Mailbox, Options, Deadline, WaitOptions),
+        receive_message_until(Mailbox, Msg, WaitOptions, Deadline, Ref)
+    ).
+
+% Validate host options through SWI itself without taking a message or waiting.
+% The final, already-expired deadline prevents acquisition. Retain unknown host
+% options and their native validation rather than introducing a second scanner.
+% Resolve any relative native timeout once, before the first bounded wait.
+receive_wait_options(Mailbox, Options, Deadline, WaitOptions) :-
+    must_be(list, Options),
+    append(Options, [deadline(-1)], ValidationOptions),
+    (thread_get_message(Mailbox, _, ValidationOptions) -> true ; true),
+    get_time(Now),
+    findall(T, member(timeout(T), Options), Timeouts),
+    findall(D, member(deadline(D), Options), Deadlines),
+    (Timeouts == [] -> Relative=infinite
+    ; last(Timeouts, Timeout),
+      (Timeout < 0 -> Relative=expired
+      ; Timeout =:= 0 -> Relative=poll
+      ; Relative is Now+Timeout)),
+    (Deadlines == [] -> Absolute=infinite ; last(Deadlines, Absolute)),
+    receive_wait_deadline(Relative, Absolute, Now, Deadline),
+    exclude(receive_time_option, Options, WaitOptions).
+
+receive_time_option(timeout(_)).
+receive_time_option(deadline(_)).
+
+receive_wait_deadline(expired, _, _, expired) :- !.
+receive_wait_deadline(_, Absolute, Now, expired) :-
+    number(Absolute), Absolute < Now, !.
+receive_wait_deadline(poll, _, _, poll) :- !.
+receive_wait_deadline(infinite, Absolute, _, Absolute) :- !.
+receive_wait_deadline(Relative, infinite, _, Relative) :- !.
+receive_wait_deadline(Relative, Absolute, _, Deadline) :-
+    Deadline is min(Relative, Absolute).
+
+receive_message_until(_, _, _, expired, _) :- !, fail.
+receive_message_until(Mailbox, Msg, _Options, poll, Ref) :-
+    !,
+    sig_atomic((thread_peek_message(Mailbox, _),
+                thread_get_message(Mailbox, Msg),
+                assertz(deferred(Msg), Ref))).
+% Preserve the native host extension that explicitly disables signal checks
+% while waiting. Public/default receives use the bounded interruptible path.
+receive_message_until(Mailbox, Msg, Options, Deadline, Ref) :-
+    findall(Signal, member(signals(Signal), Options), Signals),
+    Signals \== [], last(Signals, false), !,
+    (Deadline == infinite -> FinalOptions=Options
+    ; append(Options, [deadline(Deadline)], FinalOptions)),
+    sig_atomic((thread_get_message(Mailbox, Msg, FinalOptions),
+                assertz(deferred(Msg), Ref))).
+receive_message_until(Mailbox, Msg, Options, Deadline, Ref) :-
+    get_time(Now),
+    (Deadline == infinite -> Slice is Now+0.05
+    ; Now < Deadline, Slice is min(Deadline, Now+0.05)),
+    append(Options, [deadline(Slice)], SliceOptions),
+    (   sig_atomic((thread_get_message(Mailbox, Msg, SliceOptions),
+                    assertz(deferred(Msg), Ref)))
+    ->  true
+    ;   % A failed slice leaves sig_atomic/1 before retrying: pending signals
+        % can run here, even when the public receive has no timeout.
+        receive_message_until(Mailbox, Msg, Options, Deadline, Ref)
     ).
 
 zero_poll_option(timeout(Seconds)) :- number(Seconds), Seconds =:= 0.

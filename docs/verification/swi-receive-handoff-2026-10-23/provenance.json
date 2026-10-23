@@ -1,0 +1,16 @@
+{
+  "port_base_commit": "c5757ea5426bc70de7b9328c47b3730d008a138c",
+  "fixed_engine": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build/src/swipl",
+  "fixed_engine_sha256": "75b882a9acd6d4914483c533e6352317d14f3ee4397d6f4c2ada48a779dccc75",
+  "fixed_engine_source_commit": "09b6299f696574c9230f23e53b1ab041a942b6f3",
+  "version": "SWI-Prolog version 10.1.18 for arm64-darwin",
+  "candidate_sha256": {
+    "prolog/web_prolog/actors.pl": "09969b995e4858c06314873d1e4185d3e06e5b8ee1546c2391223acca3809619",
+    "tests/tiers/receive_handoff_tests.pl": "86f60cb0aee17b9d2c187141eeb08a53c68f5f20ecb2ec2673e2d0ea029f9f82",
+    "tests/tiers/t0_actors.pl": "9cbd7ac830172dd12844bd95c47c600b71cabbe95721ec8577f119012d0f978a"
+  },
+  "installed_engines": {
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179"
+  }
+}

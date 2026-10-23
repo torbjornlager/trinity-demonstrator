@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build/src/swipl",
+    "-q",
+    "-s",
+    "tests/tiers/t4_node.pl",
+    "-g",
+    "run_tests([worker_scope,worker_ownership_cleanup,zero_poll_accounting]),actors:receive({Msg -> throw(error(unexpected_message_in_shell(Msg),_))},[timeout(0)])",
+    "-t",
+    "halt"
+  ],
+  "exit_code": 0,
+  "seconds": 2.724828625,
+  "passed": true,
+  "reason": "Initial invocation used an undefined T4 post-check; all test assertions had passed. Rerun uses the public receive empty-mailbox check."
+}

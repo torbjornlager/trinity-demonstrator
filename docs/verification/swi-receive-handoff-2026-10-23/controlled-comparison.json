@@ -1,0 +1,18 @@
+{
+  "baseline": {
+    "base_commit": "c5757ea5426bc70de7b9328c47b3730d008a138c",
+    "exit_code": 0,
+    "stdout": "failed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\nfailed(missing_unrelated,absent,absent)\n",
+    "stderr": "",
+    "missing_count": 20,
+    "ok_count": 0
+  },
+  "candidate": {
+    "base_commit": "c5757ea5426bc70de7b9328c47b3730d008a138c",
+    "exit_code": 0,
+    "stdout": "ok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\nok\n",
+    "stderr": "",
+    "missing_count": 0,
+    "ok_count": 20
+  }
+}
