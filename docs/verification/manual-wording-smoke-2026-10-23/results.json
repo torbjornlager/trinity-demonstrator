@@ -1,0 +1,25 @@
+[
+  {
+    "label": "rpc-bridge-smoke",
+    "command": [
+      "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "tests/wasm/swi_wasm_rpc_bridge_smoke.js"
+    ],
+    "SWIPL": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "NODE": "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "exit_code": 0,
+    "seconds": 0.306
+  },
+  {
+    "label": "wasm-tier",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "WASM"
+    ],
+    "SWIPL": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "NODE": "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "exit_code": 0,
+    "seconds": 163.076
+  }
+]

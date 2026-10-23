@@ -1,0 +1,11 @@
+{
+  "revision": "f74549b0dd8369be4a0eba0b523d447ec6f99685",
+  "hashes": {
+    "web/manual.html": "d9a53c4e55e9690d02c994804ed67bff63e15b0e39e948228071f0566145b2eb",
+    "web/demonstrator.html": "6c225632fac2b58f6b354f846495138c3b800db82d24c7fc6bcdfdb5bc6fe422",
+    "web/swi_wasm_actor_worker.js": "a0ebcb3840ece44c2f41264f33051c7cdeb935ec5c6289bdbc415808cb82b4dd",
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179",
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl": "34cbf9796d4c4310b2f6bb122d2e820fc446089173b2ab39e5a6faa48ef56563"
+  }
+}

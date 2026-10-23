@@ -1,0 +1,21 @@
+{
+  "base_revision": "f74549b0dd8369be4a0eba0b523d447ec6f99685",
+  "changed_tracked_files": [
+    "tests/wasm/swi_wasm_rpc_bridge_smoke.js"
+  ],
+  "preserved_hashes": {
+    "web/manual.html": "d9a53c4e55e9690d02c994804ed67bff63e15b0e39e948228071f0566145b2eb",
+    "web/demonstrator.html": "6c225632fac2b58f6b354f846495138c3b800db82d24c7fc6bcdfdb5bc6fe422",
+    "web/swi_wasm_actor_worker.js": "a0ebcb3840ece44c2f41264f33051c7cdeb935ec5c6289bdbc415808cb82b4dd",
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179",
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl": "34cbf9796d4c4310b2f6bb122d2e820fc446089173b2ab39e5a6faa48ef56563"
+  },
+  "test_sha256": "16e5b0f0e18448d6492d3fb4275e6e3fc440cbfa89e2f68cb1f804f8ce8a5058",
+  "node_version": "v24.19.0",
+  "swipl_version": "SWI-Prolog version 10.1.18 for arm64-darwin",
+  "executables": {
+    "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node": "060b970693b04c9b5664c68014c6ece7c30ec7968d55c8764776d8a07e154056",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f"
+  }
+}

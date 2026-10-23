@@ -1394,22 +1394,28 @@ ok(workerSource.includes('transportable_term(Term) :-') &&
    workerSource.includes('must_be_transportable_term(Message)') &&
    includes('must_be_transportable_term(Message)'),
    "browser actor boundaries enforce the shared portable-term subset");
-ok(manualSource.includes('id="runtime_property/1"') &&
-   manualSource.includes('<code>main@localhost</code>') &&
-   manualSource.includes('All conforming native and browser runtimes accept:') &&
-   manualSource.includes('<code>http_timeout(+Number)</code>') &&
-   !manualSource.slice(
+ok(manualSource.includes('id="runtime_property/1"'),
+   "the HTML manual documents runtime_property/1");
+ok(manualSource.includes('<code>main@localhost</code>'),
+   "the HTML manual documents the browser main actor pid");
+ok(manualSource.includes('<code>http_timeout(+Number)</code>'),
+   "the HTML manual documents the HTTP transport timeout option");
+ok(!manualSource.slice(
      manualSource.indexOf('<article class="predicate-entry" id="rpc/2-3">'),
      manualSource.indexOf('<article class="predicate-entry" id="promise/3-4">')
-   ).includes('offset(+Integer)') &&
-   manualSource.slice(
+   ).includes('offset(+Integer)'),
+   "the HTML manual excludes offset from rpc/2-3 options");
+ok(manualSource.slice(
      manualSource.indexOf('<article class="predicate-entry" id="promise/3-4">'),
      manualSource.indexOf('<article class="predicate-entry" id="yield/2-3">')
-   ).includes('offset(+Integer)') &&
-   manualSource.includes('If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>.') &&
-   !manualSource.includes('The native runtime additionally accepts') &&
-   !manualSource.includes('The SWI-WASM runtimes additionally accept'),
-   "the HTML manual presents one common browser/native programming contract");
+   ).includes('offset(+Integer)'),
+   "the HTML manual includes offset in promise/3-4 options");
+ok(manualSource.includes('If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>.'),
+   "the HTML manual documents the default promise timeout answer");
+ok(!manualSource.includes('The native runtime additionally accepts'),
+   "the HTML manual avoids the obsolete native-only option-list introduction");
+ok(!manualSource.includes('The SWI-WASM runtimes additionally accept'),
+   "the HTML manual avoids the obsolete browser-only option-list introduction");
 ok(workerSource.includes('parallel/1, first_solution/2, first_solution/3') &&
    workerSource.includes('parallel(QualifiedGoals) :-') &&
    workerSource.includes('maplist(goal_template, Goals, Templates)') &&
