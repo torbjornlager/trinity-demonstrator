@@ -1,0 +1,10 @@
+{
+  "all_required_gates_have_passing_runs": true,
+  "initial_t4_callback_timeout_retained": true,
+  "original_callback_control_also_timed_out": true,
+  "installed_engine_hashes_unchanged": true,
+  "n3_n5_pids_and_commands_unchanged": true,
+  "original_files_deleted": [],
+  "published": false,
+  "other_node_repositories_renamed": false
+}

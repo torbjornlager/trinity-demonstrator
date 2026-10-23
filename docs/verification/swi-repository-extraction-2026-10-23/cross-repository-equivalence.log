@@ -1,0 +1,3 @@
+statechart shared schema: PASS
+statechart WASM shared microstep algorithm: PASS
+statechart WASM shared runtime helpers: PASS

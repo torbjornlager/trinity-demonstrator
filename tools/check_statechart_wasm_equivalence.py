@@ -9,6 +9,7 @@ shutdown) before comparing that shared region byte-for-byte.
 """
 
 from pathlib import Path
+import argparse
 import re
 import sys
 
@@ -75,6 +76,22 @@ def normalise(text: str, desktop: bool) -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--native-root', type=Path, default=ROOT)
+    parser.add_argument('--wasm-dir', type=Path,
+                        default=ROOT / 'prolog/web_prolog/wasm')
+    args = parser.parse_args()
+    global DESKTOP, WASM, RUNTIME_DESKTOP, RUNTIME_WASM
+    DESKTOP = args.native_root / 'prolog/web_prolog/statechart_exec.pl'
+    RUNTIME_DESKTOP = args.native_root / 'prolog/web_prolog/statechart_runtime.pl'
+    WASM = args.wasm_dir / 'statechart_wasm_exec.pl'
+    RUNTIME_WASM = args.wasm_dir / 'statechart_wasm_runtime.pl'
+    native_schema = args.native_root / 'prolog/web_prolog/wasm/sxml_schema.pl'
+    browser_schema = args.wasm_dir / 'sxml_schema.pl'
+    if native_schema.read_bytes() != browser_schema.read_bytes():
+        print('statechart shared schema: FAIL (package revisions differ)', file=sys.stderr)
+        return 1
+    print('statechart shared schema: PASS')
     desktop = normalise(shared_region(DESKTOP), desktop=True)
     wasm = normalise(shared_region(WASM), desktop=False)
     import difflib

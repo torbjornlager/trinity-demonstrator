@@ -1,0 +1,46 @@
+[
+  {
+    "label": "WASM-with-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "WASM"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 162.538
+  },
+  {
+    "label": "pack-attachment-corrected",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-g",
+      "use_module(library(prolog_pack)),pack_attach('/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node',[]),use_module(library(web_prolog)),module_property(actors,file(F)),assertion(same_file(F,'/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node/prolog/web_prolog/actors.pl')),node_version:web_prolog_version(V),assertion(V==\"0.2.0\"),writeln(pack_attachment_verified)",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/foreign-cwd",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.239
+  },
+  {
+    "label": "headless-api",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/headless-smoke.pl",
+      "-g",
+      "probe",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/foreign-cwd",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.239
+  }
+]

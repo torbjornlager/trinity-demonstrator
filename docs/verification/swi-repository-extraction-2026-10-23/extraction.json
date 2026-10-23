@@ -1,0 +1,23 @@
+{
+  "source": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+  "source_revision": "a75782d8d8e29ab8ad8330634f597e4b7f852980",
+  "destination": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+  "prepared_revision": "2fea9be9c1f55d7f490e86775534692223f439c2",
+  "extraction_revision": "563c34b4b27127c58151347ea9366339f8721ace",
+  "historical_peer": "2b5eae7ad4118e88f4aec77c513b6204dbf3b69e",
+  "original_tracked_files": 711,
+  "retained": 506,
+  "historical_only": 205,
+  "source_files_unchanged": true,
+  "remote_configured": false,
+  "history_strategy": "full independent clone; original commit IDs and tags retained",
+  "archived_source_refs": [
+    "refs/heads/main",
+    "refs/remotes/origin/HEAD",
+    "refs/remotes/origin/main",
+    "refs/remotes/origin/semantic-contracts",
+    "refs/tags/demonstrator-peer"
+  ],
+  "packaging_revision": "cb72b5fc11277028f2f95e6691fc4eac203874e7",
+  "documentation_followup_revision": "33ce33bcdf4b6afd05afa5e2aa67c7d9ca1f8fc2"
+}

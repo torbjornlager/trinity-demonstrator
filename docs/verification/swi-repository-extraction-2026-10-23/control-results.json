@@ -1,0 +1,50 @@
+[
+  {
+    "label": "T4-native-fresh-control",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_native",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 49.864
+  },
+  {
+    "label": "callback-original-control",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(node:isobase_yield_timeout_callback_is_sandboxed)",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": "watchdog_timeout",
+    "seconds": 30.01
+  },
+  {
+    "label": "callback-native-control",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(node:isobase_yield_timeout_callback_is_sandboxed)",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.616
+  }
+]

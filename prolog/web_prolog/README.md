@@ -554,3 +554,14 @@ an unknown executable meta-call, which admission rejects. Trealla accepts that
 runtime-bound form. Supporting it here needs runtime validation of the resolved
 child starts before execution; simply skipping the static check would be
 insufficient. No supervisor lifecycle code changed for this investigation.
+
+
+### External statechart examples during repository extraction
+
+The convenience `statechart_actor:interpret_example/1` uses
+`WP_ASSET_ROOT/examples/statecharts` when a nonempty root is configured. An
+explicit root does not fall back to another checkout if its example is missing.
+Unset or empty configuration preserves the original module-relative path.
+This lower-layer helper reads the setting directly from the process environment;
+it does not import the node-layer asset resolver. Source loading, sandboxing
+and ordinary `src_uri/1` resolution are unchanged.

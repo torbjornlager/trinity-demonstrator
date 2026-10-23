@@ -1,0 +1,17 @@
+ERROR: [Thread main] Assertion failed: user:("0.2.0"=='0.2.0')
+  [14] prolog_stack:backtrace(10) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/library/prolog_stack.pl:510
+  [13] prolog_debug:assertion_failed(fail,user:("0.2.0"=='0.2.0')) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/library/debug.pl:393
+  [12] prolog_debug:assertion(user:("0.2.0"=='0.2.0')) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/library/debug.pl:379
+  [11] '<meta-call>'('<garbage_collected>') <foreign>
+  [10] catch(user:(...,...),_338,'$toplevel':true) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:565
+   [9] catch_with_backtrace('<garbage_collected>','<garbage_collected>','<garbage_collected>') at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:658
+ERROR: [Thread main] -g use_module(library(prolog_pack)),pack_attach('/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node',[]),use_module(library(web_prolog)),module_property(actors,file(F)),assertion(same_file(F,'/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node/prolog/web_prolog/actors.pl')),node_version:web_prolog_version(V),assertion(V=='0.2.0'),writeln(pack_attachment_verified): Unknown error term: assertion_error(fail,user:("0.2.0"=='0.2.0'))
+ERROR: [Thread main] In:
+ERROR: [Thread main]   [14] throw(error(assertion_error(fail,...),_258))
+ERROR: [Thread main]   [12] prolog_debug:assertion(user:("0.2.0"=='0.2.0')) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/library/debug.pl:379
+ERROR: [Thread main]   [11] '<meta-call>'('<garbage_collected>') <foreign>
+ERROR: [Thread main]   [10] catch(user:(...,...),_378,'$toplevel':true) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:565
+ERROR: [Thread main]    [9] catch_with_backtrace('<garbage_collected>','<garbage_collected>','<garbage_collected>') at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:658
+ERROR: [Thread main] 
+ERROR: [Thread main] Note: some frames are missing due to last-call optimization.
+ERROR: [Thread main] Re-run your program in debug mode (:- debug.) to get more detail.

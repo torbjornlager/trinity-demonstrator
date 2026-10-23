@@ -1,0 +1,29 @@
+Cloning into '/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/reproduced-native'...
+From /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator
+ * [new branch]      main       -> refs/archive/trinity-demonstrator/heads/main
+ * [new ref]         origin/HEAD -> refs/archive/trinity-demonstrator/remotes/origin/HEAD
+ * [new ref]         origin/main -> refs/archive/trinity-demonstrator/remotes/origin/main
+ * [new ref]         origin/semantic-contracts -> refs/archive/trinity-demonstrator/remotes/origin/semantic-contracts
+ * [new tag]         demonstrator-peer -> refs/archive/trinity-demonstrator/tags/demonstrator-peer
+{
+  "source": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+  "source_revision": "a75782d8d8e29ab8ad8330634f597e4b7f852980",
+  "destination": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/reproduced-native",
+  "prepared_revision": "b9a56fefd114806ac6b44b02b66991f68149fa34",
+  "extraction_revision": "8121930edbe96b717c4d6842276f3b05d4c8b7d7",
+  "packaging_revision": "45749a9ec8f3c3b7b7514481605c69210cb5342a",
+  "historical_peer": "2b5eae7ad4118e88f4aec77c513b6204dbf3b69e",
+  "original_tracked_files": 711,
+  "retained": 506,
+  "historical_only": 205,
+  "source_files_unchanged": true,
+  "remote_configured": false,
+  "archived_source_refs": [
+    "refs/heads/main",
+    "refs/remotes/origin/HEAD",
+    "refs/remotes/origin/main",
+    "refs/remotes/origin/semantic-contracts",
+    "refs/tags/demonstrator-peer"
+  ],
+  "history_strategy": "full independent clone; original commit IDs and tags retained"
+}

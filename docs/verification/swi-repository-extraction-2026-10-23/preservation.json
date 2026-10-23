@@ -1,0 +1,294 @@
+{
+  "original_files_all_present": true,
+  "no_original_tracked_deletions": true,
+  "native_runtime_matches_prepared_source": [
+    {
+      "path": "prolog/web_prolog.pl",
+      "sha256": "30f30b76c3e4eb49fe6698b5bc6c5ab04fa8e10237cd38e6157c5b2814e66aef"
+    },
+    {
+      "path": "prolog/web_prolog/actor_api.pl",
+      "sha256": "b126770cecc2606d50eddb4c12e61e8f4f6ab47fc16aae81a9f7ddf5dc22f7d2"
+    },
+    {
+      "path": "prolog/web_prolog/actor_io_support.pl",
+      "sha256": "1ab5541f85b872c97c762117f8330c08cf1910a8b9c145b96dab077a8846c842"
+    },
+    {
+      "path": "prolog/web_prolog/actor_io_template.pl",
+      "sha256": "7cac94aebc2fa77294cb4e96f958705526fa38971cae49c166db7aab433a658e"
+    },
+    {
+      "path": "prolog/web_prolog/actors.pl",
+      "sha256": "09969b995e4858c06314873d1e4185d3e06e5b8ee1546c2391223acca3809619"
+    },
+    {
+      "path": "prolog/web_prolog/composition.pl",
+      "sha256": "dfbb773b14fe4d17792b775da972c25028e3b371e9b2c90ac40b02e897547a7a"
+    },
+    {
+      "path": "prolog/web_prolog/control_guard.pl",
+      "sha256": "6a7646e2319d3ade3d31386c26d1bde8cef09e581f6b21c0fc24ba28bbb8e08f"
+    },
+    {
+      "path": "prolog/web_prolog/debug.pl",
+      "sha256": "8a085e7d6b40173e2724552e1990730449391d7e5c34e2101cdf7811c2f55fce"
+    },
+    {
+      "path": "prolog/web_prolog/distribution.pl",
+      "sha256": "d86e20c3377439a9f26d3257da5c30089f1a814f18826e5ca4e4834c99060b14"
+    },
+    {
+      "path": "prolog/web_prolog/dollar_expansion.pl",
+      "sha256": "73ef8b87112fd273b41e84bfd05f67143c63f222458299509e42fc985a465d07"
+    },
+    {
+      "path": "prolog/web_prolog/first_solution.pl",
+      "sha256": "426959e1aa37bb446a00cd236a16e63153ff739e8b8f5260064dd33345b0b222"
+    },
+    {
+      "path": "prolog/web_prolog/goal_walker.pl",
+      "sha256": "3f026f5f71e9a1bec2a2ec46e2b42b93372902882d8a5afae0a0bfb1caff93bd"
+    },
+    {
+      "path": "prolog/web_prolog/isolation.pl",
+      "sha256": "bf155630ecb9623f19742d0aea530005efb2475d16294a7318df53196f469471"
+    },
+    {
+      "path": "prolog/web_prolog/node.pl",
+      "sha256": "8470184c321b61f5baa860339024bb4c328d9705fc85ceb7da96338ca9936917"
+    },
+    {
+      "path": "prolog/web_prolog/node_admin.pl",
+      "sha256": "524f64214aa69128368a1b57a7b7ea5bec726794cd7011214e5f8ccfc272f32b"
+    },
+    {
+      "path": "prolog/web_prolog/node_assets.pl",
+      "sha256": "d07481fb35c38ee8cbbb2897d6ff5954c4d92b044a9ac2cbc72ba189f3987a07"
+    },
+    {
+      "path": "prolog/web_prolog/node_auth.pl",
+      "sha256": "a3904094056191338899d7fcc67e77947949b759a4b2b93445f98da8f8871caa"
+    },
+    {
+      "path": "prolog/web_prolog/node_builtin_policy.pl",
+      "sha256": "62eeed0c829866f55816708fde5d89789803f7a40bc04104224616ac7a1b0dec"
+    },
+    {
+      "path": "prolog/web_prolog/node_call_context.pl",
+      "sha256": "635557e894ec132d69a567c05c2dcf786e18e52cf106a6226b1e9344fe1d5241"
+    },
+    {
+      "path": "prolog/web_prolog/node_capabilities.pl",
+      "sha256": "97ed3a3f2ddbd9616a32b6bd97b9df8515597a7fa0dac82af5478d5160fc2253"
+    },
+    {
+      "path": "prolog/web_prolog/node_controller.pl",
+      "sha256": "d8b9f6b3dee21c54c2febfd7ef7ce872e775f568696b3e91078a2985296d6eb4"
+    },
+    {
+      "path": "prolog/web_prolog/node_doctor.pl",
+      "sha256": "23adda82680ec3bc57779ed0ea91d854f6ca725b354a4097033e9c52dca3a1cb"
+    },
+    {
+      "path": "prolog/web_prolog/node_engine.pl",
+      "sha256": "d725ce275a48633ec365cd34bb058c7827f890351232764fcb659ebf93e72927"
+    },
+    {
+      "path": "prolog/web_prolog/node_execution_context.pl",
+      "sha256": "5085663e76fc18a8af473c5313012d5d161ab38dfac82b134dba36030581b202"
+    },
+    {
+      "path": "prolog/web_prolog/node_glue.pl",
+      "sha256": "e80a6fe7f19adb57facc7fa617ec4e3300a3e3afbe8a2a617b1a379bae55ca67"
+    },
+    {
+      "path": "prolog/web_prolog/node_input_limits.pl",
+      "sha256": "30a251c588b9dbec5e10bfe1be2a202e285e54dcdde532915d0848962a6846dd"
+    },
+    {
+      "path": "prolog/web_prolog/node_interaction_log.pl",
+      "sha256": "14bf2cac682a64a80475f0e3102aea143117ee347e1a0382566bd624caaef10c"
+    },
+    {
+      "path": "prolog/web_prolog/node_ip_policy.pl",
+      "sha256": "5c9bbdca35cbbabf36dde1e06b34f764b69eafe552ef58b1061da4cd01b081b6"
+    },
+    {
+      "path": "prolog/web_prolog/node_isotope_controller.pl",
+      "sha256": "af3828fceee7dc388cc216b4fb83d7edde00128d933b313b6628ae33564cf3a1"
+    },
+    {
+      "path": "prolog/web_prolog/node_isotope_options.pl",
+      "sha256": "8ac28e7c66ef83cce6541f59235592c35fd09201f2d6dc7266651bf0f649c4ea"
+    },
+    {
+      "path": "prolog/web_prolog/node_lifetime.pl",
+      "sha256": "4d3070004e9d4fa9f72a0115eb79830554baa7ed7147fcc934d1c9c07deaccb6"
+    },
+    {
+      "path": "prolog/web_prolog/node_limit_helpers.pl",
+      "sha256": "ce08f838b30226284038ff40a583d2d6a9c3ed3264f61534607fe042d6d12519"
+    },
+    {
+      "path": "prolog/web_prolog/node_limits.pl",
+      "sha256": "d0b3f9436d79b0b1535451bcf3454fc7b29f4837190bf66ad059707fd5ee1fb0"
+    },
+    {
+      "path": "prolog/web_prolog/node_log.pl",
+      "sha256": "eebe5c06b00c2226029403600272a3ee73ea9977cb0387b9e656e4d1e67f1d57"
+    },
+    {
+      "path": "prolog/web_prolog/node_log_viewer.pl",
+      "sha256": "1b77f8bda627bd60bc77e0d61235b8cc50904f536a6d9d69e845563d9ac19baf"
+    },
+    {
+      "path": "prolog/web_prolog/node_metrics.pl",
+      "sha256": "c858815e5770b01af946d5cff834e16296a91a98b0986716371870dfba5a3304"
+    },
+    {
+      "path": "prolog/web_prolog/node_metrics_counters.pl",
+      "sha256": "c409fa616a7152301af8d9fdf79afcbb149fb495e5932076a969f755a1e7d7b6"
+    },
+    {
+      "path": "prolog/web_prolog/node_owner_tag.pl",
+      "sha256": "73e0592ac38fee1203f6de2a0534d50c2c1d50be404bcc567364c9e02c5053f8"
+    },
+    {
+      "path": "prolog/web_prolog/node_principal_policy.pl",
+      "sha256": "cb97fe37e8d02995b0ffafacdc489ac5238913e008c673721751d7e6309f3dc9"
+    },
+    {
+      "path": "prolog/web_prolog/node_profile_policy.pl",
+      "sha256": "c79fc92484e2384d897bd03ffe1dc7314867077bfbeae57b561520fa4eeb9f34"
+    },
+    {
+      "path": "prolog/web_prolog/node_rate_limits.pl",
+      "sha256": "ce9303ee9741f3ab99f5651415b5f90db2a2af0d674afcb058b6f25f207a9e73"
+    },
+    {
+      "path": "prolog/web_prolog/node_relation_policy.pl",
+      "sha256": "a57f4f4c3053ea7ff03f9b89fbea596cccfc657c882820d64e9fe258710f14f8"
+    },
+    {
+      "path": "prolog/web_prolog/node_response.pl",
+      "sha256": "563d59def2dc6adf150817204545770b08466a3033131bd8c6abd1713de84013"
+    },
+    {
+      "path": "prolog/web_prolog/node_runtime_state.pl",
+      "sha256": "ddbd0d99cb9e561c3dbec7dd9ddd680bee131b8cd39146be24086542628a96f7"
+    },
+    {
+      "path": "prolog/web_prolog/node_sandbox.pl",
+      "sha256": "c4dc96592cc957726dcbb9bed4f1f3078877ed6c42672a0389817043def79d09"
+    },
+    {
+      "path": "prolog/web_prolog/node_session.pl",
+      "sha256": "79c63591f0536641925655ab357683a8b4289acfab81af55cd81571bf668fd1c"
+    },
+    {
+      "path": "prolog/web_prolog/node_session_limits.pl",
+      "sha256": "7889b3f80f5db9990054799cbd041c9f2e6d34c768c319e8b277ccdfa80ca574"
+    },
+    {
+      "path": "prolog/web_prolog/node_startup_options.pl",
+      "sha256": "0cde2ac11334bdb29f96934c65a20f1297f4394cc222c5d0726a624c50b0f9fb"
+    },
+    {
+      "path": "prolog/web_prolog/node_tokens.pl",
+      "sha256": "e30b8fd225d4cbfd83b1b73c43180858c4fcb00566378f535993bab92c7b4dd9"
+    },
+    {
+      "path": "prolog/web_prolog/node_version.pl",
+      "sha256": "2d3e429090e57be7408dd775f120479e6066881a433d56d125db2a239c39546e"
+    },
+    {
+      "path": "prolog/web_prolog/node_ws.pl",
+      "sha256": "0aea3e5c01ccf54825c23bbd76482afb186a1313b02e53ef40fb8370d48da5cf"
+    },
+    {
+      "path": "prolog/web_prolog/parallel.pl",
+      "sha256": "8122705f6f8d97a58f21366264c1e243333f91b08056f9feaa94aa5311f46810"
+    },
+    {
+      "path": "prolog/web_prolog/pid_utils.pl",
+      "sha256": "6df081dd36c0d053fbbf7b6b16882e9cb64767fd9769cdbf2ce9c7d3c9bb4983"
+    },
+    {
+      "path": "prolog/web_prolog/public_goal_guard.pl",
+      "sha256": "490cd62475fefeb77451e92f14b570877dd2d5e3f59bca429a2f441a3315c577"
+    },
+    {
+      "path": "prolog/web_prolog/remote_protocol.pl",
+      "sha256": "9617e74e621e075dfb7517f9eed008fb20f509d0169f265e204dff0e1a626fe0"
+    },
+    {
+      "path": "prolog/web_prolog/rpc.pl",
+      "sha256": "77a3dcb1c905546dce2385645ffdd03082388bc8fd3316c3001e4814f13a43b0"
+    },
+    {
+      "path": "prolog/web_prolog/server_actor.pl",
+      "sha256": "2cc05f6e626edf6343e4f355277dafbd53cb6699c5be3bf0f31403b5f601a0f2"
+    },
+    {
+      "path": "prolog/web_prolog/shared_db.pl",
+      "sha256": "6bfc19e4a686ab98ed9ad1c3508154a0b585cc0ce3d06a784dd620de4fa35fb7"
+    },
+    {
+      "path": "prolog/web_prolog/source_utils.pl",
+      "sha256": "35fee6b4b880b45496b5dd623abf10cf981ac267201ad91effaf2e742bdc0b66"
+    },
+    {
+      "path": "prolog/web_prolog/statechart_actor.pl",
+      "sha256": "c9390c8f6ee47cbb4e76b9b6095563fb983e75c46920d311e39cde028ca4ddfd"
+    },
+    {
+      "path": "prolog/web_prolog/statechart_exec.pl",
+      "sha256": "2d855562323d7354712725eecf9701b1cfc9dad1e4c1d9d43ead8f9baa1fe7ca"
+    },
+    {
+      "path": "prolog/web_prolog/statechart_model.pl",
+      "sha256": "63410b598790bad6c96ade9aad090e633943e073fd2b1881ea20ebe4bfa99522"
+    },
+    {
+      "path": "prolog/web_prolog/statechart_runtime.pl",
+      "sha256": "836ac389cb4da18e8086c6d12e9464dc6d5364e3dc6faee8d8c239b770324ed5"
+    },
+    {
+      "path": "prolog/web_prolog/supervisor_actor.pl",
+      "sha256": "990bd3877967a6f7bbc5bb450c55f01c9518281a0442b5ee91f30b81ce9b2a55"
+    },
+    {
+      "path": "prolog/web_prolog/supervisor_startup.pl",
+      "sha256": "19383799646f6cde546802179f2b33214f1b644b436d6cdf5483840560c52b0e"
+    },
+    {
+      "path": "prolog/web_prolog/sxml-0.2.dtd",
+      "sha256": "46a2d8eb32b6fa3938965b19dbd2a7b722f3fd3e2c2dd8e28d1d57d02cc03fc0"
+    },
+    {
+      "path": "prolog/web_prolog/term_display.pl",
+      "sha256": "56e9e2686243c1351b5f911b949339d73103c1e27f8cdfb8725d01508356655a"
+    },
+    {
+      "path": "prolog/web_prolog/toplevel_actors.pl",
+      "sha256": "25aaa2f817fd7df1338137c087f2bf27c94c2b9d8f7b391a00c6d962bae4cdf6"
+    },
+    {
+      "path": "prolog/web_prolog/wasm/sxml_schema.pl",
+      "sha256": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592"
+    },
+    {
+      "path": "prolog/web_prolog/wire_text.pl",
+      "sha256": "a1fefc7a98aebc8455af85996b72bba597d5f2a6eea5aef575bcaafd39350f66"
+    },
+    {
+      "path": "prolog/web_prolog/worker_cleanup.pl",
+      "sha256": "056eb7a9c3052b593725a9ab75dfd7989fa7ee4bf48e86aa8a7f1f07b6e27b91"
+    }
+  ],
+  "pack_and_loader_byte_identical": true,
+  "extraction_commit_only_removes_out_of_scope_paths": true,
+  "all_native_test_files_byte_identical": true,
+  "second_export_runtime_and_driver_match": true
+}

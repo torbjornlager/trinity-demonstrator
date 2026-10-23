@@ -1,0 +1,312 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 12ccb28..ebeb3cf 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -1,57 +1,15 @@
+-# Notes for Claude
++# Native SWI extraction rehearsal
+ 
+-## What this project is
++This local repository is `swi-prolog-node`, extracted from
++`trinity-demonstrator`. It has no publishing remote yet. See README.md.
+ 
+-This repo **is** the trinity-demonstrator (`origin` →
+-github.com/torbjornlager/trinity-demonstrator): a production Web Prolog
+-node for SWI-Prolog, restructured in place from its original `src/`-based
+-form into hook-connected layers under `prolog/web_prolog/`. The plan is
+-`docs/LAYERED_REAL_NODE_PLAN.md` — read it before structural work.
++Preserve Web Prolog semantics and package identity (`web_prolog`). No upward
++layer imports; opaque pids below distribution. Read
++`docs/LAYERED_REAL_NODE_PLAN.md` before structural work. Code relocation and
++behavior changes must remain separate commits. Keep the historical
++`demonstrator-peer` tag used by T5. Never infer permission to change installed
++engines or live n3/n5 from tests in this checkout.
+ 
+-## Hard rules
+-
+-- **Semantics freeze.** Web Prolog syntax and semantics must match the
+-  pre-layering demonstrator (the `demonstrator-peer` git tag) exactly.
+-  Any intentional observable deviation goes in `DEVIATIONS.md`. The
+-  demonstrator's test suite is the spec — it now lives relocated across
+-  the `T0`–`T5` tiers under `tests/tiers/` (the in-tree `src/` copy and
+-  its LEGACY tier were removed once the tiers fully subsumed them; the
+-  original `src/` tree, preserved under the `demonstrator-peer` tag, is
+-  materialized into a temp dir as the interop peer for T5 — there is no
+-  separate live demonstrator checkout).
+-- **No upward imports.** Layer N may only import layers ≤ N
+-  (actors < isolation < toplevel/behaviours < distribution < node <
+-  umbrella). Cross-layer connections go through multifile hooks, declared
+-  in the lower layer, with the glue defined in the umbrella.
+-- **No integer pids below distribution.** Layer-0 pids are opaque local
+-  handles behind `hook_make_pid/2` / `hook_resolve_pid/2`; integers and
+-  `Id@Node` arrive with `distribution.pl` (plan §2.4).
+-- **Relocation and behavior changes never share a commit.** Code moves
+-  verbatim; hook indirections are introduced in their own commits.
+-
+-## Building and testing
+-
+-- Run the suite with `./tools/test.sh` (tiered; each tier is a fresh
+-  process). Tiers `T0`–`T5` carry the full demonstrator suite against the
+-  layered `prolog/web_prolog/` modules (the demonstrator's own test files
+-  copied verbatim into `tests/tiers/behaviours/` and `tests/tiers/node/`,
+-  plus the lower-layer cases adapted in `t0`–`t2`). `LINT` checks layering.
+-- On this development machine, `~/bin/swipl` shadows a broken ancient
+-  build; use `SWIPL=/Applications/SWI-Prolog.app/Contents/MacOS/swipl`.
+-
+-## Relation to other checkouts
+-
+-- This working directory `/Users/lager/trinity-demonstrator` **is** the
+-  trinity-demonstrator (`origin` →
+-  github.com/torbjornlager/trinity-demonstrator) — the live node itself,
+-  the same code that runs on N3–N5 and ships the SWI-WASM model under
+-  `web/`. There is no separate "upstream" checkout to leave untouched and
+-  no `demonstrator` git remote; editing here **is** editing the
+-  demonstrator.
+-- The semantics-freeze reference is the `demonstrator-peer` git **tag**
+-  (the original pre-layering `src/` tree), which T5 extracts into a
+-  throwaway temp dir as the interop peer.
+-- A sibling `/Users/lager/web-prolog` checkout exists but is **superseded**:
+-  all work consolidated into this repo. The layered node, the discovery-hub
+-  plan, and `LAYERED_REAL_NODE_PLAN.md` / `DISCOVERY_HUB_PLAN.md` all live
+-  here under `docs/`. Don't send new work to `web-prolog`.
++Run native checks with an explicit verified SWIPL and `./tools/test.sh`.
++Frontend integration needs explicit asset roots. The original source checkout
++and all its files remain intact. The former CLAUDE.md is preserved in Git history.
+diff --git a/README.md b/README.md
+index de1a698..93df72e 100644
+--- a/README.md
++++ b/README.md
+@@ -1,168 +1,59 @@
+-# web-prolog
++# Native SWI Web Prolog node
+ 
+-A Web Prolog implementation for SWI-Prolog: Erlang-style actors, toplevel
+-query actors (pengines), actor behaviours, and distributed nodes — organized
+-as independently loadable library layers, with a production node server on
+-top.
++Local extraction rehearsal from `trinity-demonstrator`, source commit
++`a75782d8d8e29ab8ad8330634f597e4b7f852980`. No GitHub repository or remote has
++been created yet. The original demonstrator working tree remains complete.
+ 
+-**Status: pre-release.** The layered restructuring is complete through
+-the node layer: the implementation lives under `prolog/web_prolog/` and
+-loads as `library(web_prolog)`. The demonstrator's conformance suite has
+-been fully relocated into the `T0`–`T5` tiers under `tests/tiers/`, so the
+-original in-tree `src/` copy has been removed. The migration plan — layer
+-map, hook inventory, conformance strategy — is in
+-[docs/LAYERED_REAL_NODE_PLAN.md](docs/LAYERED_REAL_NODE_PLAN.md).
++The repository directory is `swi-prolog-node`. The SWI pack remains
++`web_prolog` (version 0.2.0), with `library(web_prolog)`, selective layer imports,
++`load.pl` and existing URL handlers unchanged. Published package URLs are not
++changed before a real repository is published.
+ 
+-## Documentation
++## Load and test
+ 
+-The [Web Prolog language manual](web/manual.html) is the single shared API
+-reference for native SWI, Trealla and SWI-WASM. Runtime differences remain
+-explicit there; this README describes the native SWI implementation and setup.
+-The [layered implementation guide](prolog/web_prolog/README.md) covers internals
+-and wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
+-coordination, and the [Trealla runtime guide](https://github.com/torbjornlager/trealla-port/blob/main/README.md)
+-covers that port. Runtime guides do not define separate versions of the language.
+-
+-The [interoperability baseline 0.1](https://github.com/torbjornlager/trinity-conformance/blob/main/baselines/0.1.md)
+-and its [coverage matrix](https://github.com/torbjornlager/trinity-conformance/blob/main/reports/2026-10-21-baseline-0.1/COVERAGE.md)
+-select tested common behavior, including GNU Prolog at ISOBASE level. They keep
+-unresolved and unmeasured behavior explicit; passing a selection is not complete
+-profile certification.
+-
+-## The layers (target state)
+-
+-| layer | library | gives you |
+-|---|---|---|
+-| 0 | `library(web_prolog/actors)` | spawn/send/receive, links, monitors, registration — a stand-alone actor library; full SWI-Prolog available |
+-| 1 | `library(web_prolog/isolation)` | per-actor temporary modules, `src_text/1` & friends |
+-| 2 | `library(web_prolog/toplevel_actors)` | query actors: `'$call'`/`'$next'`/`'$stop'` protocol |
+-| 2b | server, supervisor, statechart, parallel | reusable actor behaviours |
+-| 3 | `library(web_prolog/distribution)` + `rpc` | `Id@Node` pids, remote spawn/send/monitor/link, `rpc/2-3`, `promise/3-4`, `yield/2-3` |
+-| 4 | the node server | ISOBASE `/call`, ISOTOPE sessions, ACTOR WebSocket; auth, profiles, sandbox, limits |
+-| 5 | `library(web_prolog)` | everything, composed |
+-
+-Lower layers never depend on higher ones; the connections run through
+-multifile hooks, following the pattern of [swi-web-prolog]. Web Prolog
+-syntax and semantics are frozen to the trinity-demonstrator's — see
+-[DEVIATIONS.md](DEVIATIONS.md), which is expected to stay empty.
+-
+-## Running
+-
+-Requires SWI-Prolog ≥ 9.x with threads.
+-
+-```bash
++```sh
+ swipl load.pl
++SWIPL=/path/to/verified/separate/swipl ./tools/test.sh
+ ```
+ 
+-```prolog
+-?- node(3060).
+-```
+-
+-Or load layers selectively:
+-
+-```prolog
+-?- use_module(library(web_prolog/actors)).   % just actors, full SWI
+-?- use_module(library(web_prolog/rpc)).      % rpc/promise/yield client
+-?- use_module(library(web_prolog)).          % everything
+-```
+-
+-Then try:
+-
+-- the shell at <http://localhost:3060/portal>
+-- the stateless API:
+-  `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
+-
+-## Demonstrator asset locations
+-
+-The native node can serve a demonstrator tree from a separate location while
+-keeping the existing portal, tutorial, manual, example and browser-runtime URLs:
+-
+-```bash
+-WP_ASSET_ROOT=/path/to/trinity-demonstrator swipl load.pl
+-```
+-
+-`WP_WASM_SOURCE_DIR` optionally selects the directory of the six browser Prolog
+-sources. Without that override, an explicit asset root uses its current
+-`prolog/web_prolog/wasm/` layout. With neither variable set, all lookups retain
+-the existing checkout defaults. Explicit locations do not fall back to another
+-checkout when a file is missing. These are process-wide operator settings;
+-all nodes in one SWI process share them.
+-
+-The [native extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) records file
+-ownership, dependencies, configuration settings and the remaining extraction
+-steps. No repository separation has been performed yet.
+-
+-The split-layout rehearsal in `tools/check_swi_split_layout.py` builds disposable
+-native and demonstrator-asset trees, then checks native APIs, external frontend
+-integration, selection coverage and the original full T4. See the extraction
+-map for its file manifest and commands. `tools/test.sh` additionally accepts
+-`T1_NATIVE`, `T3_NATIVE`, `T4_NATIVE`, their `_INTEGRATION` counterparts, and
+-`T4_LEGACY_LAYOUT`; ordinary full-tier invocations retain all existing tests.
+-
+-## Deploying as a production node
+-
+-The node **executes untrusted code from clients** — that is the product —
+-so it is **secure by default**: `auth=private`, and it *refuses to start
+-world-open* (`auth=open`) unless you set `WP_ACK_PUBLIC=yes`. The
+-[`Deployment/`](Deployment/) directory contains the Docker + Caddy stack
+-used for the repository's `elfenbenstornet.se` nodes:
+-
+-```bash
+-cp Deployment/.env.n5-sso.example Deployment/.env
+-$EDITOR Deployment/.env          # set OAuth credentials and registration policy
+-docker compose -f Deployment/compose.yaml --env-file Deployment/.env up -d --build
+-curl https://n5.elfenbenstornet.se/healthz      # {"status":"ok"}
+-```
+-
+-The full topology, environment setup, operational commands, and SSO-gated
+-`n5` configuration are documented in
+-[Deployment/README.md](Deployment/README.md).
+-That guide also contains an opt-in, immediately reversible Trealla N5
+-override for private interoperability testing.
+-
+-Outgoing remote toplevel calls remove the caller's outer module qualification
+-before serialization: private actor modules belong to the sending node. Nested
+-goal qualifications, options and goal/template variable sharing are preserved.
+-This applies to asynchronous and synchronous calls; local calls are unchanged.
+-
+-Native SWI and Trealla prefer the optional WebSocket subprotocol
+-`web-prolog-sync-spawn-v1`, which guarantees both correlated toplevel replies
+-and request IDs on spawn successes and failures. With that selection, the
+-client accepts only the current spawn's ID; untagged command errors go to the
+-`distribution(remote)` debug topic and `distribution:hook_event/1` as
+-`remote_transport_error` events. They cannot become a later spawn failure.
+-The older `web-prolog-sync-v1` offer and unnegotiated peers retain serialized
+-legacy spawning; untagged errors on those connections remain ambiguous.
+-Connection loss still reports an unknown remote startup outcome. This does
+-not implement Trealla's missing `lineage_close` handling.
+-
+-Native SWI connection disposal continues local queue and pending-event cleanup
+-even if the WebSocket close handshake fails or raises an exception. This does
+-not confirm remote actor termination.
+-
+-Validate a configuration without starting the server:
+-
+-```bash
+-WP_CHECK=1 WP_PROFILE=actor WP_AUTH=private swipl Deployment/start_node.pl
++The default runs LINT, T0, T1_NATIVE, T2, T3_NATIVE, T4_NATIVE and T5 in separate
++processes. No frontend is required. T5 uses an ephemeral node and the preserved
++annotated `demonstrator-peer` tag, commit
++`2b5eae7ad4118e88f4aec77c513b6204dbf3b69e`; it does not contact n3/n5.
++Every source commit and tag from the local clone is retained with its original
++ID, including pre-layering history. Frontend code omitted from this working
++tree remains in that history and in the original demonstrator checkout.
++
++For frontend integration, configure the external demonstrator explicitly:
++
++```sh
++WP_ASSET_ROOT=/path/to/trinity-demonstrator \
++WP_WASM_SOURCE_DIR=/path/to/assembled/browser-prolog \
++SWIPL=/path/to/verified/separate/swipl \
++  ./tools/test.sh T1_INTEGRATION T3_INTEGRATION T4_INTEGRATION
+ ```
+ 
+-## Tests
+-
+-```bash
+-./tools/test.sh          # all tiers, each in a fresh SWI-Prolog process
+-```
+-
+-The tier structure (see `tests/tiers/README.md`): tiers `T0`–`T5` carry the
+-full demonstrator suite against the layered modules, one layer per tier,
+-and each asserts that the layers above it are *not* loaded. `LINT` checks
+-that imports only point downward.
+-
+-## Provenance
+-
+-- [trinity-demonstrator] — the semantic reference this fork preserves
+-  (full git history included here).
+-- [swi-web-prolog] — Torbjörn Lager & Jan Wielemaker's earlier
+-  implementation, whose hook-based layering this project adopts.
+-
+-[trinity-demonstrator]: https://github.com/torbjornlager/trinity-demonstrator
+-[swi-web-prolog]: https://github.com/Web-Prolog/swi-web-prolog
++The demonstrator's `tools/package_wasm_prolog.py` assembles the five browser
++modules plus this revision's native `prolog/web_prolog/wasm/sxml_schema.pl` into
++a fresh output directory. Its equivalence check accepts `--native-root` and
++`--wasm-dir` and checks schema equality as well as the shared interpreter code.
++The native copy supplies the schema for assembly; do not edit a generated copy.
++The existing demonstrator copy is retained unchanged during rehearsal. The DTD
++and default shared database remain native package files.
++
++`interpret_example/1` uses `WP_ASSET_ROOT/examples/statecharts` when configured;
++otherwise its original colocated path is retained. Ordinary source loading,
++sandbox checks and URI resolution are unchanged.
++
++Two T4_LEGACY_LAYOUT assertions intentionally require the original colocated
++checkout and run there. T5's original tag remains self-contained. The browser
++suite stays in the demonstrator. Existing test assertions have not been removed.
++
++## Boundaries
++
++No installed engines, live startup scripts, n3/n5, Docker assembly, CI workflows,
++book examples or tutorial URLs are switched by this rehearsal. Documentation
++under `docs/` preserves investigation history and may refer to the original
++layout; `prolog/web_prolog/README.md` remains the detailed runtime guide. Consult
++the extraction map and verification report in the demonstrator for current
++ownership and the full per-file inventory.
+diff --git a/tools/test.sh b/tools/test.sh
+index cca8e31..01d512d 100755
+--- a/tools/test.sh
++++ b/tools/test.sh
+@@ -11,6 +11,10 @@ cd "$(dirname "$0")/.."
+ 
+ SWIPL="${SWIPL:-swipl}"
+ SELECT="$*"
++# Native checkout default; external content and legacy-layout gates stay explicit.
++if [ -z "$SELECT" ]; then
++    SELECT="LINT T0 T1_NATIVE T2 T3_NATIVE T4_NATIVE T5"
++fi
+ FAILED=0
+ 
+ selected () {

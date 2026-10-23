@@ -1,8 +1,9 @@
 # Native SWI node extraction: files, dependencies and first seam
 
-Status: split-layout rehearsal, 23 October 2026. No repository or source files
-have been moved in the checkout. Disposable native and demonstrator asset trees
-are now verified separately. Runtime behavior and HTTP URLs are preserved.
+Status: local repository-extraction rehearsal, 23 October 2026. A separate
+`swi-prolog-node` working tree now exists. No files have been removed from the
+original demonstrator, no public repository has been created, and no live
+startup configuration has been switched. See the rehearsal section below.
 
 ## Ownership map
 
@@ -103,30 +104,35 @@ same-origin browser restrictions therefore need no change solely because of
 repository extraction. Static-file roots do not change source-fetch allowlists,
 sandbox checks or client-provided `src_uri/1` resolution.
 
-## Remaining dependencies to resolve before physical extraction
+## Dependency status through the extraction rehearsal
 
-1. **Lower-layer example convenience helper.**
+1. **Lower-layer example convenience helper — resolved for rehearsal.**
    `statechart_actor:interpret_example/1` still resolves
    `../../examples/statecharts` directly. It cannot import layer-4 node assets.
-   Decide whether to supply its example path through a lower-layer mechanism or
-   make it a demonstrator helper. Ordinary statechart execution and URI fetching
-   are unchanged by this batch.
+   The repository rehearsal now lets this helper use `WP_ASSET_ROOT` directly,
+   without an upward import. An unset/empty root preserves the original path;
+   an explicit root is authoritative. Ordinary statechart execution and URI
+   fetching are unchanged.
 2. **WASM ownership and equivalence checks.**
    Keep the two browser runtimes and six Prolog files together initially.
-   `tools/check_statechart_wasm_equivalence.py` currently reads both native and
-   WASM paths from this checkout; later CI must name the pinned native source.
+   `tools/check_statechart_wasm_equivalence.py` now accepts explicit native and
+   browser paths and verifies shared-schema equality. CI must supply a pinned
+   native checkout rather than silently follow its development branch.
 3. **Historical peer and external launchers.**
    Native/integration test selections and test-only external asset resolution
    are now explicit (see the rehearsal below); assertions remain in their
    existing units. T5 still materializes `demonstrator-peer` using Git history;
-   retain that tag/history or an explicitly pinned fixture. T5 is outside this
-   rehearsal. Trealla interop and conformance launchers still refer to sibling
-   native paths and need an explicit pinned native dependency before cutover.
+   the repository rehearsal retains and verifies that tag/history and runs T5
+   inside the new native checkout. Trealla interop and conformance launchers
+   still refer to sibling native paths and need an explicit pinned native
+   dependency before cutover.
 4. **Packaging and entry points.**
    Preserve `library(web_prolog)` and selective layer loads. `debug.pl` expects
    `../../load.pl`; `node_version.pl` discovers `../../pack.pl` and `.git`.
    These are native package-layout assumptions rather than frontend assets,
-   but extraction and source archives must retain meaningful version identity.
+   and the rehearsal checks package attachment and native source identity from
+   a foreign working directory. Published source archives still need their
+   release/build wiring.
 5. **Deployment and integration.**
    The current Dockerfile copies the whole checkout to `/app`; startup scripts,
    examples, tests, browser UI and CI assume that arrangement. Later assembly
@@ -224,10 +230,87 @@ existing frontend URLs and example integrations work with a separately located
 asset tree. Tests now express that boundary without moving or weakening their
 assertions. No runtime source was changed in this batch.
 
-Physical extraction still needs repository/history and dependency wiring:
+After that split-layout batch, the next work was repository/history and dependency wiring:
 choose the native repository and preserve useful history; retain a reproducible
 T5 peer; make the demonstrator consume one pinned native revision; package the
 shared schema for both consumers; and adjust deployment/build assembly. The
 lower-layer `interpret_example/1` convenience helper and WASM equivalence tool
 remain explicitly deferred. No live startup paths, engines, n3 or n5 were
 changed by the rehearsal.
+
+
+## Local repository-extraction rehearsal
+
+The sibling `swi-prolog-node` directory is an independent Git clone, not a move
+or a symlink. The source is `a75782d8d8e29ab8ad8330634f597e4b7f852980` plus the
+explicit example-helper preparation. Original commit IDs, the annotated
+`demonstrator-peer` tag and archived source refs (including the remote-tracking
+`semantic-contracts` branch) remain reachable. There is no publishing remote.
+A separately verified full source bundle is retained outside both checkouts.
+
+The first new commit contains only the example-helper seam and regressions.
+The next commit narrows the working tree without editing retained files. A
+third commit documents the native checkout and makes its default test selection
+native-only. `pack.pl`, `load.pl`, `library(web_prolog)`, the DTD, native source
+paths and the historical peer contents remain compatible. The package is still
+named `web_prolog`; the repository/directory name is `swi-prolog-node`.
+
+The inventory accounts for all 711 originally tracked files: 506 retained in
+the native working tree, 205 excluded there but preserved in the original
+checkout and Git history. This includes useful investigation documentation;
+its historical layout descriptions have not been rewritten wholesale.
+The demonstrator remains complete and independently usable during rehearsal.
+
+Reproduce into a fresh destination (never an existing directory):
+
+```sh
+python3 tools/rehearse_swi_repository_extraction.py \
+  --destination /fresh/path/swi-prolog-node \
+  --report-dir /fresh/path/extraction-results
+```
+
+The tool refuses existing destinations and verifies that original source bytes
+remain unchanged. Its preparation commit copies the two explicitly named
+helper/test files from the current checkout. The verification record includes
+the separate native README/test-driver packaging patch.
+
+Browser assembly now takes its shared schema from the selected native revision:
+
+```sh
+python3 tools/package_wasm_prolog.py \
+  --native-root /path/to/swi-prolog-node \
+  --browser-root /path/to/trinity-demonstrator \
+  --output /fresh/path/browser-prolog
+python3 tools/check_statechart_wasm_equivalence.py \
+  --native-root /path/to/swi-prolog-node \
+  --wasm-dir /fresh/path/browser-prolog
+```
+
+The fresh output contains the five unchanged browser modules, the native
+schema and a hash manifest. Neither source tree is overwritten. The default
+same-checkout equivalence command still works and now also rejects schema
+mismatches. Do not maintain generated schema copies independently. Existing
+browser URLs are preserved using `WP_WASM_SOURCE_DIR` for assembled payloads.
+
+T5 continues to extract its original peer from the preserved tag, whose commit
+is pinned in the extraction tool as
+`2b5eae7ad4118e88f4aec77c513b6204dbf3b69e`. It launches temporary processes on
+fresh ports; it does not connect to the existing n3/n5. Integration gates use
+the original demonstrator as the configured external asset root. Browser tests
+remain in the demonstrator. Legacy colocated-path assertions still run there.
+
+Results, diagnostics, the original per-file inventory, packaging patch and
+history/preservation checks are recorded in
+`docs/verification/swi-repository-extraction-2026-10-23/`.
+
+### Still deliberately deferred
+
+- Creating/pushing the public repository and switching the demonstrator to a
+  pinned native dependency, then removing its duplicate native working files.
+- Cross-repository CI and Docker/deployment assembly; live startup migration.
+- Updating published package/home URLs after the new repository exists.
+- Renaming Trealla/GNU directories or remote repositories. The proposed names
+  `trealla-prolog-node` and `gnu-prolog-node` fit the same naming scheme, but
+  their path consumers and GitHub redirects need their own bounded migration.
+- Pruning or reorganizing historical documentation. Retention takes priority
+  during this rehearsal.

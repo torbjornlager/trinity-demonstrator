@@ -1,0 +1,176 @@
+[
+  {
+    "label": "LINT",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "LINT"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.127
+  },
+  {
+    "label": "T0",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T0"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 7.244
+  },
+  {
+    "label": "T1_NATIVE",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1_NATIVE"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.565
+  },
+  {
+    "label": "T2",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T2"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 6.693
+  },
+  {
+    "label": "T3_NATIVE",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3_NATIVE"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 36.628
+  },
+  {
+    "label": "T4_NATIVE",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_NATIVE"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": "watchdog_timeout",
+    "seconds": 300.01
+  },
+  {
+    "label": "T5",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T5"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 1.275
+  },
+  {
+    "label": "T1_INTEGRATION",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1_INTEGRATION"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": true,
+    "exit_code": 0,
+    "seconds": 0.133
+  },
+  {
+    "label": "T3_INTEGRATION",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3_INTEGRATION"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": true,
+    "exit_code": 0,
+    "seconds": 4.197
+  },
+  {
+    "label": "T4_INTEGRATION",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_INTEGRATION"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "external_assets": true,
+    "exit_code": 0,
+    "seconds": 1.546
+  },
+  {
+    "label": "T4_LEGACY_LAYOUT",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_LEGACY_LAYOUT"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.402
+  },
+  {
+    "label": "WASM",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "WASM"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "external_assets": false,
+    "exit_code": 1,
+    "seconds": 0.186
+  },
+  {
+    "label": "cross-repository-equivalence",
+    "command": [
+      "python3",
+      "tools/check_statechart_wasm_equivalence.py",
+      "--native-root",
+      "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+      "--wasm-dir",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/browser-prolog"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.04
+  },
+  {
+    "label": "pack-attachment",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-g",
+      "use_module(library(prolog_pack)),pack_attach('/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node',[]),use_module(library(web_prolog)),module_property(actors,file(F)),assertion(same_file(F,'/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node/prolog/web_prolog/actors.pl')),node_version:web_prolog_version(V),assertion(V=='0.2.0'),writeln(pack_attachment_verified)",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/foreign-cwd",
+    "external_assets": false,
+    "exit_code": 2,
+    "seconds": 0.238
+  }
+]

@@ -243,18 +243,26 @@ interpret_text(Text) :-
 %!  interpret_example(+Name) is det.
 %
 %   Resolve a statechart example from `examples/statecharts/` relative to this
-%   module and run it inside the current actor.
+%   module (or WP_ASSET_ROOT when set) and run it inside the current actor.
 interpret_example(Name0) :-
     (   string(Name0)
     ->  atom_string(Name, Name0)
     ;   Name = Name0
     ),
-    module_property(statechart_actor, file(ThisFile)),
-    file_directory_name(ThisFile, Dir),
-    directory_file_path(Dir, '../../examples', ExamplesDir),
-    directory_file_path(ExamplesDir, 'statecharts', StatechartsDir),
-    directory_file_path(StatechartsDir, Name, Source),
+    example_source(Name, Source),
     interpret(Source).
+
+% This convenience helper can use external demonstrator assets without an
+% upward dependency on node_assets. An explicit root is authoritative.
+example_source(Name, Source) :-
+    (   getenv('WP_ASSET_ROOT', Root), Root \== ''
+    ->  directory_file_path(Root, examples, ExamplesDir)
+    ;   module_property(statechart_actor, file(ThisFile)),
+        file_directory_name(ThisFile, Dir),
+        directory_file_path(Dir, '../../examples', ExamplesDir)
+    ),
+    directory_file_path(ExamplesDir, statecharts, StatechartsDir),
+    directory_file_path(StatechartsDir, Name, Source).
 
 
 emit_trace(Event) :-

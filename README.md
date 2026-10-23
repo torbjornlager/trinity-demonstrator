@@ -166,3 +166,9 @@ that imports only point downward.
 
 [trinity-demonstrator]: https://github.com/torbjornlager/trinity-demonstrator
 [swi-web-prolog]: https://github.com/Web-Prolog/swi-web-prolog
+
+
+The next extraction rehearsal creates a separate local `swi-prolog-node`
+repository while retaining the complete demonstrator and its history. See
+[the extraction map](docs/SWI_NODE_EXTRACTION_MAP.md#local-repository-extraction-rehearsal)
+for inventory, pinned peer, browser schema assembly and remaining cutover work.

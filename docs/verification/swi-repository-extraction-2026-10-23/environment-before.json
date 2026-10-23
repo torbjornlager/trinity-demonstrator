@@ -1,0 +1,8 @@
+{
+  "engines": {
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179",
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl": "34cbf9796d4c4310b2f6bb122d2e820fc446089173b2ab39e5a6faa48ef56563"
+  },
+  "live_processes": "30612 /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl -g consult('distribution.pl'),web_prolog:web_prolog_node(3061,[bind_address('127.0.0.1'),node_url('http://localhost:3061'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3061'])])\n42134 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /tmp/web-prolog-local-ui/n5_frontend.py\n55051 /Applications/swipl-win.app/Contents/MacOS/swipl -q -s /tmp/web-prolog-local-ui/start_local_node_reuse.pl -- n3\n"
+}

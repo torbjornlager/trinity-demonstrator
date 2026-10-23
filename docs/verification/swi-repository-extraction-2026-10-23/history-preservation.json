@@ -1,0 +1,24 @@
+{
+  "all_source_commits_reachable": true,
+  "source_commit_count": 288,
+  "original_tag_object_preserved": true,
+  "source_refs": [
+    "a75782d8d8e29ab8ad8330634f597e4b7f852980 refs/heads/main",
+    "a75782d8d8e29ab8ad8330634f597e4b7f852980 refs/remotes/origin/HEAD",
+    "a75782d8d8e29ab8ad8330634f597e4b7f852980 refs/remotes/origin/main",
+    "9dc32e46718b7b7caacfd64d6eb035cd39076fa7 refs/remotes/origin/semantic-contracts",
+    "f038f5c1fa71cd212650f8549f2adfd79be60707 refs/tags/demonstrator-peer"
+  ],
+  "native_archive_refs": [
+    "a75782d8d8e29ab8ad8330634f597e4b7f852980 refs/archive/trinity-demonstrator/heads/main",
+    "a75782d8d8e29ab8ad8330634f597e4b7f852980 refs/archive/trinity-demonstrator/remotes/origin/HEAD",
+    "a75782d8d8e29ab8ad8330634f597e4b7f852980 refs/archive/trinity-demonstrator/remotes/origin/main",
+    "9dc32e46718b7b7caacfd64d6eb035cd39076fa7 refs/archive/trinity-demonstrator/remotes/origin/semantic-contracts",
+    "f038f5c1fa71cd212650f8549f2adfd79be60707 refs/archive/trinity-demonstrator/tags/demonstrator-peer"
+  ],
+  "no_publishing_remote": true,
+  "native_head": "9a2c9a168f9a864fbfb883c54fb6cfa5f3df0117",
+  "native_working_tree_clean": true,
+  "bundle": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-repository-extraction-2026-10-23/source-a75782d.bundle",
+  "bundle_sha256": "34a76610ecbdd80787a1fc1cc515494a0a08740550b472d8188036528d897bc5"
+}

@@ -49,7 +49,39 @@ test_statechart_profile_runtime :-
     run_tests([statechart_profile_runtime]).
 
 
+
+
+% Restore the caller's configuration even when a path assertion fails.
+example_root_before(some(Root)) :- getenv('WP_ASSET_ROOT', Root), !.
+example_root_before(none).
+restore_example_root(some(Root)) :- setenv('WP_ASSET_ROOT', Root).
+restore_example_root(none) :- unsetenv('WP_ASSET_ROOT').
+
 :- begin_tests(statechart_profile).
+
+test(example_helper_external_root_is_authoritative) :-
+    example_root_before(Before),
+    setup_call_cleanup(
+        setenv('WP_ASSET_ROOT', '/nonexistent/external-demonstrator'),
+        ( statechart_actor:example_source('probe.xml', Source),
+          assertion(Source == '/nonexistent/external-demonstrator/examples/statecharts/probe.xml'),
+          catch(statechart_actor:interpret_example('probe.xml'), Error, true),
+          assertion(nonvar(Error))
+        ),
+        restore_example_root(Before)).
+
+test(example_helper_unset_root_preserves_colocated_path) :-
+    example_root_before(Before),
+    setup_call_cleanup(
+        unsetenv('WP_ASSET_ROOT'),
+        ( statechart_actor:example_source('probe.xml', Source),
+          module_property(statechart_actor, file(File)),
+          file_directory_name(File, Dir),
+          directory_file_path(Dir, '../../examples/statecharts/probe.xml', Expected),
+          assertion(Source == Expected)
+        ),
+        restore_example_root(Before)).
+
 
 test(duplicate_trace_rejected_before_source_processing,
      [forall(member(Options, [[trace(true),trace(true)],
