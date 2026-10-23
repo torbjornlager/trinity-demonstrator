@@ -1,0 +1,322 @@
+[
+  {
+    "batch": "prefix",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 2.572,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 0.455,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 2,
+    "exit_code": 0,
+    "seconds": 2.516,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 2,
+    "exit_code": 0,
+    "seconds": 0.454,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 3,
+    "exit_code": 0,
+    "seconds": 2.523,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 3,
+    "exit_code": 0,
+    "seconds": 0.405,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 4,
+    "exit_code": 0,
+    "seconds": 2.526,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 4,
+    "exit_code": 0,
+    "seconds": 0.404,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 5,
+    "exit_code": 0,
+    "seconds": 2.524,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 5,
+    "exit_code": 0,
+    "seconds": 0.402,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 6,
+    "exit_code": 0,
+    "seconds": 2.518,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 6,
+    "exit_code": 0,
+    "seconds": 0.404,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 7,
+    "exit_code": 0,
+    "seconds": 2.52,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 7,
+    "exit_code": 0,
+    "seconds": 0.405,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 8,
+    "exit_code": 0,
+    "seconds": 2.57,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 8,
+    "exit_code": 0,
+    "seconds": 0.401,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 9,
+    "exit_code": 0,
+    "seconds": 2.529,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 9,
+    "exit_code": 0,
+    "seconds": 0.399,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "prefix",
+    "trial": 10,
+    "exit_code": 0,
+    "seconds": 2.572,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests([cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone",
+    "trial": 10,
+    "exit_code": 0,
+    "seconds": 0.404,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  }
+]

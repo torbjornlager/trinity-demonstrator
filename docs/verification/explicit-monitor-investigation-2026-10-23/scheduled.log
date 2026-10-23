@@ -1,0 +1,14 @@
+% [1/2] cross_node_lifecy.._custom_exit_reason ...... passed (0.050 sec)
+% [2/2] cross_node_lifecy.._2_carries_user_ref .... **FAILED (0.039 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/node/cross_node_lifecycle_tests.plt:373:
+ERROR: [Thread main]     test cross_node_lifecycle:explicit_monitor_2_carries_user_ref: assertion
+Warning: [Thread main] Ambiguous operation on stream pair <stream>(0x785ded000,0x785ded100)
+Warning: [Thread main] Ambiguous operation on stream pair <stream>(0x785ded000,0x785ded100)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/node/cross_node_lifecycle_tests.plt:373:
+ERROR: [Thread main]     test cross_node_lifecycle:explicit_monitor_2_carries_user_ref: assertion failed
+	Assertion: 7721551799@'http://localhost:54850'==8252440831@'http://localhost:54865'
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/node/cross_node_lifecycle_tests.plt:373:
+ERROR: [Thread main]     test cross_node_lifecycle:explicit_monitor_2_carries_user_ref: assertion at /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/prolog/web_prolog/actors.pl:1551 failed
+	Assertion: 7721551799@'http://localhost:54850'==5451857728
+
+ERROR: [Thread main] 1 test failed

@@ -1,0 +1,10 @@
+{
+  "runtime_unchanged": true,
+  "installed_binaries_unchanged": true,
+  "node_commands_unchanged": true,
+  "existing_test_bodies_exact_after_removing_fixture_labels": true,
+  "existing_test_bodies_sha256": "22936deaad97a9e618eeea6eb7aabc9b218fec0314749612fe7689b00bab2d53",
+  "normalized_test_bodies_sha256": "22936deaad97a9e618eeea6eb7aabc9b218fec0314749612fe7689b00bab2d53",
+  "final_diagnostic_test_sha256": "c3149fb89a2cce7afb80e8d5a88d790e45dd17bf3f8bd00f4a36239d8a591eb6",
+  "engine_sha256": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f"
+}

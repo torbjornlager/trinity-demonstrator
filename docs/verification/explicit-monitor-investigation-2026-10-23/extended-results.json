@@ -1,0 +1,50 @@
+[
+  {
+    "batch": "t4-context",
+    "trial": 1,
+    "exit_code": 1,
+    "seconds": 49.495,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,layer_honesty,run_tests([lifetime_authority, node, public_goal_guard, sandbox_source_names, promise_yield, promise_lifecycle, promise_ownership, rpc_options, native_paging,\n                toplevel_synch, toplevel_correlation_transport,\n                spawn_options, spawn_source_options,\n                wrapper_options,\n                supervisor_child_specs,\n                server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, supervisor_startup_ownership, supervisor_restart_ownership, worker_scope, worker_ownership_cleanup, zero_poll_accounting,\n                named_creation, remote_alias_cleanup, remote_named_creation, namespace_teardown,\n                node_assets,\n                goal_walker,\n                generic_actor_api,\n                actor_remote_exit_failure,\n                down_wire_format,\n                statechart_trace_options,cross_node_lifecycle:remote_spawn_monitor_fires_down,cross_node_lifecycle:remote_retirement_withdraws_registered_alias,cross_node_lifecycle:remote_synchronous_call_reports_toplevel_termination,cross_node_lifecycle:remote_synchronous_correlation,cross_node_lifecycle:remote_synchronous_target_and_async_default,cross_node_lifecycle:remote_spawn_link_propagates_on_parent_kill,cross_node_lifecycle:remote_toplevel_halt_returns_atom_true,cross_node_lifecycle:remote_toplevel_halt_cleans_up_local_target,cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "neighbours",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 0.514,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,layer_honesty,run_tests([cross_node_lifecycle:cross_node_exit_succeeds_silently,cross_node_lifecycle:down_event_preserves_custom_exit_reason,cross_node_lifecycle:explicit_monitor_2_carries_user_ref])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "batch": "alone-v2",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 0.405,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "plunit_cross_node_lifecycle:enable_lifecycle_diagnostics,layer_honesty,run_tests(cross_node_lifecycle:explicit_monitor_2_carries_user_ref)",
+      "-t",
+      "halt"
+    ]
+  }
+]

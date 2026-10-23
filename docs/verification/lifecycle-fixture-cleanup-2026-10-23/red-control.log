@@ -1,0 +1,15 @@
+% [1/1] cross_node_lifecy..fication_is_retired .... **FAILED (0.092 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/lifecycle-fixture-cleanup-2026-10-23/red/tests/tiers/node/cross_node_lifecycle_tests.plt:443:
+ERROR: [Thread main]     test cross_node_lifecycle:late_previous_fixture_notification_is_retired: assertion
+Warning: [Thread main] Ambiguous operation on stream pair <stream>(0xc95d79300,0xc95d79400)
+Warning: [Thread main] Ambiguous operation on stream pair <stream>(0xc95d79300,0xc95d79400)
+Warning: [Thread main] Ambiguous operation on stream pair <stream>(0xc95dc7600,0xc95dc7700)
+Warning: [Thread main] Ambiguous operation on stream pair <stream>(0xc95dc7600,0xc95dc7700)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/lifecycle-fixture-cleanup-2026-10-23/red/tests/tiers/node/cross_node_lifecycle_tests.plt:443:
+ERROR: [Thread main]     test cross_node_lifecycle:late_previous_fixture_notification_is_retired: assertion failed
+	Assertion: 1321188985@'http://localhost:60062'==3670816675@'http://localhost:60067'
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/lifecycle-fixture-cleanup-2026-10-23/red/tests/tiers/node/cross_node_lifecycle_tests.plt:443:
+ERROR: [Thread main]     test cross_node_lifecycle:late_previous_fixture_notification_is_retired: assertion at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/lifecycle-fixture-cleanup-2026-10-23/red/prolog/web_prolog/actors.pl:1551 failed
+	Assertion: 1321188985@'http://localhost:60062'==2309365686
+
+ERROR: [Thread main] 1 test failed

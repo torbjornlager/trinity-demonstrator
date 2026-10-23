@@ -1,0 +1,53 @@
+[
+  {
+    "label": "red-control",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(cross_node_lifecycle:late_previous_fixture_notification_is_retired)",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/lifecycle-fixture-cleanup-2026-10-23/red",
+    "exit_code": 1,
+    "seconds": 0.497,
+    "test_sha256": "af9f72545dd1b9b7756507bab8c8b0995e425428d31c678ebe1718e9e4c51837"
+  },
+  {
+    "label": "final-focused",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests([cross_node_lifecycle:late_previous_fixture_notification_is_retired,cross_node_lifecycle:fixture_cleanup_preserves_other_watchers_and_messages])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 0.5,
+    "test_sha256": "f32951fe062272fd09f6b1bd411e2f8734f7b8ff495ac850c8b235b658ce413b"
+  },
+  {
+    "label": "t4",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tier",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "exit_code": 0,
+    "seconds": 53.313,
+    "test_sha256": "f32951fe062272fd09f6b1bd411e2f8734f7b8ff495ac850c8b235b658ce413b"
+  }
+]

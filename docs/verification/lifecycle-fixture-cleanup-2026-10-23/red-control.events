@@ -1,0 +1,16 @@
+lifecycle_stage(0,1792778257.200204,main,outside_fixture,snapshot(before_flush,[],[])).
+lifecycle_stage(1,1792778257.200446,main,outside_fixture,snapshot(after_flush,[],[])).
+lifecycle_stage(2,1792778257.201207,main,down_event_preserves_custom_exit_reason,snapshot(fixture_enter(down_event_preserves_custom_exit_reason),[],[])).
+lifecycle_stage(3,1792778257.20807,main,down_event_preserves_custom_exit_reason,snapshot(server_started(down_event_preserves_custom_exit_reason),['http://localhost:60062'],[])).
+lifecycle_stage(4,1792778257.252148,<thread>(12,0xc95d740f0),outside_fixture,control_holding_wire(1321188985@'http://localhost:60062')).
+lifecycle_stage(5,1792778257.25218,main,down_event_preserves_custom_exit_reason,snapshot(before_server_teardown(down_event_preserves_custom_exit_reason),['http://localhost:60062'],[])).
+lifecycle_stage(6,1792778257.252753,main,down_event_preserves_custom_exit_reason,snapshot(after_server_teardown(down_event_preserves_custom_exit_reason),[],[])).
+lifecycle_stage(7,1792778257.25282,main,outside_fixture,snapshot(before_flush,[],[])).
+lifecycle_stage(8,1792778257.252886,main,outside_fixture,snapshot(after_flush,[],[])).
+lifecycle_stage(9,1792778257.252941,main,explicit_monitor_2_carries_user_ref,snapshot(fixture_enter(explicit_monitor_2_carries_user_ref),[],[])).
+lifecycle_stage(10,1792778257.252983,main,explicit_monitor_2_carries_user_ref,control_release_after_flush).
+lifecycle_stage(11,1792778257.25307,<thread>(12,0xc95d740f0),outside_fixture,control_released_wire(1321188985@'http://localhost:60062')).
+lifecycle_stage(12,1792778257.253209,<thread>(12,0xc95d740f0),outside_fixture,control_wire_finished(1321188985@'http://localhost:60062')).
+lifecycle_stage(13,1792778257.257393,main,explicit_monitor_2_carries_user_ref,snapshot(server_started(explicit_monitor_2_carries_user_ref),['http://localhost:60067'],[])).
+lifecycle_stage(14,1792778257.292467,main,explicit_monitor_2_carries_user_ref,snapshot(before_server_teardown(explicit_monitor_2_carries_user_ref),['http://localhost:60067'],[])).
+lifecycle_stage(15,1792778257.292802,main,explicit_monitor_2_carries_user_ref,snapshot(after_server_teardown(explicit_monitor_2_carries_user_ref),[],[])).

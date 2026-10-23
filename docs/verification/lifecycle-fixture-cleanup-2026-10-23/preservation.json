@@ -1,0 +1,13 @@
+{
+  "runtime_unchanged": true,
+  "installed_binaries_unchanged": true,
+  "node_commands_unchanged": true,
+  "existing_assertion_lines_preserved": true,
+  "existing_timeout_values_preserved": true,
+  "original_receive_patterns_preserved": true,
+  "final_test_sha256": "f32951fe062272fd09f6b1bd411e2f8734f7b8ff495ac850c8b235b658ce413b",
+  "final_test_matches_T4": true,
+  "engine": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+  "engine_sha256": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f",
+  "receive_line_comparison_normalization": "lifecycle_spawn -> spawn (the enclosing public-call helper only)"
+}

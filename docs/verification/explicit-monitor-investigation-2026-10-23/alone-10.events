@@ -1,0 +1,14 @@
+lifecycle_stage(0,1792777446.578267,main,outside_fixture,snapshot(before_flush,[],[])).
+lifecycle_stage(1,1792777446.578611,main,outside_fixture,snapshot(after_flush,[],[])).
+lifecycle_stage(2,1792777446.57944,main,explicit_monitor_2_carries_user_ref,snapshot(fixture_enter(explicit_monitor_2_carries_user_ref),[],[])).
+lifecycle_stage(3,1792777446.586291,main,explicit_monitor_2_carries_user_ref,snapshot(server_started(explicit_monitor_2_carries_user_ref),['http://localhost:63551'],[])).
+lifecycle_stage(4,1792777446.621902,<thread>(9,0x10543a7c0),outside_fixture,spawned(6434429316@'http://localhost:63551',node_shared_db_runtime_63551:sleep(60),[target(<message_queue>(0xca5cc3840)),io_target('$io_sink'(distributed)),link(false),monitor_target(<message_queue>(0xca5cc3840)),monitor_ref(7670437081)])).
+lifecycle_stage(5,1792777446.622429,main,explicit_monitor_2_carries_user_ref,spawned(6434429316@'http://localhost:63551',plunit_cross_node_lifecycle:sleep(60),[node('http://localhost:63551')])).
+lifecycle_stage(6,1792777446.622527,main,explicit_monitor_2_carries_user_ref,monitored(6434429316@'http://localhost:63551',6202092738)).
+lifecycle_stage(7,1792777446.622988,<thread>(14,0xca6484140),outside_fixture,delivering(<message_queue>(0xca5cc3840),down(6434429316@'http://localhost:63551',7670437081,normal),other)).
+lifecycle_stage(8,1792777446.623059,<thread>(14,0xca6484140),outside_fixture,delivering(5976695982@'http://localhost:63551',down(6434429316@'http://localhost:63551',6202092738,normal),other)).
+lifecycle_stage(9,1792777446.623135,main,explicit_monitor_2_carries_user_ref,selected(down(6434429316@'http://localhost:63551',6202092738,normal),plunit_cross_node_lifecycle:{down(6434429316@'http://localhost:63551',6202092738,normal)->assertion(6434429316@'http://localhost:63551'==6434429316@'http://localhost:63551'),assertion(6202092738==6202092738)})).
+lifecycle_stage(10,1792777446.623332,<thread>(12,0xca64840a0),outside_fixture,wire_down(6434429316@'http://localhost:63551',#{pid:6434429316,reason:"normal",ref:7670437081,type:"down"})).
+lifecycle_stage(11,1792777446.623409,<thread>(12,0xca64840a0),outside_fixture,delivering(5976695982@'http://localhost:63551',down(6434429316@'http://localhost:63551',6202092738,normal),remote_wire(6434429316@'http://localhost:63551',#{pid:6434429316,reason:"normal",ref:7670437081,type:"down"}))).
+lifecycle_stage(12,1792777446.628958,main,explicit_monitor_2_carries_user_ref,snapshot(before_server_teardown(explicit_monitor_2_carries_user_ref),['http://localhost:63551'],[])).
+lifecycle_stage(13,1792777446.629332,main,explicit_monitor_2_carries_user_ref,snapshot(after_server_teardown(explicit_monitor_2_carries_user_ref),[],[])).

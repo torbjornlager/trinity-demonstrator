@@ -25,14 +25,169 @@
 :- use_module('multi_node_harness.pl').
 
 :- use_module(library(plunit)).
+:- use_module(library(prolog_wrap)).
 
 :- begin_tests(cross_node_lifecycle).
 
 
 %  ----------------------------- helpers ------------------------------
 
+% Diagnostics are opt-in. They observe selection and delivery without changing
+% receive clauses, deadlines or the mailbox contents.
+:- meta_predicate with_lifecycle_nodes(+, +, 0).
+:- thread_local lifecycle_scope/1, lifecycle_origin/1.
+
+% The in-process node harness shares both monitor tables. Track only monitors
+% explicitly requested by this fixture, including ones whose local row retires
+% before the corresponding wire delivery reaches the controller.
+:- thread_local lifecycle_fixture/1, lifecycle_owned_monitor/4.
+:- meta_predicate lifecycle_spawn(0,-,+).
+with_lifecycle_nodes(Test, Specs, Goal) :-
+    gensym(lifecycle_fixture_,Token),
+    setup_call_cleanup(
+        (asserta(lifecycle_scope(Test),Scope),asserta(lifecycle_fixture(Token),Fixture)),
+        (lifecycle_stage(fixture_enter(Test)),
+         call_cleanup(
+             with_test_nodes(Specs,
+                 (lifecycle_stage(server_started(Test)),
+                  call_cleanup(Goal,
+                      call_cleanup(cleanup_lifecycle_monitors(Token),
+                                   lifecycle_stage(before_server_teardown(Test)))))),
+             lifecycle_stage(after_server_teardown(Test)))),
+        (erase(Fixture),erase(Scope),retractall(lifecycle_owned_monitor(Token,_,_,_)))).
+
+lifecycle_spawn(Goal,Pid,Options) :-
+    self(Self),spawn(Goal,Pid,Options),
+    (memberchk(monitor(true),Options) -> own_lifecycle_monitor(Self,Pid,Pid);true).
+lifecycle_monitor(Pid,Ref) :-
+    self(Self),monitor(Pid,Ref),own_lifecycle_monitor(Self,Pid,Ref).
+own_lifecycle_monitor(Self,Pid,Ref) :-
+    (lifecycle_fixture(Token) ->
+        actors:canonical_pid(Pid,Canonical),
+        assertz(lifecycle_owned_monitor(Token,Self,Canonical,Ref))
+    ;true).
+
+cleanup_lifecycle_monitors(Token) :-
+    lifecycle_control_before_cleanup,
+    findall(owned(Self,Pid,Ref),lifecycle_owned_monitor(Token,Self,Pid,Ref),Owned),
+    % Use the same lock order as local retirement and wire delivery. Once these
+    % rows are withdrawn, any prior delivery has finished; future delivery has
+    % no fixture-owned watcher to notify. Do not remove other watchers or refs.
+    with_mutex(actors_registry,
+        with_mutex(actors_monitor_lifecycle,
+            forall(member(owned(Self,Pid,Ref),Owned),
+                (retractall(actors:monitor(Self,Pid,Ref)),
+                 retractall(node_controller:remote_monitor_(Self,Pid,Ref)))))),
+    lifecycle_diag(monitors_retired(Owned)),
+    forall(member(owned(_,Pid,Ref),Owned),flush_lifecycle_down(Pid,Ref)),
+    retractall(lifecycle_owned_monitor(Token,_,_,_)).
+flush_lifecycle_down(Pid,Ref) :-
+    receive({down(Pid,Ref,_) -> flush_lifecycle_down(Pid,Ref)},
+            [timeout(0),on_timeout(true)]).
+
+lifecycle_diag_enabled :- getenv('WP_LIFECYCLE_DIAGNOSTICS','1').
+lifecycle_diag(Event) :-
+    (lifecycle_diag_enabled -> ignore(catch(lifecycle_diag_write(Event),_,true));true).
+lifecycle_diag_write(Event) :-
+    get_time(Time),thread_self(Thread),
+    (lifecycle_scope(Test)->true;Test=outside_fixture),
+    flag(lifecycle_diag_sequence,Seq,Seq+1),
+    format(string(Line),'~q.~n',[lifecycle_stage(Seq,Time,Thread,Test,Event)]),
+    getenv('WP_LIFECYCLE_LOG',File),
+    with_mutex(lifecycle_diagnostic_output,
+        setup_call_cleanup(open(File,append,S,[encoding(utf8)]),
+                           format(S,'~s',[Line]),close(S))).
+lifecycle_stage(Stage) :-
+    (lifecycle_diag_enabled -> catch(
+        (findall(URL,nb_current(node_url_b,URL),URLs),
+         findall(M,actors:deferred(M),Deferred),
+         lifecycle_diag(snapshot(Stage,URLs,Deferred))),_,true);true),
+    lifecycle_control_stage(Stage).
+
+% Temporary observational wrappers are installed by the diagnostic runner.
+% They do not change runtime source files or alter a selected reply.
+enable_lifecycle_diagnostics :-
+    wrap_predicate(actors:spawn(G,P,O),lifecycle_diag,W1,
+        (W1,plunit_cross_node_lifecycle:lifecycle_diag(spawned(P,G,O)))),
+    wrap_predicate(toplevel_actors:toplevel_spawn(P,O),lifecycle_diag,W2,
+        (W2,plunit_cross_node_lifecycle:lifecycle_diag(toplevel_spawned(P,O)))),
+    wrap_predicate(actors:monitor(P,R),lifecycle_diag,W3,
+        (W3,plunit_cross_node_lifecycle:lifecycle_diag(monitored(P,R)))),
+    wrap_predicate(actors:select_body(C,M,_Mod,_B),lifecycle_diag,W4,
+        (W4,(nonvar(M),M=down(_,_,_)
+             -> plunit_cross_node_lifecycle:lifecycle_diag(selected(M,C));true))),
+    wrap_predicate(actors:send_system(To,M),lifecycle_diag,W5,
+        ((nonvar(M),M=down(_,_,_)
+           -> plunit_cross_node_lifecycle:log_lifecycle_delivery(To,M);true),W5,
+         (nonvar(M),M=down(_,_,_)
+           -> plunit_cross_node_lifecycle:lifecycle_diag(delivered(To,M));true))),
+    wrap_predicate(distribution:deliver_remote_down_via_controller(P,D),lifecycle_diag,W6,
+        setup_call_cleanup(
+            asserta(plunit_cross_node_lifecycle:lifecycle_origin(remote_wire(P,D)),Origin),
+            (plunit_cross_node_lifecycle:lifecycle_diag(wire_down(P,D)),
+             W6),erase(Origin))),
+    wrap_predicate(distribution:remote_ws_connection_closed(N),lifecycle_diag,W7,
+        setup_call_cleanup(
+            asserta(plunit_cross_node_lifecycle:lifecycle_origin(connection_closed(N)),Origin),
+            (plunit_cross_node_lifecycle:lifecycle_diag(connection_closed(N)),W7),erase(Origin))),
+    wrap_predicate(actors:stop(P,Parent),lifecycle_diag,W8,
+        setup_call_cleanup(
+            asserta(plunit_cross_node_lifecycle:lifecycle_origin(actor_stop(P,Parent)),Origin),
+            (plunit_cross_node_lifecycle:lifecycle_diag(actor_stop(P,Parent)),W8),erase(Origin))).
+% The regression holds the old fixture's wire delivery until the following
+% fixture has flushed. This private coordinator is off in ordinary tests.
+:- dynamic lifecycle_control_queue/1, lifecycle_control_held/1, lifecycle_control_ack/1.
+start_lifecycle_schedule_control :-
+    message_queue_create(Q),assertz(lifecycle_control_queue(Q)),
+    wrap_predicate(distribution:deliver_remote_down_via_controller(P,D),lifecycle_schedule,W,
+        (plunit_cross_node_lifecycle:maybe_hold_lifecycle_wire(P,D),W,
+         plunit_cross_node_lifecycle:lifecycle_wire_finished(P,D))).
+stop_lifecycle_schedule_control :-
+    forall(lifecycle_control_queue(Q),
+        call_cleanup(
+            (thread_send_message(Q,release),
+             ((lifecycle_control_held(P), \+ lifecycle_control_ack(P))
+              -> ignore(thread_get_message(Q,finished(P),[timeout(2)]));true)),
+            (retractall(lifecycle_control_queue(Q)),message_queue_destroy(Q)))),
+    retractall(lifecycle_control_held(_)),retractall(lifecycle_control_ack(_)),
+    unwrap_predicate(distribution:deliver_remote_down_via_controller/2,lifecycle_schedule).
+
+maybe_hold_lifecycle_wire(P,D) :-
+    (get_dict(reason,D,"custom_test_reason"),lifecycle_control_queue(Q)
+    -> assertz(lifecycle_control_held(P)),thread_send_message(Q,held(P)),
+       lifecycle_diag(control_holding_wire(P)),
+       (thread_get_message(Q,release,[timeout(2)])
+        -> lifecycle_diag(control_released_wire(P))
+        ; throw(error(lifecycle_control_timeout(release),_)))
+    ;true).
+lifecycle_wire_finished(P,D) :-
+    (get_dict(reason,D,"custom_test_reason"),lifecycle_control_queue(Q)
+     -> lifecycle_diag(control_wire_finished(P)),thread_send_message(Q,finished(P))
+     ;true).
+lifecycle_control_before_cleanup :-
+    (lifecycle_scope(down_event_preserves_custom_exit_reason),lifecycle_control_queue(Q)
+     -> (thread_get_message(Q,held(_),[timeout(2)]) -> true
+         ;throw(error(lifecycle_control_timeout(held),_)))
+     ;true).
+lifecycle_control_stage(fixture_enter(explicit_monitor_2_carries_user_ref)) :-
+    lifecycle_control_queue(Q),!,
+    lifecycle_diag(control_release_after_flush),thread_send_message(Q,release).
+lifecycle_control_stage(_).
+
+log_lifecycle_delivery(To,M) :-
+    (lifecycle_origin(Origin)->true;Origin=other),
+    lifecycle_diag(delivering(To,M,Origin)).
+disable_lifecycle_diagnostics :-
+    forall(member(PI,[actors:spawn/3,toplevel_actors:toplevel_spawn/2,
+                     actors:monitor/2,actors:select_body/4,actors:send_system/2,
+                     distribution:deliver_remote_down_via_controller/2,
+                     distribution:remote_ws_connection_closed/1,actors:stop/2]),
+           unwrap_predicate(PI,lifecycle_diag)).
+
 flush_mailbox :-
-    receive({_ -> flush_mailbox}, [timeout(0), on_timeout(true)]).
+    lifecycle_stage(before_flush),
+    receive({_ -> flush_mailbox}, [timeout(0), on_timeout(true)]),
+    lifecycle_stage(after_flush).
 
 remote_only_actor_url(URLB) :-
     nb_getval(node_url_b, URLB).
@@ -42,10 +197,10 @@ remote_only_actor_url(URLB) :-
 
 test(remote_spawn_monitor_fires_down,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_spawn_monitor_fires_down,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
-            spawn(true, Pid, [node(URLB), monitor(true)]),
+            lifecycle_spawn(true, Pid, [node(URLB), monitor(true)]),
             receive({
                 down(P, Ref, Reason) ->
                     assertion(P == Pid),
@@ -61,10 +216,10 @@ test(remote_spawn_monitor_fires_down,
 
 test(remote_retirement_withdraws_registered_alias,
      [setup(flush_mailbox)]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_retirement_withdraws_registered_alias,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
-            spawn(sleep(60), Pid, [node(URLB), monitor(true), link(false)]),
+            lifecycle_spawn(sleep(60), Pid, [node(URLB), monitor(true), link(false)]),
             gensym(remote_retired_alias_, Name),
             setup_call_cleanup(register(Name, Pid),
                 (   whereis(Name, Before), assertion(Before == Pid),
@@ -79,7 +234,7 @@ test(remote_retirement_withdraws_registered_alias,
 
 test(remote_synchronous_call_reports_toplevel_termination,
      [setup(flush_mailbox),timeout(5)]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_synchronous_call_reports_toplevel_termination,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             toplevel_spawn(Pid, [node(URLB), session(true)]),
@@ -92,7 +247,7 @@ test(remote_synchronous_call_reports_toplevel_termination,
 
 test(remote_synchronous_correlation,
      [setup(flush_mailbox),forall(test_toplevel_synch:correlation_case(Case))]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_synchronous_correlation,
         [node_spec(b, [profile(actor), auth(open)])],
         (remote_only_actor_url(URLB),
          toplevel_spawn(Pid, [node(URLB), session(true),time_limit(0.15)]),
@@ -103,9 +258,9 @@ test(remote_synchronous_correlation,
 % Correlated answers must not follow the creation-time controller target.
 % A subsequent asynchronous call still uses that original target.
 test(remote_synchronous_target_and_async_default, [setup(flush_mailbox)]) :-
-    with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
+    with_lifecycle_nodes(remote_synchronous_target_and_async_default, [node_spec(b,[profile(actor),auth(open)])],
         (remote_only_actor_url(URLB), self(Self),
-         setup_call_cleanup(spawn(forward_sync_test(Self),Sink,[link(false)]),
+         setup_call_cleanup(lifecycle_spawn(forward_sync_test(Self),Sink,[link(false)]),
              (toplevel_spawn(Pid,[node(URLB),session(true),target(Sink)]),
               setup_call_cleanup(true,
                   (toplevel_call_synch(Pid,true,A,[timeout(2),on_timeout(throw(misrouted))]),
@@ -137,11 +292,11 @@ parent_with_remote_child(URLB, ParentReady) :-
 
 test(remote_spawn_link_propagates_on_parent_kill,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_spawn_link_propagates_on_parent_kill,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             self(Self),
-            spawn(parent_with_remote_child(URLB, Self), ParentPid,
+            lifecycle_spawn(parent_with_remote_child(URLB, Self), ParentPid,
                   [monitor(true)]),
             (   receive({ ready -> true },
                         [timeout(5), on_timeout(fail)])
@@ -165,7 +320,7 @@ test(remote_spawn_link_propagates_on_parent_kill,
 
 test(remote_toplevel_halt_returns_atom_true,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_toplevel_halt_returns_atom_true,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             toplevel_spawn(Pid, [node(URLB), session(true)]),
@@ -187,7 +342,7 @@ test(remote_toplevel_halt_returns_atom_true,
 
 test(remote_toplevel_halt_cleans_up_local_target,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_toplevel_halt_cleans_up_local_target,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             toplevel_spawn(Pid, [node(URLB), session(true)]),
@@ -224,10 +379,10 @@ collect_global_remote_exit_failures(Events) :-
 test(cross_node_exit_succeeds_silently,
      [setup((flush_mailbox, node_log:clear_log_scope(global))),
       Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(cross_node_exit_succeeds_silently,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
-            spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
+            lifecycle_spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
             wait_until(node_ws_actor_count(URLB, 1), 5),
             exit(Pid, normal),
             receive({ down(P, _, _) -> true },
@@ -249,10 +404,13 @@ test(cross_node_exit_succeeds_silently,
 
 test(down_event_preserves_custom_exit_reason,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    custom_exit_fixture(Result).
+
+custom_exit_fixture(Result) :-
+    with_lifecycle_nodes(down_event_preserves_custom_exit_reason,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
-            spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
+            lifecycle_spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
             wait_until(node_ws_actor_count(URLB, 1), 5),
             exit(Pid, custom_test_reason),
             receive({ down(P, Ref, Reason) ->
@@ -274,11 +432,14 @@ test(down_event_preserves_custom_exit_reason,
 
 test(explicit_monitor_2_carries_user_ref,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    explicit_monitor_fixture(Result).
+
+explicit_monitor_fixture(Result) :-
+    with_lifecycle_nodes(explicit_monitor_2_carries_user_ref,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
-            spawn(sleep(60), Pid, [node(URLB)]),
-            monitor(Pid, Ref),
+            lifecycle_spawn(sleep(60), Pid, [node(URLB)]),
+            lifecycle_monitor(Pid, Ref),
             assertion(Ref \== Pid),
             exit(Pid, normal),
             receive({ down(P, DownRef, _) ->
@@ -291,6 +452,51 @@ test(explicit_monitor_2_carries_user_ref,
         )).
 
 
+test(late_previous_fixture_notification_is_retired,
+     [setup(flush_mailbox),timeout(10)]) :-
+    setup_call_cleanup(start_lifecycle_schedule_control,
+        (custom_exit_fixture(Custom),assertion(Custom==ok),
+         flush_mailbox,
+         explicit_monitor_fixture(Explicit),assertion(Explicit==ok),
+         lifecycle_control_queue(Q),lifecycle_control_held(Old),
+         thread_get_message(Q,finished(Old),[timeout(2)]),
+         assertz(lifecycle_control_ack(Old)),
+         assertion(\+ node_controller:remote_monitor_(_,Old,_)),
+         receive({down(Old,_,_) -> Late=true},[timeout(0),on_timeout(Late=false)]),
+         assertion(Late==false)),
+        stop_lifecycle_schedule_control).
+
+test(fixture_cleanup_preserves_other_watchers_and_messages,
+     [setup(flush_mailbox)]) :-
+    with_lifecycle_nodes(cleanup_is_scoped,
+        [node_spec(b,[profile(actor),auth(open)])],
+        (remote_only_actor_url(URL),self(Self),
+         lifecycle_spawn(sleep(60),Pid,[node(URL),monitor(true)]),
+         lifecycle_fixture(Token),OtherWatcher=unrelated_fixture_watcher,
+         setup_call_cleanup(
+             (assertz(actors:monitor(OtherWatcher,Pid,Pid)),
+              assertz(node_controller:remote_monitor_(OtherWatcher,Pid,Pid))),
+             (send(Self,down(unrelated_fixture_pid,unrelated_fixture_ref,kept)),
+              send(Self,down(Pid,unrelated_fixture_ref,kept_same_pid)),
+              send(Self,down(unrelated_fixture_pid,Pid,kept_same_ref)),
+              send(Self,down(Pid,Pid,owned_pending)),
+              cleanup_lifecycle_monitors(Token),
+              assertion(\+ actors:monitor(Self,Pid,Pid)),
+              assertion(\+ node_controller:remote_monitor_(Self,Pid,Pid)),
+              assertion(actors:monitor(OtherWatcher,Pid,Pid)),
+              assertion(node_controller:remote_monitor_(OtherWatcher,Pid,Pid)),
+              receive({down(unrelated_fixture_pid,unrelated_fixture_ref,kept)->true},
+                      [timeout(0),on_timeout(fail)]),
+              receive({down(Pid,unrelated_fixture_ref,kept_same_pid)->true},
+                      [timeout(0),on_timeout(fail)]),
+              receive({down(unrelated_fixture_pid,Pid,kept_same_ref)->true},
+                      [timeout(0),on_timeout(fail)]),
+              receive({down(Pid,Pid,_)->Left=true},[timeout(0),on_timeout(Left=false)]),
+              assertion(Left==false)),
+             (retractall(actors:monitor(OtherWatcher,Pid,Pid)),
+              retractall(node_controller:remote_monitor_(OtherWatcher,Pid,Pid)),
+              exit(Pid,normal),wait_until(node_ws_actor_count(URL,0),5))))).
+
 %  -- node_controller mirror invariants (proxy-less migration, step 2) --
 %
 %  These tests pin the invariant that the node_controller tables
@@ -300,11 +506,11 @@ test(explicit_monitor_2_carries_user_ref,
 
 test(controller_mirrors_target_monitor_link_on_remote_spawn,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(controller_mirrors_target_monitor_link_on_remote_spawn,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             self(Self),
-            spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
+            lifecycle_spawn(sleep(60), Pid, [node(URLB), monitor(true)]),
             %  Three writes mirrored: target, monitor (Ref = Pid
             %  for monitor(true)), link (default link(true)).
             assertion(current_remote_target(Pid, Self)),
@@ -329,11 +535,11 @@ test(controller_mirrors_target_monitor_link_on_remote_spawn,
 
 test(controller_drops_monitor_on_demonitor,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(controller_drops_monitor_on_demonitor,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
-            spawn(sleep(60), Pid, [node(URLB)]),
-            monitor(Pid, Ref),
+            lifecycle_spawn(sleep(60), Pid, [node(URLB)]),
+            lifecycle_monitor(Pid, Ref),
             self(Self),
             assertion(node_controller:remote_monitor_(Self, Pid, Ref)),
             demonitor(Ref),
@@ -352,11 +558,11 @@ test(controller_drops_monitor_on_demonitor,
 
 test(cross_node_send_round_trip,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(cross_node_send_round_trip,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             self(Self),
-            spawn(receive({ ping(From) -> send(From, pong) }),
+            lifecycle_spawn(receive({ ping(From) -> send(From, pong) }),
                   Pid, [node(URLB), monitor(true)]),
             %  Outbound: test thread -> remote actor.  Exercises
             %  the new send/2 wire-direct clause for Id@Node.
@@ -378,11 +584,11 @@ test(cross_node_send_round_trip,
 %  five sequential sends must therefore produce [5,4,3,2,1].
 test(cross_node_send_preserves_single_channel_fifo,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(cross_node_send_preserves_single_channel_fifo,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             self(Self),
-            spawn(collector(Self, 5, []), Pid, [
+            lifecycle_spawn(collector(Self, 5, []), Pid, [
                 node(URLB),
                 monitor(true),
                 src_text("
@@ -410,7 +616,7 @@ collector(Parent, N, Acc) :-
 %  Sending to an absent service on a live node is therefore a silent no-op.
 test(absent_remote_service_send_is_non_revealing,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(absent_remote_service_send_is_non_revealing,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             catch(send(definitely_absent_service@URLB, probe), Error, true),
@@ -430,7 +636,7 @@ setup_node_b_with_humans(URLB) :-
 
 test(rpc_round_trip_to_remote_node,
      [setup(flush_mailbox), Result == [plato, aristotle]]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(rpc_round_trip_to_remote_node,
         [node_spec(b, [
             profile(actor), auth(open),
             load_shared_db_text("human(plato).\nhuman(aristotle).\n")
@@ -452,7 +658,7 @@ test(rpc_round_trip_to_remote_node,
 
 test(remote_toplevel_answers_keep_exact_terms,
      [setup(flush_mailbox), Result == ok]) :-
-    with_test_nodes(
+    with_lifecycle_nodes(remote_toplevel_answers_keep_exact_terms,
         [node_spec(b, [profile(actor), auth(open)])],
         (   remote_only_actor_url(URLB),
             toplevel_spawn(Pid, [node(URLB), session(true)]),
