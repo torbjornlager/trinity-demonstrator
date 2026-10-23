@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "-f",
+    "none",
+    "-q",
+    "-s",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/source/tests/thread/test_signal_wait.pl",
+    "-g",
+    "test_signal_wait:test_signal_wait",
+    "-t",
+    "halt"
+  ],
+  "exit_code": 0,
+  "seconds": 0.26
+}

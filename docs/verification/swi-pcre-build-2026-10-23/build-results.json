@@ -1,0 +1,193 @@
+[
+  {
+    "label": "clone-swi",
+    "command": [
+      "git",
+      "clone",
+      "--no-hardlinks",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/source"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 0.347
+  },
+  {
+    "label": "swi-origin",
+    "command": [
+      "git",
+      "-C",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/source",
+      "remote",
+      "set-url",
+      "origin",
+      "https://github.com/SWI-Prolog/swipl-devel.git"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 0.02
+  },
+  {
+    "label": "swi-submodules",
+    "command": [
+      "git",
+      "-c",
+      "protocol.file.allow=always",
+      "-c",
+      "submodule.packages/clib.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/clib",
+      "-c",
+      "submodule.packages/plunit.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/plunit",
+      "-c",
+      "submodule.packages/http.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/http",
+      "-c",
+      "submodule.packages/sgml.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/sgml",
+      "-c",
+      "submodule.packages/json.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/json",
+      "-c",
+      "submodule.packages/ssl.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/ssl",
+      "-c",
+      "submodule.packages/zlib.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/zlib",
+      "-c",
+      "submodule.packages/utf8proc.url=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/source/packages/utf8proc",
+      "submodule",
+      "update",
+      "--init",
+      "--jobs",
+      "4",
+      "packages/clib",
+      "packages/plunit",
+      "packages/http",
+      "packages/sgml",
+      "packages/json",
+      "packages/ssl",
+      "packages/zlib",
+      "packages/utf8proc",
+      "packages/pcre"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/source",
+    "exit_code": 0,
+    "seconds": 1.439
+  },
+  {
+    "label": "clone-pcre2",
+    "command": [
+      "git",
+      "clone",
+      "--depth",
+      "1",
+      "--branch",
+      "pcre2-10.49",
+      "--recurse-submodules",
+      "--shallow-submodules",
+      "https://github.com/PCRE2Project/pcre2.git",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-source"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 4.359
+  },
+  {
+    "label": "configure-pcre2",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build-tools/bin/cmake",
+      "-S",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-source",
+      "-B",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build",
+      "-G",
+      "Ninja",
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk",
+      "-DCMAKE_INSTALL_PREFIX=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2",
+      "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+      "-DBUILD_SHARED_LIBS=OFF",
+      "-DPCRE2_BUILD_PCRE2_8=ON",
+      "-DPCRE2_BUILD_PCRE2_16=OFF",
+      "-DPCRE2_BUILD_PCRE2_32=OFF",
+      "-DPCRE2_SUPPORT_UNICODE=ON",
+      "-DPCRE2_SUPPORT_JIT=ON",
+      "-DPCRE2_BUILD_TESTS=ON"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 3.641
+  },
+  {
+    "label": "build-pcre2",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build-tools/bin/cmake",
+      "--build",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build",
+      "--parallel",
+      "4"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 4.537
+  },
+  {
+    "label": "test-pcre2",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build-tools/bin/ctest",
+      "--test-dir",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build",
+      "--output-on-failure",
+      "--timeout",
+      "120"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 5.575
+  },
+  {
+    "label": "install-private-pcre2",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build-tools/bin/cmake",
+      "--install",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 0.245
+  },
+  {
+    "label": "configure-swi",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build-tools/bin/cmake",
+      "-S",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/source",
+      "-B",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build",
+      "-G",
+      "Ninja",
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DCMAKE_OSX_SYSROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk",
+      "-DCMAKE_INSTALL_PREFIX=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install",
+      "-DSWIPL_PACKAGE_LIST=clib;plunit;http;sgml;json;pcre",
+      "-DSWIPL_PACKAGES_SSL=OFF",
+      "-DUSE_GMP=OFF",
+      "-DUSE_LIBBF=ON",
+      "-DINSTALL_DOCUMENTATION=OFF",
+      "-DOPENSSL_ROOT_DIR=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/openssl",
+      "-DOPENSSL_USE_STATIC_LIBS=TRUE",
+      "-DPCRE_INCLUDE_DIR=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2/include",
+      "-DPCRE_LIBRARY=/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2/lib/libpcre2-8.a"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 34.176
+  },
+  {
+    "label": "build-swi",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build-tools/bin/cmake",
+      "--build",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build",
+      "--parallel",
+      "4"
+    ],
+    "cwd": null,
+    "exit_code": 0,
+    "seconds": 17.778
+  }
+]

@@ -1,0 +1,2 @@
+pcre_version('10.49 2026-09-28'), jit(true), unicode(true).
+ERROR: [Thread main] -g use_module(library(pcre)),re_config(version(V)),re_config(jit(J)),re_config(unicode(U)),format('pcre_version(~q), jit(~q), unicode(~q).~n',[V,J,U]),absolute_file_name(library(pcre),P,[access(read)]),format('pcre_library(~q).~n',[P]),re_matchsub('(?<word>\\p{L}+)','räksmörgås',D,[]),get_dict(word,D,"räksmörgås"),re_replace('[0-9]+'/g,'#','pid=123 ref=456',"pid=# ref=#"),writeln(pcre_unicode_and_replacement_ok),halt: source_sink `library(pcre)' does not exist

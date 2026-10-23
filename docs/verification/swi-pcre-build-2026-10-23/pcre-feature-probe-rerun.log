@@ -1,0 +1,3 @@
+pcre_version('10.49 2026-09-28'), jit(true), unicode(true).
+pcre_library('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/library/ext/pcre/pcre.pl').
+pcre_unicode_and_replacement_ok

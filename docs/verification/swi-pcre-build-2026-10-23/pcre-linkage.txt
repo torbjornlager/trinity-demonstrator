@@ -1,0 +1,3 @@
+/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/packages/pcre/pcre4pl.so:
+	@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)

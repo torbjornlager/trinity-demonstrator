@@ -1,0 +1,7 @@
+Test project /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build
+    Start 64: pcre:pcre
+1/1 Test #64: pcre:pcre ........................   Passed    0.08 sec
+
+100% tests passed out of 1
+
+Total Test time (real) =   0.08 sec

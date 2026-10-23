@@ -1,0 +1,30 @@
+{
+  "scope": "separate PCRE build only; no installed runtime or live N3/N5 changes",
+  "application_revision": "f218370328131f172fc9e997579466a84e0b20d5",
+  "source_revision": "09b6299f696574c9230f23e53b1ab041a942b6f3",
+  "source_status": "",
+  "submodules": "-d74163e6d7560df26af1fbda9e4d0bfd54787009 bench\n-6d21f7f948bfbe6c51aa04a740273feaead3e60e debian\n-3a22d42614d703aec9448002c2dacd73eadef0dd packages/PDT\n-3684e99b7fe72f89f3d0403ec7a15b5bdf6eb07b packages/RDF\n-13a3f4af8f8219e10faf4895ce9fb189bc6aaefd packages/archive\n-1f0564027b8afa8c641299987f15a9767594f5a5 packages/bdb\n-c2d3ccbf3ec0a288e25a4e0e5b99f9851ad33b8b packages/chr\n-e45e661c541917ff5f24f257c42c2de289ad7d92 packages/clib\n-82094966ecc4562aef53e5eac7db9b6cd914de3a packages/clpqr\n-2c06af2a0aeb397d8ded421906eefbce6f07f588 packages/cpp\n-66f916527b5fe873a7a30226924ef26a142f2704 packages/cql\n-9d1e28e676831618c9894f728ef50872b2eb87d7 packages/http\n-3c7a2c7064a7175019e1683af1db0e66ef0b68bf packages/inclpr\n-be9f26f25707d57a9dae31744a1c38d829865d0a packages/jpl\n-131f0c660286fd178be7e3f78f2109ba1902d8d0 packages/json\n-fabf880141e5978ca591c689ede44068edf69bcd packages/libedit\n-33ac4f3e0e24cc80db2119b8b560f55179825651 packages/ltx2htm\n-e16fcf23c77a1eacf427df1fe717b0857cc885c9 packages/mqi\n-7e3802e5d8ae1ffaa2569d252a38bc797a0e6608 packages/nlp\n-9d2aac23f64b2481e7f767e012565efd67f93e52 packages/odbc\n-151c7bd0878e08109d766d9f45586ae2090c55a0 packages/paxos\n 52a0e9486c4770f2fbfac3f4fb8a1cd9e8c77af1 packages/pcre (V10.1.19)\n-3e4c1e14f6bbd2026057d247e5fed5c33b28420d packages/pengines\n-6ce601f912de52ee73979d840db5fa297c15c87d packages/pldoc\n-bdac3ecf684bb34e1cf8d30f57fa992fcd2b4895 packages/plunit\n-534af356789f86a04640c7cd77c004af40efd32d packages/protobufs\n-ca26fa6836be0b91c2b1683f0d84a99eaac10aa6 packages/redis\n-0425be00c2a00df0e69b4f3eb5e2f359fc724076 packages/semweb\n-8161f403ecdb6bb1fb5ac0deaba2f06c63323a55 packages/sgml\n-a3588d46801adc500cc7ff2386b2eb658865e124 packages/ssl\n-d3fea5500b879f9c92da090114a7e1c4d68eaabe packages/stomp\n-3ed24d3e9f57e5b3a7915dd46ce5219557e1033d packages/sweep\n-b0356a16284b88cf9b9cd8c18bb42cca877c54ff packages/swipy\n-7f46221b8b58f566213cb7864c90ad6510fd9a52 packages/table\n-aade2981e6223b09736b6262e0b8ad76ae916a8e packages/tipc\n-670634305216cb0c8e85812d3b4972fb65d5b93b packages/utf8proc\n-7b675977619981f162b68eafa45a20dc5bb31410 packages/windows\n-6e31b0b8ae89090e408219a2072ba4c7bff405f2 packages/xpce\n-6095ffe54f29dc5dc0afbf59b5335b633d502761 packages/yaml\n-866a5e39f7315ae9f26dda15c398c3a240831efb packages/zlib\n",
+  "pcre2_revision": "6f9d7c1373262c541324a16a358785b33ef116cf",
+  "pcre2_status": "",
+  "pcre2_submodules": " de0259c7aaf36aa40cba8014f3fad3edde9307f9 deps/sljit (de0259c)\n",
+  "original_artifacts_unchanged": {
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build/src/swipl": true,
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/build/CMakeCache.txt": true,
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": true,
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": true,
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl": true
+  },
+  "original_source_revision_unchanged": true,
+  "original_source_status_unchanged": true,
+  "original_submodules_unchanged": true,
+  "live_nodes_after": "30612 /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.13.10/tpl -g consult('distribution.pl'),web_prolog:web_prolog_node(3061,[bind_address('127.0.0.1'),node_url('http://localhost:3061'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3061'])])\n42134 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /tmp/web-prolog-local-ui/n5_frontend.py\n55051 /Applications/swipl-win.app/Contents/MacOS/swipl -q -s /tmp/web-prolog-local-ui/start_local_node_reuse.pl -- n3\n",
+  "artifacts": {
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/libswipl.10.1.18.dylib": "c55f18586a33efe141b06587b3ac43f0e0595ba5da2cfe1161430b8b22eadef9",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/packages/pcre/pcre4pl.so": "c5c45975b2904a4b884a1fe2d9040246de00894af82f44aa18bbe3b876c2659a",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/CMakeCache.txt": "d0d22b22c30e077c66e98f43ec7b76f7c5d49e88cb3883f79e04e29fb3310a31",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2/lib/libpcre2-8.a": "e94c7defeaf23df3482c5326c607c1d41434ee8a45b05a2f75862809ae48f4d6",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build/CMakeCache.txt": "613ca8c69cdbd0742b4da88cc22940176bc87beef18569017456f19b5a9ff634"
+  },
+  "live_node_processes_unchanged": true
+}

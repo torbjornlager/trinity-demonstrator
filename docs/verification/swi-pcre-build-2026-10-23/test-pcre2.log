@@ -1,0 +1,16 @@
+When testing is complete, review test output in the
+"/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build/Testing/Temporary" folder.
+ 
+Test project /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-build
+    Start 1: pcre2_test
+1/4 Test #1: pcre2_test .......................   Passed    1.07 sec
+    Start 2: pcre2_grep_test
+2/4 Test #2: pcre2_grep_test ..................   Passed    1.37 sec
+    Start 3: pcre2_jit_test
+3/4 Test #3: pcre2_jit_test ...................   Passed    1.79 sec
+    Start 4: pcre2posix_test
+4/4 Test #4: pcre2posix_test ..................   Passed    0.29 sec
+
+100% tests passed out of 4
+
+Total Test time (real) =   4.51 sec

@@ -1,0 +1,21 @@
+START clone-swi
+END clone-swi 0
+START swi-origin
+END swi-origin 0
+START swi-submodules
+END swi-submodules 0
+START clone-pcre2
+END clone-pcre2 0
+START configure-pcre2
+END configure-pcre2 0
+START build-pcre2
+END build-pcre2 0
+START test-pcre2
+END test-pcre2 0
+START install-private-pcre2
+END install-private-pcre2 0
+START configure-swi
+END configure-swi 0
+START build-swi
+END build-swi 0
+BUILD COMPLETE

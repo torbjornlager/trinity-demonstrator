@@ -1,0 +1,17 @@
+START swipl-pcre
+END swipl-pcre 0 True
+START pcre-feature-probe
+END pcre-feature-probe 2 False
+START t0
+END t0 0 True
+START t3
+END t3 0 True
+START t5
+END t5 0 True
+START node-worker-accounting
+END node-worker-accounting 0 True
+START worker-fixed-batch
+END worker-fixed-batch 0 True
+START handoff-fixed-batch
+END handoff-fixed-batch 0 True
+FINISHED 7 / 8

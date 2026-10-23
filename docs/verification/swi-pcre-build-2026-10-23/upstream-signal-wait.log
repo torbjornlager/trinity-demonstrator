@@ -1,0 +1,4 @@
+% [1/4] signal_wait:cleanup_zero_timeout ............ passed (0.004 sec)
+% [2/4] signal_wait:atomic_timeout .................. passed (0.104 sec)
+% [3/4] signal_wait:atomic_wait ..................... passed (0.102 sec)
+% [4/4] signal_wait:atomic_thread_wait .............. passed (0.000 sec)

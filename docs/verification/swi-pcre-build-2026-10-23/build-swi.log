@@ -1,0 +1,670 @@
+[1/670] Generating ../home/boot/.created
+[2/670] Generating ../home/library/.created
+[3/670] Generating ../home/library/clp/.created
+[4/670] Generating ../home/library/dcg/.created
+[5/670] Generating ../home/library/unicode/.created
+[6/670] Generating ../home/library/lynx/.created
+[7/670] Building C object src/CMakeFiles/defatom.dir/defatom.c.o
+[8/670] Generating ../home/library/dialect/.created
+[9/670] Generating ../home/library/dialect/swi/.created
+[10/670] Generating ../home/library/dialect/eclipse/.created
+[11/670] Generating ../home/library/dialect/hprolog/.created
+[12/670] Building C object src/CMakeFiles/mkvmi.dir/mkvmi.c.o
+[13/670] Generating ../home/library/dialect/yap/.created
+[14/670] Linking C executable src/defatom
+[15/670] Generating ../home/library/dialect/iso/.created
+[16/670] Generating ../home/library/theme/.created
+[17/670] Generating ../home/library/iri_scheme/.created
+[18/670] Generating ../home/demo/.created
+[19/670] Generating ../home/cmake/.created
+[20/670] Linking C executable src/mkvmi
+[21/670] Generating ../home/customize/.created
+[22/670] Generating ../home/app/.created
+[23/670] Generating ../home/library/dialect/sicstus/.created
+[24/670] Generating ../home/library/dialect/sicstus4/.created
+[25/670] Generating ../home/library/dialect/xsb/.created
+[26/670] Generating ../home/library/build/.created
+[27/670] Generating ../home/include/.created
+[28/670] Generating ../home/include/sicstus/.created
+[29/670] Generating ../home/include/Yap/.created
+[30/670] Generating ../../home/library/ext/clib/.created
+[31/670] Generating ../../home/library/ext/plunit/.created
+[32/670] Generating ../../home/doc/packages/examples/plunit/.created
+[33/670] Generating ../../home/library/ext/http/http/.created
+[34/670] Generating ../../home/library/ext/http/http/web/css/.created
+[35/670] Generating ../../home/library/ext/http/http/web/icons/.created
+[36/670] Generating ../../home/library/http/web/js/.created
+[37/670] Generating ../../home/doc/packages/examples/http/.created
+[38/670] Generating ../../home/doc/packages/examples/http/pwp/.created
+[39/670] Generating ../../home/library/ext/sgml/.created
+[40/670] Generating ../../home/library/ext/sgml/DTD/.created
+[41/670] Generating ../../home/library/ext/json/.created
+[42/670] Generating ../../home/library/ext/json/http/.created
+[43/670] Generating ../../home/library/ext/pcre/.created
+[44/670] Generating ../../home/library/ext/ssl/.created
+[45/670] Generating ../../home/library/ext/ssl/http/.created
+[46/670] Generating ../../home/doc/packages/examples/ssl/.created
+[47/670] Generating ../home/boot/apply.pl
+[48/670] Generating ../../home/library/ext/zlib/.created
+[49/670] Generating static atoms and functors
+[50/670] Generating ../home/boot/attvar.pl
+[51/670] Generating ../home/boot/autoload.pl
+[52/670] Generating ../home/boot/bags.pl
+[53/670] Generating ../home/boot/dcg.pl
+[54/670] Generating ../home/boot/dicts.pl
+[55/670] Generating ../home/boot/dwim.pl
+[56/670] Generating ../home/boot/engines.pl
+[57/670] Generating ../home/boot/expand.pl
+[58/670] Generating ../home/boot/gc.pl
+[59/670] Generating ../home/boot/history.pl
+[60/670] Generating ../home/boot/init.pl
+[61/670] Generating ../home/boot/iri.pl
+[62/670] Generating ../home/boot/license.pl
+[63/670] Generating ../home/boot/load.pl
+[64/670] Generating ../home/boot/messages.pl
+[65/670] Generating ../home/boot/packs.pl
+[66/670] Generating ../home/boot/qlf.pl
+[67/670] Generating ../home/boot/predopts.pl
+[68/670] Generating ../home/boot/syspred.pl
+[69/670] Generating ../home/boot/tabling.pl
+[70/670] Generating ../home/boot/rc.pl
+[71/670] Generating ../home/boot/toplevel.pl
+[72/670] Generating ../home/boot/threads.pl
+[73/670] Generating ../home/boot/topvars.pl
+[74/670] Generating ../home/library/apply.pl
+[75/670] Generating ../home/library/aggregate.pl
+[76/670] Generating ../home/library/ansi_term.pl
+[77/670] Generating ../home/library/apply_macros.pl
+[78/670] Generating ../home/library/arithmetic.pl
+[79/670] Generating ../home/library/assoc.pl
+[80/670] Generating ../home/library/atom.pl
+[81/670] Generating ../home/library/base32.pl
+[82/670] Generating ../home/library/backcomp.pl
+[83/670] Generating ../home/library/charsio.pl
+[84/670] Generating ../home/library/base64.pl
+[85/670] Generating ../home/library/broadcast.pl
+[86/670] Generating ../home/library/check.pl
+[87/670] Generating ../home/library/codesio.pl
+[88/670] Generating ../home/library/check_installation.pl
+[89/670] Generating ../home/library/coinduction.pl
+[90/670] Generating ../home/library/console_input.pl
+[91/670] Generating ../home/library/csv.pl
+[92/670] Generating ../home/library/ctypes.pl
+[93/670] Generating ../home/library/date.pl
+[94/670] Generating ../home/library/debug.pl
+[95/670] Generating ../home/library/dicts.pl
+[96/670] Generating ../home/library/dif.pl
+[97/670] Generating ../home/library/dialect.pl
+[98/670] Generating ../home/library/error.pl
+[99/670] Generating ../home/library/edinburgh.pl
+[100/670] Generating ../home/library/edit.pl
+[101/670] Generating ../home/library/fastrw.pl
+[102/670] Generating ../home/library/exceptions.pl
+[103/670] Generating ../home/library/explain.pl
+[104/670] Generating VMI metadata into vmi-metadata.h
+[105/670] Generating ../home/library/files.pl
+[106/670] Generating ../home/library/gensym.pl
+[107/670] Generating ../home/library/git.pl
+[108/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-bag.c.o
+[109/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-atom.c.o
+[110/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-error.c.o
+[111/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-zip.c.o
+[112/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-arith.c.o
+[113/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-dwim.c.o
+[114/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-ext.c.o
+[115/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-flag.c.o
+[116/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-funct.c.o
+[117/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-privitf.c.o
+[118/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-list.c.o
+[119/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-string.c.o
+[120/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-wam.c.o
+[121/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-load.c.o
+[122/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-gc.c.o
+[123/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-comp.c.o
+[124/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-modul.c.o
+[125/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-op.c.o
+[126/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-pro.c.o
+[127/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-prof.c.o
+[128/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-proc.c.o
+[129/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-rec.c.o
+[130/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-prims.c.o
+[131/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-sys.c.o
+[132/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-setup.c.o
+[133/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-util.c.o
+[134/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-trace.c.o
+[135/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-read.c.o
+[136/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-term.c.o
+[137/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-write.c.o
+[138/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-qlf.c.o
+[139/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-srcfile.c.o
+[140/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-gvar.c.o
+[141/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-attvar.c.o
+[142/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-btree.c.o
+[143/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-termset.c.o
+[144/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-segstack.c.o
+[145/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-hash.c.o
+[146/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-thread.c.o
+[147/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-init.c.o
+[148/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-gmp.c.o
+[149/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-version.c.o
+[150/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-dbref.c.o
+[151/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-supervisor.c.o
+[152/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-codetable.c.o
+[153/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-assert.c.o
+[154/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-variant.c.o
+[155/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-termhash.c.o
+[156/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-debug.c.o
+[157/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-cont.c.o
+[158/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-ressymbol.c.o
+[159/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-copyterm.c.o
+[160/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-indirect.c.o
+[161/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-rsort.c.o
+[162/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-dict.c.o
+[163/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-mutex.c.o
+[164/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-allocpool.c.o
+[165/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-wrap.c.o
+[166/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-event.c.o
+[167/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-trie.c.o
+[168/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-transaction.c.o
+[169/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-undo.c.o
+[170/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-alloc.c.o
+[171/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-bisim.c.o
+[172/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-tabling.c.o
+[173/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-coverage.c.o
+[174/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-index.c.o
+[175/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-buffer.c.o
+[176/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-ctype.c.o
+[177/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-files.c.o
+[178/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-glob.c.o
+[179/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-fli.c.o
+[180/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-os.c.o
+[181/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-string.c.o
+[182/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-file.c.o
+[183/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-table.c.o
+[184/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-utf8.c.o
+[185/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-stream.c.o
+[186/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-option.c.o
+[187/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-text.c.o
+[188/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-fmt.c.o
+[189/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-codelist.c.o
+[190/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-cstack.c.o
+[191/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-dtoa.c.o
+[192/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-tai.c.o
+[193/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-locale.c.o
+[194/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/caltime_utc.c.o
+[195/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-apple.c.o
+[196/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/caltime_tai.c.o
+[197/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/leapsecs_sub.c.o
+[198/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/leapsecs_add.c.o
+[199/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/caldate_fmjd.c.o
+[200/670] Building C object src/CMakeFiles/swiplobjs.dir/os/pl-prologflag.c.o
+[201/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/caldate_mjd.c.o
+[202/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/leapsecs_init.c.o
+[203/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/tai_pack.c.o
+[204/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/tai_unpack.c.o
+[205/670] Building C object src/CMakeFiles/swiplobjs.dir/libtai/leapsecs_read.c.o
+[206/670] Building C object src/CMakeFiles/swiplobjs.dir/pl-bf.c.o
+[207/670] Building C object src/CMakeFiles/swiplobjs.dir/libbf/cutils.c.o
+[208/670] Building C object src/CMakeFiles/swiplobjs.dir/libbf/mersenne-twister.c.o
+[209/670] Building C object src/CMakeFiles/swiplobjs.dir/libbf/bf_gmp.c.o
+[210/670] Building C object src/CMakeFiles/swiplobjs.dir/minizip/ioapi.c.o
+[211/670] Building C object src/CMakeFiles/swipl.dir/pl-main.c.o
+[212/670] Building C object src/CMakeFiles/swiplobjs.dir/minizip/unzip.c.o
+[213/670] Generating ../home/library/hashtable.pl
+[214/670] Generating ../home/library/heaps.pl
+[215/670] Generating ../home/library/hotfix.pl
+[216/670] Building C object src/CMakeFiles/swiplobjs.dir/minizip/zip.c.o
+[217/670] Generating ../home/library/increval.pl
+[218/670] Generating ../home/library/intercept.pl
+[219/670] Generating ../home/library/iostream.pl
+[220/670] Generating ../home/library/lazy_lists.pl
+[221/670] Generating ../home/library/listing.pl
+[222/670] Generating ../home/library/lists.pl
+[223/670] Generating ../home/library/macros.pl
+[224/670] Generating ../home/library/main.pl
+[225/670] Generating ../home/library/make.pl
+[226/670] Generating ../home/library/modules.pl
+[227/670] Generating ../home/library/nb_rbtrees.pl
+[228/670] Generating ../home/library/nb_set.pl
+[229/670] Generating ../home/library/obfuscate.pl
+[230/670] Generating ../home/library/occurs.pl
+[231/670] Generating ../home/library/operators.pl
+[232/670] Generating ../home/library/optparse.pl
+[233/670] Generating ../home/library/option.pl
+[234/670] Generating ../home/library/ordsets.pl
+[235/670] Generating ../home/library/oset.pl
+[236/670] Generating ../home/library/pairs.pl
+[237/670] Generating ../home/library/portray_text.pl
+[238/670] Generating ../home/library/persistency.pl
+[239/670] Generating ../home/library/pio.pl
+[240/670] Generating ../home/library/pprint.pl
+[241/670] Generating ../home/library/predicate_options.pl
+[242/670] Generating ../home/library/prolog_autoload.pl
+[243/670] Generating ../home/library/prolog_clause.pl
+[244/670] Generating ../home/library/prolog_breakpoints.pl
+[245/670] Generating ../home/library/prolog_code.pl
+[246/670] Generating ../home/library/prolog_colour.pl
+[247/670] Generating ../home/library/prolog_codewalk.pl
+[248/670] Generating ../home/library/prolog_config.pl
+[249/670] Generating ../home/library/prolog_coverage.pl
+[250/670] Generating ../home/library/prolog_debug.pl
+[251/670] Generating ../home/library/prolog_deps.pl
+[252/670] Generating ../home/library/prolog_format.pl
+[253/670] Generating ../home/library/prolog_evaluable.pl
+[254/670] Generating ../home/library/prolog_history.pl
+[255/670] Generating ../home/library/prolog_locale.pl
+[256/670] Generating ../home/library/prolog_jiti.pl
+[257/670] Generating ../home/library/prolog_metainference.pl
+[258/670] Generating ../home/library/prolog_pack.pl
+[259/670] Generating ../home/library/prolog_profile.pl
+[260/670] Generating ../home/library/prolog_qlfmake.pl
+[261/670] Generating ../home/library/prolog_trace.pl
+[262/670] Generating ../home/library/prolog_source.pl
+[263/670] Generating ../home/library/prolog_stack.pl
+[264/670] Generating ../home/library/prolog_wrap.pl
+[265/670] Generating ../home/library/prolog_xref.pl
+[266/670] Generating ../home/library/prolog_versions.pl
+[267/670] Generating ../home/library/qpforeign.pl
+[268/670] Generating ../home/library/pure_input.pl
+[269/670] Generating ../home/library/qsave.pl
+[270/670] Generating ../home/library/quintus.pl
+[271/670] Generating ../home/library/quasi_quotations.pl
+[272/670] Generating ../home/library/random.pl
+[273/670] Generating ../home/library/random_terms.pl
+[274/670] Generating ../home/library/rbtrees.pl
+[275/670] Generating ../home/library/readln.pl
+[276/670] Generating ../home/library/readutil.pl
+[277/670] Generating ../home/library/rwlocks.pl
+[278/670] Generating ../home/library/record.pl
+[279/670] Generating ../home/library/shell.pl
+[280/670] Generating ../home/library/sandbox.pl
+[281/670] Generating ../home/library/settings.pl
+[282/670] Generating ../home/library/solution_sequences.pl
+[283/670] Generating ../home/library/sort.pl
+[284/670] Generating ../home/library/shlib.pl
+[285/670] Generating ../home/library/streams.pl
+[286/670] Generating ../home/library/statistics.pl
+[287/670] Generating ../home/library/strings.pl
+[288/670] Generating ../home/library/system.pl
+[289/670] Generating ../home/library/tables.pl
+[290/670] Generating ../home/library/tableutil.pl
+[291/670] Generating ../home/library/thread.pl
+[292/670] Generating ../home/library/tabling.pl
+[293/670] Generating ../home/library/terms.pl
+[294/670] Generating ../home/library/thread_pool.pl
+[295/670] Generating ../home/library/threadutil.pl
+[296/670] Generating ../home/library/tty.pl
+[297/670] Generating ../home/library/ugraphs.pl
+[298/670] Generating ../home/library/url.pl
+[299/670] Generating ../home/library/utf8.pl
+[300/670] Generating ../home/library/varnumbers.pl
+[301/670] Generating ../home/library/vm.pl
+[302/670] Generating ../home/library/wfs.pl
+[303/670] Generating ../home/library/when.pl
+[304/670] Generating ../home/library/writef.pl
+[305/670] Generating ../home/library/www_browser.pl
+[306/670] Generating ../home/library/zip.pl
+[307/670] Generating ../home/library/yall.pl
+[308/670] Generating ../home/library/clp/bounds.pl
+[309/670] Generating ../home/library/clp/clp_events.pl
+[310/670] Generating ../home/library/clp/clp_distinct.pl
+[311/670] Generating ../home/library/clp/clpb.pl
+[312/670] Generating ../home/library/clp/simplex.pl
+[313/670] Generating ../home/library/clp/clpfd.pl
+[314/670] Generating ../home/library/dcg/basics.pl
+[315/670] Generating ../home/library/dcg/high_order.pl
+[316/670] Generating ../home/library/unicode/blocks.pl
+[317/670] Generating ../home/library/lynx/format.pl
+[318/670] Generating ../home/library/lynx/pldoc_style.pl
+[319/670] Generating ../home/library/lynx/html_style.pl
+[320/670] Generating ../home/library/lynx/html_text.pl
+[321/670] Generating ../home/library/dialect/hprolog.pl
+[322/670] Generating ../home/library/dialect/bim.pl
+[323/670] Generating ../home/library/dialect/commons.pl
+[324/670] Generating ../home/library/dialect/sicstus.pl
+[325/670] Generating ../home/library/dialect/ifprolog.pl
+[326/670] Generating ../home/library/dialect/sicstus4.pl
+[327/670] Generating ../home/library/dialect/swi/syspred_options.pl
+[328/670] Generating ../home/library/dialect/xsb.pl
+[329/670] Generating ../home/library/dialect/yap.pl
+[330/670] Generating ../home/library/dialect/eclipse/test_util_iso.pl
+[331/670] Generating ../home/library/dialect/hprolog/format.pl
+[332/670] Generating ../home/library/dialect/iso/iso_predicates.pl
+[333/670] Generating ../home/library/theme/dark.pl
+[334/670] Generating ../home/library/dialect/yap/README.TXT
+[335/670] Generating ../home/library/theme/auto.pl
+[336/670] Generating ../home/library/theme/light.pl
+[337/670] Generating ../home/library/iri_scheme/file.pl
+[338/670] Generating ../home/demo/README.md
+[339/670] Generating ../home/demo/trace.pl
+[340/670] Generating ../home/demo/likes.pl
+[341/670] Generating ../home/demo/colours.pl
+[342/670] Generating ../home/demo/unicode.pl
+[343/670] Generating ../home/app/README.md
+[344/670] Generating ../home/cmake/swipl.cmake
+[345/670] Generating ../home/app/pack.pl
+[346/670] Generating ../home/app/qlf.pl
+[347/670] Generating ../home/app/app.pl
+[348/670] Generating ../home/app/splfr.pl
+[349/670] Generating ../home/app/sys.pl
+[350/670] Generating ../home/customize/README.md
+[351/670] Generating ../home/customize/edit
+[352/670] Generating ../home/customize/init.pl
+[353/670] Generating ../home/library/dialect/sicstus/README.TXT
+[354/670] Generating ../home/library/dialect/sicstus/block.pl
+[355/670] Generating ../home/library/dialect/sicstus/arrays.pl
+[356/670] Generating ../home/library/dialect/sicstus/lists.pl
+[357/670] Generating ../home/library/dialect/sicstus/sockets.pl
+[358/670] Generating ../home/library/dialect/sicstus/system.pl
+[359/670] Generating ../home/library/dialect/sicstus/ordsets.pl
+[360/670] Generating ../home/library/dialect/sicstus/timeout.pl
+[361/670] Generating ../home/library/dialect/sicstus/terms.pl
+[362/670] Generating ../home/library/dialect/sicstus4/aggregate.pl
+[363/670] Generating ../home/library/dialect/sicstus4/between.pl
+[364/670] Generating ../home/library/dialect/sicstus4/clpfd.pl
+[365/670] Generating ../home/library/dialect/sicstus4/file_systems.pl
+[366/670] Generating ../home/library/dialect/sicstus4/ordsets.pl
+[367/670] Generating ../home/library/dialect/sicstus4/lists.pl
+[368/670] Generating ../home/library/dialect/sicstus4/samsort.pl
+[369/670] Building C object src/CMakeFiles/swiplobjs.dir/libbf/libbf.c.o
+[370/670] Generating ../home/library/dialect/sicstus4/system.pl
+[371/670] Generating ../home/library/dialect/sicstus4/sets.pl
+[372/670] Generating ../home/library/dialect/sicstus4/sockets.pl
+[373/670] Generating ../home/library/dialect/sicstus4/terms.pl
+[374/670] Generating ../home/library/dialect/sicstus4/timeout.pl
+[375/670] Generating ../home/library/dialect/sicstus4/types.pl
+[376/670] Generating ../home/library/dialect/xsb/README.md
+[377/670] Generating ../home/library/dialect/xsb/basics.pl
+[378/670] Generating ../home/library/dialect/xsb/consult.pl
+[379/670] Generating ../home/library/dialect/xsb/gensym.pl
+[380/670] Generating ../home/library/dialect/xsb/curr_sym.pl
+[381/670] Generating ../home/library/dialect/xsb/error_handler.pl
+[382/670] Generating ../home/library/dialect/xsb/gpp.pl
+[383/670] Linking C shared library src/libswipl.10.1.18.dylib
+[384/670] Generating ../home/library/dialect/xsb/intern.pl
+[385/670] Generating ../home/library/dialect/xsb/lists.pl
+[386/670] Creating library symlink src/libswipl.10.dylib src/libswipl.dylib
+[387/670] Generating ../home/library/dialect/xsb/machine.pl
+[388/670] Generating ../home/library/dialect/xsb/ordsets.pl
+[389/670] Generating ../home/library/dialect/xsb/setof.pl
+[390/670] Generating ../home/library/dialect/xsb/source.pl
+[391/670] Generating ../home/library/dialect/xsb/standard.pl
+[392/670] Generating ../home/library/dialect/xsb/storage.pl
+[393/670] Generating ../home/library/dialect/xsb/string.pl
+[394/670] Generating ../home/library/dialect/xsb/thread.pl
+[395/670] Generating ../home/library/dialect/xsb/timed_call.pl
+[396/670] Generating ../home/library/build/conan.pl
+[397/670] Generating ../home/library/build/make.pl
+[398/670] Generating ../home/library/build/cmake.pl
+[399/670] Linking C executable src/swipl
+[400/670] Generating ../home/include/SWI-Stream.h
+[401/670] Generating ../home/library/build/tools.pl
+[402/670] Generating ../home/include/SWI-Prolog.h
+[403/670] Generating ../home/include/sicstus/sicstus.h
+[404/670] Generating ../home/include/Yap/YapInterface.h
+[405/670] Building C object packages/clib/CMakeFiles/plugin_memfile.dir/error.c.o
+[406/670] Building C object packages/clib/CMakeFiles/plugin_files.dir/error.c.o
+[407/670] Building C object packages/clib/CMakeFiles/plugin_files.dir/files.c.o
+[408/670] Building C object packages/clib/CMakeFiles/plugin_readutil.dir/readutil.c.o
+[409/670] Building C object packages/clib/CMakeFiles/plugin_memfile.dir/memfile.c.o
+[410/670] Building C object packages/clib/CMakeFiles/plugin_prolog_stream.dir/prolog_stream.c.o
+[411/670] Building C object packages/clib/CMakeFiles/plugin_md54pl.dir/md54pl.c.o
+[412/670] Building C object packages/clib/CMakeFiles/plugin_crypt.dir/error.c.o
+[413/670] Building C object packages/clib/CMakeFiles/plugin_md54pl.dir/md5.c.o
+[414/670] Building C object packages/clib/CMakeFiles/plugin_crypt.dir/md5.c.o
+[415/670] Building C object packages/clib/CMakeFiles/plugin_crypt.dir/crypt.c.o
+[416/670] Building C object packages/clib/CMakeFiles/plugin_crypt.dir/md5passwd.c.o
+[417/670] Building C object packages/clib/CMakeFiles/plugin_uri.dir/uri.c.o
+[418/670] Building C object packages/clib/CMakeFiles/plugin_hashstream.dir/md5.c.o
+[419/670] Building C object packages/clib/CMakeFiles/plugin_hashstream.dir/hash_stream.c.o
+[420/670] Building C object packages/clib/CMakeFiles/plugin_hashstream.dir/sha1/sha1.c.o
+[421/670] Building C object packages/clib/CMakeFiles/plugin_sha4pl.dir/error.c.o
+[422/670] Building C object packages/clib/CMakeFiles/plugin_sha4pl.dir/sha4pl.c.o
+[423/670] Building C object packages/clib/CMakeFiles/plugin_sha4pl.dir/sha1/hmac_sha1.c.o
+[424/670] Building C object packages/clib/CMakeFiles/plugin_hashstream.dir/sha1/sha2.c.o
+[425/670] Building C object packages/clib/CMakeFiles/plugin_sha4pl.dir/sha1/sha1.c.o
+[426/670] Building C object packages/clib/CMakeFiles/plugin_sha4pl.dir/sha1/hmac_sha256.c.o
+[427/670] Building C object packages/clib/CMakeFiles/plugin_cgi.dir/error.c.o
+[428/670] Building C object packages/clib/CMakeFiles/plugin_sha4pl.dir/sha1/sha2.c.o
+[429/670] Building C object packages/clib/CMakeFiles/plugin_cgi.dir/form.c.o
+[430/670] Building C object packages/clib/CMakeFiles/plugin_cgi.dir/cgi.c.o
+[431/670] Building C object packages/clib/CMakeFiles/plugin_time.dir/error.c.o
+[432/670] Building C object packages/clib/CMakeFiles/plugin_process.dir/error.c.o
+[433/670] Building C object packages/clib/CMakeFiles/plugin_streaminfo.dir/error.c.o
+[434/670] Building C object packages/clib/CMakeFiles/plugin_time.dir/time.c.o
+[435/670] Building C object packages/clib/CMakeFiles/plugin_streaminfo.dir/streaminfo.c.o
+[436/670] Building C object packages/clib/CMakeFiles/plugin_unix.dir/error.c.o
+[437/670] Building C object packages/clib/CMakeFiles/plugin_process.dir/process.c.o
+[438/670] Building C object packages/clib/CMakeFiles/plugin_uid.dir/error.c.o
+[439/670] Building C object packages/clib/CMakeFiles/plugin_unix.dir/unix.c.o
+[440/670] Building C object packages/clib/CMakeFiles/plugin_uid.dir/uid.c.o
+[441/670] Building C object packages/clib/CMakeFiles/plugin_rlimit.dir/rlimit.c.o
+[442/670] Building C object packages/clib/CMakeFiles/plugin_rlimit.dir/error.c.o
+[443/670] Building C object packages/clib/CMakeFiles/plugin_syslog.dir/syslog.c.o
+[444/670] Building C object packages/clib/CMakeFiles/plugin_sched.dir/sched.c.o
+[445/670] Building C object packages/clib/CMakeFiles/plugin_socket.dir/error.c.o
+[446/670] Generating ../../home/library/ext/clib/memfile.pl
+[447/670] Generating ../../home/library/ext/clib/filesex.pl
+[448/670] Generating ../../home/library/ext/clib/uri.pl
+[449/670] Generating ../../home/library/ext/clib/prolog_stream.pl
+[450/670] Generating ../../home/library/ext/clib/md5.pl
+[451/670] Generating ../../home/library/ext/clib/crypt.pl
+[452/670] Generating ../../home/library/ext/clib/hash_stream.pl
+[453/670] Generating ../../home/library/ext/clib/sha.pl
+[454/670] Building C object packages/clib/CMakeFiles/plugin_socket.dir/socket.c.o
+[455/670] Generating ../../home/library/ext/clib/cgi.pl
+[456/670] Generating ../../home/library/ext/clib/time.pl
+[457/670] Generating ../../home/library/ext/clib/process.pl
+[458/670] Building C object packages/clib/CMakeFiles/plugin_socket.dir/nonblockio.c.o
+[459/670] Generating ../../home/library/ext/clib/desktop.pl
+[460/670] Generating ../../home/library/ext/clib/streaminfo.pl
+[461/670] Generating ../../home/library/ext/clib/unix.pl
+[462/670] Generating ../../home/library/ext/clib/uid.pl
+[463/670] Generating ../../home/library/ext/clib/rlimit.pl
+[464/670] Generating ../../home/library/ext/clib/syslog.pl
+[465/670] Generating ../../home/library/ext/clib/sched.pl
+[466/670] Generating ../../home/library/ext/clib/uuid.pl
+[467/670] Generating ../../home/library/ext/clib/prolog_server.pl
+[468/670] Generating ../../home/library/ext/clib/socket.pl
+[469/670] Generating ../../home/library/ext/clib/streampool.pl
+[470/670] Generating ../../home/library/ext/clib/udp_broadcast.pl
+[471/670] Generating ../../home/library/ext/plunit/plunit.pl
+[472/670] Generating ../../home/library/ext/plunit/test_wizard.pl
+[473/670] Generating ../../home/doc/packages/examples/plunit/read.pl
+[474/670] Generating ../../home/doc/packages/examples/plunit/simple.pl
+[475/670] Generating ../../home/library/ext/http/http/html_decl.pl
+[476/670] Generating ../../home/library/ext/http/http/html_head.pl
+[477/670] Generating ../../home/library/ext/http/http/html_quasiquotations.pl
+[478/670] Generating ../../home/library/ext/http/http/html_write.pl
+[479/670] Generating ../../home/library/ext/http/http/http_path.pl
+[480/670] Generating ../../home/library/ext/http/http/mimetype.pl
+[481/670] Generating ../../home/library/ext/http/http/term_html.pl
+[482/670] Generating ../../home/library/ext/http/http/http_stream.pl
+[483/670] Generating ../../home/library/ext/http/http/dcg_basics.pl
+[484/670] Generating ../../home/library/ext/http/http/http_client.pl
+[485/670] Generating ../../home/library/ext/http/http/http_error.pl
+[486/670] Generating ../../home/library/ext/http/http/http_header.pl
+[487/670] Generating ../../home/library/ext/http/http/http_open.pl
+[488/670] Generating ../../home/library/ext/http/http/http_proxy.pl
+[489/670] Building C object packages/http/CMakeFiles/plugin_websocket.dir/websocket.c.o
+[490/670] Generating ../../home/library/ext/http/http/http_sgml_plugin.pl
+[491/670] Generating ../../home/library/ext/http/http/js_write.pl
+[492/670] Generating ../../home/library/ext/http/http/mimepack.pl
+[493/670] Generating ../../home/library/ext/http/http/README.md
+[494/670] Generating ../../home/library/ext/http/http/ax.pl
+[495/670] Generating ../../home/library/ext/http/http/graphql.pl
+[496/670] Generating ../../home/library/ext/http/http/htmx.pl
+[497/670] Building C object packages/http/CMakeFiles/plugin_http_stream.dir/http_stream.c.o
+[498/670] Generating ../../home/library/ext/http/http/http_authenticate.pl
+[499/670] Generating ../../home/library/ext/http/http/http_cookie.pl
+[500/670] Generating ../../home/library/ext/http/http/http_cors.pl
+[501/670] Generating ../../home/library/ext/http/http/http_digest.pl
+[502/670] Generating ../../home/library/ext/http/http/http_dirindex.pl
+[503/670] Generating ../../home/library/ext/http/http/http_dispatch.pl
+[504/670] Generating ../../home/library/ext/http/http/http_dyn_workers.pl
+[505/670] Generating ../../home/library/ext/http/http/http_exception.pl
+[506/670] Generating ../../home/library/ext/http/http/http_files.pl
+[507/670] Generating ../../home/library/ext/http/http/http_hook.pl
+[508/670] Generating ../../home/library/ext/http/http/http_host.pl
+[509/670] Generating ../../home/library/ext/http/http/http_log.pl
+[510/670] Generating ../../home/library/ext/http/http/http_load.pl
+[511/670] Generating ../../home/library/ext/http/http/http_multipart_plugin.pl
+[512/670] Generating ../../home/library/ext/http/http/http_openid.pl
+[513/670] Generating ../../home/library/ext/http/http/http_parameters.pl
+[514/670] Generating ../../home/library/ext/http/http/http_pwp.pl
+[515/670] Generating ../../home/library/ext/http/http/http_redis_plugin.pl
+[516/670] Generating ../../home/library/ext/http/http/http_server.pl
+[517/670] Generating ../../home/library/ext/http/http/http_server_health.pl
+[518/670] Generating ../../home/library/ext/http/http/http_server_files.pl
+[519/670] Generating ../../home/library/ext/http/http/http_session.pl
+[520/670] Generating ../../home/library/ext/http/http/http_unix_daemon.pl
+[521/670] Generating ../../home/library/ext/http/http/http_wrapper.pl
+[522/670] Generating ../../home/library/ext/http/http/sse.pl
+[523/670] Generating ../../home/library/ext/http/http/thread_httpd.pl
+[524/670] Generating ../../home/library/ext/http/http/yadis.pl
+[525/670] Generating ../../home/library/ext/http/http/hub.pl
+[526/670] Generating ../../home/library/ext/http/http/websocket.pl
+[527/670] Generating ../../home/library/ext/http/http/web/css/dirindex.css
+[528/670] Generating ../../home/library/ext/http/http/web/css/openid.css
+[529/670] Generating ../../home/library/ext/http/http/web/icons/c.png
+[530/670] Generating ../../home/library/ext/http/http/web/icons/back.png
+[531/670] Generating ../../home/library/ext/http/http/web/icons/compressed.png
+[532/670] Generating ../../home/library/ext/http/http/web/icons/folder.png
+[533/670] Generating ../../home/library/ext/http/http/web/icons/layout.png
+[534/670] Generating ../../home/library/ext/http/http/web/icons/generic.png
+[535/670] Generating ../../home/library/ext/http/http/web/icons/openid-logo-square.png
+[536/670] Generating ../../home/library/ext/http/http/web/icons/openid-logo-tiny.png
+[537/670] Generating ../../home/library/http/web/js/jquery-3.6.0.min.js
+[538/670] Generating ../../home/doc/packages/examples/http/demo_body.pl
+[539/670] Generating ../../home/doc/packages/examples/http/README.md
+[540/670] Generating ../../home/doc/packages/examples/http/calc.pl
+[541/670] Generating ../../home/doc/packages/examples/http/demo_hello.pl
+[542/670] Generating ../../home/doc/packages/examples/http/demo_client.pl
+[543/670] Generating ../../home/doc/packages/examples/http/demo_daemon.pl
+[544/670] Generating ../../home/doc/packages/examples/http/demo_files.pl
+[545/670] Generating ../../home/doc/packages/examples/http/demo_pwp.pl
+[546/670] Generating ../../home/doc/packages/examples/http/demo_login.pl
+[547/670] Generating ../../home/doc/packages/examples/http/demo_openid.pl
+[548/670] Generating ../../home/doc/packages/examples/http/demo_rest.pl
+[549/670] Generating ../../home/doc/packages/examples/http/upstart-script.conf
+[550/670] Generating ../../home/doc/packages/examples/http/demo_threads.pl
+[551/670] Generating ../../home/doc/packages/examples/http/linux-init-script
+[552/670] Generating ../../home/doc/packages/examples/http/systemd-script.service
+[553/670] Generating ../../home/doc/packages/examples/http/pwp/pwp2.pwp
+[554/670] Generating ../../home/doc/packages/examples/http/pwp/context.pwp
+[555/670] Generating ../../home/doc/packages/examples/http/pwp/index.pwp
+[556/670] Generating ../../home/doc/packages/examples/http/pwp/pwp1.pwp
+[557/670] Generating ../../home/doc/packages/examples/http/pwp/pwp3.pwp
+[558/670] Generating ../../home/doc/packages/examples/http/pwp/pwp4.pwp
+[559/670] Generating ../../home/doc/packages/examples/http/pwp/pwp5.pwp
+[560/670] Generating ../../home/doc/packages/examples/http/pwp/pwp6.pwp
+[561/670] Generating ../../home/doc/packages/examples/http/pwp/pwp7.pwp
+[562/670] Generating ../../home/doc/packages/examples/http/pwp/pwp8.pwp
+[563/670] Generating ../../home/doc/packages/examples/http/pwp/pwpdb.pl
+[564/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/charmap.c.o
+[565/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/catalog.c.o
+[566/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/util.c.o
+[567/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/model.c.o
+[568/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/utf8.c.o
+[569/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/xmlns.c.o
+[570/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/xml_unicode.c.o
+[571/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/quote.c.o
+[572/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/error.c.o
+[573/670] Generating ../../home/library/ext/sgml/c14n2.pl
+[574/670] Generating ../../home/library/ext/sgml/iso_639.pl
+[575/670] Generating ../../home/library/ext/sgml/pwp.pl
+[576/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/xsd.c.o
+[577/670] Generating ../../home/library/ext/sgml/sgml.pl
+[578/670] Generating ../../home/library/ext/sgml/sgml_write.pl
+[579/670] Generating ../../home/library/ext/sgml/xpath.pl
+[580/670] Generating ../../home/library/ext/sgml/xsdp_types.pl
+[581/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/sgml2pl.c.o
+[582/670] Generating ../../home/library/ext/sgml/DTD/HTML4.dcl
+[583/670] Generating ../../home/library/ext/sgml/DTD/HTML4.dtd
+[584/670] Generating ../../home/library/ext/sgml/DTD/HTML4.soc
+[585/670] Generating ../../home/library/ext/sgml/DTD/HTML5.dtd
+[586/670] Generating ../../home/library/ext/sgml/DTD/HTMLspec.ent
+[587/670] Generating ../../home/library/ext/sgml/DTD/HTMLlat1.ent
+[588/670] Generating ../../home/library/ext/sgml/DTD/HTMLsym.ent
+[589/670] Generating ../../home/library/ext/json/json.pl
+[590/670] Generating ../../home/library/ext/json/json_convert.pl
+[591/670] Generating ../../home/library/ext/json/json_grammar.pl
+[592/670] Generating ../../home/library/ext/json/json_rpc_client.pl
+[593/670] Generating ../../home/library/ext/json/json_rpc_common.pl
+[594/670] Generating ../../home/library/ext/json/json_rpc_server.pl
+[595/670] Generating ../../home/library/ext/json/json_schema.pl
+[596/670] Building C object packages/json/CMakeFiles/plugin_json.dir/json.c.o
+[597/670] Generating ../../home/library/ext/json/http/http_json.pl
+[598/670] Generating ../../home/library/ext/json/http/js_grammar.pl
+[599/670] Generating ../../home/library/ext/json/http/json.pl
+[600/670] Generating ../../home/library/ext/json/http/json_convert.pl
+[601/670] Generating ../../home/library/ext/pcre/pcre.pl
+[602/670] Building C object packages/ssl/CMakeFiles/plugin_ssl4pl.dir/__/clib/error.c.o
+[603/670] Building C object packages/sgml/CMakeFiles/plugin_sgml2pl.dir/parser.c.o
+[604/670] Building C object packages/pcre/CMakeFiles/plugin_pcre4pl.dir/pcre4pl.c.o
+[605/670] Building C object packages/ssl/CMakeFiles/plugin_crypto4pl.dir/__/clib/error.c.o
+[606/670] Generating ../../home/library/ext/ssl/ssl.pl
+[607/670] Building C object packages/ssl/CMakeFiles/plugin_crypto4pl.dir/crypt_blowfish.c.o
+[608/670] Generating ../../home/library/ext/ssl/crypto.pl
+[609/670] Generating ../../home/library/ext/ssl/saml.pl
+[610/670] Generating ../../home/library/ext/ssl/xmldsig.pl
+[611/670] Generating ../../home/library/ext/ssl/xmlenc.pl
+[612/670] Generating ../../home/library/ext/ssl/http/http_ssl_plugin.pl
+[613/670] Generating ../../home/doc/packages/examples/ssl/client.pl
+[614/670] Generating ../../home/doc/packages/examples/ssl/https.pl
+[615/670] Generating ../../home/doc/packages/examples/ssl/server.pl
+[616/670] Generating ../../home/library/ext/zlib/zlib.pl
+[617/670] Copy MacOS icon (prebuilt desktop/swipl.icns)
+[618/670] Building C object packages/ssl/CMakeFiles/plugin_crypto4pl.dir/crypto4pl.c.o
+[619/670] Building C object packages/zlib/CMakeFiles/plugin_zlib4pl.dir/zlib4pl.c.o
+[620/670] Linking C shared module packages/clib/memfile.so
+[621/670] Linking C shared module packages/clib/files.so
+[622/670] Linking C shared module packages/clib/uri.so
+[623/670] Linking C shared module packages/clib/readutil.so
+[624/670] Building C object packages/ssl/CMakeFiles/plugin_ssl4pl.dir/ssl4pl.c.o
+[625/670] Linking C shared module packages/clib/prolog_stream.so
+[626/670] Linking C shared module packages/clib/md54pl.so
+[627/670] Linking C shared module packages/clib/crypt.so
+[628/670] Linking C shared module packages/clib/hashstream.so
+[629/670] Linking C shared module packages/clib/sha4pl.so
+[630/670] Linking C shared module packages/clib/cgi.so
+[631/670] Linking C shared module packages/clib/time.so
+[632/670] Linking C shared module packages/clib/process.so
+[633/670] Linking C shared module packages/clib/streaminfo.so
+[634/670] Linking C shared module packages/clib/unix.so
+[635/670] Linking C shared module packages/clib/uid.so
+[636/670] Linking C shared module packages/clib/syslog.so
+[637/670] Linking C shared module packages/clib/rlimit.so
+[638/670] Linking C shared module packages/clib/sched.so
+[639/670] Linking C shared module packages/clib/socket.so
+[640/670] Linking C shared module packages/http/websocket.so
+[641/670] Linking C shared module packages/http/http_stream.so
+[642/670] Linking C shared module packages/sgml/sgml2pl.so
+[643/670] Linking C shared module packages/json/json.so
+[644/670] Linking C shared module packages/pcre/pcre4pl.so
+[645/670] Linking C shared module packages/zlib/zlib4pl.so
+[646/670] Linking C shared module packages/ssl/ssl4pl.so
+[647/670] Linking C shared module packages/ssl/crypto4pl.so
+[648/670] Building C object src/CMakeFiles/swipl-win.dir/pl-main.c.o
+[649/670] Linking C executable src/swipl-win
+[650/670] Building C object src/CMakeFiles/swipl-ld.dir/swipl-ld.c.o
+[651/670] Linking C executable src/swipl-ld
+[652/670] Generating ../home/ABI
+[653/670] Generating ../home/boot.prc
+[654/670] Build home/library/unicode/INDEX.pl
+[655/670] Build home/library/dcg/INDEX.pl
+[656/670] Build home/library/clp/INDEX.pl
+[657/670] Build home/library/lynx/INDEX.pl
+[658/670] Build home/library/ext/plunit//INDEX.pl
+[659/670] Build home/library/ext/sgml//INDEX.pl
+[660/670] Build home/library/INDEX.pl
+[661/670] Build home/library/ext/json/http/INDEX.pl
+[662/670] Build home/library/ext/json//INDEX.pl
+[663/670] Build home/library/ext/http/http/INDEX.pl
+[664/670] Build home/library/ext/ssl/http/INDEX.pl
+[665/670] Build home/library/ext/zlib//INDEX.pl
+[666/670] Build home/library/ext/pcre//INDEX.pl
+[667/670] Build home/library/ext/ssl//INDEX.pl
+[668/670] Build home/library/ext/clib//INDEX.pl
+[669/670] Generating tests/test_certs/generated
+[670/670] QLF compile library

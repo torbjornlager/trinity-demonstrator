@@ -1,0 +1,24 @@
+Cloning into '/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-source'...
+warning: refs/tags/pcre2-10.49 388ef3c412ab5269b8f76101a6bef2d416974a15 is not a commit!
+Note: switching to '6f9d7c1373262c541324a16a358785b33ef116cf'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Submodule 'deps/sljit' (https://github.com/zherczeg/sljit.git) registered for path 'deps/sljit'
+Cloning into '/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2-source/deps/sljit'...
+From https://github.com/zherczeg/sljit
+ * branch            de0259c7aaf36aa40cba8014f3fad3edde9307f9 -> FETCH_HEAD
+Submodule path 'deps/sljit': checked out 'de0259c7aaf36aa40cba8014f3fad3edde9307f9'

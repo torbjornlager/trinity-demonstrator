@@ -1,0 +1,629 @@
+-- The C compiler identification is AppleClang 21.0.0.21000101
+-- The CXX compiler identification is AppleClang 21.0.0.21000101
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring SWI-Prolog-10.1.18
+CMake Warning at cmake/port/Darwin.cmake:38 (message):
+  Could not find Macport or Homebrew to provide dependencies 		 trying to
+  configure with default search paths
+Call Stack (most recent call first):
+  cmake/Ports.cmake:7 (include)
+  CMakeLists.txt:213 (include)
+
+
+-- Trying to build without Macports or Homebrew dependencies
+-- Check floating point format
+-- Check floating point format - unknown
+-- Added packages  ssl: Required by package http
+-- Added packages  zlib: Required by package ssl
+-- Found ZLIB: /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk/usr/lib/libz.tbd (found version "1.2.12")
+-- Found Curses: /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk/usr/lib/libcurses.tbd
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Checking for 64-bit off_t
+-- Checking for 64-bit off_t - present
+-- Checking for fseeko/ftello
+-- Checking for fseeko/ftello - present
+-- Large File support - found
+-- Looking for inttypes.h
+-- Looking for inttypes.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for stdlib.h
+-- Looking for stdlib.h - found
+-- Looking for strings.h
+-- Looking for strings.h - found
+-- Looking for threads.h
+-- Looking for threads.h - not found
+-- Looking for wchar.h
+-- Looking for wchar.h - found
+-- Looking for alloca.h
+-- Looking for alloca.h - found
+-- Looking for curses.h
+-- Looking for curses.h - found
+-- Looking for dirent.h
+-- Looking for dirent.h - found
+-- Looking for dl.h
+-- Looking for dl.h - not found
+-- Looking for dlfcn.h
+-- Looking for dlfcn.h - found
+-- Looking for dmalloc.h
+-- Looking for dmalloc.h - not found
+-- Looking for execinfo.h
+-- Looking for execinfo.h - found
+-- Looking for float.h
+-- Looking for float.h - found
+-- Looking for floatingpoint.h
+-- Looking for floatingpoint.h - not found
+-- Looking for ieeefp.h
+-- Looking for ieeefp.h - not found
+-- Looking for ieee754.h
+-- Looking for ieee754.h - not found
+-- Looking for libloaderapi.h
+-- Looking for libloaderapi.h - not found
+-- Looking for limits.h
+-- Looking for limits.h - found
+-- Looking for locale.h
+-- Looking for locale.h - found
+-- Looking for xlocale.h
+-- Looking for xlocale.h - found
+-- Looking for malloc.h
+-- Looking for malloc.h - not found
+-- Looking for memory.h
+-- Looking for memory.h - found
+-- Looking for ncurses/curses.h
+-- Looking for ncurses/curses.h - not found
+-- Looking for ncurses/term.h
+-- Looking for ncurses/term.h - not found
+-- Looking for poll.h
+-- Looking for poll.h - found
+-- Looking for pwd.h
+-- Looking for pwd.h - found
+-- Looking for shlobj.h
+-- Looking for shlobj.h - not found
+-- Looking for signal.h
+-- Looking for signal.h - found
+-- Looking for string.h
+-- Looking for string.h - found
+-- Looking for sys/dir.h
+-- Looking for sys/dir.h - found
+-- Looking for sys/file.h
+-- Looking for sys/file.h - found
+-- Looking for sys/mman.h
+-- Looking for sys/mman.h - found
+-- Looking for sys/ndir.h
+-- Looking for sys/ndir.h - not found
+-- Looking for sys/param.h
+-- Looking for sys/param.h - found
+-- Looking for sys/resource.h
+-- Looking for sys/resource.h - found
+-- Looking for sys/select.h
+-- Looking for sys/select.h - found
+-- Looking for sys/stat.h
+-- Looking for sys/stat.h - found
+-- Looking for sys/syscall.h
+-- Looking for sys/syscall.h - found
+-- Looking for sys/ioctl.h
+-- Looking for sys/ioctl.h - found
+-- Looking for sys/termio.h
+-- Looking for sys/termio.h - not found
+-- Looking for sys/termios.h
+-- Looking for sys/termios.h - found
+-- Looking for sys/time.h
+-- Looking for sys/time.h - found
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for sys/wait.h
+-- Looking for sys/wait.h - found
+-- Looking for term.h
+-- Looking for term.h - found
+-- Looking for time.h
+-- Looking for time.h - found
+-- Looking for unistd.h
+-- Looking for unistd.h - found
+-- Looking for valgrind/valgrind.h
+-- Looking for valgrind/valgrind.h - not found
+-- Looking for vfork.h
+-- Looking for vfork.h - not found
+-- Looking for mach/thread_act.h
+-- Looking for mach/thread_act.h - found
+-- Looking for sys/stropts.h
+-- Looking for sys/stropts.h - not found
+-- Looking for zlib.h
+-- Looking for zlib.h - found
+-- Looking for crt_externs.h
+-- Looking for crt_externs.h - found
+-- Looking for gperftools/malloc_extension_c.h
+-- Looking for gperftools/malloc_extension_c.h - not found
+-- Looking for sanitizer/lsan_interface.h
+-- Looking for sanitizer/lsan_interface.h - found
+-- Performing Test HAVE_GCC_ATOMIC
+-- Performing Test HAVE_GCC_ATOMIC - Success
+-- Performing Test HAVE_GCC_ATOMIC_8
+-- Performing Test HAVE_GCC_ATOMIC_8 - Success
+-- Performing Test HAVE___BUILTIN_MUL_OVERFLOW
+-- Performing Test HAVE___BUILTIN_MUL_OVERFLOW - Success
+-- Looking for dlopen in dl
+-- Looking for dlopen in dl - found
+-- Looking for sin in m
+-- Looking for sin in m - found
+-- Looking for clock_gettime in rt
+-- Looking for clock_gettime in rt - not found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of int
+-- Check size of int - done
+-- Check size of long
+-- Check size of long - done
+-- Check size of void *
+-- Check size of void * - done
+-- Check size of long long
+-- Check size of long long - done
+-- Check size of wchar_t
+-- Check size of wchar_t - done
+-- Check size of wint_t
+-- Check size of wint_t - done
+-- Check size of off_t
+-- Check size of off_t - done
+-- Check size of __int128
+-- Check size of __int128 - done
+-- Check size of z_crc_t
+-- Check size of z_crc_t - done
+-- Check alignment of INT64_T: 8
+-- Check alignment of DOUBLE: 8
+-- Check alignment of VOIDP: 8
+-- Looking for mmap
+-- Looking for mmap - found
+-- Looking for popen
+-- Looking for popen - found
+-- Looking for strerror
+-- Looking for strerror - found
+-- Looking for poll
+-- Looking for poll - found
+-- Looking for getpwnam
+-- Looking for getpwnam - found
+-- Looking for fork
+-- Looking for fork - found
+-- Looking for vfork
+-- Looking for vfork - found
+-- Looking for setsid
+-- Looking for setsid - found
+-- Looking for tcgetsid
+-- Looking for tcgetsid - found
+-- Looking for qsort_r
+-- Looking for qsort_r - found
+-- Looking for qsort_s
+-- Looking for qsort_s - not found
+-- Looking for getpagesize
+-- Looking for getpagesize - found
+-- Looking for access
+-- Looking for access - found
+-- Looking for chmod
+-- Looking for chmod - found
+-- Looking for fchmod
+-- Looking for fchmod - found
+-- Looking for fcntl
+-- Looking for fcntl - found
+-- Looking for fstat
+-- Looking for fstat - found
+-- Looking for ftruncate
+-- Looking for ftruncate - found
+-- Looking for getcwd
+-- Looking for getcwd - found
+-- Looking for getwd
+-- Looking for getwd - found
+-- Looking for opendir
+-- Looking for opendir - found
+-- Looking for readlink
+-- Looking for readlink - found
+-- Looking for remove
+-- Looking for remove - found
+-- Looking for rename
+-- Looking for rename - found
+-- Looking for stat
+-- Looking for stat - found
+-- Looking for fopen64
+-- Looking for fopen64 - not found
+-- Looking for memmove
+-- Looking for memmove - found
+-- Looking for strcasecmp
+-- Looking for strcasecmp - found
+-- Looking for stricmp
+-- Looking for stricmp - not found
+-- Looking for strlwr
+-- Looking for strlwr - not found
+-- Looking for setlocale
+-- Looking for setlocale - found
+-- Looking for mbsnrtowcs
+-- Looking for mbsnrtowcs - found
+-- Looking for mbcasescoll
+-- Looking for mbcasescoll - not found
+-- Looking for localeconv
+-- Looking for localeconv - found
+-- Looking for newlocale
+-- Looking for newlocale - found
+-- Looking for uselocale
+-- Looking for uselocale - found
+-- Looking for wcsdup
+-- Looking for wcsdup - found
+-- Looking for wcsxfrm
+-- Looking for wcsxfrm - found
+-- Looking for wcwidth
+-- Looking for wcwidth - found
+-- Looking for getuid
+-- Looking for getuid - found
+-- Looking for getpid
+-- Looking for getpid - found
+-- Looking for waitpid
+-- Looking for waitpid - found
+-- Looking for setenv
+-- Looking for setenv - found
+-- Looking for putenv
+-- Looking for putenv - found
+-- Looking for unsetenv
+-- Looking for unsetenv - found
+-- Looking for sysconf
+-- Looking for sysconf - found
+-- Looking for confstr
+-- Looking for confstr - found
+-- Looking for getrlimit
+-- Looking for getrlimit - found
+-- Looking for getrusage
+-- Looking for getrusage - found
+-- Looking for _NSGetEnviron
+-- Looking for _NSGetEnviron - found
+-- Looking for mallinfo
+-- Looking for mallinfo - not found
+-- Looking for mallinfo2
+-- Looking for mallinfo2 - not found
+-- Looking for shl_load
+-- Looking for shl_load - not found
+-- Looking for dlopen
+-- Looking for dlopen - found
+-- Looking for dladdr
+-- Looking for dladdr - found
+-- Looking for signal
+-- Looking for signal - found
+-- Looking for sigprocmask
+-- Looking for sigprocmask - found
+-- Looking for sigsetmask
+-- Looking for sigsetmask - found
+-- Looking for siggetmask
+-- Looking for siggetmask - not found
+-- Looking for sigset
+-- Looking for sigset - found
+-- Looking for sigblock
+-- Looking for sigblock - found
+-- Looking for sigaltstack
+-- Looking for sigaltstack - found
+-- Looking for kill
+-- Looking for kill - found
+-- Looking for backtrace
+-- Looking for backtrace - found
+-- Looking for alarm
+-- Looking for alarm - found
+-- Looking for mtrace
+-- Looking for mtrace - not found
+-- Looking for tgetent
+-- Looking for tgetent - found
+-- Looking for tcsetattr
+-- Looking for tcsetattr - found
+-- Looking for grantpt
+-- Looking for grantpt - found
+-- Looking for sgttyb
+-- Looking for sgttyb - not found
+-- Looking for cfmakeraw
+-- Looking for cfmakeraw - found
+-- Looking for ceil
+-- Looking for ceil - found
+-- Looking for floor
+-- Looking for floor - found
+-- Looking for srand
+-- Looking for srand - found
+-- Looking for srandom
+-- Looking for srandom - found
+-- Looking for random
+-- Looking for random - found
+-- Looking for rint
+-- Looking for rint - found
+-- Looking for fpresetsticky
+-- Looking for fpresetsticky - not found
+-- Looking for fpsetmask
+-- Looking for fpsetmask - not found
+-- Looking for isnan
+-- Looking for isnan - found
+-- Looking for isinf
+-- Looking for isinf - found
+-- Looking for ftime
+-- Looking for ftime - found
+-- Looking for clock_gettime
+-- Looking for clock_gettime - found
+-- Looking for gettimeofday
+-- Looking for gettimeofday - found
+-- Looking for localtime_r
+-- Looking for localtime_r - found
+-- Looking for localtime_s
+-- Looking for localtime_s - not found
+-- Looking for ctime_r
+-- Looking for ctime_r - found
+-- Looking for asctime_r
+-- Looking for asctime_r - found
+-- Looking for nanosleep
+-- Looking for nanosleep - found
+-- Looking for sleep
+-- Looking for sleep - found
+-- Looking for usleep
+-- Looking for usleep - found
+-- Looking for select
+-- Looking for select - found
+-- Looking for clock
+-- Looking for clock - found
+-- Looking for times
+-- Looking for times - found
+-- Looking for delay
+-- Looking for delay - not found
+-- Looking for dossleep
+-- Looking for dossleep - not found
+-- Performing Test SYS_CPUSET_H_FOUND
+-- Performing Test SYS_CPUSET_H_FOUND - Failed
+-- Looking for pthread_np.h
+-- Looking for pthread_np.h - not found
+-- Looking for pthread_attr_setaffinity_np
+-- Looking for pthread_attr_setaffinity_np - not found
+-- Looking for pthread_getname_np
+-- Looking for pthread_getname_np - found
+-- Looking for pthread_getw32threadhandle_np
+-- Looking for pthread_getw32threadhandle_np - not found
+-- Looking for pthread_kill
+-- Looking for pthread_kill - found
+-- Looking for pthread_mutexattr_setkind_np
+-- Looking for pthread_mutexattr_setkind_np - not found
+-- Looking for pthread_mutexattr_settype
+-- Looking for pthread_mutexattr_settype - found
+-- Looking for pthread_mutex_timedlock
+-- Looking for pthread_mutex_timedlock - not found
+-- Looking for pthread_setconcurrency
+-- Looking for pthread_setconcurrency - found
+-- Looking for pthread_setname_np
+-- Looking for pthread_setname_np - found
+-- Looking for pthread_sigmask
+-- Looking for pthread_sigmask - found
+-- Looking for pthread_timedjoin_np
+-- Looking for pthread_timedjoin_np - not found
+-- Looking for pthread_getcpuclockid
+-- Looking for pthread_getcpuclockid - not found
+-- Looking for pthread_attr_setstacksize
+-- Looking for pthread_attr_setstacksize - found
+-- Looking for pthread_getattr_np
+-- Looking for pthread_getattr_np - not found
+-- Looking for pthread_win32_process_detach_np
+-- Looking for pthread_win32_process_detach_np - not found
+-- Looking for sched_setaffinity
+-- Looking for sched_setaffinity - not found
+-- Looking for sched_yield
+-- Looking for sched_yield - found
+-- Looking for sema_init
+-- Looking for sema_init - not found
+-- Looking for sem_init
+-- Looking for sem_init - found
+-- Looking for sem_timedwait
+-- Looking for sem_timedwait - not found
+-- Looking for setitimer
+-- Looking for setitimer - found
+-- Checking for recursive mutex support
+-- Performing Test HAVE_PTHREAD_MUTEX_RECURSIVE
+-- Performing Test HAVE_PTHREAD_MUTEX_RECURSIVE - Success
+-- Checking for recursive mutex support -- found
+-- Performing Test HAVE_PTHREAD_SETNAME_NP_WITH_TID
+-- Performing Test HAVE_PTHREAD_SETNAME_NP_WITH_TID - Failed
+-- Performing Test HAVE_PTHREAD_SETNAME_NP_WITH_TID_AND_ARG
+-- Performing Test HAVE_PTHREAD_SETNAME_NP_WITH_TID_AND_ARG - Failed
+-- Performing Test HAVE_GETTID_FUNCTION
+-- Performing Test HAVE_GETTID_FUNCTION - Failed
+-- Performing Test HAVE_GETTID_MACRO
+-- Performing Test HAVE_GETTID_MACRO - Failed
+-- Performing Test HAVE_GETTID_SYSCALL
+-- Performing Test HAVE_GETTID_SYSCALL - Failed
+-- Looking for WSAPoll
+-- Looking for WSAPoll - not found
+-- Looking for WinExec
+-- Looking for WinExec - not found
+-- Looking for F_SETLKW
+-- Looking for F_SETLKW - found
+-- Performing Test HAVE_VAR_TIMEZONE
+-- Performing Test HAVE_VAR_TIMEZONE - Success
+-- Looking for SIGPROF
+-- Looking for SIGPROF - found
+-- Performing Test HAVE_STRUCT_TIME_TM_GMTOFF
+-- Performing Test HAVE_STRUCT_TIME_TM_GMTOFF - Success
+-- Performing Test HAVE_STRUCT_STAT_ST_MTIM
+-- Performing Test HAVE_STRUCT_STAT_ST_MTIM - Failed
+-- Performing Test HAVE_RU_IDRSS
+-- Performing Test HAVE_RU_IDRSS - Success
+-- Performing Test HAVE_GMP_RANDINIT_MT
+-- Performing Test HAVE_GMP_RANDINIT_MT - Failed
+-- qsort_r() has BSD signature
+-- Performing Test HAVE___AUTO_TYPE
+-- Performing Test HAVE___AUTO_TYPE - Success
+-- Performing Test HAVE__BUILTIN_CLZ
+-- Performing Test HAVE__BUILTIN_CLZ - Success
+-- Performing Test HAVE__BUILTIN_POPCOUNT
+-- Performing Test HAVE__BUILTIN_POPCOUNT - Success
+-- Performing Test HAVE___BUILTIN_EXPECT
+-- Performing Test HAVE___BUILTIN_EXPECT - Success
+-- Performing Test HAVE___THREAD
+-- Performing Test HAVE___THREAD - Success
+-- Performing Test HAVE_VOLATILE
+-- Performing Test HAVE_VOLATILE - Success
+-- Performing Test HAVE_INLINE
+-- Performing Test HAVE_INLINE - Success
+-- Performing Test O_LABEL_ADDRESSES
+-- Performing Test O_LABEL_ADDRESSES - Success
+-- Performing Test HAVE_WEAK_ATTRIBUTE
+-- Performing Test HAVE_WEAK_ATTRIBUTE - Failed
+-- Performing Test HAVE_VISIBILITY_ATTRIBUTE
+-- Performing Test HAVE_VISIBILITY_ATTRIBUTE - Success
+-- Performing Test HAVE_ALLOCA
+-- Performing Test HAVE_ALLOCA - Success
+-- Performing Test HAVE_SIGNBIT
+-- Performing Test HAVE_SIGNBIT - Success
+-- sysconf() support for _SC_NPROCESSORS_CONF
+-- sysconf() supports _SC_NPROCESSORS_CONF  - found
+-- Performing Test TIME_WITH_SYS_TIME
+-- Performing Test TIME_WITH_SYS_TIME - Success
+-- llround(nextoward(0.5),-10) == 0 (ok)
+-- copysign(1.0, modf(-0.0, _)) == -1.0 (ok)
+-- Looking for socket in socket
+-- Looking for socket in socket - not found
+-- Looking for gethostent in nsl
+-- Looking for gethostent in nsl - not found
+-- Looking for socket
+-- Looking for socket - found
+-- Looking for sys/socket.h
+-- Looking for sys/socket.h - found
+-- Looking for sys/un.h
+-- Looking for sys/un.h - found
+-- Check size of socklen_t
+-- Check size of socklen_t - done
+-- Performing Test HAVE_H_ERRNO
+-- Performing Test HAVE_H_ERRNO - Success
+-- Performing Test HAVE_IP_MREQN
+-- Performing Test HAVE_IP_MREQN - Success
+-- Could NOT find LibUUID (missing: LIBUUID_INCLUDE_DIR UUID_LIBRARY) 
+-- Looking for crypt
+-- Looking for crypt - found
+-- Looking for syslog
+-- Looking for syslog - found
+-- Looking for fcntl.h
+-- Looking for fcntl.h - found
+-- Looking for utime.h
+-- Looking for utime.h - found
+-- Looking for crypt.h
+-- Looking for crypt.h - not found
+-- Looking for syslog.h
+-- Looking for syslog.h - found
+-- Looking for sys/prctl.h
+-- Looking for sys/prctl.h - not found
+-- Looking for netinet/tcp.h
+-- Looking for netinet/tcp.h - found
+-- Looking for utime
+-- Looking for utime - found
+-- Looking for strcasestr
+-- Looking for strcasestr - found
+-- Looking for pipe2
+-- Looking for pipe2 - not found
+-- Looking for prctl
+-- Looking for prctl - not found
+-- Looking for initgroups
+-- Looking for initgroups - found
+-- Looking for setgroups
+-- Looking for setgroups - found
+-- Looking for malloc_info
+-- Looking for malloc_info - not found
+-- Looking for open_memstream
+-- Looking for open_memstream - found
+-- Looking for posix_spawn
+-- Looking for posix_spawn - found
+-- Looking for gai_strerror
+-- Looking for gai_strerror - found
+-- Looking for hstrerror
+-- Looking for hstrerror - found
+-- Looking for setpriority
+-- Looking for setpriority - found
+-- Searching for jQuery
+-- No system jquery.js; using our own
+-- Looking for io.h
+-- Looking for io.h - not found
+-- Looking for snprintf
+-- Looking for snprintf - found
+-- Looking for strtoll
+-- Looking for strtoll - found
+-- Found PCRE: /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/pcre2/lib/libpcre2-8.a
+-- Found OpenSSL: /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/openssl/lib/libcrypto.a (found version "3.5.4")
+-- Looking for Security/Security.h
+-- Looking for Security/Security.h - found
+-- Performing Test HAVE_KSECCLASS
+-- Performing Test HAVE_KSECCLASS - Success
+-- Looking for ASN1_STRING_get0_data
+-- Looking for ASN1_STRING_get0_data - found
+-- Looking for timegm
+-- Looking for timegm - found
+-- Looking for X509_check_host
+-- Looking for X509_check_host - found
+-- Looking for i2d_re_X509_tbs
+-- Looking for i2d_re_X509_tbs - found
+-- Looking for EVP_blake2b512
+-- Looking for EVP_blake2b512 - found
+-- Looking for EVP_blake2s256
+-- Looking for EVP_blake2s256 - found
+-- Looking for EVP_sha3_224
+-- Looking for EVP_sha3_224 - found
+-- Looking for EVP_sha3_256
+-- Looking for EVP_sha3_256 - found
+-- Looking for EVP_sha3_384
+-- Looking for EVP_sha3_384 - found
+-- Looking for EVP_sha3_512
+-- Looking for EVP_sha3_512 - found
+-- Looking for HMAC_CTX_new
+-- Looking for HMAC_CTX_new - found
+-- Looking for HMAC_CTX_free
+-- Looking for HMAC_CTX_free - found
+-- Looking for EVP_PKEY_new
+-- Looking for EVP_PKEY_new - found
+-- Looking for EVP_PKEY_free
+-- Looking for EVP_PKEY_free - found
+-- Looking for EVP_PKEY_get_bn_param
+-- Looking for EVP_PKEY_get_bn_param - found
+-- Looking for EVP_PKEY_get_octet_string_param
+-- Looking for EVP_PKEY_get_octet_string_param - found
+-- Looking for EVP_PKEY_get_size
+-- Looking for EVP_PKEY_get_size - found
+-- Looking for EVP_PKEY_decrypt
+-- Looking for EVP_PKEY_decrypt - found
+-- Looking for EVP_PKEY_encrypt
+-- Looking for EVP_PKEY_encrypt - found
+-- Looking for EVP_PKEY_sign
+-- Looking for EVP_PKEY_sign - found
+-- Looking for EVP_PKEY_verify
+-- Looking for EVP_PKEY_verify - found
+-- Looking for EVP_PKEY_Q_keygen
+-- Looking for EVP_PKEY_Q_keygen - found
+-- Looking for EVP_PKEY_new_raw_private_key
+-- Looking for EVP_PKEY_new_raw_private_key - found
+-- Looking for EVP_PKEY_new_raw_public_key
+-- Looking for EVP_PKEY_new_raw_public_key - found
+-- Looking for EVP_PKEY_get_raw_private_key
+-- Looking for EVP_PKEY_get_raw_private_key - found
+-- Looking for EVP_PKEY_get_raw_public_key
+-- Looking for EVP_PKEY_get_raw_public_key - found
+-- Looking for EVP_DigestSign
+-- Looking for EVP_DigestSign - found
+-- Looking for EVP_DigestVerify
+-- Looking for EVP_DigestVerify - found
+-- Looking for OSSL_PARAM_construct_utf8_string
+-- Looking for OSSL_PARAM_construct_utf8_string - found
+-- Looking for BN_check_prime
+-- Looking for BN_check_prime - found
+-- Looking for OSSL_PARAM_BLD_new
+-- Looking for OSSL_PARAM_BLD_new - found
+-- Looking for openssl/kdf.h
+-- Looking for openssl/kdf.h - found
+-- Looking for openssl/core_names.h
+-- Looking for openssl/core_names.h - found
+-- Looking for openssl/param_build.h
+-- Looking for openssl/param_build.h - found
+-- Looking for openssl/applink.c
+-- Looking for openssl/applink.c - not found
+-- Using /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299/openssl/bin/openssl to create ssl test certificates
+-- Configuring done (34.0s)
+-- Generating done (0.1s)
+-- Build files have been written to: /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build

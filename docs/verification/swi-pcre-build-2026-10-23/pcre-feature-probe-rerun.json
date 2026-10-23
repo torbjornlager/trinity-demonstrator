@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "-f",
+    "none",
+    "-q",
+    "-g",
+    "use_module(library(pcre)),re_config(version(V)),re_config(jit(J)),re_config(unicode(U)),format('pcre_version(~q), jit(~q), unicode(~q).~n',[V,J,U]),absolute_file_name(library(pcre),P,[file_type(prolog),access(read)]),format('pcre_library(~q).~n',[P]),re_matchsub('(?<word>.+)','r\u00e4ksm\u00f6rg\u00e5s',D,[]),get_dict(word,D,\"r\u00e4ksm\u00f6rg\u00e5s\"),re_replace('[0-9]+'/g,'#','pid=123 ref=456',\"pid=# ref=#\"),writeln(pcre_unicode_and_replacement_ok),halt"
+  ],
+  "exit_code": 0,
+  "seconds": 0.03,
+  "passed": true
+}
