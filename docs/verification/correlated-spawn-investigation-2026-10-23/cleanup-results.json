@@ -1,0 +1,32 @@
+[
+  {
+    "version": "baseline",
+    "exit_code": 1,
+    "seconds": 29.215254958,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(distribution:remote_drop_connection_locked/1,[fail]),trace(websocket:ws_close/3,[fail]),layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "version": "assets",
+    "exit_code": 0,
+    "seconds": 28.9285435,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(distribution:remote_drop_connection_locked/1,[fail]),trace(websocket:ws_close/3,[fail]),layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ]
+  }
+]

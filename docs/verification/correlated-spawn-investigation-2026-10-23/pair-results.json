@@ -1,0 +1,98 @@
+[
+  {
+    "version": "baseline",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 0.505,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),run_tests([toplevel_correlation_transport:spawn_errors_isolated_on_negotiated_connection,toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "version": "assets",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 0.453,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),run_tests([toplevel_correlation_transport:spawn_errors_isolated_on_negotiated_connection,toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "version": "baseline",
+    "trial": 2,
+    "exit_code": 1,
+    "seconds": 0.444,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),run_tests([toplevel_correlation_transport:spawn_errors_isolated_on_negotiated_connection,toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "version": "assets",
+    "trial": 2,
+    "exit_code": 1,
+    "seconds": 0.405,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),run_tests([toplevel_correlation_transport:spawn_errors_isolated_on_negotiated_connection,toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "version": "baseline",
+    "trial": 3,
+    "exit_code": 0,
+    "seconds": 0.407,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),run_tests([toplevel_correlation_transport:spawn_errors_isolated_on_negotiated_connection,toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "version": "assets",
+    "trial": 3,
+    "exit_code": 0,
+    "seconds": 0.406,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),run_tests([toplevel_correlation_transport:spawn_errors_isolated_on_negotiated_connection,toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback])",
+      "-t",
+      "halt"
+    ]
+  }
+]

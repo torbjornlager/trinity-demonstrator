@@ -1,0 +1,10 @@
+[
+  "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+  "-q",
+  "-s",
+  "tests/tiers/t4_node.pl",
+  "-g",
+  "use_module(library(prolog_trace)),trace(websocket:ws_close(S,C,D),fail((test_toplevel_correlation_transport:spawn_diag(ws_close_failed(S,C,D)),fail))),trace(distribution:remote_drop_connection_locked(N),fail((test_toplevel_correlation_transport:spawn_diag(drop_locked_failed(N)),fail))),layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+  "-t",
+  "halt"
+]

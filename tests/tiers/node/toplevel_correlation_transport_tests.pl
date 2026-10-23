@@ -8,7 +8,9 @@
 :- use_module('multi_node_harness.pl').
 :- use_module(library(plunit)).
 :- use_module(library(process)).
+:- use_module(library(prolog_wrap)).
 :- use_module(library(http/http_client)).
+:- use_module(library(http/thread_httpd), [http_current_server/2]).
 :- use_module('../../../prolog/web_prolog/pid_utils.pl', []).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/websocket)).
@@ -99,18 +101,22 @@ distribution:hook_event(Event) :-
     get_dict(node,Event,'http://spawn-correlation.invalid'),
     assertz(test_toplevel_correlation_transport:transport_diagnostic(Event)).
 distribution:hook_ws_endpoint_override(Node,URL) :-
-    test_toplevel_correlation_transport:spawn_endpoint(Node,URL).
+    test_toplevel_correlation_transport:spawn_endpoint(Node,URL),
+    test_toplevel_correlation_transport:spawn_diag(selected_endpoint(Node,URL)).
 :- http_handler('/test_spawn_correlated', spawn_upgrade(correlated), []).
 :- http_handler('/test_spawn_legacy', spawn_upgrade(legacy), []).
 spawn_upgrade(Mode,Request) :-
+    spawn_diag(upgrade(Mode,Request)),
     (Mode==correlated -> Protocols=['web-prolog-sync-spawn-v1','web-prolog-sync-v1']
     ; Protocols=['web-prolog-sync-v1']),
     http_upgrade_to_websocket(spawn_peer(Mode),[subprotocols(Protocols)],Request).
 spawn_peer(Mode,WS) :-
+    spawn_diag(peer_connected(Mode,WS)),
     (Mode==correlated -> ws_send(WS,json(json{type:error,data:"before spawn"}));true),
     spawn_peer_loop(Mode,WS).
 spawn_peer_loop(Mode,WS) :-
     ws_receive(WS,Frame,[format(json)]),
+    spawn_diag(peer_received(Mode,WS,Frame)),
     (Frame.opcode==close -> true
     ; Dict=Frame.data,
       (Dict.goal=="close" -> ws_close(WS,1000,"test loss")
@@ -121,22 +127,140 @@ spawn_peer_loop(Mode,WS) :-
             ws_send(WS,json(json{type:error,data:"old request",request_id:"old"})),
             put_dict(request_id,Reply,Dict.request_id,Tagged)
         ; Tagged=Reply),
+        spawn_diag(peer_sending(Mode,WS,Tagged)),
         ws_send(WS,json(Tagged)),spawn_peer_loop(Mode,WS))).
 
 :- meta_predicate with_spawn_peer(+,-,0).
 with_spawn_peer(Mode,Node,Goal) :-
+    spawn_snapshot(fixture_enter(Mode)),
     with_test_nodes([node_spec(b,[profile(actor),auth(open)])],
         (nb_getval(node_url_b,URL),
          (Mode==correlated -> Path='/test_spawn_correlated';Path='/test_spawn_legacy'),
          atom_concat(URL,Path,Endpoint),Node='http://spawn-correlation.invalid',
-         setup_call_cleanup(assertz(spawn_endpoint(Node,Endpoint)),Goal,
-             (distribution:remote_drop_connection(Node),retractall(spawn_endpoint(Node,_)),
-              retractall(transport_diagnostic(_)))))).
+         spawn_snapshot(server_started(Mode,URL,Endpoint)),
+         setup_call_cleanup(
+             (assertz(spawn_endpoint(Node,Endpoint)),spawn_snapshot(endpoint_published(Mode,Endpoint))),
+             (spawn_diag(goal_enter(Mode,Endpoint)),
+              catch(Goal,Error,(spawn_snapshot(goal_exception(Mode,Error)),throw(Error))),
+              spawn_snapshot(goal_returned(Mode,Endpoint))),
+             call_cleanup(
+                 (spawn_snapshot(before_connection_drop(Mode,Endpoint)),
+                  spawn_drop_diagnostic(Node),
+                  spawn_snapshot(after_connection_drop(Mode,Endpoint))),
+                 (retractall(spawn_endpoint(Node,_)),retractall(transport_diagnostic(_)),
+                  spawn_snapshot(endpoint_withdrawn(Mode,Endpoint))))))),
+    spawn_snapshot(with_nodes_returned(Mode)).
+
+% Preserve success, failure and exceptions while identifying a failed cleanup.
+spawn_drop_diagnostic(Node) :-
+    (spawn_diag_enabled ->
+        catch((distribution:remote_drop_connection(Node) -> spawn_diag(drop_succeeded(Node))
+              ; spawn_diag(drop_failed(Node)),fail),
+              Error,(spawn_diag(drop_exception(Node,Error)),throw(Error)))
+    ;distribution:remote_drop_connection(Node)).
+
+% Opt-in test diagnostics. No waits, assertions or transport options are changed.
+spawn_diag_enabled :- getenv('WP_SPAWN_TEST_DIAGNOSTICS', '1').
+spawn_diag(Event) :-
+    (spawn_diag_enabled -> catch(spawn_diag_write(Event),_,true);true).
+spawn_diag_write(Event) :-
+    flag(spawn_test_diag_sequence, Seq, Seq+1), get_time(Time), thread_self(Thread),
+    format(string(Line),'~q.~n',[spawn_stage(Seq,Time,Thread,Event)]),
+    (getenv('WP_SPAWN_TEST_LOG', File) ->
+        with_mutex(spawn_test_diag_output,
+            setup_call_cleanup(open(File,append,Stream,[encoding(utf8)]),
+                               format(Stream,'~s',[Line]),close(Stream)))
+    ;format(user_error,'~s',[Line]),flush_output(user_error)).
+spawn_snapshot(Stage) :-
+    (spawn_diag_enabled -> catch(spawn_snapshot_1(Stage),Error,
+        spawn_diag(snapshot_error(Stage,Error)));true).
+spawn_snapshot_1(Stage) :-
+    findall(N-E,spawn_endpoint(N,E),Endpoints),
+    findall(connection(N,S,R,Q,Status),
+            (distribution:ws_connection(N,S,R,Q),
+             (catch(thread_property(R,status(Status0)),_,fail)->Status=Status0;Status=retired)),
+            Connections),
+    findall(Port,http_current_server(node:_,Port),Servers),
+    findall(Port,node_runtime_state:current_node_port(Port),Context),
+    findall(Overrides,node_runtime_state:current_node_value(ws_endpoint_overrides,Overrides),OverridesList),
+    spawn_diag_write(snapshot(Stage,Endpoints,Connections,Servers,Context,OverridesList)).
+
+% Fault injection is local to this test thread; other readers use the original.
+:- thread_local cleanup_fault/2.
+:- meta_predicate with_cleanup_fault(+,+,0).
+with_cleanup_fault(Point,Outcome,Goal) :-
+    setup_call_cleanup(
+        (asserta(cleanup_fault(Point,Outcome)),
+         wrap_predicate(websocket:ws_close(S,_C,_D),spawn_cleanup_close,W1,
+             (test_toplevel_correlation_transport:cleanup_fault(close,Action),
+              S==spawn_cleanup_test_socket
+              -> test_toplevel_correlation_transport:cleanup_fault_outcome(Action)
+              ; W1)),
+         wrap_predicate(distribution:remote_drop_connection(N),spawn_cleanup_drop,W2,
+             (test_toplevel_correlation_transport:cleanup_fault(drop,Action),
+              N=='http://spawn-correlation.invalid'
+              -> test_toplevel_correlation_transport:cleanup_fault_outcome(Action)
+              ; W2))),
+        Goal,
+        (unwrap_predicate(websocket:ws_close/3,spawn_cleanup_close),
+         unwrap_predicate(distribution:remote_drop_connection/1,spawn_cleanup_drop),
+         retractall(cleanup_fault(_,_)))).
+cleanup_fault_outcome(fail) :- fail.
+cleanup_fault_outcome(throw) :- throw(test_cleanup_error).
 
 :- begin_tests(toplevel_correlation_transport).
 
 bad_canonical_payload(_,Payload) :- member(Payload,[42,true,json{},"["]).
 bad_canonical_payload("success",Payload) :- member(Payload,["scalar","[a|Tail]","_"]).
+
+test(connection_drop_finishes_after_unsuccessful_close,
+     [forall(member(Outcome,[fail,throw]))]) :-
+    Node='http://spawn-cleanup.invalid',Other='http://spawn-cleanup-other.invalid',
+    setup_call_cleanup(
+        (message_queue_create(Q),message_queue_create(KeepQ)),
+        setup_call_cleanup(
+            (thread_self(Reader),
+             assertz(distribution:ws_connection(Node,spawn_cleanup_test_socket,Reader,Q)),
+             assertz(distribution:ws_sync_connection(spawn_cleanup_test_socket)),
+             assertz(distribution:spawn_correlated_queue(Q)),
+             assertz(distribution:ws_pending_event(Node,42,json{type:probe})),
+             assertz(distribution:ws_pending_event(Other,43,json{type:kept})),
+             assertz(distribution:ws_connection(Other,spawn_cleanup_other_socket,Reader,KeepQ)),
+             assertz(distribution:ws_sync_connection(spawn_cleanup_other_socket)),
+             thread_send_message(KeepQ,kept)),
+            with_cleanup_fault(close,Outcome,
+                (distribution:remote_drop_connection(Node),
+                 assertion(\+ distribution:ws_connection(Node,_,_,_)),
+                 assertion(\+ distribution:ws_sync_connection(spawn_cleanup_test_socket)),
+                 assertion(\+ distribution:spawn_correlated_queue(Q)),
+                 assertion(\+ distribution:closed_spawn_queue(Q)),
+                 catch(message_queue_property(Q,size(_)),QueueError,true),
+                 assertion(nonvar(QueueError)),
+                 assertion(QueueError=error(existence_error(message_queue,Q),_)),
+                 assertion(\+ distribution:ws_pending_event(Node,_,_)),
+                 assertion(distribution:ws_connection(Other,spawn_cleanup_other_socket,Reader,KeepQ)),
+                 assertion(distribution:ws_sync_connection(spawn_cleanup_other_socket)),
+                 assertion(distribution:ws_pending_event(Other,43,json{type:kept})),
+                 thread_get_message(KeepQ,kept,[timeout(0)]))),
+            (retractall(distribution:ws_connection(Node,_,_,_)),
+             retractall(distribution:ws_connection(Other,spawn_cleanup_other_socket,_,_)),
+             retractall(distribution:ws_sync_connection(spawn_cleanup_test_socket)),
+             retractall(distribution:ws_sync_connection(spawn_cleanup_other_socket)),
+             retractall(distribution:ws_pending_event(Node,_,_)),
+             retractall(distribution:ws_pending_event(Other,43,_)),
+             retractall(distribution:spawn_correlated_queue(Q)),
+             retractall(distribution:closed_spawn_queue(Q)))),
+        (catch(message_queue_destroy(Q),_,true),message_queue_destroy(KeepQ))).
+
+test(fixture_withdraws_endpoint_when_drop_fails_or_throws,
+     [forall(member(Outcome,[fail,throw]))]) :-
+    with_cleanup_fault(drop,Outcome,
+        catch(with_spawn_peer(correlated,_,
+                  assertz(test_toplevel_correlation_transport:transport_diagnostic(probe))),
+              Error,true)),
+    (Outcome==throw -> assertion(Error==test_cleanup_error);assertion(var(Error))),
+    assertion(\+ test_toplevel_correlation_transport:spawn_endpoint('http://spawn-correlation.invalid',_)),
+    assertion(\+ test_toplevel_correlation_transport:transport_diagnostic(_)).
 
 test(outgoing_query_preserves_nested_qualifications_options_and_sharing) :-
     Options = [template(pair(X,X)),target(caller),'$request_ref'(12345),limit(2)],
@@ -174,8 +298,8 @@ test(outgoing_async_query_normalized_on_actual_transport,
               term_string(Message,Sent.message),
               Message='$call'((A=ok,helper:check(B)),[template(C)]),
               assertion(var(A)),assertion(A==B),assertion(A==C),assertion(var(X))),
-             (distribution:remote_drop_connection('http://correlation-legacy.invalid'),
-              retractall(test_toplevel_correlation_transport:legacy_endpoint(_)))))).
+             call_cleanup(distribution:remote_drop_connection('http://correlation-legacy.invalid'),
+                          retractall(test_toplevel_correlation_transport:legacy_endpoint(_)))))).
 
 test(spawn_errors_isolated_on_negotiated_connection) :-
     with_spawn_peer(correlated,Node,
@@ -222,8 +346,8 @@ test(unsupported_peer_rejected_before_query,
               findall(D,(legacy_command(D),D.command=="send"),Sends),
               assertion(Sends = [_]),
               Sends = [Sent], assertion(\+ get_dict(toplevel_correlation,Sent,_))),
-             (distribution:remote_drop_connection('http://correlation-legacy.invalid'),
-              retractall(test_toplevel_correlation_transport:legacy_endpoint(_)))))).
+             call_cleanup(distribution:remote_drop_connection('http://correlation-legacy.invalid'),
+                          retractall(test_toplevel_correlation_transport:legacy_endpoint(_)))))).
 
 test(native_peer_in_separate_process, [timeout(15)]) :-
     (pid_utils:registered_self_node_url(Old) -> Previous = some(Old); Previous = none),
@@ -322,8 +446,8 @@ test(reader_recovers_after_malformed_answers,
           assertion(var(Detail)),
           receive({'$toplevel_reply'(704,failure(Pid)) -> true},[timeout(3),on_timeout(fail)]),
           receive({validation_kept -> true},[timeout(0),on_timeout(fail)])),
-         (distribution:remote_drop_connection(Node),
-          retractall(test_toplevel_correlation_transport:spawn_endpoint(Node,_)))))).
+         call_cleanup(distribution:remote_drop_connection(Node),
+                      retractall(test_toplevel_correlation_transport:spawn_endpoint(Node,_)))))).
 
 test(browser_answer_terms_negotiation_and_legacy_fallback,
      [forall(member(Exact,[true,false]))]) :-

@@ -129,6 +129,10 @@ legacy spawning; untagged errors on those connections remain ambiguous.
 Connection loss still reports an unknown remote startup outcome. This does
 not implement Trealla's missing `lineage_close` handling.
 
+Native SWI connection disposal continues local queue and pending-event cleanup
+even if the WebSocket close handshake fails or raises an exception. This does
+not confirm remote actor termination.
+
 Validate a configuration without starting the server:
 
 ```bash

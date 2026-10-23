@@ -1,0 +1,6 @@
+{
+  "pid": 70926,
+  "external_deadline_seconds": 180,
+  "last_test": "node:isobase_yield_timeout_callback_is_sandboxed",
+  "outcome": "no progress; terminated test process at external deadline"
+}

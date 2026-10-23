@@ -1,0 +1,5 @@
+% [1-1/1] toplevel_correlat.._unsuccessful_close .. **FAILED (0.001 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:216:
+ERROR: [Thread main]     test toplevel_correlation_transport:connection_drop_finishes_after_unsuccessful_close (1-th forall generator = member(fail,[fail,throw])): failed
+% [1-2/1] toplevel_correlat.._unsuccessful_close .... passed (0.000 sec)
+ERROR: [Thread main] 1 test failed

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "-q",
+    "-s",
+    "tests/tiers/t4_node.pl",
+    "-g",
+    "run_tier",
+    "-t",
+    "halt"
+  ],
+  "exit_code": 0,
+  "seconds": 51.474,
+  "test_sha256": "1fdfba880ca7a7276e4f94057b62ac725fb35fcbf05894c561928dd989601413"
+}

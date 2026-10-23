@@ -1,0 +1,10 @@
+% [1/2] toplevel_correlat..gotiated_connection ...... passed (0.034 sec)
+% [2-1/2] toplevel_correlat..and_legacy_fallback .... passed (0.008 sec)
+% [2-2/2] toplevel_correlat..and_legacy_fallback .. **FAILED (0.021 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/assets/tests/tiers/node/toplevel_correlation_transport_tests.pl:240:
+ERROR: [Thread main]     test toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback (2-th forall generator = member(legacy,[correlated,legacy])): assertion
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/assets/tests/tiers/node/toplevel_correlation_transport_tests.pl:240:
+ERROR: [Thread main]     test toplevel_correlation_transport:matching_startup_failure_and_legacy_fallback: assertion at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:565 failed
+	Assertion: error(remote_spawn_failed(connection_closed),context(distribution:remote_request_spawn/3,transport_error(error(socket_error(econnrefused,'Connection refused'),_5774))))=error(remote_spawn_failed("startup rejected"),_1340)
+
+ERROR: [Thread main] 1 test failed

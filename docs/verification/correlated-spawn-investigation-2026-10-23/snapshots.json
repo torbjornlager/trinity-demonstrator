@@ -1,0 +1,14 @@
+{
+  "base": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23",
+  "baseline_revision": "7926b56f28b6cc3f59318467ab3e556563ad78e9",
+  "engine": {
+    "path": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "sha256": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f"
+  },
+  "diagnostic_test_sha256": "18e8758568bd9dc12788c81320b7f8ea9d4fd16d5d4c0a55ec624d5af7f6861d",
+  "snapshot_test_sha256": {
+    "baseline": "18e8758568bd9dc12788c81320b7f8ea9d4fd16d5d4c0a55ec624d5af7f6861d",
+    "assets": "18e8758568bd9dc12788c81320b7f8ea9d4fd16d5d4c0a55ec624d5af7f6861d"
+  },
+  "patch_sha256": "916ac29ed82cbfc13daba7093edfaf9c6286b83025e453f6f4735388bb027f6d"
+}

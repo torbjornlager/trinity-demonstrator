@@ -973,7 +973,8 @@ remote_drop_connection_locked(NodeURL) :-
                thread_send_message(Queue, "connection_closed"))),
     forall(retract(ws_connection(NodeURL, Socket, _Reader, SpawnQueue)),
            ( retractall(ws_sync_connection(Socket)),
-             best_effort(ws_close(Socket, 1000, "done")),
+             % A failed close handshake must not skip local resource cleanup.
+             ignore(best_effort(ws_close(Socket, 1000, "done"))),
              close_spawn_queue(SpawnQueue)
            )),
     retractall(ws_pending_event(NodeURL, _, _)).

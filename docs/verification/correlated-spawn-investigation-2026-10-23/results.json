@@ -1,0 +1,116 @@
+[
+  {
+    "version": "baseline",
+    "trial": 1,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/baseline",
+    "exit_code": 1,
+    "seconds": 29.403,
+    "events": "baseline-01.events",
+    "log": "baseline-01.log"
+  },
+  {
+    "version": "assets",
+    "trial": 1,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/assets",
+    "exit_code": 1,
+    "seconds": 29.1,
+    "events": "assets-01.events",
+    "log": "assets-01.log"
+  },
+  {
+    "version": "baseline",
+    "trial": 2,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/baseline",
+    "exit_code": 1,
+    "seconds": 29.088,
+    "events": "baseline-02.events",
+    "log": "baseline-02.log"
+  },
+  {
+    "version": "assets",
+    "trial": 2,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/assets",
+    "exit_code": 1,
+    "seconds": 29.171,
+    "events": "assets-02.events",
+    "log": "assets-02.log"
+  },
+  {
+    "version": "baseline",
+    "trial": 3,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/baseline",
+    "exit_code": 1,
+    "seconds": 28.963,
+    "events": "baseline-03.events",
+    "log": "baseline-03.log"
+  },
+  {
+    "version": "assets",
+    "trial": 3,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "layer_honesty,run_tests([lifetime_authority,node,public_goal_guard,sandbox_source_names,promise_yield,promise_lifecycle,promise_ownership,rpc_options,native_paging,toplevel_synch,toplevel_correlation_transport])",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/correlated-spawn-2026-10-23/assets",
+    "exit_code": 1,
+    "seconds": 29.071,
+    "events": "assets-03.events",
+    "log": "assets-03.log"
+  }
+]

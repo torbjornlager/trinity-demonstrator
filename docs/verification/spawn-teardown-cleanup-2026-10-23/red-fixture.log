@@ -1,0 +1,21 @@
+% [1-1/1] toplevel_correlat..rop_fails_or_throws .. **FAILED (0.028 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:253:
+ERROR: [Thread main]     test toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws (1-th forall generator = member(fail,[fail,throw])): assertion
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:253:
+ERROR: [Thread main]     test toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws: assertion at line 260 failed
+	Assertion: \+test_toplevel_correlation_transport:spawn_endpoint('http://spawn-correlation.invalid',_2412)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:253:
+ERROR: [Thread main]     test toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws: assertion at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:698 failed
+	Assertion: \+test_toplevel_correlation_transport:transport_diagnostic(_60606)
+
+% [1-2/1] toplevel_correlat..rop_fails_or_throws .. **FAILED (0.006 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:253:
+ERROR: [Thread main]     test toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws (2-th forall generator = member(throw,[fail,throw])): assertion
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:253:
+ERROR: [Thread main]     test toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws: assertion at line 260 failed
+	Assertion: \+test_toplevel_correlation_transport:spawn_endpoint('http://spawn-correlation.invalid',_1758)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control/tests/tiers/node/toplevel_correlation_transport_tests.pl:253:
+ERROR: [Thread main]     test toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws: assertion at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/home/boot/init.pl:698 failed
+	Assertion: \+test_toplevel_correlation_transport:transport_diagnostic(_6294)
+
+ERROR: [Thread main] 2 tests failed

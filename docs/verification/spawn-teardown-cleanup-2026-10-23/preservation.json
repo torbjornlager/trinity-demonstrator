@@ -1,0 +1,14 @@
+{
+  "engine": {
+    "path": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "sha256": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f"
+  },
+  "runtime_changes_from_investigation_start": [
+    "prolog/web_prolog/distribution.pl"
+  ],
+  "installed_binaries_unchanged": true,
+  "node_commands_unchanged": true,
+  "existing_assertion_lines_preserved": true,
+  "existing_timeout_lines_preserved": true,
+  "final_test_hash_matches_full_T4": true
+}

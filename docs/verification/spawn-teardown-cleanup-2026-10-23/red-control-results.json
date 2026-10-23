@@ -1,0 +1,32 @@
+[
+  {
+    "label": "red-runtime",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(toplevel_correlation_transport:connection_drop_finishes_after_unsuccessful_close)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 1,
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control"
+  },
+  {
+    "label": "red-fixture",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(toplevel_correlation_transport:fixture_withdraws_endpoint_when_drop_fails_or_throws)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 1,
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/spawn-teardown-cleanup-2026-10-23/red-control"
+  }
+]
