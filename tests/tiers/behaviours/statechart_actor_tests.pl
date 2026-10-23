@@ -27,6 +27,8 @@
     toplevel_call/3
 ]).
 
+:- use_module('../test_layout.pl').
+
 :- dynamic statechart_tests_directory/1.
 :- prolog_load_context(directory, BehavioursDir),
    %  This adapted copy lives two levels below the original tests/
@@ -356,9 +358,7 @@ test(distributable_dtd_matches_embedded_schema) :-
     assertion(FileText == EmbeddedText).
 
 test(all_demonstrator_examples_validate) :-
-    statechart_tests_directory(TestsDir),
-    file_directory_name(TestsDir, RepositoryDir),
-    directory_file_path(RepositoryDir, 'examples/statecharts/*.xml', Pattern),
+    test_asset_file('examples/statecharts/*.xml',Pattern),
     expand_file_name(Pattern, Files),
     assertion(Files \== []),
     forall(member(File, Files),
@@ -574,8 +574,7 @@ test(runtime_spawn_nested_statechart_with_extended_options) :-
     ).
 
 test(runtime_statechart_spawn_load_uri_relative_game) :-
-    statechart_tests_directory(TestsDir),
-    file_directory_name(TestsDir, RepoDir),
+    test_asset_root(RepoDir),
     working_directory(Old, RepoDir),
     setup_call_cleanup(
         true,

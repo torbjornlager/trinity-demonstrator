@@ -1,0 +1,92 @@
+[
+  {
+    "label": "supervisor-control-01",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(supervisor_restart:automatic_failure_respects_numeric_and_brutal_shutdown)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.508
+  },
+  {
+    "label": "supervisor-control-02",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(supervisor_restart:automatic_failure_respects_numeric_and_brutal_shutdown)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.505
+  },
+  {
+    "label": "supervisor-control-03",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(supervisor_restart:automatic_failure_respects_numeric_and_brutal_shutdown)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.505
+  },
+  {
+    "label": "supervisor-control-04",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(supervisor_restart:automatic_failure_respects_numeric_and_brutal_shutdown)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.461
+  },
+  {
+    "label": "supervisor-control-05",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_tests(supervisor_restart:automatic_failure_respects_numeric_and_brutal_shutdown)",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.46
+  },
+  {
+    "label": "T4-native-retry",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "tests/tiers/t4_node.pl",
+      "-g",
+      "run_native",
+      "-t",
+      "halt"
+    ],
+    "exit_code": "external_timeout",
+    "seconds": 180.027
+  }
+]

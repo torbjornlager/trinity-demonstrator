@@ -18,6 +18,7 @@
 :- use_module('../../prolog/web_prolog/actors.pl').
 :- use_module('../../prolog/web_prolog/isolation.pl').
 :- use_module(library(plunit)).
+:- use_module(test_layout).
 :- use_module('spawn_options_tests.pl', []).
 
 %  The composition glue: every local spawn prepares a private module.
@@ -27,14 +28,26 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
                        isolation:spawn_body(Pid, Goal, Options,
                                             OnReady, OnPrepError, Runner)).
 
-run_tier :-
-    layer_honesty,
-    run_tests([ t1_isolation,
+:- use_module(test_partition).
+
+tier_test_units([ t1_isolation,
                 spawn_options, spawn_source_options,
                 t1_hooks,
                 t1_io_inheritance,
                 t1_load_options
-              ]),
+              ]).
+
+run_native :- run_partition(native).
+run_integration :- run_partition(integration).
+run_legacy_layout :- run_partition(legacy_layout).
+run_partition(Class) :-
+    layer_honesty, tier_test_units(Units),
+    partition_test_specs(Units,Class,Selected), run_tests(Selected), ensure_mailbox_empty.
+
+run_tier :-
+    layer_honesty,
+    tier_test_units(Units),
+    run_tests(Units),
     ensure_mailbox_empty.
 
 layer_honesty :-
@@ -852,13 +865,9 @@ alarm :-
    asserta(t1_tests_directory(T1Dir)).
 
 t1_actor_example_path(FileName, Path) :-
-   t1_tests_directory(TestDir),
-   atomic_list_concat(['../../examples/actors/', FileName], RelativePath),
-   absolute_file_name(RelativePath, Path, [
-       relative_to(TestDir),
-       access(read),
-       file_errors(fail)
-   ]).
+   atom_concat('examples/actors/',FileName,Relative),
+   test_asset_file(Relative,File),
+   absolute_file_name(File,Path,[access(read),file_errors(fail)]).
 
 collect_from_messages(Count, Pairs) :-
    collect_from_messages(Count, [], Pairs).

@@ -92,6 +92,13 @@ The [native extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) records file
 ownership, dependencies, configuration settings and the remaining extraction
 steps. No repository separation has been performed yet.
 
+The split-layout rehearsal in `tools/check_swi_split_layout.py` builds disposable
+native and demonstrator-asset trees, then checks native APIs, external frontend
+integration, selection coverage and the original full T4. See the extraction
+map for its file manifest and commands. `tools/test.sh` additionally accepts
+`T1_NATIVE`, `T3_NATIVE`, `T4_NATIVE`, their `_INTEGRATION` counterparts, and
+`T4_LEGACY_LAYOUT`; ordinary full-tier invocations retain all existing tests.
+
 ## Deploying as a production node
 
 The node **executes untrusted code from clients** — that is the product —

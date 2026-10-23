@@ -3,6 +3,7 @@
 ]).
 
 :- op(800, xfx, !).
+:- use_module('../test_layout.pl').
 
 :- use_module('../../../prolog/web_prolog/node.pl').
 :- use_module('../../../prolog/web_prolog/node_auth.pl', [
@@ -1172,11 +1173,8 @@ test(node_manual_page_served,
         )).
 
 test(node_admin_and_portal_pages_include_manual_predicate_link_support) :-
-    module_property(node, file(NodeFile)),
-    file_directory_name(NodeFile, Dir),
-    %  node.pl lives one level deeper than in the demonstrator.
-    directory_file_path(Dir, '../../web/admin.html', AdminFile),
-    directory_file_path(Dir, '../../web/demonstrator.html', DemonstratorFile),
+    test_asset_file('web/admin.html',AdminFile),
+    test_asset_file('web/demonstrator.html',DemonstratorFile),
     read_file_to_string(AdminFile, AdminBody, []),
     read_file_to_string(DemonstratorFile, DemonstratorBody, []),
     once((
@@ -2906,9 +2904,7 @@ test(distributed_ping_pong_preserves_causal_output) :-
                 setup_call_cleanup(ws_open(Home, WS),
                     ( % Use the example's actual predicates without changing
                       % the protocol or adding completion/output barriers.
-                      source_file(test_node:run_tests, TestFile),
-                      file_directory_name(TestFile, TestDir),
-                      directory_file_path(TestDir, '../../../examples/actors/06 ping-pong.pl', Example),
+                      test_asset_file('examples/actors/06 ping-pong.pl',Example),
                       read_file_to_string(Example, Source, []),
                       format(string(Options), "[session(true),src_text(~q)]", [Source]),
                       ws_send_json(WS, json{command:toplevel_spawn, options:Options}),
@@ -2941,9 +2937,7 @@ test(browser_terminal_ping_pong_across_two_connections) :-
                 ( forall(member(W, [W3,W4]),
                       ( ws_send_json(W, json{command:transport_hello, version:1, io_ack:true}),
                         ws_receive_json(W, Welcome), assertion(Welcome.io_ack == true) )),
-                  source_file(test_node:run_tests, TestFile),
-                  file_directory_name(TestFile, TestDir),
-                  directory_file_path(TestDir, '../../../examples/actors/06 ping-pong.pl', Example),
+                  test_asset_file('examples/actors/06 ping-pong.pl',Example),
                   read_file_to_string(Example, Source, []),
                   format(string(Options), '[src_text(~q)]', [Source]),
                   ws_send_json(W3, json{command:spawn, goal:"pong", options:Options}),
@@ -3214,9 +3208,7 @@ test(ws_mixed_ping_pong_routes_browser_actor_in_spawn_goal) :-
             ( ws_send_json(WS, json{command:transport_hello,version:1,
                                     browser_pids:true,io_ack:true}),
               ws_receive_json(WS, _),
-              source_file(test_node:run_tests, TestFile),
-              file_directory_name(TestFile, TestDir),
-              directory_file_path(TestDir, '../../../examples/actors/06 ping-pong.pl', Example),
+              test_asset_file('examples/actors/06 ping-pong.pl',Example),
               read_file_to_string(Example, Source, []),
               format(string(Options), '[src_text(~q)]', [Source]),
               ws_send_json(WS, json{command:spawn,
@@ -4988,8 +4980,9 @@ test(statechart_spawn_load_uri_node_relative) :-
         )).
 
 test(statechart_executable_content_uses_node_shared_db_and_local_shadow) :-
+    test_asset_file('Deployment/shared_db_n3.pl',DBFile),
     with_node_server_options(
-        [load_shared_db_file('Deployment/shared_db_n3.pl')],
+        [load_shared_db_file(DBFile)],
         _URI,
         setup_call_cleanup(
             statechart_spawn(Pid, [
@@ -5009,9 +5002,10 @@ test(statechart_executable_content_uses_node_shared_db_and_local_shadow) :-
     ).
 
 test(statechart_executable_content_uses_n5_shared_db_overlay) :-
+    test_asset_file('Deployment/shared_db_n5.pl',DBFile),
     with_node_server_options(
         [ load_shared_db_file('prolog/web_prolog/shared_db.pl'),
-          load_shared_db_file('Deployment/shared_db_n5.pl')
+          load_shared_db_file(DBFile)
         ],
         _URI,
         setup_call_cleanup(

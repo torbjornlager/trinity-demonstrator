@@ -28,20 +28,10 @@
 :- use_module(library(http/thread_httpd), [http_stop_server/2]).
 :- use_module(library(lists), [select/3]).
 
-:- dynamic service_examples_directory/1.
-%  This adapted copy lives in tests/tiers/node/; the service data
-%  files stayed in examples/services/ at the repository root.
-:- prolog_load_context(directory, NodeTierDir),
-   file_directory_name(NodeTierDir, TiersDir),
-   file_directory_name(TiersDir, TestsDir),
-   file_directory_name(TestsDir, RepoDir),
-   directory_file_path(RepoDir, 'examples/services', ServiceExamplesDirectory),
-   asserta(service_examples_directory(ServiceExamplesDirectory)).
-
+:- use_module('../test_layout.pl').
 
 service_directory_file(File) :-
-    service_examples_directory(Dir),
-    directory_file_path(Dir, 'service_directory.pl', File).
+    test_asset_file('examples/services/service_directory.pl',File).
 
 
 service_directory_options([load_shared_db_file(File)]) :-

@@ -50,6 +50,17 @@ run_tier T3     tests/tiers/t3_behaviours.pl run_tier
 run_tier T4     tests/tiers/t4_node.pl       run_tier
 run_tier T5     tests/tiers/t5_interop.pl    run_tier
 
+# Split-layout gates are opt-in; the default tiers above still run every test.
+if [ -n "$SELECT" ]; then
+    run_tier T1_NATIVE tests/tiers/t1_isolation.pl run_native
+    run_tier T1_INTEGRATION tests/tiers/t1_isolation.pl run_integration
+    run_tier T3_NATIVE tests/tiers/t3_behaviours.pl run_native
+    run_tier T3_INTEGRATION tests/tiers/t3_behaviours.pl run_integration
+    run_tier T4_NATIVE tests/tiers/t4_node.pl run_native
+    run_tier T4_INTEGRATION tests/tiers/t4_node.pl run_integration
+    run_tier T4_LEGACY_LAYOUT tests/tiers/t4_node.pl run_legacy_layout
+fi
+
 run_wasm () {
     selected WASM || return 0
 

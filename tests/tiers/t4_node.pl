@@ -74,9 +74,9 @@ http_status(URL, Status) :-
 :- user:load_files('node/node_controller_tests.plt', []).
 :- user:load_files('node/lifetime_authority_tests.plt', []).
 
-run_tier :-
-    layer_honesty,
-    run_tests([ lifetime_authority, node, public_goal_guard, sandbox_source_names, promise_yield, promise_lifecycle, promise_ownership, rpc_options, native_paging,
+:- use_module(test_partition).
+
+tier_test_units([ lifetime_authority, node, public_goal_guard, sandbox_source_names, promise_yield, promise_lifecycle, promise_ownership, rpc_options, native_paging,
                 toplevel_synch, toplevel_correlation_transport,
                 spawn_options, spawn_source_options,
                 wrapper_options,
@@ -111,6 +111,18 @@ run_tier :-
                 t4_shared_db_io,
                 t4_remote_self
               ]).
+
+run_native :- run_partition(native).
+run_integration :- run_partition(integration).
+run_legacy_layout :- run_partition(legacy_layout).
+run_partition(Class) :-
+    layer_honesty, tier_test_units(Units),
+    partition_test_specs(Units,Class,Selected), run_tests(Selected).
+
+run_tier :-
+    layer_honesty,
+    tier_test_units(Units),
+    run_tests(Units).
 
 %  The node_engine answer-batching surface (compute_answer/5): the
 %  windowed slicing that ISOBASE /call and ISOTOPE sessions sit on.

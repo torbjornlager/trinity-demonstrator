@@ -1,0 +1,44 @@
+[
+  {
+    "tier": 1,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t1_isolation.pl",
+      "-g",
+      "use_module(library(http/json)),tier_test_units(U),findall(A-N,(member(A,U),plunit:current_test(A,N,_,_,_)),All),findall(A-N,(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),member(A:Ns,P),member(N,Ns)),Covered),msort(All,Expected),msort(Covered,Actual),assertion(Expected==Actual),findall(_{unit:A,test:N,class:C},(member(A,U),plunit:current_test(A,N,_,_,_),test_partition:test_class(A,N,C)),Rows),findall(_{class:C,spec:S,count:Count},(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),findall(N,(member(_:Ns,P),member(N,Ns)),Keys),length(Keys,Count),term_string(P,S)),Sets),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-split-layout-2026-10-23/T1-partition-verified.json',write,F),json_write_dict(F,_{exhaustive_disjoint:true,tests:Rows,selections:Sets},[width(0)]),close(F))",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0
+  },
+  {
+    "tier": 3,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t3_behaviours.pl",
+      "-g",
+      "use_module(library(http/json)),tier_test_units(U),findall(A-N,(member(A,U),plunit:current_test(A,N,_,_,_)),All),findall(A-N,(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),member(A:Ns,P),member(N,Ns)),Covered),msort(All,Expected),msort(Covered,Actual),assertion(Expected==Actual),findall(_{unit:A,test:N,class:C},(member(A,U),plunit:current_test(A,N,_,_,_),test_partition:test_class(A,N,C)),Rows),findall(_{class:C,spec:S,count:Count},(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),findall(N,(member(_:Ns,P),member(N,Ns)),Keys),length(Keys,Count),term_string(P,S)),Sets),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-split-layout-2026-10-23/T3-partition-verified.json',write,F),json_write_dict(F,_{exhaustive_disjoint:true,tests:Rows,selections:Sets},[width(0)]),close(F))",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0
+  },
+  {
+    "tier": 4,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(http/json)),tier_test_units(U),findall(A-N,(member(A,U),plunit:current_test(A,N,_,_,_)),All),findall(A-N,(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),member(A:Ns,P),member(N,Ns)),Covered),msort(All,Expected),msort(Covered,Actual),assertion(Expected==Actual),findall(_{unit:A,test:N,class:C},(member(A,U),plunit:current_test(A,N,_,_,_),test_partition:test_class(A,N,C)),Rows),findall(_{class:C,spec:S,count:Count},(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),findall(N,(member(_:Ns,P),member(N,Ns)),Keys),length(Keys,Count),term_string(P,S)),Sets),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-split-layout-2026-10-23/T4-partition-verified.json',write,F),json_write_dict(F,_{exhaustive_disjoint:true,tests:Rows,selections:Sets},[width(0)]),close(F))",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0
+  }
+]

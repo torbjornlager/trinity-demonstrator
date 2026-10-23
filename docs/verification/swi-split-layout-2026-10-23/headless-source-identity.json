@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+    "-q",
+    "-s",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/load.pl",
+    "-g",
+    "module_property(node,file(F0)),assertion(same_file(F0,'/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/prolog/web_prolog/node.pl')),module_property(actors,file(F1)),assertion(same_file(F1,'/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/prolog/web_prolog/actors.pl')),module_property(isolation,file(F2)),assertion(same_file(F2,'/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/prolog/web_prolog/isolation.pl')),module_property(sxml_schema,file(F3)),assertion(same_file(F3,'/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/prolog/web_prolog/wasm/sxml_schema.pl')),consult('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/headless-smoke.pl'),probe",
+    "-t",
+    "halt"
+  ],
+  "exit_code": 0
+}

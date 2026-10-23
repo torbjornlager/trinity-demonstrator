@@ -1,0 +1,7 @@
+{
+  "native_sources_unchanged": true,
+  "no_frontend_directories": true,
+  "native_wasm_files": [
+    "sxml_schema.pl"
+  ]
+}

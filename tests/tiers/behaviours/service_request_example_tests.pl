@@ -4,10 +4,8 @@
 :- use_module('../../../prolog/web_prolog/statechart_actor.pl').
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
-:- dynamic example_file/1.
-:- prolog_load_context(directory, Here),
-   directory_file_path(Here, '../../../examples/statecharts/18 service-request.xml', File),
-   assertz(example_file(File)).
+:- use_module('../test_layout.pl').
+example_file(File) :- test_asset_file('examples/statecharts/18 service-request.xml',File).
 :- meta_predicate scenario(+, 1).
 
 scenario(Case, Body) :-

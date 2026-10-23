@@ -1,0 +1,66 @@
+{
+  "runtime_unchanged": true,
+  "installed_binaries_unchanged": true,
+  "node_commands_unchanged": true,
+  "test_preservation": {
+    "tests/tiers/t4_node.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    },
+    "tests/tiers/t1_isolation.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    },
+    "tests/tiers/t3_behaviours.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    },
+    "tests/tiers/behaviours/statechart_actor_tests.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    },
+    "tests/tiers/behaviours/service_request_example_tests.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    },
+    "tests/tiers/node/node_tests.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    },
+    "tests/tiers/node/node_resident_services.pl": {
+      "assertion_lines_preserved": true,
+      "declarations_preserved": true,
+      "timeout_values_preserved": true
+    }
+  },
+  "tier_unit_lists_unchanged": {
+    "tests/tiers/t4_node.pl": true,
+    "tests/tiers/t1_isolation.pl": true,
+    "tests/tiers/t3_behaviours.pl": true
+  },
+  "external_asset_sources_unchanged": true,
+  "all_partitions_exhaustive_disjoint": true,
+  "selected_counts": {
+    "1": {
+      "native": 65,
+      "integration": 1,
+      "legacy_layout": 0
+    },
+    "3": {
+      "native": 293,
+      "integration": 14,
+      "legacy_layout": 0
+    },
+    "4": {
+      "native": 983,
+      "integration": 19,
+      "legacy_layout": 2
+    }
+  }
+}

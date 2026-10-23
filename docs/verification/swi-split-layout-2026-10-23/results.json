@@ -1,0 +1,240 @@
+[
+  {
+    "label": "headless-api",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/load.pl",
+      "-g",
+      "consult('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/headless-smoke.pl'),probe",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/foreign-cwd",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.297
+  },
+  {
+    "label": "T0-native",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t0_actors.pl",
+      "-g",
+      "run_tier",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 7.202
+  },
+  {
+    "label": "T2-native",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t2_toplevel.pl",
+      "-g",
+      "run_tier",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 6.754
+  },
+  {
+    "label": "T1-partition-audit",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t1_isolation.pl",
+      "-g",
+      "use_module(library(http/json)),tier_test_units(U),findall(_{unit:A,test:N,class:C},(member(A,U),plunit:current_test(A,N,_,_,_),test_partition:test_class(A,N,C)),Rows),findall(_{class:C,spec:S},(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),term_string(P,S)),Sets),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-split-layout-2026-10-23/T1-partition.json',write,F),json_write_dict(F,_{tests:Rows,selections:Sets},[width(0)]),close(F))",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.08
+  },
+  {
+    "label": "T1-native",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t1_isolation.pl",
+      "-g",
+      "run_native",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.509
+  },
+  {
+    "label": "T1-integration",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t1_isolation.pl",
+      "-g",
+      "run_integration",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": true,
+    "exit_code": 0,
+    "seconds": 0.133
+  },
+  {
+    "label": "T3-partition-audit",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t3_behaviours.pl",
+      "-g",
+      "use_module(library(http/json)),tier_test_units(U),findall(_{unit:A,test:N,class:C},(member(A,U),plunit:current_test(A,N,_,_,_),test_partition:test_class(A,N,C)),Rows),findall(_{class:C,spec:S},(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),term_string(P,S)),Sets),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-split-layout-2026-10-23/T3-partition.json',write,F),json_write_dict(F,_{tests:Rows,selections:Sets},[width(0)]),close(F))",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.133
+  },
+  {
+    "label": "T3-native",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t3_behaviours.pl",
+      "-g",
+      "run_native",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 37.096
+  },
+  {
+    "label": "T3-integration",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t3_behaviours.pl",
+      "-g",
+      "run_integration",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": true,
+    "exit_code": 0,
+    "seconds": 4.251
+  },
+  {
+    "label": "T4-partition-audit",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t4_node.pl",
+      "-g",
+      "use_module(library(http/json)),tier_test_units(U),findall(_{unit:A,test:N,class:C},(member(A,U),plunit:current_test(A,N,_,_,_),test_partition:test_class(A,N,C)),Rows),findall(_{class:C,spec:S},(member(C,[native,integration,legacy_layout]),test_partition:partition_test_specs(U,C,P),term_string(P,S)),Sets),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-split-layout-2026-10-23/T4-partition.json',write,F),json_write_dict(F,_{tests:Rows,selections:Sets},[width(0)]),close(F))",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.441
+  },
+  {
+    "label": "T4-native",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t4_node.pl",
+      "-g",
+      "run_native",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": false,
+    "exit_code": 1,
+    "seconds": 51.83
+  },
+  {
+    "label": "T4-integration",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native/tests/tiers/t4_node.pl",
+      "-g",
+      "run_integration",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+    "external_assets": true,
+    "exit_code": 0,
+    "seconds": 1.602
+  },
+  {
+    "label": "T4-legacy-layout",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/t4_node.pl",
+      "-g",
+      "run_legacy_layout",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 0.4
+  },
+  {
+    "label": "T4-original-full",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/t4_node.pl",
+      "-g",
+      "run_tier",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "external_assets": false,
+    "exit_code": 0,
+    "seconds": 51.862
+  }
+]

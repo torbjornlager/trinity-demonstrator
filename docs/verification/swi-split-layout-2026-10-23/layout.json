@@ -1,0 +1,9 @@
+{
+  "source": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+  "revision": "832cf7f22c7034966fe6fe9448434fc3cabb5a66",
+  "native": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/native",
+  "assets": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-split-layout-2026-10-23/demonstrator-assets",
+  "engine": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build/src/swipl",
+  "engine_sha256": "c89603257067620bd7c21514a94010fee4419c97f6d4da8c5f164a532e81334f",
+  "manifest_sha256": "36db207c29b1f6a63ba2fd3fcf8a37275213f64f7a27f76cfbe47484a93b3e9f"
+}

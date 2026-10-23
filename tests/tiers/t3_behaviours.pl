@@ -39,9 +39,9 @@ actors:hook_start_body(Pid, Goal, Options, OnReady, OnPrepError, Runner,
 :- use_module('supervisor_intensity_tests.pl', []).
 :- use_module('worker_scope_tests.pl', []).
 
-run_tier :-
-    layer_honesty,
-    run_tests([ server_actor,
+:- use_module(test_partition).
+
+tier_test_units([ server_actor,
                 wrapper_options,
                 supervisor_child_specs,
                 server_promise_cleanup, supervisor_request_cleanup, supervisor_startup, supervisor_restart, supervisor_intensity, worker_scope,
@@ -53,7 +53,19 @@ run_tier :-
                 statechart_profile_runtime,
                 statechart_profile_semantics,
                 service_request_example
-              ]),
+              ]).
+
+run_native :- run_partition(native).
+run_integration :- run_partition(integration).
+run_legacy_layout :- run_partition(legacy_layout).
+run_partition(Class) :-
+    layer_honesty, tier_test_units(Units),
+    partition_test_specs(Units,Class,Selected), run_tests(Selected), ensure_mailbox_empty.
+
+run_tier :-
+    layer_honesty,
+    tier_test_units(Units),
+    run_tests(Units),
     ensure_mailbox_empty.
 
 layer_honesty :-
