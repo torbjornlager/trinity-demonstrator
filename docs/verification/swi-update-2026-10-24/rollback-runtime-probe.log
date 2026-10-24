@@ -1,0 +1,2 @@
+version(swi(10,1,17,[])).
+home('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-installed-update-2026-10-23/swipl-10.1.17.framework/Resources/swipl').

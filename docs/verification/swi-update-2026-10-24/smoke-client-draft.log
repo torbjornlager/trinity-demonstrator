@@ -1,0 +1,5 @@
+
+STDERR
+ERROR: /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/ws-smoke.pl:6:
+ERROR:    No permission to modify static procedure read/2
+ERROR: [Thread main] -g ws_smoke:run: read/2: I/O error in read on stream <stream>(0x82ee6dd00) (please call ws_read_header/3 first)

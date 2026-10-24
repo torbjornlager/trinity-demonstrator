@@ -1,0 +1,15 @@
+runtime True {"data": [{}], "more": false, "type": "success"}
+shared-database True {"data": [{"Printer": "printer2"}], "more": false, "type": "success"}
+unicode True {"data": [{"X": "räksmörgås"}, {"X": "日本語"}], "more": false, "type": "success"}
+private-source True {"data": [{}], "more": false, "type": "success"}
+private-source-isolation True {"data": "Unknown procedure: private_smoke/1", "details": "error(existence_error(procedure,private_smoke/1),_)", "type": "error"}
+worker-combinators True {"data": [{"X": "slow", "Y": "fast", "Z": "fast"}], "more": false, "pid": 6346239401, "type": "success"}
+worker-cleanup True {"data": [{"A": "[3595075228@'http://localhost:3053']", "B": "[3595075228@'http://localhost:3053']", "E": "smoke_error", "S": "[3595075228@'http://localhost:3053']"}], "more": false, "pid": 3595075228, "type": "success"}
+synchronous-toplevel True {"data": [{"A": "success(7269439114@'http://localhost:3053',[socrates],true)", "B": "success(7269439114@'http://localhost:3053',[plato],false)", "P": "7269439114@'http://localhost:3053'", "X": "X"}], "more": false, "pid": 8743789590, "type": "success"}
+supervisor False {"pid": 2998165963, "type": "failure"}
+Traceback (most recent call last):
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 22, in <module>
+    call('supervisor','supervisor_spawn([],S),supervisor_count_children(S,counts(0,0)),supervisor_halt(S)')
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 13, in call
+    row={'label':label,'goal':goal,'options':options,'answer':answer,'seconds':round(time.monotonic()-start,3),'passed':answer.get('type')==expected and (expected!='success' or bool(answer.get('data')))};ROWS.append(row);(OUT/'smoke-results.json').write_text(json.dumps(ROWS,indent=2,ensure_ascii=False)+'\n');print(label,row['passed'],json.dumps(answer,ensure_ascii=False));assert row['passed']
+AssertionError

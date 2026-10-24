@@ -1,0 +1,12 @@
+runtime True {"data": [{}], "more": false, "type": "success"}
+shared-database True {"data": [{"Printer": "printer2"}], "more": false, "type": "success"}
+unicode True {"data": [{"X": "räksmörgås"}, {"X": "日本語"}], "more": false, "type": "success"}
+private-source True {"data": [{}], "more": false, "type": "success"}
+private-source-isolation True {"data": "Unknown procedure: private_smoke/1", "details": "error(existence_error(procedure,private_smoke/1),_)", "type": "error"}
+worker-combinators False {"data": "Unknown procedure: parallel/1", "details": "error(profile_violation(isobase,goal(parallel([(sleep(0.02),_=slow),_=fast]))),_)", "type": "error"}
+Traceback (most recent call last):
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 13, in <module>
+    call('worker-combinators','parallel([(sleep(0.02),X=slow),Y=fast]),X==slow,Y==fast,first_solution(Z,[(sleep(0.1),Z=slow),Z=fast]),Z==fast')
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 7, in call
+    row={'label':label,'goal':goal,'options':options,'answer':answer,'seconds':round(time.monotonic()-start,3),'passed':answer.get('type')==expected and (expected!='success' or bool(answer.get('data')))};ROWS.append(row);(OUT/'smoke-results.json').write_text(json.dumps(ROWS,indent=2,ensure_ascii=False)+'\n');print(label,row['passed'],json.dumps(answer,ensure_ascii=False));assert row['passed']
+AssertionError

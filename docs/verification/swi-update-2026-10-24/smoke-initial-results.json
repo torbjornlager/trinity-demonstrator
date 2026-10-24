@@ -1,0 +1,65 @@
+[
+  {
+    "label": "runtime",
+    "goal": "runtime_property(implementation(swi_native)),runtime_property(actor_isolation(native_thread))",
+    "options": {},
+    "answer": {
+      "data": [
+        {}
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.043,
+    "passed": true
+  },
+  {
+    "label": "shared-database",
+    "goal": "authorized(alice),owns(alice,Printer),online(Printer)",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "Printer": "printer2"
+        }
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.061,
+    "passed": true
+  },
+  {
+    "label": "unicode",
+    "goal": "member(X,['räksmörgås','日本語'])",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "X": "räksmörgås"
+        },
+        {
+          "X": "日本語"
+        }
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.022,
+    "passed": true
+  },
+  {
+    "label": "private-source",
+    "goal": "private_smoke(ok)",
+    "options": {
+      "load_text": "private_smoke(ok)."
+    },
+    "answer": {
+      "data": "Unknown procedure: private_smoke/1",
+      "details": "error(existence_error(procedure,private_smoke/1),_)",
+      "type": "error"
+    },
+    "seconds": 0.017,
+    "passed": false
+  }
+]

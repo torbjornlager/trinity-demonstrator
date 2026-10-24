@@ -1,0 +1,149 @@
+[
+  {
+    "label": "runtime",
+    "goal": "runtime_property(implementation(swi_native)),runtime_property(actor_isolation(native_thread))",
+    "options": {},
+    "answer": {
+      "data": [
+        {}
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.018,
+    "passed": true
+  },
+  {
+    "label": "shared-database",
+    "goal": "authorized(alice),owns(alice,Printer),online(Printer)",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "Printer": "printer2"
+        }
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.012,
+    "passed": true
+  },
+  {
+    "label": "unicode",
+    "goal": "member(X,['räksmörgås','日本語'])",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "X": "räksmörgås"
+        },
+        {
+          "X": "日本語"
+        }
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.013,
+    "passed": true
+  },
+  {
+    "label": "private-source",
+    "goal": "private_smoke(ok)",
+    "options": {
+      "src_text": "private_smoke(ok)."
+    },
+    "answer": {
+      "data": [
+        {}
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.012,
+    "passed": true
+  },
+  {
+    "label": "private-source-isolation",
+    "goal": "private_smoke(ok)",
+    "options": {},
+    "answer": {
+      "data": "Unknown procedure: private_smoke/1",
+      "details": "error(existence_error(procedure,private_smoke/1),_)",
+      "type": "error"
+    },
+    "seconds": 0.012,
+    "passed": true
+  },
+  {
+    "label": "worker-combinators",
+    "goal": "parallel([(sleep(0.02),X=slow),Y=fast]),X==slow,Y==fast,first_solution(Z,[(sleep(0.1),Z=slow),Z=fast]),Z==fast",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "X": "slow",
+          "Y": "fast",
+          "Z": "fast"
+        }
+      ],
+      "more": false,
+      "pid": 6346239401,
+      "type": "success"
+    },
+    "seconds": 0.129,
+    "passed": true
+  },
+  {
+    "label": "worker-cleanup",
+    "goal": "actors(B),catch(parallel([receive({never->true}),throw(smoke_error)]),E,true),E==smoke_error,actors(A),sort(B,S),sort(A,S)",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "A": "[3595075228@'http://localhost:3053']",
+          "B": "[3595075228@'http://localhost:3053']",
+          "E": "smoke_error",
+          "S": "[3595075228@'http://localhost:3053']"
+        }
+      ],
+      "more": false,
+      "pid": 3595075228,
+      "type": "success"
+    },
+    "seconds": 0.135,
+    "passed": true
+  },
+  {
+    "label": "synchronous-toplevel",
+    "goal": "setup_call_cleanup(toplevel_spawn(P,[src_text('mortal(socrates). mortal(plato).')]),(toplevel_call_synch(P,mortal(X),A,[template(X),limit(1)]),A=success(P,[socrates],true),toplevel_next_synch(P,B),B=success(P,[plato],false)),toplevel_halt(P))",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "A": "success(7269439114@'http://localhost:3053',[socrates],true)",
+          "B": "success(7269439114@'http://localhost:3053',[plato],false)",
+          "P": "7269439114@'http://localhost:3053'",
+          "X": "X"
+        }
+      ],
+      "more": false,
+      "pid": 8743789590,
+      "type": "success"
+    },
+    "seconds": 0.085,
+    "passed": true
+  },
+  {
+    "label": "supervisor",
+    "goal": "supervisor_spawn([],S),supervisor_count_children(S,counts(0,0)),supervisor_halt(S)",
+    "options": {},
+    "answer": {
+      "pid": 2998165963,
+      "type": "failure"
+    },
+    "seconds": 0.082,
+    "passed": false
+  }
+]

@@ -1,0 +1,71 @@
+{
+  "activity_summary": {
+    "active_clients": 0,
+    "active_principals": 0,
+    "active_sessions": 0,
+    "active_ws_actors": 0,
+    "active_ws_connections": 0,
+    "newest_event_at": "2026-10-24T16:09:30Z",
+    "oldest_event_at": "2026-10-24T16:09:30Z",
+    "recent_errors": 1,
+    "recent_principals": 1,
+    "retained_events": 1,
+    "retention_seconds": 86400
+  },
+  "limit_usage": {
+    "inflight_calls": [],
+    "isotope_sessions": [],
+    "ws_actors": []
+  },
+  "principal_activity": [
+    {
+      "active_session_seconds": 0,
+      "active_sessions": 0,
+      "active_ws_actor_seconds": 0,
+      "active_ws_actors": 0,
+      "active_ws_connection_seconds": 0,
+      "active_ws_connections": 0,
+      "principal": "anonymous",
+      "recent_errors": 1,
+      "recent_last_seen": "2026-10-24T16:09:30Z",
+      "recent_requests": 1,
+      "recent_session_seconds": 0,
+      "recent_ws_connection_seconds": 0
+    }
+  ],
+  "rate_limits": {
+    "call_requests": [],
+    "session_spawns": [],
+    "window_seconds": 60,
+    "ws_commands": []
+  },
+  "recent_events": [
+    {
+      "action": "call",
+      "at": "2026-10-24T16:09:30Z",
+      "client_id": "anon:a9bbf460",
+      "duration_ms": 12,
+      "error_kind": "permission_error",
+      "event_type": "request",
+      "goal_hash": "7813a1c2",
+      "limit": 1,
+      "load_text_chars": 0,
+      "offset": 0,
+      "once": false,
+      "peer": "127.0.0.1",
+      "principal": "anonymous",
+      "requested_timeout": "default",
+      "route": "call",
+      "seq": 922,
+      "status": "error",
+      "summary": "call error (permission_error)",
+      "template_hash": "58c92402",
+      "transport": "http",
+      "user_agent": "Python-urllib/3.9"
+    }
+  ],
+  "self_url": "http://localhost:3053",
+  "sessions": [],
+  "ws_actors": [],
+  "ws_connections": []
+}

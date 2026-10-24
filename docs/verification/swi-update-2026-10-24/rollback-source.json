@@ -1,0 +1,10 @@
+{
+  "snapshot_commit": "0bc89783f756a177a9778cd38a58e61aa9dc9f2f",
+  "compatibility_restore": {
+    "path": "prolog/web_prolog/actors.pl",
+    "revision": "c5757ea5426bc70de7b9328c47b3730d008a138c"
+  },
+  "source": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/n3/rollback/source",
+  "entry": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/n3/rollback/start_compatible_node.pl",
+  "purpose": "Retained older engine uses pre-protected-wait receive adapter; active source tree remains unchanged."
+}

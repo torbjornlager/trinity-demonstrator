@@ -1,0 +1,10 @@
+runtime True {"data": [{}], "more": false, "type": "success"}
+shared-database True {"data": [{"Printer": "printer2"}], "more": false, "type": "success"}
+unicode True {"data": [{"X": "räksmörgås"}, {"X": "日本語"}], "more": false, "type": "success"}
+private-source False {"data": "Unknown procedure: private_smoke/1", "details": "error(existence_error(procedure,private_smoke/1),_)", "type": "error"}
+Traceback (most recent call last):
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 11, in <module>
+    call('private-source','private_smoke(ok)',load_text='private_smoke(ok).')
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 7, in call
+    row={'label':label,'goal':goal,'options':options,'answer':answer,'seconds':round(time.monotonic()-start,3),'passed':answer.get('type')==expected and (expected!='success' or bool(answer.get('data')))};ROWS.append(row);(OUT/'smoke-results.json').write_text(json.dumps(ROWS,indent=2,ensure_ascii=False)+'\n');print(label,row['passed'],json.dumps(answer,ensure_ascii=False));assert row['passed']
+AssertionError

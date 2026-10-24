@@ -1,0 +1,4 @@
+version(swi(10,1,18,[])).
+home('/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/lib/swipl').
+pcre('/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/lib/swipl/library/ext/pcre/pcre.pl').
+sgml('/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/lib/swipl/library/ext/sgml/sgml.pl').

@@ -1,0 +1,91 @@
+[
+  {
+    "label": "runtime",
+    "goal": "runtime_property(implementation(swi_native)),runtime_property(actor_isolation(native_thread))",
+    "options": {},
+    "answer": {
+      "data": [
+        {}
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.021,
+    "passed": true
+  },
+  {
+    "label": "shared-database",
+    "goal": "authorized(alice),owns(alice,Printer),online(Printer)",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "Printer": "printer2"
+        }
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.017,
+    "passed": true
+  },
+  {
+    "label": "unicode",
+    "goal": "member(X,['räksmörgås','日本語'])",
+    "options": {},
+    "answer": {
+      "data": [
+        {
+          "X": "räksmörgås"
+        },
+        {
+          "X": "日本語"
+        }
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.014,
+    "passed": true
+  },
+  {
+    "label": "private-source",
+    "goal": "private_smoke(ok)",
+    "options": {
+      "src_text": "private_smoke(ok)."
+    },
+    "answer": {
+      "data": [
+        {}
+      ],
+      "more": false,
+      "type": "success"
+    },
+    "seconds": 0.022,
+    "passed": true
+  },
+  {
+    "label": "private-source-isolation",
+    "goal": "private_smoke(ok)",
+    "options": {},
+    "answer": {
+      "data": "Unknown procedure: private_smoke/1",
+      "details": "error(existence_error(procedure,private_smoke/1),_)",
+      "type": "error"
+    },
+    "seconds": 0.012,
+    "passed": true
+  },
+  {
+    "label": "worker-combinators",
+    "goal": "parallel([(sleep(0.02),X=slow),Y=fast]),X==slow,Y==fast,first_solution(Z,[(sleep(0.1),Z=slow),Z=fast]),Z==fast",
+    "options": {},
+    "answer": {
+      "data": "Unknown procedure: parallel/1",
+      "details": "error(profile_violation(isobase,goal(parallel([(sleep(0.02),_=slow),_=fast]))),_)",
+      "type": "error"
+    },
+    "seconds": 0.002,
+    "passed": false
+  }
+]

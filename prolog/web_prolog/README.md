@@ -32,6 +32,19 @@ SWI-Prolog is available to actor goals.
 |---|---|
 | [actors.pl](actors.pl) | Minimal Erlang-style actors: `spawn`/`send`/`receive`, links, monitors with `down`, name registration. Opaque pids; all higher-layer behaviour attaches through its hooks. |
 
+### Active local SWI installation
+
+The local n3 node now uses the complete verified private SWI 10.1.18 installation
+selected by `~/.local/share/trinity-runtimes/swi-current`, including core fix
+`09b6299` and the HTTP shutdown candidate submitted as
+[packages-http #176](https://github.com/SWI-Prolog/packages-http/issues/176).
+Its durable launcher is `~/.local/share/trinity-local-nodes/n3/start.sh`.
+The macOS app/framework and retained 10.1.17 backups remain available; this
+selection does not replace the macOS application or alter global PATH.
+See [the controlled update and rollback record](../../docs/verification/swi-update-2026-10-24/REPORT.md)
+for configuration preservation, launcher recovery, rollback qualifications and
+HTTP/WebSocket/UI smoke results. Trealla and n5 were not changed.
+
 ### Candidate native receive handoff
 
 The receive adapter now acquires a native message and records its thread-local

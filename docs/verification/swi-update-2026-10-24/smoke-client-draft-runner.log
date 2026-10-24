@@ -1,0 +1,14 @@
+runtime True {"data": [{}], "more": false, "type": "success"}
+shared-database True {"data": [{"Printer": "printer2"}], "more": false, "type": "success"}
+unicode True {"data": [{"X": "räksmörgås"}, {"X": "日本語"}], "more": false, "type": "success"}
+private-source True {"data": [{}], "more": false, "type": "success"}
+private-source-isolation True {"data": "Unknown procedure: private_smoke/1", "details": "error(existence_error(procedure,private_smoke/1),_)", "type": "error"}
+Traceback (most recent call last):
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 19, in <module>
+    call('worker-combinators','parallel([(sleep(0.02),X=slow),Y=fast]),X==slow,Y==fast,first_solution(Z,[(sleep(0.1),Z=slow),Z=fast]),Z==fast')
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/smoke.py", line 9, in call
+    (OUT/(label+'-client.log')).write_text(proc.stdout+'\nSTDERR\n'+proc.stderr);assert proc.returncode==0,proc.stderr
+AssertionError: ERROR: /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-update-2026-10-24/ws-smoke.pl:6:
+ERROR:    No permission to modify static procedure read/2
+ERROR: [Thread main] -g ws_smoke:run: read/2: I/O error in read on stream <stream>(0x82ee6dd00) (please call ws_read_header/3 first)
+

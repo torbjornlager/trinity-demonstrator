@@ -1,0 +1,6 @@
+version(swi(10,1,18,[])).
+home('/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/lib/swipl').
+pcre_unicode_ok.
+xml_ok.
+ssl_context_ok.
+crypto_ok.

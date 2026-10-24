@@ -1,0 +1,18 @@
+{
+  "protected_processes": "42134 Sun Oct 18 21:13:07 2026     /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /tmp/web-prolog-local-ui/n5_frontend.py\n97669 Sat Oct 24 09:58:02 2026     /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl -g use_module(web_prolog),use_module(distribution),web_prolog:web_prolog_node(3061,[bind_address('127.0.0.1'),node_url('http://localhost:3061'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3061'])]),thread_get_message(stop)\n97896 Sat Oct 24 10:03:51 2026     /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl -g use_module(actors),use_module(actor_api),use_module(web_prolog),use_module(distribution),consult('Deployment/shared_db_common.pl'),consult('Deployment/shared_db_actor_common.pl'),web_prolog:web_prolog_node(3062,[bind_address('127.0.0.1'),node_url('http://localhost:3060'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3060','http://127.0.0.1:3053','http://127.0.0.1:3060']),tutorial_sections([all]),load_shared_db_file('Deployment/shared_db_common.pl'),load_shared_db_file('Deployment/shared_db_actor_common.pl')]),thread_get_message(stop)\n",
+  "old_n3": "55051 Mon Oct 19 11:21:10 2026     /Applications/swipl-win.app/Contents/MacOS/swipl -q -s /tmp/web-prolog-local-ui/start_local_node_reuse.pl -- n3\n",
+  "binary_sha256": {
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179",
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.14.10/tpl": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c"
+  },
+  "candidate_prefix": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/install",
+  "candidate_only_manifest_difference": [
+    "lib/swipl/library/ext/http/http/thread_httpd.pl",
+    "lib/swipl/library/ext/http/http/thread_httpd.qlf"
+  ],
+  "qlf_note": "SWI generated a matching QLF for the patched Prolog library during verification. No native binaries differ.",
+  "candidate_library_sha256": "20aad66d06b03a1fc83b2faefe29ed22a46e51f2d5112d4d9d4a7c92036f1680",
+  "recovered_launcher_sha256": "1bf54063b6fa441897ceeda3ec5db34e2fde5aa215ecc281c3d8f4b03f2920e4",
+  "launcher_recovery": "Original session creation command plus recorded reuseaddr-only transformation; missing original /tmp file was not available to copy."
+}

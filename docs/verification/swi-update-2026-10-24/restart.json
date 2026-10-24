@@ -1,0 +1,7 @@
+{
+  "old_pid": 55051,
+  "new_pid": 7072,
+  "launcher": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/n3/start.sh",
+  "runtime": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/install",
+  "log": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/n3/n3.log"
+}
