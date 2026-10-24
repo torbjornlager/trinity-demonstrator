@@ -1,0 +1,32 @@
+START origin-audit
+DONE origin-audit 0
+START LINT
+DONE LINT 0
+START T0
+DONE T0 0
+START T1_NATIVE
+DONE T1_NATIVE 0
+START T2
+DONE T2 0
+START T3_NATIVE
+DONE T3_NATIVE 0
+START T4_NATIVE
+DONE T4_NATIVE 0
+START T5
+DONE T5 0
+START T1_INTEGRATION
+DONE T1_INTEGRATION 0
+START T3_INTEGRATION
+DONE T3_INTEGRATION 0
+START T4_INTEGRATION
+DONE T4_INTEGRATION 0
+START default-startup-regressions
+DONE default-startup-regressions 0
+START pin-regressions
+DONE pin-regressions 0
+START ci-runner-regressions
+DONE ci-runner-regressions 0
+START browser-equivalence
+DONE browser-equivalence 0
+START WASM
+DONE WASM 0

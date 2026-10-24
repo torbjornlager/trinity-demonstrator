@@ -75,9 +75,42 @@ To explicitly use the retained native copies without setup:
 WP_NATIVE_MODE=legacy swipl load.pl
 ```
 
-`WP_NATIVE_STATE` can name an alternate generated setup JSON file. CI and the
-existing Dockerfiles explicitly select legacy mode until their dependency
-assembly is migrated. No running node or durable launcher is switched by setup.
+`WP_NATIVE_STATE` can name an alternate generated setup JSON file. Automatic CI
+and the existing Dockerfiles retain legacy mode. CI also provides an explicit
+pinned-dependency job, described below. No running node or durable launcher is
+switched by setup.
+
+### Pinned native CI checks
+
+The `CI` workflow preserves its existing push/pull-request legacy job. Its
+manual **Run workflow** form additionally offers `pinned_native`, defaulting to
+false. Selecting it checks out the exact SHA from
+`dependencies/swi-prolog-node.json`, then runs native tiers from that checkout,
+external-asset integration tiers, startup/pin regressions, a loaded-module origin
+audit, browser equivalence and the WASM tier. Each check retains a 360-second
+outer watchdog; failures are recorded while subsequent checks continue. The job
+uploads logs, provenance and individual results even after check failures.
+
+The native repository is currently private. Its checkout requires an
+owner-provided `SWI_NODE_READ_TOKEN` Actions secret with read access to that
+repository; the normal workflow token is used when no such secret exists and
+does not itself grant cross-repository access. No credential, permission or
+repository visibility is configured by this integration. Without access, the
+selected job fails at checkout; it never substitutes retained sources. The job
+is not yet an automatic cross-repository acceptance gate. The installed engine
+must also meet the receive-adapter prerequisite stated above.
+
+To run the same checks locally against an existing checkout and verified engine:
+
+```bash
+python3 tools/ci_pinned_swi.py --native-root /path/to/swi-prolog-node \
+  --swipl /path/to/verified/swipl --output /fresh/path/pinned-ci-results
+```
+
+The output directory must be new. Setup and assembled browser payloads live
+inside it, leaving the ordinary `.trinity/native-swi.json` untouched. Node.js
+must be on PATH for browser checks. This runner never fetches repositories,
+installs engines or restarts live nodes.
 
 ```prolog
 ?- node(3060).

@@ -1,0 +1,10 @@
+{
+  "native_copies": true,
+  "processes": true,
+  "binaries": true,
+  "native_revision": true,
+  "native_status": true,
+  "pinned_groups_passed": 16,
+  "legacy_groups_passed": 7,
+  "github_run_dispatched": false
+}

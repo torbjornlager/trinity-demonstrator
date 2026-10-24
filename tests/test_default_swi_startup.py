@@ -2,7 +2,7 @@
 from pathlib import Path
 import json,os,shutil,socket,subprocess,sys,tempfile,unittest
 ROOT=Path(__file__).resolve().parents[1]
-NATIVE=ROOT.parent/'swi-prolog-node'
+NATIVE=Path(os.environ.get('PINNED_SWI_TEST_ROOT',ROOT.parent/'swi-prolog-node')).resolve()
 EXE=Path(os.environ['STARTUP_TEST_SWIPL'])
 
 class DefaultStartup(unittest.TestCase):

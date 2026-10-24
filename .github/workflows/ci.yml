@@ -3,6 +3,12 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      pinned_native:
+        description: Run the pinned cross-repository SWI checks (requires dependency read access)
+        type: boolean
+        default: false
 
 # A newer push to the same ref supersedes in-flight runs, so they don't
 # pile up (and a hung run gets cancelled when the fix lands).
@@ -15,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # Cross-repository dependency checkout is not part of this migration.
+      # Retained comparison path; pinned checks are a separate explicit job.
       WP_NATIVE_MODE: legacy
     steps:
       - uses: actions/checkout@v6
@@ -55,3 +61,49 @@ jobs:
             echo "::endgroup::"
           done
           exit "$status"
+
+  pinned-native:
+    if: github.event_name == 'workflow_dispatch' && inputs.pinned_native
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Read exact native dependency pin
+        id: native
+        run: python3 tools/ci_pinned_swi.py --github-outputs "$GITHUB_OUTPUT"
+      - name: Check out pinned native dependency
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.native.outputs.repository }}
+          ref: ${{ steps.native.outputs.revision }}
+          path: .trinity/ci-native
+          # No access is provisioned here. A private dependency requires an
+          # owner-supplied read credential; absence fails checkout, not fallback.
+          token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Install SWI-Prolog
+        run: |
+          sudo apt-add-repository -y ppa:swi-prolog/stable
+          sudo apt-get update
+          sudo apt-get install -y swi-prolog
+          swipl --version
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Run pinned native and demonstrator integration checks
+        run: >-
+          python3 tools/ci_pinned_swi.py
+          --native-root "$GITHUB_WORKSPACE/.trinity/ci-native"
+          --output "$RUNNER_TEMP/pinned-swi-results"
+      - name: Preserve check results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinned-swi-results
+          path: ${{ runner.temp }}/pinned-swi-results
+          if-no-files-found: warn

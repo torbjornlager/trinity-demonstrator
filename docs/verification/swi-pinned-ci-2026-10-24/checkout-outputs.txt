@@ -1,0 +1,2 @@
+repository=torbjornlager/swi-prolog-node
+revision=f316e65503bff863dfbd2e182f7487988c91480c

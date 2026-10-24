@@ -1,0 +1,86 @@
+[
+  {
+    "label": "LINT",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "LINT"
+    ],
+    "exit_code": 0,
+    "seconds": 0.232,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T0",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T0"
+    ],
+    "exit_code": 0,
+    "seconds": 7.171,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1"
+    ],
+    "exit_code": 0,
+    "seconds": 0.556,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T2",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T2"
+    ],
+    "exit_code": 0,
+    "seconds": 7.542,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3"
+    ],
+    "exit_code": 0,
+    "seconds": 40.345,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4"
+    ],
+    "exit_code": 0,
+    "seconds": 51.739,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T5",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T5"
+    ],
+    "exit_code": 0,
+    "seconds": 1.265,
+    "watchdog_seconds": 360
+  }
+]

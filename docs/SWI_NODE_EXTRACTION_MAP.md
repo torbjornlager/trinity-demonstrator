@@ -1,6 +1,6 @@
 # Native SWI node extraction: files, dependencies and first seam
 
-Status: default local pinned-dependency startup, 24 October 2026. The separate
+Status: default local pinned startup and opt-in pinned CI, 24 October 2026. The separate
 `swi-prolog-node` repository now exists privately on GitHub with a clean initial
 snapshot (`f316e65503bff863dfbd2e182f7487988c91480c`). Its earlier extracted
 history was replaced at the owner's request; the original demonstrator and
@@ -10,7 +10,8 @@ current ancestry.
 
 No native copies have been removed from the demonstrator. Default local `load.pl`,
 `run.pl` and environment-driven startup select the validated native dependency.
-CI/Docker explicitly retain legacy selection; live n3/n5 source selection and
+Automatic CI and Docker retain legacy selection; a manual pinned CI job is now
+prepared without provisioning private-repository access. Live n3/n5 selection and
 installed runtimes remain unchanged. Setup does not fetch, install, publish or
 switch live nodes.
 See the current integration section at the end of this document.
@@ -425,3 +426,35 @@ Regression cases are in `tests/test_default_swi_startup.py`, alongside the exist
 pin/extraction tests. Native copies and public URLs remain; duplicate removal,
 authenticated CI checkout, deployment assembly, visibility changes and live-node
 cutover remain separately reviewable work.
+
+## Pinned native CI integration — 24 October 2026
+
+The existing automatic `CI / test` legacy job remains. A separate
+`pinned-native` job is selected only through the workflow's manual
+`pinned_native` input. It reads repository and full SHA from the manifest before
+checkout; it does not accept a moving native branch or silently fall back to a
+retained copy. Checkout credentials are not persisted. An optional existing
+`SWI_NODE_READ_TOKEN` secret can supply dependency read access, otherwise checkout
+uses the normal workflow token. This batch neither creates that secret nor
+changes repository access. While the dependency is private, GitHub execution
+remains contingent on an authorized credential; automatic enforcement is deferred.
+
+`tools/ci_pinned_swi.py` supplies the same orchestration locally and on Actions.
+It validates the checkout before tests, creates isolated setup/browser outputs,
+audits default-loader origins with the retained local library path present,
+and runs native LINT/T0/T1_NATIVE/T2/T3_NATIVE/T4_NATIVE/T5 from the dependency's
+own driver. T1/T3/T4 integration selections use demonstrator assets. Startup,
+pin and runner regressions, cross-repository equivalence and the full WASM tier
+remain consumer checks. No complete-node preload is introduced into independent
+layer tests. Existing assertions, receive timeouts and the legacy tier command
+are preserved; each orchestrated check has the existing CI's 360-second outer
+watchdog, with failure aggregation and per-check logs/results.
+
+Startup regression fixtures now accept `PINNED_SWI_TEST_ROOT` so CI's checkout
+layout need not mimic sibling directories. Their default path and assertions
+are unchanged. No native runtime source or retained implementation copy is edited.
+
+Verification: [pinned CI record](verification/swi-pinned-ci-2026-10-24/REPORT.md).
+Repository visibility/access, automatic pinned CI activation, Docker assembly,
+duplicate removal and live-node cutover remain separate steps. Installed engines
+and n3/n5 are unchanged.
