@@ -59,11 +59,13 @@ def main():
         else:
             dst.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(src,dst)
             manifest.append(dict(tree=destination.name,path=relative,role=role,sha256=sha(dst)))
-    for name in ['pack.pl','load.pl','LICENSE','README.md','prolog/web_prolog.pl','tests/tiers','tests/test_statecharts']:
+    for name in ['pack.pl','LICENSE','README.md','prolog/web_prolog.pl','tests/tiers','tests/test_statecharts']:
         copy(name,native,'native package or native test support')
     for file in sorted((ROOT/'prolog/web_prolog').iterdir()):
         if file.is_file() and file.suffix in ['.pl','.dtd','.md']:copy(str(file.relative_to(ROOT)),native,'native runtime')
     copy('prolog/web_prolog/wasm/sxml_schema.pl',native,'shared SXML schema required by native parser')
+    shutil.copy2(ROOT/'tools/swi_repository_templates/load.pl',native/'load.pl')
+    manifest.append(dict(tree=native.name,path='load.pl',source='tools/swi_repository_templates/load.pl',role='standalone native package loader',sha256=sha(native/'load.pl')))
     copy('tools/test.sh',native,'test driver')
     for name in ['web','img','examples','prolog/web_prolog/wasm']:
         copy(name,assets,'demonstrator/browser assets')

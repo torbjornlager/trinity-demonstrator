@@ -1,0 +1,17 @@
+{
+  "pid": 10053,
+  "port": 51857,
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-default-startup-2026-10-24/runtime/bin/swipl",
+    "-f",
+    "none",
+    "-q",
+    "-s",
+    "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/load.pl",
+    "-g",
+    "use_module(library(http/json)),true,findall(_{module:M,file:F},module_property(M,file(F)),Rows),setup_call_cleanup(open('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-default-startup-2026-10-24/legacy-ui-origins.json',write,F),json_write_dict(F,Rows,[]),close(F)),set_setting(http:public_host,localhost),set_setting(http:public_port,51857),set_setting(http:public_scheme,http),use_module(library(socket)),tcp_socket(Socket),tcp_bind(Socket,ip(127,0,0,1):51857),tcp_listen(Socket,128),node(51857,[tcp_socket(Socket),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:51857','http://127.0.0.1:51857']),tutorial_sections([local_actor,toplevels,distributed_actor,behaviours,statecharts]),load_shared_db_file('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/Deployment/shared_db_common.pl'),load_shared_db_file('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/Deployment/shared_db_actor_common.pl'),load_shared_db_file('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/Deployment/shared_db_n3.pl')]),thread_get_message(stop)",
+    "-t",
+    "halt"
+  ],
+  "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-default-startup-2026-10-24"
+}

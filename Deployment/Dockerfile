@@ -13,5 +13,7 @@ COPY --chown=webprolog:webprolog . /app/
 USER webprolog
 
 ENV HOME=/tmp
+# Pinned dependency image assembly is a separate migration.
+ENV WP_NATIVE_MODE=legacy
 
 CMD ["swipl", "-q", "-s", "/app/load.pl"]

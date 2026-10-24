@@ -14,6 +14,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Cross-repository dependency checkout is not part of this migration.
+      WP_NATIVE_MODE: legacy
     steps:
       - uses: actions/checkout@v6
         with:

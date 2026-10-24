@@ -27,6 +27,9 @@ COPY web/      /app/web/
 COPY examples/ /app/examples/
 COPY img/      /app/img/
 COPY pack.pl   /app/pack.pl
+COPY demonstrator_startup.pl /app/demonstrator_startup.pl
+# Keep image assembly explicitly on its existing colocated implementation.
+ENV WP_NATIVE_MODE=legacy
 COPY Deployment/start_node.pl /app/Deployment/start_node.pl
 COPY Deployment/shared_db_n5.pl /app/Deployment/shared_db_n5.pl
 # Discovery-hub seed files are baked in (small data files, used only when

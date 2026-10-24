@@ -69,7 +69,7 @@ def main():
         git(dst, 'rm', '--', *excluded[offset:offset + 100])
     git(dst, 'commit', '-m', 'Extract native SWI package working tree while retaining full source history')
     extraction_revision = git(dst, 'rev-parse', 'HEAD')
-    for name in ['README.md', 'CLAUDE.md']:
+    for name in ['README.md', 'CLAUDE.md', 'load.pl']:
         text = (ROOT / 'tools/swi_repository_templates' / name).read_text()
         (dst / name).write_text(text.replace('@SOURCE_REVISION@', revision))
     runner = dst / 'tools/test.sh'
@@ -81,7 +81,7 @@ def main():
     runner.write_text(text)
     for name in ['docs/SWI_NODE_EXTRACTION_MAP.md', 'prolog/web_prolog/README.md']:
         shutil.copy2(ROOT / name, dst / name)
-    git(dst, 'add', '--', 'README.md', 'CLAUDE.md', 'tools/test.sh',
+    git(dst, 'add', '--', 'README.md', 'CLAUDE.md', 'load.pl', 'tools/test.sh',
         'docs/SWI_NODE_EXTRACTION_MAP.md', 'prolog/web_prolog/README.md')
     git(dst, 'commit', '-m', 'Document native rehearsal and select standalone native test gates by default')
     packaging_revision = git(dst, 'rev-parse', 'HEAD')

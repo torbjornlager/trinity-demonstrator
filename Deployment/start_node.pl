@@ -256,24 +256,13 @@ emit_part(Atom) :- format("~w", [Atom]).
 
 %!  load_web_prolog is det.
 %
-%   Load library(web_prolog) whether started from a source checkout
-%   (this file two levels under the repo root) or from an installed
-%   pack (library/2 already resolves).
+% Same selection as load.pl. Docker/CI explicitly select legacy until their
+% dependency assembly is migrated; ordinary local startup defaults to pinned.
 :- dynamic script_dir/1.
-:- prolog_load_context(directory, D), asserta(script_dir(D)).
-
+:- prolog_load_context(directory,D),asserta(script_dir(D)).
 load_web_prolog :-
-    %  Prefer the source tree this script ships in (Deployment/../prolog)
-    %  so running from a checkout is predictable; otherwise rely on an
-    %  installed library(web_prolog) pack.
-    (   script_dir(Dir),
-        atom_concat(Dir, '/../prolog/web_prolog.pl', Co0),
-        absolute_file_name(Co0, Co, [access(read), file_errors(fail)])
-    ->  atom_concat(Dir, '/../prolog', LibDir),
-        asserta(user:file_search_path(library, LibDir)),
-        use_module(Co)
-    ;   use_module(library(web_prolog))
-    ).
+    script_dir(Dir),directory_file_path(Dir,'../demonstrator_startup.pl',Loader),
+    use_module(Loader,[]),demonstrator_startup:load_native(user).
 
 
                 /*******************************

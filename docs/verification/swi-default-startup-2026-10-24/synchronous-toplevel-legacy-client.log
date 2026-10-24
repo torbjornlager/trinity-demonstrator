@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "A":"success(4745596549@'http://localhost:51857',[socrates],true)",
+      "B":"success(4745596549@'http://localhost:51857',[plato],false)",
+      "P":"4745596549@'http://localhost:51857'",
+      "X":"X"
+    }
+  ],
+  "more":false,
+  "pid":9249313747,
+  "type":"success"
+}
+
+STDERR

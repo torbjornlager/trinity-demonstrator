@@ -1,0 +1,3 @@
+=== Tier T4_LEGACY_LAYOUT (tests/tiers/t4_node.pl) ===
+% [1/2] node_assets:defau..erve_checkout_paths ...... passed (0.001 sec)
+% [2/2] node_assets:defau..f_working_directory ...... passed (0.000 sec)

@@ -1,0 +1,37 @@
+START default-startup-regressions
+DONE default-startup-regressions 0 5.709
+START pin-negative-regressions
+DONE pin-negative-regressions 0 0.897
+START existing-extraction-regressions
+DONE existing-extraction-regressions 0 0.292
+START LINT
+DONE LINT 0 0.131
+START T0
+DONE T0 0 7.22
+START T1_NATIVE
+DONE T1_NATIVE 0 0.562
+START T2
+DONE T2 0 7.772
+START T3_NATIVE
+DONE T3_NATIVE 0 36.977
+START T4_NATIVE
+DONE T4_NATIVE 0 52.929
+START T5
+DONE T5 0 1.526
+START T1_INTEGRATION
+DONE T1_INTEGRATION 0 0.146
+START T3_INTEGRATION
+DONE T3_INTEGRATION 0 4.31
+START T4_INTEGRATION
+DONE T4_INTEGRATION 0 1.631
+START T4_LEGACY_LAYOUT
+DONE T4_LEGACY_LAYOUT 0 0.376
+START T4-original-legacy
+DONE T4-original-legacy 0 53.712
+START WASM
+DONE WASM 0 164.126
+START cross-repository-equivalence
+DONE cross-repository-equivalence 0 0.08
+START default-loader-origin
+DONE default-loader-origin 0 0.341
+COMPLETE; failed []

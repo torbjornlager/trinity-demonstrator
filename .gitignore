@@ -27,3 +27,6 @@ logs/
 
 # Runtime logs (written by test runs)
 tests/logs/
+
+# Generated local native dependency setup and browser payloads
+.trinity/

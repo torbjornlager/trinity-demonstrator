@@ -1,6 +1,6 @@
 # Native SWI node extraction: files, dependencies and first seam
 
-Status: opt-in pinned-dependency integration, 24 October 2026. The separate
+Status: default local pinned-dependency startup, 24 October 2026. The separate
 `swi-prolog-node` repository now exists privately on GitHub with a clean initial
 snapshot (`f316e65503bff863dfbd2e182f7487988c91480c`). Its earlier extracted
 history was replaced at the owner's request; the original demonstrator and
@@ -8,10 +8,11 @@ private preservation backup retain that history. Historical rehearsal details
 below describe the earlier stage and do not describe the new repository's
 current ancestry.
 
-No native copies have been removed from the demonstrator. Default `load.pl`,
-CI/Docker assembly and live n3/n5 source selection remain unchanged. The new
-integration mode explicitly selects the pinned native checkout and assembled
-browser sources; it does not fetch, install, publish or switch live nodes.
+No native copies have been removed from the demonstrator. Default local `load.pl`,
+`run.pl` and environment-driven startup select the validated native dependency.
+CI/Docker explicitly retain legacy selection; live n3/n5 source selection and
+installed runtimes remain unchanged. Setup does not fetch, install, publish or
+switch live nodes.
 See the current integration section at the end of this document.
 
 ## Ownership map
@@ -315,8 +316,8 @@ history/preservation checks are recorded in
 ### Still deliberately deferred
 
 - Making the privately published repository public, if desired. Local opt-in
-  pinned integration is now implemented; making it the default and removing
-  duplicate native working files remain separate steps.
+  pinned integration and local default startup are now implemented; removing
+  duplicate native working files remains a separate step.
 - Cross-repository CI and Docker/deployment assembly; live startup migration.
 - Publishing package/release distribution details. The native pack's home URL
   already points at `swi-prolog-node`; package name and version remain unchanged.
@@ -382,6 +383,45 @@ Pin/source/payload rejection tests are in `tests/test_pinned_swi_dependency.py`.
 The existing extraction and equivalence negative assertions remain intact.
 
 The private repository is sufficient for this local mode. Authenticated
-cross-repository CI checkout, native CI ownership, default loader migration,
+cross-repository CI checkout, native CI ownership,
 Docker/deployment assembly, duplicate removal and repository visibility remain
 separate work. No credential or permission change is part of this batch.
+
+
+## Default local startup — 24 October 2026
+
+`python3 tools/setup_swi.py --native-root /path/to/swi-prolog-node` validates the
+existing checkout using the same pin/runtime/payload checks as the explicit
+wrapper. It assembles six browser sources into a content-addressed directory
+under ignored `.trinity/` and atomically writes `.trinity/native-swi.json`.
+Existing generated payloads are verified and reused; drift is reported rather
+than overwritten. No repository fetch, engine installation, permission change
+or live-node action occurs.
+
+`demonstrator_startup.pl` centralises selection for `load.pl` (and therefore
+`run.pl` and the named deployment entry points), and `Deployment/start_node.pl`.
+Pinned mode is the default. It invokes the shared Python validator and then the
+existing origin-checking native bootstrap before any node bind. This also works
+from a foreign CWD. Missing setup, wrong pins, source/payload drift and mixed
+already-loaded native modules fail; no installed pack/local copy is used as an
+implicit fallback. Unknown `WP_NATIVE_MODE` values are rejected.
+
+`WP_NATIVE_MODE=legacy` explicitly selects the retained native sources. Existing
+asset-root/WASM overrides retain their prior behaviour in that mode. In pinned
+mode the generated setup selects this demonstrator and its checked assembled
+browser directory. `WP_NATIVE_STATE` can explicitly select another generated
+setup JSON file. These are owner startup controls, not Web Prolog predicates.
+
+The existing CI workflow and Dockerfiles set legacy mode explicitly. The minimal
+node Dockerfile also copies the central loader; legacy image startup needs no
+Python or private checkout. Host `.trinity/` state is excluded from image build
+contexts. Neither cross-repository CI nor Docker dependency assembly is switched.
+The existing standalone extraction/split-layout tools use a dedicated native
+`load.pl` template, so their outputs do not accidentally acquire the
+demonstrator's setup dependency.
+
+Verification: [default startup record](verification/swi-default-startup-2026-10-24/REPORT.md).
+Regression cases are in `tests/test_default_swi_startup.py`, alongside the existing
+pin/extraction tests. Native copies and public URLs remain; duplicate removal,
+authenticated CI checkout, deployment assembly, visibility changes and live-node
+cutover remain separately reviewable work.

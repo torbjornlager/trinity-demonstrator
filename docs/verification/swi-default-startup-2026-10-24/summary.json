@@ -1,0 +1,30 @@
+{
+  "automated_groups_passed": 18,
+  "failed_groups": [],
+  "startup_regressions": 12,
+  "prior_pin_regressions": 6,
+  "prior_extraction_regressions": 3,
+  "native_T4_cases": 983,
+  "colocated_legacy_T4_cases": 1004,
+  "api_smokes_per_mode": 13,
+  "url_checks": 36,
+  "default_native_modules_from_pin": 68,
+  "native_pin": "f316e65503bff863dfbd2e182f7487988c91480c",
+  "ui_modes_checked": [
+    "native",
+    "swi_wasm_worker"
+  ],
+  "temporary_servers_stopped": true,
+  "temporary_tabs_closed": true,
+  "preservation": {
+    "processes": true,
+    "swi_prefix": true,
+    "trealla_binary": true,
+    "trealla_library": true,
+    "native_repository": true,
+    "native_revision": true,
+    "native_copies": true,
+    "launchers": true,
+    "alias": true
+  }
+}

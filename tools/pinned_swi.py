@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the demonstrator against its exact native dependency; no fetch or install.
 
-The ordinary load.pl path remains unchanged. Browser payloads must have been
+This explicit wrapper shares validation with default startup. Browser payloads must have been
 assembled with package_wasm_prolog.py into a separate fresh directory.
 """
 from pathlib import Path
@@ -26,6 +26,13 @@ def validate(native):
             raise ValueError('missing or escaping native package file: '+rel)
     return dict(repository=pin['repository'],revision=revision,native_root=str(native),pack=pin['pack'])
 
+def validate_payloads(native,wasm):
+    names=['shared_db.pl','statechart_wasm.pl','statechart_wasm_exec.pl','statechart_wasm_model.pl','statechart_wasm_runtime.pl','sxml_schema.pl']
+    for name in names:
+        source=(native if name=='sxml_schema.pl' else ROOT)/'prolog/web_prolog/wasm'/name
+        if (wasm/name).read_bytes()!=source.read_bytes():
+            raise ValueError('assembled browser source differs from selected inputs: '+name)
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--native-root',type=Path,required=True)
@@ -41,11 +48,7 @@ def main():
         if not a.swipl or not a.swipl.is_file():raise ValueError('--swipl must name an existing verified executable')
         if not a.wasm_dir:raise ValueError('--wasm-dir must name an assembled browser payload directory')
         wasm=a.wasm_dir.resolve(strict=True)
-        names=['shared_db.pl','statechart_wasm.pl','statechart_wasm_exec.pl','statechart_wasm_model.pl','statechart_wasm_runtime.pl','sxml_schema.pl']
-        for name in names:
-            source=(native if name=='sxml_schema.pl' else ROOT)/'prolog/web_prolog/wasm'/name
-            if (wasm/name).read_bytes()!=source.read_bytes():
-                raise ValueError('assembled browser source differs from selected inputs: '+name)
+        validate_payloads(native,wasm)
         env=dict(os.environ,TRINITY_PINNED_SWI_ROOT=str(native),WP_ASSET_ROOT=str(ROOT),WP_WASM_SOURCE_DIR=str(wasm))
         for key in ['SWI_HOME_DIR','SWIPL_HOME_DIR']:env.pop(key,None)
         args=a.arguments

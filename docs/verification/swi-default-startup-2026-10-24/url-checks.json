@@ -1,0 +1,254 @@
+[
+  {
+    "mode": "pinned",
+    "path": "/portal",
+    "status": 200,
+    "sha256": "6c225632fac2b58f6b354f846495138c3b800db82d24c7fc6bcdfdb5bc6fe422",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/demonstrator",
+    "status": 200,
+    "sha256": "6c225632fac2b58f6b354f846495138c3b800db82d24c7fc6bcdfdb5bc6fe422",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/tutorial",
+    "status": 200,
+    "sha256": "f33557c9cfa49f02e3fab55ef0b17a2e4d3150757729c6529d4f7aff5b29cf78",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/manual",
+    "status": 200,
+    "sha256": "d9a53c4e55e9690d02c994804ed67bff63e15b0e39e948228071f0566145b2eb",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/admin",
+    "status": 200,
+    "sha256": "1995a0bb95a062d4ac75896b877d869e04fe7211ddcc78c704a73bfbf465e7d4",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/editor_frame?id=editor&mode=none",
+    "status": 200,
+    "sha256": "2e6ddc981dfba8e2d659463ea56120924b9910cb40eb6a6920af2e525a8af1d9",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/examples_index",
+    "status": 200,
+    "sha256": "371356e859895d0cce1d4c8434f44afbd1f0c5029dfde34ff86b16a561e55a82",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/sxml-0.2.dtd",
+    "status": 200,
+    "sha256": "46a2d8eb32b6fa3938965b19dbd2a7b722f3fd3e2c2dd8e28d1d57d02cc03fc0",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/examples/statecharts/01%20pause-and-resume.xml",
+    "status": 200,
+    "sha256": "e37b93fd0586ec667f1a5c33a6ae99e71a5b3822ab6ff2dd26baf4ce35ae0a5b",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/statecharts/01%20pause-and-resume.xml",
+    "status": 200,
+    "sha256": "e37b93fd0586ec667f1a5c33a6ae99e71a5b3822ab6ff2dd26baf4ce35ae0a5b",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/swi_wasm_actor_worker.js",
+    "status": 200,
+    "sha256": "a0ebcb3840ece44c2f41264f33051c7cdeb935ec5c6289bdbc415808cb82b4dd",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/swipl-bundle.js",
+    "status": 200,
+    "sha256": "baeed50860573728c41a4691c63a9da4d3695077fbd53b0a2ef89cd8f42541c0",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/wasm/statechart_wasm_exec.pl",
+    "status": 200,
+    "sha256": "522cff56a165439b9924b6a7e2f94b8395ad30ae3f7e51ed8ea709a913fb4f13",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/wasm/statechart_wasm_model.pl",
+    "status": 200,
+    "sha256": "26012d1d7b6cee965c695bb2216584fcbbbc4ae3e094a239e444d5c728443418",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/wasm/shared_db.pl",
+    "status": 200,
+    "sha256": "00d9afd9aaf73f6c446cc59d884da5c4942084486dbc600a4274f5c5d09927e4",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/wasm/sxml_schema.pl",
+    "status": 200,
+    "sha256": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/wasm/statechart_wasm_runtime.pl",
+    "status": 200,
+    "sha256": "6bb9c60faee83e3d9b14deeae5ad1d8f45458d0cfa3b5f4ef7763c613f7449c4",
+    "bytes_match": true
+  },
+  {
+    "mode": "pinned",
+    "path": "/wasm/statechart_wasm.pl",
+    "status": 200,
+    "sha256": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/portal",
+    "status": 200,
+    "sha256": "6c225632fac2b58f6b354f846495138c3b800db82d24c7fc6bcdfdb5bc6fe422",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/demonstrator",
+    "status": 200,
+    "sha256": "6c225632fac2b58f6b354f846495138c3b800db82d24c7fc6bcdfdb5bc6fe422",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/tutorial",
+    "status": 200,
+    "sha256": "f33557c9cfa49f02e3fab55ef0b17a2e4d3150757729c6529d4f7aff5b29cf78",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/manual",
+    "status": 200,
+    "sha256": "d9a53c4e55e9690d02c994804ed67bff63e15b0e39e948228071f0566145b2eb",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/admin",
+    "status": 200,
+    "sha256": "1995a0bb95a062d4ac75896b877d869e04fe7211ddcc78c704a73bfbf465e7d4",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/editor_frame?id=editor&mode=none",
+    "status": 200,
+    "sha256": "2e6ddc981dfba8e2d659463ea56120924b9910cb40eb6a6920af2e525a8af1d9",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/examples_index",
+    "status": 200,
+    "sha256": "371356e859895d0cce1d4c8434f44afbd1f0c5029dfde34ff86b16a561e55a82",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/sxml-0.2.dtd",
+    "status": 200,
+    "sha256": "46a2d8eb32b6fa3938965b19dbd2a7b722f3fd3e2c2dd8e28d1d57d02cc03fc0",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/examples/statecharts/01%20pause-and-resume.xml",
+    "status": 200,
+    "sha256": "e37b93fd0586ec667f1a5c33a6ae99e71a5b3822ab6ff2dd26baf4ce35ae0a5b",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/statecharts/01%20pause-and-resume.xml",
+    "status": 200,
+    "sha256": "e37b93fd0586ec667f1a5c33a6ae99e71a5b3822ab6ff2dd26baf4ce35ae0a5b",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/swi_wasm_actor_worker.js",
+    "status": 200,
+    "sha256": "a0ebcb3840ece44c2f41264f33051c7cdeb935ec5c6289bdbc415808cb82b4dd",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/swipl-bundle.js",
+    "status": 200,
+    "sha256": "baeed50860573728c41a4691c63a9da4d3695077fbd53b0a2ef89cd8f42541c0",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/wasm/statechart_wasm_exec.pl",
+    "status": 200,
+    "sha256": "522cff56a165439b9924b6a7e2f94b8395ad30ae3f7e51ed8ea709a913fb4f13",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/wasm/statechart_wasm_model.pl",
+    "status": 200,
+    "sha256": "26012d1d7b6cee965c695bb2216584fcbbbc4ae3e094a239e444d5c728443418",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/wasm/shared_db.pl",
+    "status": 200,
+    "sha256": "00d9afd9aaf73f6c446cc59d884da5c4942084486dbc600a4274f5c5d09927e4",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/wasm/sxml_schema.pl",
+    "status": 200,
+    "sha256": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/wasm/statechart_wasm_runtime.pl",
+    "status": 200,
+    "sha256": "6bb9c60faee83e3d9b14deeae5ad1d8f45458d0cfa3b5f4ef7763c613f7449c4",
+    "bytes_match": true
+  },
+  {
+    "mode": "legacy",
+    "path": "/wasm/statechart_wasm.pl",
+    "status": 200,
+    "sha256": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
+    "bytes_match": true
+  }
+]

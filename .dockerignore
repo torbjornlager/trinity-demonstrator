@@ -16,3 +16,6 @@ test.pl
 run.pl
 *.md
 **/*.plt
+
+# Host-specific pinned dependency setup is never shipped in legacy images.
+.trinity

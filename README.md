@@ -6,8 +6,9 @@ as independently loadable library layers, with a production node server on
 top.
 
 **Status: pre-release.** The layered restructuring is complete through
-the node layer: the implementation lives under `prolog/web_prolog/` and
-loads as `library(web_prolog)`. The demonstrator's conformance suite has
+the node layer. Normal local startup loads the pinned `swi-prolog-node`
+dependency as `library(web_prolog)`; `prolog/web_prolog/` remains as an explicit
+legacy/test copy during extraction. The demonstrator's conformance suite has
 been fully relocated into the `T0`–`T5` tiers under `tests/tiers/`, so the
 original in-tree `src/` copy has been removed. The migration plan — layer
 map, hook inventory, conformance strategy — is in
@@ -48,11 +49,35 @@ syntax and semantics are frozen to the trinity-demonstrator's — see
 
 ## Running
 
-Requires SWI-Prolog ≥ 9.x with threads.
+Use a verified threaded SWI build containing the protected-wait fix
+[`09b6299`](https://github.com/SWI-Prolog/swipl-devel/commit/09b6299f696574c9230f23e53b1ab041a942b6f3),
+as required by the receive adapter. The version number alone is insufficient;
+the official macOS 10.1.18 package predates that fix. Setup also needs Python 3
+and Git. Nothing is downloaded or installed by these commands.
+
+From this checkout, prepare an existing native checkout at the revision in
+`dependencies/swi-prolog-node.json`:
 
 ```bash
+python3 tools/setup_swi.py --native-root /path/to/swi-prolog-node
 swipl load.pl
 ```
+
+Setup validates the pin and assembles browser sources under ignored `.trinity/`.
+`load.pl`, `run.pl` and `Deployment/start_node.pl` share this selection and
+revalidate setup before node startup, including from another working directory.
+Missing setup, changed native files or payload drift fail without a local-copy
+fallback. Rerun setup after updating the pin or browser sources.
+
+To explicitly use the retained native copies without setup:
+
+```bash
+WP_NATIVE_MODE=legacy swipl load.pl
+```
+
+`WP_NATIVE_STATE` can name an alternate generated setup JSON file. CI and the
+existing Dockerfiles explicitly select legacy mode until their dependency
+assembly is migrated. No running node or durable launcher is switched by setup.
 
 ```prolog
 ?- node(3060).
@@ -78,11 +103,12 @@ The native node can serve a demonstrator tree from a separate location while
 keeping the existing portal, tutorial, manual, example and browser-runtime URLs:
 
 ```bash
-WP_ASSET_ROOT=/path/to/trinity-demonstrator swipl load.pl
+WP_NATIVE_MODE=legacy WP_ASSET_ROOT=/path/to/trinity-demonstrator swipl load.pl
 ```
 
-`WP_WASM_SOURCE_DIR` optionally selects the directory of the six browser Prolog
-sources. Without that override, an explicit asset root uses its current
+In legacy mode, `WP_WASM_SOURCE_DIR` optionally selects the directory of the six browser Prolog
+sources. Pinned mode instead uses this demonstrator and the validated assembled
+payload directory recorded by setup. Without that override, an explicit asset root uses its current
 `prolog/web_prolog/wasm/` layout. With neither variable set, all lookups retain
 the existing checkout defaults. Explicit locations do not fall back to another
 checkout when a file is missing. These are process-wide operator settings;
@@ -90,7 +116,9 @@ all nodes in one SWI process share them.
 
 The [native extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) records file
 ownership, dependencies, configuration settings and the remaining extraction
-steps. No repository separation has been performed yet.
+steps. The native repository is privately published; default local startup now
+uses its pinned revision, while duplicate removal and deployment migration remain
+separate steps.
 
 The split-layout rehearsal in `tools/check_swi_split_layout.py` builds disposable
 native and demonstrator-asset trees, then checks native APIs, external frontend

@@ -1,0 +1,14 @@
+runtime True {"data": [{}], "more": false, "type": "success"}
+shared-database True {"data": [{"Printer": "printer2"}], "more": false, "type": "success"}
+unicode True {"data": [{"X": "räksmörgås"}, {"X": "日本語"}], "more": false, "type": "success"}
+private-source True {"data": [{}], "more": false, "type": "success"}
+private-source-isolation True {"data": "Unknown procedure: private_smoke/1", "details": "error(existence_error(procedure,private_smoke/1),_)", "type": "error"}
+worker-combinators True {"data": [{"X": "slow", "Y": "fast", "Z": "fast"}], "more": false, "pid": 1754135138, "type": "success"}
+worker-cleanup True {"data": [{"A": "[1158084939@'http://localhost:51857']", "B": "[1158084939@'http://localhost:51857']", "E": "smoke_error", "S": "[1158084939@'http://localhost:51857']"}], "more": false, "pid": 1158084939, "type": "success"}
+synchronous-toplevel True {"data": [{"A": "success(4745596549@'http://localhost:51857',[socrates],true)", "B": "success(4745596549@'http://localhost:51857',[plato],false)", "P": "4745596549@'http://localhost:51857'", "X": "X"}], "more": false, "pid": 9249313747, "type": "success"}
+supervisor True {"data": [{"S": "3154020474@'http://localhost:51857'"}], "more": false, "pid": 9279922577, "type": "success"}
+statechart-text True {"data": [{"P": "2051123542@'http://localhost:51857'"}], "more": false, "pid": 1196990330, "type": "success"}
+statechart-uri True {"data": [{"P": "7797730460@'http://localhost:51857'"}], "more": false, "pid": 6410628357, "type": "success"}
+promise-timeout-retry True {"data": [{"A": "success([ok],false)", "E": "waiting", "R": "7177115374", "X": "X"}], "more": false, "type": "success"}
+sandbox True {"data": "node_sandbox:reject_forbidden_goal/3: No permission to call sandboxed nb_getval(secret,_12108)' (stateful_term_storage)", "details": "error(permission_error(call,sandboxed,nb_getval(secret,_)),_)", "type": "error"}
+COMPLETE 13
