@@ -1,0 +1,25 @@
+{
+  "native_pin": "f316e65503bff863dfbd2e182f7487988c91480c",
+  "automated_groups_passed": 16,
+  "failed_groups": [],
+  "negative_regressions": 6,
+  "public_api_smokes_passed": 13,
+  "url_checks_passed": 18,
+  "native_modules_from_pinned_checkout": 68,
+  "ui_modes_passed": [
+    "swi_native",
+    "swi_wasm_worker",
+    "swi_wasm_main"
+  ],
+  "temporary_node_stopped": true,
+  "temporary_tabs_closed": true,
+  "preservation": {
+    "processes": true,
+    "swi_prefix": true,
+    "trealla_binary": true,
+    "trealla_library": true,
+    "native_status": true,
+    "native_revision": true,
+    "native_copies": true
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "A":"[4921978905@'http://localhost:51855']",
+      "B":"[4921978905@'http://localhost:51855']",
+      "E":"smoke_error",
+      "S":"[4921978905@'http://localhost:51855']"
+    }
+  ],
+  "more":false,
+  "pid":4921978905,
+  "type":"success"
+}
+
+STDERR

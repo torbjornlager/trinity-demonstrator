@@ -1,9 +1,18 @@
 # Native SWI node extraction: files, dependencies and first seam
 
-Status: local repository-extraction rehearsal, 23 October 2026. A separate
-`swi-prolog-node` working tree now exists. No files have been removed from the
-original demonstrator, no public repository has been created, and no live
-startup configuration has been switched. See the rehearsal section below.
+Status: opt-in pinned-dependency integration, 24 October 2026. The separate
+`swi-prolog-node` repository now exists privately on GitHub with a clean initial
+snapshot (`f316e65503bff863dfbd2e182f7487988c91480c`). Its earlier extracted
+history was replaced at the owner's request; the original demonstrator and
+private preservation backup retain that history. Historical rehearsal details
+below describe the earlier stage and do not describe the new repository's
+current ancestry.
+
+No native copies have been removed from the demonstrator. Default `load.pl`,
+CI/Docker assembly and live n3/n5 source selection remain unchanged. The new
+integration mode explicitly selects the pinned native checkout and assembled
+browser sources; it does not fetch, install, publish or switch live nodes.
+See the current integration section at the end of this document.
 
 ## Ownership map
 
@@ -305,12 +314,74 @@ history/preservation checks are recorded in
 
 ### Still deliberately deferred
 
-- Creating/pushing the public repository and switching the demonstrator to a
-  pinned native dependency, then removing its duplicate native working files.
+- Making the privately published repository public, if desired. Local opt-in
+  pinned integration is now implemented; making it the default and removing
+  duplicate native working files remain separate steps.
 - Cross-repository CI and Docker/deployment assembly; live startup migration.
-- Updating published package/home URLs after the new repository exists.
+- Publishing package/release distribution details. The native pack's home URL
+  already points at `swi-prolog-node`; package name and version remain unchanged.
 - Renaming Trealla/GNU directories or remote repositories. The proposed names
   `trealla-prolog-node` and `gnu-prolog-node` fit the same naming scheme, but
   their path consumers and GitHub redirects need their own bounded migration.
 - Pruning or reorganizing historical documentation. Retention takes priority
   during this rehearsal.
+
+
+## Current pinned-dependency integration — 24 October 2026
+
+`dependencies/swi-prolog-node.json` pins the native repository and exact commit.
+`tools/pinned_swi.py` validates that HEAD and rejects changed/untracked runtime
+or package files before starting SWI. It checks all six assembled browser
+payloads against their selected native/browser inputs. Missing or mismatched
+inputs fail explicitly; the wrapper never fetches a repository or falls back to
+the retained native copies. Documentation-only working changes do not change
+runtime loading, but a different HEAD still requires an explicit pin update.
+
+`tools/pinned_swi_bootstrap.pl` loads `library(web_prolog)` from the external
+checkout, makes its public imports available for trusted startup goals, and
+checks mandatory modules plus each loaded native module's declared module/file
+pair. It also rejects loaded sources from the retained local native tree.
+The check handles module names explicitly: standard SWI `debug.pl` and Web
+Prolog's same-basename module are distinct modules. A foreign working directory
+and an explicitly present local library search path are verification controls.
+
+The runtime files in the two repositories are byte-identical at this checkpoint.
+The demonstrator runtime README alone has additional local n3 update notes;
+`source-alignment.json` accounts for this documentation difference without
+changing either runtime copy.
+
+From the demonstrator checkout, with a fresh output directory:
+
+```sh
+python3 tools/pinned_swi.py --native-root ../swi-prolog-node --check
+python3 tools/package_wasm_prolog.py \
+  --native-root ../swi-prolog-node --browser-root . \
+  --output /fresh/path/browser-prolog
+python3 tools/pinned_swi.py \
+  --native-root ../swi-prolog-node \
+  --swipl /path/to/verified/swipl \
+  --wasm-dir /fresh/path/browser-prolog \
+  -- -q -g 'pinned_swi_bootstrap:check_origins' -t halt
+```
+
+For a temporary server, append an ordinary trusted startup goal through `-g`.
+The wrapper sets `WP_ASSET_ROOT` to this demonstrator checkout and
+`WP_WASM_SOURCE_DIR` to the checked assembled payload directory. The verification
+record includes a loopback-bound temporary-node launcher; it is not a live n3/n5
+launcher. Package attachment and `library(web_prolog)` compatibility remain.
+
+Native unit and integration tests run from the pinned checkout's own driver,
+so lower-tier tests retain their existing no-higher-layer-loaded assertions.
+The consumer bootstrap intentionally loads the full node and is not injected
+into those independent layer tests. Browser and legacy-layout tests remain in
+the demonstrator; cross-repository equivalence checks use the selected native
+root and assembled schema explicitly.
+
+Tests and evidence: [pinned integration record](verification/swi-pinned-integration-2026-10-24/REPORT.md).
+Pin/source/payload rejection tests are in `tests/test_pinned_swi_dependency.py`.
+The existing extraction and equivalence negative assertions remain intact.
+
+The private repository is sufficient for this local mode. Authenticated
+cross-repository CI checkout, native CI ownership, default loader migration,
+Docker/deployment assembly, duplicate removal and repository visibility remain
+separate work. No credential or permission change is part of this batch.
