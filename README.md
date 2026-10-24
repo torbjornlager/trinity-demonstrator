@@ -1,9 +1,11 @@
-# web-prolog
+# Trinity demonstrator
 
-A Web Prolog implementation for SWI-Prolog: Erlang-style actors, toplevel
-query actors (pengines), actor behaviours, and distributed nodes — organized
-as independently loadable library layers, with a production node server on
-top.
+The Web Prolog demonstrator provides the portal, tutorials, shared language
+manual, examples, browser runtimes and deployment/integration tooling. Its
+native SWI node is supplied by the separate
+[`swi-prolog-node`](https://github.com/torbjornlager/swi-prolog-node) repository.
+The native SWI pack remains named `web_prolog`, with the existing
+`library(web_prolog)` imports.
 
 **Status: pre-release.** The layered restructuring is complete through
 the node layer. Normal local startup loads the pinned `swi-prolog-node`
@@ -18,9 +20,11 @@ map, hook inventory, conformance strategy — is in
 
 The [Web Prolog language manual](web/manual.html) is the single shared API
 reference for native SWI, Trealla and SWI-WASM. Runtime differences remain
-explicit there; this README describes the native SWI implementation and setup.
-The [layered implementation guide](prolog/web_prolog/README.md) covers internals
-and wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
+explicit there. This README covers demonstrator setup and integration.
+The [native repository README](https://github.com/torbjornlager/swi-prolog-node/blob/main/README.md)
+covers standalone native loading and tests. The retained
+[layered implementation guide](prolog/web_prolog/README.md) documents the
+compatibility copy and its wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
 coordination, and the [Trealla runtime guide](https://github.com/torbjornlager/trealla-port/blob/main/README.md)
 covers that port. Runtime guides do not define separate versions of the language.
 
@@ -30,7 +34,7 @@ select tested common behavior, including GNU Prolog at ISOBASE level. They keep
 unresolved and unmeasured behavior explicit; passing a selection is not complete
 profile certification.
 
-## The layers (target state)
+## Native dependency architecture
 
 | layer | library | gives you |
 |---|---|---|
@@ -43,9 +47,10 @@ profile certification.
 | 5 | `library(web_prolog)` | everything, composed |
 
 Lower layers never depend on higher ones; the connections run through
-multifile hooks, following the pattern of [swi-web-prolog]. Web Prolog
-syntax and semantics are frozen to the trinity-demonstrator's — see
-[DEVIATIONS.md](DEVIATIONS.md), which is expected to stay empty.
+multifile hooks, following the pattern of [swi-web-prolog]. The shared language
+manual defines the language contract; extraction preserves the existing
+behaviour. [DEVIATIONS.md](DEVIATIONS.md) retains the restructuring compatibility
+record.
 
 ## Running
 
@@ -80,6 +85,24 @@ and the existing Dockerfiles retain legacy mode. CI also provides an explicit
 pinned-dependency job, described below. No running node or durable launcher is
 switched by setup.
 
+```prolog
+?- node(3060).
+```
+
+Or load layers selectively:
+
+```prolog
+?- use_module(library(web_prolog/actors)).   % just actors, full SWI
+?- use_module(library(web_prolog/rpc)).      % rpc/promise/yield client
+?- use_module(library(web_prolog)).          % everything
+```
+
+Then try:
+
+- the shell at <http://localhost:3060/portal>
+- the stateless API:
+  `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
+
 ### Pinned native CI checks
 
 The `CI` workflow preserves its existing push/pull-request legacy job. Its
@@ -111,24 +134,6 @@ The output directory must be new. Setup and assembled browser payloads live
 inside it, leaving the ordinary `.trinity/native-swi.json` untouched. Node.js
 must be on PATH for browser checks. This runner never fetches repositories,
 installs engines or restarts live nodes.
-
-```prolog
-?- node(3060).
-```
-
-Or load layers selectively:
-
-```prolog
-?- use_module(library(web_prolog/actors)).   % just actors, full SWI
-?- use_module(library(web_prolog/rpc)).      % rpc/promise/yield client
-?- use_module(library(web_prolog)).          % everything
-```
-
-Then try:
-
-- the shell at <http://localhost:3060/portal>
-- the stateless API:
-  `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 
 ## Demonstrator asset locations
 
@@ -181,25 +186,8 @@ The full topology, environment setup, operational commands, and SSO-gated
 That guide also contains an opt-in, immediately reversible Trealla N5
 override for private interoperability testing.
 
-Outgoing remote toplevel calls remove the caller's outer module qualification
-before serialization: private actor modules belong to the sending node. Nested
-goal qualifications, options and goal/template variable sharing are preserved.
-This applies to asynchronous and synchronous calls; local calls are unchanged.
-
-Native SWI and Trealla prefer the optional WebSocket subprotocol
-`web-prolog-sync-spawn-v1`, which guarantees both correlated toplevel replies
-and request IDs on spawn successes and failures. With that selection, the
-client accepts only the current spawn's ID; untagged command errors go to the
-`distribution(remote)` debug topic and `distribution:hook_event/1` as
-`remote_transport_error` events. They cannot become a later spawn failure.
-The older `web-prolog-sync-v1` offer and unnegotiated peers retain serialized
-legacy spawning; untagged errors on those connections remain ambiguous.
-Connection loss still reports an unknown remote startup outcome. This does
-not implement Trealla's missing `lineage_close` handling.
-
-Native SWI connection disposal continues local queue and pending-event cleanup
-even if the WebSocket close handshake fails or raises an exception. This does
-not confirm remote actor termination.
+Native routing and transport details are recorded in the retained
+[runtime integration notes](prolog/web_prolog/README.md#native-integration-notes).
 
 Validate a configuration without starting the server:
 
@@ -207,21 +195,30 @@ Validate a configuration without starting the server:
 WP_CHECK=1 WP_PROFILE=actor WP_AUTH=private swipl Deployment/start_node.pl
 ```
 
-## Tests
+## Maintenance and tests
+
+For future fixes, dependency updates and compatibility-copy handling, follow
+[the native maintenance guide](docs/SWI_NODE_MAINTENANCE.md). Native implementation
+changes and native regression tests belong in `swi-prolog-node`; demonstrator
+assets, browser changes and consumer integration tests belong here. Pinning a
+new native revision does not update the retained legacy copies.
+
+The pinned integration runner above tests the dependency. To deliberately test
+the retained compatibility implementation:
 
 ```bash
-./tools/test.sh          # all tiers, each in a fresh SWI-Prolog process
+WP_NATIVE_MODE=legacy ./tools/test.sh  # all tiers in fresh SWI-Prolog processes
 ```
 
-The tier structure (see `tests/tiers/README.md`): tiers `T0`–`T5` carry the
+The retained tier structure (see [tests/tiers/README.md](tests/tiers/README.md)): tiers `T0`–`T5` carry the
 full demonstrator suite against the layered modules, one layer per tier,
 and each asserts that the layers above it are *not* loaded. `LINT` checks
 that imports only point downward.
 
 ## Provenance
 
-- [trinity-demonstrator] — the semantic reference this fork preserves
-  (full git history included here).
+- [trinity-demonstrator] — this repository retains the pre-extraction
+  implementation history and migration records.
 - [swi-web-prolog] — Torbjörn Lager & Jan Wielemaker's earlier
   implementation, whose hook-based layering this project adopts.
 
@@ -229,7 +226,8 @@ that imports only point downward.
 [swi-web-prolog]: https://github.com/Web-Prolog/swi-web-prolog
 
 
-The next extraction rehearsal creates a separate local `swi-prolog-node`
-repository while retaining the complete demonstrator and its history. See
-[the extraction map](docs/SWI_NODE_EXTRACTION_MAP.md#local-repository-extraction-rehearsal)
-for inventory, pinned peer, browser schema assembly and remaining cutover work.
+The native repository has already been extracted. See
+[the extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) for current ownership,
+completed integration checks and historical rehearsal records. Deployment
+packaging is paused until the normal deployment computer is available; no
+implementation copies are removed during this transition.

@@ -1,6 +1,7 @@
 # Native SWI node extraction: files, dependencies and first seam
 
-Status: default local pinned startup and opt-in pinned CI, 24 October 2026. The separate
+Status: default local pinned startup, opt-in pinned CI and maintenance ownership
+clarified, 24 October 2026. The separate
 `swi-prolog-node` repository now exists privately on GitHub with a clean initial
 snapshot (`f316e65503bff863dfbd2e182f7487988c91480c`). Its earlier extracted
 history was replaced at the owner's request; the original demonstrator and
@@ -14,7 +15,9 @@ Automatic CI and Docker retain legacy selection; a manual pinned CI job is now
 prepared without provisioning private-repository access. Live n3/n5 selection and
 installed runtimes remain unchanged. Setup does not fetch, install, publish or
 switch live nodes.
-See the current integration section at the end of this document.
+See the current integration sections and the
+[maintenance guide](SWI_NODE_MAINTENANCE.md). Historical stage descriptions below
+are retained; they are not the current maintenance procedure.
 
 ## Ownership map
 
@@ -457,4 +460,33 @@ are unchanged. No native runtime source or retained implementation copy is edite
 Verification: [pinned CI record](verification/swi-pinned-ci-2026-10-24/REPORT.md).
 Repository visibility/access, automatic pinned CI activation, Docker assembly,
 duplicate removal and live-node cutover remain separate steps. Installed engines
+and n3/n5 are unchanged.
+
+## Maintenance ownership clarified — 24 October 2026
+
+[SWI_NODE_MAINTENANCE.md](SWI_NODE_MAINTENANCE.md) defines where future changes
+belong and how to review a full-SHA pin update. Native implementation, native
+regressions, pack resources and the shared SXML schema belong in
+`swi-prolog-node`. Browser-only sources, UI/tutorial/manual content and dependency
+integration remain demonstrator responsibilities. Shared cross-runtime coverage
+remains in `trinity-conformance`. Generated payloads are not independently
+maintained source copies.
+
+The retained native copies are explicitly transitional. Every applicable native
+fix needs a conscious compatibility-mirroring decision while automatic CI and
+Docker still use them; a pin update alone does not update those copies. Native
+work begins in its own repository, and any compatibility update keeps reviewed
+changes and corresponding tests identifiable. No native files or historical
+records are removed in this batch.
+
+The demonstrator README now describes consumer setup and ownership; its detailed
+transport paragraphs remain available in the retained runtime guide. The stale
+claim that repository extraction is the next step has been replaced with current
+status. The separate native repository and its pinned commit are unchanged, so
+this consumer-documentation edit requires no pin advancement.
+
+Deployment packaging is paused until the normal deployment computer is available.
+Automatic pinned CI activation/access, Docker assembly, duplicate removal and
+live-node cutover remain separate work. No packaging implementation was made
+during the initial inspection on the borrowed computer. Code, installed runtimes
 and n3/n5 are unchanged.

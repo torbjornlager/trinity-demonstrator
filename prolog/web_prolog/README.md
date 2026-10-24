@@ -1,6 +1,15 @@
 # `library(web_prolog)` — the layered source
 
-This directory holds the implementation, organised as a stack of layers.
+This directory is the retained native compatibility implementation. Future
+native fixes and regression tests belong first in
+[`swi-prolog-node`](https://github.com/torbjornlager/swi-prolog-node), not solely
+in this copy. Default local demonstrator startup loads that pinned dependency;
+automatic legacy CI and the existing Dockerfiles still use these retained
+sources. Follow the [maintenance guide](../../docs/SWI_NODE_MAINTENANCE.md) for
+explicit compatibility mirroring and pin updates. Browser-only files under
+`wasm/` remain demonstrator-owned; the shared SXML schema is native-owned.
+
+The native implementation is organised as a stack of layers.
 The rule is simple and **machine-enforced**: a module may only import
 modules in its own layer or a lower one. Cross-cutting connections that
 would otherwise point *upward* run through `multifile` hooks instead
@@ -578,3 +587,29 @@ Unset or empty configuration preserves the original module-relative path.
 This lower-layer helper reads the setting directly from the process environment;
 it does not import the node-layer asset resolver. Source loading, sandboxing
 and ordinary `src_uri/1` resolution are unchanged.
+
+## Native integration notes
+
+These notes describe the retained implementation. The selected native pin and
+its own README identify the implementation loaded by pinned startup; a pin
+update does not synchronize this directory.
+
+Outgoing remote toplevel calls remove the caller's outer module qualification
+before serialization: private actor modules belong to the sending node. Nested
+goal qualifications, options and goal/template variable sharing are preserved.
+This applies to asynchronous and synchronous calls; local calls are unchanged.
+
+Native SWI and Trealla prefer the optional WebSocket subprotocol
+`web-prolog-sync-spawn-v1`, which guarantees both correlated toplevel replies
+and request IDs on spawn successes and failures. With that selection, the
+client accepts only the current spawn's ID; untagged command errors go to the
+`distribution(remote)` debug topic and `distribution:hook_event/1` as
+`remote_transport_error` events. They cannot become a later spawn failure.
+The older `web-prolog-sync-v1` offer and unnegotiated peers retain serialized
+legacy spawning; untagged errors on those connections remain ambiguous.
+Connection loss still reports an unknown remote startup outcome. This does
+not implement Trealla's missing `lineage_close` handling.
+
+Native SWI connection disposal continues local queue and pending-event cleanup
+even if the WebSocket close handshake fails or raises an exception. This does
+not confirm remote actor termination.
