@@ -1,0 +1,6 @@
+% [1/6] serialization:text .......................... passed (0.004 sec)
+% [2/6] serialization:unicode ....................... passed (0.000 sec)
+% [3/6] serialization:prolog ........................ passed (0.000 sec)
+% [4/6] serialization:json .......................... passed (0.009 sec)
+% [5/6] serialization:split ......................... passed (0.000 sec)
+% [6/6] http:echo ................................... passed (0.034 sec)

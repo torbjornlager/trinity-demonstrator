@@ -1,0 +1,3 @@
+Browser tab: 5, Title: "The Prolog Trinity demonstrator", URL: "http://localhost:51853/portal".
+There has been no change in the accessibility tree.
+The focused UI element is 105 text entry area (settable) Clipboard textarea for jQuery Terminal, Value:  , ID: buevtc

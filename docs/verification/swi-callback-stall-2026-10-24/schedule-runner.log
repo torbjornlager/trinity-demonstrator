@@ -1,0 +1,21 @@
+schedule-trace-01 0 0.488
+schedule-trace-02 watchdog_timeout 30.01
+schedule-trace-03 0 0.514
+schedule-trace-04 0 0.561
+schedule-trace-05 0 0.561
+schedule-trace-06 0 0.566
+schedule-trace-07 0 0.408
+schedule-trace-08 0 0.404
+schedule-trace-09 0 0.406
+schedule-trace-10 0 0.509
+schedule-trace-11 0 0.565
+schedule-trace-12 0 0.405
+schedule-trace-13 0 0.512
+schedule-trace-14 watchdog_timeout 30.006
+schedule-trace-15 0 0.574
+schedule-trace-16 0 0.566
+schedule-trace-17 0 0.459
+schedule-trace-18 0 0.458
+schedule-trace-19 0 0.398
+schedule-trace-20 0 0.51
+COMPLETE failed [2, 14]

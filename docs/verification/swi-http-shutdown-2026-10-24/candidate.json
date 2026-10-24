@@ -1,0 +1,7 @@
+{
+  "base": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23",
+  "candidate": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24",
+  "core_commit": "09b6299f696574c9230f23e53b1ab041a942b6f3",
+  "method": "Complete private installed-prefix copy; Prolog HTTP library patched, no compiled engine changes or native rebuild required.",
+  "http_package_commit": "9d1e28e676831618c9894f728ef50872b2eb87d7"
+}

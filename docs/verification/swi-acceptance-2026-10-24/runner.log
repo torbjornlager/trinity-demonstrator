@@ -1,0 +1,69 @@
+START stage-install
+DONE stage-install 0 0.88
+START installed-runtime-probe
+DONE installed-runtime-probe 0 3.746
+START upstream-ctest
+DONE upstream-ctest 0 17.553
+START LINT
+DONE LINT 0 0.126
+START T0
+DONE T0 0 7.75
+START T1_NATIVE
+DONE T1_NATIVE 0 0.57
+START T2
+DONE T2 0 6.684
+START T3_NATIVE
+DONE T3_NATIVE 0 36.599
+START T4_NATIVE
+DONE T4_NATIVE 0 50.414
+START T5
+DONE T5 0 1.157
+START T1_INTEGRATION
+DONE T1_INTEGRATION 0 0.132
+START T3_INTEGRATION
+DONE T3_INTEGRATION 0 4.184
+START T4_INTEGRATION
+DONE T4_INTEGRATION 0 1.54
+START T4_LEGACY_LAYOUT
+DONE T4_LEGACY_LAYOUT 0 0.402
+START callback-01
+DONE callback-01 0 0.401
+START supervisor-01
+DONE supervisor-01 0 0.455
+START callback-02
+DONE callback-02 0 0.453
+START supervisor-02
+DONE supervisor-02 0 0.506
+START callback-03
+DONE callback-03 0 0.458
+START supervisor-03
+DONE supervisor-03 0 0.461
+START callback-04
+DONE callback-04 watchdog_timeout 30.012
+START supervisor-04
+DONE supervisor-04 0 0.506
+START callback-05
+DONE callback-05 0 0.46
+START supervisor-05
+DONE supervisor-05 0 0.503
+START callback-06
+DONE callback-06 0 0.459
+START supervisor-06
+DONE supervisor-06 0 0.504
+START callback-07
+DONE callback-07 0 0.456
+START supervisor-07
+DONE supervisor-07 0 0.502
+START callback-08
+DONE callback-08 0 0.564
+START supervisor-08
+DONE supervisor-08 0 0.513
+START callback-09
+DONE callback-09 0 0.453
+START supervisor-09
+DONE supervisor-09 0 0.457
+START callback-10
+DONE callback-10 0 0.569
+START supervisor-10
+DONE supervisor-10 0 0.512
+COMPLETE 34 failed ['callback-04']

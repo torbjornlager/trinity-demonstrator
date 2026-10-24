@@ -1,0 +1,36 @@
+% [1/13] proxy:Direct connection for TCP .......... **FAILED (0.015 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:524:
+ERROR: [Thread main]     test proxy:'Direct connection for TCP': received error: ssl:'_ssl_context'/4: file `'/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/../ssl/etc/server/server-cert.pem'' does not exist
+% [2/13] proxy:All connections via SOCKS .......... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:537:
+ERROR: [Thread main]     test proxy:'All connections via SOCKS': received error: Socket error: Address already in use
+% [3/13] proxy:Some TCP connections via SOCKS ..... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:552:
+ERROR: [Thread main]     test proxy:'Some TCP connections via SOCKS': received error: Socket error: Address already in use
+% [4/13] proxy:First try S..fall back to direct ... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:572:
+ERROR: [Thread main]     test proxy:'First try SOCKS then fall back to direct': received error: Socket error: Address already in use
+% [5/13] proxy:First try d.. fall back to SOCKS ... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:588:
+ERROR: [Thread main]     test proxy:'First try direct to a nonexistent-host then fall back to SOCKS': received error: Socket error: Address already in use
+% [6/13] proxy:All TCP connections via HTTP ....... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:607:
+ERROR: [Thread main]     test proxy:'All TCP connections via HTTP': received error: Socket error: Address already in use
+% [7/13] proxy:All TCP con..non-existent server ..... passed (0.000 sec)
+% [8/13] proxy:Request URL directly ............... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:635:
+ERROR: [Thread main]     test proxy:'Request URL directly': received error: Socket error: Address already in use
+% [9/13] proxy:Request URL..ctions go via SOCKS ... **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:649:
+ERROR: [Thread main]     test proxy:'Request URL when all connections go via SOCKS': received error: Socket error: Address already in use
+% [10/13] proxy:Request URL..ections go via HTTP .. **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:664:
+ERROR: [Thread main]     test proxy:'Request URL when all connections go via HTTP': received error: Socket error: Address already in use
+% [11/13] proxy:Request inv..rather than failure .... passed (0.000 sec)
+% [12/13] proxy:Request HTT..CT and not HTTP GET .. **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:693:
+ERROR: [Thread main]     test proxy:'Request HTTPS url via proxy - should get HTTP CONNECT and not HTTP GET': received error: Socket error: Address already in use
+% [13/13] proxy:Test an exo..with authentication .. **FAILED (0.000 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/http-source/test_proxy.pl:730:
+ERROR: [Thread main]     test proxy:'Test an exotic application-level proxy - http with authentication': received error: Socket error: Address already in use
+ERROR: [Thread main] 11 tests failed

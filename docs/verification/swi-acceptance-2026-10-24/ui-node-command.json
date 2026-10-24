@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+    "-f",
+    "none",
+    "-q",
+    "-g",
+    "use_module('/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node/prolog/web_prolog/node.pl'),set_setting(http:public_host,localhost),set_setting(http:public_port,51853),set_setting(http:public_scheme,http),use_module(library(socket)),tcp_socket(Socket),tcp_bind(Socket,ip(127,0,0,1):51853),tcp_listen(Socket,128),node:node(51853,[tcp_socket(Socket),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:51853','http://127.0.0.1:51853']),tutorial_sections([behaviours,distributed_actor,local_actor,statecharts,toplevels]),load_shared_db_file('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/Deployment/shared_db_common.pl'),load_shared_db_file('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/Deployment/shared_db_actor_common.pl'),load_shared_db_file('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/Deployment/shared_db_n3.pl')]),thread_get_message(stop)"
+  ],
+  "pid": 99065,
+  "environment": {
+    "WP_ASSET_ROOT": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "WP_WASM_SOURCE_DIR": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/prolog/web_prolog/wasm"
+  }
+}

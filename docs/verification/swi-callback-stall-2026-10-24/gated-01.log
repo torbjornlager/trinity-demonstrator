@@ -1,0 +1,4 @@
+control(1792831262.321929,scheduler_gate(_168{peer:ip(127,0,0,1),port:62114,queue:'httpd@62114',reason:accept,waiting:1},'http@62114')).
+control(1792831262.322006,releasing_worker('httpd@62114_1')).
+control(1792831262.322026,stop_begin(62114,'http@62114')).
+ERROR: [Thread http@62114] Unknown message: http_stop(main)

@@ -1,0 +1,3 @@
+patching file thread_httpd.pl
+patching file CMakeLists.txt
+patching file test_thread_httpd.pl

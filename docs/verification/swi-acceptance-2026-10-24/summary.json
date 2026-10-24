@@ -1,0 +1,92 @@
+{
+  "upstream_ctest_groups": 66,
+  "upstream_ctest_passed": 66,
+  "native_and_integration_results": [
+    {
+      "label": "LINT",
+      "exit_code": 0,
+      "seconds": 0.126
+    },
+    {
+      "label": "T0",
+      "exit_code": 0,
+      "seconds": 7.75
+    },
+    {
+      "label": "T1_NATIVE",
+      "exit_code": 0,
+      "seconds": 0.57
+    },
+    {
+      "label": "T2",
+      "exit_code": 0,
+      "seconds": 6.684
+    },
+    {
+      "label": "T3_NATIVE",
+      "exit_code": 0,
+      "seconds": 36.599
+    },
+    {
+      "label": "T4_NATIVE",
+      "exit_code": 0,
+      "seconds": 50.414
+    },
+    {
+      "label": "T5",
+      "exit_code": 0,
+      "seconds": 1.157
+    },
+    {
+      "label": "T1_INTEGRATION",
+      "exit_code": 0,
+      "seconds": 0.132
+    },
+    {
+      "label": "T3_INTEGRATION",
+      "exit_code": 0,
+      "seconds": 4.184
+    },
+    {
+      "label": "T4_INTEGRATION",
+      "exit_code": 0,
+      "seconds": 1.54
+    },
+    {
+      "label": "T4_LEGACY_LAYOUT",
+      "exit_code": 0,
+      "seconds": 0.402
+    }
+  ],
+  "callback": {
+    "trials": 10,
+    "passed": 9,
+    "failed": [
+      {
+        "label": "callback-04",
+        "command": [
+          "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+          "-f",
+          "none",
+          "-q",
+          "-s",
+          "tests/tiers/t4_node.pl",
+          "-g",
+          "run_tests(node:isobase_yield_timeout_callback_is_sandboxed)",
+          "-t",
+          "halt"
+        ],
+        "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+        "exit_code": "watchdog_timeout",
+        "seconds": 30.012,
+        "outer_watchdog_seconds": 30
+      }
+    ]
+  },
+  "supervisor": {
+    "trials": 10,
+    "passed": 10
+  },
+  "ui_checks": "passed; see UI transcripts and screenshot",
+  "decision": "Hold live n3 cutover pending the callback stall investigation."
+}

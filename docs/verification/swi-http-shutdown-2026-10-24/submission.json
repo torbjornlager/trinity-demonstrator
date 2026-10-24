@@ -1,0 +1,10 @@
+{
+  "url": "https://github.com/SWI-Prolog/packages-http/issues/176",
+  "number": 176,
+  "created_at": "2026-10-24T14:03:52Z",
+  "author": "torbjornlager",
+  "state": "open",
+  "published_patch_matches_verified_patch": true,
+  "patch_sha256": "95b687af8928271e1eb368551d3d54b352279db20ab0260b6bd1ffc58eab8684",
+  "submission_method": "Signed-in GitHub browser; connector create attempt was denied with 403 and created no issue."
+}

@@ -1,0 +1,6 @@
+version(swi(10,1,18,[])).
+home('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl').
+pcre('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/library/ext/pcre/pcre.pl').
+sgml('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/library/ext/sgml/sgml.pl').
+ssl_probe(_23028).
+installed_runtime_probe_passed

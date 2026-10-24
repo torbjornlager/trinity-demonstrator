@@ -1,0 +1,21 @@
+trace-01 0 0.566
+trace-02 0 0.457
+trace-03 0 0.516
+trace-04 -6 0.628
+trace-05 0 0.569
+trace-06 0 0.561
+trace-07 2 0.566
+trace-08 0 0.455
+trace-09 0 0.564
+trace-10 0 0.461
+trace-11 -6 0.622
+trace-12 2 0.569
+trace-13 0 0.399
+trace-14 0 0.405
+trace-15 0 0.404
+trace-16 2 0.453
+trace-17 0 0.513
+trace-18 0 0.463
+trace-19 watchdog_timeout 30.008
+trace-20 0 0.516
+COMPLETE failed [4, 7, 11, 12, 16, 19]

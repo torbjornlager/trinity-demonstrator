@@ -1,0 +1,51 @@
+{
+  "groups": {
+    "baseline-gated": {
+      "watchdog_timeout": 1
+    },
+    "regression": {
+      "0": 20
+    },
+    "callback": {
+      "0": 30
+    },
+    "http-cleanup": {
+      "0": 5
+    },
+    "upstream-http": {
+      "0": 1
+    },
+    "upstream-cgi_stream": {
+      "0": 1
+    },
+    "upstream-multipart": {
+      "0": 1
+    },
+    "upstream-proxy": {
+      "1": 1
+    },
+    "upstream-websocket": {
+      "0": 1
+    },
+    "upstream-graphql": {
+      "0": 1
+    },
+    "upstream-sse": {
+      "0": 1
+    },
+    "T4_NATIVE": {
+      "0": 1
+    }
+  },
+  "initial_proxy_failure": "Missing sibling SSL certificate fixtures; retained separately",
+  "proxy_with_fixtures": "13/13 pass; command exit 0",
+  "preservation": {
+    "source_sha256": true,
+    "binary_sha256": true,
+    "live_processes": true
+  },
+  "original_staged_prefix_changed": [],
+  "patch_sha256": "95b687af8928271e1eb368551d3d54b352279db20ab0260b6bd1ffc58eab8684",
+  "submitted_upstream": true,
+  "upstream_issue": "https://github.com/SWI-Prolog/packages-http/issues/176"
+}

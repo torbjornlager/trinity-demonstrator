@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+    "-f",
+    "none",
+    "-q",
+    "-s",
+    "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-acceptance-2026-10-24/installed-ssl-probe.pl",
+    "-g",
+    "run",
+    "-t",
+    "halt"
+  ],
+  "cwd": "/tmp",
+  "exit_code": 0,
+  "seconds": 0.068
+}

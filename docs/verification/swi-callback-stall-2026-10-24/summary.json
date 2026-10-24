@@ -1,0 +1,91 @@
+{
+  "candidate_core_commit": "09b6299f696574c9230f23e53b1ab041a942b6f3",
+  "outer_watchdog_seconds": 30,
+  "phases": {
+    "initial_stderr_probe": {
+      "trials": 20,
+      "outcomes": {
+        "0": 14,
+        "-6": 2,
+        "2": 3,
+        "watchdog_timeout": 1
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    },
+    "file": {
+      "trials": 20,
+      "outcomes": {
+        "0": 19,
+        "watchdog_timeout": 1
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    },
+    "accept": {
+      "trials": 20,
+      "outcomes": {
+        "0": 19,
+        "watchdog_timeout": 1
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    },
+    "schedule": {
+      "trials": 20,
+      "outcomes": {
+        "0": 18,
+        "watchdog_timeout": 2
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    },
+    "standalone": {
+      "trials": 20,
+      "outcomes": {
+        "0": 20
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    },
+    "nested": {
+      "trials": 20,
+      "outcomes": {
+        "0": 20
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    },
+    "gated": {
+      "trials": 1,
+      "outcomes": {
+        "watchdog_timeout": 1
+      },
+      "preservation": {
+        "source_sha256": true,
+        "binary_sha256": true,
+        "live_processes": true
+      }
+    }
+  },
+  "cause": "http_enough_workers/3 catches and prints http_stop/1 thrown inside http:schedule_workers/1; acceptor continues and shutdown waits in thread_join/2",
+  "runtime_changes": false
+}

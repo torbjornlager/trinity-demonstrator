@@ -1,0 +1,17 @@
+callback_stage(1792830497.750842,main,ready,installed).
+% [1/1] node:isobase_yiel..llback_is_sandboxed ..
+ERROR: [Thread main] -g use_module('/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/trace.pl'),callback_stall_trace:install,run_tests(node:isobase_yield_timeout_callback_is_sandboxed): Cannot represent due to `code_point'
+ERROR: [Thread main] In:
+ERROR: [Thread main]   [21] throw(error(representation_error(code_point),context(...,_428)))
+ERROR: [Thread main]   [20] prolog_statistics:call_time('<garbage_collected>','<garbage_collected>') at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/library/statistics.pl:326
+ERROR: [Thread main]   [19] setup_call_cleanup(plunit:setup_trap_assertions(<clause>(0x8c9f9f3e0)),plunit:call_time(...,...),plunit:report_and_cleanup(<clause>(0x8c9f9f3e0),...,[])) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/boot/init.pl:695
+ERROR: [Thread main]   [18] plunit:run_tests_sync('<garbage_collected>',[]) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/library/ext/plunit/plunit.pl:743
+ERROR: [Thread main]   [17] <meta call>
+ERROR: [Thread main]   [16] with_mutex(plunit,run_tests_sync([...],[])) <foreign>
+ERROR: [Thread main]   [14] setup_call_cleanup(plunit:set_test_options([]),plunit:(...,...),plunit:set_test_options(...)) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/boot/init.pl:695
+ERROR: [Thread main]   [13] plunit:run_tests('<garbage_collected>',[]) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/library/ext/plunit/plunit.pl:730
+ERROR: [Thread main]   [10] catch(user:(...,...),_772,'$toplevel':true) at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/boot/init.pl:565
+ERROR: [Thread main]    [9] catch_with_backtrace('<garbage_collected>','<garbage_collected>','<garbage_collected>') at /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/boot/init.pl:658
+ERROR: [Thread main] 
+ERROR: [Thread main] Note: some frames are missing due to last-call optimization.
+ERROR: [Thread main] Re-run your program in debug mode (:- debug.) to get more detail.

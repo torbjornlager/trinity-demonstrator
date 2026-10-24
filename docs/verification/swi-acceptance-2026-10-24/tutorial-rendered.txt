@@ -1,0 +1,88 @@
+Browser tab: 6, Title: "Web Prolog Tutorial — The ACTOR Profile", URL: "http://localhost:51853/actor-profile-tutorial".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+~				8 link Description: Getting started, Value: localhost:51853/actor-profile-tutorial
+~				9 link Description: Introduction, Value: localhost:51853/actor-profile-tutorial
+~				10 link Description: append/3 in two modes, Value: localhost:51853/actor-profile-tutorial
+~				11 link Description: A small family program, Value: localhost:51853/actor-profile-tutorial
+~				12 link Description: Parsing with a DCG, Value: localhost:51853/actor-profile-tutorial
+~				13 link Description: Message-passing concurrency, Value: localhost:51853/actor-profile-tutorial
+~				14 link Description: Your shell has a pid, Value: localhost:51853/actor-profile-tutorial
+~				15 link Description: Send a message to yourself, Value: localhost:51853/actor-profile-tutorial
+~				16 link Description: Inspect the mailbox without blocking, Value: localhost:51853/actor-profile-tutorial
+~				17 link Description: Spawn an actor and talk to it, Value: localhost:51853/actor-profile-tutorial
+~				18 link Description: Monitors tell you when an actor dies, Value: localhost:51853/actor-profile-tutorial
+~				19 link Description: Names are easier to remember than pids, Value: localhost:51853/actor-profile-tutorial
+~				20 link Description: Kill an actor from the outside, Value: localhost:51853/actor-profile-tutorial
+~				21 link Description: An actor can choose its own exit reason, Value: localhost:51853/actor-profile-tutorial
+~				22 link Description: Receive can do more than one thing, Value: localhost:51853/actor-profile-tutorial
+~				23 link Description: Selective receive, Value: localhost:51853/actor-profile-tutorial
+~				24 link Description: Guards and timeouts, Value: localhost:51853/actor-profile-tutorial
+~				25 link Description: Receiving as inference, Value: localhost:51853/actor-profile-tutorial
+~				26 link Description: A simple priority queue, Value: localhost:51853/actor-profile-tutorial
+~				27 link Description: More on monitors, Value: localhost:51853/actor-profile-tutorial
+~				28 link Description: See which actors are running, Value: localhost:51853/actor-profile-tutorial
+~				29 link Description: Linking controls child lifetime, Value: localhost:51853/actor-profile-tutorial
+~				30 link Description: Shadowing, Value: localhost:51853/actor-profile-tutorial
+~				31 link Description: Programming with actors, Value: localhost:51853/actor-profile-tutorial
+~				32 link Description: A count server, Value: localhost:51853/actor-profile-tutorial
+~				33 link Description: Using a published service, Value: localhost:51853/actor-profile-tutorial
+~				34 link Description: A fridge simulation, Value: localhost:51853/actor-profile-tutorial
+~				35 link Description: Hiding the protocol details, Value: localhost:51853/actor-profile-tutorial
+~				36 link Description: Actors playing ping-pong, Value: localhost:51853/actor-profile-tutorial
+~				37 link Description: Programming with toplevels, Value: localhost:51853/actor-profile-tutorial
+~				38 link Description: Calling goals, Value: localhost:51853/actor-profile-tutorial
+~				39 link Description: Using the template option, Value: localhost:51853/actor-profile-tutorial
+~				40 link Description: Paging with limit, next, and stop, Value: localhost:51853/actor-profile-tutorial
+~				41 link Description: Collecting answers synchronously, Value: localhost:51853/actor-profile-tutorial
+~				42 link Description: Output, input, and reply, Value: localhost:51853/actor-profile-tutorial
+~				43 link Description: An expert-system agent and a simulation, Value: localhost:51853/actor-profile-tutorial
+~				44 link Description: Aborting and halting, Value: localhost:51853/actor-profile-tutorial
+~				45 link Description: Remote calls with rpc/2-3, Value: localhost:51853/actor-profile-tutorial
+~				46 link Description: Humans are mortal, Value: localhost:51853/actor-profile-tutorial
+~				47 link Description: Shipping source code with rpc/3, Value: localhost:51853/actor-profile-tutorial
+~				48 link Description: Remote calls with promise/3-4 and yield/2-3, Value: localhost:51853/actor-profile-tutorial
+~				49 link Description: Bounding the wait, Value: localhost:51853/actor-profile-tutorial
+~				50 link Description: Polling for results, Value: localhost:51853/actor-profile-tutorial
+~				51 link Description: Local and distributed proof trees, Value: localhost:51853/actor-profile-tutorial
+~				52 link Description: First an answer, then its explanation, Value: localhost:51853/actor-profile-tutorial
+~				53 link Description: Let the explanation cross a node boundary, Value: localhost:51853/actor-profile-tutorial
+~				54 link Description: The concurrent Prolog Web, Value: localhost:51853/actor-profile-tutorial
+~				55 link Description: Actor talking to remote actor, Value: localhost:51853/actor-profile-tutorial
+~				56 link Description: Ping-pong across nodes, Value: localhost:51853/actor-profile-tutorial
+~				57 link Description: The node option works for toplevels too, Value: localhost:51853/actor-profile-tutorial
+~				58 link Description: The server behaviour, Value: localhost:51853/actor-profile-tutorial
+~				59 link Description: Starting a supervised server, Value: localhost:51853/actor-profile-tutorial
+~				60 link Description: Synchronous calls, Value: localhost:51853/actor-profile-tutorial
+~				61 link Description: Asynchronous calls, Value: localhost:51853/actor-profile-tutorial
+~				62 link Description: Fail-fast and recovery, Value: localhost:51853/actor-profile-tutorial
+~				63 link Description: Hot code swap, Value: localhost:51853/actor-profile-tutorial
+~				64 link Description: Tearing down, Value: localhost:51853/actor-profile-tutorial
+~				65 link Description: Programming with statecharts, Value: localhost:51853/actor-profile-tutorial
+~				66 link Description: Pause and resume, Value: localhost:51853/actor-profile-tutorial
+~				67 link Description: Reading a spaghetti statechart, Value: localhost:51853/actor-profile-tutorial
+~				68 link Description: NPC emotions, Value: localhost:51853/actor-profile-tutorial
+~				69 link Description: Computing the GCD, Value: localhost:51853/actor-profile-tutorial
+~				70 link Description: A dialogue governor, Value: localhost:51853/actor-profile-tutorial
+~				71 link Description: Process invocation and communication, Value: localhost:51853/actor-profile-tutorial
+~				72 link Description: Reasoning about service requests, Value: localhost:51853/actor-profile-tutorial
+~				73 link Description: A service-request agent: proposal, confirmation, and review, Value: localhost:51853/actor-profile-tutorial
+~				74 link Description: Before you start, Value: localhost:51853/actor-profile-tutorial
+~				75 link Description: 1. Complete an automatically permitted request, Value: localhost:51853/actor-profile-tutorial
+~				76 link Description: 2. Resolve a policy conflict through human review, Value: localhost:51853/actor-profile-tutorial
+~				77 link Description: 3. Correct a request while the old model reply is in flight, Value: localhost:51853/actor-profile-tutorial
+~				78 link Description: 4. Explore rejection, incomplete requests, and timeouts, Value: localhost:51853/actor-profile-tutorial
+~				79 link Description: 5. Read the implementation, Value: localhost:51853/actor-profile-tutorial
+~				80 link Description: 6. Continue in the editor, Value: localhost:51853/actor-profile-tutorial
+~				81 link Description: Choosing the ACTOR profile, Value: localhost:51853/actor-profile-tutorial
+~				82 link Description: Where to go next, Value: localhost:51853/actor-profile-tutorial
+~				98 link Description: ACTOR API tutorial, Value: localhost:51853/actor-api-tutorial
+~				138 link Description: SWISH, Value: swish.swi-prolog.org/
+~				293 link Description: Learn You Some Erlang for Great Good!, Value: learnyousomeerlang.com/
+~				420 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+~				427 link Description: Learn You Some Erlang for Great Good!, Value: learnyousomeerlang.com/
+~				468 link Description: Erlang message-passing guide, Value: erlang.org/doc/system/conc_prog.html
+~					635 link Description: earlier shadowing examples, Value: localhost:51853/actor-profile-tutorial
+~					1021 link Description: service-request agent, Value: localhost:51853/actor-profile-tutorial
+~					1264 link Description: ACTOR API tutorial, Value: localhost:51853/actor-api-tutorial
+~					1275 link Description: stateful API tutorial, Value: localhost:51853/actor-api-tutorial
+The focused UI element is 0 AXWebArea Web Prolog Tutorial — The ACTOR Profile, URL: localhost:51853/actor-profile-tutorial

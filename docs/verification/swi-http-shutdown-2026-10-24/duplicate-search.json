@@ -1,0 +1,48 @@
+[
+  {
+    "query": "org:SWI-Prolog \"http_stop_server\"",
+    "total_count": 3,
+    "items": [
+      {
+        "title": "TEST: Skip test_thread_exit if alert signal == 0",
+        "url": "https://github.com/SWI-Prolog/swipl-devel/pull/1469",
+        "state": "closed",
+        "body": null
+      },
+      {
+        "title": "It turns out that X509_STORE_add_cert increments the reference count \u2026",
+        "url": "https://github.com/SWI-Prolog/packages-ssl/pull/150",
+        "state": "closed",
+        "body": "\u2026on the certificate anyway. This isnt really documented in the OpenSSL documentation, but valgrind makes it pretty clear that we are leaking a lot of memory by duplicating the certificate\r\n\r\nI also noticed while valgrinding that starting an HTTPS server then stopping it leaves a reference (somewhere) to the SSL context:\r\n\r\n```\r\n\r\nstart_and_stop_https_server:-\r\n        http_server(http_dispatch, [port(Port),\r\n                                    ssl([certificate_file('untrusted.pem'),\r\n                                         key_file('untrusted.key'),\r\n                                         password(-)])]),\r\n        http_stop_server(Port, []).\r\n\r\n\r\n?- start_and_stop_https_server.\r\ntrue.\r\n\r\n?- start_and_stop_https_server.\r\ntrue.\r\n\r\n?- start_and_stop_https_server.\r\ntrue.\r\n\r\n?- start_and_stop_https_server.\r\ntrue.\r\n\r\n?- start_and_stop_https_server.\r\ntrue.\r\n\r\n?- garbage_collect_atoms.\r\ntrue.\r\n\r\n?- current_blob(X, ssl_context).\r\nX = <ssl_context>(0x7f879d459250) ;\r\nX = <ssl_context>(0x7f879d45a8a0) ;\r\nX = <ssl_context>(0x7f879f1d71a0) ;\r\nX = <ssl_context>(0x7f879d4a4fa0) ;\r\nX = <ssl_context>(0x7f879f5de180) ;\r\nfalse.\r\n```\r\n\r\nThe equivalent case of calling `https_open('https://www.google.com', Stream, []), close(Stream)` does not leave these references. I couldn't work out where they were ending up stuck - without calling ssl_negotiate/5 we don't increment the reference count explicitly, and with no threads left I'm not sure where else to look. This isn't so important to me since I think stopping a web server is relatively uncommon, but it does make my Valgrind report a bit frightening since a tight loop of create-server, connect-to-server, stop-server, repeat leak a LOT of memory\r\n"
+      },
+      {
+        "title": "Use the winsock threads queue for deallocating sockets",
+        "url": "https://github.com/SWI-Prolog/packages-clib/pull/3",
+        "state": "closed",
+        "body": "Recently I noticed that http_stop_server/2 does not do what you'd expect on Windows. It succeeds and closes the listening socket, but does not call closesocket() on it. The consequence is that you can start a new server, but Windows will give you two sockets both listening on the same port (?!). All the connection requests go to the defunct socket.\n\nThe original cause of this was code that I wrote (or helped write) many years ago to work around a problem where a server opening and closing a lot of connections rapidly could end up getting close messages for the wrong socket. Essentially what happened was:\n\n1) Client and server are happily chatting away. Server has socket #1.\n2) Server hangs up, and closes socket #1 via closesocket().\n3) Client also hangs up at about the same time. This triggers a FIN, which manifests as an FD_CLOSE ending up on the winsock window's message queue, but that's not the thread currently executing\n4) Server asks for a new socket, and OS gives it the first available socket: Socket #1. Server tries to connect, or listen, or whatever, generating a waitRequest() and yields.\n5) Winsock window wakes up and processes its events in order. First one is FD_CLOSE for socket #1. The logical action to take here is to close the socket, which it does. \n6) Server wakes up and wonders why its socket is closed.\n\nTo try and fix that, we added a timeout mechanism; when you close a socket, just call shutdown() on it, then set a timeout. If we ask for a socket, and we get a socket marked as 'in the process of closing down', then don't give it to the process unless the timeout has passed.\n\nThis kind of works for sockets we want to use for connecting, but works very poorly for sockets which are bound, since when we say we want to close the socket, we really mean it. I also don't think you get an FD_CLOSE for such a socket - one of us (probably Jan) alluded to this in a comment added to the source.\n\nThis pull request would get rid of that, and instead deallocate sockets (call closesocket()) only on the winsock thread. When we elect to close a connection, the process would be:\n1) call shutdown() on the socket.\n2) post a message to the winsock queue asking it to call closesocket()\n\nI assume that any FD_CLOSE messages for the socket will be delivered before shutdown() and discarded after it. The problem we had before was that FD_CLOSE could be received on one thread, we do the shutdown() and close() on another after that, but before the FD_CLOSE message was actually processed. The socket would be reallocated (after all, it was closed), and then many time slices later, the winsock thread would reawaken, see the FD_CLOSE on its queue, and close the connection prematurely. I'm hoping that RST/FINs received by the OS after shutdown() will be discarded and not turned into FD_CLOSEs, but it's very hard to get concrete information.\n\nSorry for the excessively long message, but I wanted to try and be as clear as possible, since one day I'm sure we will be referring back to this :)\n"
+      }
+    ]
+  },
+  {
+    "query": "org:SWI-Prolog \"schedule_workers\"",
+    "total_count": 0,
+    "items": []
+  },
+  {
+    "query": "repo:SWI-Prolog/packages-http shutdown",
+    "total_count": 1,
+    "items": [
+      {
+        "title": "fix http:proxy test suite failure due to incomplete thread cleanup",
+        "url": "https://github.com/SWI-Prolog/packages-http/pull/175",
+        "state": "closed",
+        "body": "The http:proxy test suite (Test #54) was failing with \"Socket error: Address already in use\" errors because the socks server thread was not being properly terminated between test runs.\r\n\r\nThe issue was in stop_socks_server/1 where:\r\n1. retract(socks_control/3) was called too early\r\n2. close(ControlWrite) was called after thread_join/2, meaning the thread didn't receive the EOF signal until after we tried to join it\r\n\r\nThis caused zombie threads (e.g., 'socks@42391') to remain alive and hold TCP ports, causing subsequent test iterations to fail when trying to bind to the same ports.\r\n\r\nThe fix reorders the cleanup steps in stop_socks_server/1 to:\r\n1. Get thread info and debug\r\n2. Retract the control fact\r\n3. Close ControlWrite (sends EOF to thread's ControlRead)\r\n4. Attempt TCP connect to wake blocked accept\r\n5. Call thread_join to wait for thread termination\r\n\r\nThis ensures the thread receives proper shutdown signals before we attempt to join it."
+      }
+    ]
+  },
+  {
+    "query": "repo:SWI-Prolog/packages-http \"http_stop\"",
+    "total_count": 0,
+    "items": []
+  }
+]

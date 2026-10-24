@@ -1,0 +1,4 @@
+ssl_context_ok crypto_hash(c1514c6cdad166c18aa557dc1d780ba84c0e32df7633235385023eb429377e74).
+foreign(foreign(ssl4pl)).
+foreign(foreign(crypto4pl)).
+home('/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl').

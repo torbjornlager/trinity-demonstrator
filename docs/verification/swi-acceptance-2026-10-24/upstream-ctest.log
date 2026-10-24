@@ -1,0 +1,137 @@
+Test project /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/build
+      Start 64: pcre:pcre
+      Start  1: swipl:abi-version
+ 1/66 Test  #1: swipl:abi-version ................   Passed    0.01 sec
+      Start  2: swipl:basic
+ 2/66 Test #64: pcre:pcre ........................   Passed    0.08 sec
+      Start  3: swipl:unprotected
+ 3/66 Test  #2: swipl:basic ......................   Passed    0.09 sec
+      Start  4: swipl:core_lang
+ 4/66 Test  #3: swipl:unprotected ................   Passed    0.07 sec
+      Start  5: swipl:core_text
+ 5/66 Test  #4: swipl:core_lang ..................   Passed    1.13 sec
+      Start  6: swipl:db
+ 6/66 Test  #6: swipl:db .........................   Passed    0.38 sec
+      Start  7: swipl:attvar
+ 7/66 Test  #5: swipl:core_text ..................   Passed    1.47 sec
+      Start  8: swipl:debug
+ 8/66 Test  #7: swipl:attvar .....................   Passed    0.16 sec
+      Start  9: swipl:tabling
+ 9/66 Test  #8: swipl:debug ......................   Passed    0.27 sec
+      Start 10: swipl:library
+10/66 Test #10: swipl:library ....................   Passed    0.86 sec
+      Start 11: swipl:compile
+11/66 Test #11: swipl:compile ....................   Passed    0.05 sec
+      Start 12: swipl:charset
+12/66 Test #12: swipl:charset ....................   Passed    0.04 sec
+      Start 13: swipl:eclipse
+13/66 Test #13: swipl:eclipse ....................   Passed    0.04 sec
+      Start 14: swipl:clp
+14/66 Test #14: swipl:clp ........................   Passed    0.03 sec
+      Start 15: swipl:GC
+15/66 Test #15: swipl:GC .........................   Passed    0.62 sec
+      Start 16: swipl:save
+16/66 Test #16: swipl:save .......................   Passed    1.40 sec
+      Start 17: swipl:files
+17/66 Test #17: swipl:files ......................   Passed    1.15 sec
+      Start 18: swipl:transaction
+18/66 Test #18: swipl:transaction ................   Passed    0.11 sec
+      Start 19: swipl:xsb/basic_tests
+19/66 Test #19: swipl:xsb/basic_tests ............   Passed    0.16 sec
+      Start 20: swipl:xsb/ai_tests
+20/66 Test #20: swipl:xsb/ai_tests ...............   Passed    0.17 sec
+      Start 21: swipl:xsb/ptq
+21/66 Test #21: swipl:xsb/ptq ....................   Passed    0.14 sec
+      Start 22: swipl:xsb/neg_tests
+22/66 Test #22: swipl:xsb/neg_tests ..............   Passed    0.13 sec
+      Start 23: swipl:xsb/delay_tests
+23/66 Test  #9: swipl:tabling ....................   Passed    5.24 sec
+      Start 24: swipl:xsb/wfs_tests
+24/66 Test #23: swipl:xsb/delay_tests ............   Passed    0.27 sec
+      Start 25: swipl:xsb/table_tests
+25/66 Test #24: swipl:xsb/wfs_tests ..............   Passed    0.16 sec
+      Start 26: swipl:xsb/incremental_tests
+26/66 Test #26: swipl:xsb/incremental_tests ......   Passed    0.08 sec
+      Start 27: swipl:xsb/nonmt_tests
+27/66 Test #27: swipl:xsb/nonmt_tests ............   Passed    0.09 sec
+      Start 28: swipl:xsb/sub_tests
+28/66 Test #25: swipl:xsb/table_tests ............   Passed    0.32 sec
+      Start 29: swipl:xsb/attv_tests
+29/66 Test #29: swipl:xsb/attv_tests .............   Passed    0.07 sec
+      Start 30: swipl:thread
+30/66 Test #28: swipl:xsb/sub_tests ..............   Passed    0.13 sec
+      Start 31: swipl:thread_wait
+31/66 Test #31: swipl:thread_wait ................   Passed    0.27 sec
+      Start 32: swipl:signals
+32/66 Test #32: swipl:signals ....................   Passed    0.58 sec
+      Start 33: swipl:engines
+33/66 Test #33: swipl:engines ....................   Passed    0.64 sec
+      Start 34: swipl:rational
+34/66 Test #34: swipl:rational ...................   Passed    0.07 sec
+      Start 35: clib:crypt
+35/66 Test #35: clib:crypt .......................   Passed    0.05 sec
+      Start 36: clib:memfile
+36/66 Test #36: clib:memfile .....................   Passed    0.05 sec
+      Start 37: clib:readutil
+37/66 Test #37: clib:readutil ....................   Passed    0.04 sec
+      Start 38: clib:stream
+38/66 Test #38: clib:stream ......................   Passed    0.04 sec
+      Start 39: clib:uri
+39/66 Test #39: clib:uri .........................   Passed    0.05 sec
+      Start 40: clib:filesex
+40/66 Test #40: clib:filesex .....................   Passed    0.04 sec
+      Start 41: clib:cgi
+41/66 Test #41: clib:cgi .........................   Passed    0.05 sec
+      Start 42: clib:time
+42/66 Test #42: clib:time ........................   Passed    2.23 sec
+      Start 43: clib:process
+43/66 Test #43: clib:process .....................   Passed    0.25 sec
+      Start 44: clib:desktop
+44/66 Test #30: swipl:thread .....................   Passed    4.51 sec
+      Start 45: clib:socket
+45/66 Test #44: clib:desktop .....................   Passed    0.26 sec
+      Start 46: clib:af_unix
+46/66 Test #46: clib:af_unix .....................   Passed    0.02 sec
+      Start 47: clib:udp_sockets
+47/66 Test #47: clib:udp_sockets .................   Passed    0.05 sec
+      Start 48: clib:uuid
+48/66 Test #48: clib:uuid ........................   Passed    0.04 sec
+      Start 49: http:term_html
+49/66 Test #49: http:term_html ...................   Passed    0.06 sec
+      Start 50: http:cgi_stream
+50/66 Test #50: http:cgi_stream ..................   Passed    0.08 sec
+      Start 51: http:http
+51/66 Test #51: http:http ........................   Passed    0.45 sec
+      Start 52: http:multipart
+52/66 Test #52: http:multipart ...................   Passed    0.09 sec
+      Start 53: http:proxy
+53/66 Test #53: http:proxy .......................   Passed    0.15 sec
+      Start 54: http:websocket
+54/66 Test #54: http:websocket ...................   Passed    0.09 sec
+      Start 55: http:graphql
+55/66 Test #55: http:graphql .....................   Passed    0.05 sec
+      Start 56: http:sse
+56/66 Test #56: http:sse .........................   Passed    0.07 sec
+      Start 57: sgml:sgml
+57/66 Test #57: sgml:sgml ........................   Passed    0.04 sec
+      Start 58: sgml:sgml_write
+58/66 Test #58: sgml:sgml_write ..................   Passed    0.02 sec
+      Start 59: sgml:xsd
+59/66 Test #59: sgml:xsd .........................   Passed    0.04 sec
+      Start 60: sgml:c14n
+60/66 Test #60: sgml:c14n ........................   Passed    0.06 sec
+      Start 61: json:json
+61/66 Test #61: json:json ........................   Passed    0.08 sec
+      Start 62: json:json_schema
+62/66 Test #62: json:json_schema .................   Passed    0.04 sec
+      Start 63: json:json_rpc
+63/66 Test #63: json:json_rpc ....................   Passed    0.08 sec
+      Start 65: ssl:ssl
+64/66 Test #45: clib:socket ......................   Passed    4.17 sec
+      Start 66: zlib:zlib
+65/66 Test #66: zlib:zlib ........................   Passed    0.11 sec
+66/66 Test #65: ssl:ssl ..........................   Passed    3.79 sec
+
+100% tests passed out of 66
+
+Total Test time (real) =  17.42 sec

@@ -1,0 +1,7 @@
+{
+  "repository": "SWI-Prolog/packages-http",
+  "head": "9d1e28e676831618c9894f728ef50872b2eb87d7",
+  "unfixed_scheduling_catch_present": true,
+  "source_sha256": "802559ab4d1ddfc01043f31975f5c633adc47f6a6a7f5ace331b5034c8c3aa47",
+  "duplicate_conclusion": "No matching issue or pull request found in targeted all-state GitHub searches; older proxy cleanup and Windows socket/SSL lifecycle reports concern different causes."
+}

@@ -1,0 +1,198 @@
+[
+  {
+    "file": "lib/swipl/lib/arm64-darwin/cgi.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/cgi.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/crypt.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/crypt.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/crypto4pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/crypto4pl.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/files.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/files.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/hashstream.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/hashstream.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/http_stream.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/http_stream.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/json.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/json.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/libswipl.10.1.18.dylib",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/libswipl.10.1.18.dylib:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libncurses.5.4.dylib (compatibility version 5.4.0, current version 5.4.0)\n\t/usr/lib/libform.5.4.dylib (compatibility version 5.4.0, current version 5.4.0)\n\t/usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 3423.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/md54pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/md54pl.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/memfile.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/memfile.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/pcre4pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/pcre4pl.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/process.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/process.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/prolog_stream.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/prolog_stream.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/readutil.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/readutil.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/rlimit.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/rlimit.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/sched.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/sched.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/sgml2pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/sgml2pl.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/sha4pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/sha4pl.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/socket.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/socket.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/ssl4pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/ssl4pl.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 3423.0.0)\n\t/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 61439.101.1)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/streaminfo.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/streaminfo.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/syslog.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/syslog.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/time.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/time.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/uid.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/uid.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/unix.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/unix.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/uri.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/uri.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/websocket.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/websocket.so:\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/zlib4pl.so",
+    "dependencies": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/zlib4pl.so:\n\t/usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)\n\t@rpath/libswipl.10.dylib (compatibility version 10.0.0, current version 10.1.18)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+    "rpaths": [
+      "path /Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin (offset 12)"
+    ]
+  }
+]

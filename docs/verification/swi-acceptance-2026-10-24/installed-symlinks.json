@@ -1,0 +1,27 @@
+[
+  {
+    "file": "bin/swipl-win",
+    "target": "../lib/swipl/bin/arm64-darwin/swipl-win",
+    "resolved": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/bin/arm64-darwin/swipl-win"
+  },
+  {
+    "file": "bin/swipl",
+    "target": "../lib/swipl/bin/arm64-darwin/swipl",
+    "resolved": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/bin/arm64-darwin/swipl"
+  },
+  {
+    "file": "bin/swipl-ld",
+    "target": "../lib/swipl/bin/arm64-darwin/swipl-ld",
+    "resolved": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/bin/arm64-darwin/swipl-ld"
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/libswipl.10.dylib",
+    "target": "libswipl.10.1.18.dylib",
+    "resolved": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/libswipl.10.1.18.dylib"
+  },
+  {
+    "file": "lib/swipl/lib/arm64-darwin/libswipl.dylib",
+    "target": "libswipl.10.dylib",
+    "resolved": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/lib/swipl/lib/arm64-darwin/libswipl.10.1.18.dylib"
+  }
+]

@@ -1,0 +1,3 @@
+callback_stage(1792830496.93358,main,ready,installed).
+% [1/1] node:isobase_yiel..llback_is_sandboxed ...... passed (0.064 sec)
+callback_stage(1792830497.001933,<thread>(11,0xa93f3c1e0),leave(exception(unwind(halt(0)))),http_open('http://localhost:61409/call?goal=%28sleep%280.1%29%29&template=%28sleep%280.1%29%29&offset=0&format=prolog',_2910,rpc:[])).

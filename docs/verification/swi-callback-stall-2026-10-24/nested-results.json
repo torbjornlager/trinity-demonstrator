@@ -1,0 +1,382 @@
+[
+  {
+    "trial": 1,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.209,
+    "samples": []
+  },
+  {
+    "trial": 2,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.206,
+    "samples": []
+  },
+  {
+    "trial": 3,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.2,
+    "samples": []
+  },
+  {
+    "trial": 4,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.196,
+    "samples": []
+  },
+  {
+    "trial": 5,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.205,
+    "samples": []
+  },
+  {
+    "trial": 6,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.209,
+    "samples": []
+  },
+  {
+    "trial": 7,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.203,
+    "samples": []
+  },
+  {
+    "trial": 8,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.203,
+    "samples": []
+  },
+  {
+    "trial": 9,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.206,
+    "samples": []
+  },
+  {
+    "trial": 10,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.212,
+    "samples": []
+  },
+  {
+    "trial": 11,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.193,
+    "samples": []
+  },
+  {
+    "trial": 12,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.196,
+    "samples": []
+  },
+  {
+    "trial": 13,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.21,
+    "samples": []
+  },
+  {
+    "trial": 14,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.195,
+    "samples": []
+  },
+  {
+    "trial": 15,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.208,
+    "samples": []
+  },
+  {
+    "trial": 16,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.206,
+    "samples": []
+  },
+  {
+    "trial": 17,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.192,
+    "samples": []
+  },
+  {
+    "trial": 18,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.205,
+    "samples": []
+  },
+  {
+    "trial": 19,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.205,
+    "samples": []
+  },
+  {
+    "trial": 20,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-09b6299-pcre-2026-10-23/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/swi-callback-stall-2026-10-24/http-stop-nested.pl",
+      "-g",
+      "http_stop_nested:run",
+      "-t",
+      "halt"
+    ],
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "exit_code": 0,
+    "seconds": 0.198,
+    "samples": []
+  }
+]
