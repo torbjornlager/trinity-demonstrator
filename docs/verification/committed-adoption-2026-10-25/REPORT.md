@@ -96,7 +96,9 @@ n3 explicitly selects `WP_EXPERIMENTAL_TEXT=portable-text-0.2`. Host/library
 modules retain native strings; package defaults and the cumulative language
 baseline are unchanged. Six assembled browser Prolog payloads compare byte-for-byte
 with the preceding payloads; the new directory hash reflects selected paths.
-Browser reading semantics were not changed.
+Browser reading semantics were not changed. The verification directory retains
+the payload SHA-256 manifest rather than redundant generated Prolog source
+copies; the deployed payload directory itself remains intact.
 
 Both candidates passed temporary-port startup, shared DB, character-list and
 complete ping-pong checks before the public restart. Existing node settings compare
