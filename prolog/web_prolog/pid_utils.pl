@@ -25,6 +25,8 @@ Shared normalization utilities for:
 %  the node layer there is no such scoping.  hook_current_node_url/1
 %  is implemented by the node layer (Phase 6); the fallback chain is
 %  the registered self URL, then http://localhost.
+:- use_module(library(error), [must_be/2,type_error/2]).
+
 :- multifile hook_current_node_url/1.
 
 :- dynamic self_node/1.
@@ -55,6 +57,8 @@ node_url_atom(Node0, NodeURL) :-
     string(Node0),
     !,
     atom_string(NodeURL, Node0).
+node_url_atom(Value, _) :-
+    must_be(nonvar, Value), type_error(atom_or_string, Value).
 
 
 %!  normalize_node_url(+Node0, -Node) is det.

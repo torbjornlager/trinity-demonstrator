@@ -1,0 +1,21 @@
+{
+  "base_revision": "c04ecf15859c54b9ad1728adea97e2dc179d68b6",
+  "files": {
+    "DEVIATIONS.md": "1b02cf48d0075b12d9120d80c505bf65104860d52c25bcdc096e84075ea53708",
+    "README.md": "a81ea6f716bd1e437b5a92bc6a5c19e6a1cb1a89b8c22b07406427a19816524f",
+    "prolog/web_prolog/node.pl": "8dfab255fc7b1a39c2b4888406b5264da5e06262a0b97f82c08304af6a36f021",
+    "prolog/web_prolog/node_ws.pl": "3b9504956fcd67ac83f6d9b7169d4d6f2ee2088e4cea4ff275b9e36aa0e135e8",
+    "prolog/web_prolog/pid_utils.pl": "0175d109722acb6ac3dfe730e07e95ba52e7e2ee6f5cb3e820cfc2ea91f510c5",
+    "prolog/web_prolog/rpc.pl": "03bfedbc11d3083300dcf4138676086d51edd1d566f3b859bc0d0074d50916e2",
+    "prolog/web_prolog/source_utils.pl": "a82d2a3a2f7d2ea37c56d47adc7d3c533752652f209c93d29eac8287f39786dc",
+    "prolog/web_prolog/toplevel_actors.pl": "1067d7be046e2987052c1000e745a48553276e13783ce53574c5171e03ba07b3",
+    "tests/tiers/node/boolean_options_tests.pl": "b66845298d264f34c53ff14873dd2dcdb58f02f435b0200c37992625d6b67489",
+    "tests/tiers/node/uri_options_tests.pl": "14b6a3fca7c0d40b762990e67b48734b9795606f90411bde02fa21b5e035477e",
+    "tests/tiers/t4_node.pl": "5bb00561c1a5dfc00c7323767bc9981a46ef0dc2f1fea897ae23655da50591a3",
+    "tests/tiers/toplevel_synch_tests.pl": "3b35e8c4912ae57384872d9810ccd973ad583a72a68eaf92acf036c6e1cc4025",
+    "tests/wasm/swi_wasm_contracts.js": "82c326e725888304cb983e8f0479fb5437da61527fdf58f3561231075eac2065",
+    "web/demonstrator.html": "36dbd616137a64db9718b64a49781e91a7c5eacb711d6a5ccdef6b56eb6ebade",
+    "web/manual.html": "5cdf9589be8d3e0580e066b774e8d8b13a80659cff0ac4fc5529a3fa17610061",
+    "web/swi_wasm_actor_worker.js": "a31d1549ea8c727239110cd8778dafc15e810a43f99749b7137641f7e0a56733"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "installed_aliases_and_binaries_unchanged": true,
+  "pin_sha256": "cc5c7c125a3b4d1df2593a6bcad08bc9acdc64d40a664970389697227a169c47",
+  "n3_n5_identities_unchanged": true,
+  "fixture_flags": {
+    "native_prolog": true,
+    "trealla_sources": true,
+    "engines": true,
+    "library": true,
+    "live": true,
+    "dependency_pin": true
+  },
+  "temporary_nodes_stopped": true,
+  "final_sources_match_fixture": true
+}

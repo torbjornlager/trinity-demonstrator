@@ -164,7 +164,7 @@
 
 <p>The <a href="https://github.com/torbjornlager/trinity-conformance/blob/main/baselines/0.1.md">draft interoperability baseline 0.1</a> links selected requirements to executable tests and a coverage matrix. It includes GNU Prolog at ISOBASE level; this does not imply ACTOR support or completion of its broader ISOBASE audit. Untested and unresolved behavior remains explicit rather than being counted as passing.</p>
 
-<p>This is the shared language and API manual for Web Prolog across native SWI-Prolog, native Trealla and the SWI-WASM browser runtimes. It describes common behaviour once and labels remaining implementation differences at the relevant entry. The language is a design in progress; a listed runtime limitation does not establish a separate language definition.</p>
+<p>This is the shared language and API manual for Web Prolog across native SWI-Prolog, native Trealla, GNU Prolog at ISOBASE level, and the SWI-WASM browser runtimes. It describes common behaviour once and labels remaining implementation differences at the relevant entry. The language is a design in progress; a listed runtime limitation does not establish a separate language definition.</p>
 
 <p>
     The classification shown beside each entry identifies the minimum public
@@ -180,7 +180,7 @@
     code.
 </p>
 
-<p>Each predicate entry has a stable anchor based on its indicator. Runtime architecture, setup, transport implementation and regression-test notes belong to the <a href="https://github.com/torbjornlager/trinity-demonstrator/blob/main/README.md">native SWI guide</a>, <a href="https://github.com/torbjornlager/trealla-port/blob/main/README.md">Trealla guide</a> and <a href="https://github.com/torbjornlager/trinity-demonstrator/blob/main/web/README.md">SWI-WASM guide</a>. This web reference and Appendix B of the book present the same language manual. The book’s wire specification is in Appendix D; code examples are maintained separately.</p>
+<p>Each predicate entry has a stable anchor based on its indicator. Runtime architecture, setup, transport implementation and regression-test notes belong to the <a href="https://github.com/torbjornlager/swi-prolog-node/blob/main/README.md">native SWI guide</a>, <a href="https://github.com/torbjornlager/trealla-port/blob/main/README.md">Trealla guide</a>, <a href="https://github.com/torbjornlager/gprolog-port/blob/main/isobase/README.md">GNU ISOBASE guide</a> and <a href="https://github.com/torbjornlager/trinity-demonstrator/blob/main/web/README.md">SWI-WASM guide</a>. This web reference and Appendix B of the book present the same language manual. The book’s wire specification is in Appendix D; code examples are maintained separately.</p>
 
 <div class="contents">
     <h2>Contents</h2>
@@ -203,6 +203,19 @@
 
 <h2 id="sec:conventions">Common conventions and runtime differences</h2>
 <p>“Native” means a server runtime running SWI-Prolog or Trealla. “SWI-WASM” means either the Worker runtime or the compatibility main-thread engine in the browser. Runtime choice is independent of the node profile. Browser actors live only as long as their page and cannot accept incoming node connections; native nodes can remain available independently of a browser.</p>
+<h3 id="sec:uri-values">URI values</h3>
+<p>The canonical representation of a URI or node URL is an atom, for example <code>'https://n3.example'</code>. URI-taking API boundaries normalise supported text inputs to atoms before using them for fetching, dispatch or node routing. This conversion preserves the text; it does not introduce new URI resolution, case-folding, escaping or fetch permissions. Use atoms in portable programs and in the node component of a canonical pid.</p>
+<table>
+<thead><tr><th>Runtime</th><th>Accepted URI text inputs</th></tr></thead>
+<tbody>
+<tr><td>Native SWI and SWI-WASM</td><td>Atoms and distinct SWI string objects. Character/code lists are not URI text inputs for these APIs.</td></tr>
+<tr><td>Trealla</td><td>Atoms and character-list text; RPC/promise destinations, source URI loading and the explicit remote connection adapter also accept code-list text. The <code>node/1</code> spawn option retains its atom/character-list input convention.</td></tr>
+<tr><td>GNU ISOBASE</td><td>Atoms, character-list text and code-list text for RPC/promise destinations and source URIs. Actor <code>node/1</code> does not apply to this profile.</td></tr>
+</tbody>
+</table>
+<p>RPC and promise destinations additionally accept <code>Host:Port</code>, which expands to the atom spelling <code>http://Host:Port</code>. The host must be instantiated text of a supported kind and the port an instantiated integer. This is an explicit shorthand, not general term-to-text conversion. GNU also retains this shorthand for source URIs; the other runtimes' <code>src_uri/1</code> and <code>node/1</code> options retain their documented text-only forms.</p>
+<p>Numbers and arbitrary terms are not URI text. An unbound destination raises an instantiation error without binding it, and invalid representation or shorthand component types are rejected before source fetching or request dispatch. Error contexts and type names can differ between runtimes. URI syntax, schemes, ports, relative paths, file access and origin restrictions remain subject to each entry's existing resolution and fetch policy. In particular, a valid text representation need not be an allowed or reachable URI. Double-quoted text has different Prolog representations across runtimes; it does not define a common portable string type.</p>
+
 <h3 id="sec:option-validation">Options and validation</h3>
 <p>A Boolean language option requires the atom <code>true</code> or <code>false</code>. Single-quoted <code>'true'</code> is the same atom as <code>true</code>. Integers such as <code>1</code> and <code>0</code>, strings such as <code>"true"</code> and <code>"false"</code>, character lists and JSON wrapper terms are not Boolean option values. This applies to <code>link/1</code>, <code>monitor/1</code>, <code>session/1</code>, <code>trace/1</code> and <code>once/1</code>. Asynchronous <code>toplevel_call/3</code> checks every supplied <code>once/1</code> value before sending the request, including later duplicates; a pending value raises an instantiation error.</p>
 <p>Transport decoding is separate: an HTTP query parameter such as <code>once=true</code> is text on the wire, and a JSON field can carry a genuine JSON Boolean. The endpoint decodes those representations before invoking the language API. This does not make <code>once("true")</code> a valid Prolog option. Existing endpoint-specific trace and administration field decoding remains separate from language option validation.</p>
@@ -212,7 +225,7 @@
 <p>Source is loaded before its goal runs and remains private to the receiving actor or stateless call. Repeated source options preserve order within each source kind. Native SWI, Trealla and the browser main engine process source options in list order. Worker source collection groups text, clause lists, copied predicates and URI texts, in that order. Programs combining source kinds must account for this Worker ordering difference.</p>
 <p>For native SWI actor creation, the destination loads URI source under its own fetch restrictions. Trealla materialises supplemental Prolog URI source on the calling node before remote dispatch. Browser actor creation fetches supplemental Prolog URI source in the creating browser engine and sends the resulting text to the child or remote node. RPC and promise source options are materialised by the calling runtime; for a promise this is done before the asynchronous request starts. Repeated URIs are fetched separately. Browser fetching is restricted by the page's origin allowlist and CORS; file access is unavailable. URI XML for a statechart is fetched by the engine or node that runs that chart. Root-relative XML URIs on native Trealla resolve against the destination's configured public URL.</p>
 <p>For paged stateless calls, supplied source belongs to the computation's private database. A cached continuation retains that database between pages; a request with different source cannot resume it. Source is validated under the destination's profile, sandbox and source-size policy before execution. Goal and template variables retain their sharing.</p>
-<p>Text source should use atoms or strings for portability. Native runtimes also accept some character/code-list text forms. Source predicates are identified by atom names and nonnegative integer arities. Source loading and execution remain subject to the destination's profile and sandbox; sender module names grant no authority. Blacklist mode remains a prototype policy rather than a complete security boundary.</p>
+<p>Use atoms for portable text source. Additional text forms accepted at runtime boundaries are implementation-specific. Source predicates are identified by atom names and nonnegative integer arities. Source loading and execution remain subject to the destination's profile and sandbox; sender module names grant no authority. Blacklist mode remains a prototype policy rather than a complete security boundary.</p>
 
 <h2 id="sec:actor-api">Predicates for programming with core actors</h2>
 

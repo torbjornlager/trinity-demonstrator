@@ -1,0 +1,43 @@
+{
+  "base_revision": "c04ecf15859c54b9ad1728adea97e2dc179d68b6",
+  "engines": {
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-default-startup-2026-10-24/runtime/bin/swipl": "915c4758b6aba3d01ade4fe4f46332b6f526ad6c70a8e2574dd05278c2b0ce9c",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/trealla-v3.14.10-acceptance-2026-10-24/engine/tpl": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c",
+    "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node": "060b970693b04c9b5664c68014c6ece7c30ec7968d55c8764776d8a07e154056"
+  },
+  "groups": [
+    {
+      "label": "legacy-T2",
+      "command": [
+        "bash",
+        "tools/test.sh",
+        "T2"
+      ],
+      "exit_code": 0,
+      "seconds": 8.724,
+      "log": "legacy-T2.log"
+    },
+    {
+      "label": "legacy-T4-NATIVE",
+      "command": [
+        "bash",
+        "tools/test.sh",
+        "T4_NATIVE"
+      ],
+      "exit_code": 0,
+      "seconds": 49.906,
+      "log": "legacy-T4-NATIVE.log"
+    },
+    {
+      "label": "WASM",
+      "command": [
+        "bash",
+        "tools/test.sh",
+        "WASM"
+      ],
+      "exit_code": 0,
+      "seconds": 164.514,
+      "log": "WASM.log"
+    }
+  ]
+}

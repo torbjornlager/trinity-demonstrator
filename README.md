@@ -245,3 +245,12 @@ JSON Booleans retain their endpoint decoding. See the shared manual's
 The native fix belongs to `swi-prolog-node`; this batch mirrors it explicitly
 in the retained legacy source for compatibility tests. The dependency pin and
 installed/live runtimes are not updated by these source changes.
+
+### URI representation boundary
+
+URI and node-URL inputs use atoms canonically; supported text forms and explicit
+`Host:Port` shorthand are normalised at API boundaries. The [shared URI contract](web/manual.html#sec:uri-values)
+records the runtime differences and unchanged resolution/fetch restrictions.
+Browser bridges preserve source ordering and validate representations before
+fetching or dispatch. Native-owned checks are mirrored in the retained legacy
+source; this does not promote the native dependency pin or update live nodes.

@@ -129,8 +129,10 @@ uri_atom(URI, URI) :-
     atom(URI),
     !.
 uri_atom(URIString, URI) :-
-    string(URIString),
+    string(URIString), !,
     atom_string(URI, URIString).
+uri_atom(Value, _) :-
+    must_be(nonvar, Value), type_error(atom_or_string, Value).
 
 %!  normalize_load_uri_allowed_origins(+Origins0, -Origins) is det.
 %

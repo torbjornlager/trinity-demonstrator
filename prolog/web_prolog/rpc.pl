@@ -103,8 +103,10 @@ rpc(URI, Goal0, Options0) :-
         HTTPOptions, LoadText, RemoteTimeout, Once).
 
 %!  resolve_rpc_uri(+URI0, -URI) is det.
-resolve_rpc_uri(Host:Port, URI) :-
+resolve_rpc_uri(Input, URI) :-
+    nonvar(Input), Input = Host0:Port,
     !,
+    uri_atom(Host0, Host), must_be(integer, Port),
     format(atom(URI), 'http://~w:~w', [Host, Port]).
 resolve_rpc_uri(URI0, URI) :-
     uri_atom(URI0, URIAtom),

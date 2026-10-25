@@ -1,0 +1,31 @@
+Warning: /uri_inputs.pl:444:
+Warning:    Clauses of swi_wasm_actor_bridge:send/2 are not together in the source-file
+Warning:    Earlier definition at /uri_inputs.pl:430
+Warning:    Current predicate: swi_wasm_actor_bridge:send/3
+Warning:    Use :- discontiguous swi_wasm_actor_bridge:send/2. to suppress this message
+Warning: /uri_inputs.pl:446:
+Warning:    Clauses of swi_wasm_actor_bridge:send/3 are not together in the source-file
+Warning:    Earlier definition at /uri_inputs.pl:437
+Warning:    Current predicate: swi_wasm_actor_bridge:send/2
+Warning:    Use :- discontiguous swi_wasm_actor_bridge:send/3. to suppress this message
+Warning: /uri_inputs.pl:1277:
+Warning:    Singleton variables: [Opts]
+  ok   compatibility_uri_input_contract: main URI engine loaded
+  ok   compatibility_uri_input_contract: rpc(42,true,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: promise(42,true,_,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: rpc(1.5,true,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: promise(1.5,true,_,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: rpc(foo(bar),true,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: promise(foo(bar),true,_,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: rpc([h,t,t,p],true,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: promise([h,t,t,p],true,_,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: rpc([104,116,116,112],true,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: promise([104,116,116,112],true,_,[src_uri('https://example.org/source')])
+  ok   compatibility_uri_input_contract: URI variable not bound
+  ok   compatibility_uri_input_contract: port variable not bound
+  ok   compatibility_uri_input_contract: invalid port type
+  ok   compatibility_uri_input_contract: canonical URI atom and string
+  ok   compatibility_uri_input_contract: Host:Port shorthand
+  ok   compatibility_uri_input_contract: textual localhost
+  ok   compatibility_uri_input_contract: invalid destinations trigger no transport operation
+  ok   compatibility_uri_input_contract: main receives canonical atom text and preserves promise independence

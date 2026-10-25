@@ -1,0 +1,20 @@
+add_import_module/3: No permission to add_import module `user' (would create a cycle)
+  ok   uri_input_contract: rpc(42,true,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: promise(42,true,_,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: rpc(1.5,true,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: promise(1.5,true,_,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: rpc(foo(bar),true,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: promise(foo(bar),true,_,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: rpc([h,t,t,p],true,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: promise([h,t,t,p],true,_,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: rpc([104,116,116,112],true,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: promise([104,116,116,112],true,_,[src_uri('https://example.org/source')]): success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: URI variable not bound: success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: port variable not bound: success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: invalid port type: success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: canonical URI atom and string: success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: Host:Port shorthand: success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: textual localhost: success(@(1234567890,localhost),[checked],false)
+  ok   uri_input_contract: invalid destinations trigger neither source fetch nor RPC
+  ok   uri_input_contract: text destination and authority RPC/promise retain answers and caller independence
+  ok   uri_input_contract: Worker sends canonical atom spellings: ["'https://example.org'","'http://localhost:3053'"]

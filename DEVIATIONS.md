@@ -269,3 +269,12 @@ are language Booleans; pending values raise instantiation errors. The first
 valid value retains precedence. HTTP/JSON boundary decoding is preserved.
 Regression coverage is in `toplevel_synch_tests.pl` and the node Boolean tests;
 the demonstrator also exercises both actual SWI-WASM engines.
+
+## URI representation validation
+
+URI/path and node-URL normalizers now raise explicit type/instantiation errors
+instead of silently failing on non-text input. RPC `Host:Port` matching does not
+instantiate an unknown destination, and checks component types before formatting.
+Browser RPC/promise boundaries normalise supported text and explicit Host:Port
+shorthand to atoms before dispatch; URI loading and node routing preserve their
+existing policies. The shared manual records accepted representations.

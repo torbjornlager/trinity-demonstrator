@@ -1220,7 +1220,55 @@ function booleanLanguageCases() {
   return cases;
 }
 
+function uriLanguageCases() {
+  const cases=[];
+  for(const value of ['42','1.5','foo(bar)','[h,t,t,p]','[104,116,116,112]']) {
+    for(const goal of [`rpc(${value},true,[src_uri('https://example.org/source')])`,
+                        `promise(${value},true,_,[src_uri('https://example.org/source')])`]) {
+      cases.push({label:goal,goal:`catch((${goal},fail),error(type_error(atom_or_string,_),_),true)`});
+    }
+  }
+  cases.push({label:'URI variable not bound',goal:'catch((rpc(U,true),fail),error(instantiation_error,_),true),var(U)'});
+  cases.push({label:'port variable not bound',goal:'catch((promise(localhost:P,true,_),fail),error(instantiation_error,_),true),var(P)'});
+  cases.push({label:'invalid port type',goal:'catch((rpc(localhost:bad,true),fail),error(type_error(integer,bad),_),true)'});
+  cases.push({label:'canonical URI atom and string',goal:`swi_wasm_actor_bridge:browser_uri_atom('https://example.org/é?x=%2F',A),swi_wasm_actor_bridge:browser_uri_atom("https://example.org/é?x=%2F",B),atom(A),A==B`});
+  cases.push({label:'Host:Port shorthand',goal:"swi_wasm_actor_bridge:browser_rpc_uri(localhost:3053,U),U=='http://localhost:3053'"});
+  cases.push({label:'textual localhost',goal:'swi_wasm_actor_bridge:browser_uri_atom("localhost",U),U==localhost'});
+  return cases;
+}
+
 const scenarios = {
+  async uri_input_contract(W, check) {
+    await startToplevel(W);
+    for(const c of uriLanguageCases()) {
+      const n=W.sends.length;
+      deliver(W,"'$call'(("+c.goal+"->R=checked;R=wrong),[template(R)])");
+      const messages=await nSends(W,n+1);
+      check(/\[checked\],false\)/.test(messages[n]||""),c.label+": "+messages[n]);
+    }
+    check(!W.posted.some(m=>m.type==="request"&&["rpc","src_uri"].includes(m.action)),"invalid destinations trigger neither source fetch nor RPC");
+    W.control.reply=m=>({result:m.action==="rpc"?(m.template.includes("-")?"success([-(ok,ok)],false)":"success([v(ok)],false)"):true});
+    const n=W.sends.length;
+    deliver(W,`'$call'((rpc("https://example.org",X=ok),promise(localhost:3053,Y=ok,Ref,[template(Y-Y)]),yield(Ref,A),A==success([ok-ok],false),var(Y)),[template(X)])`);
+    const messages=await nSends(W,n+1);
+    check(/\[ok\],false\)/.test(messages[n]||""),"text destination and authority RPC/promise retain answers and caller independence");
+    const requests=W.posted.filter(m=>m.type==="request"&&m.action==="rpc");
+    check(requests.length===2&&requests[0].node==="'https://example.org'"&&requests[1].node==="'http://localhost:3053'","Worker sends canonical atom spellings: "+JSON.stringify(requests.map(m=>m.node)));
+  },
+  async compatibility_uri_input_contract(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/uri_inputs.pl",source);
+    check(!!engine.prolog.query("use_module('/uri_inputs.pl')").once(),"main URI engine loaded");
+    const calls=compatibilityClientHarness();
+    for(const c of uriLanguageCases()) {let n=0;await engine.prolog.forEach(c.goal,()=>n++);check(n===1,c.label);}
+    check(calls.rpc.length===0&&calls.source.length===0&&calls.promise.length===0&&calls.wait===0,"invalid destinations trigger no transport operation");
+    const bases=[];global.self.swiResolveRpcBase=uri=>{bases.push(uri);return String(uri);};
+    let n=0;await engine.prolog.forEach(`rpc("https://example.org",X=ok),promise(localhost:3053,Y=ok,Ref,[template(Y-Y)]),yield(Ref,A),A==success([ok-ok],false),var(Y)`,()=>n++);
+    check(n===1&&bases.join("|")==="https://example.org|http://localhost:3053","main receives canonical atom text and preserves promise independence");
+  },
+
   async strict_boolean_options(W, check) {
     await startToplevel(W);
     for(const c of booleanLanguageCases()) {
