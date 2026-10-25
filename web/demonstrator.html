@@ -2792,13 +2792,14 @@
               </div>
               <div class="portal-splash-runtime">
                 <img class="portal-splash-runtime-logo"
+                     v-if="portalRuntimeName === 'SWI-Prolog'"
                      src="/img/swi-logo.png"
                      alt="SWI-Prolog logo">
                 <div class="portal-splash-runtime-copy">
-                  <span><strong>Powered by</strong> <strong>SWI-Prolog {{ portalSwiplVersion || "version unavailable" }}</strong></span>
-                  <a href="https://www.swi-prolog.org/"
+                  <span><strong>Powered by</strong> <strong>{{ portalRuntimeName }} {{ portalRuntimeVersion || "version unavailable" }}</strong></span>
+                  <a :href="portalRuntimeUrl"
                      target="_blank"
-                     rel="noopener noreferrer">https://www.swi-prolog.org</a>
+                     rel="noopener noreferrer">{{ portalRuntimeUrl }}</a>
                 </div>
               </div>
             </section>
@@ -3990,7 +3991,7 @@
            hidden></div>
 
       <footer class="wb-statusbar">
-        <div class="wb-statusbar-attribution">Inspired by <a target="_blank" href="http://www.erlang.org/">Erlang</a>, powered by <a target="_blank" href="http://www.swi-prolog.org/">SWI-Prolog</a>.</div>
+        <div class="wb-statusbar-attribution">Inspired by <a target="_blank" href="http://www.erlang.org/">Erlang</a>, powered by <a target="_blank" :href="portalRuntimeUrl">{{ portalRuntimeName }}</a>.</div>
         <div>Profile:&nbsp;{{ nodeProfileLabel }}&nbsp;&nbsp;|&nbsp;&nbsp;Principal:&nbsp;{{ principalSummaryLabel }}&nbsp;&nbsp;|&nbsp;&nbsp;Auth:&nbsp;{{ nodeAuthLabel }}</div>
       </footer>
     </div>
@@ -5779,6 +5780,7 @@
             introSuppressFuture: false,
             portalVersion: "0.2.0",
             portalSwiplVersion: "",
+            portalTreallaVersion: "",
             tutorialSrc: (function() {
               var base = profileTutorialForCurrentRuntime().path;
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
@@ -5894,6 +5896,22 @@
           },
           bookManuscriptUrl: function() {
             return PORTAL_BOOK_MANUSCRIPT_URL;
+          },
+          portalRuntimeName: function() {
+            if (this.isBrowserSwiWasmMode || this.portalSwiplVersion) {
+              return "SWI-Prolog";
+            }
+            return this.portalTreallaVersion ? "Trealla Prolog" : "Prolog";
+          },
+          portalRuntimeUrl: function() {
+            return this.portalRuntimeName === "Trealla Prolog"
+              ? "https://github.com/trealla-prolog/trealla-prolog"
+              : (this.portalRuntimeName === "SWI-Prolog"
+                  ? "https://www.swi-prolog.org/" : "https://trinity.elfenbenstornet.se/");
+          },
+          portalRuntimeVersion: function() {
+            return this.portalRuntimeName === "Trealla Prolog"
+              ? this.portalTreallaVersion : this.portalSwiplVersion;
           },
           portalVersionLabel: function() {
             return this.portalVersion ? "v" + this.portalVersion : "";
@@ -6185,13 +6203,13 @@
           this.restoreTerminalPredicateHighlightSettings();
           this.restoreErrorMessageDetail();
           this.restoreCodeColoringSettings();
-          this.fetchPortalVersion();
+          initialNodeInfoReady = this.fetchPortalVersion();
           if (this.isSwiWasmMode) {
             this.initSwiWasmSession();
           } else if (this.isSwiWasm2Mode) {
             this.initSwiWasm2Session();
           } else {
-            initialNodeInfoReady = this.fetchNodeInfo();
+            initialNodeInfoReady = Promise.all([initialNodeInfoReady, this.fetchNodeInfo()]);
             this.probeAdminAccess();
           }
           this.fetchExamplesIndex();
@@ -6656,8 +6674,13 @@
               }
               return response.json();
             }).then(function(json) {
-              if (json && json.web_prolog) {
+              if (json && /^\d+\.\d+/.test(String(json.web_prolog || ""))) {
                 self.portalVersion = String(json.web_prolog);
+              }
+              self.portalSwiplVersion = "";
+              self.portalTreallaVersion = "";
+              if (json && json.trealla) {
+                self.portalTreallaVersion = String(json.trealla);
               }
               if (json && json.swipl) {
                 self.portalSwiplVersion = String(json.swipl);
@@ -6839,7 +6862,7 @@
               : nodeLabelForUrl(this.currentPortalNodeUrl);
             return "Welcome to [[b;;]Web Prolog], running\n" +
               "the [[b;;]" + profile + "] profile on node [[b;;]" + node + ",]\n" +
-              "powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog].\n";
+              "powered by [[!u;;;;" + this.portalRuntimeUrl + "]" + this.portalRuntimeName + "].\n";
           },
           echoTerminalSystemInfo: function(term, message, options) {
             var echoOptions;
