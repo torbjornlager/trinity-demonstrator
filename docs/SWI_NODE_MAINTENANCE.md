@@ -129,3 +129,22 @@ Deployment packaging is paused until the normal deployment computer is
 available. Docker defaults, repository access, installed runtimes, n3/n5 and
 retained native files are not migrated by this documentation cleanup. Native
 runtime fixes must not be confused with changes to the engine executable itself.
+
+## Local character-list adoption checkpoint (25 October 2026)
+
+The demonstrator pin now selects the committed native answer and term-output
+repairs. The authorised local n3/n5 deployment uses detached checkouts of exact
+SWI, Trealla and demonstrator commits, including the tested model/Jev application
+conversions and private-source shadowing repair. Launchers verify their selected
+HEADs and reject dirty runtime/application inputs before startup. Character-list
+reading is selected for n3 with `WP_EXPERIMENTAL_TEXT=portable-text-0.2`; Trealla
+retains its character-list mode. This local adoption does not change the shared
+profile baseline or the SWI package's native-string default.
+
+The [adoption record](verification/committed-adoption-2026-10-25/REPORT.md) records
+the exact revisions, checks, durable launcher locations and rollback. Repository
+access and remote publication remain separate: these locally committed revisions
+must be pushed before a different computer can fetch the new pin. Old snapshots,
+launchers and engine installations are retained. Trealla cyclic-exception copying,
+supplementary-character JSON escapes and broader migration diagnostics remain
+explicit; they are not converted into passing conformance results.

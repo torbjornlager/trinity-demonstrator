@@ -490,3 +490,13 @@ Automatic pinned CI activation/access, Docker assembly, duplicate removal and
 live-node cutover remain separate work. No packaging implementation was made
 during the initial inspection on the borrowed computer. Code, installed runtimes
 and n3/n5 are unchanged.
+
+### Committed local adoption checkpoint — 25 October 2026
+
+The [commit-pinned adoption batch](verification/committed-adoption-2026-10-25/REPORT.md)
+advances the demonstrator's native dependency to the committed answer/output
+repairs and selects exact local deployment revisions. Native retained copies
+remain available for legacy consumers; this batch does not mirror repaired
+native modules into them or remove them. Deployment packaging and public hosting
+remain deferred. Local n3 uses the explicit character-list configuration; browser
+text reading and the cumulative language baseline remain unchanged.
