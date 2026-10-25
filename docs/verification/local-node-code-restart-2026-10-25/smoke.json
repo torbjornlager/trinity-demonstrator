@@ -1,0 +1,189 @@
+[
+  {
+    "label": "n3 portal",
+    "passed": true,
+    "result": "portal contains Web Prolog"
+  },
+  {
+    "label": "n3 implementation",
+    "passed": true,
+    "result": "success([swi_native],false).\n"
+  },
+  {
+    "label": "n3 cyclic answer",
+    "passed": true,
+    "result": "error(error(representation_error(cyclic_term),context(:(toplevel_actors,/(answer,5)),'cyclic answer'))).\n"
+  },
+  {
+    "label": "n3 cyclic exception",
+    "passed": true,
+    "result": "error(error(representation_error(cyclic_term),context(:(toplevel_actors,/(answer,5)),'answer or exception contains a cyclic term'))).\n"
+  },
+  {
+    "label": "n3 local cycle finite result",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 shared database",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 websocket session",
+    "passed": true,
+    "result": {
+      "data": [
+        "ok"
+      ],
+      "more": false,
+      "pid": 4186924204,
+      "type": "success"
+    }
+  },
+  {
+    "label": "n3 synchronous paging cleanup",
+    "passed": true,
+    "result": {
+      "data": [
+        "ok"
+      ],
+      "more": false,
+      "pid": 4186924204,
+      "type": "success"
+    }
+  },
+  {
+    "label": "n3 statechart monitor cleanup",
+    "passed": true,
+    "result": {
+      "data": [
+        "ok"
+      ],
+      "more": false,
+      "pid": 4186924204,
+      "type": "success"
+    }
+  },
+  {
+    "label": "n5 portal",
+    "passed": true,
+    "result": "portal contains Web Prolog"
+  },
+  {
+    "label": "n5 implementation",
+    "passed": true,
+    "result": "success([trealla_native],false).\n"
+  },
+  {
+    "label": "n5 cyclic answer",
+    "passed": true,
+    "result": "error(error(representation_error(cyclic_term),answer_terms)).\n"
+  },
+  {
+    "label": "n5 local cycle finite result",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 shared database",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 websocket session",
+    "passed": true,
+    "result": {
+      "type": "success",
+      "pid": 2234778270,
+      "data": [
+        "ok"
+      ],
+      "more": false
+    }
+  },
+  {
+    "label": "n5 synchronous paging cleanup",
+    "passed": true,
+    "result": {
+      "type": "success",
+      "pid": 2234778270,
+      "data": [
+        "ok"
+      ],
+      "more": false
+    }
+  },
+  {
+    "label": "n5 statechart monitor cleanup",
+    "passed": true,
+    "result": {
+      "type": "success",
+      "pid": 2234778270,
+      "data": [
+        "ok"
+      ],
+      "more": false
+    }
+  },
+  {
+    "label": "n3 to http://localhost:3053 RPC paging",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 to http://localhost:3053 promise callback retry sharing",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 to http://localhost:3053 promise cycle rejection",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 to http://localhost:3060 RPC paging",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 to http://localhost:3060 promise callback retry sharing",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n3 to http://localhost:3060 promise cycle rejection",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 to http://localhost:3053 RPC paging",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 to http://localhost:3053 promise callback retry sharing",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 to http://localhost:3053 promise cycle rejection",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 to http://localhost:3060 RPC paging",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 to http://localhost:3060 promise callback retry sharing",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "label": "n5 to http://localhost:3060 promise cycle rejection",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  }
+]

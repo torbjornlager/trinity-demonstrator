@@ -1,0 +1,17 @@
+{
+  "n3": {
+    "url": "http://localhost:3053/portal",
+    "banner": "SWI-Prolog",
+    "query": "X=\"abc\", X==[a,b,c], write(X), nl.",
+    "output": "[a,b,c]",
+    "answer": "X = [a,b,c]."
+  },
+  "n5": {
+    "url": "http://localhost:3060/portal",
+    "banner": "Trealla Prolog",
+    "query": "X=\"abc\", X==[a,b,c], write(X).",
+    "output": "[a,b,c]",
+    "answer": "X = [a,b,c]."
+  },
+  "separate_existing_n5_io_difference": "nl/0 is rejected by the existing Trealla sandbox; the supported write/1 query passes. No repair attempted."
+}

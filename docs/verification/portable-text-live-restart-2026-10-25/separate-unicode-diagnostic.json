@@ -1,0 +1,12 @@
+[
+  {
+    "node": "n3",
+    "check": "ASCII-escaped JSON supplementary character in source",
+    "result": "spawned"
+  },
+  {
+    "node": "n5",
+    "check": "ASCII-escaped JSON supplementary character in source",
+    "result": "expected spawned, got {'type': 'error', 'data': 'error(representation_error(character),read_term_from_atom/3)'}"
+  }
+]

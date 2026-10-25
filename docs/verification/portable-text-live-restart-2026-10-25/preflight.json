@@ -1,0 +1,22 @@
+[
+  {
+    "node": "n3",
+    "check": "chars",
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n3",
+    "check": "shared",
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n5",
+    "check": "chars",
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n5",
+    "check": "shared",
+    "result": "success([ok],false).\n"
+  }
+]

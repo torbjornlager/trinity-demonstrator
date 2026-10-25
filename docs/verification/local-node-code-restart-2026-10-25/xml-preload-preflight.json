@@ -1,0 +1,32 @@
+[
+  {
+    "pid": 1378315531,
+    "type": "spawned"
+  },
+  {
+    "data": "configuration([s])",
+    "pid": 7272358344,
+    "type": "statechart_trace"
+  },
+  {
+    "data": "external_event('$stop'(1378315531@'http://localhost:57806'))",
+    "pid": 7272358344,
+    "type": "statechart_trace"
+  },
+  {
+    "pid": 7272358344,
+    "reason": "true",
+    "ref": "7272358344@'http://localhost:57806'",
+    "type": "down"
+  },
+  {
+    "data": [
+      {
+        "P": "7272358344@'http://localhost:57806'"
+      }
+    ],
+    "more": false,
+    "pid": 1378315531,
+    "type": "success"
+  }
+]

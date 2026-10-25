@@ -1,0 +1,22 @@
+{
+  "old_pid": 42134,
+  "new_pid": 91509,
+  "original_script_missing": true,
+  "reconstruction_basis": "Existing acceptance UI proxy, same asset/API split, durable path and explicit version/health routes",
+  "preflight": {
+    "version": {
+      "web_prolog": "trealla-port",
+      "trealla": "3.14.10",
+      "protocol": 1
+    },
+    "portal_bytes": 735399
+  },
+  "after": {
+    "version": {
+      "web_prolog": "trealla-port",
+      "trealla": "3.14.10",
+      "protocol": 1
+    },
+    "portal_bytes": 735399
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "engines": {
+    "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl": {
+      "target": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/install/lib/swipl/bin/arm64-darwin/swipl",
+      "sha256": "915c4758b6aba3d01ade4fe4f46332b6f526ad6c70a8e2574dd05278c2b0ce9c"
+    },
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl": {
+      "target": "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.14.10/tpl",
+      "sha256": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c"
+    }
+  },
+  "pin_sha256": "cc5c7c125a3b4d1df2593a6bcad08bc9acdc64d40a664970389697227a169c47",
+  "protected": "91509 Sun Oct 25 14:27:44 2026     /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /Users/torbjorn.lager/.local/share/trinity-local-nodes/n5/frontend.py --port 3060\n97669 Sat Oct 24 09:58:02 2026     /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl -g use_module(web_prolog),use_module(distribution),web_prolog:web_prolog_node(3061,[bind_address('127.0.0.1'),node_url('http://localhost:3061'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3061'])]),thread_get_message(stop)\n"
+}

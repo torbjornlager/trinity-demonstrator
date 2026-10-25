@@ -1,0 +1,76 @@
+[
+  {
+    "node": "n3",
+    "check": "Unicode characters",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n3",
+    "check": "empty text",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n3",
+    "check": "private source and actor copying",
+    "passed": true,
+    "result": {
+      "data": [
+        "ok"
+      ],
+      "more": false,
+      "pid": 9193297199,
+      "type": "success"
+    }
+  },
+  {
+    "node": "n5",
+    "check": "Unicode characters",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n5",
+    "check": "empty text",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n5",
+    "check": "private source and actor copying",
+    "passed": true,
+    "result": {
+      "type": "success",
+      "pid": 2522425589,
+      "data": [
+        "ok"
+      ],
+      "more": false
+    }
+  },
+  {
+    "node": "n3",
+    "check": "model character prompt",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n3",
+    "check": "model invalid atom",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n3",
+    "check": "Jev character prompt",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  },
+  {
+    "node": "n3",
+    "check": "Jev invalid codes",
+    "passed": true,
+    "result": "success([ok],false).\n"
+  }
+]

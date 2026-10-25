@@ -1,0 +1,19 @@
+{
+  "batch": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/portable-text-live-2026-10-25",
+  "nodes": [
+    {
+      "node": "n3",
+      "old_pid": 91992,
+      "new_pid": 8855,
+      "forced_stop": false,
+      "configuration_preserved": true
+    },
+    {
+      "node": "n5",
+      "old_pid": 94384,
+      "new_pid": 8862,
+      "forced_stop": false,
+      "configuration_preserved": true
+    }
+  ]
+}

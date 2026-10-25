@@ -1,0 +1,21 @@
+{
+  "batch": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/code-restart-2026-10-25",
+  "nodes": [
+    {
+      "node": "n3",
+      "old_pid": 7072,
+      "new_pid": 91992,
+      "forced_stop": false,
+      "configuration_identical": true,
+      "intermediate_pid": 91431,
+      "xml_preload_note": "Explicit sgml/option preloads match verified fixture; separate preflight passed"
+    },
+    {
+      "node": "n5",
+      "old_pid": 97896,
+      "new_pid": 91435,
+      "forced_stop": false,
+      "configuration_identical": true
+    }
+  ]
+}
