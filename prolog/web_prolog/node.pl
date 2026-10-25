@@ -1939,24 +1939,19 @@ parse_enabled_atom(@(true), true) :-
     !.
 parse_enabled_atom(@(false), false) :-
     !.
-parse_enabled_atom(Atom0, Enabled) :-
-    atom(Atom0),
-    !,
-    atom_string(Atom0, Text),
-    parse_enabled_atom(Text, Enabled).
-parse_enabled_atom(Text0, Enabled) :-
-    string(Text0),
+% HTTP query values are text, not language option terms. Decode once;
+% recursing on a lower-case string would never reach the canonical clauses.
+parse_enabled_atom(Value0, Enabled) :-
+    ( atom(Value0) -> atom_string(Value0, Text0)
+    ; string(Value0) -> Text0 = Value0
+    ),
     !,
     string_lower(Text0, Text),
-    parse_enabled_atom(Text, Enabled).
-parse_enabled_atom('true', true) :-
-    !.
-parse_enabled_atom('false', false) :-
-    !.
-parse_enabled_atom("true", true) :-
-    !.
-parse_enabled_atom("false", false) :-
-    !.
+    ( Text == "true" -> Enabled = true
+    ; Text == "false" -> Enabled = false
+    ; throw(error(domain_error(boolean, Value0),
+                  context(node:parse_enabled_atom/2, 'enabled must be true or false')))
+    ).
 parse_enabled_atom(Value, _) :-
     throw(error(domain_error(boolean, Value),
                 context(node:parse_enabled_atom/2,

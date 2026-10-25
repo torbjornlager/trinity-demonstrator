@@ -1843,22 +1843,19 @@ ws_parse_enabled_atom(@(true), true) :-
     !.
 ws_parse_enabled_atom(@(false), false) :-
     !.
-ws_parse_enabled_atom('true', true) :-
-    !.
-ws_parse_enabled_atom('false', false) :-
-    !.
+% Wire fields may contain textual or JSON Booleans. Decode text once;
+% invalid text must raise rather than cycle between atom and string forms.
 ws_parse_enabled_atom(Value0, Enabled) :-
-    atom(Value0),
+    ( atom(Value0) -> atom_string(Value0, Text0)
+    ; string(Value0) -> Text0 = Value0
+    ),
     !,
-    atom_string(Value0, ValueString),
-    string_lower(ValueString, Lower),
-    ws_parse_enabled_atom(Lower, Enabled).
-ws_parse_enabled_atom(Value0, Enabled) :-
-    string(Value0),
-    !,
-    string_lower(Value0, Lower),
-    atom_string(LowerAtom, Lower),
-    ws_parse_enabled_atom(LowerAtom, Enabled).
+    string_lower(Text0, Text),
+    ( Text == "true" -> Enabled = true
+    ; Text == "false" -> Enabled = false
+    ; throw(error(domain_error(boolean, Value0),
+                  context(node_ws:ws_parse_enabled_atom/2, 'enabled must be true or false')))
+    ).
 ws_parse_enabled_atom(Value, _) :-
     throw(error(domain_error(boolean, Value),
                 context(node_ws:ws_parse_enabled_atom/2,

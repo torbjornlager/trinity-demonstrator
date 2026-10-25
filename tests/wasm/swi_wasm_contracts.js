@@ -1201,7 +1201,51 @@ async function supervisorShutdownContract(run,host,check) {
 
 // ---------------------------------------------------------------- scenarios
 
+function booleanLanguageCases() {
+  const cases=[];
+  for(const value of ['1','0','-1','1.0','"true"','"false"',"'TRUE'",'[t,r,u,e]','@(true)']) {
+    const goals=[
+      `spawn(true,_,[link(${value})])`, `spawn(true,_,[monitor(${value})])`,
+      `toplevel_spawn(_,[session(${value})])`,
+      `statechart_spawn(_,[src_text('<invalid/>'),trace(${value})])`,
+      `rpc('https://invalid.example',true,[once(${value})])`,
+      `promise('https://invalid.example',true,_,[once(${value})])`,
+      `toplevel_call(42,true,[once(${value})])`,
+      `toplevel_call(42,true,[once(false),once(${value})])`
+    ];
+    for(const goal of goals)cases.push({label:goal,
+      goal:`catch((${goal},fail),error(Formal,_),(Formal=type_error(boolean,_);Formal=domain_error(boolean,_)))`});
+  }
+  cases.push({label:'pending Boolean remains unbound',goal:'catch((toplevel_call(42,true,[once(B)]),fail),error(instantiation_error,_),true),var(B)'});
+  return cases;
+}
+
 const scenarios = {
+  async strict_boolean_options(W, check) {
+    await startToplevel(W);
+    for(const c of booleanLanguageCases()) {
+      const n=W.sends.length;
+      deliver(W,"'$call'(("+c.goal+"->R=checked;R=wrong),[template(R)])");
+      const messages=await nSends(W,n+1);
+      check(/\[checked\],false\)/.test(messages[n]||""),c.label+": "+messages[n]);
+    }
+    check(!W.posted.some(m=>m.type==="request"&&["rpc","src_uri","spawn"].includes(m.action)),"rejection precedes fetch, request and child creation");
+  },
+
+  async compatibility_strict_boolean_options(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/boolean_options.pl",source);
+    check(!!engine.prolog.query("use_module('/boolean_options.pl')").once(),"main Boolean engine loaded");
+    const calls=spawnOptionMainHarness();
+    for(const c of booleanLanguageCases()) {
+      let count=0;await engine.prolog.forEach(c.goal,()=>count++);
+      check(count===1,c.label);
+    }
+    check(calls.length===0,"rejection precedes all coordinator operations");
+  },
+
 
 
 

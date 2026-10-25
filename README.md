@@ -231,3 +231,17 @@ The native repository has already been extracted. See
 completed integration checks and historical rehearsal records. Deployment
 packaging is paused until the normal deployment computer is available; no
 implementation copies are removed during this transition.
+
+### Boolean option boundary
+
+Language Boolean options require Prolog atoms `true` or `false`, not numbers,
+strings, character lists or JSON wrapper terms. Native SWI and Trealla and both
+browser runtimes validate asynchronous `toplevel_call/3` `once/1` values before
+dispatch, including later duplicates. The browser bridge's internal conversion
+of encoded Prolog atoms remains transport plumbing. HTTP query text and genuine
+JSON Booleans retain their endpoint decoding. See the shared manual's
+[option validation](web/manual.html#sec:option-validation).
+
+The native fix belongs to `swi-prolog-node`; this batch mirrors it explicitly
+in the retained legacy source for compatibility tests. The dependency pin and
+installed/live runtimes are not updated by these source changes.

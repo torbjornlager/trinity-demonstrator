@@ -579,6 +579,13 @@ collect_slice(Limit, Template, Goal, Slice) :-
 validate_solution_limit(Options) :-
     ( option(limit(N), Options) -> must_be(positive_integer, N) ; true ).
 
+% Validate every supplied Boolean before sending; a later duplicate must not
+% hide an invalid value. Do not bind pending option entries while inspecting.
+validate_once_options(Options) :-
+    must_be(list, Options),
+    forall((member(Option, Options), nonvar(Option), Option = once(Value)),
+           must_be(boolean, Value)).
+
 %!  add_pid(+Answer0, +Pid, -Answer) is det.
 %
 %   Add actor pid to outward-facing answer terms.
@@ -596,6 +603,7 @@ toplevel_call(Pid, Goal) :-
     toplevel_call(Pid, Goal, []).
 
 toplevel_call(Pid, Goal, Options) :-
+    validate_once_options(Options),
     validate_solution_limit(Options),
     %  No explicit copy_term/2 here: send/2 to a local pid resolves
     %  to thread_send_message/2, which places a copy of the term in

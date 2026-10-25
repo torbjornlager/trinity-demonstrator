@@ -1,0 +1,30 @@
+{
+  "installed_binary_checks": {
+    "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl": {
+      "before": {
+        "target": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/install/lib/swipl/bin/arm64-darwin/swipl",
+        "sha256": "915c4758b6aba3d01ade4fe4f46332b6f526ad6c70a8e2574dd05278c2b0ce9c"
+      },
+      "after": {
+        "target": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-http-shutdown-2026-10-24/install/lib/swipl/bin/arm64-darwin/swipl",
+        "sha256": "915c4758b6aba3d01ade4fe4f46332b6f526ad6c70a8e2574dd05278c2b0ce9c"
+      },
+      "unchanged": true
+    },
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl": {
+      "before": {
+        "target": "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.14.10/tpl",
+        "sha256": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c"
+      },
+      "after": {
+        "target": "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-v3.14.10/tpl",
+        "sha256": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c"
+      },
+      "unchanged": true
+    }
+  },
+  "pin_sha256": "cc5c7c125a3b4d1df2593a6bcad08bc9acdc64d40a664970389697227a169c47",
+  "live_processes_unchanged": true,
+  "temporary_nodes_stopped": true,
+  "source_stable_in_shared_run": true
+}

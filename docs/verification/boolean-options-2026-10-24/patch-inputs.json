@@ -1,0 +1,17 @@
+{
+  "base_revision": "c04ecf15859c54b9ad1728adea97e2dc179d68b6",
+  "files": {
+    "DEVIATIONS.md": "1b368eee01dc6c252bcaa2d3a30ab7f120ad467f7faa2f9d89532c59e230b540",
+    "README.md": "a81ea6f716bd1e437b5a92bc6a5c19e6a1cb1a89b8c22b07406427a19816524f",
+    "prolog/web_prolog/node.pl": "8dfab255fc7b1a39c2b4888406b5264da5e06262a0b97f82c08304af6a36f021",
+    "prolog/web_prolog/node_ws.pl": "3b9504956fcd67ac83f6d9b7169d4d6f2ee2088e4cea4ff275b9e36aa0e135e8",
+    "prolog/web_prolog/toplevel_actors.pl": "1067d7be046e2987052c1000e745a48553276e13783ce53574c5171e03ba07b3",
+    "tests/tiers/node/boolean_options_tests.pl": "b66845298d264f34c53ff14873dd2dcdb58f02f435b0200c37992625d6b67489",
+    "tests/tiers/t4_node.pl": "9ff50559f87f9e90cf3532b0e89fed387ec1b979959d16094e5b8ce457b4737e",
+    "tests/tiers/toplevel_synch_tests.pl": "3b35e8c4912ae57384872d9810ccd973ad583a72a68eaf92acf036c6e1cc4025",
+    "tests/wasm/swi_wasm_contracts.js": "3a8204de7384565d3cabd52604e40e0ab48ffa9acb19b8ddb9391a662aa1a16d",
+    "web/demonstrator.html": "0d4fc7c017efe42b7d92c8ea6b152d4cc99e41cf9bcab6fcfd143971d3e662ee",
+    "web/manual.html": "f8f9fb7896fb8631a0e6e4336db02279c220015c7f3f6bbce5ada7c5d74e08bd",
+    "web/swi_wasm_actor_worker.js": "8ebf86a3d71fb8820fe8c86a90eab687898f6ee7be7202d03025d766a7614cb4"
+  }
+}

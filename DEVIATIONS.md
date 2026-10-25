@@ -260,3 +260,12 @@ Pinned by `lifetime_authority_tests.plt`, the native toplevel and node tests,
 `tests/wasm/swi_wasm_contracts.js`, and the browser smoke suites. Running-time,
 abort and termination controls bypass client recovery; inference exhaustion
 remains an ordinary catchable exception.
+
+## Boolean option validation
+
+Asynchronous `toplevel_call/3` rejects non-Boolean `once/1` values before
+sending, including invalid later duplicates. Only the atoms `true` and `false`
+are language Booleans; pending values raise instantiation errors. The first
+valid value retains precedence. HTTP/JSON boundary decoding is preserved.
+Regression coverage is in `toplevel_synch_tests.pl` and the node Boolean tests;
+the demonstrator also exercises both actual SWI-WASM engines.

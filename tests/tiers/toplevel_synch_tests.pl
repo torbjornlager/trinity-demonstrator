@@ -250,4 +250,23 @@ test(send_exception_flushes_private_down,
     assertion(Error=error(existence_error(actor_name,Name),_)),assertion(nonvar(Error)),
     receive({down(Name,_,_)->throw(leaked_send_down)},[timeout(0)]).
 
+test(async_once_rejects_substitutes_before_send,
+     [forall((member(V,[1,0,-1,1.0,"true","false",'TRUE',[t,r,u,e],@(true)]),
+              member(Options,[[once(V)],[once(false),once(V)]])))]) :-
+    self(Self),
+    catch(toplevel_call(Self,throw(must_not_run),Options),Error,true),
+    assertion(nonvar(Error)),assertion(Error=error(type_error(boolean,V),_)),
+    receive({'$call'(_,_) -> throw(invalid_call_was_sent)},[timeout(0)]).
+
+test(async_once_variable_is_not_bound) :-
+    self(Self),catch(toplevel_call(Self,true,[once(Value)]),Error,true),
+    assertion(nonvar(Error)),assertion(Error=error(instantiation_error,_)),
+    assertion(var(Value)).
+
+test(async_once_retains_first_valid_value,
+     [forall(member(Once,[true,false]))]) :-
+    self(Self),toplevel_call(Self,true,[once(Once),once(false)]),
+    receive({'$call'(_,Options) -> assertion(Options==[once(Once),once(false)])},
+            [timeout(1),on_timeout(throw(missing_valid_call))]).
+
 :- end_tests(toplevel_synch).

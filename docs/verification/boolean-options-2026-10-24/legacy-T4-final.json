@@ -1,0 +1,10 @@
+{
+  "command": [
+    "bash",
+    "tools/test.sh",
+    "T4_NATIVE"
+  ],
+  "exit_code": 0,
+  "seconds": 49.972,
+  "log": "legacy-T4-final.log"
+}
