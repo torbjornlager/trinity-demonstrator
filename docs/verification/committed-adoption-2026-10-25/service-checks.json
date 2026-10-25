@@ -1,0 +1,23 @@
+[
+  {
+    "mode": "default",
+    "exit_code": 0,
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "SERVICE_TEXT",
+      "MODEL",
+      "MODEL_SXML",
+      "JEV"
+    ]
+  },
+  {
+    "mode": "chars",
+    "exit_code": 0,
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "SERVICE_TEXT"
+    ]
+  }
+]

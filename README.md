@@ -254,3 +254,13 @@ records the runtime differences and unchanged resolution/fetch restrictions.
 Browser bridges preserve source ordering and validate representations before
 fetching or dispatch. Native-owned checks are mirrored in the retained legacy
 source; this does not promote the native dependency pin or update live nodes.
+
+### Commit-pinned local development nodes
+
+The [25 October adoption record](docs/verification/committed-adoption-2026-10-25/REPORT.md)
+records the selected native SWI, Trealla and demonstrator commits and the
+verified local n3/n5 launchers. Local n3 explicitly selects character-list
+reading; normal package defaults and browser text semantics are unchanged.
+Startup rejects source drift, and the previous frozen launchers remain available
+for rollback. Follow [native maintenance](docs/SWI_NODE_MAINTENANCE.md) for future
+fixes and explicit pin updates; do not edit the deployment checkouts.

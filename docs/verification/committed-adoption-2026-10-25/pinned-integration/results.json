@@ -1,0 +1,203 @@
+[
+  {
+    "label": "origin-audit",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/load.pl",
+      "-p",
+      "library=/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/prolog",
+      "-g",
+      "pinned_swi_bootstrap:check_origins,forall(module_property(M,file(F)),format(\"~q ~q~n\",[M,F]))",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.346,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "LINT",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "LINT"
+    ],
+    "exit_code": 0,
+    "seconds": 0.18,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T0",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T0"
+    ],
+    "exit_code": 0,
+    "seconds": 7.213,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1_NATIVE",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1_NATIVE"
+    ],
+    "exit_code": 0,
+    "seconds": 0.569,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T2",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T2"
+    ],
+    "exit_code": 0,
+    "seconds": 6.65,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3_NATIVE",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3_NATIVE"
+    ],
+    "exit_code": 0,
+    "seconds": 36.63,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4_NATIVE",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_NATIVE"
+    ],
+    "exit_code": 0,
+    "seconds": 50.975,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T5",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T5"
+    ],
+    "exit_code": 0,
+    "seconds": 1.212,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1_INTEGRATION",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1_INTEGRATION"
+    ],
+    "exit_code": 0,
+    "seconds": 0.183,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3_INTEGRATION",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3_INTEGRATION"
+    ],
+    "exit_code": 0,
+    "seconds": 4.068,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4_INTEGRATION",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_INTEGRATION"
+    ],
+    "exit_code": 0,
+    "seconds": 1.537,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "default-startup-regressions",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "tests/test_default_swi_startup.py"
+    ],
+    "exit_code": 0,
+    "seconds": 6.237,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "pin-regressions",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "tests/test_pinned_swi_dependency.py"
+    ],
+    "exit_code": 0,
+    "seconds": 1.824,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "ci-runner-regressions",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "tests/test_ci_pinned_swi.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.292,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "browser-equivalence",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "tools/check_statechart_wasm_equivalence.py",
+      "--native-root",
+      "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+      "--wasm-dir",
+      "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/committed-adoption-2026-10-25/pinned-integration/browser-prolog-00751ced7df8e4f5"
+    ],
+    "exit_code": 0,
+    "seconds": 0.035,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "WASM",
+    "cwd": "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "WASM"
+    ],
+    "exit_code": 1,
+    "seconds": 0.181,
+    "watchdog_seconds": 360
+  }
+]

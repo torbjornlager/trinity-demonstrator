@@ -1,0 +1,10 @@
+.START fails
+DONE fails 7
+START passes
+DONE passes 0
+....pinned SWI CI: wrong pin
+.
+----------------------------------------------------------------------
+Ran 6 tests in 0.177s
+
+OK

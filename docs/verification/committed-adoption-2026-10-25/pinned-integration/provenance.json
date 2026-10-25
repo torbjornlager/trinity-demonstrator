@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+  "revision": "abbc56f3d5104bd6d40d2ed5f99fe6199d75c4a8",
+  "native_root": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node",
+  "pack": "web_prolog",
+  "swipl": "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+  "swipl_version": "SWI-Prolog version 10.1.18 for arm64-darwin",
+  "demonstrator_revision": "f1897b1c90fbc38eb045958b6fd13c4971768eaf"
+}

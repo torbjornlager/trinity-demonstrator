@@ -1,0 +1,27 @@
+{
+  "n3": {
+    "url": "http://localhost:3053/portal",
+    "banner": "N3, SWI-Prolog",
+    "query": "X=\"abc\", X==[a,b,c], write(X).",
+    "output": "[a,b,c]",
+    "answer": "X = [a,b,c]."
+  },
+  "n5": {
+    "url": "http://localhost:3060/portal",
+    "banner": "Trealla Prolog",
+    "source": "06 ping-pong.pl",
+    "query": "ping_pong.",
+    "load_success": true,
+    "answer": "true.",
+    "output": [
+      "Pong received ping.",
+      "Ping received pong.",
+      "Pong received ping.",
+      "Ping received pong.",
+      "Pong received ping.",
+      "Ping received pong.",
+      "Ping finished.",
+      "Pong finished."
+    ]
+  }
+}

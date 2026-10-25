@@ -1,0 +1,44 @@
+{
+  "selected": {
+    "native": {
+      "repository": "swi-prolog-node",
+      "revision": "abbc56f3d5104bd6d40d2ed5f99fe6199d75c4a8",
+      "path": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/native"
+    },
+    "trealla": {
+      "repository": "trealla-port",
+      "revision": "e7c51dc101cd8002dea9548f8154fc4d2bf6707d",
+      "path": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/trealla"
+    },
+    "demonstrator": {
+      "repository": "trinity-demonstrator",
+      "revision": "5b4deb3aeee6e3b9bc66592d0554e4e1e65535ad",
+      "path": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator"
+    }
+  },
+  "checks": {
+    "pinned_native_and_integration": true,
+    "both_text_modes": true,
+    "chars_full_T4_native": true,
+    "trealla_full_unit": true,
+    "default_and_chars_services": true,
+    "full_WASM_final": true,
+    "portal_runtime": true,
+    "startup_guard_checks": 4,
+    "post_restart_interop": 29,
+    "post_restart_text": 10,
+    "actual_UI": true
+  },
+  "initial_attempts": {
+    "pinned_CI": "WASM JavaScript commands could not find node; native/integration and other checks passed",
+    "WASM_retry": "stale literal greeting smoke assertion failed; substantive scenarios passed",
+    "resolution": "test-only greeting alignment committed separately; final complete WASM rerun passed with bundled Node.js"
+  },
+  "unresolved": [
+    "Trealla cyclic exception copying",
+    "Trealla supplementary-character JSON surrogate escapes (#1181)",
+    "broader portable-text diagnostics, ISO assessment and cross-runtime baseline adoption"
+  ],
+  "installed_engines_changed": false,
+  "pushed": false
+}

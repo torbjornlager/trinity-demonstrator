@@ -1,0 +1,26 @@
+[
+  {
+    "check": "clean exact commit accepted",
+    "passed": true,
+    "exit_code": 0,
+    "detail": ""
+  },
+  {
+    "check": "tracked source drift rejected",
+    "passed": true,
+    "exit_code": 1,
+    "detail": "Pinned tracked files differ: fixture"
+  },
+  {
+    "check": "untracked runtime input rejected",
+    "passed": true,
+    "exit_code": 1,
+    "detail": "Untracked runtime/application inputs: fixture"
+  },
+  {
+    "check": "different commit rejected",
+    "passed": true,
+    "exit_code": 1,
+    "detail": "Pinned checkout HEAD differs: fixture"
+  }
+]
