@@ -1028,6 +1028,8 @@ yield(+Ref, -Answer, +Options) is det.</pre>
 <h3>All-Solutions</h3>
 <p><code>findall/3</code>, <code>bagof/3</code>, <code>setof/3</code></p>
 
+<h3>Demonstrator application text</h3>
+<p>The owner-installed model and Jev example services accept native SWI strings and proper lists of one-character atoms as prompt text. They convert known text fields explicitly at the JSON boundary. Model answer text and Jev score legends follow the selected language text mode; raw Jev provenance retains native JSON types. These are application examples rather than additional built-in predicates. Service limits and configuration are documented in the <a href="../examples/services/README.md">service README</a>.</p>
 
 <h3>Actor I/O (Overrides)</h3>
 <p>The ambient stream I/O predicates of ISO Prolog are blacklisted. In their place, the actor runtime prelude injects local overrides that route output through the actor messaging layer:</p>

@@ -12,6 +12,7 @@ at node startup; the underlying transport reads `TYPESAFE_API_KEY` and optional
 */
 
 :- use_module('../jev/deployment_observation').
+:- use_module('../example_text').
 :- use_module(library(error)).
 :- use_module(library(web_prolog/node_execution_context),
               [current_public_execution_profile/1]).
@@ -38,19 +39,16 @@ configure_jev_service :-
 %   This is a tutorial spending guard, not a general multi-tenant quota system.
 
 jev_deployment_observation(Text, Result) :-
-    (   valid_text(Text)
+    (   bounded_native_text(Text,500,Native,Length),Length>0
     ->  setup_call_cleanup(
             admit(Request),
-            perform(Request, Text, Result),
+            perform(Request, Native, Result),
             release(Request))
     ;   Result = unavailable(invalid_text)
     ).
 
 valid_text(Text) :-
-    string(Text),
-    string_length(Text, Length),
-    Length > 0,
-    Length =< 500.
+    bounded_native_text(Text,500,_,Length),Length>0.
 
 admit(Request) :-
     with_mutex(jev_admission, admit_locked(Request)).

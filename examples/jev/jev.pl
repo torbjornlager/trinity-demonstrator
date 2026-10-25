@@ -21,6 +21,7 @@ provider response, so new or provider-specific fields are never discarded.
 */
 
 :- use_module(jev_http).
+:- use_module('../example_text').
 :- use_module(library(option)).
 :- use_module(library(error)).
 
@@ -55,29 +56,34 @@ question_json(choice(Id0, Instructions, Criteria0, Answer),
     !,
     question_id(Id0, Id),
     pair_dict(choice_criteria, Criteria0, Criteria),
-    Question = _{type:"choice", instructions:Instructions, criteria:Criteria}.
-question_json(score(Id0, Instructions, Criteria, Answer),
+    text_string(Instructions,NativeInstructions),
+    Question = _{type:"choice", instructions:NativeInstructions, criteria:Criteria}.
+question_json(score(Id0, Instructions, Criteria0, Answer),
               Id-Question, binding(Id, score, Answer)) :-
     !,
     question_id(Id0, Id),
-    must_be(list, Criteria),
-    Question = _{type:"score", instructions:Instructions, criteria:Criteria}.
+    must_be(list, Criteria0),maplist(text_string,Criteria0,Criteria),
+    text_string(Instructions,NativeInstructions),
+    Question = _{type:"score", instructions:NativeInstructions, criteria:Criteria}.
 question_json(noul(Id0, Instructions, Answer),
               Id-Question, binding(Id, noul, Answer)) :-
     !,
     question_id(Id0, Id),
-    Question = _{type:"noul", instructions:Instructions}.
+    text_string(Instructions,NativeInstructions),
+    Question = _{type:"noul", instructions:NativeInstructions}.
 question_json(noul(Id0, Instructions, Criteria0, Answer),
               Id-Question, binding(Id, noul, Answer)) :-
     !,
     question_id(Id0, Id),
     pair_dict(noul_criteria, Criteria0, Criteria),
-    Question = _{type:"noul", instructions:Instructions, criteria:Criteria}.
+    text_string(Instructions,NativeInstructions),
+    Question = _{type:"noul", instructions:NativeInstructions, criteria:Criteria}.
 question_json(Question, _, _) :-
     domain_error(jev_question, Question).
 
 question_id(Id, Id) :- atom(Id), !.
 question_id(Id0, Id) :- string(Id0), !, atom_string(Id, Id0).
+question_id(Id0,Id) :- native_text(Id0,Native),!,atom_string(Id,Native).
 question_id(Id, _) :- type_error(atom_or_string, Id).
 
 pair_dict(Context, Pairs0, Dict) :-
@@ -85,9 +91,9 @@ pair_dict(Context, Pairs0, Dict) :-
     maplist(json_pair(Context), Pairs0, Pairs),
     dict_create(Dict, json, Pairs).
 
-json_pair(_Context, Key0-Value, Key-Value) :-
+json_pair(_Context, Key0-Value0, Key-Value) :-
     !,
-    question_id(Key0, Key).
+    question_id(Key0, Key),text_string(Value0,Value).
 json_pair(Context, Pair, _) :-
     throw(error(domain_error(Context, Pair), _)).
 
@@ -115,12 +121,21 @@ bind_typed_answer(score, Raw,
                   score(Score, Legend, Probabilities, Confidence)) :-
     require_answer_type(score, Raw),
     required_field(score, Raw, Score),
-    required_field(legend, Raw, Legend),
+    required_field(legend, Raw, NativeLegend),
+    language_legend(NativeLegend,Legend),
     required_field(probabilities, Raw, Probabilities),
     required_field(confidence, Raw, Confidence).
 bind_typed_answer(noul, Raw, noul(Probability)) :-
     require_answer_type(noul, Raw),
     required_field(noul, Raw, Probability).
+
+% Only the application legend is language text. Raw response JSON is retained.
+language_legend(Native,Legend) :-
+    (is_dict(Native) -> dict_pairs(Native,Tag,Pairs),maplist(legend_pair,Pairs,Converted),
+                       dict_pairs(Legend,Tag,Converted)
+    ; Legend=Native).
+legend_pair(Key-Native,Key-Text) :-
+    (string(Native) -> language_text(Native,Text) ; Text=Native).
 
 require_answer_type(Expected, Raw) :-
     required_field(type, Raw, Type0),
@@ -149,5 +164,6 @@ symbolic_atom(Value, Atom) :-
 text_string(Value, String) :-
     (   string(Value) -> String = Value
     ;   atom(Value) -> atom_string(Value, String)
+    ;   native_text(Value,String) -> true
     ;   type_error(text, Value)
     ).

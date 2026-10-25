@@ -89,6 +89,7 @@ run_wasm () {
 
 run_wasm
 
+run_tier SERVICE_TEXT tests/service_text_tests.pl 'run_tests([service_text,service_text_owner_options])'
 run_tier MODEL tests/model_service_tests.pl run_tests
 run_tier MODEL_SXML tests/model_statechart_tests.pl 'run_tests(model_statechart)'
 run_tier JEV tests/jev_tests.pl 'run_tests(jev)'

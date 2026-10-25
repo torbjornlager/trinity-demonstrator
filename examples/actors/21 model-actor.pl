@@ -45,7 +45,7 @@ chat_actor(History) :-
     }).
 
 chat_exchange(Text, History, Result, NextHistory) :-
-    ( string(Text), string_length(Text, N), N > 0, N =< 500
+    ( chat_text_size(Text, N), N > 0, N =< 500
     -> append(History, [user(Text)], Messages),
        model_chat(Messages, Result),
        ( Result = answer(Reply)
@@ -69,13 +69,20 @@ chat_trim(History, Kept) :-
 
 chat_size([], 0).
 chat_size([Message|Rest], Size) :-
-    arg(1, Message, Text), string_length(Text, N),
+    arg(1, Message, Text), chat_text_size(Text, N),
     chat_size(Rest, Tail), Size is N + Tail.
+
+% Native strings remain accepted; portable literals are character lists.
+chat_text_size(Text, N) :-
+    ( string(Text) -> string_length(Text, N)
+    ; is_list(Text), maplist(chat_character, Text), length(Text, N)
+    ).
+chat_character(Char) :- atom(Char), atom_length(Char, 1).
 
 start_chat(Pid) :-
     spawn(chat_actor([]), Pid, [
         src_predicates([chat_actor/1, chat_exchange/4, chat_reply/3,
-                        chat_trim/2, chat_size/2]),
+                        chat_trim/2, chat_size/2, chat_text_size/2, chat_character/1]),
         monitor(true)
     ]).
 

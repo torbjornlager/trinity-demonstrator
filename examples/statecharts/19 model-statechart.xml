@@ -17,7 +17,7 @@ The 45-second SXML timer returns model_error(Ref, timeout) without changing
 history. Cancellation does not free the protected backend slot prematurely.
 
 History retains at most two complete exchanges within 1500 characters. Prompts
-are nonempty strings of at most 500 characters. The service accepts at most
+are nonempty native strings or character lists of at most 500 characters. The service accepts at most
 five alternating user/assistant messages, with 2000 characters in total, and
 fixes the endpoint, model, 1024-token context and 80-token output limit.
 SmolLM2 135M can ramble, hallucinate or forget even when history is supplied.
@@ -39,7 +39,7 @@ never executable code. Chart pids belong to your session; keep them private.
     history([]).
 
     valid_prompt(Text) :-
-        string(Text), string_length(Text, N), N &gt; 0, N =&lt; 500.
+        text_size(Text, N), N &gt; 0, N =&lt; 500.
 
     prepare(From, Ref, Text) :-
         history(History), append(History, [user(Text)], Messages),
@@ -64,7 +64,7 @@ never executable code. Chart pids belong to your session; keep them private.
         pending(Expected, _, _, _), Token == Expected.
 
     valid_answer(Text) :-
-        string(Text), string_length(Text, N), N =&lt; 4000.
+        text_size(Text, N), N =&lt; 4000.
 
     remember_and_reply(Text) :-
         retract(pending(_, From, Ref, Messages)),
@@ -88,8 +88,13 @@ never executable code. Chart pids belong to your session; keep them private.
 
     history_size([], 0).
     history_size([Message|Rest], Size) :-
-        arg(1, Message, Text), string_length(Text, N),
+        arg(1, Message, Text), text_size(Text, N),
         history_size(Rest, Tail), Size is N + Tail.
+    text_size(Text, N) :-
+        ( string(Text) -&gt; string_length(Text, N)
+        ; is_list(Text), maplist(text_character, Text), length(Text, N)
+        ).
+    text_character(Char) :- atom(Char), atom_length(Char, 1).
   </datamodel>
 
   <!-- Parent transitions remain available while thinking. -->

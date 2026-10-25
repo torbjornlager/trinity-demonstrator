@@ -1,0 +1,6 @@
+% [1/6] model_statechart:..es_reset_and_errors ...... passed (0.028 sec)
+% [2/6] model_statechart:..es_not_call_backend ...... passed (0.001 sec)
+% [3/6] model_statechart:stop_reaches_final ......... passed (0.001 sec)
+% [4/6] model_statechart:..nce_and_stale_reply ...... passed (0.015 sec)
+% [5/6] model_statechart:..ry_and_backend_slot ...... passed (0.072 sec)
+% [6/6] model_statechart:..et_runs_sxml_source ...... passed (0.062 sec)

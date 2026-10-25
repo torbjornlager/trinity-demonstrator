@@ -1,0 +1,39 @@
+{
+  "checks": {
+    "native_prolog": true,
+    "trealla_sources": true,
+    "library": true,
+    "engines": true,
+    "pin": true,
+    "live_processes": true,
+    "existing_test_assertions": true,
+    "xml_well_formed": true,
+    "shell_syntax": true,
+    "diff_whitespace": true
+  },
+  "selection_counts": {
+    "default-JEV.log": 17,
+    "default-MODEL_SXML.log": 6,
+    "default-MODEL.log": 11,
+    "chars-SERVICE_TEXT.log": 25,
+    "default-SERVICE_TEXT.log": 25
+  },
+  "inputs": {
+    "examples/example_text.pl": "e34fb29ca852ced222d9df9692788505c2a1fdaee55073329025314b86b7d770",
+    "examples/services/model_service.pl": "8e944249c80921598af39e2375098afd305201b0a0b289dad8efda02f5213fce",
+    "examples/services/jev_service.pl": "dc76929469bc159f96a0a95e156f898f8b7680dcd01333c6eed179595166d92e",
+    "examples/jev/deployment_observation.pl": "60e6ef351f15fb40660dc661f93327a39b85f868efc1c4aa9e20170452f40616",
+    "examples/jev/jev.pl": "a6172bc7a5c4df7da26decc69900920df8337154007583f2669354e5fd1fdbf0",
+    "examples/jev/jev_http.pl": "42031a395e0006c7afe939853ffc5592124a8a003b9ba6fba05d2f9df6a2c831",
+    "examples/actors/21 model-actor.pl": "25d129c7d6e65a10af722fccac0b28260c1865a95c92edae42b23cc8413f982c",
+    "examples/statecharts/19 model-statechart.xml": "49392c24e108cc04cac7f67b8e1e315b0f1563be36ec9c17287492627b40e0c2",
+    "tests/service_text_tests.pl": "9d68cd8ebe69c1797144e0819613bcc5e942d090aa733937a75d6cd11764f4fe",
+    "tools/test.sh": "597b4a6bd6a078129f40ec52103e3a237e9cb16efeb9dbb59b07ec8c7ab50b11"
+  },
+  "engines": {
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swi-default-startup-2026-10-24/runtime/bin/swipl": "915c4758b6aba3d01ade4fe4f46332b6f526ad6c70a8e2574dd05278c2b0ce9c",
+    "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/trealla-v3.14.10-acceptance-2026-10-24/engine/tpl": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c"
+  },
+  "protected": "91509 Sun Oct 25 14:27:44 2026     /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /Users/torbjorn.lager/.local/share/trinity-local-nodes/n5/frontend.py --port 3060\n91992 Sun Oct 25 14:32:56 2026     /Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl -f none -q -s /Users/torbjorn.lager/.local/share/trinity-local-nodes/code-restart-2026-10-25/n3-active/start_local_node.pl -- n3\n94384 Sun Oct 25 15:00:32 2026     /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl -g use_module(actors),use_module(actor_api),use_module(web_prolog),use_module(distribution),consult('Deployment/shared_db_common.pl'),consult('Deployment/shared_db_actor_common.pl'),web_prolog:web_prolog_node(3062,[bind_address('127.0.0.1'),node_url('http://localhost:3060'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3060','http://127.0.0.1:3053','http://127.0.0.1:3060']),tutorial_sections([all]),load_shared_db_file('Deployment/shared_db_common.pl'),load_shared_db_file('Deployment/shared_db_actor_common.pl')]),thread_get_message(stop)\n97669 Sat Oct 24 09:58:02 2026     /Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl -g use_module(web_prolog),use_module(distribution),web_prolog:web_prolog_node(3061,[bind_address('127.0.0.1'),node_url('http://localhost:3061'),profile(actor),sandbox(blacklist),auth(open),ws_allowed_origins(['http://localhost:3053','http://localhost:3061'])]),thread_get_message(stop)",
+  "prior_snapshot": "/Users/torbjorn.lager/Documents/GitHub/swi-prolog-node/docs/verification/portable-term-output-2026-10-25/results/preservation.json"
+}

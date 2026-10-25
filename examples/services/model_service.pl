@@ -7,6 +7,7 @@ the calling actor; no return address, URL, model or options come from users.
 Enable on ONE node only: limits are process-wide, not cluster-wide.
 */
 
+:- use_module('../example_text').
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/json)).
@@ -32,8 +33,8 @@ configure_model_service(Endpoint) :-
 
 % Retain the one-prompt interface for existing callers.
 model_answer(Prompt, Result) :-
-    ( string(Prompt), string_length(Prompt, N), N > 0, N =< 500
-    -> model_chat([user(Prompt)], Result)
+    ( bounded_native_text(Prompt,500,Native,N), N > 0
+    -> model_chat([user(Native)], Result)
     ; Result = error(invalid_prompt) ).
 
 model_chat(Messages, Result) :-
@@ -42,8 +43,11 @@ model_chat(Messages, Result) :-
            message_queue_create(Queue, [max_size(1)]),
            request_model(JSON, Queue, Reply),
            message_queue_destroy(Queue)),
-       Result = Reply
+       model_reply(Reply, Result)
     ; Result = error(invalid_messages) ).
+
+model_reply(answer(Native),answer(Text)) :- !,language_text(Native,Text).
+model_reply(Reply,Reply).
 
 % Only alternating user/assistant text, ending with a user turn. No system
 % messages, extra JSON keys, tools, URLs or generation settings are accepted.
@@ -52,16 +56,17 @@ valid_messages(Messages, JSON) :-
     length(Messages, Count), memberchk(Count, [1,3,5]),
     conversation(Messages, user, JSON, Size), Size =< 2000.
 
-conversation([user(Text)], user, [_{role:"user",content:Text}], Size) :-
-    message_text(Text, 500, Size).
+conversation([user(Text)], user, [_{role:"user",content:Native}], Size) :-
+    bounded_native_text(Text,500,Native,Size),Size>0.
 conversation([user(Text),assistant(Answer)|Rest], user,
-             [_{role:"user",content:Text},
-              _{role:"assistant",content:Answer}|JSON], Size) :-
-    message_text(Text, 500, N), message_text(Answer, 1500, M),
+             [_{role:"user",content:NativeText},
+              _{role:"assistant",content:NativeAnswer}|JSON], Size) :-
+    bounded_native_text(Text,500,NativeText,N),N>0,
+    bounded_native_text(Answer,1500,NativeAnswer,M),M>0,
     conversation(Rest, user, JSON, TailSize), Size is N+M+TailSize.
 
 message_text(Text, Limit, Size) :-
-    string(Text), string_length(Text, Size), Size > 0, Size =< Limit.
+    bounded_native_text(Text,Limit,_,Size),Size>0.
 
 request_model(Messages, Queue, Result) :-
     % Setup is protected against asynchronous cancellation: admission and
@@ -116,9 +121,10 @@ infer(Endpoint, Messages, Text) :-
     setup_call_cleanup(
         http_open(Endpoint, Stream,
                   [post(json(Payload)), timeout(30), redirect(false)]),
-        read_string(Stream, 16385, Raw),
+        (set_stream(Stream,encoding(octet)),read_string(Stream,16385,BytesText)),
         close(Stream)),
-    string_length(Raw, Size), Size =< 16384,
+    string_length(BytesText,Size),Size=<16384,
+    string_codes(BytesText,Bytes),string_bytes(Raw,Bytes,utf8),
     atom_json_dict(Raw, Response, []),
     get_dict(done, Response, true),
     get_dict(message, Response, Message),

@@ -17,6 +17,7 @@ exceptions never become semantic intents: they become explicit
 */
 
 :- use_module(jev).
+:- use_module('../example_text').
 :- use_module(library(error)).
 
 :- meta_predicate observe_with(2, +, -).
@@ -50,8 +51,8 @@ observe_with(Sensor, Text, Observation) :-
 
 deployment_decision(Text,
         decision(Intent, Urgency, IsQuestion, RawResponse)) :-
-    must_be(string, Text),
-    jev_decide(_{message:Text}, [
+    (native_text(Text,Native) -> true ; type_error(text,Text)),
+    jev_decide(_{message:Native}, [
         choice(intent,
                "Which single intent best describes the message?",
                [ request_deploy-"Ask to prepare or perform a deployment",

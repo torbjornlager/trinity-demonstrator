@@ -1,0 +1,87 @@
+[
+  {
+    "mode": "default",
+    "suite": "SERVICE_TEXT",
+    "exit_code": 0,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/model-jev-text-18oe410d/tests/service_text_tests.pl",
+      "-g",
+      "run_tests([service_text,service_text_owner_options])",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "mode": "default",
+    "suite": "MODEL",
+    "exit_code": 0,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/model-jev-text-18oe410d/tests/model_service_tests.pl",
+      "-g",
+      "run_tests(model_service)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "mode": "default",
+    "suite": "MODEL_SXML",
+    "exit_code": 0,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/model-jev-text-18oe410d/tests/model_statechart_tests.pl",
+      "-g",
+      "run_tests(model_statechart)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "mode": "default",
+    "suite": "JEV",
+    "exit_code": 0,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/model-jev-text-18oe410d/tests/jev_tests.pl",
+      "-g",
+      "run_tests(jev)",
+      "-t",
+      "halt"
+    ]
+  },
+  {
+    "mode": "chars",
+    "suite": "SERVICE_TEXT",
+    "exit_code": 0,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/model-jev-text-18oe410d/tests/service_text_tests.pl",
+      "-g",
+      "run_tests([service_text,service_text_owner_options])",
+      "-t",
+      "halt"
+    ]
+  }
+]

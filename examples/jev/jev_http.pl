@@ -13,6 +13,7 @@ overridden with `TYPESAFE_ENDPOINT`; this is useful for gateways and tests.
 Neither value is stored in source.
 */
 
+:- use_module('../example_text').
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/json)).
@@ -85,13 +86,16 @@ configured_key(Options, Key) :-
 
 read_response(Stream, Status, MaxBytes, Response) :-
     Limit is MaxBytes + 1,
-    read_string(Stream, Limit, Body),
-    string_length(Body, Length),
+    set_stream(Stream,encoding(octet)),
+    read_string(Stream, Limit, BytesText),
+    string_length(BytesText, Length),
     (   Length > MaxBytes
     ->  throw(error(resource_error(jev_response_too_large),
                     context(jev_http:jev_http_request/3, MaxBytes)))
     ;   true
     ),
+    catch((string_codes(BytesText,Bytes),string_bytes(Body,Bytes,utf8)),Error,
+          throw(error(jev_invalid_json(BytesText),context(jev_http:read_response/4,Error)))),
     (   between(200, 299, Status)
     ->  parse_json_response(Body, Response)
     ;   throw(error(jev_http_error(Status, Body),
@@ -127,11 +131,13 @@ rethrow_transport_error(Error) :-
 text_atom(Value, Atom) :-
     (   atom(Value) -> Atom = Value
     ;   string(Value) -> atom_string(Atom, Value)
+    ;   native_text(Value,Native) -> atom_string(Atom,Native)
     ;   type_error(text, Value)
     ).
 
 text_string(Value, String) :-
     (   string(Value) -> String = Value
     ;   atom(Value) -> atom_string(Value, String)
+    ;   native_text(Value,String) -> true
     ;   type_error(text, Value)
     ).

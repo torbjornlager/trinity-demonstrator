@@ -194,3 +194,26 @@ Tests: [`tests/discovery_hub_tests.pl`](../../tests/discovery_hub_tests.pl)
 > **Schema note.** The plan sketches the membership relation as `node/1`;
 > the implementation uses `node_id/1`, because the node server already owns
 > `node/1` and the hub's shared module would otherwise shadow it.
+
+## Model and Jev text boundaries
+
+The owner-installed model and Jev services accept native SWI strings or proper
+lists of one-character atoms as prompt text. Numeric code lists, atoms, open
+lists and multi-character list elements are rejected by the public prompt
+guards. Existing nonempty prompt, conversation, response and admission limits
+remain in force. The model actor (21) and model statechart (19) accept both text
+forms, including history entries.
+
+Provider requests convert known text fields to native strings for JSON; a
+character list must not accidentally become a JSON array. Responses are decoded
+from UTF-8 after checking the existing byte limit. Model answer text and Jev
+score legends follow the node's selected language text mode: native strings by
+default, character lists in the experimental portable-text configuration.
+Jev's `provenance(Raw)` and caller-supplied JSON state retain native JSON types,
+including the distinction between an empty string and an empty array. Owner
+endpoint/key settings and Jev question descriptions also accept character lists;
+their existing atom/string forms remain supported.
+
+The [mock-only verification](../../docs/verification/model-jev-text-2026-10-25/REPORT.md)
+covers both reading modes without contacting a provider or using a real API key.
+These application services are examples, not portable built-in predicates.
