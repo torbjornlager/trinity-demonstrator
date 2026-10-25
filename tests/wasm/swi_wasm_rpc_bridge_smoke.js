@@ -1230,7 +1230,7 @@ ok(workerSource.includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
    "both SWI-WASM bridges halt through runtime exit without awaiting in cleanup");
 ok(workerSource.includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
    workerSource.includes('return installSharedDatabase().then(function()') &&
-   workerSource.includes("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])") &&
+   workerSource.includes("load_files(wasm_shared_db:'/worker_shared_db.pl',[silent(true)])") &&
    workerSource.includes('add_import_module(user,wasm_shared_db,start)') &&
    includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
    nodeSource.includes("wasm_module_file_name('shared_db.pl').") &&
@@ -1248,7 +1248,7 @@ ok(workerSource.includes('load_private_source(') &&
    includes('swi_wasm_actor_bridge:load_private_source'),
    "intentional shared-predicate shadows suppress only their loader redefinition warnings");
 ok(includes('installSwiWasmSharedDatabase(Prolog, Module)') &&
-   includes("load_files('/swi_wasm_shared_db.pl',[module(wasm_shared_db),silent(true)])") &&
+   includes("load_files(wasm_shared_db:'/swi_wasm_shared_db.pl',[silent(true)])") &&
    includes('swi_wasm_actor_bridge:load_private_source'),
    "the optional main-thread model uses the same shared/private module boundary");
 ok(tutorialIncludes('id="tutorial-private-and-shared-knowledge"') &&
@@ -1315,8 +1315,8 @@ ok(sharedDbSource.includes('echo_actor :-') &&
    sharedDbSource.includes('From ! echo(Msg)') &&
    !sharedDbSource.includes('swi_wasm_actor_bridge:'),
    "the standalone SWI-WASM shared database accepts ordinary actor source");
-ok(workerSource.includes('\":- use_module(\'/worker_actor_bridge.pl\').\\n\" + sourceText') &&
-   includes('\":- use_module(\'/swi_wasm_actor_bridge.pl\').\\n\" + sourceText') &&
+ok(workerSource.includes(":- use_module('/worker_actor_bridge.pl').\\n\" + sourceText") &&
+   includes(":- use_module('/swi_wasm_actor_bridge.pl').\\n\" + sourceText") &&
    includes('Unable to install the SWI-WASM actor bridge for the shared database'),
    "both SWI-WASM models import the actor API before compiling shared node code");
 ok(tutorialSource.includes('id="mpc-spawn-echo">?- spawn(echo_actor, Pid).') &&
@@ -1329,7 +1329,8 @@ ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
    workerSource.includes('redefine_system_predicate(read_term(_, _))') &&
    workerSource.includes('read(Term) :- swi_wasm_actor_bridge:input(\\"|:\\", Term).') &&
    workerSource.includes('read_term(Term, _) :- swi_wasm_actor_bridge:input(\\"|:\\", Term).') &&
-   workerSource.includes("atom(Prompt) -> atom_string(Prompt, PromptText)"),
+   workerSource.includes("string_chars(PromptTerm,Prompt)") &&
+   workerSource.includes("prompt(Self, PromptTerm)"),
    "the user-module worker shell routes read/1 and read_term/2 through its explicit prompt protocol");
 ok(includes('source: String(extraSourceText || "")') &&
    !includes('extraSourceText || this.currentLoadText()'),

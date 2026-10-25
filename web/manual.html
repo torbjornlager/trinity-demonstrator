@@ -208,7 +208,8 @@
 <table>
 <thead><tr><th>Runtime</th><th>Accepted URI text inputs</th></tr></thead>
 <tbody>
-<tr><td>Native SWI and SWI-WASM</td><td>Atoms and distinct SWI string objects. Character/code lists are not URI text inputs for these APIs.</td></tr>
+<tr><td>Native SWI</td><td>Atoms and distinct SWI string objects; character-list text is also accepted in character-list reading mode. Code lists are not URI text inputs.</td></tr>
+<tr><td>SWI-WASM</td><td>Atoms, distinct SWI string objects and proper lists of one-character atoms. Code lists are not URI text inputs.</td></tr>
 <tr><td>Trealla</td><td>Atoms and character-list text; RPC/promise destinations, source URI loading and the explicit remote connection adapter also accept code-list text. The <code>node/1</code> spawn option retains its atom/character-list input convention.</td></tr>
 <tr><td>GNU ISOBASE</td><td>Atoms, character-list text and code-list text for RPC/promise destinations and source URIs. Actor <code>node/1</code> does not apply to this profile.</td></tr>
 </tbody>
@@ -401,7 +402,7 @@ send(+PidOrName, +Message, +Options) is det.</pre>
         <li><code>delay(+Number)</code><br>Delays the sending by a specified number of seconds. Default is <code>0</code>.</li>
         <li><code>id(+ID)</code><br><code>ID</code> is a user-supplied identifier that can be used by <code>cancel/1</code> to stop the sending from taking place.</li>
     </ul>
-    <p>Portable actor application messages are acyclic ordinary Prolog terms. Atoms (including Unicode text atoms), strings, numbers, variables, lists, and compound terms are portable; variables arrive as fresh variables. Attributed variables, streams, and other non-text blob values must be encoded explicitly by the application. Remote delivery preserves these terms and their variable sharing; runtime guides describe their wire encoding. A double-quoted literal denotes a string in every profile: goals, options, answers, input and actor source are read with <code>double_quotes</code> set to <code>string</code>, whatever the host's default. Native local delivery may happen to carry additional host terms, but programs using them are outside the placement-independent contract.</p>
+    <p>Portable actor application messages are acyclic ordinary Prolog terms. Atoms (including Unicode text atoms), strings, numbers, variables, lists, and compound terms are portable; variables arrive as fresh variables. Attributed variables, streams, and other non-text blob values must be encoded explicitly by the application. Remote delivery preserves these terms and their variable sharing; runtime guides describe their wire encoding. The node's language text mode determines double-quoted literals. Both SWI-WASM modes read <code>"abc"</code> as <code>[a,b,c]</code> and <code>""</code> as <code>[]</code>, consistently in goals, options, interactive input, supplied source, the browser shared database and statechart datamodels. Each character is a one-character Unicode atom, including supplementary characters. Native nodes retain their selected text mode. Native-library string objects and strings received in canonical term messages remain distinct strings; transport decoding does not reinterpret them as character lists. This browser migration does not make the experimental portable-text draft a requirement of every node profile. Native local delivery may happen to carry additional host terms, but programs using them are outside the placement-independent contract.</p>
 </article>
 
 <article class="predicate-entry" id="cancel/1">

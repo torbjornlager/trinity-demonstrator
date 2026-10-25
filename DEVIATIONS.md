@@ -278,3 +278,17 @@ instantiate an unknown destination, and checks component types before formatting
 Browser RPC/promise boundaries normalise supported text and explicit Host:Port
 shorthand to atoms before dispatch; URI loading and node routing preserve their
 existing policies. The shared manual records accepted representations.
+
+## Browser character-list reading (2026-10-25)
+
+The two SWI-WASM language engines now read double-quoted literals as proper lists
+of one-character Unicode atoms, including the browser shared database and
+statechart datamodels. This supersedes the browser language-reader portion of D5;
+it does not alter the native node's selected mode or canonical wire strings.
+Bridge and native-library modules retain `double_quotes(string)`, and generated
+local source from typed clauses preserves explicit native string objects.
+The experimental portable-text profile remains separate from cumulative profiles.
+
+Author-directed migration. Pinned by `portable_text_worker` and
+`portable_text_main` in `tests/wasm/swi_wasm_contracts.js`; boundary and UI evidence
+is in `docs/verification/wasm-character-text-2026-10-25/REPORT.md`.

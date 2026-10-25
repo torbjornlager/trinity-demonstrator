@@ -1,0 +1,216 @@
+Browser tab: 23, Title: "The Prolog Trinity demonstrator", URL: "http://localhost:53179/portal?node=swi-wasm".
+1 AXWebArea The Prolog Trinity demonstrator, URL: localhost:53179/portal?node=swi-wasm
+	2 container app
+		3 container
+			4 link Description: Web Prolog logo, Value: trinity.elfenbenstornet.se/
+			5 heading Trinity demonstrator, Value: 1
+				6 text Trinity demonstrator
+			7 text  Your portal to the Prolog Web
+			8 text Browser node
+			9 container Browser help
+				10 text Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.
+			11 link Description: SWI-WASM, Value: localhost:53179/portal?node=swi-wasm
+			12 link Description:  Shared DB, Value: localhost:53179/wasm/shared_db.pl
+			13 text Remote nodes
+			14 container Node help
+				15 text Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.
+			16 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+			17 link Description: Open N1 demonstrator, Value: n1.elfenbenstornet.se/demonstrator
+			18 link Description: Open N2 demonstrator, Value: n2.elfenbenstornet.se/demonstrator
+			19 link Description: Open N3 demonstrator, Value: n3.elfenbenstornet.se/demonstrator
+			20 link Description: Open N4 demonstrator, Value: n4.elfenbenstornet.se/demonstrator
+			21 link Description: Open N5 demonstrator, Value: n5.elfenbenstornet.se/demonstrator
+			22 button Description: Open help, Help: Help
+			23 button Description: Open settings, Help: Settings
+		24 container
+			25 button Hide examples
+			26 text Examples
+			27 text Tutorials
+			28 content list
+				29 link Description: The ACTOR profile, Value: localhost:53179/actor-profile-tutorial
+				30 link Description: The stateful WebSocket API, Value: localhost:53179/actor-api-tutorial
+				31 link Description: Jev agent experiment, Value: localhost:53179/jev-sxml-tutorial
+			32 text Web Prolog code
+			33 content list
+				34 link Description: 01 queens.pl, Value: localhost:53179/examples/actors/01%20queens.pl
+				35 link Description: 02 grammar.pl, Value: localhost:53179/examples/actors/02%20grammar.pl
+				36 link Description: 03 expert-system.pl, Value: localhost:53179/examples/actors/03%20expert-system.pl
+				37 link Description: 04 count_server.pl, Value: localhost:53179/examples/actors/04%20count_server.pl
+				38 link Description: 05 fridge.pl, Value: localhost:53179/examples/actors/05%20fridge.pl
+				39 link Description: 06 ping-pong.pl, Value: localhost:53179/examples/actors/06%20ping-pong.pl
+				40 link Description: 07 selective-receive.pl, Value: localhost:53179/examples/actors/07%20selective-receive.pl
+				41 link Description: 08 priority_queue.pl, Value: localhost:53179/examples/actors/08%20priority_queue.pl
+				42 link Description: 09 alarm.pl, Value: localhost:53179/examples/actors/09%20alarm.pl
+				43 link Description: 10 links.pl, Value: localhost:53179/examples/actors/10%20links.pl
+				44 link Description: 11 ring.pl, Value: localhost:53179/examples/actors/11%20ring.pl
+				45 link Description: 12 dining_philosophers.pl, Value: localhost:53179/examples/actors/12%20dining_philosophers.pl
+				46 link Description: 13 parallel.pl, Value: localhost:53179/examples/actors/13%20parallel.pl
+				47 link Description: 14 backtracking.pl, Value: localhost:53179/examples/actors/14%20backtracking.pl
+				48 link Description: 15 simple_toplevel.pl, Value: localhost:53179/examples/actors/15%20simple_toplevel.pl
+				49 link Description: 16 fridge_server.pl, Value: localhost:53179/examples/actors/16%20fridge_server.pl
+				50 link Description: 17 rpc.pl, Value: localhost:53179/examples/actors/17%20rpc.pl
+				51 link Description: 18 proof-trees.pl, Value: localhost:53179/examples/actors/18%20proof-trees.pl
+				52 link Description: 19 promise-and-yield.pl, Value: localhost:53179/examples/actors/19%20promise-and-yield.pl
+				53 link Description: 20 expert-system-agent.pl, Value: localhost:53179/examples/actors/20%20expert-system-agent.pl
+				54 link Description: 21 model-actor.pl, Value: localhost:53179/examples/actors/21%20model-actor.pl
+				55 link Description: 22 service-policy.pl, Value: localhost:53179/examples/actors/22%20service-policy.pl
+				56 link Description: 23 jev-agent.pl, Value: localhost:53179/examples/actors/23%20jev-agent.pl
+				57 link Description: 24 jev-sxml-agent.pl, Value: localhost:53179/examples/actors/24%20jev-sxml-agent.pl
+			58 text SXML code
+			59 content list
+				60 link Description: 01 pause-and-resume.xml, Value: localhost:53179/examples/statecharts/01%20pause-and-resume.xml
+				61 link Description: 02 spaghetti.xml, Value: localhost:53179/examples/statecharts/02%20spaghetti.xml
+				62 link Description: 03 emotions.xml, Value: localhost:53179/examples/statecharts/03%20emotions.xml
+				63 link Description: 04 clock.xml, Value: localhost:53179/examples/statecharts/04%20clock.xml
+				64 link Description: 05 pingpong.xml, Value: localhost:53179/examples/statecharts/05%20pingpong.xml
+				65 link Description: 06 parallel.xml, Value: localhost:53179/examples/statecharts/06%20parallel.xml
+				66 link Description: 07 deferred-events.xml, Value: localhost:53179/examples/statecharts/07%20deferred-events.xml
+				67 link Description: 08 closure.xml, Value: localhost:53179/examples/statecharts/08%20closure.xml
+				68 link Description: 09 gcd.xml, Value: localhost:53179/examples/statecharts/09%20gcd.xml
+				69 link Description: 10 shared-database.xml, Value: localhost:53179/examples/statecharts/10%20shared-database.xml
+				70 link Description: 11 boxshop-1.xml, Value: localhost:53179/examples/statecharts/11%20boxshop-1.xml
+				71 link Description: 12 boxshop-2.xml, Value: localhost:53179/examples/statecharts/12%20boxshop-2.xml
+				72 link Description: 13 spawn-actor.xml, Value: localhost:53179/examples/statecharts/13%20spawn-actor.xml
+				73 link Description: 14 spawn-toplevel.xml, Value: localhost:53179/examples/statecharts/14%20spawn-toplevel.xml
+				74 link Description: 15 spawn-server.xml, Value: localhost:53179/examples/statecharts/15%20spawn-server.xml
+				75 link Description: 16 spawn-supervisor.xml, Value: localhost:53179/examples/statecharts/16%20spawn-supervisor.xml
+				76 link Description: 17 spawn-statechart.xml, Value: localhost:53179/examples/statecharts/17%20spawn-statechart.xml
+				77 link Description: 18 service-request.xml, Value: localhost:53179/examples/statecharts/18%20service-request.xml
+				78 link Description: 19 model-statechart.xml, Value: localhost:53179/examples/statecharts/19%20model-statechart.xml
+				79 link Description: 20 jev-deployment-assistant.xml, Value: localhost:53179/examples/statecharts/20%20jev-deployment-assistant.xml
+			80 container
+				81 text Editor
+				82 text <scratch-buffer>
+			83 container Demonstrator editor
+				84 AXWebArea Demonstrator Editor Frame, URL: localhost:53179/editor_frame?id=editor&mode=none
+					85 container
+						86 text entry area (settable)
+						87 container
+							88 text Scratch buffer
+
+
+
+Code typed here is auto-loaded into
+the current actor's private database.
+Selecting an example from the Examples
+drawer overwrites the buffer.
+			89 container
+				90 text Terminal
+				91 container
+					92 container
+						93 text Welcome to 
+						94 text Web Prolog
+						95 text , running
+						96 text the 
+						97 text ACTOR
+						98 text  profile on node 
+						99 text SWI-WASM,
+						100 text powered by 
+						101 link Description: SWI-Prolog, Value: swi-prolog.org/
+						102 text .
+						140 text ?- runtime_property(implementation(Which)), X="hé
+						141 text 😀", X==[h,é,'😀'], portable_text_fixture(X), ""==[
+						142 text ], write(X).
+						143 text X = [h,'é','😀'],
+						144 text Which = swi_wasm_main.
+						149 text ?- 
+						150 text rpc
+						151 text ("
+						152 link Description: http://localhost:53179, Value: localhost:53179/
+						153 text ", atom_string(nati
+						154 text ve,X)), string(X), string_chars(X,"native").
+						155 text X = "native".
+						160 text ?- read(X), X=="hé😀".
+						164 text |:  "hé😀".
+						165 text X = [h,'é','😀'].
+						169 text ?- 
+						170 text self
+						171 text (Parent), atom_string(native,N), 
+						172 text spawn
+						173 text ((po
+						174 text rtable_pair(A,B), Parent 
+						175 text !
+						176 text  pair(A,B)),Pid,[src_li
+						177 text st([portable_pair(N,"chars")]),monitor(true)]), 
+						178 text r
+						179 text eceive
+						180 text ({pair(A,B)->true}), string(A), B=="chars",
+						181 text receive
+						182 text ({down(Pid,Pid,true)->true}).
+						183 text Pid = 3160191544@localhost,
+						184 text N = "native",
+						185 text A = "native",
+						186 text Parent = main@localhost,
+						187 text B = [c,h,a,r,s].
+					103 container
+						166 text ?-  Clipboard textarea for jQuery Terminal
+						105 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: iy8fzb
+				106 text x
+				107 button (collapsed) History, Secondary Actions: Expand
+				108 button Flush, Help: Call flush/0 in the Editor session
+				109 button Actors, Help: Call actors/1 in the Editor session
+				110 button Call
+				111 button (disabled) Next
+				112 button (disabled) Stop
+				113 button (disabled) Abort
+				114 button Clear
+			115 container
+				116 text Logger 20:08:17 · API · SWI-WASM
+				188 text Pid = 3160191544,
+N = "native",
+A = "native",
+Parent = main,
+B = [c,h,a,r,s].
+				189 text 20:08:17 · API · SWI-WASM
+				190 text 3160191544 done.
+				191 text 20:08:17 · API · SWI-WASM
+				192 text main -> main: down(3160191544,3160191544,true)
+				193 text 20:08:17 · API · SWI-WASM
+				194 text 3160191544 -> main: pair("native",[c,h,a,r,s])
+				195 text 20:08:17 · API · SWI-WASM
+				196 text 3160191544 started.
+				197 text 20:08:17 · API · SWI-WASM
+				198 text 3160191544 ready.
+				199 text 20:08:17 · API · SWI-WASM
+				200 text spawn 3160191544 using SWI-WASM WebWorker.
+				201 text 20:08:17 · API · SWI-WASM
+				202 text ?- self(Parent), atom_string(native,N), spawn((portable_pair(A,B), Parent ! pair(A,B)),Pid,[src_list([portable_pair(N,"chars")]),monitor(true)]), receive({pair(A,B)->true}), string(A), B=="chars", receive({down(Pid,Pid,true)->true}).
+				203 text 20:06:05 · API · SWI-WASM
+				167 text X = [h,'é','😀'].
+				168 text 20:06:00 · API · SWI-WASM
+				162 text ?- read(X), X=="hé😀".
+				163 text 20:05:57 · API · SWI-WASM
+				156 text X = "native".
+				157 text 20:05:57 · API · SWI-WASM
+				158 text ?- rpc("http://localhost:53179", atom_string(native,X)), string(X), string_chars(X,"native").
+				159 text 20:05:53 · API · SWI-WASM
+				145 text X = [h,'é','😀'],
+Which = swi_wasm_main.
+				146 text 20:05:53 · API · SWI-WASM
+				147 text ?- runtime_property(implementation(Which)), X="hé😀", X==[h,é,'😀'], portable_text_fixture(X), ""==[], write(X).
+				148 text 20:05:44 · INFO · SWI-WASM
+				117 text SWI-Prolog WASM runtime ready.
+				118 text 20:05:44 · INFO · RUNTIME
+				119 text Tutorial bridge connected.
+				120 text 20:05:44 · INFO · INTERACTION
+				121 text POST /interaction_log (durable usage log): {"event":"portal_view","route":"portal","device":"mac","timezone":"Europe/Stockholm","language":"en-US"}
+				122 text 20:05:44 · INFO · RUNTIME
+				123 text Demonstrator frontend loaded.
+				124 text 20:05:44 · INFO · RUNTIME
+				125 text Demonstrator scaffold loaded.
+				126 checkbox (settable, integer) Description: Info, Value: 1
+				127 text Info
+				128 checkbox (settable, integer) Description: SXML trace, Value: 1
+				129 text SXML trace
+				130 checkbox (settable, integer) Description: API traffic, Value: 1
+				131 text API traffic
+				132 button Clear
+			133 button Hide logger
+		134 container
+			135 text Inspired by 
+			136 link Description: Erlang, Value: erlang.org/
+			137 text , powered by 
+			138 link Description: SWI-Prolog, Value: swi-prolog.org/
+			139 text . Profile: SWI-WASM / ACTOR (DOM)  |  Principal: anonymous  |  Auth: OPEN
+
+The focused UI element is 105 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: iy8fzb

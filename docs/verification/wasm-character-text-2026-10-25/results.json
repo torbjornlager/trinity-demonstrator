@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-25",
+  "command": "PATH=<bundled Node bin>:$PATH SWIPL=~/.local/share/trinity-runtimes/swi-current/bin/swipl bash tools/test.sh WASM",
+  "exit_code": 0,
+  "full_wasm_tier": "passed",
+  "ok_assertion_lines": 2736,
+  "portable_worker_assertions": 15,
+  "portable_main_assertions": 18,
+  "ui_modes": [
+    "swi_wasm_worker",
+    "swi_wasm_main"
+  ],
+  "ui_checks": "passed on disposable origin; see REPORT.md",
+  "n3_n5_unchanged": true,
+  "temporary_ui_server_stopped": true
+}

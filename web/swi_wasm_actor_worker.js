@@ -1135,7 +1135,7 @@ function createSwiWasmPromiseStore(options) {
     }
     var path = String(fileName || "/worker_user_code.pl");
     Module.FS.writeFile(path, String(sourceText));
-    Prolog.query("swi_wasm_actor_bridge:load_private_source(" + JSON.stringify(path) + ")").once();
+    Prolog.query("swi_wasm_actor_bridge:load_private_source(File)", {File:path}).once();
   }
 
   function installSharedDatabase() {
@@ -1152,9 +1152,10 @@ function createSwiWasmPromiseStore(options) {
       // Web Prolog actor modules.  Keep this loader concern out of the shared
       // source so users can write receive/1 and Pid ! Message naturally.
       Module.FS.writeFile("/worker_shared_db.pl",
-        ":- use_module('/worker_actor_bridge.pl').\n" + sourceText);
+        ":- set_prolog_flag(double_quotes,chars).\n:- use_module('/worker_actor_bridge.pl').\n" + sourceText);
       Prolog.query("use_module(library(modules))").once();
-      Prolog.query("load_files('/worker_shared_db.pl',[module(wasm_shared_db),silent(true)])").once();
+      Prolog.query("set_module(wasm_shared_db:base(system))").once();
+      Prolog.query("load_files(wasm_shared_db:'/worker_shared_db.pl',[silent(true)])").once();
       Prolog.query("add_import_module(user,wasm_shared_db,start)").once();
     });
   }
@@ -1447,7 +1448,7 @@ function createSwiWasmPromiseStore(options) {
       "        down(Pid, _, _) -> worker_drain(Pid)",
       "    }, [timeout(0)]).",
       "",
-      "canonical_source_option(src_text(Text), src_text(Text)).",
+      "canonical_source_option(src_text(Text0), src_text(Text)) :- browser_source_text(Text0,Text).",
       "canonical_source_option(src_list(Terms), src_list(Terms)).",
       "canonical_source_option(src_uri(URI0), src_uri(URI)) :- browser_uri_atom(URI0, URI).",
       "canonical_source_option(src_predicates(PIs), src_predicates(PIs)).",
@@ -1497,7 +1498,7 @@ function createSwiWasmPromiseStore(options) {
       "    ( option(io_target(Target), Options) -> Goal = actors:with_io_target(Target, Goal0) ; Goal = Goal0 ).",
       "",
       "collect_statechart_support_source(Options, Source) :-",
-      "    findall(Text, (member(Option, Options), statechart_support_source_option(Option, Text)), Texts),",
+      "    findall(Text, (member(Option, Options), statechart_support_source_option(Option, Raw), browser_materialized_source(Options,Raw,Text)), Texts),",
       "    atomic_list_concat(Texts, '\\n', Source).",
       "statechart_support_source_option(Option, Text) :-",
       "    canonical_source_option(Option, Canonical),",
@@ -1547,7 +1548,7 @@ function createSwiWasmPromiseStore(options) {
       "spawn_source_option(Options, Text) :-",
       "    source_option_member(src_list(Terms), Options),",
       "    findall(ClauseText, (member(Term, Terms), clause_source_text(Term, ClauseText)), ClauseTexts),",
-      "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "    atomic_list_concat(ClauseTexts, '\\n', Raw), browser_materialized_source(Options,Raw,Text).",
       "spawn_source_option(Options, Text) :-",
       "    source_option_member(src_predicates(Indicators), Options),",
       "    findall(ClauseText,",
@@ -1558,7 +1559,7 @@ function createSwiWasmPromiseStore(options) {
       "              clause_source_text(Clause, ClauseText)",
       "            ),",
       "            ClauseTexts),",
-      "    atomic_list_concat(ClauseTexts, '\\n', Text).",
+      "    atomic_list_concat(ClauseTexts, '\\n', Raw), browser_materialized_source(Options,Raw,Text).",
       "",
       "% Preserve Worker source groups: text, lists, predicates, then URI texts.",
       "spawn_source_option(Options, Text) :-",
@@ -1601,6 +1602,7 @@ function createSwiWasmPromiseStore(options) {
       "    must_be(nonvar, Input),",
       "    ( atom(Input) -> URI = Input",
       "    ; string(Input) -> atom_string(URI, Input)",
+      "    ; is_list(Input), maplist(browser_character,Input) -> atom_chars(URI,Input)",
       "    ; type_error(atom_or_string, Input) ).",
       "browser_rpc_uri(Input, URI) :-",
       "    nonvar(Input), Input = Host0:Port, !,",
@@ -1625,7 +1627,7 @@ function createSwiWasmPromiseStore(options) {
       "    must_be(nonvar, Value), normalize_boolean(Value, _).",
       "validate_rpc_client_value(atom_or_string, Value) :- !,",
       "    must_be(nonvar, Value),",
-      "    ( atom(Value) -> true ; string(Value) -> true ; type_error(atom_or_string, Value) ).",
+      "    browser_native_text(Value,_).",
       "validate_rpc_client_value(predicate_indicators, Value) :- !,",
       "    must_be(list, Value), maplist(validate_rpc_client_pi, Value).",
       "validate_rpc_client_value(Type, Value) :- must_be(Type, Value).",
@@ -1743,7 +1745,7 @@ function createSwiWasmPromiseStore(options) {
       "",
       "rpc_load_text(Options, Text) :-",
       "    source_option_member(src_text(Source), Options),",
-      "    ( atom(Source) -> atom_string(Source, Text0) ; string(Source) -> Text0 = Source ; term_string(Source, Text0) ),",
+      "    browser_native_text(Source,Text0),",
       "    Text := actorEnsureFinalFullStop(#Text0).",
       "rpc_load_text(Options, Text) :-",
       "    source_option_member(src_list(Terms), Options),",
@@ -1792,7 +1794,7 @@ function createSwiWasmPromiseStore(options) {
       "transportable_term(Term) :-",
       "    acyclic_term(Term),",
       "    term_attvars(Term, []),",
-      "    \\+ (sub_term(Sub, Term), nonvar(Sub), blob(Sub, BlobType), BlobType \\== text, BlobType \\== reserved_symbol).",
+      "    \\+ (sub_term(Sub, Term), nonvar(Sub), blob(Sub, BlobType), BlobType \\== text, BlobType \\== ucs_text, BlobType \\== reserved_symbol).",
       "must_be_transportable_term(Term) :-",
       "    ( transportable_term(Term) -> true",
       "    ; throw(error(type_error(transportable_term, Term), send/2)) ).",
@@ -1815,6 +1817,25 @@ function createSwiWasmPromiseStore(options) {
       "wire_variable_names([Var|Vars], N, [Name=Var|Names]) :-",
       "    format(atom(Name), '_~d', [N]), N1 is N + 1,",
       "    wire_variable_names(Vars, N1, Names).",
+      "% Language text uses characters; bridge/library and wire strings stay native.",
+      "language_read(Text, Term) :- term_string(Term, Text, [double_quotes(chars),module(user)]).",
+      "browser_character(Char) :- atom(Char), atom_length(Char,1).",
+      "browser_source_text(Text, Source) :-",
+      "    ( atom(Text) -> Source=Text ; browser_native_text(Text,Source) ).",
+      "browser_native_text(Text, Native) :-",
+      "    ( atom(Text) -> atom_string(Text,Native)",
+      "    ; string(Text) -> Native=Text",
+      "    ; is_list(Text), maplist(browser_character,Text) -> string_chars(Native,Text)",
+      "    ; type_error(atom_or_string,Text) ).",
+      "% Materialised local clauses already contain typed terms, including native strings.",
+      "browser_materialized_source(Options, Raw, Text) :-",
+      "    option(node(Node0),Options,localhost), browser_uri_atom(Node0,Node),",
+      "    ( Node == localhost",
+      "    -> format(atom(Text),':- set_prolog_flag(double_quotes,string).~n~s~n:- set_prolog_flag(double_quotes,chars).~n',[Raw])",
+      "    ; Text=Raw ).",
+      "",
+      ":- set_prolog_flag(user:double_quotes,chars).",
+      "",
       "wire_read(Text, Term) :- term_string(Term, Text, [double_quotes(string)]).",
       "remote_answer_message(Text, Msg) :-",
       "    wire_read(Text, Raw),",
@@ -2046,7 +2067,7 @@ function createSwiWasmPromiseStore(options) {
       "    receive_idle({",
       "        '$call_text'(GoalText, Limit0, Offset, Once) ->",
       "            drain_stale_commands,",
-      "            term_string(PlainGoal, GoalText, [variable_names(Bindings), double_quotes(string)]),",
+      "            term_string(PlainGoal, GoalText, [variable_names(Bindings), double_quotes(chars),module(user)]),",
       "            Goal = user:PlainGoal,",
       "            dict_create(Template, bindings, Bindings),",
       "            ( Limit0 == none -> Limits = [] ; must_be(positive_integer, Limit0), Limits = [limit(Limit0)] ), append(Limits, [template(Template), offset(Offset), once(Once)], Options),",
@@ -2282,37 +2303,36 @@ function createSwiWasmPromiseStore(options) {
       "",
       "input(Prompt, Answer, Options) :-",
       "    self(Self),",
+      "    ( is_list(Prompt), maplist(browser_character,Prompt) -> string_chars(PromptTerm,Prompt) ; PromptTerm=Prompt ),",
       "    (   option(target(Target), Options)",
-      "    ->  send(Target, prompt(Self, Prompt)),",
-      "        receive({'$input'(_, Answer) -> true})",
+      "    ->  send(Target, prompt(Self, PromptTerm)),",
+      "        receive({'$input'(_, Answer) -> true ; '$input_text'(_, Line) -> language_read(Line,Answer)})",
       "    ;   io_target(Target)",
-      "    ->  send(Target, prompt(Self, Prompt)),",
-      "        receive({'$input'(_, Answer) -> true})",
-      "    ;   ( atom(Prompt) -> atom_string(Prompt, PromptText)",
-      "        ; string(Prompt) -> PromptText = Prompt",
-      "        ; term_string(Prompt, PromptText)",
-      "        ),",
+      "    ->  send(Target, prompt(Self, PromptTerm)),",
+      "        receive({'$input'(_, Answer) -> true ; '$input_text'(_, Line) -> language_read(Line,Answer)})",
+      "    ;   ( atom(PromptTerm) -> atom_string(PromptTerm,PromptText)",
+      "        ; string(PromptTerm) -> PromptText=PromptTerm ; term_string(PromptTerm,PromptText) ),",
       "        Promise := actorInput(#PromptText),",
       "        actor_await(Promise, AnswerText),",
       "        AnswerText \\== null,",
-      "        term_string(Answer, AnswerText)",
+      "        language_read(AnswerText, Answer)",
       "    ).",
       "",
       ":- dynamic behaviour_source_load/1, behaviour_source_block/1.",
       "% The active load's clause reference scopes markers across nested loads and",
       "% is erased on success, exception or interruption, even without an end marker.",
       "load_behaviour_source(File) :-",
-      "    atom_string(Path, File),",
+      "    browser_native_text(File,NativePath), atom_string(Path,NativePath),",
       "    setup_call_cleanup(",
       "        asserta(behaviour_source_load(Path), Ref),",
-      "        user:consult(File),",
-      "        (erase(Ref), retractall(behaviour_source_block(Ref)))",
+      "        user:consult(Path),",
+      "        (erase(Ref), retractall(behaviour_source_block(Ref)), set_prolog_flag(user:double_quotes,chars))",
       "    ).",
       "behaviour_source_boundary(Boundary) :-",
       "    prolog_load_context(file, File),",
       "    clause(behaviour_source_load(File), true, Ref), !,",
-      "    ( Boundary == begin -> assertz(behaviour_source_block(Ref))",
-      "    ; retractall(behaviour_source_block(Ref)) ).",
+      "    ( Boundary == begin -> assertz(behaviour_source_block(Ref)), set_prolog_flag(user:double_quotes,string)",
+      "    ; retractall(behaviour_source_block(Ref)), set_prolog_flag(user:double_quotes,chars) ).",
       "behaviour_source_boundary(_).",
       "internal_behaviour_loading :-",
       "    prolog_load_context(file, File),",
@@ -2504,7 +2524,7 @@ function createSwiWasmPromiseStore(options) {
     currentGoalText = String(goalText || "true");
     abortRequested = false;
     return Prolog.forEach(
-      "term_string(Goal, GoalText), catch(catch((call(Goal) -> Outcome = true ; Outcome = false), '$actor_exit'(Reason), Outcome = Reason), Error, Outcome = exception(Error)), term_string(Outcome, OutcomeText), _ := actorSetDoneReason(#OutcomeText)",
+      "swi_wasm_actor_bridge:wire_read(GoalText, Goal), catch(catch((call(Goal) -> Outcome = true ; Outcome = false), '$actor_exit'(Reason), Outcome = Reason), Error, Outcome = exception(Error)), term_string(Outcome, OutcomeText), _ := actorSetDoneReason(#OutcomeText)",
       { GoalText: currentGoalText },
       function(answer) {
         flushOutput(true);
@@ -2717,7 +2737,7 @@ function createSwiWasmPromiseStore(options) {
       var inputLine = message.input == null ? "" : String(message.input);
       var inputBody = inputLine.replace(/\.[ \t]*$/, "");
       var inputArg = inputBody.trim() === "" ? "end_of_file" : "(" + inputBody + ")";
-      deliver("'$input'(terminal," + inputArg + ")");
+      deliver("'$input_text'(terminal," + JSON.stringify(inputArg) + ")");
       post("responded", {});
       return;
     }

@@ -1,0 +1,9 @@
+{
+  "state": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/wasm-character-ui-mkqnngwf",
+  "pid": 18812,
+  "port": 53179,
+  "url": "http://localhost:53179/portal?node=swi-wasm",
+  "shared_text_fixture": "portable_text_fixture(\"h\u00e9\ud83d\ude00\").",
+  "regular_nodes_unchanged": true,
+  "stopped_after_checks": true
+}

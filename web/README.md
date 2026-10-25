@@ -15,6 +15,35 @@ interpreter sources are under [prolog/web_prolog/wasm](../prolog/web_prolog/wasm
 The main engine has DOM access and cooperative interruption; Workers can be
 terminated by the browser. Neither remains alive after its page is destroyed.
 
+## Language text and native boundaries
+
+Both browser modes initialise `user:double_quotes` to `chars`. Goals and options,
+interactive input, editor/URI source, the isolated `wasm_shared_db` module and
+statechart datamodels read double-quoted literals as lists of one-character
+Unicode atoms (`"hé😀"` is `[h,é,'😀']`; empty text is `[]`). This is a browser
+reading-mode migration, not adoption of the experimental portable-text profile
+by every node. `write/1` prints these values as list terms.
+
+Bridge and library modules keep native string reading. Known text inputs (source,
+URI and prompt text) convert character lists explicitly at JS/native boundaries;
+numeric code lists are rejected. Existing URI origin, CORS and fetch restrictions
+remain in force. The shared database is loaded explicitly into its own module,
+with bridge imports; it is not copied into user source.
+
+Canonical term messages are still read with `double_quotes(string)`. Native string
+objects created by libraries, including returned HTTP data, keep their type and
+variable sharing through the wire and Worker startup. Local `src_list/1` and
+`src_predicates/1` are already typed terms: their generated source brackets native
+string reading and restores character reading afterward. Internally supplied
+behaviour code has the same boundary; ordinary user source reads characters.
+Explicit remote source retains the destination's existing loading convention and
+source ordering. No new remote text-mode negotiation is introduced.
+
+The regression scenarios `portable_text_worker` and `portable_text_main` in
+`tests/wasm/swi_wasm_contracts.js` run against the real WASM engine. See
+[the migration verification record](../docs/verification/wasm-character-text-2026-10-25/REPORT.md)
+for the complete WASM tier and temporary-origin UI checks.
+
 ## Source loading and named startup
 
 The creating engine asks the page coordinator to fetch supplemental Prolog URI

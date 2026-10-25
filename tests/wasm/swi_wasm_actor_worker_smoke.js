@@ -196,12 +196,12 @@ async function main() {
   // it '$input'/3 and the shell's receive would never match).
   S.onmessage({ data: { command: "toplevel_respond", input: "a, b." } });
   const shellInput = await S.actorReceive(-1);
-  ok(shellInput === "'$input'(terminal,(a, b))",
+  ok(shellInput === '\'$input_text\'(terminal,"(a, b)")',
      "shell input parenthesises the answer and strips the read terminator");
   // An empty answer maps to end_of_file (not the invalid term '()').
   S.onmessage({ data: { command: "toplevel_respond", input: "" } });
   const shellEof = await S.actorReceive(-1);
-  ok(shellEof === "'$input'(terminal,end_of_file)",
+  ok(shellEof === '\'$input_text\'(terminal,"end_of_file")',
      "an empty shell input answer is end_of_file");
 
   // Prolog toplevel events cross the Worker boundary as the canonical API

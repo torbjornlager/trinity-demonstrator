@@ -535,7 +535,10 @@ load_datamodel(Text) :-
     datamodel_dynamic_snapshot(Before),
     setup_call_cleanup(
         open_string(Text, Stream),
-        read_datamodel_terms(Stream),
+        (current_prolog_flag(statechart_wasm:double_quotes,BeforeMode),
+         setup_call_cleanup(set_prolog_flag(statechart_wasm:double_quotes,chars),
+                            read_datamodel_terms(Stream),
+                            set_prolog_flag(statechart_wasm:double_quotes,BeforeMode))),
         close(Stream)),
     %  Track every predicate the datamodel added, including ones created by
     %  directives (`:- dynamic(p/1)`, `:- assertz(...)`) that assert_local/1
@@ -554,7 +557,7 @@ datamodel_dynamic_snapshot(PIs) :-
     sort(PIs0, PIs).
 
 read_datamodel_terms(Stream) :-
-    read_term(Stream, Term, []),
+    read_term(Stream, Term, [module(statechart_wasm)]),
     (   Term == end_of_file
     ->  true
     ;   expand_and_assert(Term),

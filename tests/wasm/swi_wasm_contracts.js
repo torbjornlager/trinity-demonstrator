@@ -75,9 +75,9 @@ async function until(pred, ms) {
   return true;
 }
 
-async function startToplevel(W, lifecycle, source = behaviourSource) {
+async function startToplevel(W, lifecycle, source = behaviourSource, role = "actor") {
   W.S.onmessage({ data: {
-    command: "start", pid: PID, behaviourSource: source,
+    command: "start", pid: PID, behaviourSource: source, role: role,
     goal: "swi_wasm_actor_bridge:ptcp(" + QPID + ", " + CLIENT + "@localhost, " + (lifecycle || "true") + ")"
   } });
   if (!await until(function() { return W.posted.some(function(m) { return m.type === "started"; }); }, 20000)) {
@@ -438,7 +438,7 @@ async function behaviourWarningContract(run, check, incomingSource) {
   const pre=JSON.stringify("parallel(_) :- true.\n");
   const post=JSON.stringify("\nfirst_solution(_,_) :- true.\n");
   const file="/warning_probe.pl";
-  const loadGoal=(incomingSource?"B="+JSON.stringify(incomingSource):b+"wasm_behaviour_source([],B)")+",atomics_to_string(["+pre+",B,"+post+"],Text),"+
+  const loadGoal=(incomingSource?b+"browser_native_text("+JSON.stringify(incomingSource)+",B)":b+"wasm_behaviour_source([],B)")+","+b+"browser_native_text("+pre+",Pre),"+b+"browser_native_text("+post+",Post),atomics_to_string([Pre,B,Post],Text),"+
     "setup_call_cleanup(open('"+file+"',write,S),format(S,'~s',[Text]),close(S)),"+b+"load_private_source("+JSON.stringify(file)+"),"+
     "findall(PI,user:observed_warning(ignored_weak_import(user,swi_wasm_actor_bridge:PI)),PIs),sort(PIs,[first_solution/2,parallel/1]),"+
     "user:wasm_should_restart(transient,killed),findall(R,"+b+"behaviour_source_load(R),[]),findall(R,"+b+"behaviour_source_block(R),[])";
@@ -805,13 +805,13 @@ async function asynchronousAnswerContract(run,host,check) {
   const frame=(type,term,extra={})=>({frame:{type,term,more:false,data:["wrong_display"],...extra}});
   async function request(expected,label,next=false) {
     const command=next?"toplevel_next(P)":"toplevel_call(P,true)";
-    check(await run("user:answer_pid(P),"+command+",receive({"+expected+"->true},[timeout(1),on_timeout(fail)])"),label);
+    check(await run("user:answer_pid(P),"+command+",term_string(Expected,"+JSON.stringify(expected)+",[double_quotes(string),variable_names(['P'=P])]),receive({Expected->true},[timeout(1),on_timeout(fail)])"),label);
   }
   try {
     check(await run("toplevel_spawn(P,[node('http://sync.test'),session(true)]),assertz(user:answer_pid(P))"),"asynchronous answer fixture negotiates canonical payloads");
     check(host.swiWasmRemoteActorConnections['http://sync.test'].answerTerms&&state.commands.some(m=>m.command==="transport_hello"&&m.answer_terms===true),"canonical capability is requested and acknowledged");
     state.answers=[frame("success",String.raw`[row(pair(X,X),'a b',"ab",'$VAR'(1),f('x(y)')),row(pair(Y,Z),plain,"ab",literal,f(ok))]`,{more:true})];
-    check(await run("user:answer_pid(P),toplevel_call(P,true),receive({success(P,[row(pair(A,B),'a b',Text,'$VAR'(1),f('x(y)')),row(pair(C,D),plain,Text2,literal,f(ok))],true)->true},[timeout(1),on_timeout(fail)]),A==B,var(A),var(C),var(D),C\\==D,A\\==C,string(Text),Text==\"ab\",Text2==Text"),"whole canonical solution list preserves sharing, fresh variables, atoms, strings and literal VAR terms");
+    check(await run("user:answer_pid(P),toplevel_call(P,true),receive({success(P,[row(pair(A,B),'a b',Text,'$VAR'(1),f('x(y)')),row(pair(C,D),plain,Text2,literal,f(ok))],true)->true},[timeout(1),on_timeout(fail)]),A==B,var(A),var(C),var(D),C\\==D,A\\==C,string(Text),atom_string(ab,Text),Text2==Text"),"whole canonical solution list preserves sharing, fresh variables, atoms, strings and literal VAR terms");
     const escaped=String.raw`["a\nb","C:\\tmp\\x","quote\"here"]`;
     state.answers=[frame("success",escaped)];
     await request('success(P,'+escaped+',false)',"canonical strings retain newlines, backslashes and escaped quotes");
@@ -1222,7 +1222,7 @@ function booleanLanguageCases() {
 
 function uriLanguageCases() {
   const cases=[];
-  for(const value of ['42','1.5','foo(bar)','[h,t,t,p]','[104,116,116,112]']) {
+  for(const value of ['42','1.5','foo(bar)','[http,t,p]','[104,116,116,112]']) {
     for(const goal of [`rpc(${value},true,[src_uri('https://example.org/source')])`,
                         `promise(${value},true,_,[src_uri('https://example.org/source')])`]) {
       cases.push({label:goal,goal:`catch((${goal},fail),error(type_error(atom_or_string,_),_),true)`});
@@ -1237,7 +1237,57 @@ function uriLanguageCases() {
   return cases;
 }
 
+
+function portableTextCases() {
+  return [
+    ['literal Unicode and empty text', '"hé😀"==[h,é,\'😀\'],""==[],\\+string("abc"),"abc"==[a,b,c]'],
+    ['native library constructors remain strings', `atom_string('hé😀',S),string(S),string_chars(S,"hé😀"),with_output_to(string(O),write("abc")),string(O),atom_string('[a,b,c]',O)`],
+    ['default term reader follows language mode', `read_term_from_atom('"hé😀"',T,[]),T=="hé😀"`],
+    ['DCG terminals are character lists', `phrase("hé😀",[h,é,'😀'])`],
+    ['bridge and native modules retain string flags', `current_prolog_flag(user:double_quotes,chars),current_prolog_flag(swi_wasm_actor_bridge:double_quotes,string),use_module(library(option)),current_prolog_flag(option:double_quotes,string)`],
+    ['canonical wire retains native strings, arrays and sharing', `atom_string('hé😀',S),swi_wasm_actor_bridge:wire_text(p(S,[a,b,c],V,V),W),swi_wasm_actor_bridge:wire_read(W,p(N,L,A,B)),string(N),N==S,L==[a,b,c],var(A),A==B`],
+    ['materialised clauses retain native strings and character lists', `atom_string('native text',Native),assertz(user:portable_copied(Native)),swi_wasm_actor_bridge:collect_spawn_source([src_list([portable_materialized(Native,\"chars\")]),src_predicates([portable_copied/1]),src_text('portable_after("text").')],Source),assertz((user:portable_materialized_load :- setup_call_cleanup(open('/portable_materialized.pl',write,S),format(S,'~s',[Source]),close(S)),swi_wasm_actor_bridge:load_private_source('/portable_materialized.pl'))),portable_materialized_load,portable_materialized(N,C),string(N),N==Native,C==\"chars\",portable_copied(Copied),string(Copied),Copied==Native,portable_after("text"),current_prolog_flag(user:double_quotes,chars)`],
+    ['transport rejects cycles and non-text blobs', `\\+ (C=f(C),swi_wasm_actor_bridge:transportable_term(C)),\\+setup_call_cleanup(open('/portable_blob',write,S),swi_wasm_actor_bridge:transportable_term(S),close(S))`],
+    ['explicit remote source keeps its existing convention', `swi_wasm_actor_bridge:browser_materialized_source([node('http://example.org')],'p("native").',S),S=='p("native").'`],
+    ['upgrade reader preserves typed strings and restores characters', `atom_string(native,N),swi_wasm_actor_bridge:collect_spawn_source([src_list([portable_upgrade(N,"chars")])],S),(current_predicate(user:wasm_load_upgrade_source/1)->M=user;M=swi_wasm_actor_bridge),M:wasm_load_upgrade_source(S),portable_upgrade(U,C),string(U),U==N,C=="chars",current_prolog_flag(user:double_quotes,chars),current_prolog_flag(swi_wasm_actor_bridge:double_quotes,string)`],
+    ['text option boundary rejects codes and open text without binding', `catch((swi_wasm_actor_bridge:browser_native_text([97],_),fail),error(type_error(atom_or_string,_),_),true),catch((swi_wasm_actor_bridge:browser_native_text([a|Tail],_),fail),error(type_error(atom_or_string,_),_),true),var(Tail)`],
+    ['URI and source text accept character lists and native strings', `swi_wasm_actor_bridge:browser_uri_atom("https://example.org/é",A),atom_string(A,N),swi_wasm_actor_bridge:browser_uri_atom(N,A),swi_wasm_actor_bridge:validate_browser_spawn_options([src_text("p(a)."),src_uri("https://example.org/p"),node("localhost")])`]
+  ];
+}
+async function portableMain(W,check) {
+ const source=Function(html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0]).call({swiWasmBehaviourProlog:()=>behaviourSource});
+ const engine=await require(path.join(ROOT,'web/swipl-bundle.js'))({arguments:['-q','--nosignals']});
+ const original=global.fetch;global.fetch=async url=>{const r=await original(url);return {ok:r.ok,text:async()=>await r.text()+(String(url).endsWith('/shared_db.pl')?'\nportable_shared("hé😀").\n':'')}};
+ await workbenchMethod('installSwiWasmSharedDatabase','swiWasmBehaviourProlog').call({swiWasmRpcProlog:()=>source},engine.prolog,engine);
+ const run=async goal=>{let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;};
+ for(const [label,goal] of portableTextCases())check(await run(goal),label);
+ check(await run(`portable_shared("hé😀"),current_prolog_flag(wasm_shared_db:double_quotes,chars)`),'shared database uses language characters');
+ engine.FS.writeFile('/portable_source.pl','portable_private("hé😀").\n');
+ check(await run(`swi_wasm_actor_bridge:load_private_source('/portable_source.pl'),portable_private("hé😀")`),'supplied private source uses characters');
+ check(await loadCompatibilityStatecharts(engine),'statechart modules loaded');
+ check(await run(`statechart_wasm_model:load_datamodel('portable_chart("hé😀").'),statechart_wasm:portable_chart("hé😀"),current_prolog_flag(statechart_wasm_model:double_quotes,string)`),'datamodel uses characters while its native implementation remains strings');
+ global.self.swiWasmActorInput=()=>Promise.resolve('"hé😀".');
+ check(await run(`input("Prompt: ",A),A=="hé😀"`),'inline input reader returns language characters');
+ check(await run(`swi_wasm_actor_bridge:swi_wasm_read_line_term('"hé😀".',A),A=="hé😀"`),'read shim uses the same characters');
+}
+async function portableWorker(W,check) {
+ const original=global.fetch;global.fetch=async url=>{const r=await original(url);return {ok:r.ok,text:async()=>await r.text()+(String(url).endsWith('/shared_db.pl')?'\nportable_shared("hé😀").\n':'')}};
+ await startToplevel(W,undefined,behaviourSource,'shell_toplevel');
+ async function run(goal) {
+  const n=W.sends.length;W.S.onmessage({data:{command:'toplevel_call',goal:goal+',PortableResult=passed',options:'[limit(1)]'}});
+  await until(()=>W.sends.length>n||done(W).length>0,5000);if(done(W).length)throw new Error(JSON.stringify(done(W)));const replies=messages(W);const reply=replies[n]||'';if(!(/^success\(/.test(reply)&&reply.includes('passed')))console.log('  diagnostic '+reply+' '+JSON.stringify(W.posted.slice(-3)));return /^success\(/.test(reply)&&reply.includes('passed');
+ }
+ for(const [label,goal] of portableTextCases())check(await run(goal),label);
+ check(await run(`portable_shared("hé😀"),current_prolog_flag(wasm_shared_db:double_quotes,chars)`),'shared database uses language characters');
+ const n=W.sends.length;W.S.onmessage({data:{command:'toplevel_call',goal:'read(T),T=="hé😀",PortableResult=passed',options:'[limit(1)]'}});
+ check(await until(()=>W.posted.some(m=>m.type==='request'&&m.action==='send'&&m.message.includes('prompt(')&&m.message.includes('\"|:\"'))),'read/1 requests terminal input');
+ W.S.onmessage({data:{command:'toplevel_respond',input:'"hé😀".'}});
+ const replies=await nSends(W,n+2);check(replies.some((r,i)=>i>=n&&/^success\(/.test(r)&&r.includes('passed')),'shell input command parses characters independently of the wire decoder');
+}
+
 const scenarios = {
+  portable_text_worker: portableWorker,
+  portable_text_main: portableMain,
   async uri_input_contract(W, check) {
     await startToplevel(W);
     for(const c of uriLanguageCases()) {
