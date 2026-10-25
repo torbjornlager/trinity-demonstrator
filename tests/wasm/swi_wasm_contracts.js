@@ -1254,6 +1254,51 @@ function portableTextCases() {
     ['URI and source text accept character lists and native strings', `swi_wasm_actor_bridge:browser_uri_atom("https://example.org/é",A),atom_string(A,N),swi_wasm_actor_bridge:browser_uri_atom(N,A),swi_wasm_actor_bridge:validate_browser_spawn_options([src_text("p(a)."),src_uri("https://example.org/p"),node("localhost")])`]
   ];
 }
+// Exercise the actual main-engine lazy driver, not output captured in a
+// temporary string stream (which hides user_output buffering).
+async function mainOutputOrdering(W,check) {
+  const events=[];
+  const source=Function(html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0]).call({swiWasmBehaviourProlog:()=>behaviourSource});
+  const engine=await require(path.join(ROOT,'web/swipl-bundle.js'))({
+    arguments:['-q','--nosignals'],
+    on_output:(text,stream)=>events.push({kind:'output',text,stream})
+  });
+  engine.FS.writeFile('/output_bridge.pl',source);
+  engine.prolog.query("use_module('/output_bridge.pl')").once();
+  let resume;
+  global.self.swiWasmNoteDet=det=>events.push({kind:'det',det});
+  global.self.swiWasmNoteException=text=>events.push({kind:'exception',text});
+  global.self.swiWasmAwaitMore=()=>{events.push({kind:'wait'});return new Promise(r=>{resume=r;});};
+  const outputs=()=>events.filter(e=>e.kind==='output').map(e=>e.text).join('');
+  async function run(goal) {
+    events.length=0;
+    try {
+      await engine.prolog.forEach('swi_wasm_actor_bridge:swi_wasm_drive(user:('+goal+'))',
+        {},answer=>events.push({kind:'answer',answer}));
+      events.push({kind:'complete'});
+    } catch(e) {events.push({kind:'rejected',text:String(e)});}
+  }
+  for(const [goal,text] of [['write("abc")','[a,b,c]'],['write(atom)','atom'],
+                            ["format(user_error,'stderr',[])",'stderr'],['writeln("abc")','[a,b,c]\n']]) {
+    await run(goal);
+    check(outputs()===text && events.findIndex(e=>e.kind==='output')<events.findIndex(e=>e.kind==='answer'),goal+' output precedes answer exactly once');
+    check(events.some(e=>e.kind==='det'&&e.det==='true'),'deterministic answer remains final: '+goal);
+  }
+  await run('write(failed),fail');
+  check(outputs()==='failed'&&!events.some(e=>e.kind==='answer')&&events.at(-1).kind==='complete','failure flushes trailing output before completion');
+  await run('write(before_error),throw(test_error)');
+  check(outputs()==='before_error'&&events.findIndex(e=>e.kind==='output')<events.findIndex(e=>e.kind==='exception')&&events.at(-1).kind==='rejected'&&events.at(-1).text.includes('test_error'),'exception flushes output before reporting the original error');
+  events.length=0;
+  const pending=engine.prolog.forEach('swi_wasm_actor_bridge:swi_wasm_drive(user:(member(X,[a,b]),write(X)))',{},answer=>events.push({kind:'answer',answer}));
+  check(await until(()=>events.some(e=>e.kind==='wait')),'nondeterministic driver waits for explicit next');
+  check(outputs()==='a'&&events.filter(e=>e.kind==='answer').length===1&&events.findIndex(e=>e.kind==='output')<events.findIndex(e=>e.kind==='answer'),'first page flushes only its own output before waiting');
+  resume(true); await pending;
+  check(outputs()==='ab'&&events.filter(e=>e.kind==='answer').length===2,'next page emits its own output without duplication');
+  check(JSON.stringify(events.filter(e=>e.kind==='det').map(e=>e.det))===JSON.stringify(['false','true']),'lazy paging retains deterministic flags');
+  await run('true');
+  check(outputs()===''&&events.filter(e=>e.kind==='answer').length===1,'next query has no stale output');
+}
+
 async function portableMain(W,check) {
  const source=Function(html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0]).call({swiWasmBehaviourProlog:()=>behaviourSource});
  const engine=await require(path.join(ROOT,'web/swipl-bundle.js'))({arguments:['-q','--nosignals']});
@@ -1286,6 +1331,7 @@ async function portableWorker(W,check) {
 }
 
 const scenarios = {
+  compatibility_output_ordering: mainOutputOrdering,
   portable_text_worker: portableWorker,
   portable_text_main: portableMain,
   async uri_input_contract(W, check) {

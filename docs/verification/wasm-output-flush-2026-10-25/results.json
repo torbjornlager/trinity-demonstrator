@@ -1,0 +1,10 @@
+{
+  "base_commit": "3a84a7a72de8d06fa286cb5b6f995682c84cad0a",
+  "full_wasm_command": "PATH=<bundled Node bin>:$PATH SWIPL=~/.local/share/trinity-runtimes/swi-current/bin/swipl bash tools/test.sh WASM",
+  "exit_code": 0,
+  "full_wasm_assertion_lines": 2751,
+  "output_ordering_assertions": 15,
+  "ui_main_thread": "passed: answer/failure/exception and lazy next output ordering",
+  "n3_n5_unchanged": true,
+  "temporary_server_stopped": true
+}

@@ -1,0 +1,7 @@
+{
+  "pid": 22302,
+  "port": 53737,
+  "state": "/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/wasm-output-ui-5lhifcwn",
+  "url": "http://localhost:53737/portal?node=swi-wasm",
+  "stopped_after_ui_checks": true
+}

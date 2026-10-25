@@ -44,6 +44,16 @@ The regression scenarios `portable_text_worker` and `portable_text_main` in
 [the migration verification record](../docs/verification/wasm-character-text-2026-10-25/REPORT.md)
 for the complete WASM tier and temporary-origin UI checks.
 
+## Main-thread output flushing
+
+The main-thread lazy query driver flushes Prolog's `user_output` and `user_error`
+before publishing each answer or exception. Cleanup flushes trailing output on
+failure or abandonment. Flush errors do not replace query exceptions, and output
+from later alternatives is produced only when the user requests the next answer.
+This complements the existing Worker terminal flush; it does not change stream
+buffering globally. Regression and UI evidence is in
+[the output-flushing record](../docs/verification/wasm-output-flush-2026-10-25/REPORT.md).
+
 ## Source loading and named startup
 
 The creating engine asks the page coordinator to fetch supplemental Prolog URI
