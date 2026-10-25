@@ -1,0 +1,6 @@
+{
+  "exe": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/extracted/swipl-component.pkg/Applications/swipl-win.app/Contents/MacOS/swipl",
+  "SWI_HOME_DIR": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/extracted/swipl-component.pkg/Library/Frameworks/swipl.framework/Versions/A/Resources/swipl",
+  "DYLD_LIBRARY_PATH": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/extracted/swipl-component.pkg/Library/Frameworks/swipl.framework/Versions/A",
+  "wrapper": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/run-swipl"
+}

@@ -1,0 +1,3 @@
+.github/actions/setup-swi/action.yml: parsed
+.github/workflows/ci.yml: parsed
+Inline shell syntax: passed

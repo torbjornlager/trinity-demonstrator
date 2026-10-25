@@ -1,0 +1,50 @@
+[
+  {
+    "engine": "unpatched_10_1_18",
+    "case": "handoff",
+    "exit": 1,
+    "timeout": false,
+    "seconds": 3.22,
+    "tail": "blocking,timed,deadline])): throw(thread_status(exception(test_cleanup)))\n% [1-3/1] receive_handoff:e..mains_interruptible .. **FAILED (1.018 sec)\nERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/receive_handoff_tests.pl:83:\nERROR: [Thread main]     test receive_handoff:empty_wait_remains_interruptible (3-th forall generator = member(deadline,[blocking,timed,deadline])): throw(thread_status(exception(test_cleanup)))\nERROR: [Thread main] 3 tests failed\n"
+  },
+  {
+    "engine": "unpatched_10_1_18",
+    "case": "uri",
+    "exit": 1,
+    "timeout": false,
+    "seconds": 2.16,
+    "tail": "% [1/1] t1_load_options:l.._user_bang_operator .... **FAILED (1.009 sec)\nERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/t1_isolation.pl:1049:\nERROR: [Thread main]     test t1_load_options:load_uri_without_user_bang_operator: failed\nERROR: [Thread main] 1 test failed\n"
+  },
+  {
+    "engine": "unpatched_10_1_18",
+    "case": "shell",
+    "exit": -9,
+    "timeout": true,
+    "seconds": 8.0,
+    "tail": "% [1/1] t2_toplevels:sess..es_actor_primitives .."
+  },
+  {
+    "engine": "fixed",
+    "case": "handoff",
+    "exit": 0,
+    "timeout": false,
+    "seconds": 0.92,
+    "tail": "% [1-1/1] receive_handoff:e..mains_interruptible .... passed (0.272 sec)\n% [1-2/1] receive_handoff:e..mains_interruptible .... passed (0.274 sec)\n% [1-3/1] receive_handoff:e..mains_interruptible .... passed (0.276 sec)\n"
+  },
+  {
+    "engine": "fixed",
+    "case": "uri",
+    "exit": 0,
+    "timeout": false,
+    "seconds": 0.15,
+    "tail": "% [1/1] t1_load_options:l.._user_bang_operator ...... passed (0.059 sec)\n"
+  },
+  {
+    "engine": "fixed",
+    "case": "shell",
+    "exit": 0,
+    "timeout": false,
+    "seconds": 0.12,
+    "tail": "% [1/1] t2_toplevels:sess..es_actor_primitives ...... passed (0.057 sec)\n"
+  }
+]

@@ -29,12 +29,15 @@ jobs:
           # T5 archives the historical demonstrator-peer tag to run its
           # cross-version interoperability peer.
           fetch-depth: 0
-      - name: Install SWI-Prolog
-        run: |
-          sudo apt-add-repository -y ppa:swi-prolog/stable
-          sudo apt-get update
-          sudo apt-get install -y swi-prolog
-          swipl --version
+      # 10.1.19 includes the protected-wait fix required by receive handoff.
+      - uses: ./.github/actions/setup-swi
+      - name: Check CI process-group cleanup
+        run: python3 tests/test_ci_timeout.py
+      - name: Verify receive-handoff engine prerequisite
+        run: >-
+          python3 tools/ci_timeout.py 30 -- "$SWIPL" -f none -q
+          -s tests/tiers/receive_handoff_tests.pl
+          -g 'run_tests(receive_handoff)' -t halt
       - name: Run tiered test suite
         run: |
           set -u
@@ -47,11 +50,11 @@ jobs:
           status=0
           for tier in LINT T0 T1 T2 T3 T4 T5; do
             echo "::group::Tier $tier"
-            if timeout 360 ./tools/test.sh "$tier"; then
+            if python3 tools/ci_timeout.py 360 -- ./tools/test.sh "$tier"; then
               echo "Tier $tier OK"
             else
               code=$?
-              if [ "$code" -eq 124 ]; then
+              if [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; then
                 echo "::error::Tier $tier TIMED OUT (likely a deadlocked receive/await)"
               else
                 echo "::error::Tier $tier FAILED (exit $code)"
@@ -86,12 +89,8 @@ jobs:
           # owner-supplied read credential; absence fails checkout, not fallback.
           token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
           persist-credentials: false
-      - name: Install SWI-Prolog
-        run: |
-          sudo apt-add-repository -y ppa:swi-prolog/stable
-          sudo apt-get update
-          sudo apt-get install -y swi-prolog
-          swipl --version
+      # 10.1.19 includes the protected-wait fix required by receive handoff.
+      - uses: ./.github/actions/setup-swi
       - uses: actions/setup-node@v6
         with:
           node-version: '22'

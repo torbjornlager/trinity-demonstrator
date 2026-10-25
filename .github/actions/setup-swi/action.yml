@@ -1,0 +1,37 @@
+name: Set up verified SWI-Prolog release
+description: Build official SWI-Prolog 10.1.19 in the disposable runner directory
+runs:
+  using: composite
+  steps:
+    - name: Install build dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake ninja-build curl \
+          libgmp-dev libpcre2-dev libssl-dev zlib1g-dev libedit-dev \
+          libarchive-dev libyaml-dev uuid-dev
+    - name: Build checksum-pinned official release
+      shell: bash
+      run: |
+        set -euo pipefail
+        version=10.1.19
+        sha256=3b4128b8bdfa2b9778ee9b29163872b1e414ca0f3117a32c286decfe246b7e6a
+        work="$RUNNER_TEMP/swi-release-$version"
+        prefix="$work/install"
+        mkdir -p "$work/source"
+        curl --fail --location --retry 3 \
+          "https://www.swi-prolog.org/download/devel/src/swipl-$version.tar.gz" \
+          --output "$work/source.tar.gz"
+        echo "$sha256  $work/source.tar.gz" | sha256sum --check --strict
+        tar -xzf "$work/source.tar.gz" -C "$work/source" --strip-components=1
+        cmake -S "$work/source" -B "$work/build" -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix" \
+          -DINSTALL_DOCUMENTATION=OFF -DSWIPL_PACKAGES_GUI=OFF \
+          -DSWIPL_PACKAGES_JAVA=OFF
+        cmake --build "$work/build" --parallel 2
+        cmake --install "$work/build"
+        "$prefix/bin/swipl" --version
+        "$prefix/bin/swipl" -f none -q -g \
+          "current_prolog_flag(version_data,swi(10,1,19,_)),use_module(library(pcre)),use_module(library(sgml)),use_module(library(http/http_open)),use_module(library(ssl)),use_module(library(crypto)),halt"
+        echo "$prefix/bin" >> "$GITHUB_PATH"
+        echo "SWIPL=$prefix/bin/swipl" >> "$GITHUB_ENV"

@@ -1,0 +1,12 @@
+{
+  "installed_executable_hashes_unchanged": true,
+  "n3_n5_process_identities_unchanged": true,
+  "launcher_and_selection_hashes_unchanged": true,
+  "installed_executable_sha256": {
+    "/Applications/swipl-win.app/Contents/MacOS/swipl": "def8dda8fa520840d3bab90a7e429b8672ab9fce183ad3d8b19194c6ddf3470b",
+    "/Library/Frameworks/swipl.framework/Versions/A/swipl": "1a2c01caed7b839d7e44250b514ff481df99bc96585c848f6d607face3a91179",
+    "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl": "915c4758b6aba3d01ade4fe4f46332b6f526ad6c70a8e2574dd05278c2b0ce9c",
+    "/Users/torbjorn.lager/Documents/GitHub/trealla-port/.build/trealla-current/tpl": "71f5ab7df3bde1a0a73cffccb2a762815895f6d2c2ef3f63ee52ef10baaeba1c"
+  },
+  "node_reference": "../wasm-character-text-2026-10-25/preservation.json"
+}

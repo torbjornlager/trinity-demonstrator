@@ -1,0 +1,4 @@
+stage(spawned)
+stage(count_reply)
+stage(kill_sent)
+ERROR: [Thread main] -g self(Self),t1_actor_example_path('04 count_server.pl',File),current_op(Pri,Type,!),setup_call_cleanup(op(0,xfx,!),(spawn(count_server(0),P,[monitor(true),src_uri(File)]),writeln(stage(spawned)),send(P,count(Self)),receive({count(1)->writeln(stage(count_reply))},[timeout(1),on_timeout(throw(missing_count))]),exit(P,kill),writeln(stage(kill_sent)),receive({down(P,_,kill)->writeln(stage(down))},[timeout(1),on_timeout(throw(missing_down))])),op(Pri,Type,!)): Unknown message: missing_down

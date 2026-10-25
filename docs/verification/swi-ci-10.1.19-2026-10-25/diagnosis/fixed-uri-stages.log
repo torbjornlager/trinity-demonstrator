@@ -1,0 +1,4 @@
+stage(spawned)
+stage(count_reply)
+stage(kill_sent)
+stage(down)

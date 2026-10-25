@@ -56,9 +56,10 @@ record.
 
 Use a verified threaded SWI build containing the protected-wait fix
 [`09b6299`](https://github.com/SWI-Prolog/swipl-devel/commit/09b6299f696574c9230f23e53b1ab041a942b6f3),
-as required by the receive adapter. The version number alone is insufficient;
-the official macOS 10.1.18 package predates that fix. Setup also needs Python 3
-and Git. Nothing is downloaded or installed by these commands.
+as required by the receive adapter. The official **10.1.19** release includes
+this fix and passes the native checkpoint recorded below. The official 10.1.18
+package predates it; custom builds that report 10.1.18 need source/provenance
+verification. Setup also needs Python 3 and Git. Nothing is downloaded or installed by these commands.
 
 From this checkout, prepare an existing native checkout at the revision in
 `dependencies/swi-prolog-node.json`:
@@ -104,6 +105,18 @@ Then try:
   `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 
 ### Pinned native CI checks
+
+Both CI jobs build the checksum-pinned official SWI-Prolog **10.1.19** source
+release through `.github/actions/setup-swi`, in the disposable runner directory.
+They verify the version and required PCRE, XML, HTTP, SSL and crypto libraries.
+The automatic legacy job checks the receive-handoff prerequisite before its
+unchanged native tiers. Its 360-second tier watchdog terminates the entire
+process group after a bounded grace period, including children whose shell has
+already exited. See [the CI engine verification record](docs/verification/swi-ci-10.1.19-2026-10-25/REPORT.md).
+Changing this CI selection does not update a developer's installed engine or
+restart a node. Updating the release requires updating and verifying the version
+and source SHA-256 together in the composite action.
+
 
 The `CI` workflow preserves its existing push/pull-request legacy job. Its
 manual **Run workflow** form additionally offers `pinned_native`, defaulting to

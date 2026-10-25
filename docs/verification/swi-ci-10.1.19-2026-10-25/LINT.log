@@ -1,0 +1,2 @@
+=== Tier LINT (layering: imports only point downward) ===
+Layering lint OK (595 edges checked)

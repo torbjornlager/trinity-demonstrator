@@ -1,0 +1,4 @@
+% [1/1] t1_load_options:l.._user_bang_operator .... **FAILED (1.009 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/tests/tiers/t1_isolation.pl:1049:
+ERROR: [Thread main]     test t1_load_options:load_uri_without_user_bang_operator: failed
+ERROR: [Thread main] 1 test failed

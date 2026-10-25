@@ -1,0 +1,8 @@
+{
+  "version": "10.1.19",
+  "source_url": "https://www.swi-prolog.org/download/devel/src/swipl-10.1.19.tar.gz",
+  "source_sha256": "3b4128b8bdfa2b9778ee9b29163872b1e414ca0f3117a32c286decfe246b7e6a",
+  "macos_package_url": "https://www.swi-prolog.org/download/devel/bin/swipl-10.1.19-1.fat.pkg",
+  "macos_package_sha256": "b91d4b0bfdbfc0cf08d0614b75d7d2348691c96344e2675dc2a47d88da5b16c3",
+  "checksum_reference": "https://www.swi-prolog.org/download/devel"
+}

@@ -1,0 +1,9 @@
+{'label': 'prerequisite', 'command': ['/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/run-swipl', '-f', 'none', '-q', '-s', 'tests/tiers/receive_handoff_tests.pl', '-g', 'run_tests(receive_handoff)', '-t', 'halt'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 30, 'seconds': 1.545}
+{'label': 'libraries', 'command': ['/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/run-swipl', '-f', 'none', '-q', '-g', 'current_prolog_flag(version_data,swi(10,1,19,_)),use_module(library(pcre)),use_module(library(sgml)),use_module(library(http/http_open)),use_module(library(ssl)),use_module(library(crypto)),halt'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 0.127}
+{'label': 'LINT', 'command': ['bash', 'tools/test.sh', 'LINT'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 0.238}
+{'label': 'T0', 'command': ['bash', 'tools/test.sh', 'T0'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 7.277}
+{'label': 'T1', 'command': ['bash', 'tools/test.sh', 'T1'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 0.624}
+{'label': 'T2', 'command': ['bash', 'tools/test.sh', 'T2'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 6.85}
+{'label': 'T3', 'command': ['bash', 'tools/test.sh', 'T3'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 40.945}
+{'label': 'T4', 'command': ['bash', 'tools/test.sh', 'T4'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 52.298}
+{'label': 'T5', 'command': ['bash', 'tools/test.sh', 'T5'], 'exit_code': 0, 'timeout': False, 'watchdog_seconds': 360, 'seconds': 1.332}
