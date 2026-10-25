@@ -1,0 +1,102 @@
+Browser tab: 25, Title: "The Prolog Trinity demonstrator", URL: "http://localhost:3053/portal?node=swi-wasm".
+0 AXWebArea The Prolog Trinity demonstrator, URL: localhost:3053/portal?node=swi-wasm
+	1 container app
+		2 container
+			3 link Description: Web Prolog logo, Value: trinity.elfenbenstornet.se/
+			4 heading Trinity demonstrator, Value: 1
+				5 text Trinity demonstrator
+			6 text  Your portal to the Prolog Web
+			7 text Browser node
+			8 container Browser help
+				9 text Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.
+			10 link Description: SWI-WASM, Value: localhost:3053/portal?node=swi-wasm
+			11 link Description:  Shared DB, Value: localhost:3053/wasm/shared_db.pl
+			12 text Remote nodes
+			13 container Node help
+				14 text Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.
+			15 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+			16 link Description: Open N1 demonstrator, Value: localhost:3051/demonstrator
+			17 link Description: Open N2 demonstrator, Value: localhost:3052/demonstrator
+			18 link Description: Open N3 demonstrator, Value: localhost:3053/demonstrator
+			19 link Description: Open N4 demonstrator, Value: localhost:3055/demonstrator
+			20 link Description: Open N5 demonstrator, Value: localhost:3056/demonstrator
+			21 button Description: Open help, Help: Help
+			22 button Description: Open settings, Help: Settings
+		23 container
+			24 button Show examples
+			25 container
+				26 text Editor
+				27 text <scratch-buffer>
+			28 container Demonstrator editor
+				29 AXWebArea Demonstrator Editor Frame, URL: localhost:3053/editor_frame?id=editor&mode=none
+					30 container
+						31 text entry area (settable)
+						32 container
+							33 text Scratch buffer
+
+
+
+Code typed here is auto-loaded into
+the current actor's private database.
+Selecting an example from the Examples
+drawer overwrites the buffer.
+			34 container
+				35 text Terminal
+				36 container
+					37 container
+						38 text Welcome to 
+						39 text Web Prolog
+						40 text , running
+						41 text the 
+						42 text ACTOR
+						43 text  profile on node 
+						44 text SWI-WASM,
+						45 text powered by 
+						46 link Description: SWI-Prolog, Value: swi-prolog.org/
+						47 text .
+						85 text ?- write("abc").
+						86 text [a,b,c]
+						87 text true.
+					48 container
+						49 text ?-  Clipboard textarea for jQuery Terminal
+						50 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: aoozib
+				51 text x
+				52 button (collapsed) History, Secondary Actions: Expand
+				53 button Flush, Help: Call flush/0 in the Editor session
+				54 button Actors, Help: Call actors/1 in the Editor session
+				55 button Call
+				56 button (disabled) Next
+				57 button (disabled) Stop
+				58 button (disabled) Abort
+				59 button Clear
+			60 container
+				61 text Logger 21:09:22 · API · SWI-WASM
+				88 text true.
+				89 text 21:09:22 · API · SWI-WASM
+				90 text ?- write("abc").
+				91 text 21:09:19 · INFO · SWI-WASM
+				62 text SWI-Prolog WASM runtime ready.
+				63 text 21:09:19 · INFO · RUNTIME
+				64 text Tutorial bridge connected.
+				65 text 21:09:18 · INFO · INTERACTION
+				66 text POST /interaction_log (durable usage log): {"event":"portal_view","route":"portal","device":"mac","timezone":"Europe/Stockholm","language":"en-US"}
+				67 text 21:09:18 · INFO · RUNTIME
+				68 text Demonstrator frontend loaded.
+				69 text 21:09:18 · INFO · RUNTIME
+				70 text Demonstrator scaffold loaded.
+				71 checkbox (settable, integer) Description: Info, Value: 1
+				72 text Info
+				73 checkbox (settable, integer) Description: SXML trace, Value: 1
+				74 text SXML trace
+				75 checkbox (settable, integer) Description: API traffic, Value: 1
+				76 text API traffic
+				77 button Clear
+			78 button Hide logger
+		79 container
+			80 text Inspired by 
+			81 link Description: Erlang, Value: erlang.org/
+			82 text , powered by 
+			83 link Description: SWI-Prolog, Value: swi-prolog.org/
+			84 text . Profile: SWI-WASM / ACTOR (DOM)  |  Principal: anonymous  |  Auth: OPEN
+
+The focused UI element is 50 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: aoozib

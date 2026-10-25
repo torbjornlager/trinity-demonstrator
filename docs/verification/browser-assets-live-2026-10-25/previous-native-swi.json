@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+  "revision": "abbc56f3d5104bd6d40d2ed5f99fe6199d75c4a8",
+  "native_root": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/native",
+  "pack": "web_prolog",
+  "asset_root": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator",
+  "wasm_root": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator/.trinity/browser-prolog-00751ced7df8e4f5"
+}

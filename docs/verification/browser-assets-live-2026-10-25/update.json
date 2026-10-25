@@ -1,0 +1,13 @@
+{
+  "old_revision": "5b4deb3aeee6e3b9bc66592d0554e4e1e65535ad",
+  "new_revision": "b9ea7c557a61faf5ef9524fb97500bbe1ff89015",
+  "live_checkout": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator",
+  "rollback": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/browser-assets-rollback-2026-10-25",
+  "old_payload": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator/.trinity/browser-prolog-00751ced7df8e4f5",
+  "saved_payload": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/browser-assets-rollback-2026-10-25/browser-payload",
+  "new_payload": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator/.trinity/browser-prolog-38d86f5c618da3af",
+  "all_processes_unchanged": true,
+  "protected_files_unchanged": true,
+  "n3_config_unchanged": true,
+  "exact_assets_and_six_payloads_verified": true
+}

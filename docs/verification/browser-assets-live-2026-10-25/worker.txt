@@ -1,0 +1,133 @@
+Browser tab: 25, Title: "The Prolog Trinity demonstrator", URL: "http://localhost:3053/portal?node=swi-wasm".
+1 AXWebArea The Prolog Trinity demonstrator, URL: localhost:3053/portal?node=swi-wasm
+	2 container app
+		3 container
+			4 link Description: Web Prolog logo, Value: trinity.elfenbenstornet.se/
+			5 heading Trinity demonstrator, Value: 1
+				6 text Trinity demonstrator
+			7 text  Your portal to the Prolog Web
+			8 text Browser node
+			9 container Browser help
+				10 text Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.
+			11 link Description: SWI-WASM, Value: localhost:3053/portal?node=swi-wasm
+			12 link Description:  Shared DB, Value: localhost:3053/wasm/shared_db.pl
+			13 text Remote nodes
+			14 container Node help
+				15 text Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.
+			16 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+			17 link Description: Open N1 demonstrator, Value: localhost:3051/demonstrator
+			18 link Description: Open N2 demonstrator, Value: localhost:3052/demonstrator
+			19 link Description: Open N3 demonstrator, Value: localhost:3053/demonstrator
+			20 link Description: Open N4 demonstrator, Value: localhost:3055/demonstrator
+			21 link Description: Open N5 demonstrator, Value: localhost:3056/demonstrator
+			22 button Description: Open help, Help: Help
+			23 button Description: Open settings, Help: Settings
+		24 container
+			25 button Show examples
+			26 container
+				27 text Editor
+				28 text <scratch-buffer>
+			29 container Demonstrator editor
+				30 AXWebArea Demonstrator Editor Frame, URL: localhost:3053/editor_frame?id=editor&mode=none
+					31 container
+						32 text entry area (settable)
+						33 container
+							34 text Scratch buffer
+
+
+
+Code typed here is auto-loaded into
+the current actor's private database.
+Selecting an example from the Examples
+drawer overwrites the buffer.
+			35 container
+				36 text Terminal
+				37 container
+					38 container
+						39 text Welcome to 
+						40 text Web Prolog
+						41 text , running
+						42 text the 
+						43 text ACTOR
+						44 text  profile on node 
+						45 text SWI-WASM,
+						46 text powered by 
+						47 link Description: SWI-Prolog, Value: swi-prolog.org/
+						48 text .
+						90 text ?- write("abc").
+						91 text [a,b,c]
+						92 text true.
+					49 container
+						50 text ?-  Clipboard textarea for jQuery Terminal
+						51 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: kj0dnm
+				52 text x
+				53 button (collapsed) History, Secondary Actions: Expand
+				54 button Flush, Help: Call flush/0 in the Editor session
+				55 button Actors, Help: Call actors/1 in the Editor session
+				56 button Call
+				57 button (disabled) Next
+				58 button (disabled) Stop
+				59 button (disabled) Abort
+				60 button Clear
+			61 container
+				62 text Logger 21:09:33 · INFO · QUERY
+				93 text true.
+				94 text 21:09:33 · API · STATEFUL WORKER · JS OBJECT
+				95 text {
+  type: "success",
+  pid: 1400048370,
+  data: [
+    {}
+  ],
+  more: false
+}
+				96 text 21:09:33 · API · STATEFUL WORKER · JS OBJECT
+				97 text {
+  type: "output",
+  pid: 1400048370,
+  data: "[a,b,c]"
+}
+				98 text 21:09:33 · API · STATEFUL WORKER · JS OBJECT
+				99 text {
+  command: "toplevel_call",
+  pid: 1400048370,
+  goal: "write(\"abc\")",
+  options: "[limit(1)]"
+}
+				100 text 21:09:30 · INFO · SWI-WASM
+				63 text SWI-WASM worker toplevel actor ready.
+				64 text 21:09:30 · API · STATEFUL WORKER · JS OBJECT
+				65 text {
+  type: "spawned",
+  pid: 1400048370
+}
+				66 text 21:09:30 · INFO · RUNTIME
+				67 text Tutorial bridge connected.
+				68 text 21:09:30 · INFO · INTERACTION
+				69 text POST /interaction_log (durable usage log): {"event":"portal_view","route":"portal","device":"mac","timezone":"Europe/Stockholm","language":"en-US"}
+				70 text 21:09:30 · INFO · RUNTIME
+				71 text Demonstrator frontend loaded.
+				72 text 21:09:30 · INFO · RUNTIME
+				73 text Demonstrator scaffold loaded.
+				74 text 21:09:30 · API · STATEFUL WORKER · JS OBJECT
+				75 text {
+  command: "toplevel_spawn",
+  pid: 1400048370,
+  options: "[session(true)]"
+}
+				76 checkbox (settable, integer) Description: Info, Value: 1
+				77 text Info
+				78 checkbox (settable, integer) Description: SXML trace, Value: 1
+				79 text SXML trace
+				80 checkbox (settable, integer) Description: API traffic, Value: 1
+				81 text API traffic
+				82 button Clear
+			83 button Hide logger
+		84 container
+			85 text Inspired by 
+			86 link Description: Erlang, Value: erlang.org/
+			87 text , powered by 
+			88 link Description: SWI-Prolog, Value: swi-prolog.org/
+			89 text . Profile: SWI-WASM / ACTOR (WORKERS)  |  Principal: anonymous  |  Auth: OPEN
+
+The focused UI element is 51 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: kj0dnm

@@ -1,0 +1,14 @@
+{
+  "all_four_process_identities_unchanged": true,
+  "engine_targets_and_hashes_unchanged": true,
+  "launcher_and_frontend_hashes_unchanged": true,
+  "native_and_trealla_selections_unchanged": true,
+  "native_and_trealla_tracked_files_clean": true,
+  "n3_config_unchanged": true,
+  "selection_guard_passed": true,
+  "browser_payload_validation_passed": true,
+  "demonstrator_revision": "b9ea7c557a61faf5ef9524fb97500bbe1ff89015",
+  "served_asset_checks": "update.json",
+  "ui_checks": "ui-results.json",
+  "rollback_retained": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/browser-assets-rollback-2026-10-25"
+}
