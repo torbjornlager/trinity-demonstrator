@@ -373,13 +373,13 @@ ok(includes('return "Welcome to [[b;;]Web Prolog], running\\n" +') &&
    includes('? "SWI-WASM"') &&
    includes(': nodeLabelForUrl(this.currentPortalNodeUrl)') &&
    includes('"the [[b;;]" + profile + "] profile on node [[b;;]" + node + ",]\\n" +') &&
-   includes('"powered by [[!u;;;;https://www.swi-prolog.org/]SWI-Prolog].\\n"') &&
+   includes('"powered by [[!u;;;;" + this.portalRuntimeUrl + "]" + this.portalRuntimeName + "].\\n"') &&
    includes('a[href="https://www.swi-prolog.org/"]') &&
    includes('background: url("/img/swi-logo.png") left center / 1em 1em no-repeat;') &&
    includes('profile = "ACTOR"') &&
    includes('profile = "ISOTOPE"') &&
    includes('profile = "ISOBASE"') &&
-   includes("initialNodeInfoReady = this.fetchNodeInfo()") &&
+   includes("initialNodeInfoReady = Promise.all([initialNodeInfoReady, this.fetchNodeInfo()]);") &&
    includes("initialNodeInfoReady.then(function()"),
    "terminal greeting identifies the announced profile and node and links to SWI-Prolog with its owl logo");
 ok(includes("terminalHighlightPredicates: true") &&
