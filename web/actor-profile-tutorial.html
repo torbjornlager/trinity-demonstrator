@@ -1707,42 +1707,6 @@ ping_pong :-
 </button>
 </p>
 
-<h2 id="toplevel-synchronous-calls">Collecting answers synchronously</h2>
-
-<p>
-    The synchronous forms <code>toplevel_call_synch/3-4</code> and
-    <code>toplevel_next_synch/2-3</code> wait for an answer and return it in an
-    argument. This lets a program use the result directly. Here a separate
-    session collects two pages, then terminates:
-</p>
-
-<pre id="toplevel-synchronous-pages">?- toplevel_spawn(Top, [session(true)]),
-   toplevel_call_synch(Top, member(X,[a,b,c]), First,
-                       [template(X),limit(2)]),
-   toplevel_next_synch(Top, Last),
-   toplevel_halt(Top).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#toplevel-synchronous-pages&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
-</p>
-
-<p>
-    <code>First</code> is <code>success(Top,[a,b],true)</code> and
-    <code>Last</code> is <code>success(Top,[c],false)</code>, with the actual
-    toplevel pid in place of <code>Top</code>. The first call takes two answers;
-    the next call collects the remaining answer. The caller's <code>X</code>
-    stays unbound: the returned terms carry the answers. No separate
-    <code>receive/1</code> or <code>flush/0</code> is needed to collect them.
-</p>
-
-<p>
-    A failing goal returns <code>failure(Top)</code>; a goal that raises an
-    exception returns <code>error(Top,Exception)</code>. The wait is unbounded
-    by default. The option-taking forms also accept <code>timeout/1</code>
-    and <code>on_timeout/1</code>; a wait timeout does not cancel the goal.
-</p>
-
 <h2 id="expert-system-agent">An expert-system agent and a simulation</h2>
 
 <p>We can turn the expert system in <strong>03 expert-system.pl</strong> into
@@ -1864,6 +1828,42 @@ this is a small pedagogical client; a deployed client should also monitor the
 expert and bound its wait. The printed negative answer means no proof was found
 with the supplied answers.</p>
 
+
+<h2 id="toplevel-synchronous-calls">Collecting answers synchronously</h2>
+
+<p>
+    The synchronous forms <code>toplevel_call_synch/3-4</code> and
+    <code>toplevel_next_synch/2-3</code> wait for an answer and return it in an
+    argument. This lets a program use the result directly. Here a separate
+    session collects two pages, then terminates:
+</p>
+
+<pre id="toplevel-synchronous-pages">?- toplevel_spawn(Top, [session(true)]),
+   toplevel_call_synch(Top, member(X,[a,b,c]), First,
+                       [template(X),limit(2)]),
+   toplevel_next_synch(Top, Last),
+   toplevel_halt(Top).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-synchronous-pages&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+</p>
+
+<p>
+    <code>First</code> is <code>success(Top,[a,b],true)</code> and
+    <code>Last</code> is <code>success(Top,[c],false)</code>, with the actual
+    toplevel pid in place of <code>Top</code>. The first call takes two answers;
+    the next call collects the remaining answer. The caller's <code>X</code>
+    stays unbound: the returned terms carry the answers. No separate
+    <code>receive/1</code> or <code>flush/0</code> is needed to collect them.
+</p>
+
+<p>
+    A failing goal returns <code>failure(Top)</code>; a goal that raises an
+    exception returns <code>error(Top,Exception)</code>. The wait is unbounded
+    by default. The option-taking forms also accept <code>timeout/1</code>
+    and <code>on_timeout/1</code>; a wait timeout does not cancel the goal.
+</p>
 
 <section id="tutorial-remote-calls">
 <h1>Remote calls with rpc/2-3</h1>
