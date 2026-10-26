@@ -1694,6 +1694,55 @@ ping_pong :-
     <code>input('Input',hello)</code>.
 </p>
 
+<h2>Aborting and halting</h2>
+
+<p>
+    Because the toplevel is a separate actor, you can give it work that does
+    not terminate, then abort that work without killing the session itself.
+</p>
+
+<pre id="toplevel-assert-loop">?- toplevel_call($Pid, assert((p :- p))),
+   receive({Answer -&gt; true}).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-assert-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<pre id="toplevel-call-loop">?- toplevel_call($Pid, p).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-call-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    Nothing useful will appear in the shell, but the spawned toplevel is now
+    spinning on its own. Abort the running goal like this:
+</p>
+
+<pre id="toplevel-abort">?- toplevel_abort($Pid).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-abort&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
+<p>
+    When you are done with the toplevel altogether, halt it:
+</p>
+
+<pre id="toplevel-halt">?- toplevel_halt($Pid, Reply).
+</pre>
+
+<p class="ask-buttons">
+  <button onclick="pasteAndAskExample(&quot;#toplevel-halt&quot;)" class="btn btn-xs btn-primary" type="button">Call
+</button>
+</p>
+
 <h2 id="expert-system-agent">An expert-system agent and a simulation</h2>
 
 <p>We can turn the expert system in <strong>03 expert-system.pl</strong> into
@@ -1814,55 +1863,6 @@ alternatives. They do not limit the questions needed to find it. As in the book,
 this is a small pedagogical client; a deployed client should also monitor the
 expert and bound its wait. The printed negative answer means no proof was found
 with the supplied answers.</p>
-
-<h2>Aborting and halting</h2>
-
-<p>
-    Because the toplevel is a separate actor, you can give it work that does
-    not terminate, then abort that work without killing the session itself.
-</p>
-
-<pre id="toplevel-assert-loop">?- toplevel_call($Pid, assert((p :- p))),
-   receive({Answer -&gt; true}).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#toplevel-assert-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<pre id="toplevel-call-loop">?- toplevel_call($Pid, p).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#toplevel-call-loop&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    Nothing useful will appear in the shell, but the spawned toplevel is now
-    spinning on its own. Abort the running goal like this:
-</p>
-
-<pre id="toplevel-abort">?- toplevel_abort($Pid).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#toplevel-abort&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
-
-<p>
-    When you are done with the toplevel altogether, halt it:
-</p>
-
-<pre id="toplevel-halt">?- toplevel_halt($Pid, Reply).
-</pre>
-
-<p class="ask-buttons">
-  <button onclick="pasteAndAskExample(&quot;#toplevel-halt&quot;)" class="btn btn-xs btn-primary" type="button">Call
-</button>
-</p>
 
 
 <section id="tutorial-remote-calls">
