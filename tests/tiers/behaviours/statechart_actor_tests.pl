@@ -435,7 +435,39 @@ check_error_chart(terminate, Pid) :-
     send(Pid,go),error_message(terminated(Marks)),error_marks(Marks),
     error_message(down(Pid,Pid,true)).
 
+invocation_states(Pid,States) :-
+    ( receive({terminal_output(Pid,statechart_trace(invoked(_,_,State))) -> true},[timeout(0),on_timeout(fail)])
+    -> States=[State|Rest],invocation_states(Pid,Rest)
+    ; States=[] ).
+
 :- begin_tests(statechart_profile_runtime).
+
+test(invocation_stabilisation_and_completion,
+     [forall(member(Command-Reason,[finish-true,crash-exception(broken)])),timeout(5)]) :-
+    resolve_statechart_fixture('test_statecharts/statechart-invocation-lifecycle.statechart',File),
+    setup_call_cleanup(open(File,read,S),read_string(S,_,Template),close(S)),
+    self(Self),format(atom(Text),Template,[Self]),
+    setup_call_cleanup(
+        statechart_spawn(Pid,[src_text(Text),trace(true),io_target(Self),monitor(true),link(false)]),
+        ( receive({lifecycle(Pid,settled(Child)) -> true},[timeout(2),on_timeout(fail)]),
+          % No external event was needed to handle spawned/1, the following
+          % eventless transition, and its raised internal event.
+          send(Child,Command),
+          receive({lifecycle(Pid,child_down(Actual)) -> true},[timeout(2),on_timeout(fail)]),
+          assertion(Actual==Reason),
+          send(Pid,probe),
+          receive({lifecycle(Pid,snapshot(Reasons)) -> true},[timeout(2),on_timeout(fail)]),
+          assertion(Reasons==[Reason]),
+          % Child termination did not complete the owning compound state.
+          send(Pid,complete),
+          receive({lifecycle(Pid,state_done) -> true},[timeout(2),on_timeout(fail)]),
+          receive({down(Pid,Pid,true) -> true},[timeout(2),on_timeout(fail)]),
+          invocation_states(Pid,States),
+          assertion(States==[owned]) ),
+        (catch(statechart_halt(Pid,_,1),_,true),
+         repeat,(receive({terminal_output(Pid,_) -> true},[timeout(0),on_timeout(fail)]) -> fail ; !))).
+
+
 
 test(final_entry_error_does_not_prevent_normal_completion, [timeout(5)]) :-
     Text='<statechart version="0.2" initial="f"><final id="f"><onentry>fail</onentry></final></statechart>',
@@ -1183,6 +1215,29 @@ test(trace_golden_parallel_conflict, [setup(enable_trace_capture),
     same_set(ExitSet, ['Start','A','A1','B','B1']),
     same_set(EntrySet, ['Done']),
     !.
+
+test(retired_invocation_record_removed,
+     [forall(member(ExitMode,[transition,shutdown])),
+      setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    init_interpreter_text('<statechart version="0.2" initial="s"><state id="s"><go on="leave" to="out"/></state><state id="out"/></statechart>'),
+    setup_call_cleanup(
+        spawn(receive({never -> true}),Child,[monitor(true),link(false)]),
+        ( assertz(statechart_actor:invoked(s,Child)),
+          (ExitMode==transition -> step_event(leave) ; statechart_runtime:exit_interpreter),
+          receive({down(Child,Child,stop) -> true},[timeout(2),on_timeout(fail)]),
+          assertion(\+statechart_actor:invoked(s,_)) ),
+        catch(exit(Child,kill),_,true)).
+
+test(parallel_event_bindings_are_isolated,
+     [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
+    init_interpreter('test_statecharts/statechart-parallel-bindings.statechart'),
+    % Both fields refer to the same supplied variable. Each region may bind
+    % its own candidate, but neither a failed guard nor a sibling may leak it.
+    step_event(query(Value,Value)),
+    assertion(var(Value)),
+    statechart_runtime:call_chart_goal(
+        findall(seen(R,X,Y),seen(R,X,Y),Rows)),
+    assertion(Rows == [seen(left,left,left),seen(right,right,right)]).
 
 test(trace_golden_parallel_compatible, [setup(enable_trace_capture),
                                         cleanup(disable_trace_capture)]) :-

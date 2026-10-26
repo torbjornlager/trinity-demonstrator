@@ -1,0 +1,29 @@
+<!-- Test template: format with the observer pid. -->
+<statechart version="0.2" initial="transient">
+  <datamodel>
+    :- dynamic child/1, observed/1.
+    observer(~q).
+    notify(Event) :- observer(To), self(Chart), send(To,lifecycle(Chart,Event)).
+  </datamodel>
+  <state id="transient">
+    <spawn type="actor" goal="throw(should_not_start)"/>
+    <onentry>raise(skip)</onentry>
+    <go on="skip" to="owned"/>
+  </state>
+  <state id="owned" initial="ask">
+    <spawn type="actor" goal="receive({finish -&gt; true; crash -&gt; throw(broken)})" options="[monitor(true),link(false)]"/>
+    <state id="ask">
+      <go on="spawned(C)" to="armed">assertz(child(C))</go>
+    </state>
+    <state id="armed"><go to="ready">raise(settled)</go></state>
+    <state id="ready">
+      <go on="settled">child(C),notify(settled(C))</go>
+      <go on="probe">findall(E,observed(E),Events),notify(snapshot(Events))</go>
+      <go on="complete" to="local_final"/>
+    </state>
+    <final id="local_final"/>
+    <go on="down(Pid,Ref,Reason)" if="child(Expected), Pid == Expected, Ref == Expected">assertz(observed(Reason)),notify(child_down(Reason))</go>
+    <go on="done(owned)" to="f">notify(state_done)</go>
+  </state>
+  <final id="f"/>
+</statechart>

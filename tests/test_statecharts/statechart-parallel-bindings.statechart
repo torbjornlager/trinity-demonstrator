@@ -1,0 +1,14 @@
+<!-- Each region must see the original event, including its variable sharing. -->
+<statechart version="0.2" initial="p">
+  <datamodel>:- dynamic seen/3.</datamodel>
+  <parallel id="p">
+    <state id="left_region">
+      <go on="query(X,Y)" if="X = rejected, fail">assertz(seen(rejected,X,Y))</go>
+      <go on="query(X,Y)" if="X = left, Y == X">assertz(seen(left,X,Y))</go>
+    </state>
+    <state id="right_region">
+      <go on="query(X,Y)" if="X = right, Y == X">assertz(seen(right,X,Y))</go>
+    </state>
+    <go on="probe(To)">findall(seen(R,X,Y),seen(R,X,Y),Rows), send(To,snapshot(Rows))</go>
+  </parallel>
+</statechart>

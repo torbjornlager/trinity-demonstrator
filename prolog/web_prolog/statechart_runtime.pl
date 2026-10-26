@@ -124,7 +124,7 @@ exit_interpreter([]).
 exit_interpreter([State|States]) :-
     cancel_after_transitions(State),
     forall(statechart_actor:onexit(State, Content), execute_content(Content)),
-    forall(statechart_actor:invoked(State, Pid), exit(Pid, stop)),
+    forall(retract(statechart_actor:invoked(State, Pid)), exit(Pid, stop)),
     configuration_delete(State),
     (   is_final(State),
         has_parent(State, Parent),
@@ -344,8 +344,8 @@ invoke(State) :-
     enqueue_internal_event(spawned(Pid)),
     fail.
 invoke(State) :-
-    statechart_actor:to_be_invoked(State, actor, Options),
-    option(goal(Goal), Options),
+    statechart_actor:to_be_invoked(State, actor, Options0),
+    select_option(goal(Goal), Options0, Options),
     spawn(Goal, Pid, Options),
     emit_trace(invoked(actor, Pid, State)),
     debug(statechart_actor(invoke), '      Invoked: actor ~p at ~p', [Pid, State]),

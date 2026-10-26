@@ -110,6 +110,16 @@ test(error_stops_only_its_block,
     statechart_wasm:internal_queue([error(Expected)]).
 
 
+test(parallel_event_bindings_are_isolated, [cleanup(statechart_stop)]) :-
+    test_dir(Dir),
+    directory_file_path(Dir,'test_statecharts/statechart-parallel-bindings.statechart',File),
+    setup_call_cleanup(open(File,read,Stream),read_string(Stream,_,Text),close(Stream)),
+    start_text(Text),
+    statechart_send(query(Value,Value)),
+    assertion(var(Value)),
+    findall(seen(R,X,Y),statechart_wasm:seen(R,X,Y),Rows),
+    assertion(Rows == [seen(left,left,left),seen(right,right,right)]).
+
 test(unspecified_event_keeps_application_unification,
      [cleanup((retractall(statechart_wasm:after_timer(_,_,_)),statechart_stop))]) :-
     start_text('<statechart version="0.2" initial="s"><state id="s"><go on="go" to="f"/></state><final id="f"/><final id="timed"/></statechart>'),
@@ -746,6 +756,40 @@ test(toplevel_spawn_drives_chart,
     assertion(statechart_in(collect)),
     statechart_send(success(worker_actor(1), b, false)),
     \+ statechart_running.
+
+test(invocation_stabilisation_and_completion,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    test_dir(Dir),directory_file_path(Dir,'test_statecharts/statechart-invocation-lifecycle.statechart',File),
+    setup_call_cleanup(open(File,read,S),read_string(S,_,Template),close(S)),
+    format(atom(Original),Template,[unused]),
+    atomic_list_concat(Parts,'observer(To), self(Chart), send(To,lifecycle(Chart,Event))',Original),
+    atomic_list_concat(Parts,'assertz(notification(Event))',WithNotify),
+    atomic_list_concat(DataParts,':- dynamic child/1, observed/1.',WithNotify),
+    atomic_list_concat(DataParts,':- dynamic child/1, observed/1, notification/1.',Text),
+    start_text(Text),
+    findall(Goal,mock_call(spawn(Goal)),Goals),
+    assertion(Goals=[receive(_)]),
+    once(mock_call(spawn_options(_,Options))),
+    assertion(memberchk(monitor(true),Options)),
+    assertion(\+memberchk(goal(_),Options)),
+    assertion(statechart_in(ready)),
+    assertion(statechart_wasm:notification(settled(worker_actor(1)))),
+    statechart_send(down(worker_actor(1),worker_actor(1),exception(broken))),
+    assertion(statechart_in(ready)),
+    assertion(statechart_running),
+    assertion(statechart_wasm:notification(child_down(exception(broken)))),
+    assertion(\+statechart_wasm:notification(state_done)),
+    statechart_send(complete),
+    assertion(statechart_wasm:notification(state_done)),
+    assertion(statechart_in(f)),
+    \+statechart_running.
+
+test(invocation_without_monitor_preserves_default,
+     [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><spawn type="actor" goal="true" options="[link(false)]"/></state></statechart>'),
+    once(mock_call(spawn_options(true,Options))),
+    assertion(\+memberchk(monitor(_),Options)),
+    assertion(\+memberchk(goal(_),Options)).
 
 test(toplevel_spawn_preserves_explicit_target,
      [setup(setup_mock_bridge), cleanup(teardown_mock_bridge)]) :-

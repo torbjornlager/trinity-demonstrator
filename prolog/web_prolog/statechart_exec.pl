@@ -408,7 +408,7 @@ process_states_to_exit([]).
 process_states_to_exit([State|States]) :-
     cancel_after_transitions(State),
     forall(statechart_actor:onexit(State, Content), execute_content(Content)),
-    forall(statechart_actor:invoked(State, Pid), exit(Pid, stop)),
+    forall(retract(statechart_actor:invoked(State, Pid)), exit(Pid, stop)),
     configuration_delete(State),
     process_states_to_exit(States).
 

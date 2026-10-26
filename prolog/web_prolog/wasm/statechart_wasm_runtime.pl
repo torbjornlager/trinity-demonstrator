@@ -375,9 +375,9 @@ invoke(State) :-
     fail.
 
 invoke(State) :-
-    statechart_wasm:to_be_invoked(State, actor, Options),
+    statechart_wasm:to_be_invoked(State, actor, Options0),
     current_predicate(swi_wasm_actor_bridge:spawn/3),
-    memberchk(goal(Goal), Options),
+    select_option(goal(Goal), Options0, Options),
     swi_wasm_actor_bridge:spawn(Goal, Pid, Options),
     emit_trace(invoked(actor, Pid, State)),
     assertz(statechart_wasm:invoked(State, Pid)),

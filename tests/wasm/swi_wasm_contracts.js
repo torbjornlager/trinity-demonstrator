@@ -2142,6 +2142,38 @@ const scenarios = {
   },
 
 
+  async statechart_invocation_lifecycle(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_invocation.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_invocation.pl')").once(),"real main actor bridge loaded");
+    check(await loadCompatibilityStatecharts(engine),"real statechart engine loaded");
+    const calls=spawnOptionMainHarness();
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    const template=fs.readFileSync(path.join(ROOT,"tests/test_statecharts/statechart-invocation-lifecycle.statechart"),"utf8");
+    const text=template.replace("~q","unused")
+      .replace("observer(To), self(Chart), send(To,lifecycle(Chart,Event))","assertz(notification(Event))")
+      .replace(":- dynamic child/1, observed/1.",":- dynamic child/1, observed/1, notification/1.");
+    check(await run("statechart_start(text("+JSON.stringify(text)+")),statechart_in(ready),statechart_wasm:child(C),statechart_wasm:notification(settled(C))"),"spawned event, eventless transition and internal event stabilise before external input");
+    check(calls.filter(m=>m.action==="spawn").length===1,"transient state never starts its child");
+    check(calls.filter(m=>m.action==="monitor").length===1,"explicit invocation monitor reaches the actor bridge");
+    check(await run("statechart_wasm:child(C),statechart_send(down(C,C,exception(broken))),statechart_in(ready),statechart_running,statechart_wasm:notification(child_down(exception(broken))),\\+statechart_wasm:notification(state_done)"),"child termination remains distinct from state completion");
+    check(await run("statechart_send(complete),statechart_wasm:notification(state_done),statechart_in(f),\\+statechart_running,statechart_stop"),"final child raises done(owned) and completes the chart");
+    const monitorsBefore=calls.filter(m=>m.action==="monitor").length;
+    check(await run("statechart_start(text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"><spawn type=\"actor\" goal=\"true\" options=\"[link(false)]\"/></state></statechart>')),statechart_in(s),statechart_stop"),"default invocation accepts only public spawn options");
+    check(calls.filter(m=>m.action==="monitor").length===monitorsBefore,"invocation does not add an implicit monitor");
+  },
+
+  async statechart_parallel_event_bindings(W, check) {
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    check(await loadCompatibilityStatecharts(engine),"real statechart engine loaded");
+    const text=fs.readFileSync(path.join(ROOT,"tests/test_statecharts/statechart-parallel-bindings.statechart"),"utf8");
+    let n=0;
+    await engine.prolog.forEach("statechart_start(text("+JSON.stringify(text)+")),statechart_send(query(V,V)),var(V),findall(seen(R,X,Y),statechart_wasm:seen(R,X,Y),Rows),Rows==[seen(left,left,left),seen(right,right,right)],statechart_stop",()=>n++);
+    check(n===1,"parallel regions retain event aliases and independent bindings after a failed guard");
+  },
+
   async statechart_action_failure_blocks(W, check) {
     const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
     check(await loadCompatibilityStatecharts(engine),"real statechart engine loaded");
