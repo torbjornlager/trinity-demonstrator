@@ -1,0 +1,39 @@
+<!-- Test template: format with parent pid, then handle/ignore/terminate policy. -->
+<statechart version="0.2" initial="p">
+  <datamodel>
+    :- dynamic mark/1.
+    test_parent(~q).
+    policy(~w).
+    notify(Event) :- test_parent(Parent), Parent ! Event.
+  </datamodel>
+  <parallel id="p">
+    <state id="left" initial="a">
+      <state id="a">
+        <onexit>assertz(mark(exit_before)), fail, assertz(mark(exit_skipped))</onexit>
+        <onexit>assertz(mark(exit_other))</onexit>
+        <go on="go" to="b">assertz(mark(transition_before)), throw(block_error), assertz(mark(transition_skipped))</go>
+      </state>
+      <state id="b">
+        <onentry>assertz(mark(entry_before)), fail, assertz(mark(entry_skipped))</onentry>
+        <onentry>assertz(mark(entry_other))</onentry>
+      </state>
+    </state>
+    <state id="right" initial="c">
+      <state id="c">
+        <onexit>assertz(mark(parallel_exit))</onexit>
+        <go on="go" to="d">assertz(mark(parallel_action))</go>
+      </state>
+      <state id="d"><onentry>assertz(mark(parallel_entry))</onentry></state>
+    </state>
+    <go on="error(E)" if="policy(handle), in(b), in(d)">
+      findall(M,mark(M),Marks), notify(handled(E,Marks))
+    </go>
+    <go on="error(_)" if="policy(terminate)" to="failed"/>
+    <go on="probe(To)" if="ground(To), in(b), in(d)">
+      findall(M,mark(M),Marks), To ! snapshot(Marks)
+    </go>
+  </parallel>
+  <final id="failed">
+    <onentry>findall(M,mark(M),Marks), notify(terminated(Marks))</onentry>
+  </final>
+</statechart>

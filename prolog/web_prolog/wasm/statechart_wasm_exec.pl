@@ -138,13 +138,18 @@ trace_reoffered_events(Events) :-
     maplist(trace_event_term, Events, TraceEvents),
     trace_emit(reoffered(TraceEvents)).
 
-trace_event_term('$statechart_after'(Source, Key, _Ref),
-                 after(Source, Delay)) :-
+% Runtime timer envelopes must be supplied, not synthesised by matching an
+% application event variable. Ordinary transition patterns still unify.
+trace_event_term(Event, after(Source, Delay)) :-
+    ground(Event),
+    Event = '$statechart_after'(Source, Key, _Ref),
     statechart_wasm:after_transition(Source, Key, Delay, _, _, _),
     !.
 trace_event_term(Event, Event).
 
-defer_event('$statechart_after'(_, _, _)) :-
+defer_event(Event) :-
+    ground(Event),
+    Event = '$statechart_after'(_, _, _),
     !,
     fail.
 defer_event(Event) :-
@@ -249,6 +254,7 @@ current_microstep_budget(N) :-
 %!  select_transitions(+Event, -EnabledTransitions) is semidet.
 
 select_transitions(Event, EnabledTransitions) :-
+    ground(Event),
     Event = '$statechart_after'(Source, Key, Ref),
     !,
     call_cleanup(

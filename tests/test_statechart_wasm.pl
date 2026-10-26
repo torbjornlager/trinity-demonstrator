@@ -60,7 +60,69 @@ cleanup_statechart_shared_db :-
     ignore(catch(abolish(wasm_shared_db:shared_transition_enabled/0), _, true)).
 
 
+action_error_text(Policy, Text) :-
+    test_dir(Dir),directory_file_path(Dir,'test_statecharts/statechart-action-errors.statechart',File),
+    setup_call_cleanup(open(File,read,Stream),read_string(Stream,_,Template),close(Stream)),
+    format(atom(Original),Template,[unused,Policy]),
+    atomic_list_concat(Parts,'test_parent(Parent), Parent ! Event',Original),
+    atomic_list_concat(Parts,'assertz(notification(Event))',WithReporter),
+    atomic_list_concat(DataParts,':- dynamic mark/1.',WithReporter),
+    atomic_list_concat(DataParts,':- dynamic mark/1, notification/1.',Text).
+
+check_action_effects(Marks) :-
+    sort([exit_before,exit_other,transition_before,entry_before,entry_other,
+          parallel_exit,parallel_action,parallel_entry],Expected),
+    sort(Marks,Actual),assertion(Actual==Expected).
+
 :- begin_tests(statechart_wasm_unit).
+
+test(final_entry_error_does_not_prevent_normal_completion, [cleanup(statechart_stop)]) :-
+    start_text('<statechart version="0.2" initial="f"><final id="f"><onentry>fail</onentry></final></statechart>'),
+    \+statechart_running,statechart_in(f),
+    statechart_wasm:internal_queue([error(failure(fail))]).
+
+
+test(action_error_policy,
+     [forall(member(Policy,[handle,ignore,terminate])),cleanup(statechart_stop)]) :-
+    action_error_text(Policy,Text),start_text(Text),statechart_send(go),
+    findall(M,statechart_wasm:mark(M),Marks),check_action_effects(Marks),
+    findall(N,statechart_wasm:notification(N),Notifications),
+    (Policy==handle
+    -> Notifications=[handled(E1,M1),handled(E2,M2),handled(E3,M3)],
+       maplist(check_action_effects,[M1,M2,M3]),
+       memberchk(block_error,[E1,E2,E3]),
+       findall(G,member(failure(G),[E1,E2,E3]),Failures),length(Failures,2),
+       statechart_running,statechart_in(b),statechart_in(d)
+    ;Policy==ignore
+    -> Notifications==[],statechart_send(unrelated),statechart_running,
+       statechart_in(b),statechart_in(d),statechart_wasm:internal_queue([])
+    ; Notifications=[terminated(EndMarks)],check_action_effects(EndMarks),
+      \+statechart_running,statechart_in(failed)).
+
+test(error_stops_only_its_block,
+     [forall(member(Fault-Expected,[fail-failure(fail),throw(block_error)-block_error])),
+      cleanup((statechart_stop,retractall(statechart_wasm:block_mark(_))))]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"/></statechart>'),
+    statechart_wasm_runtime:execute_content([
+        script(assertz(statechart_wasm:block_mark(before))),script(Fault),
+        script(assertz(statechart_wasm:block_mark(skipped)))]),
+    statechart_wasm:block_mark(before),\+statechart_wasm:block_mark(skipped),
+    statechart_wasm:internal_queue([error(Expected)]).
+
+
+test(unspecified_event_keeps_application_unification,
+     [cleanup((retractall(statechart_wasm:after_timer(_,_,_)),statechart_stop))]) :-
+    start_text('<statechart version="0.2" initial="s"><state id="s"><go on="go" to="f"/></state><final id="f"/><final id="timed"/></statechart>'),
+    % Seed a pending timer without requiring a JavaScript scheduler here.
+    assertz(statechart_wasm:after_transition(s,777,60,true,[timed],[])),
+    assertz(statechart_wasm:after_timer(s,777,test_timer)),
+    statechart_wasm_exec:trace_event_term(Event,Trace),
+    assertion(var(Event)),assertion(Event==Trace),
+    statechart_wasm_exec:select_transitions(Event,[t(s,[f],_)]),
+    assertion(statechart_wasm:after_timer(s,777,test_timer)),
+    retractall(statechart_wasm:after_timer(_,_,_)),
+    statechart_send(Event),
+    config([f]),assertion(var(Event)).
 
 % A bare-minimum chart: one state, no transitions.
 test(minimal_chart, [cleanup(statechart_stop)]) :-

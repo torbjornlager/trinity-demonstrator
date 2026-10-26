@@ -152,7 +152,7 @@ main_event_loop_2 :-
     ;   receive({Event -> true}),
         trace_external_event(Event),
         debug(statechart_actor(event), '   Ext. event: ~p', [Event]),
-        (   Event = '$stop'(From)
+        (   nonvar(Event), Event = '$stop'(From), ground(From)
         ->  retractall(statechart_actor:running),
             exit_interpreter,
             send(From, reply(true))
@@ -193,13 +193,18 @@ trace_reoffered_events(Events) :-
     maplist(trace_event_term, Events, TraceEvents),
     trace_emit(reoffered(TraceEvents)).
 
-trace_event_term('$statechart_after'(Source, Key, _Ref),
-                 after(Source, Delay)) :-
+% Runtime timer envelopes must be supplied, not synthesised by matching an
+% application event variable. Ordinary transition patterns still unify.
+trace_event_term(Event, after(Source, Delay)) :-
+    ground(Event),
+    Event = '$statechart_after'(Source, Key, _Ref),
     statechart_actor:after_transition(Source, Key, Delay, _, _, _),
     !.
 trace_event_term(Event, Event).
 
-defer_event('$statechart_after'(_, _, _)) :-
+defer_event(Event) :-
+    ground(Event),
+    Event = '$statechart_after'(_, _, _),
     !,
     fail.
 defer_event(Event) :-
@@ -224,6 +229,7 @@ defer_event(Event) :-
 %   Fails when no transition is enabled.
 
 select_transitions(Event, EnabledTransitions) :-
+    ground(Event),
     Event = '$statechart_after'(Source, Key, Ref),
     !,
     call_cleanup(

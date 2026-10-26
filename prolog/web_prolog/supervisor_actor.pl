@@ -371,7 +371,7 @@ do_start_child(spec(Id, Start, Restart, Shutdown, Type),
     Spec = spec(Id, Start, Restart, Shutdown, Type),
     supervisor_startup:start_child(Spec, Start, Id, Pid),
     monitor(Pid, MonitorRef),
-    remember_monitor(Pid, MonitorRef),
+    remember_child_monitor(Pid, MonitorRef),
     append(Children, [ch(Id, Pid, Spec)], Children1),
     debug(supervisor, '[sup] Started ~w  pid=~w', [Id, Pid]).
 
@@ -492,11 +492,40 @@ server_source_option(src_uri(_)).
 %% The supervisor loop
 %% -------------------------------------------------------------------
 
+% Keep monitor identities in this supervisor's engine/thread-local store.
+% Prune against current state so retired/replaced children leave no registry.
+remember_child_monitor(Pid, Ref) :-
+    remember_monitor(Pid, Ref),
+    (nb_current('$supervisor_child_monitors', Old) -> true ; Old = []),
+    nb_setval('$supervisor_child_monitors', [Pid-Ref|Old]).
+
+prune_child_monitors(sup(_, _, _, Children, _)) :-
+    (nb_current('$supervisor_child_monitors', Old) -> true ; Old = []),
+    include(current_child_pid(Children), Old, Current),
+    nb_setval('$supervisor_child_monitors', Current).
+
+current_child_pid(Children, Pid-_) :-
+    Pid \== undefined,
+    member(ch(_, ChildPid, _), Children),
+    Pid == ChildPid, !.
+
+current_child_monitor(Pid, Ref, sup(_, _, _, Children, _)) :-
+    ground(Pid-Ref),
+    current_child_pid(Children, Pid-Ref),
+    nb_current('$supervisor_child_monitors', Monitors),
+    member(ChildPid-ChildRef, Monitors),
+    Pid == ChildPid, Ref == ChildRef, !.
+
 sup_loop(State) :-
+    prune_child_monitors(State),
     receive({
-        down(Pid, _, Reason) ->
+        down(Pid, Ref, Reason)
+                if current_child_monitor(Pid, Ref, State) ->
             handle_exit(Pid, Reason, State, State1),
             sup_loop(State1)
+        ;
+        down(_, _, _) ->
+            sup_loop(State)
         ;
         '$sup'(From, Ref, Request) ->
             handle_call(Request, From, Ref, State, State1),
@@ -514,7 +543,8 @@ sup_loop(State) :-
 
 handle_exit(Pid, Reason, State0, State) :-
     sup(Strategy, MaxR, MaxT, Children, RL) = State0,
-    (   select(ch(Id, Pid, Spec), Children, _Rest)
+    (   ground(Pid), Pid \== undefined,
+        select(ch(Id, Pid, Spec), Children, _Rest)
     ->  spec(_, _, Restart, _, _) = Spec,
         debug(supervisor, '[sup] Child ~w (~w) exited: ~w',
               [Id, Pid, Reason]),
@@ -601,7 +631,7 @@ restart_attempt_failed(Id, Children, Error) :-
 start_replacement(Spec, Pid) :-
     Spec=spec(Id, Start, _, _, _),
     supervisor_startup:start_child(Spec, Start, Id, Pid),
-    monitor(Pid, MonitorRef), remember_monitor(Pid, MonitorRef).
+    monitor(Pid, MonitorRef), remember_child_monitor(Pid, MonitorRef).
 
 restart_child_record(Id, Spec, Pid) :-
     catch((start_replacement(Spec, Pid) -> true ; throw(start_failed)),

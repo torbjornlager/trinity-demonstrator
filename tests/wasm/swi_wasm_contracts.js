@@ -413,6 +413,30 @@ async function childSpecContract(run, check, sideEffects, main) {
 // Exercise the actual supervisor down handler and spawn path in each engine;
 // only coordinator startup/monitoring is mocked. Do not pin deferred ordering
 // or inactive-child bookkeeping behavior in these policy tests.
+
+async function supervisorNotificationContract(run, check) {
+  const b="swi_wasm_actor_bridge:";
+  const goal="self(Self),Spec=child(guarded,[start(true),restart(temporary)]),"+
+    "State=sup(one_for_one,0,5,[child(guarded,7000000000,Spec)],[]),"+
+    b+"wasm_remember_child_monitor(7000000000,8000000000),"+
+    b+"wasm_remember_child_monitor(retired,old),"+
+    "send(Self,down(_,unknown,true)),send(Self,down(7000000000,_,true)),"+
+    "send(Self,down(7000000000,wrong_reference,true)),"+
+    "send(Self,down(undefined,unknown,true)),send(Self,down(unrelated,unknown,true)),"+
+    "send(Self,'$sup'(Self,77,which_children)),"+
+    "send(Self,down(7000000000,8000000000,true)),"+
+    "send(Self,'$sup'(Self,78,which_children)),send(Self,'$sup'(Self,79,stop)),"+
+    b+"wasm_supervisor_loop(State),"+
+    "receive({77-Before->true}),Before==[child(guarded,7000000000,Spec)],"+
+    "receive({78-After->true}),After==[],receive({79-true->true}),"+
+    "nb_current('$supervisor_child_monitors',[])";
+  check(await run(goal),"loop ignores unspecified/wrong/retired identities, accepts its exact monitor, and prunes retired records");
+  check(await run("State=sup(one_for_one,0,5,[child(retired,undefined,bad)],[]),"+
+    b+"wasm_handle_down(Pid,false,State,Next),var(Pid),Next==State,"+
+    b+"wasm_handle_down(undefined,false,State,Again),Again==State"),
+    "direct bookkeeping cannot instantiate a pid or select a retired child");
+}
+
 async function supervisorRestartPolicyContract(run, spawnCount, check) {
   const reasons=["true","false","exception(test_error)","killed","shutdown"];
   for(const policy of ["transient","permanent","temporary"]) {
@@ -691,8 +715,12 @@ wasm_child_start(startup_after_spawn, Id, Options, Pid) :- !,
 wasm_child_start(startup_monitor_fault, Id, Options, Pid) :- !,
     spawn(receive({never->true}),Pid,[name(Id)|Options]).
 wasm_child_start(Goal, Id, ChildOptions, Pid) :-`)
-  .replace("wasm_supervisor_loop(State0) :- receive({", "wasm_supervisor_loop(State0) :- receive({arm_restart -> assertz(user:restart_armed), wasm_supervisor_loop(State0) ; disarm_restart -> retractall(user:restart_armed), retractall(user:restart_seen(_)), wasm_supervisor_loop(State0) ;")
-  .replace("( monitor(Pid, _) -> true ;", "( monitor(Pid, _) -> (Start == startup_monitor_fault -> throw(startup_monitor_error) ; Start == restart_probe(monitor), user:restart_armed -> throw(restart_monitor_error) ; true) ;");
+  .replace("wasm_supervisor_loop(State0) :- wasm_prune_child_monitors(State0), receive({", "wasm_supervisor_loop(State0) :- wasm_prune_child_monitors(State0), receive({arm_restart -> assertz(user:restart_armed), wasm_supervisor_loop(State0) ; disarm_restart -> retractall(user:restart_armed), retractall(user:restart_seen(_)), wasm_supervisor_loop(State0) ;")
+  .replace("( monitor(Pid, Ref) -> wasm_remember_child_monitor(Pid, Ref) ;", "( monitor(Pid, Ref) -> wasm_remember_child_monitor(Pid, Ref), (Start == startup_monitor_fault -> throw(startup_monitor_error) ; Start == restart_probe(monitor), user:restart_armed -> throw(restart_monitor_error) ; true) ;");
+if (!startupFaultSource.includes("throw(startup_monitor_error)") ||
+    !startupFaultSource.includes("arm_restart -> assertz")) {
+  throw new Error("supervisor startup fault-injection boundaries were not found");
+}
 
 async function supervisorStartupContract(run,host,check) {
   const idle="receive({never->true})";
@@ -1911,6 +1939,37 @@ const scenarios = {
     check(err.message==="setup failure"&&Object.keys(host.swiWasmActorWorkers.a.promiseRequests).length===0,"synchronous fetch failure clears timer and registry");
   },
 
+
+  async supervisor_notification_identity(W, check) {
+    wrapperWorkerReplies(W);
+    const previous=W.control.reply;
+    W.control.reply=m=>{
+      if(m.action==="send"&&m.to!==CLIENT){deliver(W,m.message);return {result:true};}
+      return previous(m);
+    };
+    await startToplevel(W);
+    async function run(goal){
+      const replies=()=>W.sends.filter(m=>m.to===CLIENT).map(m=>m.message),n=replies().length;
+      deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");
+      await until(()=>replies().length>n);
+      const reply=replies()[n]||"";if(!/\[checked\],false\)/.test(reply))console.log(reply);
+      return /\[checked\],false\)/.test(reply);
+    }
+    await supervisorNotificationContract(run,check);
+  },
+  async compatibility_supervisor_notification_identity(W, check) {
+    const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
+    const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    engine.FS.writeFile("/compat_supervisor_notifications.pl",source);
+    check(!!engine.prolog.query("use_module('/compat_supervisor_notifications.pl')").once(),"main supervisor engine loaded");
+    spawnOptionMainHarness();
+    const queue=[];
+    global.self.swiWasmActorReceive=()=>Promise.resolve(queue.shift()||null);
+    global.self.swiWasmActorSend=(_pid,msg)=>{queue.push(msg);return Promise.resolve(true);};
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    await supervisorNotificationContract(run,check);
+  },
   async supervisor_ordering_bookkeeping(W, check) {
     wrapperWorkerReplies(W);await startToplevel(W);
     async function run(goal){const n=W.sends.length;deliver(W,"'$call'(("+goal+"->R=checked;R=wrong),[template(R)])");const m=await nSends(W,n+1);const ok=/\[checked\],false\)/.test(m[n]||"");if(!ok)console.log("supervisor order reply: "+m[n]);return ok;}
@@ -2082,6 +2141,29 @@ const scenarios = {
     check(req.goal.includes("interpret_trace(false")&&req.goal.includes("remote.xml")&&req.goal.includes("with_io_target(client"),"worker remote statechart goal and routing unchanged");
   },
 
+
+  async statechart_action_failure_blocks(W, check) {
+    const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+    check(await loadCompatibilityStatecharts(engine),"real statechart engine loaded");
+    async function run(goal){let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;}
+    const template=fs.readFileSync(path.join(ROOT,"tests/test_statecharts/statechart-action-errors.statechart"),"utf8");
+    const effects="findall(M,statechart_wasm:mark(M),Marks),sort(Marks,Actual),sort([exit_before,exit_other,transition_before,entry_before,entry_other,parallel_exit,parallel_action,parallel_entry],Actual)";
+    for(const policy of ["handle","ignore","terminate"]) {
+      const text=template.replace("~q","unused").replace("~w",policy)
+        .replace("test_parent(Parent), Parent ! Event","assertz(notification(Event))")
+        .replace(":- dynamic mark/1.",":- dynamic mark/1,notification/1.");
+      const result=policy==="handle"?
+        "findall(E-Snapshot,statechart_wasm:notification(handled(E,Snapshot)),Events),Events=[E1-A,E2-B,E3-C],maplist(sort,[A,B,C],[Actual,Actual,Actual]),memberchk(block_error,[E1,E2,E3]),findall(G,member(failure(G),[E1,E2,E3]),[_,_]),statechart_running,statechart_in(b),statechart_in(d)":
+        policy==="ignore"?"findall(N,statechart_wasm:notification(N),[]),statechart_send(unrelated),statechart_running,statechart_in(b),statechart_in(d),statechart_wasm:internal_queue([])":
+        "statechart_wasm:notification(terminated(Snapshot)),sort(Snapshot,Actual),\\+statechart_running,statechart_in(failed)";
+      check(await run("statechart_start(text("+JSON.stringify(text)+")),statechart_send(go),"+effects+","+result+",statechart_stop"),policy+": partial effects retained, other blocks and parallel transition complete before chart error policy");
+    }
+    for(const fault of ["fail","throw(block_error)"]) {
+      const expected=fault==="fail"?"failure(fail)":"block_error";
+      check(await run("statechart_start(text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>')),statechart_wasm_runtime:execute_content([script(assertz(statechart_wasm:block_mark(before))),script("+fault+"),script(assertz(statechart_wasm:block_mark(skipped)))]),statechart_wasm:block_mark(before),\\+statechart_wasm:block_mark(skipped),statechart_wasm:internal_queue([error("+expected+")]),retractall(statechart_wasm:block_mark(_)),statechart_stop"),fault+": remainder of the same block skipped and exactly one error queued");
+    }
+    check(await run("statechart_start(text('<statechart version=\"0.2\" initial=\"f\"><final id=\"f\"><onentry>fail</onentry></final></statechart>')),\\+statechart_running,statechart_in(f),statechart_wasm:internal_queue([error(failure(fail))]),statechart_stop"),"top-level final completion does not wait to handle its queued entry error");
+  },
   async statechart_monitors_worker(W,check) { await statechartMonitorContract(W,check,false); },
   async statechart_monitors_main(W,check) { await statechartMonitorContract(W,check,true); },
 

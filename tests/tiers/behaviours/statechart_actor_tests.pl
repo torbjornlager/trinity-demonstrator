@@ -401,7 +401,61 @@ test(all_demonstrator_examples_validate) :-
 :- end_tests(statechart_profile).
 
 
+action_error_case(Policy) :-
+    resolve_statechart_fixture('test_statecharts/statechart-action-errors.statechart', File),
+    setup_call_cleanup(open(File,read,Stream),read_string(Stream,_,Template),close(Stream)),
+    self(Self),format(atom(Text),Template,[Self,Policy]),
+    setup_call_cleanup(
+        statechart_spawn(Pid,[src_text(Text),trace(false),monitor(true),link(false)]),
+        check_error_chart(Policy,Pid),error_chart_cleanup(Pid)).
+
+error_marks(Marks) :-
+    sort([exit_before,exit_other,transition_before,entry_before,entry_other,
+          parallel_exit,parallel_action,parallel_entry], Expected),
+    sort(Marks, Actual),
+    (Actual == Expected -> true ; throw(unexpected_effects(Marks))).
+error_message(Message) :-
+    receive({Message -> true},[timeout(3),on_timeout(throw(missing(Message)))]).
+error_chart_cleanup(Pid) :-
+    catch(statechart_halt(Pid,_,1),_,true),
+    receive({down(Pid,Pid,_) -> true},[timeout(0)]).
+check_error_chart(handle, Pid) :-
+    send(Pid,go),
+    error_message(handled(E1,M1)),error_marks(M1),
+    error_message(handled(E2,M2)),error_marks(M2),
+    error_message(handled(E3,M3)),error_marks(M3),
+    memberchk(block_error,[E1,E2,E3]),
+    findall(G,member(failure(G),[E1,E2,E3]),Failures),length(Failures,2),
+    self(Self),send(Pid,probe(Self)),error_message(snapshot(Marks)),error_marks(Marks).
+check_error_chart(ignore, Pid) :-
+    send(Pid,go),self(Self),send(Pid,probe(Self)),
+    error_message(snapshot(Marks)),error_marks(Marks),
+    receive({handled(_,_) -> throw(unexpected_handler)},[timeout(0)]).
+check_error_chart(terminate, Pid) :-
+    send(Pid,go),error_message(terminated(Marks)),error_marks(Marks),
+    error_message(down(Pid,Pid,true)).
+
 :- begin_tests(statechart_profile_runtime).
+
+test(final_entry_error_does_not_prevent_normal_completion, [timeout(5)]) :-
+    Text='<statechart version="0.2" initial="f"><final id="f"><onentry>fail</onentry></final></statechart>',
+    statechart_spawn(Pid,[src_text(Text),trace(false),monitor(true)]),
+    receive({down(Pid,Pid,true) -> true},[timeout(2),on_timeout(fail)]).
+
+
+test(action_error_policy, [forall(member(Policy,[handle,ignore,terminate])),timeout(5)]) :-
+    action_error_case(Policy).
+
+
+test(unspecified_event_is_not_a_stop_request, [timeout(5)]) :-
+    Text = '<statechart version="0.2" initial="s"><state id="s"><go on="probe(To)" if="ground(To)">To ! alive</go></state></statechart>',
+    setup_call_cleanup(
+        statechart_spawn(Pid,[src_text(Text),trace(false),monitor(true),link(false)]),
+        (self(Self),send(Pid,_),send(Pid,'$stop'(_)),send(Pid,probe(Self)),
+         receive({alive -> true},[timeout(2),on_timeout(fail)])),
+        (statechart_halt(Pid,_,2),
+         receive({down(Pid,Pid,_) -> true},[timeout(2),on_timeout(fail)]))).
+
 
 test(spawn_returns_without_choicepoint,
      [forall((member(SourceType, [uri,text]),
@@ -973,6 +1027,32 @@ test(runtime_enabled_transition_precedes_deferral) :-
 
 
 :- begin_tests(statechart_profile_semantics).
+
+test(error_stops_only_its_block,
+     [forall(member(Fault-Expected,[fail-failure(fail),throw(block_error)-block_error])),
+      setup((statechart_actor:clean,retractall(statechart_actor:block_mark(_)))),
+      cleanup((statechart_actor:clean,retractall(statechart_actor:block_mark(_))))]) :-
+    statechart_runtime:with_internal_queue(
+        (statechart_runtime:execute_content([
+             script(assertz(statechart_actor:block_mark(before))),
+             script(Fault),
+             script(assertz(statechart_actor:block_mark(skipped)))]),
+         statechart_actor:block_mark(before),
+         \+statechart_actor:block_mark(skipped),
+         statechart_actor:internal_queue(Queue),
+         thread_get_message(Queue,error(Expected),[timeout(0)]),
+         \+thread_get_message(Queue,_,[timeout(0)]))).
+
+
+test(unspecified_event_keeps_application_unification,
+     [setup(statechart_actor:clean),cleanup(statechart_actor:clean)]) :-
+    init_interpreter_text('<statechart version="0.2" initial="s"><state id="s"><go on="go" to="f"/><go after="60" to="timed"/></state><final id="f"/><final id="timed"/></statechart>'),
+    statechart_exec:trace_event_term(Event,Trace),
+    assertion(var(Event)),assertion(Event==Trace),
+    statechart_actor:select_transitions(Event,[t(s,[f],_)]),
+    assertion(var(Event)),
+    assertion(statechart_actor:after_timer(s,_,_)).
+
 
 test(exit_set_pause, [setup(statechart_actor:clean), cleanup(statechart_actor:clean)]) :-
     parse_statechart_fixture('test_statecharts/statechart-history.statechart'),

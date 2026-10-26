@@ -98,7 +98,44 @@ run_tests :-
 %% PL-Unit suite
 %% -------------------------------------------------------------------
 
+
+% Each management reply is an ordering barrier after the injected messages.
+notification_guard_running :-
+    setup_call_cleanup(
+        supervisor_spawn(test_supervisor:[child(guarded,
+            [start(forever),shutdown(brutal_kill)])], Sup, [intensity(0)]),
+        ( supervisor_which_children(Sup, Before),
+          member(info(guarded, Pid, _, _), Before),
+          actors:send(Sup, down(_, unknown, false)),
+          actors:send(Sup, down(Pid, _, false)),
+          actors:send(Sup, down(Pid, wrong_reference, false)),
+          actors:send(Sup, down(undefined, unknown, false)),
+          actors:send(Sup, down(unrelated, unknown, false)),
+          supervisor_which_children(Sup, After), After == Before
+        ),
+        supervisor_halt(Sup)).
+
+notification_guard_retired :-
+    setup_call_cleanup(
+        supervisor_spawn(test_supervisor:[child(guarded,
+            [start(forever),shutdown(brutal_kill)])], Sup, [intensity(0)]),
+        ( supervisor_which_children(Sup, Before),
+          member(info(guarded, Old, _, _), Before),
+          supervisor_terminate_child(Sup, guarded, ok),
+          supervisor_which_children(Sup, Retired),
+          member(info(guarded, undefined, _, _), Retired),
+          actors:send(Sup, down(undefined, unknown, false)),
+          actors:send(Sup, down(_, unknown, false)),
+          actors:send(Sup, down(Old, unknown, false)),
+          supervisor_which_children(Sup, After), After == Retired
+        ),
+        supervisor_halt(Sup)).
+
 :- begin_tests(supervisor).
+
+test(notification_guard_running, [timeout(5)]) :- notification_guard_running.
+test(notification_guard_retired, [timeout(5)]) :- notification_guard_retired.
+
 
 test(halt_ordering_and_deadlines) :-
     supervisor_halt_tests:run.
