@@ -1,0 +1,15 @@
+  ok   portable_text_worker: literal Unicode and empty text
+  ok   portable_text_worker: native library constructors remain strings
+  ok   portable_text_worker: default term reader follows language mode
+  ok   portable_text_worker: DCG terminals are character lists
+  ok   portable_text_worker: bridge and native modules retain string flags
+  ok   portable_text_worker: canonical wire retains native strings, arrays and sharing
+  ok   portable_text_worker: materialised clauses retain native strings and character lists
+  ok   portable_text_worker: transport rejects cycles and non-text blobs
+  ok   portable_text_worker: explicit remote source keeps its existing convention
+  ok   portable_text_worker: upgrade reader preserves typed strings and restores characters
+  ok   portable_text_worker: text option boundary rejects codes and open text without binding
+  ok   portable_text_worker: URI and source text accept character lists and native strings
+  ok   portable_text_worker: shared database uses language characters
+  ok   portable_text_worker: read/1 requests terminal input
+  ok   portable_text_worker: shell input command parses characters independently of the wire decoder

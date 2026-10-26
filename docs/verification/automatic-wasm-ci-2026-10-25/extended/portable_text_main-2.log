@@ -1,0 +1,32 @@
+Warning: /swi_wasm_actor_bridge.pl:446:
+Warning:    Clauses of swi_wasm_actor_bridge:send/2 are not together in the source-file
+Warning:    Earlier definition at /swi_wasm_actor_bridge.pl:432
+Warning:    Current predicate: swi_wasm_actor_bridge:send/3
+Warning:    Use :- discontiguous swi_wasm_actor_bridge:send/2. to suppress this message
+Warning: /swi_wasm_actor_bridge.pl:448:
+Warning:    Clauses of swi_wasm_actor_bridge:send/3 are not together in the source-file
+Warning:    Earlier definition at /swi_wasm_actor_bridge.pl:439
+Warning:    Current predicate: swi_wasm_actor_bridge:send/2
+Warning:    Use :- discontiguous swi_wasm_actor_bridge:send/3. to suppress this message
+Warning: /swi_wasm_actor_bridge.pl:1305:
+Warning:    Singleton variables: [Opts]
+  ok   portable_text_main: literal Unicode and empty text
+  ok   portable_text_main: native library constructors remain strings
+  ok   portable_text_main: default term reader follows language mode
+  ok   portable_text_main: DCG terminals are character lists
+  ok   portable_text_main: bridge and native modules retain string flags
+  ok   portable_text_main: canonical wire retains native strings, arrays and sharing
+Warning: /portable_materialized.pl:6:
+Warning:    Redefined static procedure portable_copied/1
+  ok   portable_text_main: materialised clauses retain native strings and character lists
+  ok   portable_text_main: transport rejects cycles and non-text blobs
+  ok   portable_text_main: explicit remote source keeps its existing convention
+  ok   portable_text_main: upgrade reader preserves typed strings and restores characters
+  ok   portable_text_main: text option boundary rejects codes and open text without binding
+  ok   portable_text_main: URI and source text accept character lists and native strings
+  ok   portable_text_main: shared database uses language characters
+  ok   portable_text_main: supplied private source uses characters
+  ok   portable_text_main: statechart modules loaded
+  ok   portable_text_main: datamodel uses characters while its native implementation remains strings
+  ok   portable_text_main: inline input reader returns language characters
+  ok   portable_text_main: read shim uses the same characters

@@ -1,0 +1,11 @@
+{'label': 'clean-inputs', 'base_commit': '290bc0312f01163f361ac1290dbd58ee7f643080', 'no_git_or_local_setup': True, 'private_checkout_absent': True, 'contracts_sha256': 'f06ad5ef641f66e974f18aa44179928165d946a59d0cf81589371b49a58c2499'}
+{'label': 'clean-export-wasm', 'exit_code': 0, 'seconds': 169.89}
+{'label': 'portable_text_worker', 'repetitions': 10, 'passed': 10, 'ok_assertions': 150, 'seconds': 5.291}
+{'label': 'portable_text_main', 'repetitions': 10, 'passed': 10, 'ok_assertions': 180, 'seconds': 2.651}
+{'label': 'compatibility_output_ordering', 'repetitions': 10, 'passed': 10, 'ok_assertions': 150, 'seconds': 2.633}
+{'label': 'pipeline-timeout', 'exit_code': 124, 'seconds': 0.434, 'expected_exit_code': 124, 'version_metadata_retained': True, 'partial_log_retained': True}
+{'label': 'pipeline-log-writer-error', 'exit_code': 9, 'seconds': 0.489, 'expected_exit_code': 9, 'version_metadata_retained': True}
+Traceback (most recent call last):
+  File "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/docs/verification/automatic-wasm-ci-2026-10-25/extended/run.py", line 70, in <module>
+    assert row['exit_code']==expected,row
+AssertionError: {'label': 'pipeline-bad-engine', 'exit_code': 1, 'seconds': 0.049}

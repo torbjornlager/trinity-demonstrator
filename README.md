@@ -104,9 +104,26 @@ Then try:
 - the stateless API:
   `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 
+### Automatic browser CI
+
+The separate `CI / wasm` job runs on pushes and pull requests (and manual workflow
+runs), independently of native test jobs. It uses SWI-Prolog 10.1.19 and Node.js
+22 to run the existing `bash tools/test.sh WASM` tier without changing assertions.
+That tier covers the shared statechart checks, Worker/coordinator smoke tests and
+real-engine semantic contracts for both Worker and compatibility main-thread mode,
+including character-list reading and output ordering. It does not replace UI tests
+in an actual browser.
+
+The job uses retained local schema inputs with `WP_NATIVE_MODE=legacy`; it needs
+no private-repository checkout or credential. The existing 360-second process-group
+watchdog bounds the tier. Shell `pipefail` preserves failures through log capture,
+and an always-run artifact step retains `WASM.log` and the commit/engine versions
+as `wasm-results`. The optional external pinned-native job remains separate.
+See [the browser CI verification record](docs/verification/automatic-wasm-ci-2026-10-25/REPORT.md).
+
 ### Pinned native CI checks
 
-Both CI jobs build the checksum-pinned official SWI-Prolog **10.1.19** source
+All CI jobs build the checksum-pinned official SWI-Prolog **10.1.19** source
 release through `.github/actions/setup-swi`, in the disposable runner directory.
 They verify the version and required PCRE, XML, HTTP, SSL and crypto libraries.
 The automatic legacy job checks the receive-handoff prerequisite before its

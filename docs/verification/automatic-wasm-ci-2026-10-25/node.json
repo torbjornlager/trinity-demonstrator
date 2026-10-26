@@ -1,0 +1,6 @@
+{
+  "url": "https://nodejs.org/dist/latest-v22.x/node-v22.23.4-darwin-arm64.tar.gz",
+  "sha256": "c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428",
+  "executable": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/node-22-wasm-ci-2026-10-25/node-v22.23.4-darwin-arm64/bin/node",
+  "checksum_url": "https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt"
+}

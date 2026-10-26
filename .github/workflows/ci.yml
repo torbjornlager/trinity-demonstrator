@@ -65,6 +65,39 @@ jobs:
           done
           exit "$status"
 
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      # Browser checks use retained local schema inputs; no private checkout.
+      WP_NATIVE_MODE: legacy
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-swi
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Run existing WASM tier
+        shell: bash
+        run: |
+          set -euo pipefail
+          results="$RUNNER_TEMP/wasm-ci-results"
+          mkdir -p "$results"
+          printf 'Commit: %s\n' "$GITHUB_SHA" > "$results/versions.log"
+          node --version >> "$results/versions.log"
+          "$SWIPL" --version >> "$results/versions.log"
+          cat "$results/versions.log"
+          python3 tools/ci_timeout.py 360 -- bash tools/test.sh WASM 2>&1 | tee "$results/WASM.log"
+      - name: Preserve WASM results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-results
+          path: ${{ runner.temp }}/wasm-ci-results
+          if-no-files-found: warn
+
   pinned-native:
     if: github.event_name == 'workflow_dispatch' && inputs.pinned_native
     runs-on: ubuntu-latest

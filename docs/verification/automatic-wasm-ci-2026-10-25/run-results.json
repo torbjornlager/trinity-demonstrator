@@ -1,0 +1,13 @@
+{
+  "command": [
+    "bash",
+    "workflow-step.sh"
+  ],
+  "exit_code": 0,
+  "seconds": 170.759,
+  "node": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/node-22-wasm-ci-2026-10-25/node-v22.23.4-darwin-arm64/bin/node",
+  "swipl": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/swipl-10.1.19-ci-2026-10-25/run-swipl",
+  "base_commit": "290bc0312f01163f361ac1290dbd58ee7f643080",
+  "platform": "macOS arm64; hosted Ubuntu verification pending push",
+  "ok_assertion_lines": 2751
+}

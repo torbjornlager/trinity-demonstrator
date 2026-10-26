@@ -1,0 +1,4 @@
+{'label': 'pipeline-timeout', 'exit_code': 124, 'seconds': 0.459, 'expected_exit_code': 124, 'version_metadata_retained': True, 'partial_log_retained': True}
+{'label': 'pipeline-log-writer-error', 'exit_code': 9, 'seconds': 0.24, 'expected_exit_code': 9, 'version_metadata_retained': True}
+{'label': 'pipeline-bad-engine', 'exit_code': 1, 'seconds': 0.041, 'expected_exit_code': 1, 'no_language_tests_started': True, 'version_metadata_retained': True}
+All extended checks passed; disposable exports/fixtures removed.

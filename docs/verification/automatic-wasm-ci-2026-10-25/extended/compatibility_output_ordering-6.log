@@ -1,0 +1,16 @@
+  ok   compatibility_output_ordering: write("abc") output precedes answer exactly once
+  ok   compatibility_output_ordering: deterministic answer remains final: write("abc")
+  ok   compatibility_output_ordering: write(atom) output precedes answer exactly once
+  ok   compatibility_output_ordering: deterministic answer remains final: write(atom)
+  ok   compatibility_output_ordering: format(user_error,'stderr',[]) output precedes answer exactly once
+  ok   compatibility_output_ordering: deterministic answer remains final: format(user_error,'stderr',[])
+  ok   compatibility_output_ordering: writeln("abc") output precedes answer exactly once
+  ok   compatibility_output_ordering: deterministic answer remains final: writeln("abc")
+  ok   compatibility_output_ordering: failure flushes trailing output before completion
+Unknown message: test_error
+  ok   compatibility_output_ordering: exception flushes output before reporting the original error
+  ok   compatibility_output_ordering: nondeterministic driver waits for explicit next
+  ok   compatibility_output_ordering: first page flushes only its own output before waiting
+  ok   compatibility_output_ordering: next page emits its own output without duplication
+  ok   compatibility_output_ordering: lazy paging retains deterministic flags
+  ok   compatibility_output_ordering: next query has no stale output

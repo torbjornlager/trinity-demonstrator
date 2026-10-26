@@ -1,0 +1,20 @@
+{
+  "native_jobs_and_triggers_unchanged": true,
+  "wasm_job_independent": true,
+  "artifact_always": true,
+  "yaml_and_shell_syntax_valid": true,
+  "pipeline_cases": [
+    {
+      "command_exit": 0,
+      "job_step_exit": 0,
+      "log_preserved": true,
+      "versions_recorded": true
+    },
+    {
+      "command_exit": 7,
+      "job_step_exit": 7,
+      "log_preserved": true,
+      "versions_recorded": true
+    }
+  ]
+}

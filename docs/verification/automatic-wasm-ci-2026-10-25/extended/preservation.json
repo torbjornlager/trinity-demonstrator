@@ -1,0 +1,7 @@
+{
+  "running_nodes_unchanged": true,
+  "native_runtimes_unchanged": true,
+  "live_asset_selection_unchanged": true,
+  "test_and_runner_inputs_unchanged": true,
+  "reference": "../before.json"
+}

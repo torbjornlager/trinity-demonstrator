@@ -1,0 +1,6 @@
+{
+  "initial_assumed_missing_command_status": 127,
+  "actual_host_bash_status": 1,
+  "cause": "temporary negative-test assumption; job correctly failed before language tests",
+  "correction": "compare with independent host-shell baseline and require missing-executable diagnostic plus no WASM log"
+}

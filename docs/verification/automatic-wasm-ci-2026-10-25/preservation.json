@@ -1,0 +1,8 @@
+{
+  "all_node_process_identities_unchanged": true,
+  "installed_native_executable_hashes_unchanged": true,
+  "launchers_and_frontend_hashes_unchanged": true,
+  "live_asset_selection_unchanged": true,
+  "native_dependency_pin_unchanged": true,
+  "test_and_runner_files_unchanged": true
+}
