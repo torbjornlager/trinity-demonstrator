@@ -1,0 +1,11 @@
+  ok   statechart_monitors_worker: unrelated actor/monitor established
+  ok   statechart_monitors_worker: text unnamed exact spawn reference delivered once
+  ok   statechart_monitors_worker: text named exact spawn reference delivered once
+  ok   statechart_monitors_worker: uri unnamed exact spawn reference delivered once
+  ok   statechart_monitors_worker: uri named exact spawn reference delivered once
+  ok   statechart_monitors_worker: same-query explicit monitor sees a live chart and exact termination
+  ok   statechart_monitors_worker: monitor(false) does not install a spawn monitor
+  ok   statechart_monitors_worker: withdrawn explicit monitor receives no termination
+  ok   statechart_monitors_worker: only unrelated monitor remains after chart retirement
+  ok   statechart_monitors_worker: unrelated monitor still delivers exact reference
+  ok   statechart_monitors_worker: all fixture monitors retired

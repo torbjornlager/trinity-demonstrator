@@ -1,0 +1,30 @@
+  ok   statechart_monitors_main: real singleton interpreter loaded
+  ok   statechart_monitors_main: unrelated actor/monitor established
+  ok   statechart_monitors_main: text unnamed exact spawn reference delivered once
+  ok   statechart_monitors_main: text named exact spawn reference delivered once
+  ok   statechart_monitors_main: uri unnamed exact spawn reference delivered once
+  ok   statechart_monitors_main: uri named exact spawn reference delivered once
+  ok   statechart_monitors_main: same-query explicit monitor sees a live chart and exact termination
+  ok   statechart_monitors_main: monitor(false) does not install a spawn monitor
+  ok   statechart_monitors_main: withdrawn explicit monitor receives no termination
+  ok   statechart_monitors_main: repeated halt does not duplicate termination
+  ok   statechart_monitors_main: final state reached by same-query send notifies monitors
+  ok   statechart_monitors_main: initial completion preserves normal termination for late spawn monitor
+  ok   statechart_monitors_main: secondary Worker chart uses canonical pid and complete monitor reference
+  ok   statechart_monitors_main: direct stop fixture created
+  ok   statechart_monitors_main: status synchronization retires monitors once
+  ok   statechart_monitors_main: only unrelated monitor remains after chart retirement
+  ok   statechart_monitors_main: unrelated monitor still delivers exact reference
+  ok   statechart_monitors_main: all fixture monitors retired
+Warning: /chart_monitor.pl:446:
+Warning:    Clauses of swi_wasm_actor_bridge:send/2 are not together in the source-file
+Warning:    Earlier definition at /chart_monitor.pl:432
+Warning:    Current predicate: swi_wasm_actor_bridge:send/3
+Warning:    Use :- discontiguous swi_wasm_actor_bridge:send/2. to suppress this message
+Warning: /chart_monitor.pl:448:
+Warning:    Clauses of swi_wasm_actor_bridge:send/3 are not together in the source-file
+Warning:    Earlier definition at /chart_monitor.pl:439
+Warning:    Current predicate: swi_wasm_actor_bridge:send/2
+Warning:    Use :- discontiguous swi_wasm_actor_bridge:send/3. to suppress this message
+Warning: /chart_monitor.pl:1312:
+Warning:    Singleton variables: [Opts]

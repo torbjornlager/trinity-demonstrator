@@ -1,0 +1,21 @@
+{
+  "base_revision": "dc4ed197fb91cc4de963d377649e76d9596f5b9d",
+  "stage": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/statechart-monitor-repair-2026-10-26",
+  "source_sha256": {
+    "web/demonstrator.html": "4c4c6d20b56b31929efe571c4d498de1ca5b8793c22e269e21dc0249d33538c2",
+    "web/swi_wasm_actor_worker.js": "f68eb2b3df8a93dc580fad924fb2cf737679107ddef308fb417ce2ea1e5f9ec0",
+    "tests/wasm/swi_wasm_contracts.js": "7ef242f63e5cf6b3649b187efe5fdd4319be451224f3ad055f53f92470fcbc34",
+    "web/README.md": "fdd4a49ce38dd67685fc637714972bb6a6bb81ed26f7310e2bdce24ff0485175"
+  },
+  "engine_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+  "engine_pin": {
+    "package": "swipl-wasm",
+    "package_version": "8.2.5",
+    "engine_version": "10.1.19",
+    "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+    "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz",
+    "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+    "bundle": "web/swipl-bundle.js",
+    "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b"
+  }
+}

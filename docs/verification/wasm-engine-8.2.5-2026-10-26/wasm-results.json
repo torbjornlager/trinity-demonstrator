@@ -1,0 +1,16 @@
+{
+  "command": [
+    "python3",
+    "tools/ci_timeout.py",
+    "360",
+    "--",
+    "bash",
+    "tools/test.sh",
+    "WASM"
+  ],
+  "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/wasm-engine-8.2.5-2026-10-26/demonstrator",
+  "node": "v22.23.4",
+  "swipl": "SWI-Prolog version 10.1.19 for fat-darwin",
+  "exit_code": 0,
+  "seconds": 182.476054166
+}

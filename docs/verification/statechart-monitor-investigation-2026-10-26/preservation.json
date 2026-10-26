@@ -1,0 +1,11 @@
+{
+  "checks": {
+    "processes_unchanged": true,
+    "native_engines_unchanged": true,
+    "native_selection_unchanged": true,
+    "trealla_selection_unchanged": true,
+    "new_bundle_served": true,
+    "adapter_sources_unchanged": true
+  },
+  "reference": "../wasm-engine-adoption-2026-10-26/preservation.json"
+}

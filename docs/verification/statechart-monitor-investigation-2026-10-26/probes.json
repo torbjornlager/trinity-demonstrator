@@ -1,0 +1,38 @@
+[
+  {
+    "id": "worker_mismatch",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,stopped),receive({down(D,R,Reason)->true},[timeout(2),on_timeout(throw(missing_down))]),canonical_pid(P,Canonical),D==Canonical,P\\==D,R==P,Reason==true,integer(P),Probe=worker_mismatch.",
+    "mode": "worker",
+    "observed": true
+  },
+  {
+    "id": "worker_explicit",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false)]),monitor(P,Ref),statechart_halt(P,stopped),receive({down(D,Ref,true)->true},[timeout(2),on_timeout(throw(missing_explicit_down))]),canonical_pid(P,D),P\\==D,Probe=worker_explicit.",
+    "mode": "worker",
+    "observed": true
+  },
+  {
+    "id": "main_early_liveness",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false)]),monitor(P,Ref),receive({down(P,Ref,Reason)->Stage=Reason},[timeout(0.2),on_timeout(Stage=none)]),statechart_halt(P,stopped),demonitor(Ref,[flush]),Stage==no_process,Probe=main_early_liveness.",
+    "mode": "main",
+    "observed": true
+  },
+  {
+    "id": "main_spawn_monitor_ignored",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,stopped),receive({down(P,P,_)->Stage=down},[timeout(0.2),on_timeout(Stage=none)]),Stage==none,Probe=main_spawn_monitor_ignored.",
+    "mode": "main",
+    "observed": true
+  },
+  {
+    "id": "main_chart_live",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false)]),statechart_wasm:statechart_running,Probe=main_chart_live.",
+    "mode": "main",
+    "observed": true
+  },
+  {
+    "id": "main_stop_no_notify",
+    "goal": "monitor(statechart,Ref),receive({down(statechart,Ref,R)->Before=R},[timeout(0),on_timeout(Before=none)]),Before==none,statechart_halt(statechart,stopped),receive({down(statechart,Ref,_)->After=down},[timeout(0.2),on_timeout(After=none)]),demonitor(Ref,[flush]),After==none,Probe=main_stop_no_notify.",
+    "mode": "main",
+    "observed": true
+  }
+]

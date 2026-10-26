@@ -1,0 +1,293 @@
+Browser tab: 28, Title: "The Prolog Trinity demonstrator", URL: "http://127.0.0.1:59382/portal?node=swi-wasm".
+0 AXWebArea The Prolog Trinity demonstrator, URL: 127.0.0.1:59382/portal?node=swi-wasm
+	1 container app
+		2 container
+			3 link Description: Web Prolog logo, Value: trinity.elfenbenstornet.se/
+			4 heading Trinity demonstrator, Value: 1
+				5 text Trinity demonstrator
+			6 text  Your portal to the Prolog Web
+			7 text Browser node
+			8 container Browser help
+				157 text Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.
+			10 link Description: SWI-WASM, Value: 127.0.0.1:59382/portal?node=swi-wasm
+			11 link Description:  Shared DB, Value: 127.0.0.1:59382/wasm/shared_db.pl
+			12 text Remote nodes
+			13 container Node help
+				158 text Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.
+			15 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+			16 link Description: Open N1 demonstrator, Value: n1.elfenbenstornet.se/demonstrator
+			17 link Description: Open N2 demonstrator, Value: n2.elfenbenstornet.se/demonstrator
+			18 link Description: Open N3 demonstrator, Value: n3.elfenbenstornet.se/demonstrator
+			19 link Description: Open N4 demonstrator, Value: n4.elfenbenstornet.se/demonstrator
+			20 link Description: Open N5 demonstrator, Value: n5.elfenbenstornet.se/demonstrator
+			21 button Description: Open help, Help: Help
+			22 button Description: Open settings, Help: Settings
+		41 container
+			42 button Hide examples
+			43 text Examples
+			44 text Tutorials
+			45 content list
+				46 link Description: The ACTOR profile, Value: 127.0.0.1:59382/actor-profile-tutorial
+				47 link Description: The stateful WebSocket API, Value: 127.0.0.1:59382/actor-api-tutorial
+				48 link Description: Jev agent experiment, Value: 127.0.0.1:59382/jev-sxml-tutorial
+			49 text Web Prolog code
+			50 content list
+				51 link Description: 01 queens.pl, Value: 127.0.0.1:59382/examples/actors/01%20queens.pl
+				52 link Description: 02 grammar.pl, Value: 127.0.0.1:59382/examples/actors/02%20grammar.pl
+				53 link Description: 03 expert-system.pl, Value: 127.0.0.1:59382/examples/actors/03%20expert-system.pl
+				54 link Description: 04 count_server.pl, Value: 127.0.0.1:59382/examples/actors/04%20count_server.pl
+				55 link Description: 05 fridge.pl, Value: 127.0.0.1:59382/examples/actors/05%20fridge.pl
+				56 link Description: 06 ping-pong.pl, Value: 127.0.0.1:59382/examples/actors/06%20ping-pong.pl
+				57 link Description: 07 selective-receive.pl, Value: 127.0.0.1:59382/examples/actors/07%20selective-receive.pl
+				58 link Description: 08 priority_queue.pl, Value: 127.0.0.1:59382/examples/actors/08%20priority_queue.pl
+				59 link Description: 09 alarm.pl, Value: 127.0.0.1:59382/examples/actors/09%20alarm.pl
+				60 link Description: 10 links.pl, Value: 127.0.0.1:59382/examples/actors/10%20links.pl
+				61 link Description: 11 ring.pl, Value: 127.0.0.1:59382/examples/actors/11%20ring.pl
+				62 link Description: 12 dining_philosophers.pl, Value: 127.0.0.1:59382/examples/actors/12%20dining_philosophers.pl
+				63 link Description: 13 parallel.pl, Value: 127.0.0.1:59382/examples/actors/13%20parallel.pl
+				64 link Description: 14 backtracking.pl, Value: 127.0.0.1:59382/examples/actors/14%20backtracking.pl
+				65 link Description: 15 simple_toplevel.pl, Value: 127.0.0.1:59382/examples/actors/15%20simple_toplevel.pl
+				66 link Description: 16 fridge_server.pl, Value: 127.0.0.1:59382/examples/actors/16%20fridge_server.pl
+				67 link Description: 17 rpc.pl, Value: 127.0.0.1:59382/examples/actors/17%20rpc.pl
+				68 link Description: 18 proof-trees.pl, Value: 127.0.0.1:59382/examples/actors/18%20proof-trees.pl
+				69 link Description: 19 promise-and-yield.pl, Value: 127.0.0.1:59382/examples/actors/19%20promise-and-yield.pl
+				70 link Description: 20 expert-system-agent.pl, Value: 127.0.0.1:59382/examples/actors/20%20expert-system-agent.pl
+				71 link Description: 21 model-actor.pl, Value: 127.0.0.1:59382/examples/actors/21%20model-actor.pl
+				72 link Description: 22 service-policy.pl, Value: 127.0.0.1:59382/examples/actors/22%20service-policy.pl
+				73 link Description: 23 jev-agent.pl, Value: 127.0.0.1:59382/examples/actors/23%20jev-agent.pl
+				74 link Description: 24 jev-sxml-agent.pl, Value: 127.0.0.1:59382/examples/actors/24%20jev-sxml-agent.pl
+			75 text SXML code
+			76 content list
+				77 link Description: 01 pause-and-resume.xml, Value: 127.0.0.1:59382/examples/statecharts/01%20pause-and-resume.xml
+				78 link Description: 02 spaghetti.xml, Value: 127.0.0.1:59382/examples/statecharts/02%20spaghetti.xml
+				79 link Description: 03 emotions.xml, Value: 127.0.0.1:59382/examples/statecharts/03%20emotions.xml
+				80 link Description: 04 clock.xml, Value: 127.0.0.1:59382/examples/statecharts/04%20clock.xml
+				81 link Description: 05 pingpong.xml, Value: 127.0.0.1:59382/examples/statecharts/05%20pingpong.xml
+				82 link Description: 06 parallel.xml, Value: 127.0.0.1:59382/examples/statecharts/06%20parallel.xml
+				83 link Description: 07 deferred-events.xml, Value: 127.0.0.1:59382/examples/statecharts/07%20deferred-events.xml
+				84 link Description: 08 closure.xml, Value: 127.0.0.1:59382/examples/statecharts/08%20closure.xml
+				85 link Description: 09 gcd.xml, Value: 127.0.0.1:59382/examples/statecharts/09%20gcd.xml
+				86 link Description: 10 shared-database.xml, Value: 127.0.0.1:59382/examples/statecharts/10%20shared-database.xml
+				87 link Description: 11 boxshop-1.xml, Value: 127.0.0.1:59382/examples/statecharts/11%20boxshop-1.xml
+				88 link Description: 12 boxshop-2.xml, Value: 127.0.0.1:59382/examples/statecharts/12%20boxshop-2.xml
+				89 link Description: 13 spawn-actor.xml, Value: 127.0.0.1:59382/examples/statecharts/13%20spawn-actor.xml
+				90 link Description: 14 spawn-toplevel.xml, Value: 127.0.0.1:59382/examples/statecharts/14%20spawn-toplevel.xml
+				91 link Description: 15 spawn-server.xml, Value: 127.0.0.1:59382/examples/statecharts/15%20spawn-server.xml
+				92 link Description: 16 spawn-supervisor.xml, Value: 127.0.0.1:59382/examples/statecharts/16%20spawn-supervisor.xml
+				93 link Description: 17 spawn-statechart.xml, Value: 127.0.0.1:59382/examples/statecharts/17%20spawn-statechart.xml
+				94 link Description: 18 service-request.xml, Value: 127.0.0.1:59382/examples/statecharts/18%20service-request.xml
+				95 link Description: 19 model-statechart.xml, Value: 127.0.0.1:59382/examples/statecharts/19%20model-statechart.xml
+				96 link Description: 20 jev-deployment-assistant.xml, Value: 127.0.0.1:59382/examples/statecharts/20%20jev-deployment-assistant.xml
+			97 container
+				98 text Editor
+				99 text <scratch-buffer>
+			100 container Demonstrator editor
+				101 AXWebArea Demonstrator Editor Frame, URL: 127.0.0.1:59382/editor_frame?id=editor&mode=none
+					102 container
+						103 text entry area (settable)
+						104 container
+							105 text Scratch buffer
+
+
+
+Code typed here is auto-loaded into
+the current actor's private database.
+Selecting an example from the Examples
+drawer overwrites the buffer.
+			106 container
+				107 text Terminal
+				108 container
+					109 container
+						110 text Welcome to 
+						111 text Web Prolog
+						112 text , running
+						113 text the 
+						114 text ACTOR
+						115 text  profile on node 
+						116 text SWI-WASM,
+						117 text powered by 
+						118 link Description: SWI-Prolog, Value: swi-prolog.org/
+						119 text .
+						164 text ?- current_prolog_flag(version_data,V).
+						165 text V = swi(10,1,8,[]).
+						172 text ?- once((
+						173 text statechart_spawn
+						174 text (P,[src_text('<statechart version="0.2"
+						175 text initial="s"><state id="s"/></statechart>'),trace(false),monitor
+						176 text (true)]),
+						177 text statechart_halt
+						178 text (P,Reply),Reply==stopped,
+						179 text receive
+						180 text ({down(P
+						181 text ,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))])
+						182 text )),Candidate=old009.
+						200 text Missing_chart_down
+						206 text ?- 
+						207 text flush
+						208 text ,
+						209 text statechart_spawn
+						210 text (P,[src_text('<statechart version="0.2"
+						211 text initial="s"><state id="s"/></statechart>'),trace(false),monitor
+						212 text (true)]),
+						213 text statechart_halt
+						214 text (P,Reply),
+						215 text receive
+						216 text ({down(D,R,Reason)->tru
+						217 text e},[timeout(2),on_timeout(throw(probe_missing_down))]),Candidate
+						218 text =referenceprobe.
+						219 text Shell got down(8580316596,8580316596,true)
+						234 text Reason = true,
+						235 text Reply = stopped,
+						236 text P = 8175429505,
+						237 text R = 8175429505,
+						238 text Candidate = referenceprobe,
+						239 text D = 8175429505.
+					120 container
+						201 text ?-  Clipboard textarea for jQuery Terminal
+						122 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: 5f9rmj
+				123 text x
+				124 button (collapsed) History, Secondary Actions: Expand
+				125 button Flush, Help: Call flush/0 in the Editor session
+				126 button Actors, Help: Call actors/1 in the Editor session
+				127 button Call
+				128 button (disabled) Next
+				129 button (disabled) Stop
+				130 button (disabled) Abort
+				131 button Clear
+			132 container
+				133 text Logger 09:14:22 · INFO · QUERY
+				240 text Reason = true,
+Reply = stopped,
+P = 8175429505,
+R = 8175429505,
+Candidate = referenceprobe,
+D = 8175429505.
+				220 text 09:14:22 · API · STATEFUL WORKER · JS OBJECT
+				241 text {
+  type: "success",
+  pid: 9665906128,
+  data: [
+    {
+      Reason: "true",
+      Reply: "stopped",
+      P: "8175429505",
+      R: "8175429505",
+      Candidate: "referenceprobe",
+      D: "8175429505@localhost"
+    }
+  ],
+  more: false
+}
+				221 text 09:14:22 · API · SWI-WASM
+				242 text 8175429505 done.
+				222 text 09:14:22 · API · SWI-WASM
+				243 text 9665906128 -> 9665906128: down(8175429505,8175429505,true)
+				223 text 09:14:22 · API · SWI-WASM
+				244 text 8175429505 -> 9665906128: reply(stopped)
+				224 text 09:14:22 · API · SWI-WASM
+				245 text 9665906128 -> 8175429505: '$statechart_stop'(@(9665906128,localhost))
+				225 text 09:14:22 · API · SWI-WASM
+				246 text 8175429505 started.
+				226 text 09:14:22 · API · SWI-WASM
+				247 text 8175429505 ready.
+				227 text 09:14:22 · API · SWI-WASM
+				228 text spawn 8175429505 using SWI-WASM WebWorker.
+				229 text 09:14:22 · API · STATEFUL WORKER · JS OBJECT
+				230 text {
+  type: "output",
+  pid: 9665906128,
+  data: "Shell got down(8580316596..."
+}
+				231 text 09:14:22 · API · STATEFUL WORKER · JS OBJECT
+				232 text {
+  command: "toplevel_call",
+  pid: 9665906128,
+  goal: "flush,statechart_spawn(P,...",
+  options: "[limit(1)]"
+}
+				233 text 09:13:46 · ERROR · QUERY
+				202 text Missing_chart_down
+				203 text 09:13:46 · API · STATEFUL WORKER · JS OBJECT
+				204 text {
+  type: "error",
+  pid: 9665906128,
+  data: "missing_chart_down"
+}
+				205 text 09:13:44 · API · SWI-WASM
+				194 text 8580316596 done.
+				184 text 09:13:44 · API · SWI-WASM
+				195 text 9665906128 -> 9665906128: down(8580316596,8580316596,true)
+				185 text 09:13:44 · API · SWI-WASM
+				196 text 8580316596 -> 9665906128: reply(stopped)
+				186 text 09:13:44 · API · SWI-WASM
+				197 text 9665906128 -> 8580316596: '$statechart_stop'(@(9665906128,localhost))
+				187 text 09:13:44 · API · SWI-WASM
+				198 text 8580316596 started.
+				188 text 09:13:44 · API · SWI-WASM
+				199 text 8580316596 ready.
+				189 text 09:13:44 · API · SWI-WASM
+				190 text spawn 8580316596 using SWI-WASM WebWorker.
+				191 text 09:13:44 · API · STATEFUL WORKER · JS OBJECT
+				192 text {
+  command: "toplevel_call",
+  pid: 9665906128,
+  goal: "once((statechart_spawn(P,...",
+  options: "[limit(1)]"
+}
+				193 text 09:13:43 · INFO · QUERY
+				166 text V = swi(10,1,8,[]).
+				167 text 09:13:43 · API · STATEFUL WORKER · JS OBJECT
+				168 text {
+  type: "success",
+  pid: 9665906128,
+  data: [
+    {
+      V: "swi(10,1,8,[])"
+    }
+  ],
+  more: false
+}
+				169 text 09:13:43 · API · STATEFUL WORKER · JS OBJECT
+				170 text {
+  command: "toplevel_call",
+  pid: 9665906128,
+  goal: "current_prolog_flag(versi...",
+  options: "[limit(1)]"
+}
+				171 text 09:13:10 · INFO · SWI-WASM
+				160 text SWI-WASM worker toplevel actor ready.
+				161 text 09:13:10 · API · STATEFUL WORKER · JS OBJECT
+				162 text {
+  type: "spawned",
+  pid: 9665906128
+}
+				163 text 09:13:10 · INFO · RUNTIME
+				134 text Tutorial bridge connected.
+				135 text 09:13:10 · INFO · INTERACTION
+				136 text POST /interaction_log (durable usage log): {"event":"portal_view","route":"portal","device":"mac","timezone":"Europe/Stockholm","language":"en-US"}
+				137 text 09:13:10 · INFO · RUNTIME
+				138 text Demonstrator frontend loaded.
+				139 text 09:13:10 · INFO · RUNTIME
+				140 text Demonstrator scaffold loaded.
+				141 text 09:13:10 · API · STATEFUL WORKER · JS OBJECT
+				142 text {
+  command: "toplevel_spawn",
+  pid: 9665906128,
+  options: "[session(true)]"
+}
+				143 checkbox (settable, integer) Description: Info, Value: 1
+				144 text Info
+				145 checkbox (settable, integer) Description: SXML trace, Value: 1
+				146 text SXML trace
+				147 checkbox (settable, integer) Description: API traffic, Value: 1
+				148 text API traffic
+				149 button Clear
+			150 button Hide logger
+		151 container
+			152 text Inspired by 
+			153 link Description: Erlang, Value: erlang.org/
+			154 text , powered by 
+			155 link Description: SWI-Prolog, Value: swi-prolog.org/
+			156 text . Profile: SWI-WASM / ACTOR (WORKERS)  |  Principal: anonymous  |  Auth: OPEN
+
+The focused UI element is 122 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: 5f9rmj

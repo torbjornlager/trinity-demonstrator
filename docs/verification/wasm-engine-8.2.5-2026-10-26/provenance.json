@@ -1,0 +1,10 @@
+{
+  "stage": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/wasm-engine-8.2.5-2026-10-26",
+  "source_revision": "dc1b3d1cfe735c81372515991fb27397478ba770",
+  "package_integrity_verified": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+  "tarball_sha256": "0d728917d606d1d9314f29a30c035d2770a8467814f1de121ca6d888ce10d5df",
+  "source_archive_sha256": "5bdfd596131317e770be09ca1d737dcc72fa36bef2f59b9192a32ecbb9869799",
+  "previous_bundle_sha256": "baeed50860573728c41a4691c63a9da4d3695077fbd53b0a2ef89cd8f42541c0",
+  "candidate_bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+  "candidate_size": 6366082
+}

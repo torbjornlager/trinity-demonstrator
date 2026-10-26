@@ -1,0 +1,26 @@
+[
+  {
+    "id": "original",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,stopped),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_original_down))])",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "explicit",
+    "goal": "spawn(receive({stop->true}),U,[monitor(true)]),statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),monitor(P,R),\\+receive({down(_,R,no_process)->true},[timeout(0),on_timeout(fail)]),statechart_halt(P,stopped),receive({down(P,P,true)->true},[timeout(2)]),receive({down(P,R,true)->true},[timeout(2)]),\\+receive({down(P,P,_)->true},[timeout(0),on_timeout(fail)]),U!stop,receive({down(U,U,true)->true},[timeout(2),on_timeout(throw(unrelated_monitor_lost))])",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "original",
+    "goal": "statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,stopped),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_original_down))])",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "explicit",
+    "goal": "spawn(receive({stop->true}),U,[monitor(true)]),statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),monitor(P,R),\\+receive({down(_,R,no_process)->true},[timeout(0),on_timeout(fail)]),statechart_halt(P,stopped),receive({down(P,P,true)->true},[timeout(2)]),receive({down(P,R,true)->true},[timeout(2)]),\\+receive({down(P,P,_)->true},[timeout(0),on_timeout(fail)]),U!stop,receive({down(U,U,true)->true},[timeout(2),on_timeout(throw(unrelated_monitor_lost))])",
+    "mode": "worker",
+    "passed": true
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "old_revision": "b9ea7c557a61faf5ef9524fb97500bbe1ff89015",
+  "new_revision": "0064d8d1934b0fc84c501ff134aed094c95960f8",
+  "served_bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+  "checks": {
+    "http://localhost:3053/swipl-bundle.js": true,
+    "http://localhost:3060/swipl-bundle.js": true
+  },
+  "commit_guard": true,
+  "setup_validation": true,
+  "processes_unchanged": true
+}

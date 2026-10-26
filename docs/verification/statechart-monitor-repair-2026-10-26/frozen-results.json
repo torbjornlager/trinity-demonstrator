@@ -1,0 +1,14 @@
+{
+  "exit_code": 0,
+  "seconds": 184.69968741600002,
+  "command": [
+    "python3",
+    "tools/ci_timeout.py",
+    "360",
+    "--",
+    "bash",
+    "tools/test.sh",
+    "WASM"
+  ],
+  "cwd": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/statechart-monitor-repair-2026-10-26/demonstrator"
+}

@@ -1,0 +1,465 @@
+Browser tab: 27, Title: "The Prolog Trinity demonstrator", URL: "http://127.0.0.1:59340/portal?node=swi-wasm".
+1 AXWebArea The Prolog Trinity demonstrator, URL: 127.0.0.1:59340/portal?node=swi-wasm
+	2 container app
+		3 container
+			4 link Description: Web Prolog logo, Value: trinity.elfenbenstornet.se/
+			5 heading Trinity demonstrator, Value: 1
+				6 text Trinity demonstrator
+			7 text  Your portal to the Prolog Web
+			8 text Browser node
+			9 container Browser help
+				157 text Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.
+			11 link Description: SWI-WASM, Value: 127.0.0.1:59340/portal?node=swi-wasm
+			12 link Description:  Shared DB, Value: 127.0.0.1:59340/wasm/shared_db.pl
+			13 text Remote nodes
+			14 container Node help
+				158 text Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.
+			16 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+			17 link Description: Open N1 demonstrator, Value: n1.elfenbenstornet.se/demonstrator
+			18 link Description: Open N2 demonstrator, Value: n2.elfenbenstornet.se/demonstrator
+			19 link Description: Open N3 demonstrator, Value: n3.elfenbenstornet.se/demonstrator
+			20 link Description: Open N4 demonstrator, Value: n4.elfenbenstornet.se/demonstrator
+			21 link Description: Open N5 demonstrator, Value: n5.elfenbenstornet.se/demonstrator
+			22 button Description: Open help, Help: Help
+			23 button Description: Open settings, Help: Settings
+		42 container
+			43 button Hide examples
+			44 text Examples
+			45 text Tutorials
+			46 content list
+				47 link Description: The ACTOR profile, Value: 127.0.0.1:59340/actor-profile-tutorial
+				48 link Description: The stateful WebSocket API, Value: 127.0.0.1:59340/actor-api-tutorial
+				49 link Description: Jev agent experiment, Value: 127.0.0.1:59340/jev-sxml-tutorial
+			50 text Web Prolog code
+			51 content list
+				52 link Description: 01 queens.pl, Value: 127.0.0.1:59340/examples/actors/01%20queens.pl
+				53 link Description: 02 grammar.pl, Value: 127.0.0.1:59340/examples/actors/02%20grammar.pl
+				54 link Description: 03 expert-system.pl, Value: 127.0.0.1:59340/examples/actors/03%20expert-system.pl
+				55 link Description: 04 count_server.pl, Value: 127.0.0.1:59340/examples/actors/04%20count_server.pl
+				56 link Description: 05 fridge.pl, Value: 127.0.0.1:59340/examples/actors/05%20fridge.pl
+				57 link Description: 06 ping-pong.pl, Value: 127.0.0.1:59340/examples/actors/06%20ping-pong.pl
+				58 link Description: 07 selective-receive.pl, Value: 127.0.0.1:59340/examples/actors/07%20selective-receive.pl
+				59 link Description: 08 priority_queue.pl, Value: 127.0.0.1:59340/examples/actors/08%20priority_queue.pl
+				60 link Description: 09 alarm.pl, Value: 127.0.0.1:59340/examples/actors/09%20alarm.pl
+				61 link Description: 10 links.pl, Value: 127.0.0.1:59340/examples/actors/10%20links.pl
+				62 link Description: 11 ring.pl, Value: 127.0.0.1:59340/examples/actors/11%20ring.pl
+				63 link Description: 12 dining_philosophers.pl, Value: 127.0.0.1:59340/examples/actors/12%20dining_philosophers.pl
+				64 link Description: 13 parallel.pl, Value: 127.0.0.1:59340/examples/actors/13%20parallel.pl
+				65 link Description: 14 backtracking.pl, Value: 127.0.0.1:59340/examples/actors/14%20backtracking.pl
+				66 link Description: 15 simple_toplevel.pl, Value: 127.0.0.1:59340/examples/actors/15%20simple_toplevel.pl
+				67 link Description: 16 fridge_server.pl, Value: 127.0.0.1:59340/examples/actors/16%20fridge_server.pl
+				68 link Description: 17 rpc.pl, Value: 127.0.0.1:59340/examples/actors/17%20rpc.pl
+				69 link Description: 18 proof-trees.pl, Value: 127.0.0.1:59340/examples/actors/18%20proof-trees.pl
+				70 link Description: 19 promise-and-yield.pl, Value: 127.0.0.1:59340/examples/actors/19%20promise-and-yield.pl
+				71 link Description: 20 expert-system-agent.pl, Value: 127.0.0.1:59340/examples/actors/20%20expert-system-agent.pl
+				72 link Description: 21 model-actor.pl, Value: 127.0.0.1:59340/examples/actors/21%20model-actor.pl
+				73 link Description: 22 service-policy.pl, Value: 127.0.0.1:59340/examples/actors/22%20service-policy.pl
+				74 link Description: 23 jev-agent.pl, Value: 127.0.0.1:59340/examples/actors/23%20jev-agent.pl
+				75 link Description: 24 jev-sxml-agent.pl, Value: 127.0.0.1:59340/examples/actors/24%20jev-sxml-agent.pl
+			76 text SXML code
+			77 content list
+				78 link Description: 01 pause-and-resume.xml, Value: 127.0.0.1:59340/examples/statecharts/01%20pause-and-resume.xml
+				79 link Description: 02 spaghetti.xml, Value: 127.0.0.1:59340/examples/statecharts/02%20spaghetti.xml
+				80 link Description: 03 emotions.xml, Value: 127.0.0.1:59340/examples/statecharts/03%20emotions.xml
+				81 link Description: 04 clock.xml, Value: 127.0.0.1:59340/examples/statecharts/04%20clock.xml
+				82 link Description: 05 pingpong.xml, Value: 127.0.0.1:59340/examples/statecharts/05%20pingpong.xml
+				83 link Description: 06 parallel.xml, Value: 127.0.0.1:59340/examples/statecharts/06%20parallel.xml
+				84 link Description: 07 deferred-events.xml, Value: 127.0.0.1:59340/examples/statecharts/07%20deferred-events.xml
+				85 link Description: 08 closure.xml, Value: 127.0.0.1:59340/examples/statecharts/08%20closure.xml
+				86 link Description: 09 gcd.xml, Value: 127.0.0.1:59340/examples/statecharts/09%20gcd.xml
+				87 link Description: 10 shared-database.xml, Value: 127.0.0.1:59340/examples/statecharts/10%20shared-database.xml
+				88 link Description: 11 boxshop-1.xml, Value: 127.0.0.1:59340/examples/statecharts/11%20boxshop-1.xml
+				89 link Description: 12 boxshop-2.xml, Value: 127.0.0.1:59340/examples/statecharts/12%20boxshop-2.xml
+				90 link Description: 13 spawn-actor.xml, Value: 127.0.0.1:59340/examples/statecharts/13%20spawn-actor.xml
+				91 link Description: 14 spawn-toplevel.xml, Value: 127.0.0.1:59340/examples/statecharts/14%20spawn-toplevel.xml
+				92 link Description: 15 spawn-server.xml, Value: 127.0.0.1:59340/examples/statecharts/15%20spawn-server.xml
+				93 link Description: 16 spawn-supervisor.xml, Value: 127.0.0.1:59340/examples/statecharts/16%20spawn-supervisor.xml
+				94 link Description: 17 spawn-statechart.xml, Value: 127.0.0.1:59340/examples/statecharts/17%20spawn-statechart.xml
+				95 link Description: 18 service-request.xml, Value: 127.0.0.1:59340/examples/statecharts/18%20service-request.xml
+				96 link Description: 19 model-statechart.xml, Value: 127.0.0.1:59340/examples/statecharts/19%20model-statechart.xml
+				97 link Description: 20 jev-deployment-assistant.xml, Value: 127.0.0.1:59340/examples/statecharts/20%20jev-deployment-assistant.xml
+			98 container
+				99 text Editor
+				100 text <scratch-buffer>
+			101 container Demonstrator editor
+				102 AXWebArea Demonstrator Editor Frame, URL: 127.0.0.1:59340/editor_frame?id=editor&mode=none
+					103 container
+						104 text entry area (settable)
+						105 container
+							106 text Scratch buffer
+
+
+
+Code typed here is auto-loaded into
+the current actor's private database.
+Selecting an example from the Examples
+drawer overwrites the buffer.
+			107 container
+				108 text Terminal
+				109 container
+					110 container
+						111 text Welcome to 
+						112 text Web Prolog
+						113 text , running
+						114 text the 
+						115 text ACTOR
+						116 text  profile on node 
+						117 text SWI-WASM,
+						118 text powered by 
+						119 link Description: SWI-Prolog, Value: swi-prolog.org/
+						120 text .
+						160 text ?- once((current_prolog_flag(version_data,swi(10,1,19,[])))),Can
+						161 text didate=e001.
+						162 text Candidate = e001.
+						167 text ?- once(("abc"==[a,b,c],""==[],"é😀"==['é','😀'],phrase(("ab","cd"
+						168 text ),"abcd"))),Candidate=e002.
+						169 text Candidate = e002.
+						174 text ?- once((
+						175 text self
+						176 text (S),
+						177 text spawn
+						178 text ((text_check(T),T==[a,b],S!text_ok),P,[src
+						179 text _text('text_check("ab").'),monitor(true)]),
+						180 text receive
+						181 text ({text_ok->tru
+						182 text e},[timeout(2),on_timeout(throw(missing_text))]),
+						183 text receive
+						184 text ({down(P
+						185 text ,P,true)->true},[timeout(2),on_timeout(throw(missing_down))]))),
+						186 text Candidate=e003.
+						187 text S = main@localhost,
+						188 text P = 8599117144@localhost,
+						189 text Candidate = e003.
+						206 text ?- once((parallel([(sleep(0.1),X=slow),Y=fast]),X==slow,Y==fast)
+						207 text ),Candidate=e004.
+						219 text X = slow,
+						220 text Y = fast,
+						221 text Candidate = e004.
+						243 text ?- once((
+						244 text actors
+						245 text (B),first_solution(X,[(
+						246 text receive
+						247 text ({never->true}),X=s
+						248 text low),X=fast]),X==fast,
+						249 text actors
+						250 text (A),sort(B,S),sort(A,S))),Candidate=
+						251 text e005.
+						263 text S = [main@localhost],
+						264 text A = [main@localhost],
+						265 text X = fast,
+						266 text Candidate = e005,
+						267 text B = [main@localhost].
+						283 text ?- once((
+						284 text actors
+						285 text (B),catch(parallel([
+						286 text receive
+						287 text ({never->true}),throw(
+						288 text test_error)]),E,true),E==test_error,
+						289 text actors
+						290 text (A),sort(B,S),sort(A,S
+						291 text ))),Candidate=e006.
+						303 text E = test_error,
+						304 text S = [main@localhost],
+						305 text A = [main@localhost],
+						306 text Candidate = e006,
+						307 text B = [main@localhost].
+						323 text ?- once((
+						324 text promise
+						325 text ('
+						326 link Description: http://127.0.0.1:59340, Value: 127.0.0.1:59340/
+						327 text ',(sleep(0.3),X=ok),R,[t
+						328 text emplate(X)]),
+						329 text yield
+						330 text (R,Early,[timeout(0),on_timeout(Early=waiting)
+						331 text ]),Early==waiting,
+						332 text yield
+						333 text (R,A),A==success([ok],false))),Candidate=
+						334 text e007.
+						338 text A = success([ok],false),
+						339 text R = 9358994622,
+						340 text Candidate = e007,
+						341 text Early = waiting.
+						345 text ?- once((findall(X,
+						346 text rpc
+						347 text ('
+						348 link Description: http://127.0.0.1:59340, Value: 127.0.0.1:59340/
+						349 text ',member(X,[a,b,c]
+						350 text ),[limit(2)]),Xs),Xs==[a,b,c])),Candidate=e008.
+						351 text Candidate = e008,
+						352 text Xs = [a,b,c].
+						357 text ?- once((
+						358 text statechart_spawn
+						359 text (P,[src_text('<statechart version="0.2"
+						360 text initial="s"><state id="s"/></statechart>'),trace(false),monitor
+						361 text (true)]),
+						362 text statechart_halt
+						363 text (P,Reply),Reply==stopped,
+						364 text receive
+						365 text ({down(P
+						366 text ,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))])
+						367 text )),Candidate=e009.
+						373 text Missing_chart_down
+						375 text ?- once((catch(
+						376 text spawn
+						377 text (true,P,[
+						378 text monitor
+						379 text (1)]),error(type_error(boole
+						380 text an,1),_),true),var(P))),Candidate=e010.
+						381 text Candidate = e010.
+						386 text ?- once((write("abc"))),Candidate=e011.
+						387 text [a,b,c]
+						388 text Candidate = e011.
+						393 text ?- 
+						394 text input
+						395 text ('Candidate input',T),T==['é','😀'],Candidate=e012.
+						399 text Candidate input "é😀".
+						400 text T = ['é','😀'],
+						401 text Candidate = e012.
+						405 text ?- write("abc"),fail.
+						406 text [a,b,c]
+						407 text false.
+						414 text ?- write("abc"),throw(candidate_output_error).
+						415 text [a,b,c]
+						416 text Candidate_output_error
+						421 text ?- current_prolog_flag(version_data,V).
+						422 text V = swi(10,1,19,[]).
+						427 text ?- write("abc").
+						428 text [a,b,c]
+						429 text true.
+						434 text ?- 
+						435 text flush
+						436 text ,
+						437 text statechart_spawn
+						438 text (P,[src_text('<statechart version="0.2"
+						439 text initial="s"><state id="s"/></statechart>'),trace(false),monitor
+						440 text (true)]),
+						441 text statechart_halt
+						442 text (P,Reply),
+						443 text receive
+						444 text ({down(D,R,Reason)->tru
+						445 text e},[timeout(2),on_timeout(throw(probe_missing_down))]),Candidate
+						446 text =referenceprobe.
+						450 text Probe_missing_down
+						454 text ?- 
+						455 text flush
+						456 text ,
+						457 text statechart_spawn
+						458 text (P,[src_text('<statechart version="0.2"
+						459 text initial="s"><state id="s"/></statechart>'),trace(false),monitor
+						460 text (true)]),
+						461 text statechart_halt
+						462 text (P,Reply),
+						463 text receive
+						464 text ({down(D,R,Reason)->tru
+						465 text e},[timeout(2),on_timeout(throw(probe_missing_down))]),term_to_a
+						466 text tom(P,PT),term_to_atom(D,DT),term_to_atom(R,RT),Candidate=refere
+						467 text nceencoded.
+						471 text Probe_missing_down
+					121 container
+						472 text ?-  Clipboard textarea for jQuery Terminal
+						123 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: e08kpx
+				124 text x
+				125 button (collapsed) History, Secondary Actions: Expand
+				126 button Flush, Help: Call flush/0 in the Editor session
+				127 button Actors, Help: Call actors/1 in the Editor session
+				128 button Call
+				129 button (disabled) Next
+				130 button (disabled) Stop
+				131 button Abort
+				132 button Clear
+			133 container
+				134 text Logger 09:14:48 · ERROR · QUERY
+				473 text Probe_missing_down
+				474 text 09:14:46 · API · SWI-WASM
+				469 text ?- flush,statechart_spawn(P,[src_text('<statechart version="0.2" initial="s"><state id="s"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,Reply),receive({down(D,R,Reason)->true},[timeout(2),on_timeout(throw(probe_missing_down))]),term_to_atom(P,PT),term_to_atom(D,DT),term_to_atom(R,RT),Candidate=referenceencoded.
+				470 text 09:14:25 · ERROR · QUERY
+				452 text Probe_missing_down
+				453 text 09:14:23 · API · SWI-WASM
+				448 text ?- flush,statechart_spawn(P,[src_text('<statechart version="0.2" initial="s"><state id="s"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,Reply),receive({down(D,R,Reason)->true},[timeout(2),on_timeout(throw(probe_missing_down))]),Candidate=referenceprobe.
+				449 text 09:14:07 · API · SWI-WASM
+				430 text true.
+				431 text 09:14:07 · API · SWI-WASM
+				432 text ?- write("abc").
+				433 text 09:14:06 · API · SWI-WASM
+				423 text V = swi(10,1,19,[]).
+				424 text 09:14:06 · API · SWI-WASM
+				425 text ?- current_prolog_flag(version_data,V).
+				426 text 09:14:05 · ERROR · QUERY
+				417 text Candidate_output_error
+				418 text 09:14:05 · API · SWI-WASM
+				419 text ?- write("abc"),throw(candidate_output_error).
+				420 text 09:14:05 · INFO · QUERY
+				408 text false.
+				409 text 09:14:05 · API · SWI-WASM
+				410 text false.
+				411 text 09:14:04 · API · SWI-WASM
+				412 text ?- write("abc"),fail.
+				413 text 09:14:04 · API · SWI-WASM
+				403 text T = ['é','😀'],
+Candidate = e012.
+				404 text 09:14:03 · API · SWI-WASM
+				397 text ?- input('Candidate input',T),T==['é','😀'],Candidate=e012.
+				398 text 09:13:01 · API · SWI-WASM
+				389 text Candidate = e011.
+				390 text 09:13:01 · API · SWI-WASM
+				391 text ?- once((write("abc"))),Candidate=e011.
+				392 text 09:13:01 · API · SWI-WASM
+				382 text Candidate = e010.
+				383 text 09:13:01 · API · SWI-WASM
+				384 text ?- once((catch(spawn(true,P,[monitor(1)]),error(type_error(boolean,1),_),true),var(P))),Candidate=e010.
+				385 text 09:12:59 · ERROR · QUERY
+				374 text Missing_chart_down
+				372 text 09:12:57 · API · SWI-WASM
+				369 text ?- once((statechart_spawn(P,[src_text('<statechart version="0.2" initial="s"><state id="s"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,Reply),Reply==stopped,receive({down(P,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))]))),Candidate=e009.
+				370 text 09:12:57 · API · SWI-WASM
+				353 text Candidate = e008,
+Xs = [a,b,c].
+				354 text 09:12:57 · API · SWI-WASM
+				355 text ?- once((findall(X,rpc('http://127.0.0.1:59340',member(X,[a,b,c]),[limit(2)]),Xs),Xs==[a,b,c])),Candidate=e008.
+				356 text 09:12:56 · API · SWI-WASM
+				343 text A = success([ok],false),
+R = 9358994622,
+Candidate = e007,
+Early = waiting.
+				344 text 09:12:56 · API · SWI-WASM
+				336 text ?- once((promise('http://127.0.0.1:59340',(sleep(0.3),X=ok),R,[template(X)]),yield(R,Early,[timeout(0),on_timeout(Early=waiting)]),Early==waiting,yield(R,A),A==success([ok],false))),Candidate=e007.
+				337 text 09:12:55 · API · SWI-WASM
+				309 text E = test_error,
+S = [main],
+A = [main],
+Candidate = e006,
+B = [main].
+				310 text 09:12:55 · API · SWI-WASM
+				311 text main -> main: '$worker_scope_closed'('scope-3')
+				312 text 09:12:55 · API · SWI-WASM
+				313 text 9513114921 exited: kill.
+				314 text 09:12:55 · API · SWI-WASM
+				315 text 1572053386 done.
+				316 text 09:12:55 · API · SWI-WASM
+				317 text main -> main: down(1572053386,1572053386,exception(test_error))
+				318 text 09:12:55 · API · SWI-WASM
+				319 text 1572053386 started.
+				320 text 09:12:55 · API · SWI-WASM
+				321 text 1572053386 ready.
+				322 text 09:12:55 · API · SWI-WASM
+				293 text spawn 1572053386 using SWI-WASM WebWorker.
+				294 text 09:12:55 · API · SWI-WASM
+				295 text 9513114921 started.
+				296 text 09:12:55 · API · SWI-WASM
+				297 text 9513114921 ready.
+				298 text 09:12:54 · API · SWI-WASM
+				299 text spawn 9513114921 using SWI-WASM WebWorker.
+				300 text 09:12:54 · API · SWI-WASM
+				301 text ?- once((actors(B),catch(parallel([receive({never->true}),throw(test_error)]),E,true),E==test_error,actors(A),sort(B,S),sort(A,S))),Candidate=e006.
+				302 text 09:12:54 · API · SWI-WASM
+				269 text S = [main],
+A = [main],
+X = fast,
+Candidate = e005,
+B = [main].
+				270 text 09:12:54 · API · SWI-WASM
+				271 text main -> main: '$worker_scope_closed'('scope-2')
+				272 text 09:12:54 · API · SWI-WASM
+				273 text 5435482857 exited: kill.
+				274 text 09:12:54 · API · SWI-WASM
+				275 text 3393223575 exited: kill.
+				276 text 09:12:54 · API · SWI-WASM
+				277 text 5435482857 -> main: -(@(5435482857,localhost),fast)
+				278 text 09:12:54 · API · SWI-WASM
+				279 text 5435482857 started.
+				280 text 09:12:54 · API · SWI-WASM
+				281 text 5435482857 ready.
+				282 text 09:12:54 · API · SWI-WASM
+				253 text spawn 5435482857 using SWI-WASM WebWorker.
+				254 text 09:12:54 · API · SWI-WASM
+				255 text 3393223575 started.
+				256 text 09:12:54 · API · SWI-WASM
+				257 text 3393223575 ready.
+				258 text 09:12:54 · API · SWI-WASM
+				259 text spawn 3393223575 using SWI-WASM WebWorker.
+				260 text 09:12:54 · API · SWI-WASM
+				261 text ?- once((actors(B),first_solution(X,[(receive({never->true}),X=slow),X=fast]),X==fast,actors(A),sort(B,S),sort(A,S))),Candidate=e005.
+				262 text 09:12:53 · API · SWI-WASM
+				223 text X = slow,
+Y = fast,
+Candidate = e004.
+				224 text 09:12:53 · API · SWI-WASM
+				225 text main -> main: '$worker_scope_closed'('scope-1')
+				226 text 09:12:53 · API · SWI-WASM
+				227 text 5479517916 done.
+				228 text 09:12:53 · API · SWI-WASM
+				229 text main -> main: down(5479517916,5479517916,true)
+				230 text 09:12:53 · API · SWI-WASM
+				231 text 2762815133 done.
+				232 text 09:12:53 · API · SWI-WASM
+				233 text main -> main: down(2762815133,2762815133,true)
+				234 text 09:12:53 · API · SWI-WASM
+				235 text 5479517916 -> main: -(@(5479517916,localhost),[fast])
+				236 text 09:12:53 · API · SWI-WASM
+				237 text 5479517916 started.
+				238 text 09:12:53 · API · SWI-WASM
+				239 text 5479517916 ready.
+				240 text 09:12:53 · API · SWI-WASM
+				241 text 2762815133 -> main: -(@(2762815133,localhost),[slow])
+				242 text 09:12:53 · API · SWI-WASM
+				209 text spawn 5479517916 using SWI-WASM WebWorker.
+				210 text 09:12:53 · API · SWI-WASM
+				211 text 2762815133 started.
+				212 text 09:12:53 · API · SWI-WASM
+				213 text 2762815133 ready.
+				214 text 09:12:53 · API · SWI-WASM
+				215 text spawn 2762815133 using SWI-WASM WebWorker.
+				216 text 09:12:53 · API · SWI-WASM
+				217 text ?- once((parallel([(sleep(0.1),X=slow),Y=fast]),X==slow,Y==fast)),Candidate=e004.
+				218 text 09:12:52 · API · SWI-WASM
+				190 text S = main,
+P = 8599117144,
+Candidate = e003.
+				191 text 09:12:52 · API · SWI-WASM
+				192 text 8599117144 done.
+				193 text 09:12:52 · API · SWI-WASM
+				194 text main -> main: down(8599117144,8599117144,true)
+				195 text 09:12:52 · API · SWI-WASM
+				196 text 8599117144 -> main: text_ok
+				197 text 09:12:52 · API · SWI-WASM
+				198 text 8599117144 started.
+				199 text 09:12:52 · API · SWI-WASM
+				200 text 8599117144 ready.
+				201 text 09:12:52 · API · SWI-WASM
+				202 text spawn 8599117144 using SWI-WASM WebWorker.
+				203 text 09:12:52 · API · SWI-WASM
+				204 text ?- once((self(S),spawn((text_check(T),T==[a,b],S!text_ok),P,[src_text('text_check("ab").'),monitor(true)]),receive({text_ok->true},[timeout(2),on_timeout(throw(missing_text))]),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_down))]))),Candidate=e003.
+				205 text 09:12:51 · API · SWI-WASM
+				170 text Candidate = e002.
+				171 text 09:12:51 · API · SWI-WASM
+				172 text ?- once(("abc"==[a,b,c],""==[],"é😀"==['é','😀'],phrase(("ab","cd"),"abcd"))),Candidate=e002.
+				173 text 09:12:51 · API · SWI-WASM
+				163 text Candidate = e001.
+				164 text 09:12:51 · API · SWI-WASM
+				165 text ?- once((current_prolog_flag(version_data,swi(10,1,19,[])))),Candidate=e001.
+				166 text 09:12:42 · INFO · SWI-WASM
+				159 text SWI-Prolog WASM runtime ready.
+				135 text 09:12:42 · INFO · RUNTIME
+				136 text Tutorial bridge connected.
+				137 text 09:12:41 · INFO · INTERACTION
+				138 text POST /interaction_log (durable usage log): {"event":"portal_view","route":"portal","device":"mac","timezone":"Europe/Stockholm","language":"en-US"}
+				139 text 09:12:41 · INFO · RUNTIME
+				140 text Demonstrator frontend loaded.
+				141 text 09:12:41 · INFO · RUNTIME
+				142 text Demonstrator scaffold loaded.
+				143 checkbox (settable, integer) Description: Info, Value: 1
+				144 text Info
+				145 checkbox (settable, integer) Description: SXML trace, Value: 1
+				146 text SXML trace
+				147 checkbox (settable, integer) Description: API traffic, Value: 1
+				148 text API traffic
+				149 button Clear
+			150 button Hide logger
+		151 container
+			152 text Inspired by 
+			153 link Description: Erlang, Value: erlang.org/
+			154 text , powered by 
+			155 link Description: SWI-Prolog, Value: swi-prolog.org/
+			156 text . Profile: SWI-WASM / ACTOR (DOM)  |  Principal: anonymous  |  Auth: OPEN
+
+The focused UI element is 123 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: e08kpx

@@ -1,0 +1,171 @@
+Browser tab: 28, Title: "The Prolog Trinity demonstrator", URL: "http://127.0.0.1:59382/portal?node=swi-wasm".
+1 AXWebArea The Prolog Trinity demonstrator, URL: 127.0.0.1:59382/portal?node=swi-wasm
+	2 container app
+		3 container
+			4 link Description: Web Prolog logo, Value: trinity.elfenbenstornet.se/
+			5 heading Trinity demonstrator, Value: 1
+				6 text Trinity demonstrator
+			7 text  Your portal to the Prolog Web
+			8 text Browser node
+			9 container Browser help
+				156 text Open the browser-based SWI-Prolog node. Its execution model is selected in Settings.
+			11 link Description: SWI-WASM, Value: 127.0.0.1:59382/portal?node=swi-wasm
+			12 link Description:  Shared DB, Value: 127.0.0.1:59382/wasm/shared_db.pl
+			13 text Remote nodes
+			14 container Node help
+				157 text Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.
+			16 link Description: Discovery Hub, Value: n0.elfenbenstornet.se/discovery-hub
+			17 link Description: Open N1 demonstrator, Value: n1.elfenbenstornet.se/demonstrator
+			18 link Description: Open N2 demonstrator, Value: n2.elfenbenstornet.se/demonstrator
+			19 link Description: Open N3 demonstrator, Value: n3.elfenbenstornet.se/demonstrator
+			20 link Description: Open N4 demonstrator, Value: n4.elfenbenstornet.se/demonstrator
+			21 link Description: Open N5 demonstrator, Value: n5.elfenbenstornet.se/demonstrator
+			22 button Description: Open help, Help: Help
+			23 button Description: Open settings, Help: Settings
+		42 container
+			43 button Hide examples
+			44 text Examples
+			45 text Tutorials
+			46 content list
+				47 link Description: The ACTOR profile, Value: 127.0.0.1:59382/actor-profile-tutorial
+				48 link Description: The stateful WebSocket API, Value: 127.0.0.1:59382/actor-api-tutorial
+				49 link Description: Jev agent experiment, Value: 127.0.0.1:59382/jev-sxml-tutorial
+			50 text Web Prolog code
+			51 content list
+				52 link Description: 01 queens.pl, Value: 127.0.0.1:59382/examples/actors/01%20queens.pl
+				53 link Description: 02 grammar.pl, Value: 127.0.0.1:59382/examples/actors/02%20grammar.pl
+				54 link Description: 03 expert-system.pl, Value: 127.0.0.1:59382/examples/actors/03%20expert-system.pl
+				55 link Description: 04 count_server.pl, Value: 127.0.0.1:59382/examples/actors/04%20count_server.pl
+				56 link Description: 05 fridge.pl, Value: 127.0.0.1:59382/examples/actors/05%20fridge.pl
+				57 link Description: 06 ping-pong.pl, Value: 127.0.0.1:59382/examples/actors/06%20ping-pong.pl
+				58 link Description: 07 selective-receive.pl, Value: 127.0.0.1:59382/examples/actors/07%20selective-receive.pl
+				59 link Description: 08 priority_queue.pl, Value: 127.0.0.1:59382/examples/actors/08%20priority_queue.pl
+				60 link Description: 09 alarm.pl, Value: 127.0.0.1:59382/examples/actors/09%20alarm.pl
+				61 link Description: 10 links.pl, Value: 127.0.0.1:59382/examples/actors/10%20links.pl
+				62 link Description: 11 ring.pl, Value: 127.0.0.1:59382/examples/actors/11%20ring.pl
+				63 link Description: 12 dining_philosophers.pl, Value: 127.0.0.1:59382/examples/actors/12%20dining_philosophers.pl
+				64 link Description: 13 parallel.pl, Value: 127.0.0.1:59382/examples/actors/13%20parallel.pl
+				65 link Description: 14 backtracking.pl, Value: 127.0.0.1:59382/examples/actors/14%20backtracking.pl
+				66 link Description: 15 simple_toplevel.pl, Value: 127.0.0.1:59382/examples/actors/15%20simple_toplevel.pl
+				67 link Description: 16 fridge_server.pl, Value: 127.0.0.1:59382/examples/actors/16%20fridge_server.pl
+				68 link Description: 17 rpc.pl, Value: 127.0.0.1:59382/examples/actors/17%20rpc.pl
+				69 link Description: 18 proof-trees.pl, Value: 127.0.0.1:59382/examples/actors/18%20proof-trees.pl
+				70 link Description: 19 promise-and-yield.pl, Value: 127.0.0.1:59382/examples/actors/19%20promise-and-yield.pl
+				71 link Description: 20 expert-system-agent.pl, Value: 127.0.0.1:59382/examples/actors/20%20expert-system-agent.pl
+				72 link Description: 21 model-actor.pl, Value: 127.0.0.1:59382/examples/actors/21%20model-actor.pl
+				73 link Description: 22 service-policy.pl, Value: 127.0.0.1:59382/examples/actors/22%20service-policy.pl
+				74 link Description: 23 jev-agent.pl, Value: 127.0.0.1:59382/examples/actors/23%20jev-agent.pl
+				75 link Description: 24 jev-sxml-agent.pl, Value: 127.0.0.1:59382/examples/actors/24%20jev-sxml-agent.pl
+			76 text SXML code
+			77 content list
+				78 link Description: 01 pause-and-resume.xml, Value: 127.0.0.1:59382/examples/statecharts/01%20pause-and-resume.xml
+				79 link Description: 02 spaghetti.xml, Value: 127.0.0.1:59382/examples/statecharts/02%20spaghetti.xml
+				80 link Description: 03 emotions.xml, Value: 127.0.0.1:59382/examples/statecharts/03%20emotions.xml
+				81 link Description: 04 clock.xml, Value: 127.0.0.1:59382/examples/statecharts/04%20clock.xml
+				82 link Description: 05 pingpong.xml, Value: 127.0.0.1:59382/examples/statecharts/05%20pingpong.xml
+				83 link Description: 06 parallel.xml, Value: 127.0.0.1:59382/examples/statecharts/06%20parallel.xml
+				84 link Description: 07 deferred-events.xml, Value: 127.0.0.1:59382/examples/statecharts/07%20deferred-events.xml
+				85 link Description: 08 closure.xml, Value: 127.0.0.1:59382/examples/statecharts/08%20closure.xml
+				86 link Description: 09 gcd.xml, Value: 127.0.0.1:59382/examples/statecharts/09%20gcd.xml
+				87 link Description: 10 shared-database.xml, Value: 127.0.0.1:59382/examples/statecharts/10%20shared-database.xml
+				88 link Description: 11 boxshop-1.xml, Value: 127.0.0.1:59382/examples/statecharts/11%20boxshop-1.xml
+				89 link Description: 12 boxshop-2.xml, Value: 127.0.0.1:59382/examples/statecharts/12%20boxshop-2.xml
+				90 link Description: 13 spawn-actor.xml, Value: 127.0.0.1:59382/examples/statecharts/13%20spawn-actor.xml
+				91 link Description: 14 spawn-toplevel.xml, Value: 127.0.0.1:59382/examples/statecharts/14%20spawn-toplevel.xml
+				92 link Description: 15 spawn-server.xml, Value: 127.0.0.1:59382/examples/statecharts/15%20spawn-server.xml
+				93 link Description: 16 spawn-supervisor.xml, Value: 127.0.0.1:59382/examples/statecharts/16%20spawn-supervisor.xml
+				94 link Description: 17 spawn-statechart.xml, Value: 127.0.0.1:59382/examples/statecharts/17%20spawn-statechart.xml
+				95 link Description: 18 service-request.xml, Value: 127.0.0.1:59382/examples/statecharts/18%20service-request.xml
+				96 link Description: 19 model-statechart.xml, Value: 127.0.0.1:59382/examples/statecharts/19%20model-statechart.xml
+				97 link Description: 20 jev-deployment-assistant.xml, Value: 127.0.0.1:59382/examples/statecharts/20%20jev-deployment-assistant.xml
+			98 container
+				99 text Editor
+				100 text <scratch-buffer>
+			101 container Demonstrator editor
+				102 AXWebArea Demonstrator Editor Frame, URL: 127.0.0.1:59382/editor_frame?id=editor&mode=none
+					103 container
+						104 text entry area (settable)
+						105 container
+							106 text Scratch buffer
+
+
+
+Code typed here is auto-loaded into
+the current actor's private database.
+Selecting an example from the Examples
+drawer overwrites the buffer.
+			107 container
+				108 text Terminal
+				109 container
+					110 container
+						111 text Welcome to 
+						112 text Web Prolog
+						113 text , running
+						114 text the 
+						115 text ACTOR
+						116 text  profile on node 
+						117 text SWI-WASM,
+						118 text powered by 
+						119 link Description: SWI-Prolog, Value: swi-prolog.org/
+						120 text .
+						160 text ?- current_prolog_flag(version_data,V).
+						161 text V = swi(10,1,8,[]).
+						166 text ?- once((
+						167 text statechart_spawn
+						168 text (P,[src_text('<statechart version="0.2"
+						169 text initial="s"><state id="s"/></statechart>'),trace(false),monitor
+						170 text (true)]),
+						171 text statechart_halt
+						172 text (P,Reply),Reply==stopped,
+						173 text receive
+						174 text ({down(P
+						175 text ,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))])
+						176 text )),Candidate=old009.
+						180 text Missing_chart_down
+					121 container
+						181 text ?-  Clipboard textarea for jQuery Terminal
+						123 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: t25k9l
+				124 text x
+				125 button (collapsed) History, Secondary Actions: Expand
+				126 button Flush, Help: Call flush/0 in the Editor session
+				127 button Actors, Help: Call actors/1 in the Editor session
+				128 button Call
+				129 button (disabled) Next
+				130 button (disabled) Stop
+				131 button (disabled) Abort
+				132 button Clear
+			133 container
+				134 text Logger 09:15:29 · ERROR · QUERY
+				182 text Missing_chart_down
+				183 text 09:15:27 · API · SWI-WASM
+				178 text ?- once((statechart_spawn(P,[src_text('<statechart version="0.2" initial="s"><state id="s"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,Reply),Reply==stopped,receive({down(P,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))]))),Candidate=old009.
+				179 text 09:15:27 · API · SWI-WASM
+				162 text V = swi(10,1,8,[]).
+				163 text 09:15:27 · API · SWI-WASM
+				164 text ?- current_prolog_flag(version_data,V).
+				165 text 09:15:18 · INFO · SWI-WASM
+				158 text SWI-Prolog WASM runtime ready.
+				135 text 09:15:18 · INFO · RUNTIME
+				159 text Tutorial bridge connected.
+				136 text 09:15:18 · INFO · INTERACTION
+				137 text POST /interaction_log (durable usage log): {"event":"portal_view","route":"portal","device":"mac","timezone":"Europe/Stockholm","language":"en-US"}
+				138 text 09:15:18 · INFO · RUNTIME
+				139 text Demonstrator frontend loaded.
+				140 text 09:15:18 · INFO · RUNTIME
+				141 text Demonstrator scaffold loaded.
+				142 checkbox (settable, integer) Description: Info, Value: 1
+				143 text Info
+				144 checkbox (settable, integer) Description: SXML trace, Value: 1
+				145 text SXML trace
+				146 checkbox (settable, integer) Description: API traffic, Value: 1
+				147 text API traffic
+				148 button Clear
+			149 button Hide logger
+		150 container
+			151 text Inspired by 
+			152 link Description: Erlang, Value: erlang.org/
+			153 text , powered by 
+			154 link Description: SWI-Prolog, Value: swi-prolog.org/
+			155 text . Profile: SWI-WASM / ACTOR (DOM)  |  Principal: anonymous  |  Auth: OPEN
+
+The focused UI element is 123 text entry area (settable) Clipboard textarea for jQuery Terminal, ID: t25k9l

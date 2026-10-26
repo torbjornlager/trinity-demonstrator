@@ -1,0 +1,14 @@
+{
+  "assertion_lines": 2780,
+  "new_monitor_assertions": 29,
+  "focused_runs": 10,
+  "isolated_ui": {
+    "worker": 6,
+    "main": 10
+  },
+  "live_ui": {
+    "worker": 2,
+    "main": 2
+  },
+  "revision": "f0783fb4b66fa55ed39774fe0666ada4c8d108fe"
+}

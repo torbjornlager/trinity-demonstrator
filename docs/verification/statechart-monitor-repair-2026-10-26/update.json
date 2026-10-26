@@ -1,0 +1,12 @@
+{
+  "old_revision": "0064d8d1934b0fc84c501ff134aed094c95960f8",
+  "new_revision": "f0783fb4b66fa55ed39774fe0666ada4c8d108fe",
+  "served_assets": {
+    "http://localhost:3053/demonstrator": true,
+    "http://localhost:3053/swi_wasm_actor_worker.js": true,
+    "http://localhost:3060/demonstrator": true,
+    "http://localhost:3060/swi_wasm_actor_worker.js": true
+  },
+  "commit_guard": true,
+  "setup_validation": true
+}

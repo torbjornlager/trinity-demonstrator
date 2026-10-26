@@ -1,0 +1,14 @@
+{
+  "url": "http://127.0.0.1:59340",
+  "pid": 38563,
+  "command": [
+    "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+    "-f",
+    "none",
+    "-q",
+    "-g",
+    "use_module(library(sgml)),use_module(library(option)),consult('/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/native/load.pl'),set_setting(node_assets:root,'/Users/torbjorn.lager/.local/share/trinity-runtime-tests/wasm-engine-8.2.5-2026-10-26/demonstrator'),set_setting(node_assets:wasm_directory,'/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator/.trinity/browser-prolog-38d86f5c618da3af'),set_setting(http:public_host,'127.0.0.1'),set_setting(http:public_port,59340),set_setting(http:public_scheme,http),use_module(library(socket)),tcp_socket(S),tcp_bind(S,ip(127,0,0,1):59340),tcp_listen(S,128),node:node(59340,[tcp_socket(S),profile(actor),sandbox(blacklist),auth(open)]),thread_get_message(stop)"
+  ],
+  "web_root": "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/wasm-engine-8.2.5-2026-10-26/demonstrator",
+  "wasm_prolog_root": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator/.trinity/browser-prolog-38d86f5c618da3af"
+}

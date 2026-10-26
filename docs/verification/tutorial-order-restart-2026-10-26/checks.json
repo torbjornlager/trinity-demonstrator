@@ -1,0 +1,52 @@
+[
+  {
+    "node": "n3",
+    "url": "http://localhost:3053/actor-profile-tutorial",
+    "headings": [
+      "Calling goals",
+      "Using the template option",
+      "Paging with limit, next, and stop",
+      "Output, input, and reply",
+      "Aborting and halting",
+      "An expert-system agent and a simulation",
+      "Collecting answers synchronously"
+    ],
+    "/healthz": {
+      "status": 200,
+      "body": "{\"status\":\"ok\"}"
+    },
+    "/version": {
+      "status": 200,
+      "body": "{\n  \"git\":\"abbc56f3d5104bd6d40d2ed5f99fe6199d75c4a8\",\n  \"protocol\":1,\n  \"swipl\":\"10.1.18\",\n  \"web_prolog\":\"0.2.0\"\n}"
+    },
+    "/portal": {
+      "status": 200,
+      "body": "HTML served"
+    }
+  },
+  {
+    "node": "n5",
+    "url": "http://localhost:3060/actor-profile-tutorial",
+    "headings": [
+      "Calling goals",
+      "Using the template option",
+      "Paging with limit, next, and stop",
+      "Output, input, and reply",
+      "Aborting and halting",
+      "An expert-system agent and a simulation",
+      "Collecting answers synchronously"
+    ],
+    "/healthz": {
+      "status": 200,
+      "body": "{\"status\":\"ok\"}"
+    },
+    "/version": {
+      "status": 200,
+      "body": "{\"web_prolog\":\"trealla-port\",\"trealla\":\"3.14.10\",\"protocol\":1}"
+    },
+    "/portal": {
+      "status": 200,
+      "body": "HTML served"
+    }
+  }
+]

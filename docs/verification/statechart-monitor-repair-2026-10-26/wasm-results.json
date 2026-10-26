@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "seconds": 183.80308541699998,
+  "command": [
+    "python3",
+    "tools/ci_timeout.py",
+    "360",
+    "--",
+    "bash",
+    "tools/test.sh",
+    "WASM"
+  ]
+}

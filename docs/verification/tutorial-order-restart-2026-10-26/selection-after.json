@@ -1,0 +1,17 @@
+{
+  "native": {
+    "repository": "swi-prolog-node",
+    "revision": "abbc56f3d5104bd6d40d2ed5f99fe6199d75c4a8",
+    "path": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/native"
+  },
+  "trealla": {
+    "repository": "trealla-port",
+    "revision": "e7c51dc101cd8002dea9548f8154fc4d2bf6707d",
+    "path": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/trealla"
+  },
+  "demonstrator": {
+    "repository": "trinity-demonstrator",
+    "revision": "6e76af3525bfdd40d642b7ac1ada0913673eef44",
+    "path": "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/demonstrator"
+  }
+}

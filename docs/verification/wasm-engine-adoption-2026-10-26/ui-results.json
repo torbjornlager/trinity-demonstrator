@@ -1,0 +1,32 @@
+[
+  {
+    "mode": "main",
+    "goal": "current_prolog_flag(version_data,V),V=swi(10,1,19,[]).",
+    "passed": true
+  },
+  {
+    "mode": "main",
+    "goal": "write(\"abc\").",
+    "passed": true
+  },
+  {
+    "mode": "main",
+    "goal": "\"\u00e9\ud83d\ude00\"==['\u00e9','\ud83d\ude00'].",
+    "passed": true
+  },
+  {
+    "mode": "worker",
+    "goal": "current_prolog_flag(version_data,V),V=swi(10,1,19,[]).",
+    "passed": true
+  },
+  {
+    "mode": "worker",
+    "goal": "write(\"abc\").",
+    "passed": true
+  },
+  {
+    "mode": "worker",
+    "goal": "\"\u00e9\ud83d\ude00\"==['\u00e9','\ud83d\ude00'].",
+    "passed": true
+  }
+]

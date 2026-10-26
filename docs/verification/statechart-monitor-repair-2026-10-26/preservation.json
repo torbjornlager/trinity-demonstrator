@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "processes_unchanged": true,
+    "engines_unchanged": true,
+    "native_selection_unchanged": true,
+    "trealla_selection_unchanged": true,
+    "commit_guard": true
+  }
+}

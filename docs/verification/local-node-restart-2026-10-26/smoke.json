@@ -1,0 +1,124 @@
+[
+  {
+    "node": "n3",
+    "url": "http://localhost:3053",
+    "/portal": {
+      "status": 200,
+      "body": "HTML served"
+    },
+    "/version": {
+      "status": 200,
+      "body": "{\n  \"git\":\"abbc56f3d5104bd6d40d2ed5f99fe6199d75c4a8\",\n  \"protocol\":1,\n  \"swipl\":\"10.1.18\",\n  \"web_prolog\":\"0.2.0\"\n}"
+    },
+    "/node_info": {
+      "status": 200,
+      "body": "{\n  \"auth\":\"open\",\n  \"auth_boundary\":\"trusted_headers\",\n  \"internal_transport_principal_prefix\":\"node:\",\n  \"principal_execution\":true,\n  \"principal_id\":\"anonymous\",\n  \"profile\":\"actor\",\n  \"provides\": [\n    \"ancestor_descendant/2\",\n    \"authorized/1\",\n    \"count_actor/1\",\n    \"echo_actor/0\",\n    \"father_child/2\",\n    \"human/1\",\n    \"jev_deployment_observation/2\",\n    \"list_price/2\",\n    \"local_label/1\",\n    \"model_answer/2\",\n    \"model_chat/2\",\n    \"mortal/1\",\n    \"mother_child/2\",\n    \"online/1\",\n    \"owns/2\",\n    \"parent_child/2\",\n    \"ping/2\",\n    \"ping_pong/0\",\n    \"ping_pong/1\",\n    \"ping_pong_benchmark/2\",\n    \"pong/1\",\n    \"price/2\",\n    \"receive/1\",\n    \"service/2\",\n    \"shared_fact/1\",\n    \"shared_transition_enabled/0\"\n  ],\n  \"self_contained\":true,\n  \"self_url\":\"http://localhost:3053\",\n  \"services\": [\"counter\", \"pubsub_service\" ],\n  \"trusted_capability_headers\": [\"X-Web-Prolog-Capabilities\", \"X-Web-Prolog-Caps\" ],\n  \"trusted_identity_headers\": [\n    \"X-Web-Prolog-User\",\n    \"X-Web-Prolog-Principal\",\n    \"X-Authenticated-User\"\n  ],\n  \"tutorial_sections\": [\n    \"behaviours\",\n    \"distributed_actor\",\n    \"local_actor\",\n    \"statecharts\",\n    \"toplevels\"\n  ],\n  \"ws_allowed_origins\": [\n    \"http://127.0.0.1:3053\",\n    \"http://127.0.0.1:3060\",\n    \"http://localhost:3053\",\n    \"http://localhost:3060\"\n  ]\n}"
+    },
+    "/healthz": {
+      "status": 200,
+      "body": "{\"status\":\"ok\"}"
+    },
+    "queries": [
+      {
+        "goal": "runtime_property(implementation(I))",
+        "answer": {
+          "data": [
+            "swi_native"
+          ],
+          "more": false,
+          "pid": 8088312655,
+          "type": "success"
+        },
+        "outputs": []
+      },
+      {
+        "goal": "\"abc\"==[a,b,c]",
+        "answer": {
+          "data": [
+            "ok"
+          ],
+          "more": false,
+          "pid": 8088312655,
+          "type": "success"
+        },
+        "outputs": []
+      },
+      {
+        "goal": "write(\"abc\")",
+        "answer": {
+          "data": [
+            "ok"
+          ],
+          "more": false,
+          "pid": 8088312655,
+          "type": "success"
+        },
+        "outputs": [
+          "[a,b,c]"
+        ]
+      }
+    ],
+    "browser_engine_hash_matches": true
+  },
+  {
+    "node": "n5",
+    "url": "http://localhost:3060",
+    "/portal": {
+      "status": 200,
+      "body": "HTML served"
+    },
+    "/version": {
+      "status": 200,
+      "body": "{\"web_prolog\":\"trealla-port\",\"trealla\":\"3.14.10\",\"protocol\":1}"
+    },
+    "/node_info": {
+      "status": 200,
+      "body": "{\"self_url\":\"http:\\/\\/localhost:3060\",\"profile\":\"actor\",\"auth\":\"open\",\"sandbox\":\"blacklist\",\"protocol_version\":1,\"auth_boundary\":\"trusted_headers\",\"trusted_identity_headers\":[\"X-Web-Prolog-User\",\"X-Web-Prolog-Principal\",\"X-Authenticated-User\"],\"trusted_capability_headers\":[\"X-Web-Prolog-Capabilities\",\"X-Web-Prolog-Caps\"],\"internal_transport_principal_prefix\":\"node:\",\"principal_id\":\"anonymous\",\"principal_execution\":true,\"maintenance\":false,\"services\":[],\"provides\":[],\"self_contained\":true,\"ws_allowed_origins\":[\"http:\\/\\/localhost:3053\",\"http:\\/\\/localhost:3060\",\"http:\\/\\/127.0.0.1:3053\",\"http:\\/\\/127.0.0.1:3060\"],\"tutorial_sections\":[\"all\"]}"
+    },
+    "/healthz": {
+      "status": 200,
+      "body": "{\"status\":\"ok\"}"
+    },
+    "queries": [
+      {
+        "goal": "runtime_property(implementation(I))",
+        "answer": {
+          "type": "success",
+          "pid": 3145364763,
+          "data": [
+            "trealla_native"
+          ],
+          "more": false
+        },
+        "outputs": []
+      },
+      {
+        "goal": "\"abc\"==[a,b,c]",
+        "answer": {
+          "type": "success",
+          "pid": 3145364763,
+          "data": [
+            "ok"
+          ],
+          "more": false
+        },
+        "outputs": []
+      },
+      {
+        "goal": "write(\"abc\")",
+        "answer": {
+          "type": "success",
+          "pid": 3145364763,
+          "data": [
+            "ok"
+          ],
+          "more": false
+        },
+        "outputs": [
+          "[a,b,c]"
+        ]
+      }
+    ],
+    "browser_engine_hash_matches": true
+  }
+]

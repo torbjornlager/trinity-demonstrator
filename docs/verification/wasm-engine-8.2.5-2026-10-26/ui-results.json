@@ -1,0 +1,184 @@
+[
+  {
+    "id": "e001",
+    "title": "Engine 10.1.19",
+    "query": "once((current_prolog_flag(version_data,swi(10,1,19,[])))),Candidate=e001.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e002",
+    "title": "Character-list literals, Unicode and DCG",
+    "query": "once((\"abc\"==[a,b,c],\"\"==[],\"\u00e9\ud83d\ude00\"==['\u00e9','\ud83d\ude00'],phrase((\"ab\",\"cd\"),\"abcd\"))),Candidate=e002.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e003",
+    "title": "Private source and monitor",
+    "query": "once((self(S),spawn((text_check(T),T==[a,b],S!text_ok),P,[src_text('text_check(\"ab\").'),monitor(true)]),receive({text_ok->true},[timeout(2),on_timeout(throw(missing_text))]),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_down))]))),Candidate=e003.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e004",
+    "title": "Parallel out-of-order completion",
+    "query": "once((parallel([(sleep(0.1),X=slow),Y=fast]),X==slow,Y==fast)),Candidate=e004.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e005",
+    "title": "First solution loser cleanup",
+    "query": "once((actors(B),first_solution(X,[(receive({never->true}),X=slow),X=fast]),X==fast,actors(A),sort(B,S),sort(A,S))),Candidate=e005.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e006",
+    "title": "Worker exception cleanup",
+    "query": "once((actors(B),catch(parallel([receive({never->true}),throw(test_error)]),E,true),E==test_error,actors(A),sort(B,S),sort(A,S))),Candidate=e006.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e007",
+    "title": "Timeout callback and retry",
+    "query": "once((promise('http://127.0.0.1:59340',(sleep(0.3),X=ok),R,[template(X)]),yield(R,Early,[timeout(0),on_timeout(Early=waiting)]),Early==waiting,yield(R,A),A==success([ok],false))),Candidate=e007.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e008",
+    "title": "HTTP paging",
+    "query": "once((findall(X,rpc('http://127.0.0.1:59340',member(X,[a,b,c]),[limit(2)]),Xs),Xs==[a,b,c])),Candidate=e008.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e009",
+    "title": "Statechart startup and termination",
+    "query": "once((statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,Reply),Reply==stopped,receive({down(P,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))]))),Candidate=e009.",
+    "mode": "worker",
+    "passed": false
+  },
+  {
+    "id": "e010",
+    "title": "Strict option validation",
+    "query": "once((catch(spawn(true,P,[monitor(1)]),error(type_error(boolean,1),_),true),var(P))),Candidate=e010.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e011",
+    "title": "Write output",
+    "query": "once((write(\"abc\"))),Candidate=e011.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e001",
+    "title": "Engine 10.1.19",
+    "query": "once((current_prolog_flag(version_data,swi(10,1,19,[])))),Candidate=e001.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e002",
+    "title": "Character-list literals, Unicode and DCG",
+    "query": "once((\"abc\"==[a,b,c],\"\"==[],\"\u00e9\ud83d\ude00\"==['\u00e9','\ud83d\ude00'],phrase((\"ab\",\"cd\"),\"abcd\"))),Candidate=e002.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e003",
+    "title": "Private source and monitor",
+    "query": "once((self(S),spawn((text_check(T),T==[a,b],S!text_ok),P,[src_text('text_check(\"ab\").'),monitor(true)]),receive({text_ok->true},[timeout(2),on_timeout(throw(missing_text))]),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_down))]))),Candidate=e003.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e004",
+    "title": "Parallel out-of-order completion",
+    "query": "once((parallel([(sleep(0.1),X=slow),Y=fast]),X==slow,Y==fast)),Candidate=e004.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e005",
+    "title": "First solution loser cleanup",
+    "query": "once((actors(B),first_solution(X,[(receive({never->true}),X=slow),X=fast]),X==fast,actors(A),sort(B,S),sort(A,S))),Candidate=e005.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e006",
+    "title": "Worker exception cleanup",
+    "query": "once((actors(B),catch(parallel([receive({never->true}),throw(test_error)]),E,true),E==test_error,actors(A),sort(B,S),sort(A,S))),Candidate=e006.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e007",
+    "title": "Timeout callback and retry",
+    "query": "once((promise('http://127.0.0.1:59340',(sleep(0.3),X=ok),R,[template(X)]),yield(R,Early,[timeout(0),on_timeout(Early=waiting)]),Early==waiting,yield(R,A),A==success([ok],false))),Candidate=e007.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e008",
+    "title": "HTTP paging",
+    "query": "once((findall(X,rpc('http://127.0.0.1:59340',member(X,[a,b,c]),[limit(2)]),Xs),Xs==[a,b,c])),Candidate=e008.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e009",
+    "title": "Statechart startup and termination",
+    "query": "once((statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false),monitor(true)]),statechart_halt(P,Reply),Reply==stopped,receive({down(P,P,_)->true},[timeout(2),on_timeout(throw(missing_chart_down))]))),Candidate=e009.",
+    "mode": "main",
+    "passed": false
+  },
+  {
+    "id": "e010",
+    "title": "Strict option validation",
+    "query": "once((catch(spawn(true,P,[monitor(1)]),error(type_error(boolean,1),_),true),var(P))),Candidate=e010.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e011",
+    "title": "Write output",
+    "query": "once((write(\"abc\"))),Candidate=e011.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e012",
+    "title": "Unicode input",
+    "mode": "main",
+    "query": "input('Candidate input',T),T==['\u00e9','\ud83d\ude00'],Candidate=e012. / \"\u00e9\ud83d\ude00\".",
+    "passed": true
+  },
+  {
+    "id": "e013",
+    "title": "Statechart startup and halt acknowledgement",
+    "query": "once((statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false)]),statechart_halt(P,Reply),Reply==stopped)),Candidate=e013.",
+    "mode": "main",
+    "passed": true
+  },
+  {
+    "id": "e013",
+    "title": "Statechart startup and halt acknowledgement",
+    "query": "once((statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"/></statechart>'),trace(false)]),statechart_halt(P,Reply),Reply==stopped)),Candidate=e013.",
+    "mode": "worker",
+    "passed": true
+  },
+  {
+    "id": "e012",
+    "title": "Unicode input",
+    "mode": "worker",
+    "query": "input('Candidate input',T),T==['\u00e9','\ud83d\ude00'],Candidate=e012. / \"\u00e9\ud83d\ude00\".",
+    "passed": true
+  }
+]

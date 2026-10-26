@@ -1,0 +1,29 @@
+{
+  "frontend": {
+    "old_pid": 45197,
+    "command": [
+      "/Library/Developer/CommandLineTools/usr/bin/python3",
+      "/Users/torbjorn.lager/.local/share/trinity-local-nodes/n5/frontend.py",
+      "--port",
+      "3060"
+    ],
+    "port": 3060,
+    "new_pid": 47431
+  },
+  "n5": {
+    "old_pid": 45186,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/n5-start.sh"
+    ],
+    "port": 3062,
+    "new_pid": 47420
+  },
+  "n3": {
+    "old_pid": 45168,
+    "command": [
+      "/Users/torbjorn.lager/.local/share/trinity-local-nodes/committed-adoption-2026-10-25/n3-start.sh"
+    ],
+    "port": 3053,
+    "new_pid": 47403
+  }
+}

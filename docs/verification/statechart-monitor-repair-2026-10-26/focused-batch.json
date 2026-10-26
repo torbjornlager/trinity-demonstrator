@@ -1,0 +1,62 @@
+[
+  {
+    "scenario": "statechart_monitors_worker",
+    "iteration": 1,
+    "exit_code": 0,
+    "seconds": 1.739342458
+  },
+  {
+    "scenario": "statechart_monitors_worker",
+    "iteration": 2,
+    "exit_code": 0,
+    "seconds": 1.762094
+  },
+  {
+    "scenario": "statechart_monitors_worker",
+    "iteration": 3,
+    "exit_code": 0,
+    "seconds": 1.7300187920000005
+  },
+  {
+    "scenario": "statechart_monitors_worker",
+    "iteration": 4,
+    "exit_code": 0,
+    "seconds": 1.7105293750000001
+  },
+  {
+    "scenario": "statechart_monitors_worker",
+    "iteration": 5,
+    "exit_code": 0,
+    "seconds": 1.726009875
+  },
+  {
+    "scenario": "statechart_monitors_main",
+    "iteration": 1,
+    "exit_code": 0,
+    "seconds": 0.6031481250000006
+  },
+  {
+    "scenario": "statechart_monitors_main",
+    "iteration": 2,
+    "exit_code": 0,
+    "seconds": 0.5995900419999991
+  },
+  {
+    "scenario": "statechart_monitors_main",
+    "iteration": 3,
+    "exit_code": 0,
+    "seconds": 0.5920299159999995
+  },
+  {
+    "scenario": "statechart_monitors_main",
+    "iteration": 4,
+    "exit_code": 0,
+    "seconds": 0.5841096669999999
+  },
+  {
+    "scenario": "statechart_monitors_main",
+    "iteration": 5,
+    "exit_code": 0,
+    "seconds": 0.5874290000000002
+  }
+]
