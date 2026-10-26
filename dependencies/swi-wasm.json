@@ -1,0 +1,10 @@
+{
+  "package": "swipl-wasm",
+  "package_version": "8.2.5",
+  "engine_version": "10.1.19",
+  "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+  "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz",
+  "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+  "bundle": "web/swipl-bundle.js",
+  "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b"
+}
