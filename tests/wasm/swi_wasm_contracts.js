@@ -214,7 +214,9 @@ function scopedWorkerCoordinator(W, owner = PID) {
     clearSwiWasmActorNamesForPid:"terminateLinkedSwiWasmChildren",terminateLinkedSwiWasmChildren:"exitSwiWasmActor",
     exitSwiWasmActor:"abortSwiWasmActor",finalizeSwiWasmWorkerActor:"receiveSwiWasmActorMessage",
     swiWasmActorListText:"sendSwiWasmActorMessage",
-    swiWasmActorPidLive:"takeSwiWasmRemoteMonitor"
+    swiWasmActorPidLive:"takeSwiWasmRemoteMonitor",
+    startSwiWasmLocalChart:"stopSwiWasmLocalChart",stopSwiWasmLocalChart:"syncSwiWasmStatechartStatus",
+    syncSwiWasmStatechartStatus:"runSwiWasmQuery"
   };
   for(const [name,next] of Object.entries(methods))host[name]=workbenchMethod(name,next);
   host.swiWasmReservedWorkerActorPids={};host.swiWasmActorNames={};host.swiWasmActorServices={};
@@ -317,6 +319,9 @@ function spawnOptionMainHarness() {
   const calls=[];let next=7200000000,nextRef=8900000000;const mailbox=[],monitors=[];
   function record(action,args,result){calls.push({action,args});return result;}
   Object.assign(global.self,{
+    swiWasmNamedChartStarted:()=>true,
+    swiWasmNamedChartStopped:()=>true,
+    swiWasmSyncChartStatus:()=>true,
     swiWasmNameToken:()=>"mock-name",
     swiWasmNameReserve:(...args)=>Promise.resolve(record("name_reserve",args,"reserved")),
     swiWasmNamePublish:(...args)=>Promise.resolve(record("name_publish",args,"published")),
@@ -526,7 +531,7 @@ function wrapperWorkerReplies(W) {
   spawnOptionWorkerReplies(W);const previous=W.control.reply;
   W.control.reply=m=>{
     if(m.action==="remote_toplevel_spawn")return {result:"8800000000@'https://example.org'"};
-    if(m.action==="statechart_spawn")return {result:"7300000000@localhost"};
+    if(m.action==="statechart_spawn")return {result:"7300000000"};
     return previous(m);
   };
 }
@@ -2077,6 +2082,9 @@ const scenarios = {
     check(req.goal.includes("interpret_trace(false")&&req.goal.includes("remote.xml")&&req.goal.includes("with_io_target(client"),"worker remote statechart goal and routing unchanged");
   },
 
+  async statechart_monitors_worker(W,check) { await statechartMonitorContract(W,check,false); },
+  async statechart_monitors_main(W,check) { await statechartMonitorContract(W,check,true); },
+
   async compatibility_statechart_routing(W, check) {
     const body=html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0];
     const source=Function(body).call({swiWasmBehaviourProlog:()=>behaviourSource});
@@ -2090,7 +2098,7 @@ const scenarios = {
     let next=7400000000;
     global.self.swiWasmStatechartSpawnWorker=(...args)=>{
       // The real main-engine coordinator currently returns a bare local id.
-      // Monitor references retain that handle; down/3 qualifies its pid field.
+      // The adapter must expose a qualified pid and use that complete reference.
       const pid=String(next++);
       calls.push({action:"statechart",args,pid});
       return Promise.resolve("statechart_spawn_ok("+JSON.stringify(pid)+")");
@@ -2115,7 +2123,7 @@ const scenarios = {
         check(outgoing(items).length===1&&!!req,kind+" nested chart uses worker path exclusively");
         check(!!req&&req.args[0]===kind&&req.args[1]===(kind==="text"?simpleChart:"https://example.org/chart.xml")&&req.args[2].includes("child_support("+kind+")")&&req.args[3]===""&&items.some(m=>m.action==="name_reserve"&&m.args[1]==="nested_chart")&&req.args[4]==="false"&&req.args[5]==="child_client"&&req.args[6]==="false",kind+" nested worker receives source, name, link, I/O and first trace");
         check(!items.some(m=>m.action==="get"),kind+" nested source is passed to worker without main-engine fetching");
-        check(!!req&&items.some(m=>m.action==="monitor"&&m.args[0]===req.pid&&m.args[1]===req.pid),kind+" nested spawn monitor targets worker pid");
+        check(!!req&&items.some(m=>m.action==="monitor"&&m.args[0]===req.pid+"@localhost"&&m.args[1]===req.pid+"@localhost"),kind+" nested spawn monitor targets worker pid");
 
         for(const running of [true,false]) {
           if(!running)check(await succeeds("statechart_wasm:statechart_stop"),kind+" stops parent before remote-only case");
@@ -3155,6 +3163,61 @@ const scenarios = {
 
 // Thin test-only entry point for the implementation-neutral baseline adapter.
 // Assertions are supplied by trinity-conformance, not duplicated in this repo.
+// Real engine + real coordinator: decimal statechart startup replies must not
+// be hidden by mocks that already qualify the pid. Main mode keeps its singleton.
+async function statechartMonitorContract(W,check,main) {
+  const dummy=main?{S:{onmessage:()=>{}},control:{}}:W;
+  const host=scopedWorkerCoordinator(dummy,main?"main":PID);
+  host.loadSwiWasmAssetSource=()=>Promise.resolve(simpleChart);
+  let engine,run;
+  try {
+    if(main) {
+      const source=Function(html.split("swiWasmRpcProlog: function() {")[1].split("\n          },")[0]).call({swiWasmBehaviourProlog:()=>behaviourSource});
+      engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
+      engine.FS.writeFile('/chart_monitor.pl',source);engine.prolog.query("use_module('/chart_monitor.pl')").once();
+      check(await loadCompatibilityStatecharts(engine),'real singleton interpreter loaded');
+      host.swiWasmActorMainMailbox=[];host.swiWasmActorMainWaiters=[];host.lastBindings={};
+      host.deliverSwiWasmMainActorMessage=workbenchMethod("deliverSwiWasmMainActorMessage","deliverSwiWasmRemoteResult");
+      host.receiveSwiWasmActorMessage=workbenchMethod("receiveSwiWasmActorMessage","cancelSwiWasmMainActorWaiters");
+      dummy.S.onmessage=({data})=>{if(data.command==="deliver")host.deliverSwiWasmMainActorMessage(data.message);};
+      host.swiWasmStatechartOwnsActorTraffic=()=>false;
+      workbenchMethod("installSwiWasmActorBridge","randomSwiIdentity").call(host);
+      global.self.setTimeout=setTimeout;global.self.clearTimeout=clearTimeout;
+      global.self.swiResolveAssetUrl=uri=>uri;global.self.swiRpcGet=()=>simpleChart;
+      run=async goal=>{let n=0;await engine.prolog.forEach(goal,()=>n++);return n===1;};
+    } else {
+      await startToplevel(W);
+      const replies=()=>W.sends.filter(m=>m.to===CLIENT&&/^(success|failure|error)\(/.test(m.message)).map(m=>m.message);
+      run=async goal=>{const before=replies().length;deliver(W,"'$call'(("+goal+"),[template(chart_test_ok),limit(1)])");
+        if(!await until(()=>replies().length>before,10000))throw Error('chart monitor query did not answer');
+        const reply=replies()[before];if(!/^success\(/.test(reply))console.log('  diagnostic '+reply);return /^success\(/.test(reply);};
+    }
+    const chart="src_text('"+simpleChart+"'),trace(false)";
+    check(await run("spawn(receive({stop->true}),U,[link(false)]),monitor(U,UR),assertz(user:chart_unrelated(U,UR))"),'unrelated actor/monitor established');
+    for(const kind of ["text","uri"]) for(const named of [false,true]) {
+      const source=kind==="text"?chart:"src_uri('https://example.org/chart.xml'),trace(false)";
+      const opts="["+source+(named?",name(monitored_chart)":"")+",monitor(true)]";
+      check(await run("statechart_spawn(P,"+opts+"),"+(main?"P==statechart":"P=_@localhost")+",statechart_halt(P,stopped),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_spawn_down))]),\\+receive({down(P,P,_)->true},[timeout(0),on_timeout(fail)])"),
+        kind+' '+(named?'named':'unnamed')+' exact spawn reference delivered once');
+    }
+    check(await run("statechart_spawn(P,["+chart+"]),monitor(P,R),\\+receive({down(_,R,no_process)->true},[timeout(0),on_timeout(fail)]),statechart_halt(P,stopped),receive({down(P,R,true)->true},[timeout(2),on_timeout(throw(missing_explicit_down))])"),'same-query explicit monitor sees a live chart and exact termination');
+    check(await run("statechart_spawn(P,["+chart+",monitor(false)]),statechart_halt(P,stopped),\\+receive({down(P,P,_)->true},[timeout(0),on_timeout(fail)])"),'monitor(false) does not install a spawn monitor');
+    check(await run("statechart_spawn(P,["+chart+"]),monitor(P,R),demonitor(R,[flush]),statechart_halt(P,stopped),\\+receive({down(_,R,_)->true},[timeout(0),on_timeout(fail)])"),'withdrawn explicit monitor receives no termination');
+    if(main) {
+      check(await run("statechart_spawn(P,["+chart+",monitor(true)]),statechart_halt(P,stopped),statechart_halt(P,stopped),receive({down(P,P,true)->true},[timeout(2)]),\\+receive({down(P,P,_)->true},[timeout(0),on_timeout(fail)])"),'repeated halt does not duplicate termination');
+      check(await run("statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"s\"><state id=\"s\"><go on=\"finish\" to=\"done\"/></state><final id=\"done\"/></statechart>'),trace(false),monitor(true)]),P!finish,receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_final_down))])"),'final state reached by same-query send notifies monitors');
+      check(await run("statechart_spawn(P,[src_text('<statechart version=\"0.2\" initial=\"done\"><final id=\"done\"/></statechart>'),trace(false),monitor(true)]),receive({down(P,P,true)->true},[timeout(2),on_timeout(throw(missing_early_down))])"),'initial completion preserves normal termination for late spawn monitor');
+      check(await run("statechart_spawn(Parent,["+chart+"]),statechart_spawn(Child,["+chart+",monitor(true)]),Child=_@localhost,exit(Child,kill),receive({down(Child,Child,kill)->true},[timeout(2)]),statechart_halt(Parent,stopped)"),'secondary Worker chart uses canonical pid and complete monitor reference');
+      check(await run("statechart_spawn(P,["+chart+",monitor(true)]),statechart_wasm:statechart_stop,assertz(user:chart_stopped(P))"),'direct stop fixture created');
+      host.syncSwiWasmStatechartStatus(engine.prolog);host.syncSwiWasmStatechartStatus(engine.prolog);
+      check(await run("retract(user:chart_stopped(P)),receive({down(P,P,true)->true},[timeout(2)]),\\+receive({down(P,P,_)->true},[timeout(0),on_timeout(fail)])"),'status synchronization retires monitors once');
+    }
+    check(host.swiWasmActorMonitors.length===1,'only unrelated monitor remains after chart retirement');
+    check(await run("retract(user:chart_unrelated(U,UR)),U!stop,receive({down(U,UR,true)->true},[timeout(2),on_timeout(throw(missing_unrelated_down))])"),'unrelated monitor still delivers exact reference');
+    check(host.swiWasmActorMonitors.length===0,'all fixture monitors retired');
+  } finally {if(main&&engine)try{await engine.prolog.forEach('statechart_wasm:statechart_stop',()=>{});}catch(_){}await host.stop();}
+}
+
 async function runExternalContractCases(mode, cases) {
   const W=bootWorker();let host,engine,run;
   if(mode==='worker') {

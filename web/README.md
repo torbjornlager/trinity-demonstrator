@@ -15,6 +15,9 @@ interpreter sources are under [prolog/web_prolog/wasm](../prolog/web_prolog/wasm
 The main engine has DOM access and cooperative interruption; Workers can be
 terminated by the browser. Neither remains alive after its page is destroyed.
 
+The bundled engine is pinned to `swipl-wasm@8.2.5` (SWI-Prolog 10.1.19), with
+package integrity and bundle checksum in `dependencies/swi-wasm.json`.
+
 ## Language text and native boundaries
 
 Both browser modes initialise `user:double_quotes` to `chars`. Goals and options,
@@ -138,6 +141,16 @@ branches keep local, nested and remote entry points separate so nested creation
 does not overwrite the active interpreter configuration. XML is fetched by the
 engine/node running the chart; supplemental Prolog follows the source-loading
 path above.
+
+Worker-backed statecharts expose the same `Id@localhost` pid form as ordinary
+actors. Their spawn monitors retain that complete pid as the reference. The
+main-thread singleton keeps the `statechart` pid; successful startup publishes
+its liveness before monitor installation. Its stop boundary retires only that
+chart's monitors, delivers normal `down/3` notifications once, and retains normal
+completion for a chart that finishes before its spawn monitor is installed.
+Main-thread sends and status synchronization use the same retirement boundary;
+status checks inspect the WASM query result's `success` field rather than the
+truthiness of its result object. Unrelated actor monitors are preserved.
 
 The [native transport implementation notes](../prolog/web_prolog/README.md#node-transport-implementation)
 document wire envelopes, terminal acknowledgements, session replay and monitor

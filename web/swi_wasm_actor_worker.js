@@ -1484,7 +1484,7 @@ function createSwiWasmPromiseStore(options) {
       "statechart_spawn_worker_result(ResultText, Pid) :-",
       "    term_string(Result, ResultText),",
       "    (   Result = statechart_spawn_ok(PidText)",
-      "    ->  term_string(Pid, PidText)",
+      "    ->  term_string(LocalPid, PidText), canonical_pid(LocalPid, Pid)",
       "    ;   Result = statechart_spawn_error(Message)",
       "    ->  throw(error(statechart_startup_error(Message), context(statechart_spawn/2, 'the statechart worker rejected its source')))",
       "    ;   throw(error(domain_error(statechart_spawn_result, Result), statechart_spawn/2))",

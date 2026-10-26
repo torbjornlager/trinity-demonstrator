@@ -5820,6 +5820,7 @@
             swiWasmStatechartLoaded: false,
             swiWasmStatechartLoadError: "",
             swiWasmStatechartActive: false,
+            swiWasmLocalChartResult: null,
             swiWasmChartPending: false,
             swiWasmStatechartDelayedQueue: [],
             swiWasmQueryPending: false,
@@ -10415,7 +10416,14 @@
             window.swiWasmNameToken = function() { return "name-" + (self.swiWasmNextName = (self.swiWasmNextName || 0) + 1); };
             window.swiWasmNameReserve = function(token, name) { return Promise.resolve(self.reserveSwiWasmName("main", token, name)); };
             window.swiWasmNamePublish = function(token, name, pid, live) { return Promise.resolve(self.publishSwiWasmName("main", token, name, pid, live)); };
-            window.swiWasmNamedChartStopped = function() { self.swiWasmStatechartActive = false; self.clearSwiWasmActorNamesForPid("statechart"); return true; };
+            window.swiWasmNamedChartStarted = function(live) { self.startSwiWasmLocalChart(live === true || live === "true"); return true; };
+            window.swiWasmNamedChartStopped = function() { self.stopSwiWasmLocalChart("true"); return true; };
+            window.swiWasmSyncChartStatus = function(live) {
+              if (live === true || live === "true") {
+                if (!self.swiWasmStatechartActive) self.startSwiWasmLocalChart(true);
+              } else self.stopSwiWasmLocalChart("true");
+              return true;
+            };
             window.swiWasmNameCommit = function(token, name) { return self.commitSwiWasmName("main", token, name); };
             window.swiWasmNameRelease = function(token, name) { return self.releaseSwiWasmName("main", token, name); };
             window.swiWasmStartupErrorText = function(error) { return String(error && error.message || error); };
@@ -12278,7 +12286,7 @@
                 return true;
               }.bind(this));
             }
-            localEntry = this.swiWasmActorWorkers[pid];
+            localEntry = pid === "statechart" ? this.swiWasmLocalChartResult : this.swiWasmActorWorkers[pid];
             if (!this.swiWasmActorPidLive(pid)) {
               // The worker may finish between spawn's ready reply and
               // install_spawn_monitor/2. Its entry is intentionally retained,
@@ -13437,14 +13445,14 @@
               "send(statechart, Message) :-",
               "    !,",
               "    (   current_predicate(statechart_wasm:statechart_send/1)",
-              "    ->  statechart_wasm:statechart_send(Message)",
+              "    ->  statechart_wasm:statechart_send(Message), sync_local_statechart_status",
               "    ;   send_worker_actor(statechart, Message)",
               "    ).",
               "",
               "send(statechart, Message, _) :-",
               "    !,",
               "    (   current_predicate(statechart_wasm:statechart_send/1)",
-              "    ->  statechart_wasm:statechart_send(Message)",
+              "    ->  statechart_wasm:statechart_send(Message), sync_local_statechart_status",
               "    ;   send_worker_actor(statechart, Message)",
               "    ).",
               "",
@@ -13765,6 +13773,9 @@
               "        statechart_wasm:set_trace_enabled(Trace),",
               "        statechart_wasm:statechart_start(text(XML), SupportSource),",
               "        Pid = statechart,",
+              "        (statechart_wasm:statechart_running -> ChartLive = true ; ChartLive = false),",
+              "        _ := swiWasmNamedChartStarted(#ChartLive),",
+              "        install_spawn_monitor(Pid, Options),",
               "        maybe_register_toplevel_name(Options, Pid)",
               "    ).",
               "",
@@ -13780,11 +13791,15 @@
               "statechart_spawn_worker_result(ResultText, Pid) :-",
               "    term_string(Result, ResultText),",
               "    (   Result = statechart_spawn_ok(PidText)",
-              "    ->  term_string(Pid, PidText)",
+              "    ->  term_string(LocalPid, PidText), canonical_pid(LocalPid, Pid)",
               "    ;   Result = statechart_spawn_error(Message)",
               "    ->  throw(error(statechart_startup_error(Message), context(statechart_spawn/2, 'the statechart worker rejected its source')))",
               "    ;   throw(error(domain_error(statechart_spawn_result, Result), statechart_spawn/2))",
               "    ).",
+              "",
+              "sync_local_statechart_status :-",
+              "    (statechart_wasm:statechart_running -> Live = true ; Live = false),",
+              "    _ := swiWasmSyncChartStatus(#Live).",
               "",
               "statechart_halt(Pid, Reply) :- statechart_halt(Pid, Reply, 5).",
               "statechart_halt(statechart, Reply, _Timeout) :-",
@@ -14507,7 +14522,7 @@
             self.swiWasmChartPending = true;
             self.startSwiWasmOutputStreaming();
             Prolog.forEach(
-              "term_string(Event, EventText), statechart_wasm:statechart_send(Event)",
+              "term_string(Event, EventText), statechart_wasm:statechart_send(Event), swi_wasm_actor_bridge:sync_local_statechart_status",
               { EventText: eventText },
               function() {}
             ).then(function() {
@@ -14605,18 +14620,39 @@
             return /\bstatechart_(spawn|start|send|stop|running|configuration|in|halt_reason)\b/.test(String(goal || "")) ||
               /(^|[^A-Za-z0-9_])statechart\s*!/.test(String(goal || ""));
           },
+          startSwiWasmLocalChart: function(live) {
+            // A singleton chart is live before same-query monitor installation.
+            // Retain normal completion for a chart that finishes during startup.
+            this.swiWasmStatechartActive = live === true;
+            this.swiWasmLocalChartResult = { done: live !== true, reason: "true" };
+          },
+          stopSwiWasmLocalChart: function(reason) {
+            var result = this.swiWasmLocalChartResult;
+            var wasLive = this.swiWasmStatechartActive || (result && !result.done);
+            this.swiWasmStatechartActive = false;
+            if (!wasLive) {
+              this.clearSwiWasmActorNamesForPid("statechart");
+              return;
+            }
+            this.swiWasmLocalChartResult = { done: true, reason: reason || "true" };
+            // Removal precedes delivery, so repeated halt/status sync cannot
+            // duplicate a down or retire another actor's monitor.
+            this.notifySwiWasmActorMonitors("statechart", reason || "true");
+          },
           syncSwiWasmStatechartStatus: function(Prolog) {
             var running = false;
             if (!Prolog) {
               return;
             }
             try {
-              running = !!Prolog.query("statechart_wasm:statechart_running").once();
+              var answer = Prolog.query("statechart_wasm:statechart_running").once();
+              running = !!answer && answer.success !== false;
             } catch (_) {
               return;
             }
-            if (this.swiWasmStatechartActive && !running) this.clearSwiWasmActorNamesForPid("statechart");
-            this.swiWasmStatechartActive = running;
+            if (running) {
+              if (!this.swiWasmStatechartActive) this.startSwiWasmLocalChart(true);
+            } else this.stopSwiWasmLocalChart("true");
             if (running) {
               if (!Object.prototype.hasOwnProperty.call(this.lastBindings, "Pid")) {
                 this.lastBindings.Pid = "statechart";
