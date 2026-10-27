@@ -1,0 +1,22 @@
+Browser tab: 6, Title: "Standalone SWI-WASM node", URL: "http://localhost:56745/vendor/swi-wasm-minimal.html".
+1 AXWebArea Standalone SWI-WASM node, URL: localhost:56745/vendor/swi-wasm-minimal.html
+	2 heading Standalone SWI-WASM node, Value: 1
+		3 text Standalone SWI-WASM node
+	4 text This host loads the runtime and its engine. It uses no demonstrator, Vue, terminal widget, native node, or example database.
+	5 button Run Worker checks, ID: checks
+	6 button Check compatibility engine, ID: compatibility
+	7 container query
+		8 text field (settable) Description: Prolog goal, Value: member(X,[a,b,c]), ID: goal
+		9 button Query
+	10 button Next, ID: next
+	11 button Stop, ID: stop
+	12 button Abort, ID: abort
+	13 button New session, ID: reset
+	16 text Compatibility check: PASS
+	15 container Description: Runtime events, ID: output
+		17 text PASS: independent compatibility engine and DOM library
+PASS: independent compatibility source and query driver
+PASS: compatibility promise lifecycle
+
+
+The focused UI element is 6 button Check compatibility engine, ID: compatibility

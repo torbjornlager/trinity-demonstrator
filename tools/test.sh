@@ -94,6 +94,10 @@ run_wasm () {
         echo "!!! Tier WASM RPC bridge smoke FAILED"
         FAILED=1
     fi
+    if ! node tests/wasm/swi_wasm_standalone.js; then
+        echo "!!! Tier WASM standalone host FAILED"
+        FAILED=1
+    fi
     if ! node tests/wasm/swi_wasm_contracts.js; then
         echo "!!! Tier WASM semantic contracts FAILED"
         FAILED=1

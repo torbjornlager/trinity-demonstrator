@@ -1,0 +1,70 @@
+{
+  "source_revision": "c5d71c2989f526063a2ec903aa5facfa2471d08b",
+  "engine_pin": {
+    "package": "swipl-wasm",
+    "package_version": "8.2.5",
+    "engine_version": "10.1.19",
+    "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+    "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz",
+    "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+    "bundle": "web/swipl-bundle.js",
+    "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b"
+  },
+  "native_pin": {
+    "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+    "revision": "470f20b07f3157b07c8861d10610f2b73cd7efd8",
+    "pack": "web_prolog",
+    "mode": "required for startup, tests and container builds"
+  },
+  "runs": {
+    "baseline.log": {
+      "javascript_assertions_passed": 2803,
+      "failed_assertions": 0,
+      "all_scenarios_passed": true,
+      "sha256": "aa24390ddfb02dfe8359e41e8db2ff7fe544d00236007feb1dfd08c176d9a201"
+    },
+    "accepted-wasm.log": {
+      "javascript_assertions_passed": 2803,
+      "failed_assertions": 0,
+      "all_scenarios_passed": true,
+      "sha256": "d8486f938f0f589ab6104b26f00c7a87462840fcd3fbcfe76b8c9934b076380d"
+    }
+  },
+  "semantic_scenarios": 99,
+  "python_tests": 31,
+  "generated_bridges": {
+    "swiWasmBehaviourProlog": {
+      "unchanged": true,
+      "sha256": "204c76e8711c927c59336ac839584c9eddd37557d00b3696960895fe85043b6f"
+    },
+    "swiWasmRpcProlog": {
+      "unchanged": true,
+      "sha256": "76f73f6956a3741e5b945bb4cd4ba05f7fb07b2119179944d2c8f0afb0ff261d"
+    }
+  },
+  "standalone_final": "passed",
+  "browser_checks": [
+    "standalone Worker host with actor/monitor/statechart/Unicode/output/error/disposal checks",
+    "standalone compatibility bootstrap and DOM library",
+    "demonstrator Worker query paging and Stop",
+    "demonstrator queens example load/replacement/query",
+    "demonstrator valid SXML statechart spawn/trace/exit",
+    "demonstrator main-thread lazy query output and Next",
+    "standalone compatibility source loading, lazy query driver and promise lifecycle",
+    "demonstrator main-thread RPC paging through extracted query driver"
+  ],
+  "files": {
+    "web/vendor/swi-wasm-node.js": "08f12506e89ca297039ca72b9e31c7d32ad8b5efa2342e32d4e81db58262ab05",
+    "web/swi_wasm_actor_worker.js": "667ef5bab00dea9b3c0185805f6f603389d48ee7b4038b3f5052b9b7c2c1ed87",
+    "web/demonstrator.html": "6d03535a362e036319d23d7fbbbefb70ae49d038716178f0ebe8ffd5671198d5",
+    "web/vendor/swi-wasm-minimal.html": "81d55131b662631de137072c50690dc70b735f49578959c4160ac43534e6c5d1",
+    "tests/wasm/swi_wasm_standalone.js": "233d892995134d21f4dce0acd65d959adf9a7b5dd94b7b723a01e9ba683f4db6"
+  },
+  "verification_commands": [
+    "SWIPL=/verified/swipl tools/test.sh WASM",
+    "STARTUP_TEST_SWIPL=/verified/swipl PINNED_SWI_TEST_ROOT=/exact/native python3 -m unittest discover -s tests -p test_*.py",
+    "node tools/test-portal-runtime.cjs",
+    "python3 tools/setup_swi.py --validate"
+  ],
+  "node_version": "v24.19.0"
+}

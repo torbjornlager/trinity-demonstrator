@@ -1,0 +1,177 @@
+  ok   remote output is accepted by the shared browser terminal before acknowledgement
+  ok   blank output is still acknowledged
+  ok   missing browser terminal cannot acknowledge success
+  ok   render failure replies with an I/O error
+  ok   paged RPC has an asynchronous fetch helper
+  ok   paged RPC fetch is abortable
+  ok   web_rpc_page awaits each remote page
+  ok   web_rpc_page no longer uses synchronous XHR
+  ok   multiline src_text preserves a terminating full stop before trailing whitespace
+  ok   rpc src_uri resolves its source before the browser fetches it
+  ok   localhost RPC keeps the browser node as target while Markdown src_uri resolves as source
+  ok   worker RPC fetches src_uri source without using it to choose the call target
+  ok   worker RPC preserves a terminating full stop before trailing whitespace
+  ok   worker RPC reports non-success HTTP responses before Prolog parsing
+  ok   Abort settles suspended waits without leaving a Prolog abort for the next query
+  ok   blocking receive/1 mailbox promises are rejectable
+  ok   terminal URLs are converted to links when enabled, including echoed typed/pasted commands
+  ok   terminal system information is muted and can be disabled in Settings
+  ok   SWI-WASM override notices are concise and blue in both themes
+  ok   SWI-WASM time/1 output keeps inference and elapsed time only and uses theme-aware green
+  ok   terminal greeting identifies the announced profile and node and links to SWI-Prolog with its owl logo
+  ok   terminal highlights manual-listed Web Prolog predicates in the theme-aware colour
+  ok   Settings can restore their persisted defaults and update the live interface
+  ok   CodeMirror can apply the same Web Prolog predicate highlighting overlay
+  ok   tutorial code follows the Web Prolog predicate highlighting preference
+  ok   output is streamed to the terminal while a runner is active
+  ok   flush always writes the Shell got prefix in both SWI-WASM models
+  ok   long-running WASM queries yield frequently
+  ok   delayed statechart events are serialized behind all active engine work
+  ok   SWI-WASM read/1 and input/2 use the inline terminal prompt, not a modal
+  ok   solutions page lazily: side effects between answers run only on ';' (no eager forEach buffering)
+  ok   <spawn> in WASM charts: bridge loaded for charts, send(statechart) routes from workers (via sendSwiWasmActorMessage), replies become chart events
+  ok   both SWI-WASM statechart loaders install the SXML schema module
+  ok   a chart's monitor/2 watches as `statechart`, so a monitored child's down(...) routes back as a chart event
+  ok   remote <spawn> in WASM charts only owns browser actor traffic while the statechart workbench is active
+  ok   a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap
+  ok   SWI-WASM remote tutorial examples ship remote echo source and keep remote toplevels as sessions
+  ok   supervised fridge tutorial source has a Load control
+  ok   supervised fridge upgrade transfers callback source without replacing the shell
+  ok   the Examples drawer reserves its SXML menu for ACTOR profiles
+  ok   grammar and promise/yield examples are available on ISOBASE nodes
+  ok   ISOBASE calls include editor or tutorial request source while RELATION remains source-free
+  ok   the ISOBASE profile queues temporary request source without consulting a session
+  ok   the Tutorials drawer exposes profile and API tutorials for each profile
+  ok   Settings calls Statechart XML coloring SXML code
+  ok   Settings uses a checkbox that defaults to concise errors and can show a context-elided exception term
+  ok   exception-term display elides context and private actor-module qualification
+  ok   SWI-WASM renders a statechart worker's validation diagnostic at the toplevel
+  ok   down reasons are sanitised before display or browser-mailbox delivery
+  ok   SWI-WASM type errors use the native node's concise value-and-kind wording
+  ok   SWI-WASM supplies a context-elided exception term while preserving concise error data
+  ok   the Examples drawer has one fixed width instead of per-node persisted or clamped widths
+  ok   N1-N5 and SWI-WASM share the Editor and Examples drawer layout
+  ok   the Examples drawer hides its entire SXML menu on N1 and N2
+  ok   editor scratch-buffer and filename labels are larger and theme-aware
+  ok   src_text(<editor>) expands as one explicit UI placeholder
+  ok   quoted and commented <editor> text is not expanded
+  ok   <editor> outside src_text/1 is rejected instead of sent to Prolog
+  ok   terminal and Examples share visible submission-time editor expansion
+  ok   all terminal transports protect negation inside nested Prolog source before parsing it
+  ok   the editor toolbar has no separate Run or Halt execution path
+  ok   Logger Clear sits at the right of the bottom panel at standard Clear size
+  ok   Logger groups lifecycle, warning, error, timing, and UI events under Info
+  ok   API tutorials can isolate, mirror, and highlight their live Logger traffic
+  ok   statechart traces always feed both the Logger and tutorial animations while SXML trace only filters display
+  ok   ISOTOPE puts session and initial source in spawn options and logs the response as API traffic
+  ok   session source serializer escapes multiline layout for portable Prolog term parsing
+  ok   SWI-WASM Worker toplevel traffic uses the stateful API protocol on the actual Worker boundary
+  ok   SWI-WASM Worker source crosses only in toplevel_spawn options and calls reject source options
+  ok   browser-generated toplevel_next carries only pid and inherits the active call limit
+  ok   the Worker consumes canonical spawn and call options instead of parallel private fields
+  ok   spawn source round-trips through prologQuotedText and the Worker reader
+  ok   the Worker reader decodes hexadecimal and octal escapes
+  ok   omitting a Worker call limit requests all solutions
+  ok   Worker call rejects limit 0
+  ok   Worker call rejects limit -1
+  ok   Worker call rejects limit infinity
+  ok   Worker call rejects limit infinite
+  ok   Worker call rejects limit 1.5
+  ok   SWI-WASM API traffic is rendered as a JavaScript object literal rather than JSON text
+  ok   SWI-WASM request fields follow book order and long values use remote-node cropping
+  ok   JSON responses follow the book's type, pid, data, more field order
+  ok   Logger prints down fields in down(Pid, Ref, Reason) order
+  ok   every canonical response follows its corresponding Prolog term field order
+  ok   actual WebSocket request JSON is serialized in the book's field order
+  ok   interaction logging is visible, including failed recording attempts
+  ok   edited source spawns an ISOTOPE replacement before best-effort retirement and never loads source through a call
+  ok   SWI-WASM hard Abort reports surviving actor pids
+  ok   the main-thread SWI-WASM model preserves deferred mailbox messages across queries
+  ok   every numbered SXML file exposes launch and final halt queries
+  ok   tutorial Load replaces the ACTOR toplevel and transfers source only at spawn
+  ok   server_upgrade/3 transfers explicit source while server_upgrade/2 transfers none
+  ok   SWI-WASM bridge keeps stale remote echo/toplevel tutorial commands working
+  ok   SWI-WASM bridge routes inbound remote actor messages through the local delivery funnel
+  ok   SWI-WASM send routes qualified published-service addresses through the remote actor transport
+  ok   SWI-WASM bridge normalizes markdown-link remote node URLs
+  ok   SWI-WASM RPC accepts pasted Markdown-link node URLs
+  ok   an uncaught worker error finalizes the actor (monitors' down/3 + name clear + reap), not just a log
+  ok   a monitor installed after a SWI-WASM worker exits receives its recorded failure reason
+  ok   monitoring a missing SWI-WASM actor immediately reports no_process
+  ok   SWI-WASM exit hard-terminates a busy Worker and notifies its monitors
+  ok   remote connection settles once: rejects on close-before-open and on timeout, so the connect promise never parks
+  ok   worker input is exempt from the coordinator request timeout
+  ok   SWI-WASM worker pids use secure, never-reused ten-digit integers
+  ok   browser actors expose Id@localhost while coordinator keys remain numeric
+  ok   actors/1 lists the SWI-WASM shell first, independent of numeric pid order
+  ok   Hide local node in pid only removes @localhost from terminal display
+  ok   SWI-WASM references are coordinator-reserved ten-digit numeric tokens
+  ok   main and Worker SWI-WASM promises use opaque ten-digit references
+  ok   one SWI-WASM entry defaults to workers and Settings retains the DOM-capable main model
+  ok   SWI-WASM Worker startup stays quiet until the toplevel prompt is ready
+  ok   automatic editor reloads report the completed toplevel load without exposing the replaced session
+  ok   SWI-WASM model help is detailed and keyboard accessible
+  ok   SWI-WASM-2 drives a persistent worker-resident ptcp/3 shell actor
+  ok   SWI-WASM toplevels separate s2 time limits from s1/s3 idle limits
+  ok   whereis/2 binds an absent local name to undefined like a remote node
+  ok   SWI-WASM-2 hard abort replaces a blocked shell Worker at the same pid
+  ok   SWI-WASM-2 keeps module-private runtime predicates separate from reloadable user source
+  ok   both SWI-WASM bridges halt through runtime exit without awaiting in cleanup
+  ok   every runtime imports an independent copy of the standalone SWI-WASM shared database
+  ok   worker source loading repairs accidental empty dynamic shadows
+  ok   intentional shared-predicate shadows suppress only their loader redefinition warnings
+  ok   the optional main-thread model uses the same shared/private module boundary
+  ok   the SWI-WASM tutorial demonstrates private pricing over shared knowledge
+  ok   the ACTOR profile tutorial demonstrates node-side private/shared shadowing
+  ok   the ACTOR profile tutorial exposes copyable heading permalinks
+  ok   statechart programming is integrated into the ACTOR profile tutorial
+  ok   GCD statechart tutorials send the integers/1 event expected by the chart
+  ok   the standalone SWI-WASM shared database accepts ordinary actor source
+  ok   both SWI-WASM models import the actor API before compiling shared node code
+  ok   the echo tutorials identify the shared definition and need neither source transfer nor Load
+  ok   the user-module worker shell routes read/1 and read_term/2 through its explicit prompt protocol
+  ok   spawned SWI-WASM actors receive only explicit src_* source
+  ok   actor examples explicitly transfer editor predicates to spawned workers
+  ok   supervised servers transfer callbacks across both actor boundaries
+  ok   generated WASM source preserves singleton variables as anonymous
+  ok   worker actors delegate remote spawning to the JavaScript node controller
+  ok   both browser RPC clients preserve remote exceptions without a wrapper
+  ok   both SWI-WASM rpc/3 models keep initial transport offset internal
+  ok   both browser models provide non-consuming yield timeouts with the common default
+  ok   browser runtimes expose their host capabilities through runtime_property/1
+  ok   browser pid presentation consistently qualifies the main actor
+  ok   browser actor boundaries enforce the shared portable-term subset
+  ok   the HTML manual documents runtime_property/1
+  ok   the HTML manual documents the browser main actor pid
+  ok   the HTML manual documents the HTTP transport timeout option
+  ok   the HTML manual excludes offset from rpc/2-3 options
+  ok   the HTML manual includes offset in promise/3-4 options
+  ok   the HTML manual documents the default promise timeout answer
+  ok   the HTML manual avoids the obsolete native-only option-list introduction
+  ok   the HTML manual avoids the obsolete browser-only option-list introduction
+  ok   both SWI-WASM models pack parallel results and provide the actor-based predicate generics
+  ok   SWI-WASM-2 runs statecharts in dedicated worker actors
+  ok   a SWI-WASM statechart validates and starts before its worker announces readiness
+  ok   SWI-WASM statechart terminal output is delivered to the spawning actor mailbox
+  ok   nested statecharts preserve lifecycle, node, I/O, trace, and supplemental-source options
+  ok   SWI-WASM worker spawns resolve only after the child worker is ready
+  ok   both SWI-WASM models preserve default link(true) and explicit link(false) at spawn
+  ok   a terminating SWI-WASM parent recursively kills linked children but preserves link(false) children
+  ok   SWI-WASM-2 statechart workers route child replies to their concrete chart pid
+  ok   delayed statechart self-sends use the cancellable local scheduler in both SWI-WASM models
+  ok   after transitions resolve the rewritten worker self pid before scheduling
+  ok   the main-thread SWI-WASM bridge implements statechart_halt/2-3
+  ok   statechart_halt/3 returns after force-stopping a busy SWI-WASM chart
+  ok   SWI-WASM-2 terminal output renders strings without Prolog quotes
+  ok   SWI-WASM-2 omits unbound variables from successful binding rows
+  ok   SWI-WASM renders pair terms with infix minus notation
+  ok   SWI-WASM renders unification and conjunction in operator notation inside RPC answers
+  ok   ISOTOPE replacement survives an older node's /toplevel_halt 404 after switching to the new pid
+  ok   SWI-WASM Worker spawns and activates the sourced replacement before halting its predecessor
+  ok   SWI-WASM Worker calls use the canonical options field and carry no source
+  ok   tutorial Load replaces the SWI-WASM Worker shell before reporting success
+  ok   tutorial Load reports the same completed lifecycle on remote ACTOR nodes
+  ok   Examples selection replaces the SWI-WASM Worker shell before reporting the loaded filename
+  ok   Examples selection immediately replaces a remote ACTOR session with editor-origin source
+
+swi_wasm_rpc_bridge smoke: PASS

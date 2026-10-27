@@ -9,8 +9,12 @@ limitations; it does not define a separate browser language.
 The Worker runtime runs each actor in its own Web Worker and SWI-Prolog engine.
 The optional main-thread compatibility runtime runs shell queries in a shared
 page engine; actors spawned from it still use Workers. Their implementations
-live in [swi_wasm_actor_worker.js](swi_wasm_actor_worker.js) and the runtime and
-coordinator sections of [demonstrator.html](demonstrator.html). Statechart
+live in [swi_wasm_actor_worker.js](swi_wasm_actor_worker.js) and
+[vendor/swi-wasm-node.js](vendor/swi-wasm-node.js). The demonstrator supplies
+presentation adapters through the host interface; the
+[independent minimal host](vendor/swi-wasm-minimal.html) uses the same runtime.
+The [extraction inventory and host API](../docs/SWI_WASM_NODE_EXTRACTION.md)
+record the repository boundary. Statechart
 interpreter sources are under [prolog/web_prolog/wasm](../prolog/web_prolog/wasm/).
 The main engine has DOM access and cooperative interruption; Workers can be
 terminated by the browser. Neither remains alive after its page is destroyed.

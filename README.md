@@ -14,6 +14,14 @@ container builds all require the exact native revision in
 [`dependencies/swi-prolog-node.json`](dependencies/swi-prolog-node.json).
 There is no in-tree native implementation or legacy startup mode.
 
+## Browser runtime extraction
+
+Stages 1 and 2 now separate browser runtime machinery from demonstrator
+presentation within this repository. See the
+[ownership inventory, host API and standalone verification instructions](docs/SWI_WASM_NODE_EXTRACTION.md).
+The engine pin and current deployment URLs are retained; a separate repository
+and CDN distribution follow in later stages.
+
 ## Documentation
 
 The [Web Prolog language manual](web/manual.html) is the single shared API

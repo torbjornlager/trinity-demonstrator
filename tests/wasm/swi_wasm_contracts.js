@@ -24,7 +24,9 @@ if (!WASM_DIR || !NATIVE_ROOT) throw new Error("Run through tools/test.sh with p
 const PID = "1234567890";
 const QPID = PID + "@localhost";
 const CLIENT = "9999999999";
-const html = fs.readFileSync(path.join(ROOT, "web", "demonstrator.html"), "utf8");
+const runtimeSource = fs.readFileSync(path.join(ROOT,"web/vendor/swi-wasm-node.js"),"utf8");
+const runtime = require(path.join(ROOT,"web/vendor/swi-wasm-node.js"));
+const html = fs.readFileSync(path.join(ROOT, "web", "demonstrator.html"), "utf8") + "\n" + runtimeSource;
 const behaviourBody = html.split("swiWasmBehaviourProlog: function() {")[1].split("\n          },")[0];
 const behaviourSource = Function(behaviourBody)();
 
@@ -118,6 +120,7 @@ function installCleanupReplies(W) {
 
 
 function workbenchMethod(name, next) {
+  if (runtime.methods[name]) return runtime.methods[name];
   const start = html.indexOf("          " + name + ": function") + ("          " + name + ": ").length;
   const tail = html.slice(start);
   const boundary = new RegExp("\\n[ \\t]+" + next + ": function").exec(tail);
@@ -131,6 +134,7 @@ function workbenchMethod(name, next) {
 function serverMonitorCoordinator(deliverMessage) {
   return {
     swiWasmActorMonitors: [], swiWasmActorWorkers: {}, cleaned: [],
+    swiWasmHostEvent() {}, emitSwiWasmOutput() {},
     resolveSwiWasmActorTarget: x => String(x),
     swiWasmActorPidLive: () => true,
     parseSwiWasmRemoteActorPid: () => null,
@@ -626,7 +630,7 @@ function compatibilityClientHarness() {
   global.self.swiRpcGet=url=>{calls.source.push(url);return "uri_fact(ok).";};
   global.self.swiRpcGetAsync=url=>{calls.rpc.push(url);return Promise.resolve("success([v(ok)],false)");};
   global.self._swiPromiseStore={items:{}};
-  const text=html.slice(html.indexOf("            window._swiPromiseStore = createSwiWasmPromiseStore"),html.indexOf('            var el = document.createElement("script");',html.indexOf("            window.swiPromiseStart = function")));
+  const text=html.slice(html.indexOf("            window._swiPromiseStore = createSwiWasmPromiseStore"),html.indexOf('            return this.loadSwiWasmEngineBundle().then(function() {',html.indexOf("            window.swiPromiseStart = function")));
   const fetchMock=(url,options)=>{
     calls.promise.push({url,options});
     if(calls.hold)return new Promise(resolve=>{calls.complete=()=>resolve({text:()=>Promise.resolve("success([done],false)")});});
@@ -660,7 +664,7 @@ function isolatedPromiseEngine(mode) {
   } else {
     context.makeBrowserPromiseRef=()=>"1000000000";
     context.fetch=(url,options)=>new Promise(resolve=>requests.push({resolve,signal:options.signal}));
-    const text=html.slice(html.indexOf("            window._swiPromiseStore = createSwiWasmPromiseStore"),html.indexOf('            var el = document.createElement("script");',html.indexOf("            window.swiPromiseStart = function")));
+    const text=html.slice(html.indexOf("            window._swiPromiseStore = createSwiWasmPromiseStore"),html.indexOf('            return this.loadSwiWasmEngineBundle().then(function() {',html.indexOf("            window.swiPromiseStart = function")));
     vm.runInContext(text,context);
     start=()=>context.swiPromiseStart("https://example.org",100);
     complete=value=>requests[0].resolve({text:()=>Promise.resolve(value)});
@@ -2036,13 +2040,15 @@ const scenarios = {
     const engine=await require(path.join(ROOT,"web/swipl-bundle.js"))({arguments:["-q","--nosignals"]});
     // Use the terminal's actual query runner and display formatter. Only UI
     // rendering and paging input are substituted; Prolog executes normally.
-    const helpers=Function(html.slice(html.indexOf("function splitTopLevelArgs"),html.indexOf("function isDollarVarStartChar"))+
-      "\nreturn {exceptionDisplayTerm, normalizeErrorText, normalizeRuntimeErrorMessage};")();
+    const helpers=Function("SwiWasmNode",html.slice(html.indexOf("var splitTopLevelArgs ="),html.indexOf("function isDollarVarStartChar"))+
+      "\nreturn {exceptionDisplayTerm, normalizeErrorText, normalizeRuntimeErrorMessage};")(runtime);
     Object.assign(global,helpers);
     const displayed=[],solutions=[],dets=[];
     const noop=()=>{};
     let completed;
     const host={swiWasmProlog:engine.prolog,swiWasmModule:engine,
+      loadSwiWasmMainSource:runtime.methods.loadSwiWasmMainSource,
+      driveSwiWasmMainQuery:runtime.methods.driveSwiWasmMainQuery,
       swiWasmRpcProlog:()=>source,currentLoadText:()=>"",swiWasmGoalNeedsStatechart:()=>false,
       pauseTerm:noop,recordSessionEvent:noop,clipText:x=>x,log:noop,
       startSwiWasmOutputStreaming:noop,stopSwiWasmOutputStreaming:noop,drainSwiWasmStatechartEventQueue:noop,
@@ -2307,7 +2313,7 @@ const scenarios = {
     ]);
     const fetched=[];let releaseFetch;
     const base="https://n3.elfenbenstornet.se";
-    global.resolveBrowserRpcLoadUri=Function(html.slice(html.indexOf("function normalizeNodeUrl"),html.indexOf("function currentNodeReferenceUrls"))+"\nreturn resolveBrowserRpcLoadUri;")();
+    global.resolveBrowserRpcLoadUri=runtime.helpers.resolveBrowserRpcLoadUri;
     global.window.location={origin:"http://localhost:3053"};
     host.loadSwiWasmUriSource=workbenchMethod("loadSwiWasmUriSource","loadSwiWasmAssetSource");
     global.fetch=async (url,options)=>{

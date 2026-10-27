@@ -1,0 +1,10 @@
+{
+  "swiWasmBehaviourProlog": {
+    "unchanged": true,
+    "sha256": "204c76e8711c927c59336ac839584c9eddd37557d00b3696960895fe85043b6f"
+  },
+  "swiWasmRpcProlog": {
+    "unchanged": true,
+    "sha256": "76f73f6956a3741e5b945bb4cd4ba05f7fb07b2119179944d2c8f0afb0ff261d"
+  }
+}

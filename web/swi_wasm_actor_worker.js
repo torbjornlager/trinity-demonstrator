@@ -1142,7 +1142,8 @@ function createSwiWasmPromiseStore(options) {
     if (!Module || !Module.FS) {
       return Promise.reject(new Error("SWI-WASM shared database requires the virtual filesystem"));
     }
-    return fetch("/wasm/shared_db.pl", { cache: "no-store" }).then(function(response) {
+    var url = runtimeAsset("shared_db.pl");
+    return (url === null ? Promise.resolve({ok:true,text:function() { return Promise.resolve(""); }}) : fetch(url, { cache: "no-store" })).then(function(response) {
       if (!response.ok) {
         throw new Error("HTTP " + response.status + " for /wasm/shared_db.pl");
       }
@@ -2563,7 +2564,7 @@ function createSwiWasmPromiseStore(options) {
     ];
     try { Module.FS.mkdir("/wasm"); } catch (_) {}
     return Promise.all(names.map(function(name) {
-      return fetch("/wasm/" + name, { cache: "no-store" }).then(function(response) {
+      return fetch(runtimeAsset(name), { cache: "no-store" }).then(function(response) {
         if (!response.ok) throw new Error("HTTP " + response.status + " for /wasm/" + name);
         return response.text().then(function(source) {
           var adapted = source.replace(/swi_wasm_actor_bridge:/g, "user:");
@@ -2628,7 +2629,15 @@ function createSwiWasmPromiseStore(options) {
     }
   }
 
+  function runtimeAsset(name) {
+    var assets = workerConfiguration.assets || {};
+    if (name === "engine") return assets.engineUrl || "/swipl-bundle.js";
+    if (name === "shared_db.pl" && Object.prototype.hasOwnProperty.call(assets,"sharedDatabaseUrl")) return assets.sharedDatabaseUrl;
+    return (assets.prologBaseUrl || "/wasm/") + name;
+  }
+
   function start(message) {
+    if (message.assets) workerConfiguration.assets = message.assets;
     if (started) {
       post("error", { error: "worker actor already started" });
       return;
@@ -2640,7 +2649,7 @@ function createSwiWasmPromiseStore(options) {
       post("error", { error: "invalid worker actor pid" });
       return;
     }
-    importScripts("/swipl-bundle.js");
+    importScripts(runtimeAsset("engine"));
     SWIPL({
       arguments: ["-q", "--nosignals"],
       on_output: function(text) {

@@ -1,5 +1,5 @@
-// Dependency-free regression checks for the SWI-WASM RPC bridge embedded in
-// demonstrator.html.  These assertions protect the browser scheduling
+// Dependency-free regression checks for the extracted SWI-WASM RPC bridge
+// and the demonstrator host adapters.  These assertions protect the browser scheduling
 // contract: paged rpc/3 calls must await fetches, stream side effects, and
 // make the in-flight fetch abortable.
 //
@@ -10,10 +10,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const runtime = require("../../web/vendor/swi-wasm-node.js");
+const runtimeSource = fs.readFileSync(path.join(__dirname,"../../web/vendor/swi-wasm-node.js"),"utf8");
 const source = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "demonstrator.html"),
   "utf8"
-);
+) + "\n" + runtimeSource;
 const prologQuotedTextMatch = source.match(
   /prologQuotedText: function\(text\) \{([\s\S]*?)\n          \},\n          toplevelSpawnOptionsText:/
 );
@@ -121,6 +123,7 @@ function tutorialIncludes(text) {
 }
 
 function embeddedWorkbenchMethod(name, nextName) {
+  if (runtime.methods[name]) return runtime.methods[name];
   const marker = name + ": function";
   const start = source.indexOf(marker);
   const functionStart = source.indexOf("function", start);
@@ -136,7 +139,7 @@ const acceptRemoteIo = embeddedWorkbenchMethod("acceptSwiWasmRemoteIo", "swiWasm
 const ioOrder = [];
 const ioSocket = { send(text) { ioOrder.push(JSON.parse(text)); } };
 const ioView = {
-  terminal: { echo(text) { ioOrder.push(text); } },
+  emitSwiWasmOutput(text) { ioOrder.push(text); },
   formatOutputDisplay(data) { return data; }
 };
 acceptRemoteIo.call(ioView, ioSocket,
@@ -155,18 +158,18 @@ ok(ioOrder[0].status === "error", "missing browser terminal cannot acknowledge s
 ioOrder.length = 0;
 try {
   acceptRemoteIo.call({
-    terminal: { echo() { throw new Error("render failed"); } },
+    emitSwiWasmOutput() { throw new Error("render failed"); },
     formatOutputDisplay(data) { return data; }
   }, ioSocket, { request_id: "failed", event: { type: "output", data: "pong" } });
 } catch (_) {}
 ok(ioOrder[0].status === "error", "render failure replies with an I/O error");
 
-const errorDisplayHelpers = Function(
+const errorDisplayHelpers = Function("SwiWasmNode",
   source.slice(
-    source.indexOf("function splitTopLevelArgs"),
+    source.indexOf("var splitTopLevelArgs ="),
     source.indexOf("function summarizeStructuredError")
   ) + "\nreturn { exceptionDisplayTerm, sanitizeDownReasonTerm, humanizePrologErrorTerm, prologTermKindDescription };"
-)();
+)(runtime);
 const exceptionDisplayTerm = errorDisplayHelpers.exceptionDisplayTerm;
 const humanizePrologErrorTerm = errorDisplayHelpers.humanizePrologErrorTerm;
 
@@ -179,7 +182,7 @@ const rewriteEditorLoadTextAware = Function(
 )();
 const rpcUriHelpersSource = source.slice(
   source.indexOf("function normalizeNodeUrl"),
-  source.indexOf("function currentNodeReferenceUrls")
+  source.indexOf("var methods = {",source.indexOf("function normalizeNodeUrl"))
 );
 const rpcUriHelpers = Function(
   rpcUriHelpersSource +
@@ -187,7 +190,7 @@ const rpcUriHelpers = Function(
 )();
 const qualifiedServiceParserSource = source.slice(
   source.indexOf("function parseSwiWasmQualifiedServiceAddress"),
-  source.indexOf("function currentNodeReferenceUrls")
+  source.indexOf("var methods = {",source.indexOf("function normalizeNodeUrl"))
 );
 const parseSwiWasmQualifiedServiceAddress = Function(
   qualifiedServiceParserSource +
@@ -465,7 +468,7 @@ ok(editorIncludes("WEB_PROLOG_CODEMIRROR_PREDICATE_NAMES") &&
      !highlightedParts.includes("append"),
      "tutorial code follows the Web Prolog predicate highlighting preference");
 }
-ok(includes("self.echoSwiWasmOutput(self.terminal, String(text).replace(/\\n$/, \"\"));"),
+ok(includes("self.emitSwiWasmOutput(String(text).replace(/\\n$/, \"\"));"),
    "output is streamed to the terminal while a runner is active");
 ok(includes('"flush :-",') &&
    includes("atomics_to_string(['Shell got ', Atom], MessageString)") &&
@@ -511,7 +514,7 @@ ok(includes('self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main"') 
    includes("self.deliverSwiWasmRemoteResult(remoteMessage,"),
    "remote <spawn> in WASM charts only owns browser actor traffic while the statechart workbench is active");
 ok(includes('message.type === "output"') &&
-   includes("this.echoSwiWasmOutput(this.terminal, String(message.output)"),
+   includes("this.emitSwiWasmOutput( String(message.output)"),
    "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
 ok(tutorialIncludes('src_text("echo_actor :-') &&
    tutorialIncludes("node('{{actor_peer_host}}'),\n       session(true)") &&
@@ -1120,7 +1123,7 @@ ok(pidDisplayHelpers.token("2159438818@localhost", false) ===
    pidDisplayHelpers.text(
      "Shell got down(5074010345@localhost,2356029108,true)", true
    ) === "Shell got down(5074010345,2356029108,true)" &&
-   includes("self.terminal.echo(self.formatDisplayText(String(text)))") &&
+   includes('self.emitSwiWasmOutput(String(text), undefined, "terminal")') &&
    includes("term.echo(this.formatDisplayText(") &&
    includes("var text = this.formatDisplayText(renderOutputData(data));") &&
    includes("this.echoSwiWasmOutput(this.terminal, buf.replace") &&
@@ -1148,7 +1151,7 @@ ok(includes("reserveSwiWasmActorRef: function()") &&
 }
 ok(includes('window.localStorage.getItem("wb.swiWasmModel") === "main"') &&
    includes('node === "swi-wasm-2" || (node === "swi-wasm" && model !== "main")') &&
-   includes('this.initSwiWasmSession();') &&
+   includes('this.initSwiWasmSession().catch(function() {});') &&
    includes('this.initSwiWasm2Session();') &&
    includes('{ id: "swi-wasm", href: "?node=swi-wasm", label: "SWI-WASM", active: this.isBrowserSwiWasmMode }') &&
    !includes('{ id: "swi-wasm-2", href: "?node=swi-wasm-2"') &&
@@ -1228,11 +1231,11 @@ ok(workerSource.includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
    !includes('"        (   toplevel_halt(Pid),"') &&
    !includes("'$halt'(From)"),
    "both SWI-WASM bridges halt through runtime exit without awaiting in cleanup");
-ok(workerSource.includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
+ok(workerSource.includes('fetch(url, { cache: "no-store" })') &&
    workerSource.includes('return installSharedDatabase().then(function()') &&
    workerSource.includes("load_files(wasm_shared_db:'/worker_shared_db.pl',[silent(true)])") &&
    workerSource.includes('add_import_module(user,wasm_shared_db,start)') &&
-   includes('fetch("/wasm/shared_db.pl", { cache: "no-store" })') &&
+   includes('fetch(databaseUrl, { cache: "no-store" })') &&
    nodeSource.includes("wasm_module_file_name('shared_db.pl').") &&
    sharedDbSource.includes('list_price(widget, 100).'),
    "every runtime imports an independent copy of the standalone SWI-WASM shared database");
@@ -1490,7 +1493,7 @@ ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSou
    includes('parentEntry && parentEntry.role === "statechart_actor"') &&
    includes('ioTarget: inheritedIoTarget') &&
    includes('terminalParent.role === "shell_toplevel"') &&
-   includes('this.echoSwiWasmOutput(this.terminal, String(message.term || "true"))') &&
+   includes('this.emitSwiWasmOutput( String(message.term || "true"))') &&
    includes('linked: linked !== false'),
    "nested statecharts preserve lifecycle, node, I/O, trace, and supplemental-source options");
 ok(includes("spawnSwiWasmWorkerActorReady") &&
@@ -1653,6 +1656,7 @@ ok(includes('compound.functor === "=" && args.length === 2') &&
       swiWasmActorWorkers: { "11": oldEntry },
       lastBindings: { Old: "binding" },
       lastDollarVars: ["Old"],
+      swiWasmHostEvent: embeddedWorkbenchMethod("swiWasmHostEvent", "requiredRuntimeWidth"),
       reserveSwiWasmWorkerActorPid: function() {
         return "22";
       },
@@ -1685,6 +1689,8 @@ ok(includes('compound.functor === "=" && args.length === 2') &&
       ok(pid === "22" &&
          workerHarness.swiWasm2ShellPid === "22" &&
          workerHarness.swiWasm2LoadedSource === "new." &&
+         Object.keys(workerHarness.lastBindings).length === 0 &&
+         workerHarness.lastDollarVars.length === 0 &&
          workerCalls[0].action === "spawn" &&
          workerCalls[0].source === "new." &&
          workerCalls[0].candidate === true &&

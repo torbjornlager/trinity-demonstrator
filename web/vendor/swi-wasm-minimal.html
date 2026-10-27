@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Standalone SWI-WASM node</title>
+<style>body{font:16px system-ui;max-width:58rem;margin:2rem auto;padding:0 1rem}button,input{font:inherit;margin:.25rem}input{width:75%}pre{white-space:pre-wrap;background:#f3f4f4;padding:1rem}h1{color:#006400}</style>
+<h1>Standalone SWI-WASM node</h1>
+<p>This host loads the runtime and its engine. It uses no demonstrator, Vue, terminal widget, native node, or example database.</p>
+<button id="checks">Run Worker checks</button>
+<button id="compatibility">Check compatibility engine</button>
+<form id="query"><input id="goal" aria-label="Prolog goal" value="member(X,[a,b,c])"><button>Query</button></form>
+<button id="next">Next</button><button id="stop">Stop</button><button id="abort">Abort</button><button id="reset">New session</button>
+<pre id="status" role="status">Ready to run checks.</pre>
+<pre id="output" aria-label="Runtime events"></pre>
+<script src="../swi_wasm_actor_worker.js"></script>
+<script src="swi-wasm-node.js"></script>
+<script>
+'use strict';
+let node, compatibility;
+const status=document.getElementById('status'),output=document.getElementById('output');
+function event(e){if(e.type==='output'||e.type==='statechart_trace')output.textContent+=e.type+': '+e.data+'\n';}
+function create(){return SwiWasmNode.create({
+  workerUrl:new URL('../swi_wasm_actor_worker.js',location.href).href,
+  engineUrl:new URL('../swipl-bundle.js',location.href).href,
+  prologBaseUrl:new URL('../wasm/',location.href).href,
+  sharedDatabaseUrl:null,onEvent:event,onInput:text=>window.prompt(text)
+});}
+async function ready(){if(!node)node=create();await node.open();return node;}
+function require(test,label){if(!test)throw new Error(label);output.textContent+='PASS: '+label+'\n';}
+async function action(run){try{status.textContent='Running…';await run();}catch(e){status.textContent='FAIL: '+String(e);throw e;}}
+document.getElementById('checks').onclick=()=>action(async()=>{
+  if(node)node.dispose();node=create();output.textContent='';
+  await node.open({source:'square(X,Y):-Y is X*X.'});
+  let r=await node.query('square(3,Y)',{limit:1});require(r.type==='success'&&r.data[0].Y==='9','host-supplied source');
+  r=await node.query('member(X,[a,b,c])',{limit:1});require(r.more&&r.data[0].X==='a','first page');
+  r=await node.next();require(r.more&&r.data[0].X==='b','next page');await node.stop();
+  r=await node.query('self(S),spawn(receive({ping(From)->From!pong}),P),P!ping(S),receive({pong->true})');require(r.type==='success','actor messaging');
+  r=await node.query('spawn(receive({stop->true}),P),monitor(P,R),exit(P,kill),receive({down(P,R,_)->true})');require(r.type==='success','monitor and termination');
+  r=await node.query(`statechart_spawn(P,[trace(true),src_text('<statechart version="0.2" initial="s"><state id="s"/></statechart>')]),exit(P,kill)`);require(r.type==='success','statechart lifecycle');
+  r=await node.query('writeln(independent),member("hé😀",[[h,é,\'😀\']])');require(r.type==='success','Unicode and output');
+  r=await node.query('throw(standalone_probe)');require(r.type==='error','query error is surfaced');
+  r=await node.query('true');require(r.type==='success','session usable after query error');
+  node.dispose();require(Object.keys(node.swiWasmActorWorkers).length===0,'dispose reclaims Workers');node=null;
+  status.textContent='Worker checks: PASS';
+});
+document.getElementById('compatibility').onclick=()=>action(async()=>{
+  if(compatibility)throw new Error('Reload the page before initializing another compatibility engine');
+  compatibility=create();compatibility.isSwiWasm2Mode=false;
+  await compatibility.initSwiWasmSession();
+  require(!!compatibility.swiWasmProlog.query('current_module(dom),X is 6*7').once(),'independent compatibility engine and DOM library');
+  await compatibility.loadSwiWasmMainSource('compatibility_value(42).');
+  const answers=[];
+  await compatibility.driveSwiWasmMainQuery('compatibility_value(X)',answer=>answers.push(answer));
+  require(answers.length===1&&answers[0].X===42,'independent compatibility source and query driver');
+  const ref=window.swiPromiseStart('data:text/plain,success([ok],false).',1);
+  try {
+    const collector=window.swiPromiseClaim(ref);
+    const answer=await window.swiPromiseWait(ref,collector,1);
+    require(/^[1-9][0-9]{9}$/.test(ref)&&answer==='success([ok],false).','compatibility promise lifecycle');
+    window.swiPromiseRelease(ref,collector);
+  } finally {window.swiPromiseCleanup(ref);}
+  status.textContent='Compatibility check: PASS';
+});
+document.getElementById('query').onsubmit=e=>{e.preventDefault();action(async()=>{const n=await ready();status.textContent=JSON.stringify(await n.query(document.getElementById('goal').value,{limit:1}),null,2);});};
+for(const command of ['next','stop','abort'])document.getElementById(command).onclick=()=>action(async()=>{if(!node)throw new Error('Open a session first');status.textContent=JSON.stringify(await node[command](),null,2);});
+document.getElementById('reset').onclick=()=>action(async()=>{if(node)node.dispose();node=null;await ready();status.textContent='New session ready.';});
+window.addEventListener('pagehide',()=>{if(node)node.dispose();if(compatibility)compatibility.dispose();});
+</script>
+</html>
