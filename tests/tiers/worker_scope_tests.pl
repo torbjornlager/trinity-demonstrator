@@ -1,9 +1,9 @@
 :- module(test_worker_scope, []).
 
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/parallel.pl').
-:- use_module('../../prolog/web_prolog/first_solution.pl').
-:- use_module('../../prolog/web_prolog/worker_cleanup.pl', []).
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/parallel)).
+:- use_module(library(web_prolog/first_solution)).
+:- use_module(library(web_prolog/worker_cleanup), []).
 :- use_module(library(plunit)).
 :- use_module(library(time)).
 

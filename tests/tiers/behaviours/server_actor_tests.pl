@@ -7,8 +7,8 @@ predicates defined here are directly accessible when the server loop
 calls them -- matching how the interactive examples in the book work.
 */
 
-:- use_module('../../../prolog/web_prolog/server_actor.pl').
-:- use_module('../../../prolog/web_prolog/actors.pl', [spawn/3, receive/1, receive/2,
+:- use_module(library(web_prolog/server_actor)).
+:- use_module(library(web_prolog/actors), [spawn/3, receive/1, receive/2,
                                monitor/2, self/1]).
 :- use_module(library(plunit)).
 

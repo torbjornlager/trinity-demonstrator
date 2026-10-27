@@ -50,23 +50,23 @@ function statechartExample(name) {
   );
 }
 const nodeWsSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "prolog", "web_prolog", "node_ws.pl"),
+  path.join(process.env.TRINITY_PINNED_SWI_ROOT, "prolog", "web_prolog", "node_ws.pl"),
   "utf8"
 );
 const nodeSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "prolog", "web_prolog", "node.pl"),
+  path.join(process.env.TRINITY_PINNED_SWI_ROOT, "prolog", "web_prolog", "node.pl"),
   "utf8"
 );
 const sharedDbSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "shared_db.pl"),
+  path.join(process.env.WP_WASM_SOURCE_DIR, "shared_db.pl"),
   "utf8"
 );
 const statechartWasmSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "statechart_wasm.pl"),
+  path.join(process.env.WP_WASM_SOURCE_DIR, "statechart_wasm.pl"),
   "utf8"
 );
 const statechartWasmRuntimeSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "prolog", "web_prolog", "wasm", "statechart_wasm_runtime.pl"),
+  path.join(process.env.WP_WASM_SOURCE_DIR, "statechart_wasm_runtime.pl"),
   "utf8"
 );
 const editorFrameSource = fs.readFileSync(

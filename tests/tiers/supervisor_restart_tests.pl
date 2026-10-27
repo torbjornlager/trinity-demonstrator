@@ -1,8 +1,8 @@
 :- module(test_supervisor_restart, []).
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/supervisor_actor.pl').
-:- use_module('../../prolog/web_prolog/supervisor_startup.pl', []).
-:- use_module('../../prolog/web_prolog/server_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/supervisor_actor)).
+:- use_module(library(web_prolog/supervisor_startup), []).
+:- use_module(library(web_prolog/server_actor)).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 
@@ -91,7 +91,9 @@ check_automatic(Sup,Strategy,Mode,Trigger,Failed) :-
        ;Expected=restart_failed(Failed,replacement_error(Failed))),
        receive({down(Sup,Sup,Reason) -> true},[timeout(4),on_timeout(fail)]),
        assertion(Reason==Expected),
-       receive({down(Sup,ExtraSup,ExtraReason) -> true},[timeout(0),on_timeout(fail)]),
+       % Each monitor notification is sent independently. The first down is
+       % not a barrier for a second monitor on the same actor.
+       receive({down(Sup,ExtraSup,ExtraReason) -> true},[timeout(1),on_timeout(fail)]),
        assertion(ExtraReason==Expected),
        (Mode==policies -> AReason=shutdown,CReason=kill
        ;Mode==cleanup_error -> AReason=true,CReason=shutdown

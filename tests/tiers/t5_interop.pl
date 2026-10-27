@@ -25,13 +25,13 @@
     demonstrator node sends pong back to a local pid over OUR /ws.
 */
 
-:- use_module('../../prolog/web_prolog/node.pl').
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/isolation.pl').
-:- use_module('../../prolog/web_prolog/toplevel_actors.pl').
-:- use_module('../../prolog/web_prolog/distribution.pl').
-:- use_module('../../prolog/web_prolog/rpc.pl').
-:- use_module('../../prolog/web_prolog/pid_utils.pl', [register_node_self/1]).
+:- use_module(library(web_prolog/node)).
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/isolation)).
+:- use_module(library(web_prolog/toplevel_actors)).
+:- use_module(library(web_prolog/distribution)).
+:- use_module(library(web_prolog/rpc)).
+:- use_module(library(web_prolog/pid_utils), [register_node_self/1]).
 :- use_module(library(plunit)).
 :- use_module(library(socket)).
 :- use_module(library(process)).

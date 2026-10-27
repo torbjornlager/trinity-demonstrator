@@ -9,9 +9,9 @@
     levels deeper), and one condition/1 gate that named legacy modules.
 */
 
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/isolation.pl').
-:- use_module('../../prolog/web_prolog/toplevel_actors.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/isolation)).
+:- use_module(library(web_prolog/toplevel_actors)).
 :- use_module(library(plunit)).
 
 %  Composition glue (single chain, as the umbrella will define it).
@@ -57,7 +57,6 @@ tier_test_units([ server_actor,
 
 run_native :- run_partition(native).
 run_integration :- run_partition(integration).
-run_legacy_layout :- run_partition(legacy_layout).
 run_partition(Class) :-
     layer_honesty, tier_test_units(Units),
     partition_test_specs(Units,Class,Selected), run_tests(Selected), ensure_mailbox_empty.

@@ -19,9 +19,9 @@
 
 
 
-:- use_module('../../../prolog/web_prolog/supervisor_actor.pl').
-:- use_module('../../../prolog/web_prolog/actors.pl', [receive/1, receive/2, monitor/2, demonitor/2, exit/1, exit/2]).
-:- use_module('../../../prolog/web_prolog/server_actor.pl', [server_request/3, server_halt/2]).
+:- use_module(library(web_prolog/supervisor_actor)).
+:- use_module(library(web_prolog/actors), [receive/1, receive/2, monitor/2, demonitor/2, exit/1, exit/2]).
+:- use_module(library(web_prolog/server_actor), [server_request/3, server_halt/2]).
 
 :- use_module('supervisor_halt_tests.pl', []).
 

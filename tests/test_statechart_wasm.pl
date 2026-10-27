@@ -12,7 +12,7 @@
           ]).
 
 :- use_module(library(plunit)).
-:- use_module('../prolog/web_prolog/wasm/statechart_wasm.pl').
+:- use_module(browser_prolog(statechart_wasm)).
 
 :- dynamic test_dir/1.
 :- prolog_load_context(directory, ThisDir),

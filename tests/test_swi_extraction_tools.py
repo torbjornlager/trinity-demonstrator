@@ -1,5 +1,5 @@
 """Fail-closed packaging/equivalence checks; no engine or repository mutation."""
-import importlib.util
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+NATIVE = Path(os.environ.get('PINNED_SWI_TEST_ROOT', ROOT / '.trinity/native'))
 
 
 def tool(name, *args):
@@ -16,29 +17,6 @@ def tool(name, *args):
 
 
 class ExtractionTools(unittest.TestCase):
-    def test_existing_destination_is_not_touched(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            sentinel = root / 'keep.txt'
-            sentinel.write_text('keep')
-            result = tool('rehearse_swi_repository_extraction.py', '--destination',
-                          root, '--report-dir', root / 'report')
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn('destination must not exist', result.stderr)
-            self.assertEqual(sentinel.read_text(), 'keep')
-            self.assertFalse((root / 'report').exists())
-
-    def test_native_boundary_keeps_schema_but_not_browser_engine(self):
-        spec = importlib.util.spec_from_file_location(
-            'extraction', ROOT / 'tools/rehearse_swi_repository_extraction.py')
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        self.assertTrue(module.native_path('prolog/web_prolog/wasm/sxml_schema.pl'))
-        self.assertFalse(module.native_path('prolog/web_prolog/wasm/statechart_wasm.pl'))
-        self.assertFalse(module.native_path('web/manual.html'))
-        self.assertTrue(module.native_path('tests/tiers/t5_interop.pl'))
-        self.assertTrue(module.native_path('pack.pl'))
-
     def test_package_uses_native_schema_and_detects_drift(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
@@ -46,9 +24,9 @@ class ExtractionTools(unittest.TestCase):
             browser = root / 'browser'
             relative = Path('prolog/web_prolog/wasm')
             shutil.copytree(ROOT / relative, browser / relative)
-            shutil.copytree(ROOT / relative, native / relative)
+            shutil.copytree(NATIVE / relative, native / relative)
             for name in ['statechart_exec.pl', 'statechart_runtime.pl']:
-                shutil.copy2(ROOT / 'prolog/web_prolog' / name,
+                shutil.copy2(NATIVE / 'prolog/web_prolog' / name,
                              native / 'prolog/web_prolog' / name)
             (browser / relative / 'sxml_schema.pl').write_text('stale browser schema')
             output = root / 'assembled'

@@ -30,5 +30,8 @@ Contract for a tier file (`tN_*.pl`):
   not assert `integer(Pid)` or `_@_` forms.
 
 Tier files are created by the phase that brings their layer into
-existence; a missing file is reported by the runner as "pending", not as
-a failure.
+existence; a missing file is a test-run failure.
+
+All native imports resolve through the validated `swi-prolog-node` dependency.
+The runner configures its search path without preloading the upper layers.
+The browser schema is assembled from that same revision.

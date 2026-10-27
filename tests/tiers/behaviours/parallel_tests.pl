@@ -3,9 +3,9 @@
 Tests for the actor-based parallel predicate generics.
 */
 
-:- use_module('../../../prolog/web_prolog/parallel.pl').
-:- use_module('../../../prolog/web_prolog/first_solution.pl').
-:- use_module('../../../prolog/web_prolog/actors.pl', [
+:- use_module(library(web_prolog/parallel)).
+:- use_module(library(web_prolog/first_solution)).
+:- use_module(library(web_prolog/actors), [
     spawn/3,
     self/1,
     send/2,

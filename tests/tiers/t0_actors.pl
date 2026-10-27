@@ -14,7 +14,7 @@
         and a hook clause takes the documented effect.
 */
 
-:- use_module('../../prolog/web_prolog/actors.pl').
+:- use_module(library(web_prolog/actors)).
 :- use_module(library(plunit)).
 :- use_module('spawn_options_tests.pl', []).
 :- use_module('zero_poll_tests.pl', []).

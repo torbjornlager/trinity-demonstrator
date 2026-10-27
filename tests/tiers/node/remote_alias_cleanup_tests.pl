@@ -1,8 +1,8 @@
 :- module(test_remote_alias_cleanup, []).
 
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/distribution.pl', []).
-:- use_module('../../../prolog/web_prolog/node_controller.pl', []).
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/distribution), []).
+:- use_module(library(web_prolog/node_controller), []).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 

@@ -1,10 +1,10 @@
 :- module(test_native_paging, []).
 
-:- use_module('../../../prolog/web_prolog/rpc.pl').
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/node_engine.pl', []).
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl', [toplevel_halt/2]).
-:- use_module('../../../prolog/web_prolog/actors.pl', []).
+:- use_module(library(web_prolog/rpc)).
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/node_engine), []).
+:- use_module(library(web_prolog/toplevel_actors), [toplevel_halt/2]).
+:- use_module(library(web_prolog/actors), []).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 :- use_module(library(http/thread_httpd)).

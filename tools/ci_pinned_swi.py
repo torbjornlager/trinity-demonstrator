@@ -27,16 +27,21 @@ def plan(native, wasm, swipl):
     # processes whose assertions require higher layers to be absent.
     rows = [('origin-audit', ROOT,
              [swipl, '-f', 'none', '-q', '-s', str(ROOT/'load.pl'),
-              '-p', 'library='+str(ROOT/'prolog'), '-g',
+              '-g',
               'pinned_swi_bootstrap:check_origins,forall(module_property(M,file(F)),format("~q ~q~n",[M,F]))',
               '-t', 'halt'])]
     for tier in ['LINT', 'T0', 'T1_NATIVE', 'T2', 'T3_NATIVE', 'T4_NATIVE', 'T5',
                  'T1_INTEGRATION', 'T3_INTEGRATION', 'T4_INTEGRATION']:
         rows.append((tier, native, ['bash', 'tools/test.sh', tier]))
+    for tier in ['LINT', 'T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'SERVICE_TEXT', 'MODEL', 'MODEL_SXML', 'JEV']:
+        rows.append(('demonstrator-'+tier, ROOT, ['bash', 'tools/test.sh', tier]))
     rows += [
         ('default-startup-regressions', ROOT, [sys.executable, 'tests/test_default_swi_startup.py']),
         ('pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_swi_dependency.py']),
         ('ci-runner-regressions', ROOT, [sys.executable, 'tests/test_ci_pinned_swi.py']),
+        ('packaging-regressions', ROOT, [sys.executable, 'tests/test_swi_extraction_tools.py']),
+        ('watchdog-regressions', ROOT, [sys.executable, 'tests/test_ci_timeout.py']),
+        ('fetch-regressions', ROOT, [sys.executable, 'tests/test_fetch_swi.py']),
         ('browser-equivalence', ROOT, [sys.executable, 'tools/check_statechart_wasm_equivalence.py',
                                      '--native-root', str(native), '--wasm-dir', str(wasm)]),
         ('WASM', ROOT, ['bash', 'tools/test.sh', 'WASM']),

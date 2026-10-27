@@ -17,11 +17,11 @@
       - No proxy stragglers: remote_pid_proxy/2 retracted after halt.
 */
 
-:- use_module('../../../prolog/web_prolog/actor_api.pl').
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl').
-:- use_module('../../../prolog/web_prolog/node.pl').
-:- use_module('../../../prolog/web_prolog/node_log.pl').
-:- use_module('../../../prolog/web_prolog/node_controller.pl').
+:- use_module(library(web_prolog/actor_api)).
+:- use_module(library(web_prolog/toplevel_actors)).
+:- use_module(library(web_prolog/node)).
+:- use_module(library(web_prolog/node_log)).
+:- use_module(library(web_prolog/node_controller)).
 :- use_module('multi_node_harness.pl').
 
 :- use_module(library(plunit)).

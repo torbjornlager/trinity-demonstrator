@@ -17,9 +17,7 @@
                     (run -> halt(0) ; halt(1))"
 */
 
-:- prolog_load_context(directory, Dir),
-   atom_concat(Dir, '/../prolog', LibDir),
-   asserta(user:file_search_path(library, LibDir)).
+:- ['../load.pl'].
 
 :- use_module(library(web_prolog)).
 :- use_module(library(web_prolog/rpc)).

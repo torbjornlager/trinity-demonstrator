@@ -1,8 +1,8 @@
 :- module(test_public_goal_guard, []).
 
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/public_goal_guard.pl').
-:- use_module('../../../prolog/web_prolog/node_execution_context.pl').
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/public_goal_guard)).
+:- use_module(library(web_prolog/node_execution_context)).
 :- use_module(library(apply)).
 :- use_module(library(settings)).
 :- use_module(library(plunit)).

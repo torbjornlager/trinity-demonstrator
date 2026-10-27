@@ -1,9 +1,9 @@
 % Canonical URI representations; loopback-only HTTP fixture.
 :- module(test_uri_options, []).
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/rpc.pl').
-:- use_module('../../../prolog/web_prolog/source_utils.pl', []).
-:- use_module('../../../prolog/web_prolog/pid_utils.pl', []).
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/rpc)).
+:- use_module(library(web_prolog/source_utils), []).
+:- use_module(library(web_prolog/pid_utils), []).
 :- use_module(library(plunit)).
 :- use_module(library(socket)).
 :- use_module(library(http/thread_httpd)).

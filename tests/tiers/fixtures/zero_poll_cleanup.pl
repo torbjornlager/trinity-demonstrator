@@ -1,6 +1,8 @@
+:- use_module('../../../demonstrator_startup.pl', []).
+:- demonstrator_startup:configure_native.
 % Run in a disposable process: a regressed poll inside signal-masked cleanup
 % cannot reliably be interrupted by another Prolog signal or time-limit alarm.
-:- use_module('../../../prolog/web_prolog/actors.pl').
+:- use_module(library(web_prolog/actors)).
 :- initialization(main, main).
 
 main :-

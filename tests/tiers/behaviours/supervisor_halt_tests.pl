@@ -1,7 +1,7 @@
 % SPDX-License-Identifier: MIT
 :- module(supervisor_halt_tests,[run/0]).
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/supervisor_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/supervisor_actor)).
 run :-
     ordered(reply_first),ordered(down_first),delayed_ack,
     absent(normal_down),absent(pending),abnormal,

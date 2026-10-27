@@ -1,6 +1,6 @@
 :- module(test_rpc_options, []).
 
-:- use_module('../../../prolog/web_prolog/rpc.pl').
+:- use_module(library(web_prolog/rpc)).
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(plunit)).
 

@@ -11,8 +11,8 @@ statechart macrostep, and sends one complete semantic observation to SXML.
 */
 
 :- use_module(deployment_observation).
-:- use_module('../../prolog/web_prolog/actors').
-:- use_module('../../prolog/web_prolog/statechart_actor').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/statechart_actor)).
 
 :- meta_predicate demo_spawn(-, 2).
 

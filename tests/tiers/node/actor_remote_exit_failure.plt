@@ -7,8 +7,8 @@
     safe_remote_kill_send/4's docstring).
 */
 
-:- use_module('../../../prolog/web_prolog/actor_api.pl').
-:- use_module('../../../prolog/web_prolog/node_log.pl').
+:- use_module(library(web_prolog/actor_api)).
+:- use_module(library(web_prolog/node_log)).
 
 :- use_module(library(plunit)).
 

@@ -1,7 +1,7 @@
 :- module(test_supervisor_request_cleanup, []).
 
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/supervisor_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/supervisor_actor)).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 :- use_module(library(time)).

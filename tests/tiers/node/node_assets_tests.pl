@@ -1,7 +1,7 @@
 :- module(test_node_assets, []).
 
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/node_assets.pl').
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/node_assets)).
 :- use_module(library(plunit)).
 :- use_module(library(settings)).
 :- use_module(library(filesex)).
@@ -121,18 +121,6 @@ missing_asset(Port) :-
 
 :- begin_tests(node_assets).
 
-test(default_resolvers_preserve_checkout_paths) :-
-    with_assets('', '',
-      (module_property(node, file(NodeFile)), file_directory_name(NodeFile, Dir),
-       forall(page(_, Rel),
-              (node_asset_file(Rel, Actual),
-               directory_file_path(Dir, '../..', Root), directory_file_path(Root, Rel, Expected),
-               assertion(same_file(Actual, Expected)))),
-       forall(wasm(Name),
-              (node:node_wasm_module_file(Name, Actual),
-               directory_file_path(Dir, wasm, WasmDir), directory_file_path(WasmDir, Name, Expected),
-               assertion(same_file(Actual, Expected)))))).
-
 test(relocated_tree_serves_existing_urls,
      [setup(fixture(Root)), cleanup(delete_directory_and_contents(Root))]) :-
     with_assets(Root, '', with_server(relocated_pages)).
@@ -147,15 +135,6 @@ test(explicit_root_does_not_fall_back_to_checkout,
      [setup((fixture(Root), directory_file_path(Root, 'web/manual.html', File), delete_file(File))),
       cleanup(delete_directory_and_contents(Root))]) :-
     with_assets(Root, '', with_server(missing_asset)).
-
-test(default_root_is_independent_of_working_directory,
-     [setup((tmp_file(asset_cwd, Dir), make_directory(Dir))),
-      cleanup(delete_directory(Dir))]) :-
-    with_assets('', '',
-      (node:node_manual_file(Before),
-       setup_call_cleanup(working_directory(Previous, Dir), node:node_manual_file(After),
-                          working_directory(_, Previous)),
-       assertion(Before == After), assertion(exists_file(After)))).
 
 test(prefix_guards_and_wasm_allowlist_remain_in_force,
      [setup(fixture(Root)), cleanup(delete_directory_and_contents(Root))]) :-

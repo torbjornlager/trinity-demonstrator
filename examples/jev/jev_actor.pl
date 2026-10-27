@@ -12,7 +12,7 @@ statechart and needs none for this stateless interaction.
 */
 
 :- use_module(deployment_observation).
-:- use_module('../../prolog/web_prolog/actors').
+:- use_module(library(web_prolog/actors)).
 
 :- meta_predicate deployment_actor_spawn(-, 2).
 

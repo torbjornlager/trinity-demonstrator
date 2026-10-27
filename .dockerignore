@@ -10,12 +10,29 @@
 src
 tests
 docs
-tools
 logs
 test.pl
 run.pl
 *.md
 **/*.plt
 
-# Host-specific pinned dependency setup is never shipped in legacy images.
+# Host-specific dependency setup is regenerated inside the image.
 .trinity
+
+# Development-only tools are not part of the runtime image.
+tools/__pycache__
+
+# Only startup/dependency assembly tools are runtime inputs.
+tools/*
+!tools/setup_swi.py
+!tools/pinned_swi.py
+!tools/pinned_swi_bootstrap.pl
+!tools/package_wasm_prolog.py
+!tools/fetch_swi.py
+**/__pycache__
+**/.DS_Store
+# Operator credentials never enter the build context.
+.env
+.env.*
+**/.env
+**/.env.*

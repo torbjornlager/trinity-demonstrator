@@ -1,7 +1,7 @@
 :- module(test_supervisor_intensity, []).
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/supervisor_actor.pl').
-:- use_module('../../prolog/web_prolog/server_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/supervisor_actor)).
+:- use_module(library(web_prolog/server_actor)).
 :- use_module('supervisor_restart_tests.pl', []).
 :- use_module(library(plunit)).
 
@@ -36,7 +36,8 @@ check_exhaustion(Sup,Max,Mode) :-
          (self(Caller),send(Caller,unrelated_intensity_message),server_halt(Last,_),
           receive({down(Sup,Sup,Reason) -> true},[timeout(4),on_timeout(fail)]),
           assertion(Reason==shutdown),
-          receive({down(Sup,Extra,ExtraReason) -> true},[timeout(0),on_timeout(fail)]),
+          % A second monitor can be notified after the first down is consumed.
+          receive({down(Sup,Extra,ExtraReason) -> true},[timeout(1),on_timeout(fail)]),
           assertion(ExtraReason==shutdown),
           receive({down(Last,RB,BReason) -> true},[timeout(1),on_timeout(fail)]),
           assertion(BReason==true),

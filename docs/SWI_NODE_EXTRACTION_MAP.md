@@ -1,5 +1,12 @@
 # Native SWI node extraction: files, dependencies and first seam
 
+> **Current status (27 October 2026):** native duplicate removal is implemented.
+> Startup, tests, CI and Docker require the exact `swi-prolog-node` dependency.
+> Only browser-specific Prolog sources remain under `prolog/web_prolog/wasm/`;
+> the shared schema is supplied during setup. The following map and rehearsal
+> notes are historical. Use [native maintenance](SWI_NODE_MAINTENANCE.md) and
+> the top-level README for current commands.
+
 Status: default local pinned startup, opt-in pinned CI and maintenance ownership
 clarified, 24 October 2026. The separate
 `swi-prolog-node` repository now exists privately on GitHub with a clean initial

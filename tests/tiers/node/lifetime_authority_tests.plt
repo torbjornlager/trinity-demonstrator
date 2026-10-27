@@ -1,9 +1,9 @@
 :- begin_tests(lifetime_authority).
 
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/node_lifetime.pl').
-:- use_module('../../../prolog/web_prolog/node_execution_context.pl').
-:- use_module('../../../prolog/web_prolog/node_runtime_state.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/node_lifetime)).
+:- use_module(library(web_prolog/node_execution_context)).
+:- use_module(library(web_prolog/node_runtime_state)).
 :- use_module(library(settings)).
 
 principal(Id, principal{id:Id, capabilities:[execute], unknown:false}).

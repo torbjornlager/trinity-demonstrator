@@ -1,7 +1,7 @@
 :- module(test_zero_poll_accounting, []).
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/node_lifetime.pl', [with_owner_context/4]).
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/node_lifetime), [with_owner_context/4]).
 :- use_module(library(plunit)).
 
 probe :-

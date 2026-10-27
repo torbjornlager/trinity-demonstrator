@@ -7,9 +7,9 @@
     node without the distribution layer raises.
 */
 
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/isolation.pl').
-:- use_module('../../prolog/web_prolog/toplevel_actors.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/isolation)).
+:- use_module(library(web_prolog/toplevel_actors)).
 :- use_module(library(plunit)).
 :- use_module('toplevel_synch_tests.pl', []).
 

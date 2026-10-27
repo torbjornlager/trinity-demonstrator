@@ -1,7 +1,7 @@
 /* Exercise the exact self-contained SXML source served by the demonstrator. */
 :- module(service_request_example_tests, []).
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/statechart_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/statechart_actor)).
 :- use_module(library(plunit)).
 :- use_module(library(readutil)).
 :- use_module('../test_layout.pl').

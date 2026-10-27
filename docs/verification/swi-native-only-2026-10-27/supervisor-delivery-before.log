@@ -1,0 +1,70 @@
+% [1/14] supervisor_restar..c_sibling_and_retry ..... passed (0.064 sec)
+% [2-1/14] supervisor_restar..actual_failed_child .. **FAILED (0.019 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_restart_tests.pl:141:
+ERROR: [Thread main]     test supervisor_restart:automatic_failure_rolls_back_and_reports_actual_failed_child (1-th forall generator = member(one_for_one,[one_for_one,one_for_all,rest_for_one])): failed
+FAILED RECEIVE test_supervisor_restart:{down(actor(6),ref([38,125,199,94,240,37,118,109,13,223,58,173,3,153,70,230]),_7900)->true} [timeout(0),on_timeout(fail)]
+
+% [2-2/14] supervisor_restar..actual_failed_child .. **FAILED (0.023 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_restart_tests.pl:141:
+ERROR: [Thread main]     test supervisor_restart:automatic_failure_rolls_back_and_reports_actual_failed_child (2-th forall generator = member(one_for_all,[one_for_one,one_for_all,rest_for_one])): failed
+FAILED RECEIVE test_supervisor_restart:{down(actor(11),ref([49,203,144,250,146,155,217,27,98,54,2,242,196,16,106,47]),_11320)->true} [timeout(0),on_timeout(fail)]
+
+% [2-3/14] supervisor_restar..actual_failed_child .. **FAILED (0.025 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_restart_tests.pl:141:
+ERROR: [Thread main]     test supervisor_restart:automatic_failure_rolls_back_and_reports_actual_failed_child (3-th forall generator = member(rest_for_one,[one_for_one,one_for_all,rest_for_one])): failed
+FAILED RECEIVE test_supervisor_restart:{down(actor(17),ref([136,150,244,188,164,62,101,24,121,16,30,144,38,134,163,241]),_14746)->true} [timeout(0),on_timeout(fail)]
+
+% [3/14] supervisor_restar..sional_replacements ... **FAILED (0.024 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_restart_tests.pl:145:
+ERROR: [Thread main]     test supervisor_restart:group_monitor_failure_reclaims_live_provisional_replacements: failed
+FAILED RECEIVE test_supervisor_restart:{down(actor(23),ref([89,75,233,124,163,205,114,43,56,26,17,181,74,209,100,7]),_18470)->true} [timeout(0),on_timeout(fail)]
+
+% [4/14] supervisor_restar..and_brutal_shutdown ... **FAILED (0.121 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_restart_tests.pl:148:
+ERROR: [Thread main]     test supervisor_restart:automatic_failure_respects_numeric_and_brutal_shutdown: failed
+FAILED RECEIVE supervisor_startup:{down(actor(30),ref([21,36,141,27,123,239,208,224,78,226,215,33,97,184,35,21]),_5408)->true} [timeout(0.02),on_timeout(fail)]
+FAILED RECEIVE test_supervisor_restart:{down(actor(29),ref([123,123,21,117,204,170,114,105,134,57,90,201,120,114,245,161]),_8880)->true} [timeout(0),on_timeout(fail)]
+
+% [5/14] supervisor_restar..tops_other_children ... **FAILED (0.073 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_restart_tests.pl:151:
+ERROR: [Thread main]     test supervisor_restart:cleanup_error_preserves_restart_error_and_still_stops_other_children: failed
+FAILED RECEIVE test_supervisor_restart:{down(actor(34),ref([31,148,149,234,223,22,146,80,19,66,38,234,135,81,251,131]),_12628)->true} [timeout(0),on_timeout(fail)]
+
+% [6/14] supervisor_restar..atic_classification ..... passed (0.000 sec)
+% [7-1/14] supervisor_restar.._controls_propagate ... passed (0.000 sec)
+% [7-2/14] supervisor_restar.._controls_propagate ... passed (0.000 sec)
+% [8/14] supervisor_restar..application_monitor ..... passed (0.067 sec)
+% [9/14] supervisor_intens..and_strict_boundary ..... passed (0.000 sec)
+% [10-1/14] supervisor_intens..without_replacement .. **FAILED (0.019 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_intensity_tests.pl:88:
+ERROR: [Thread main]     test supervisor_intensity:zero_budget_stops_children_without_replacement (1-th forall generator = member(one_for_one,[one_for_one,one_for_all,rest_for_one])): failed
+FAILED RECEIVE test_supervisor_intensity:{down(actor(40),ref([5,235,33,30,132,143,24,141,164,161,16,99,33,228,30,0]),_10296)->true} [timeout(0),on_timeout(fail)]
+
+% [10-2/14] supervisor_intens..without_replacement .. **FAILED (0.018 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_intensity_tests.pl:88:
+ERROR: [Thread main]     test supervisor_intensity:zero_budget_stops_children_without_replacement (2-th forall generator = member(one_for_all,[one_for_one,one_for_all,rest_for_one])): failed
+FAILED RECEIVE test_supervisor_intensity:{down(actor(44),ref([18,239,195,200,139,240,173,19,44,214,9,173,241,219,19,68]),_8750)->true} [timeout(0),on_timeout(fail)]
+
+% [10-3/14] supervisor_intens..without_replacement .. **FAILED (0.019 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_intensity_tests.pl:88:
+ERROR: [Thread main]     test supervisor_intensity:zero_budget_stops_children_without_replacement (3-th forall generator = member(rest_for_one,[one_for_one,one_for_all,rest_for_one])): failed
+FAILED RECEIVE test_supervisor_intensity:{down(actor(48),ref([25,56,74,61,29,248,164,108,137,191,160,160,232,85,230,150]),_12170)->true} [timeout(0),on_timeout(fail)]
+
+% [11/14] supervisor_intens..rts_then_exhaustion .. **FAILED (0.027 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_intensity_tests.pl:92:
+ERROR: [Thread main]     test supervisor_intensity:exactly_two_restarts_then_exhaustion: failed
+FAILED RECEIVE test_supervisor_intensity:{down(actor(52),ref([252,157,82,34,233,57,145,155,220,9,47,166,144,20,254,252]),_15884)->true} [timeout(0),on_timeout(fail)]
+
+% [12/14] supervisor_intens..licies_are_honoured .. **FAILED (0.123 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_intensity_tests.pl:95:
+ERROR: [Thread main]     test supervisor_intensity:shutdown_policies_are_honoured: failed
+FAILED RECEIVE supervisor_startup:{down(actor(59),ref([53,46,156,12,223,76,154,53,151,17,208,237,179,35,217,15]),_14710)->true} [timeout(0.02),on_timeout(fail)]
+FAILED RECEIVE test_supervisor_intensity:{down(actor(58),ref([17,251,99,209,205,104,10,158,225,61,81,17,106,172,80,197]),_19608)->true} [timeout(0),on_timeout(fail)]
+
+% [13/14] supervisor_intens.._remaining_children .. **FAILED (0.070 sec)
+ERROR: [Thread main] /Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native/tests/tiers/supervisor_intensity_tests.pl:98:
+ERROR: [Thread main]     test supervisor_intensity:cleanup_error_preserves_shutdown_and_attempts_remaining_children: failed
+FAILED RECEIVE test_supervisor_intensity:{down(actor(62),ref([22,2,82,139,206,132,36,233,17,145,102,232,102,120,25,148]),_8456)->true} [timeout(0),on_timeout(fail)]
+
+% [14/14] supervisor_intens..me_mailbox_monitors .... passed (0.060 sec)
+ERROR: [Thread main] 12 tests failed

@@ -1,5 +1,5 @@
 :- module(test_zero_poll, []).
-:- use_module('../../prolog/web_prolog/actors.pl').
+:- use_module(library(web_prolog/actors)).
 :- use_module(library(plunit)).
 :- use_module(library(process)).
 :- use_module(library(readutil)).

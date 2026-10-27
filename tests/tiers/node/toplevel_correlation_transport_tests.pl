@@ -1,17 +1,17 @@
 :- module(test_toplevel_correlation_transport, []).
 :- op(200,xfx,@).
 
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl').
-:- use_module('../../../prolog/web_prolog/distribution.pl', []).
-:- use_module('../../../prolog/web_prolog/remote_protocol.pl', []).
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/toplevel_actors)).
+:- use_module(library(web_prolog/distribution), []).
+:- use_module(library(web_prolog/remote_protocol), []).
 :- use_module('multi_node_harness.pl').
 :- use_module(library(plunit)).
 :- use_module(library(process)).
 :- use_module(library(prolog_wrap)).
 :- use_module(library(http/http_client)).
 :- use_module(library(http/thread_httpd), [http_current_server/2]).
-:- use_module('../../../prolog/web_prolog/pid_utils.pl', []).
+:- use_module(library(web_prolog/pid_utils), []).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/websocket)).
 :- use_module(library(http/json)).
@@ -76,8 +76,8 @@ unsupported_request(next, Pid) :- toplevel_next_synch(Pid,_,[timeout(0)]).
 start_native_peer(Process, URL) :-
     pick_free_port(Port), format(atom(URL),'http://localhost:~w',[Port]),
     source_file(legacy_upgrade(_), ThisFile), file_directory_name(ThisFile, Dir),
-    absolute_file_name('../../../prolog/web_prolog/node.pl',NodeFile,
-                       [relative_to(Dir),access(read)]),
+    absolute_file_name(library(web_prolog/node),NodeFile,
+                       [relative_to(Dir),file_type(prolog),access(read)]),
     format(atom(Goal),'use_module(~q),node(~w,[profile(actor),auth(open)]),pid_utils:register_node_self(~q)',
            [NodeFile,Port,URL]),
     current_prolog_flag(executable, Exe),

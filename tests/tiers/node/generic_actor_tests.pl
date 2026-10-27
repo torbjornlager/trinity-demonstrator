@@ -3,15 +3,15 @@
 Profile, sandbox, and actor-module visibility tests for predicate generics.
 */
 
-:- use_module('../../../prolog/web_prolog/isolation.pl').
-:- use_module('../../../prolog/web_prolog/node_profile_policy.pl').
-:- use_module('../../../prolog/web_prolog/node_sandbox.pl').
-:- use_module('../../../prolog/web_prolog/node_execution_context.pl', [
+:- use_module(library(web_prolog/isolation)).
+:- use_module(library(web_prolog/node_profile_policy)).
+:- use_module(library(web_prolog/node_sandbox)).
+:- use_module(library(web_prolog/node_execution_context), [
     with_public_execution_profile/2,
     current_public_execution_profile/1
 ]).
-:- use_module('../../../prolog/web_prolog/parallel.pl', [parallel/1]).
-:- use_module('../../../prolog/web_prolog/first_solution.pl', [
+:- use_module(library(web_prolog/parallel), [parallel/1]).
+:- use_module(library(web_prolog/first_solution), [
     first_solution/2
 ]).
 :- use_module(library(plunit)).

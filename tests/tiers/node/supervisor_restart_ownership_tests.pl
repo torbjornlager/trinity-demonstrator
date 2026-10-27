@@ -1,6 +1,6 @@
 :- module(test_supervisor_restart_ownership, []).
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/node_lifetime.pl', [with_owner_context/4]).
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/node_lifetime), [with_owner_context/4]).
 :- use_module('../supervisor_restart_tests.pl', []).
 :- use_module('../supervisor_intensity_tests.pl', []).
 :- use_module(library(plunit)).

@@ -152,7 +152,7 @@ Main-thread sends and status synchronization use the same retirement boundary;
 status checks inspect the WASM query result's `success` field rather than the
 truthiness of its result object. Unrelated actor monitors are preserved.
 
-The [native transport implementation notes](../prolog/web_prolog/README.md#node-transport-implementation)
+The [native transport implementation notes](https://github.com/torbjornlager/swi-prolog-node/blob/main/prolog/web_prolog/README.md#node-transport-implementation)
 document wire envelopes, terminal acknowledgements, session replay and monitor
 reference serialization once. Browser connections offer `web-prolog-sync-v1`;
 an upgrade failure before opening can retry without a subprotocol for legacy
@@ -184,3 +184,6 @@ The source-fetch, worker/supervisor cleanup, naming, monitor and promise-store
 sections above record SWI-WASM implementation status. Browser-engine coverage,
 resource/lifetime guarantees and portable lifecycle contracts remain engineering
 and conformance questions, rather than conclusions implied by those repairs.
+
+The shared SXML schema is supplied by the pinned native dependency during
+`tools/setup_swi.py`; run browser tests through `tools/test.sh WASM` after setup.

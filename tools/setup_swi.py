@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prepare/check local pinned startup; never fetch, install or overwrite sources."""
 from pathlib import Path
-import argparse,hashlib,json,os,subprocess,sys
+import argparse,hashlib,json,os,shlex,subprocess,sys
 from pinned_swi import ROOT,validate,validate_payloads
 DEFAULT=ROOT/'.trinity/native-swi.json'
 
@@ -17,11 +17,17 @@ def check(state_file):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--native-root',type=Path)
-    p.add_argument('--state-file',type=Path,default=DEFAULT)
+    p.add_argument('--state-file',type=Path,default=Path(os.environ.get('WP_NATIVE_STATE',str(DEFAULT))))
     p.add_argument('--validate',action='store_true')
+    p.add_argument('--shell',action='store_true',help='validate and emit quoted test environment')
     a=p.parse_args()
     try:
         state_file=a.state_file.resolve()
+        if a.shell:
+            state=check(state_file)
+            for key,field in [('TRINITY_PINNED_SWI_ROOT','native_root'),('WP_ASSET_ROOT','asset_root'),('WP_WASM_SOURCE_DIR','wasm_root')]:
+                print(key+'='+shlex.quote(state[field]))
+            return
         if a.validate:
             print(json.dumps(check(state_file)));return
         if not a.native_root:raise ValueError('--native-root is required for setup')

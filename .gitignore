@@ -30,3 +30,7 @@ tests/logs/
 
 # Generated local native dependency setup and browser payloads
 .trinity/
+
+# Python tooling caches
+__pycache__/
+*.pyc

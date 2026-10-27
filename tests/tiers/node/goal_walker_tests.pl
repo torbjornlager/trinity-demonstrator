@@ -3,7 +3,7 @@
 Tests for goal_walker:walk_goal/2.
 */
 
-:- use_module('../../../prolog/web_prolog/goal_walker.pl').
+:- use_module(library(web_prolog/goal_walker)).
 :- use_module(library(plunit)).
 
 

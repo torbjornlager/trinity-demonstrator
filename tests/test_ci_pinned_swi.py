@@ -20,9 +20,12 @@ class PinnedCI(unittest.TestCase):
                 with self.assertRaises(ValueError):ci.checkout_outputs()
     def test_native_and_integration_tiers_use_external_checkout(self):
         rows=ci.plan(Path('/external/native'),Path('/assembled'),'/verified/swipl')
-        tiers=[r for r in rows if r[2][:2]==['bash','tools/test.sh'] and r[0]!='WASM']
+        tiers=[r for r in rows if r[2][:2]==['bash','tools/test.sh'] and r[1]==Path('/external/native')]
         self.assertEqual([r[0] for r in tiers],['LINT','T0','T1_NATIVE','T2','T3_NATIVE','T4_NATIVE','T5','T1_INTEGRATION','T3_INTEGRATION','T4_INTEGRATION'])
         self.assertTrue(all(r[1]==Path('/external/native') for r in tiers))
+        consumer=[r for r in rows if r[0].startswith('demonstrator-')]
+        self.assertEqual(len(consumer),11)
+        self.assertTrue(all(r[1]==ROOT for r in consumer))
         self.assertIn('pinned_swi_bootstrap:check_origins',rows[0][2][-3])
         equivalence=next(r for r in rows if r[0]=='browser-equivalence')
         self.assertIn('/external/native',equivalence[2]);self.assertIn('/assembled',equivalence[2])

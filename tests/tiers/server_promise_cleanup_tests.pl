@@ -1,7 +1,7 @@
 :- module(test_server_promise_cleanup, []).
 
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/server_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/server_actor)).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 

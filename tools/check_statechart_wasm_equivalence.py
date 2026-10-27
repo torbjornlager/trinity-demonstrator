@@ -77,10 +77,16 @@ def normalise(text: str, desktop: bool) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--native-root', type=Path, default=ROOT)
+    parser.add_argument('--native-root', type=Path)
     parser.add_argument('--wasm-dir', type=Path,
-                        default=ROOT / 'prolog/web_prolog/wasm')
+                        default=None)
     args = parser.parse_args()
+    if args.native_root is None or args.wasm_dir is None:
+        from setup_swi import check, DEFAULT
+        import os
+        state = check(Path(os.environ.get('WP_NATIVE_STATE', str(DEFAULT))))
+        args.native_root = args.native_root or Path(state['native_root'])
+        args.wasm_dir = args.wasm_dir or Path(state['wasm_root'])
     global DESKTOP, WASM, RUNTIME_DESKTOP, RUNTIME_WASM
     DESKTOP = args.native_root / 'prolog/web_prolog/statechart_exec.pl'
     RUNTIME_DESKTOP = args.native_root / 'prolog/web_prolog/statechart_runtime.pl'

@@ -7,7 +7,7 @@ Usage:
   `swipl load.pl`
 
 Prepare once with `python3 tools/setup_swi.py --native-root /path/to/swi-prolog-node`.
-`WP_NATIVE_MODE=legacy` explicitly selects the retained native copies.
+Only the pinned swi-prolog-node dependency is supported.
 
 Loads the full layered Web Prolog system (library(web_prolog)): actors,
 isolation, toplevel query actors, behaviours, distribution, rpc, and

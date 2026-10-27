@@ -1,15 +1,15 @@
 :- module(test_remote_named_creation, []).
 
-:- use_module('../../../prolog/web_prolog/actors.pl').
-:- use_module('../../../prolog/web_prolog/distribution.pl', []).
-:- use_module('../../../prolog/web_prolog/node_controller.pl', []).
-:- use_module('../../../prolog/web_prolog/node_execution_context.pl').
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl').
-:- use_module('../../../prolog/web_prolog/server_actor.pl').
-:- use_module('../../../prolog/web_prolog/supervisor_actor.pl').
-:- use_module('../../../prolog/web_prolog/statechart_actor.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/distribution), []).
+:- use_module(library(web_prolog/node_controller), []).
+:- use_module(library(web_prolog/node_execution_context)).
+:- use_module(library(web_prolog/toplevel_actors)).
+:- use_module(library(web_prolog/server_actor)).
+:- use_module(library(web_prolog/supervisor_actor)).
+:- use_module(library(web_prolog/statechart_actor)).
 :- use_module('multi_node_harness.pl').
-:- use_module('../../../prolog/web_prolog/node_ws.pl', []).
+:- use_module(library(web_prolog/node_ws), []).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 :- use_module(library(prolog_wrap)).

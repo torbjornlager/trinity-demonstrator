@@ -5,8 +5,8 @@
 :- op(800, xfx, !).
 :- use_module('../test_layout.pl').
 
-:- use_module('../../../prolog/web_prolog/node.pl').
-:- use_module('../../../prolog/web_prolog/node_auth.pl', [
+:- use_module(library(web_prolog/node)).
+:- use_module(library(web_prolog/node_auth), [
     auth_mode/1,
     normalize_auth_mode/2,
     principal_from_id/2,
@@ -17,23 +17,23 @@
     request_principal/2,
     set_dev_auth_config/2
 ]).
-:- use_module('../../../prolog/web_prolog/node_capabilities.pl', [
+:- use_module(library(web_prolog/node_capabilities), [
     capability_granted/2
 ]).
-:- use_module('../../../prolog/web_prolog/node_profile_policy.pl', [
+:- use_module(library(web_prolog/node_profile_policy), [
     profile_check_route/1,
     profile_check_goal/2,
     profile_check_source_text/3
 ]).
-:- use_module('../../../prolog/web_prolog/node_call_context.pl', [
+:- use_module(library(web_prolog/node_call_context), [
     parse_call_context/9,
     parse_call_options_context/9
 ]).
-:- use_module('../../../prolog/web_prolog/node_relation_policy.pl', [relation_check_call/3]).
-:- use_module('../../../prolog/web_prolog/node_principal_policy.pl', [normalize_principal_policies/2]).
-:- use_module('../../../prolog/web_prolog/node_startup_options.pl', [node_options/24]).
-:- use_module('../../../prolog/web_prolog/node_response.pl', [answer_to_json/2]).
-:- use_module('../../../prolog/web_prolog/node_sandbox.pl', [
+:- use_module(library(web_prolog/node_relation_policy), [relation_check_call/3]).
+:- use_module(library(web_prolog/node_principal_policy), [normalize_principal_policies/2]).
+:- use_module(library(web_prolog/node_startup_options), [node_options/24]).
+:- use_module(library(web_prolog/node_response), [answer_to_json/2]).
+:- use_module(library(web_prolog/node_sandbox), [
     sandbox_check_goal/2,
     sandbox_check_goal_in_module/3,
     sandbox_check_goal_with_source/4,
@@ -42,33 +42,33 @@
     sandbox_prepare_public_spawn/5,
     normalize_sandbox_mode/2
 ]).
-:- use_module('../../../prolog/web_prolog/dollar_expansion.pl', [
+:- use_module(library(web_prolog/dollar_expansion), [
     expand_dollar_vars/3,
     capture_answer_bindings/1,
     session_bindings/2,
     clear_session_bindings/1
 ]).
-:- use_module('../../../prolog/web_prolog/goal_walker.pl', [walk_goal/2]).
-:- use_module('../../../prolog/web_prolog/public_goal_guard.pl', [
+:- use_module(library(web_prolog/goal_walker), [walk_goal/2]).
+:- use_module(library(web_prolog/public_goal_guard), [
     rewrite_goal_if_needed/3,
     rewrite_source_text_if_needed/3
 ]).
-:- use_module('../../../prolog/web_prolog/node_session.pl', [cleanup_isotope_session/1]).
-:- use_module('../../../prolog/web_prolog/node_runtime_state.pl', [
+:- use_module(library(web_prolog/node_session), [cleanup_isotope_session/1]).
+:- use_module(library(web_prolog/node_runtime_state), [
     register_node_runtime/2,
     with_node_port_context/2,
     current_node_value/2,
     update_current_node_runtime/1
 ]).
-:- use_module('../../../prolog/web_prolog/node_execution_context.pl', [with_public_execution_profile/2]).
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl',
+:- use_module(library(web_prolog/node_execution_context), [with_public_execution_profile/2]).
+:- use_module(library(web_prolog/toplevel_actors),
               [toplevel_spawn/2, toplevel_call/3, toplevel_next/1,
                toplevel_call_synch/4, toplevel_next_synch/3, toplevel_halt/2]).
-:- use_module('../../../prolog/web_prolog/actor_api.pl', [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, make_id/1, op(200, xfx, @)]).
-:- use_module('../../../prolog/web_prolog/pid_utils.pl', [pid_local/2]).
-:- use_module('../../../prolog/web_prolog/statechart_actor.pl', [statechart_spawn/2]).
-:- use_module('../../../prolog/web_prolog/server_actor.pl', []).
-:- use_module('../../../prolog/web_prolog/supervisor_actor.pl', []).
+:- use_module(library(web_prolog/actor_api), [spawn/3, receive/2, send/2, exit/2, demonitor/1, self/1, self_node_url/1, make_id/1, op(200, xfx, @)]).
+:- use_module(library(web_prolog/pid_utils), [pid_local/2]).
+:- use_module(library(web_prolog/statechart_actor), [statechart_spawn/2]).
+:- use_module(library(web_prolog/server_actor), []).
+:- use_module(library(web_prolog/supervisor_actor), []).
 :- use_module('./node_resident_services.pl', [
     service_directory_file/1,
     start_counter_service/1,
@@ -5002,9 +5002,10 @@ test(statechart_executable_content_uses_node_shared_db_and_local_shadow) :-
     ).
 
 test(statechart_executable_content_uses_n5_shared_db_overlay) :-
+    absolute_file_name(library(web_prolog/shared_db), SharedDB, [file_type(prolog),access(read)]),
     test_asset_file('Deployment/shared_db_n5.pl',DBFile),
     with_node_server_options(
-        [ load_shared_db_file('prolog/web_prolog/shared_db.pl'),
+        [ load_shared_db_file(SharedDB),
           load_shared_db_file(DBFile)
         ],
         _URI,

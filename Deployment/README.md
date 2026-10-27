@@ -1,5 +1,27 @@
 # Deployment Bundle
 
+## Native dependency in container builds
+
+Both SWI Dockerfiles fetch the exact commit from `dependencies/swi-prolog-node.json`,
+validate it, and assemble the browser payloads before checking node startup.
+Python 3 and Git remain available in the image for startup validation. There is
+no in-tree native implementation or legacy build mode. SWI-Prolog is pinned to
+10.1.19, which includes the required protected-wait fix.
+
+For a private dependency, provide a read token as a BuildKit secret:
+
+```bash
+docker build --secret id=github_token,src=/path/to/read-token \
+  -f Deployment/Dockerfile -t web-prolog-node .
+```
+
+For Compose builds, supply the same `github_token` build secret through an
+owner-local Compose override, or prebuild the tagged images and start without
+`--build`. Credentials are never build arguments or persisted Git configuration.
+The existing Actions `SWI_NODE_READ_TOKEN` secret serves the same read-access role
+in CI. Missing dependency access fails the build rather than loading a fallback.
+
+
 This folder is the practical deployment for the public `elfenbenstornet.se`
 Web Prolog nodes: a **discovery hub**, four public demo nodes, one
 **SSO-gated production node**, and a local-only admin node. It is
@@ -281,8 +303,8 @@ an `n0.elfenbenstornet.se` vhost to the `Caddyfile` — a plain
 `n0` bakes `web/`, `prolog/`, and `examples/` into its image at build time
 (`Dockerfile.node`), so edits to the hub UI (`web/discovery-hub.html`), the
 registry service (`examples/services/discovery_hub.pl`,
-`examples/services/discovery_directory.pl`), or the node engine
-(`prolog/web_prolog/`) only go live after a **rebuild + recreate** — the
+`examples/services/discovery_directory.pl`), or the pinned node engine
+(`dependencies/swi-prolog-node.json`) only go live after a **rebuild + recreate** — the
 same command as first bring-up; `--build` is what matters:
 
 ```bash
@@ -521,7 +543,7 @@ The current deployment split is:
 - `shared_db_admin.pl`: local deployment facts for admin use
 
 This keeps the repo-level
-[`shared_db.pl`](../prolog/web_prolog/shared_db.pl)
+[`shared_db.pl`](https://github.com/torbjornlager/swi-prolog-node/blob/main/prolog/web_prolog/shared_db.pl)
 unchanged for non-deployment defaults.
 
 After editing any of the shared DB files, rebuild the node containers:

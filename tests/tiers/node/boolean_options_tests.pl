@@ -1,9 +1,9 @@
 % Language Booleans are atoms; transport fields have their own decoding.
 :- module(test_boolean_options, []).
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/actor_api.pl').
-:- use_module('../../../prolog/web_prolog/rpc.pl', []).
-:- use_module('../../../prolog/web_prolog/statechart_actor.pl').
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/actor_api)).
+:- use_module(library(web_prolog/rpc), []).
+:- use_module(library(web_prolog/statechart_actor)).
 :- use_module(library(plunit)).
 
 boolean_goal(link,V,spawn(true,_,[link(V)])).

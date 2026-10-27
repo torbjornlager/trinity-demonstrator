@@ -1,7 +1,7 @@
 :- module(test_sandbox_source_names, []).
 
-:- use_module('../../../prolog/web_prolog/node.pl', []).
-:- use_module('../../../prolog/web_prolog/node_sandbox.pl', []).
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/node_sandbox), []).
 :- use_module(library(modules)).
 :- use_module(library(settings)).
 :- use_module(library(plunit)).

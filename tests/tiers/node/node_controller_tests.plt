@@ -7,7 +7,7 @@
     starts serving real routing decisions.
 */
 
-:- use_module('../../../prolog/web_prolog/node_controller.pl').
+:- use_module(library(web_prolog/node_controller)).
 
 :- use_module(library(plunit)).
 

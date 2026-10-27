@@ -4,106 +4,18 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      pinned_native:
-        description: Run the pinned cross-repository SWI checks (requires dependency read access)
-        type: boolean
-        default: false
 
-# A newer push to the same ref supersedes in-flight runs, so they don't
-# pile up (and a hung run gets cancelled when the fix lands).
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      # Retained comparison path; pinned checks are a separate explicit job.
-      WP_NATIVE_MODE: legacy
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          # T5 archives the historical demonstrator-peer tag to run its
-          # cross-version interoperability peer.
-          fetch-depth: 0
-      # 10.1.19 includes the protected-wait fix required by receive handoff.
-      - uses: ./.github/actions/setup-swi
-      - name: Check CI process-group cleanup
-        run: python3 tests/test_ci_timeout.py
-      - name: Verify receive-handoff engine prerequisite
-        run: >-
-          python3 tools/ci_timeout.py 30 -- "$SWIPL" -f none -q
-          -s tests/tiers/receive_handoff_tests.pl
-          -g 'run_tests(receive_handoff)' -t halt
-      - name: Run tiered test suite
-        run: |
-          set -u
-          # Run each tier separately with its own timeout so a deadlocked
-          # receive/await surfaces as a fast, attributable failure instead
-          # of hanging the whole job to the runner limit. Every tier runs
-          # even if an earlier one fails, so one CI run shows the full
-          # picture. (Each invocation is a fresh swipl, as the layer-honesty
-          # assertions require.)
-          status=0
-          for tier in LINT T0 T1 T2 T3 T4 T5; do
-            echo "::group::Tier $tier"
-            if python3 tools/ci_timeout.py 360 -- ./tools/test.sh "$tier"; then
-              echo "Tier $tier OK"
-            else
-              code=$?
-              if [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; then
-                echo "::error::Tier $tier TIMED OUT (likely a deadlocked receive/await)"
-              else
-                echo "::error::Tier $tier FAILED (exit $code)"
-              fi
-              status=1
-            fi
-            echo "::endgroup::"
-          done
-          exit "$status"
-
-  wasm:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    env:
-      # Browser checks use retained local schema inputs; no private checkout.
-      WP_NATIVE_MODE: legacy
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-swi
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-      - name: Run existing WASM tier
-        shell: bash
-        run: |
-          set -euo pipefail
-          results="$RUNNER_TEMP/wasm-ci-results"
-          mkdir -p "$results"
-          printf 'Commit: %s\n' "$GITHUB_SHA" > "$results/versions.log"
-          node --version >> "$results/versions.log"
-          "$SWIPL" --version >> "$results/versions.log"
-          cat "$results/versions.log"
-          python3 tools/ci_timeout.py 360 -- bash tools/test.sh WASM 2>&1 | tee "$results/WASM.log"
-      - name: Preserve WASM results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: wasm-results
-          path: ${{ runner.temp }}/wasm-ci-results
-          if-no-files-found: warn
-
-  pinned-native:
-    if: github.event_name == 'workflow_dispatch' && inputs.pinned_native
-    runs-on: ubuntu-latest
     timeout-minutes: 40
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -118,16 +30,13 @@ jobs:
           repository: ${{ steps.native.outputs.repository }}
           ref: ${{ steps.native.outputs.revision }}
           path: .trinity/ci-native
-          # No access is provisioned here. A private dependency requires an
-          # owner-supplied read credential; absence fails checkout, not fallback.
           token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
           persist-credentials: false
-      # 10.1.19 includes the protected-wait fix required by receive handoff.
       - uses: ./.github/actions/setup-swi
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-      - name: Run pinned native and demonstrator integration checks
+      - name: Run pinned native, demonstrator and browser checks
         run: >-
           python3 tools/ci_pinned_swi.py
           --native-root "$GITHUB_WORKSPACE/.trinity/ci-native"
@@ -138,4 +47,41 @@ jobs:
         with:
           name: pinned-swi-results
           path: ${{ runner.temp }}/pinned-swi-results
+          if-no-files-found: warn
+
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Read exact native dependency pin
+        id: native
+        run: python3 tools/ci_pinned_swi.py --github-outputs "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.native.outputs.repository }}
+          ref: ${{ steps.native.outputs.revision }}
+          path: .trinity/ci-native
+          token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-swi
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Assemble browser sources from pinned schema
+        run: python3 tools/setup_swi.py --native-root .trinity/ci-native
+      - name: Run WASM tier
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wasm-ci-results"
+          python3 tools/ci_timeout.py 360 -- bash tools/test.sh WASM 2>&1 | tee "$RUNNER_TEMP/wasm-ci-results/WASM.log"
+      - name: Preserve WASM results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-results
+          path: ${{ runner.temp }}/wasm-ci-results
           if-no-files-found: warn

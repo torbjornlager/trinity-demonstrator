@@ -20,7 +20,7 @@
     composition — exactly what a production node runs.
 */
 
-:- use_module('../../prolog/web_prolog/node.pl').
+:- use_module(library(web_prolog/node)).
 :- use_module(library(plunit)).
 :- use_module(library(http/http_open)).
 :- use_module(library(http/http_client)).
@@ -116,7 +116,6 @@ tier_test_units([ lifetime_authority, node, public_goal_guard, boolean_options, 
 
 run_native :- run_partition(native).
 run_integration :- run_partition(integration).
-run_legacy_layout :- run_partition(legacy_layout).
 run_partition(Class) :-
     layer_honesty, tier_test_units(Units),
     partition_test_specs(Units,Class,Selected), run_tests(Selected).

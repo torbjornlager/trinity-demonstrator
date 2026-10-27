@@ -1,4 +1,4 @@
-:- module(demonstrator_startup,[load_native/1]).
+:- module(demonstrator_startup,[load_native/1,configure_native/0]).
 :- use_module(library(process)).
 :- use_module(library(readutil)).
 :- use_module(library(http/json)).
@@ -6,21 +6,23 @@
 :- dynamic root/1.
 :- prolog_load_context(directory,Root),assertz(root(Root)).
 
-load_native(Into) :-
-    (getenv('WP_NATIVE_MODE',Mode0) -> Mode=Mode0 ; Mode=pinned),
-    ( Mode==legacy -> load_legacy(Into)
-    ; Mode==pinned -> load_pinned
-    ; throw(error(domain_error(native_startup_mode,Mode),_)) ).
+% A former legacy selection is rejected explicitly; it cannot silently select
+% another implementation after removal of the retained copy.
+load_native(_Into) :-
+    check_mode,
+    configure_native,
+    root(Root),directory_file_path(Root,'tools/pinned_swi_bootstrap.pl',Bootstrap),
+    use_module(Bootstrap,[]),pinned_swi_bootstrap:check_origins.
 
-load_legacy(Into) :-
-    root(Root),directory_file_path(Root,prolog,Lib),
-    directory_file_path(Lib,'web_prolog.pl',Entry),
-    asserta(user:file_search_path(library,Lib)),
-    Into:use_module(Entry),
-    module_property(web_prolog,file(Loaded)),
-    (same_file(Loaded,Entry) -> true ; throw(error(native_origin_mismatch(web_prolog,Loaded,Entry),_))).
+check_mode :-
+    (getenv('WP_NATIVE_MODE',Mode), Mode \== pinned
+    -> throw(error(domain_error(native_startup_mode,Mode),
+                   context(load_native/1,'Only the pinned swi-prolog-node dependency is supported')))
+    ; true).
 
-load_pinned :-
+% Configure library lookup without loading upper layers, for tiered tests.
+configure_native :-
+    check_mode,
     root(Root),directory_file_path(Root,'tools/setup_swi.py',Validator),
     (getenv('WP_NATIVE_STATE',State0),State0\=='' -> absolute_file_name(State0,State)
     ; directory_file_path(Root,'.trinity/native-swi.json',State)),
@@ -33,5 +35,5 @@ load_pinned :-
     ; throw(error(native_dependency_setup(Diagnostic),context(load_native/1,'Pinned setup failed before node startup')))),
     setenv('TRINITY_PINNED_SWI_ROOT',Config.native_root),
     setenv('WP_ASSET_ROOT',Config.asset_root),setenv('WP_WASM_SOURCE_DIR',Config.wasm_root),
-    directory_file_path(Root,'tools/pinned_swi_bootstrap.pl',Bootstrap),
-    use_module(Bootstrap,[]),pinned_swi_bootstrap:check_origins.
+    directory_file_path(Config.native_root,prolog,Lib),
+    asserta(user:file_search_path(library,Lib)).

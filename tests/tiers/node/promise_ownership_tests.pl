@@ -1,11 +1,11 @@
 :- module(test_promise_ownership, []).
 
-:- use_module('../../../prolog/web_prolog/rpc.pl').
-:- use_module('../../../prolog/web_prolog/actors.pl', []).
-:- use_module('../../../prolog/web_prolog/node_execution_context.pl').
-:- use_module('../../../prolog/web_prolog/node_runtime_state.pl', [with_node_port_context/2]).
-:- use_module('../../../prolog/web_prolog/node_lifetime.pl', [with_owner_context/4]).
-:- use_module('../../../prolog/web_prolog/node_session.pl', []).
+:- use_module(library(web_prolog/rpc)).
+:- use_module(library(web_prolog/actors), []).
+:- use_module(library(web_prolog/node_execution_context)).
+:- use_module(library(web_prolog/node_runtime_state), [with_node_port_context/2]).
+:- use_module(library(web_prolog/node_lifetime), [with_owner_context/4]).
+:- use_module(library(web_prolog/node_session), []).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 :- use_module(library(prolog_wrap)).

@@ -1,0 +1,45 @@
+{
+  "native_revision": "470f20b07f3157b07c8861d10610f2b73cd7efd8",
+  "checks": [
+    {
+      "path": "/healthz",
+      "status": 200,
+      "bytes": 15
+    },
+    {
+      "path": "/version",
+      "status": 200,
+      "bytes": 115
+    },
+    {
+      "path": "/portal",
+      "status": 200,
+      "bytes": 742853
+    },
+    {
+      "path": "/manual",
+      "status": 200,
+      "bytes": 127638
+    },
+    {
+      "path": "/actor-profile-tutorial",
+      "status": 200,
+      "bytes": 167367
+    },
+    {
+      "path": "/wasm/sxml_schema.pl",
+      "status": 200,
+      "bytes": 12010
+    },
+    {
+      "path": "/wasm/statechart_wasm.pl",
+      "status": 200,
+      "bytes": 16505
+    },
+    {
+      "path": "/call",
+      "status": 200,
+      "bytes": 22
+    }
+  ]
+}

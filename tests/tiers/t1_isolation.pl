@@ -15,8 +15,8 @@
         prepare_goal/3 rewriting.
 */
 
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/isolation.pl').
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/isolation)).
 :- use_module(library(plunit)).
 :- use_module(test_layout).
 :- use_module('spawn_options_tests.pl', []).
@@ -39,7 +39,6 @@ tier_test_units([ t1_isolation,
 
 run_native :- run_partition(native).
 run_integration :- run_partition(integration).
-run_legacy_layout :- run_partition(legacy_layout).
 run_partition(Class) :-
     layer_honesty, tier_test_units(Units),
     partition_test_specs(Units,Class,Selected), run_tests(Selected), ensure_mailbox_empty.

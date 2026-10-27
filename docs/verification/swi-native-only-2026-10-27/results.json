@@ -1,0 +1,155 @@
+[
+  {
+    "label": "origin-audit",
+    "exit_code": 0,
+    "seconds": 0.398
+  },
+  {
+    "label": "LINT",
+    "exit_code": 0,
+    "seconds": 0.133
+  },
+  {
+    "label": "T0",
+    "exit_code": 0,
+    "seconds": 7.18
+  },
+  {
+    "label": "T1_NATIVE",
+    "exit_code": 0,
+    "seconds": 0.609
+  },
+  {
+    "label": "T2",
+    "exit_code": 0,
+    "seconds": 7.839
+  },
+  {
+    "label": "T3_NATIVE",
+    "exit_code": 0,
+    "seconds": 36.836
+  },
+  {
+    "label": "T4_NATIVE",
+    "exit_code": 0,
+    "seconds": 51.44
+  },
+  {
+    "label": "T5",
+    "exit_code": 0,
+    "seconds": 1.261
+  },
+  {
+    "label": "T1_INTEGRATION",
+    "exit_code": 0,
+    "seconds": 0.188
+  },
+  {
+    "label": "T3_INTEGRATION",
+    "exit_code": 0,
+    "seconds": 4.227
+  },
+  {
+    "label": "T4_INTEGRATION",
+    "exit_code": 0,
+    "seconds": 1.693
+  },
+  {
+    "label": "demonstrator-LINT",
+    "exit_code": 0,
+    "seconds": 0.233
+  },
+  {
+    "label": "demonstrator-T0",
+    "exit_code": 0,
+    "seconds": 7.702
+  },
+  {
+    "label": "demonstrator-T1",
+    "exit_code": 0,
+    "seconds": 0.718
+  },
+  {
+    "label": "demonstrator-T2",
+    "exit_code": 0,
+    "seconds": 7.899
+  },
+  {
+    "label": "demonstrator-T3",
+    "exit_code": 0,
+    "seconds": 40.921,
+    "initial_exit_code": 1,
+    "retry": "consumer-T3-recheck.log",
+    "note": "Identical unmodified tier passed in a fresh process after a one-off sgml autoload error"
+  },
+  {
+    "label": "demonstrator-T4",
+    "exit_code": 0,
+    "seconds": 53.377
+  },
+  {
+    "label": "demonstrator-T5",
+    "exit_code": 0,
+    "seconds": 1.433
+  },
+  {
+    "label": "demonstrator-SERVICE_TEXT",
+    "exit_code": 0,
+    "seconds": 0.727
+  },
+  {
+    "label": "demonstrator-MODEL",
+    "exit_code": 0,
+    "seconds": 0.613
+  },
+  {
+    "label": "demonstrator-MODEL_SXML",
+    "exit_code": 0,
+    "seconds": 0.675
+  },
+  {
+    "label": "demonstrator-JEV",
+    "exit_code": 0,
+    "seconds": 2.351
+  },
+  {
+    "label": "default-startup-regressions",
+    "exit_code": 0,
+    "seconds": 6.575
+  },
+  {
+    "label": "pin-regressions",
+    "exit_code": 0,
+    "seconds": 1.765
+  },
+  {
+    "label": "ci-runner-regressions",
+    "exit_code": 0,
+    "seconds": 0.24
+  },
+  {
+    "label": "packaging-regressions",
+    "exit_code": 0,
+    "seconds": 0.242
+  },
+  {
+    "label": "watchdog-regressions",
+    "exit_code": 0,
+    "seconds": 2.577
+  },
+  {
+    "label": "fetch-regressions",
+    "exit_code": 0,
+    "seconds": 0.674
+  },
+  {
+    "label": "browser-equivalence",
+    "exit_code": 0,
+    "seconds": 0.038
+  },
+  {
+    "label": "WASM",
+    "exit_code": 0,
+    "seconds": 181.846
+  }
+]

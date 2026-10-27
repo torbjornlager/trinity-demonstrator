@@ -3,19 +3,19 @@
 /** <module> Explicit test ownership for a native-only checkout
 
 All existing tests stay in their units. Native and integration selections are
-exhaustive, with two existing colocated-layout compatibility tests kept as an
-explicit third selection. Full tiers continue to execute the original lists.
+exhaustive. Colocated native/browser layout checks were retired with the
+legacy implementation; asset relocation checks remain in the node_assets unit.
 */
 :- use_module(library(plunit), []).
 :- use_module(library(lists), [member/2]).
 
 partition_test_specs(Units,Class,Specs) :-
-    memberchk(Class,[native,integration,legacy_layout]),
+    memberchk(Class,[native,integration]),
     forall(member(Unit,Units),
            (plunit:current_test_unit(Unit,_) -> true
             ;throw(error(existence_error(test_unit,Unit),_)))),
     % A stale classification must fail loudly rather than silently lose a test.
-    forall(((external_test(Unit,Name);legacy_test(Unit,Name)),memberchk(Unit,Units)),
+    forall((external_test(Unit,Name),memberchk(Unit,Units)),
            (plunit:current_test(Unit,Name,_,_,_) -> true
             ;throw(error(existence_error(classified_test,Unit:Name),_)))),
     findall(Unit:Names,
@@ -24,8 +24,7 @@ partition_test_specs(Units,Class,Specs) :-
                        test_class(Unit,Name,Class)),Names),Names\==[]),Specs).
 
 test_class(Unit,Name,Class) :-
-    (legacy_test(Unit,Name) -> Class=legacy_layout
-    ;external_unit(Unit) -> Class=integration
+    (external_unit(Unit) -> Class=integration
     ;external_test(Unit,Name) -> Class=integration
     ;Class=native).
 
@@ -52,5 +51,3 @@ external_test(node,node_resident_counter_service_exposes_shared_state).
 external_test(node,advertisement_does_not_create_a_live_service).
 external_test(node,node_resident_pubsub_service_coordinates_clients).
 external_test(node,public_actor_client_sees_service_as_sendable_but_not_client_registered).
-legacy_test(node_assets,default_resolvers_preserve_checkout_paths).
-legacy_test(node_assets,default_root_is_independent_of_working_directory).

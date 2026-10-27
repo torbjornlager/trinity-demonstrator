@@ -18,6 +18,9 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..", "..");
+const WASM_DIR = process.env.WP_WASM_SOURCE_DIR;
+const NATIVE_ROOT = process.env.TRINITY_PINNED_SWI_ROOT;
+if (!WASM_DIR || !NATIVE_ROOT) throw new Error("Run through tools/test.sh with pinned dependency setup");
 const PID = "1234567890";
 const QPID = PID + "@localhost";
 const CLIENT = "9999999999";
@@ -55,7 +58,7 @@ function bootWorker() {
     global.SWIPL = require(path.join(ROOT, "web", "swipl-bundle.js"));
   };
   global.fetch = async function(url) {
-    const file = path.join(ROOT, "prolog", "web_prolog", String(url).replace(/^\//, ""));
+    const file = path.join(WASM_DIR, path.basename(String(url)));
     const text = fs.readFileSync(file, "utf8");
     return { ok: true, text: async function() { return text; } };
   };
@@ -185,7 +188,7 @@ function scopedWorkerCoordinator(W, owner = PID) {
         global.window=global.self;
         global.self.startupTestReject=()=>Promise.reject(new Error('startup_js_original'));
         global.importScripts=()=>{global.SWIPL=require(path.join(root,'web/swipl-bundle.js'));};
-        global.fetch=async url=>({ok:true,text:async()=>fs.readFileSync(path.join(root,'prolog/web_prolog',String(url).replace(/^\\//,'')),'utf8')});
+        global.fetch=async url=>({ok:true,text:async()=>fs.readFileSync(path.join(process.env.WP_WASM_SOURCE_DIR,path.basename(String(url))),'utf8')});
         (0,eval)(fs.readFileSync(path.join(root,'web/swi_wasm_actor_worker.js'),'utf8'));
         parentPort.on('message',data=>global.self.onmessage({data}));
       `;
@@ -562,7 +565,7 @@ function wrapperWorkerReplies(W) {
 async function loadCompatibilityStatecharts(engine) {
   engine.FS.mkdir("/wasm");
   for(const name of ["sxml_schema.pl","statechart_wasm_runtime.pl","statechart_wasm_model.pl","statechart_wasm_exec.pl","statechart_wasm.pl"])
-    engine.FS.writeFile("/wasm/"+name,fs.readFileSync(path.join(ROOT,"prolog/web_prolog/wasm",name),"utf8"));
+    engine.FS.writeFile("/wasm/"+name,fs.readFileSync(path.join(WASM_DIR,name),"utf8"));
   return !!engine.prolog.query("use_module('/wasm/statechart_wasm.pl')").once();
 }
 
@@ -2730,7 +2733,7 @@ const scenarios = {
   async remote_monitor_reference_wire(W, check) {
     // Feed actual native response JSON into the unchanged browser matcher.
     const node="http://monitor.test:3053",pid="123@'"+node+"'";
-    const responseFile=path.join(ROOT,"prolog/web_prolog/node_response.pl").replace(/'/g,"''");
+    const responseFile=path.join(NATIVE_ROOT,"prolog/web_prolog/node_response.pl").replace(/'/g,"''");
     const goal="use_module('"+responseFile+"'),node_runtime_state:register_node_runtime(-77124,_{url:'"+node+"'}),node_runtime_state:with_node_port_context(-77124,findall(JSON,(member(Ref,[@(123,'"+node+"'),456,9007199254740993]),node_response:answer_to_json(down(@(123,'"+node+"'),Ref,true),JSON)),Frames)),http_json:atom_json_dict(Text,Frames,[]),writeln(Text)";
     const result=spawnSync(process.env.SWIPL||"swipl",["-q","-g",goal,"-t","halt"],{encoding:"utf8",timeout:10000});
     if(result.status!==0)throw new Error("native reference fixture failed: "+(result.stderr||result.error));

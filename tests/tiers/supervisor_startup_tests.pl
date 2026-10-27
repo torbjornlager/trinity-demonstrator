@@ -1,7 +1,7 @@
 :- module(test_supervisor_startup, []).
-:- use_module('../../prolog/web_prolog/actors.pl').
-:- use_module('../../prolog/web_prolog/supervisor_actor.pl').
-:- use_module('../../prolog/web_prolog/supervisor_startup.pl', []).
+:- use_module(library(web_prolog/actors)).
+:- use_module(library(web_prolog/supervisor_actor)).
+:- use_module(library(web_prolog/supervisor_startup), []).
 :- use_module(library(plunit)).
 :- use_module(library(gensym)).
 

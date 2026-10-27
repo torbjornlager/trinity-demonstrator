@@ -49,8 +49,8 @@ Each node's URL is stored under the global variable `node_url_<Tag>`
 read it inside the body.
 */
 
-:- use_module('../../../prolog/web_prolog/actor_api.pl').
-:- use_module('../../../prolog/web_prolog/node.pl').
+:- use_module(library(web_prolog/actor_api)).
+:- use_module(library(web_prolog/node)).
 :- use_module(library(socket)).
 :- use_module(library(http/thread_httpd), [http_stop_server/2]).
 :- use_module(library(http/http_client), [http_get/3]).

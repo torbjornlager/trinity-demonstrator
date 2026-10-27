@@ -1,5 +1,5 @@
 :- module(test_receive_handoff, []).
-:- use_module('../../prolog/web_prolog/actors.pl').
+:- use_module(library(web_prolog/actors)).
 :- use_module(library(plunit)).
 :- use_module(library(prolog_wrap)).
 :- use_module(library(time)).

@@ -8,8 +8,8 @@
     format so the standardization is not silently reverted.
 */
 
-:- use_module('../../../prolog/web_prolog/node_response.pl', [answer_to_json/2]).
-:- use_module('../../../prolog/web_prolog/actor_api.pl', [op(200, xfx, @)]).
+:- use_module(library(web_prolog/node_response), [answer_to_json/2]).
+:- use_module(library(web_prolog/actor_api), [op(200, xfx, @)]).
 
 :- use_module(library(plunit)).
 

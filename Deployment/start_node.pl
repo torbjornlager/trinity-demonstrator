@@ -256,8 +256,7 @@ emit_part(Atom) :- format("~w", [Atom]).
 
 %!  load_web_prolog is det.
 %
-% Same selection as load.pl. Docker/CI explicitly select legacy until their
-% dependency assembly is migrated; ordinary local startup defaults to pinned.
+% Same pinned dependency as load.pl, including in Docker and CI.
 :- dynamic script_dir/1.
 :- prolog_load_context(directory,D),asserta(script_dir(D)).
 load_web_prolog :-

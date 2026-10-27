@@ -7,9 +7,9 @@
           ]).
 
 :- use_module(library(plunit)).
-:- use_module('../../../prolog/web_prolog/statechart_actor.pl').
-:- use_module('../../../prolog/web_prolog/composition.pl', []).
-:- use_module('../../../prolog/web_prolog/actors.pl', [
+:- use_module(library(web_prolog/statechart_actor)).
+:- use_module(library(web_prolog/composition), []).
+:- use_module(library(web_prolog/actors), [
     spawn/2,
     spawn/3,
     self/1,
@@ -22,7 +22,7 @@
     unregister/1,
     exit/2
 ]).
-:- use_module('../../../prolog/web_prolog/toplevel_actors.pl', [
+:- use_module(library(web_prolog/toplevel_actors), [
     toplevel_spawn/2,
     toplevel_call/3
 ]).

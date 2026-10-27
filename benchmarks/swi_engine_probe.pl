@@ -1,6 +1,8 @@
 :- module(swi_engine_probe, [main/0]).
 
-:- use_module('../prolog/web_prolog/actors').
+:- use_module('../demonstrator_startup.pl', []).
+:- demonstrator_startup:configure_native.
+:- use_module(library(web_prolog/actors)).
 :- use_module(library(http/json)).
 :- use_module(library(error)).
 

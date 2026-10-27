@@ -1,8 +1,10 @@
 :- module(io_ack_probe, [main/0]).
 
-:- use_module('../prolog/web_prolog/node', []).
-:- use_module('../prolog/web_prolog/distribution', []).
-:- use_module('../prolog/web_prolog/remote_protocol', []).
+:- use_module('../demonstrator_startup.pl', []).
+:- demonstrator_startup:configure_native.
+:- use_module(library(web_prolog/node), []).
+:- use_module(library(web_prolog/distribution), []).
+:- use_module(library(web_prolog/remote_protocol), []).
 :- use_module(library(http/json)).
 :- use_module(library(lists)).
 

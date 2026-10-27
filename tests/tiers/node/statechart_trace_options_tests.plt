@@ -6,7 +6,7 @@
       - Both keys absent => default false.
 */
 
-:- use_module('../../../prolog/web_prolog/node_isotope_options.pl').
+:- use_module(library(web_prolog/node_isotope_options)).
 
 :- use_module(library(plunit)).
 

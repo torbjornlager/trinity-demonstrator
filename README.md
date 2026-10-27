@@ -7,14 +7,12 @@ native SWI node is supplied by the separate
 The native SWI pack remains named `web_prolog`, with the existing
 `library(web_prolog)` imports.
 
-**Status: pre-release.** The layered restructuring is complete through
-the node layer. Normal local startup loads the pinned `swi-prolog-node`
-dependency as `library(web_prolog)`; `prolog/web_prolog/` remains as an explicit
-legacy/test copy during extraction. The demonstrator's conformance suite has
-been fully relocated into the `T0`–`T5` tiers under `tests/tiers/`, so the
-original in-tree `src/` copy has been removed. The migration plan — layer
-map, hook inventory, conformance strategy — is in
-[docs/LAYERED_REAL_NODE_PLAN.md](docs/LAYERED_REAL_NODE_PLAN.md).
+**Status: pre-release.** The native SWI implementation is maintained only in
+`swi-prolog-node`. This repository contains the demonstrator assets, browser-specific
+Prolog sources, application examples and integration tests. Local startup, CI and
+container builds all require the exact native revision in
+[`dependencies/swi-prolog-node.json`](dependencies/swi-prolog-node.json).
+There is no in-tree native implementation or legacy startup mode.
 
 ## Documentation
 
@@ -22,9 +20,8 @@ The [Web Prolog language manual](web/manual.html) is the single shared API
 reference for native SWI, Trealla and SWI-WASM. Runtime differences remain
 explicit there. This README covers demonstrator setup and integration.
 The [native repository README](https://github.com/torbjornlager/swi-prolog-node/blob/main/README.md)
-covers standalone native loading and tests. The retained
-[layered implementation guide](prolog/web_prolog/README.md) documents the
-compatibility copy and its wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
+covers standalone native loading and tests. The [native implementation guide](https://github.com/torbjornlager/swi-prolog-node/blob/main/prolog/web_prolog/README.md)
+documents the implementation and its wire protocols. The [SWI-WASM runtime guide](web/README.md) explains browser
 coordination, and the [Trealla runtime guide](https://github.com/torbjornlager/trealla-port/blob/main/README.md)
 covers that port. Runtime guides do not define separate versions of the language.
 
@@ -75,16 +72,21 @@ revalidate setup before node startup, including from another working directory.
 Missing setup, changed native files or payload drift fail without a local-copy
 fallback. Rerun setup after updating the pin or browser sources.
 
-To explicitly use the retained native copies without setup:
+`WP_NATIVE_STATE` can name an alternate generated setup JSON file. Setup validates
+the exact native revision and clean runtime sources, and assembles browser payloads
+using the dependency's shared SXML schema. Missing setup or source/payload drift
+fails before a node starts. `WP_NATIVE_MODE=legacy` is rejected.
+
+If you need a fresh checkout at the recorded pin, fetch it explicitly before setup:
 
 ```bash
-WP_NATIVE_MODE=legacy swipl load.pl
+python3 tools/fetch_swi.py --destination .trinity/native
+python3 tools/setup_swi.py --native-root .trinity/native
+swipl load.pl
 ```
 
-`WP_NATIVE_STATE` can name an alternate generated setup JSON file. Automatic CI
-and the existing Dockerfiles retain legacy mode. CI also provides an explicit
-pinned-dependency job, described below. No running node or durable launcher is
-switched by setup.
+Fetching requires read access to the native repository. An existing checkout is
+never overwritten; using a separate checkout avoids changing your development branch.
 
 ```prolog
 ?- node(3060).
@@ -104,96 +106,40 @@ Then try:
 - the stateless API:
   `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 
-### Automatic browser CI
+### Continuous integration
 
-The separate `CI / wasm` job runs on pushes and pull requests (and manual workflow
-runs), independently of native test jobs. It uses SWI-Prolog 10.1.19 and Node.js
-22 to run the existing `bash tools/test.sh WASM` tier without changing assertions.
-That tier covers the shared statechart checks, Worker/coordinator smoke tests and
-real-engine semantic contracts for both Worker and compatibility main-thread mode,
-including character-list reading and output ordering. It does not replace UI tests
-in an actual browser.
+Both `CI / test` and `CI / wasm` check out the exact native dependency on pushes,
+pull requests and manual runs. The main job runs the dependency's native and
+external-asset integration tiers, this repository's tiered regression suite,
+startup/pin/packaging regressions, a module-origin audit and browser checks. The
+separate WASM job provides independent browser-runtime feedback. Both use the
+checksum-pinned official SWI-Prolog 10.1.19 release and Node.js 22.
 
-The job uses retained local schema inputs with `WP_NATIVE_MODE=legacy`; it needs
-no private-repository checkout or credential. The existing 360-second process-group
-watchdog bounds the tier. Shell `pipefail` preserves failures through log capture,
-and an always-run artifact step retains `WASM.log` and the commit/engine versions
-as `wasm-results`. The optional external pinned-native job remains separate.
-See [the browser CI verification record](docs/verification/automatic-wasm-ci-2026-10-25/REPORT.md).
+Checks run in fresh processes with bounded process-group watchdogs. Logs and results
+are uploaded even after failure. A private native repository requires the existing
+owner-provided `SWI_NODE_READ_TOKEN` Actions secret; the default workflow token does
+not grant cross-repository access. A failed dependency checkout fails CI without
+substituting another implementation.
 
-### Pinned native CI checks
-
-All CI jobs build the checksum-pinned official SWI-Prolog **10.1.19** source
-release through `.github/actions/setup-swi`, in the disposable runner directory.
-They verify the version and required PCRE, XML, HTTP, SSL and crypto libraries.
-The automatic legacy job checks the receive-handoff prerequisite before its
-unchanged native tiers. Its 360-second tier watchdog terminates the entire
-process group after a bounded grace period, including children whose shell has
-already exited. See [the CI engine verification record](docs/verification/swi-ci-10.1.19-2026-10-25/REPORT.md).
-Changing this CI selection does not update a developer's installed engine or
-restart a node. Updating the release requires updating and verifying the version
-and source SHA-256 together in the composite action.
-
-
-The `CI` workflow preserves its existing push/pull-request legacy job. Its
-manual **Run workflow** form additionally offers `pinned_native`, defaulting to
-false. Selecting it checks out the exact SHA from
-`dependencies/swi-prolog-node.json`, then runs native tiers from that checkout,
-external-asset integration tiers, startup/pin regressions, a loaded-module origin
-audit, browser equivalence and the WASM tier. Each check retains a 360-second
-outer watchdog; failures are recorded while subsequent checks continue. The job
-uploads logs, provenance and individual results even after check failures.
-
-The native repository is currently private. Its checkout requires an
-owner-provided `SWI_NODE_READ_TOKEN` Actions secret with read access to that
-repository; the normal workflow token is used when no such secret exists and
-does not itself grant cross-repository access. No credential, permission or
-repository visibility is configured by this integration. Without access, the
-selected job fails at checkout; it never substitutes retained sources. The job
-is not yet an automatic cross-repository acceptance gate. The installed engine
-must also meet the receive-adapter prerequisite stated above.
-
-To run the same checks locally against an existing checkout and verified engine:
+Run the complete CI boundary locally with an existing pinned checkout:
 
 ```bash
-python3 tools/ci_pinned_swi.py --native-root /path/to/swi-prolog-node \
+python3 tools/ci_pinned_swi.py --native-root /path/to/pinned/swi-prolog-node \
   --swipl /path/to/verified/swipl --output /fresh/path/pinned-ci-results
 ```
 
-The output directory must be new. Setup and assembled browser payloads live
-inside it, leaving the ordinary `.trinity/native-swi.json` untouched. Node.js
-must be on PATH for browser checks. This runner never fetches repositories,
-installs engines or restarts live nodes.
+The output directory must be new. The runner records setup there and leaves the
+ordinary local setup untouched. It does not fetch repositories or restart live nodes.
+Node.js must be on PATH for browser checks.
 
 ## Demonstrator asset locations
 
-The native node can serve a demonstrator tree from a separate location while
-keeping the existing portal, tutorial, manual, example and browser-runtime URLs:
-
-```bash
-WP_NATIVE_MODE=legacy WP_ASSET_ROOT=/path/to/trinity-demonstrator swipl load.pl
-```
-
-In legacy mode, `WP_WASM_SOURCE_DIR` optionally selects the directory of the six browser Prolog
-sources. Pinned mode instead uses this demonstrator and the validated assembled
-payload directory recorded by setup. Without that override, an explicit asset root uses its current
-`prolog/web_prolog/wasm/` layout. With neither variable set, all lookups retain
-the existing checkout defaults. Explicit locations do not fall back to another
-checkout when a file is missing. These are process-wide operator settings;
-all nodes in one SWI process share them.
-
-The [native extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) records file
-ownership, dependencies, configuration settings and the remaining extraction
-steps. The native repository is privately published; default local startup now
-uses its pinned revision, while duplicate removal and deployment migration remain
-separate steps.
-
-The split-layout rehearsal in `tools/check_swi_split_layout.py` builds disposable
-native and demonstrator-asset trees, then checks native APIs, external frontend
-integration, selection coverage and the original full T4. See the extraction
-map for its file manifest and commands. `tools/test.sh` additionally accepts
-`T1_NATIVE`, `T3_NATIVE`, `T4_NATIVE`, their `_INTEGRATION` counterparts, and
-`T4_LEGACY_LAYOUT`; ordinary full-tier invocations retain all existing tests.
+Startup configures `WP_ASSET_ROOT` as this demonstrator checkout and
+`WP_WASM_SOURCE_DIR` as the validated payload directory from setup. The five
+browser-specific Prolog sources remain under `prolog/web_prolog/wasm/`; the sixth
+file, `sxml_schema.pl`, is copied from the pinned native package during assembly.
+No second native schema is maintained here. Portal, tutorial, manual, example and
+browser-runtime URLs remain unchanged.
 
 ## Deploying as a production node
 
@@ -216,8 +162,8 @@ The full topology, environment setup, operational commands, and SSO-gated
 That guide also contains an opt-in, immediately reversible Trealla N5
 override for private interoperability testing.
 
-Native routing and transport details are recorded in the retained
-[runtime integration notes](prolog/web_prolog/README.md#native-integration-notes).
+Native routing and transport details are recorded in the
+[runtime integration notes](https://github.com/torbjornlager/swi-prolog-node/blob/main/prolog/web_prolog/README.md#native-integration-notes).
 
 Validate a configuration without starting the server:
 
@@ -227,23 +173,21 @@ WP_CHECK=1 WP_PROFILE=actor WP_AUTH=private swipl Deployment/start_node.pl
 
 ## Maintenance and tests
 
-For future fixes, dependency updates and compatibility-copy handling, follow
-[the native maintenance guide](docs/SWI_NODE_MAINTENANCE.md). Native implementation
-changes and native regression tests belong in `swi-prolog-node`; demonstrator
-assets, browser changes and consumer integration tests belong here. Pinning a
-new native revision does not update the retained legacy copies.
-
-The pinned integration runner above tests the dependency. To deliberately test
-the retained compatibility implementation:
+Native implementation fixes and their regression tests belong in
+`swi-prolog-node`; demonstrator assets, browser changes and integration tests belong
+here. Update the dependency pin deliberately after testing the selected revision,
+then rerun setup. See [native maintenance](docs/SWI_NODE_MAINTENANCE.md).
 
 ```bash
-WP_NATIVE_MODE=legacy ./tools/test.sh  # all tiers in fresh SWI-Prolog processes
+SWIPL=/path/to/verified/swipl ./tools/test.sh
 ```
 
-The retained tier structure (see [tests/tiers/README.md](tests/tiers/README.md)): tiers `T0`–`T5` carry the
-full demonstrator suite against the layered modules, one layer per tier,
-and each asserts that the layers above it are *not* loaded. `LINT` checks
-that imports only point downward.
+Tiers `T0`–`T5` exercise the external implementation in fresh processes without
+preloading upper layers. `LINT` checks layering in the pinned package. `WASM` checks
+browser statecharts, Worker/coordinator bridges and real-engine semantics. The
+`T1_NATIVE`, `T3_NATIVE`, `T4_NATIVE` and corresponding `_INTEGRATION` selections
+remain available. The two tests requiring a colocated native/browser tree were
+retired; explicit asset relocation and missing-asset checks remain.
 
 ## Provenance
 
@@ -256,12 +200,6 @@ that imports only point downward.
 [swi-web-prolog]: https://github.com/Web-Prolog/swi-web-prolog
 
 
-The native repository has already been extracted. See
-[the extraction map](docs/SWI_NODE_EXTRACTION_MAP.md) for current ownership,
-completed integration checks and historical rehearsal records. Deployment
-packaging is paused until the normal deployment computer is available; no
-implementation copies are removed during this transition.
-
 ### Boolean option boundary
 
 Language Boolean options require Prolog atoms `true` or `false`, not numbers,
@@ -272,9 +210,8 @@ of encoded Prolog atoms remains transport plumbing. HTTP query text and genuine
 JSON Booleans retain their endpoint decoding. See the shared manual's
 [option validation](web/manual.html#sec:option-validation).
 
-The native fix belongs to `swi-prolog-node`; this batch mirrors it explicitly
-in the retained legacy source for compatibility tests. The dependency pin and
-installed/live runtimes are not updated by these source changes.
+The native fix belongs to `swi-prolog-node`. The demonstrator consumes native
+changes through reviewed dependency pin updates.
 
 ### URI representation boundary
 
@@ -282,8 +219,8 @@ URI and node-URL inputs use atoms canonically; supported text forms and explicit
 `Host:Port` shorthand are normalised at API boundaries. The [shared URI contract](web/manual.html#sec:uri-values)
 records the runtime differences and unchanged resolution/fetch restrictions.
 Browser bridges preserve source ordering and validate representations before
-fetching or dispatch. Native-owned checks are mirrored in the retained legacy
-source; this does not promote the native dependency pin or update live nodes.
+fetching or dispatch. Native implementation and validation live in
+`swi-prolog-node`; updating source here does not update live nodes.
 
 ### Commit-pinned local development nodes
 
