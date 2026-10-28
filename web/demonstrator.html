@@ -2717,7 +2717,7 @@
             <div class="wb-header-actions">
               <a v-if="nodeIsAdmin"
                  class="wb-icon-button"
-                 href="/admin"
+                 :href="adminPageUrl"
                  aria-label="Open admin console"
                  title="Admin console">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -3729,7 +3729,7 @@
                                 @click="saveAdminConfig"
                                 :disabled="adminConfigSaving || !adminConfigDirty">{{ adminConfigButtonLabel }}</button>
                         <a class="wb-button subtle"
-                           href="/admin"
+                           :href="adminPageUrl"
                            target="_blank"
                            rel="noopener">Open Full Admin Page</a>
                         <button class="wb-button"
@@ -3999,6 +3999,7 @@
     
     
 
+    <script src="/vendor/trinity-host.js"></script>
     <script src="/vendor/jquery.min.js"
             crossorigin="anonymous"></script>
     <script src="/vendor/vue.global.prod.js"></script>
@@ -4597,7 +4598,7 @@
 
       function currentNodeReferenceUrls() {
         var refs = [];
-        var current = normalizeNodeUrl(window.location.origin);
+        var current = normalizeNodeUrl(TrinityHost.nodeBase || window.location.origin);
         var canonical = normalizeNodeUrl(window.webPrologNodeSelfUrl || "");
         if (current) {
           refs.push(current);
@@ -5327,7 +5328,7 @@
       }
 
       function browserRuntimeRouteState() {
-        var node = (new URLSearchParams(window.location.search)).get("node");
+        var node = (new URLSearchParams(window.location.search)).get("node") || TrinityHost.defaultNode;
         var model = storedBrowserRuntimeModel();
         // `swi-wasm` is the canonical single UI route. Keep the historical
         // `swi-wasm-2` URL as a Worker-model alias for old links/bookmarks.
@@ -5339,7 +5340,7 @@
 
       function profileTutorialForCurrentRuntime(announcedProfile) {
         var runtime = browserRuntimeRouteState();
-        var node = nodeLabelForUrl(window.location.origin).toLowerCase();
+        var node = nodeLabelForUrl(TrinityHost.nodeBase || window.location.origin).toLowerCase();
         var profile;
         if (runtime.main || runtime.worker || ["n3", "n4", "n5"].indexOf(node) >= 0) {
           profile = "actor";
@@ -5586,7 +5587,8 @@
             handledTutorialDeepLink: "",
             isSwiWasmMode: browserRuntimeRouteState().main,
             isSwiWasm2Mode: browserRuntimeRouteState().worker,
-            ...SwiWasmNode.createState()
+            ...SwiWasmNode.createState(),
+            swiWasmAssets: TrinityHost.runtimeAssets()
           };
         },
         computed: {
@@ -5594,10 +5596,13 @@
             return this.isSwiWasmMode || this.isSwiWasm2Mode;
           },
           currentPortalNodeUrl: function() {
-            return this.nodeSelfUrl || window.location.origin;
+            return this.nodeSelfUrl || TrinityHost.nodeBase || window.location.origin;
           },
           currentPortalHref: function() {
             return portalHrefForNodeUrl(this.currentPortalNodeUrl);
+          },
+          adminPageUrl: function() {
+            return TrinityHost.nodeBase ? TrinityHost.endpoint("/admin") : "";
           },
           currentPortalNodeAddress: function() {
             var normalized = normalizeNodeUrl(this.currentPortalNodeUrl);
@@ -6099,7 +6104,7 @@
             var self = this;
             window.webPrologTutorialBridge = {
               currentHost: function() {
-                return window.location.origin;
+                return TrinityHost.nodeBase ? TrinityHost.nodeBase.replace(/\/$/, "") : window.location.origin;
               },
               currentSessionPid: function() {
                 return self.currentTutorialSessionPid();
@@ -6393,7 +6398,7 @@
           },
           fetchExamplesIndex: function() {
             var self = this;
-            return fetch("/examples_index", {
+            return fetch(TrinityHost.isStatic ? TrinityHost.asset("examples_index.json") : "/examples_index", {
               cache: "no-store",
               headers: { Accept: "application/json" }
             }).then(function(response) {
@@ -6431,7 +6436,8 @@
           },
 	          fetchNodeInfo: function() {
 	            var self = this;
-	            return fetch("/node_info", {
+                if (!TrinityHost.nodeBase) return Promise.resolve();
+	            return fetch(TrinityHost.endpoint("/node_info"), {
               headers: { Accept: "application/json" }
             }).then(function(response) {
               if (!response.ok) {
@@ -6460,7 +6466,8 @@
 	          },
           fetchPortalVersion: function() {
             var self = this;
-            return fetch("/version", {
+            if (!TrinityHost.nodeBase) return Promise.resolve();
+            return fetch(TrinityHost.endpoint("/version"), {
               headers: { Accept: "application/json" }
             }).then(function(response) {
               if (!response.ok) {
@@ -6488,7 +6495,8 @@
             // (200 = admin, 403 = not) without changing the /node_info
             // protocol surface.
             var self = this;
-            return fetch("/admin/config", { headers: { Accept: "application/json" } })
+            if (!TrinityHost.nodeBase) return Promise.resolve();
+            return fetch(TrinityHost.endpoint("/admin/config"), { headers: { Accept: "application/json" } })
               .then(function(response) { self.nodeIsAdmin = response.ok; })
               .catch(function() { self.nodeIsAdmin = false; });
           },
@@ -8285,6 +8293,7 @@
             }
           },
           reportInteraction: function(payload) {
+            if (TrinityHost.isStatic) return;
             var body;
             var self = this;
             if (!payload || typeof payload !== "object") {
@@ -8305,7 +8314,7 @@
               return;
             }
             this.log("info", "POST /interaction_log (durable usage log): " + body, "interaction");
-            return fetch("/interaction_log", {
+            return fetch(TrinityHost.endpoint("/interaction_log"), {
               method: "POST",
               headers: {
                 Accept: "application/json",
@@ -8358,7 +8367,7 @@
           },
           adaptTutorialText: function(text) {
             var out = this.tutorialExampleText(text);
-            out = out.replace(/{{host}}/g, window.location.origin);
+            out = out.replace(/{{host}}/g, TrinityHost.nodeBase ? TrinityHost.nodeBase.replace(/\/$/, "") : window.location.origin);
             out = out.replace(/{{pengine}}/g, this.currentTutorialSessionPid());
             out = out.replace(/\bload_text\s*\(/g, "src_text(");
             out = out.replace(/\bload_list\s*\(/g, "src_list(");
@@ -8873,7 +8882,7 @@
             var params = requestOptions.params || null;
             var jsonBody = requestOptions.jsonBody;
             var logScope = requestOptions.logScope || "http";
-            var url = path;
+            var url = TrinityHost.endpoint(path);
             var headers = { Accept: "application/json" };
             var fetchOptions = { method: method, headers: headers };
 
@@ -11349,8 +11358,7 @@
             });
           },
           wsUrl: function() {
-            var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-            return proto + "//" + window.location.host + "/ws";
+            return TrinityHost.websocket();
           },
           wsSend: function(obj) {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {

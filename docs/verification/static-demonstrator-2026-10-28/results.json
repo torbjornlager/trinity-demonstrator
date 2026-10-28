@@ -1,0 +1,23 @@
+{
+  "source": {
+    "dirty": true,
+    "revision": "1f454d42f1637e5379535eadaa82079b200e2832"
+  },
+  "host": {
+    "assetBase": "/releases/preview/",
+    "mode": "static",
+    "nodeUrl": null
+  },
+  "browser": {
+    "manifest_sha256": "59018548f0b810e88a96f4fec4dab5f4f7f35c11a7544e0d51c7e1cdae99edcf",
+    "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f",
+    "version": "0.1.0"
+  },
+  "files": 136,
+  "python_tests": 44,
+  "wasm_semantic_scenarios": 102,
+  "wasm_prolog_cases": 71,
+  "plain_static_http_errors": 0,
+  "live_deployments_changed": false
+}

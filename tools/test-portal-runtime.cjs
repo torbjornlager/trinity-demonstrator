@@ -2,11 +2,12 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const TrinityHost = require('../web/vendor/trinity-host.js')({}, new URL('http://localhost:3060/portal'));
 const html = fs.readFileSync(path.join(__dirname, '../web/demonstrator.html'), 'utf8');
 function method(name, fetcher) {
   const match = html.match(new RegExp('^          '+name+': function\\(([^)]*)\\) \\{([\\s\\S]*?)^          \\},', 'm'));
   assert.ok(match, name);
-  return new Function('fetch','nodeLabelForUrl', 'return function('+match[1]+'){'+match[2]+'}')(fetcher, ()=>'localhost:3060');
+  return new Function('fetch','nodeLabelForUrl','TrinityHost', 'return function('+match[1]+'){'+match[2]+'}')(fetcher, ()=>'localhost:3060', TrinityHost);
 }
 function component(fetcher) {
   const obj = {portalVersion:'0.2.0',portalSwiplVersion:'',portalTreallaVersion:'',isBrowserSwiWasmMode:false,

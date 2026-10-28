@@ -25,7 +25,9 @@ Tracked relative symlinks preserve the existing public asset URLs. Runtime fixes
 belong upstream; presenter adapters, tutorials and example databases stay here.
 See the [ownership and integration guide](docs/SWI_WASM_NODE_EXTRACTION.md).
 The runtime package can be served as static files beneath a versioned URL prefix;
-CDN distribution of the complete demonstrator remains a later stage.
+Stage 4 adds an opt-in static demonstrator build, independent asset and node
+addresses, and a file-only preview server. See [CDN preparation and usage](docs/CDN_DISTRIBUTION.md).
+Public CDN publication and installable/offline behaviour remain later steps.
 
 ## Documentation
 

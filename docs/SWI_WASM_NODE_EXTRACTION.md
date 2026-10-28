@@ -154,6 +154,6 @@ CI checks out both exact dependencies. Docker fetches both using a BuildKit
 secret; the token needs read access to both private repositories. No deployment
 is implied by changing the source checkout.
 
-Later stages will address full demonstrator static hosting, CDN publication,
-installation and cross-origin deployment policy. Existing node asset URLs and
-language semantics are unchanged by this extraction.
+Stage 4 adds [static packaging and independent asset/node addresses](CDN_DISTRIBUTION.md).
+Later stages will address public CDN publication, installation and cross-origin
+deployment policy. Existing node-hosted asset URLs and language semantics are unchanged.
