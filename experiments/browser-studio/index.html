@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trinity Studio · UI experiment</title>
+<link rel="stylesheet" href="/runtime/vendor/codemirror.min.css">
+<link rel="stylesheet" href="studio.css">
+<script defer src="/runtime/vendor/codemirror.min.js"></script>
+<script defer src="/runtime/swi_wasm_actor_worker.js"></script>
+<script defer src="/runtime/vendor/swi-wasm-node.js"></script>
+<script defer src="studio.js"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="#"><span class="brand-mark">∴</span> Trinity <strong>Studio</strong></a><span class="experiment">UI EXPERIMENT</span><div class="top-actions"><span class="engine"><i></i> SWI-Prolog · WASM</span><button id="theme" title="Switch colour theme">Light mode</button></div></header>
+<main class="studio">
+<aside class="workspace"><div class="panel-heading">EXPLORER <span>LOCAL WORKSPACE</span></div><div class="workspace-title">⌄ &nbsp; EXAMPLE PROGRAMS</div><div id="files" role="group" aria-label="Example programs"></div><div class="file-actions"><button id="open">Open .pl file</button><input id="file-input" type="file" accept=".pl,.pro,.txt" hidden><button id="save">Save source</button></div><div class="workspace-note"><span class="note-mark">↗</span><p>A small workspace for exploring Web Prolog.</p><p>The engine runs here, in your browser. No native node is needed.</p><a href="https://github.com/torbjornlager/swi-wasm-node" target="_blank" rel="noreferrer">About the runtime ↗</a></div></aside>
+<div class="divider" id="left-divider" role="separator" aria-label="Resize workspace" aria-orientation="vertical" tabindex="0"></div>
+<section class="editor-pane" aria-label="Source editor"><div class="editor-tabs"><span class="file-icon">PL</span><span id="filename">family.pl</span><span id="dirty" aria-label="Unsaved changes"></span><span class="editor-tab-end">SOURCE</span></div><div class="editor-toolbar"><span id="source-state">Ready to load</span><button id="load" class="primary" title="Load source into a fresh browser session (Ctrl or Command + Enter)">▷ Load program</button></div><div class="code-wrap"><textarea id="source" aria-label="Prolog source"></textarea></div><div class="editor-foot"><span>Prolog</span><span>UTF-8 &nbsp; · &nbsp; Browser-local source</span></div><section class="guide"><span class="eyebrow">TRY IT YOURSELF</span><h1>A little logic. A live conversation.</h1><p id="hint">Load the program, then run a query. Ask for the next answer to explore its alternatives.</p><div id="suggestions" aria-label="Suggested queries"></div></section></section>
+<div class="divider" id="right-divider" role="separator" aria-label="Resize query panel" aria-orientation="vertical" tabindex="0"></div>
+<section class="query-pane" aria-label="Queries and results"><div class="panel-heading">QUERY <span id="session-label">NO SESSION</span></div><form id="query-form"><label for="goal">Ask the loaded program</label><div class="goal-wrap"><span>?-</span><textarea id="goal" rows="3" spellcheck="false">ancestor(ada, Who)</textarea></div><div class="query-actions"><button id="run" class="primary" disabled>Run query ↵</button><button type="button" id="next" disabled>Next</button><button type="button" id="stop" disabled>Stop</button><button type="button" id="abort" disabled>Abort</button></div><div class="query-caption">Enter to run · Shift + Enter for a new line</div></form><div class="result-tabs" role="tablist" aria-label="Session views"><button role="tab" id="tab-answers" aria-selected="true" aria-controls="answers">Answers <span id="answer-count">0</span></button><button role="tab" id="tab-output" aria-selected="false" aria-controls="output" tabindex="-1">Output</button><button role="tab" id="tab-session" aria-selected="false" aria-controls="session" tabindex="-1">Session</button></div><div class="result-view"><div id="answers" role="tabpanel" aria-labelledby="tab-answers"><div class="empty"><span>∴</span><h2>Your next discovery starts here.</h2><p>Load a program and ask a question.<br>Answers come from the real SWI-WASM engine.</p></div></div><pre id="output" role="tabpanel" aria-labelledby="tab-output" hidden></pre><div id="session" role="tabpanel" aria-labelledby="tab-session" hidden></div></div><div class="history"><label for="history">QUERY HISTORY</label><select id="history"><option value="">Choose a previous query…</option></select></div><div class="session-actions"><button id="reset">Reset session</button><button id="clear">Clear results</button></div></section>
+</main>
+<footer class="statusbar"><span id="status" role="status">● Ready · load a program to begin</span><span>Experimental UI · page closure ends the runtime</span></footer>
+<dialog id="input-dialog"><form method="dialog"><h2>Input requested by Prolog</h2><p id="input-prompt"></p><label for="input-value">Response (include a full stop when reading a Prolog term)</label><input id="input-value" autocomplete="off"><div><button value="cancel">Abort query</button><button value="send" class="primary">Send response</button></div></form></dialog>
+</body>
+</html>
