@@ -55,9 +55,9 @@ async function loadProgram() {
   dispose();loading=true;controls();status('Loading program…');
   const token=generation, source=editor.getValue();
   const fresh=SwiWasmNode.create({
-    workerUrl:new URL('/runtime/swi_wasm_actor_worker.js',location.href).href,
-    engineUrl:new URL('/runtime/swipl-bundle.js',location.href).href,
-    prologBaseUrl:new URL('/runtime/wasm/',location.href).href,
+    workerUrl:new URL('runtime/swi_wasm_actor_worker.js',location.href).href,
+    engineUrl:new URL('runtime/swipl-bundle.js',location.href).href,
+    prologBaseUrl:new URL('runtime/wasm/',location.href).href,
     sharedDatabaseUrl:null,
     onEvent(event){
       if(token!==generation)return false;

@@ -47,3 +47,9 @@ read/1 through the input dialog. Also checked theme switching, narrow stacked
 and compact three-column layouts, and keyboard pane resizing. JavaScript and
 Python syntax checks pass. Remote-node access and real SSO are outside this
 prototype's scope.
+
+Runtime and editor asset URLs are relative to the page, allowing publication
+under a static path such as `/studio/`. A deployed copy includes the pinned
+runtime, CodeMirror assets and their license notices.
+
+`CODEMIRROR-LICENSE.txt` retains the upstream CodeMirror 5.65.16 MIT notice.
