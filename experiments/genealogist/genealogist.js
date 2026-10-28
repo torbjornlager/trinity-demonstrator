@@ -203,7 +203,7 @@ async function boot() {
     const response = await fetch('genealogist.pl'); if (!response.ok) throw new Error('Cannot load genealogist.pl');
     source = await response.text(); if (disposed) return;
     $('program').textContent = source;
-    node = SwiWasmNode.create({workerUrl:new URL('/runtime/swi_wasm_actor_worker.js',location.href).href,engineUrl:new URL('/runtime/swipl-bundle.js',location.href).href,prologBaseUrl:new URL('/runtime/wasm/',location.href).href,sharedDatabaseUrl:null,
+    node = SwiWasmNode.create({workerUrl:new URL('runtime/swi_wasm_actor_worker.js',location.href).href,engineUrl:new URL('runtime/swipl-bundle.js',location.href).href,prologBaseUrl:new URL('runtime/wasm/',location.href).href,sharedDatabaseUrl:null,
       onEvent(event) { if (disposed) return false; if (event.type === 'output' || event.type === 'statechart_trace') { $('output').append(document.createTextNode(event.data)); $('output').parentElement.open = true; return true; } },
       onInput:requestInput});
     await node.open({source});

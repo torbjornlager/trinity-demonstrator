@@ -6,6 +6,9 @@ The original family names and core relations connect the experiment to the
 original example. The interface uses plain JavaScript, CSS and an accessible SVG
 family diagram. No UI framework, jQuery, native node or Prolog server is required.
 
+Runtime URLs are relative to the page, so the static UI and its runtime can
+also be hosted together under a path such as `/genealogist/`.
+
 The experiment is separate from the existing demonstrator and Studio prototype.
 It is not included in the demonstrator's static distribution, and neither their
 startup paths nor live node processes are changed.
