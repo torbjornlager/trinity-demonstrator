@@ -40,6 +40,7 @@ def plan(native, wasm, swipl):
         ('pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_swi_dependency.py']),
         ('browser-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_browser_dependency.py']),
         ('static-distribution-regressions', ROOT, [sys.executable, 'tests/test_static_demonstrator.py']),
+        ('https-sso-probe-regressions', ROOT, [sys.executable, 'tests/test_https_sso_probe.py']),
         ('host-url-regressions', ROOT, ['node', 'tools/test-trinity-host.cjs']),
         ('cross-origin-native-integration', ROOT, ['node', 'tools/test-cdn-remote.cjs']),
         ('portal-runtime-regressions', ROOT, ['node', 'tools/test-portal-runtime.cjs']),

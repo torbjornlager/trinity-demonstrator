@@ -1,0 +1,49 @@
+{
+  "time": "2026-10-28T08:07:03.203983+00:00",
+  "node": "https://n5.elfenbenstornet.se/",
+  "ui_origin": "https://trinity.elfenbenstornet.se",
+  "credentials_used": false,
+  "checks": {
+    "https_reachable": false,
+    "signed_out_api_401": null,
+    "readable_version": null,
+    "credentialed_json_preflight": null,
+    "unlisted_origin_not_granted": null
+  },
+  "requests": [
+    {
+      "name": "signed_out_metadata",
+      "path": "/node_info",
+      "method": "GET",
+      "https_response_received": false,
+      "error": "timeout",
+      "errno": null
+    },
+    {
+      "name": "version",
+      "path": "/version",
+      "method": "GET",
+      "https_response_received": false,
+      "error": "timeout",
+      "errno": null
+    },
+    {
+      "name": "json_preflight",
+      "path": "/toplevel_spawn",
+      "method": "OPTIONS",
+      "https_response_received": false,
+      "error": "timeout",
+      "errno": null
+    },
+    {
+      "name": "unlisted_origin",
+      "path": "/node_info",
+      "method": "GET",
+      "https_response_received": false,
+      "error": "timeout",
+      "errno": null
+    }
+  ],
+  "browser_sso_verified": false,
+  "ready_for_browser_verification": false
+}

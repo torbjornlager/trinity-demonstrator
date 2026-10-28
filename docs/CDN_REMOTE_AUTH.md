@@ -113,3 +113,20 @@ saved [verification record](verification/cdn-remote-auth-2026-10-28/REPORT.md)
 contains the tested origins, procedure, results and screenshots. Browser tests
 are distinct from the automated HTTP checks: only a real browser proves CORS
 and cookie enforcement.
+
+## HTTPS readiness before real-provider browser testing
+
+The read-only probe can check the selected real endpoint without exporting
+browser cookies or following SSO redirects:
+
+```sh
+python3 tools/probe-cdn-sso.py --node-url https://node.example.com \
+  --ui-origin https://ui.example.com --output /fresh/path/readiness.json
+```
+
+It uses normal HTTPS certificate validation and records only sanitized response
+metadata. Transport failures leave CORS/auth checks unmeasured. Even a passing
+probe does not certify browser login or production cookie/WebSocket behaviour.
+The [28 October real-SSO attempt](verification/cdn-https-sso-2026-10-28/REPORT.md)
+is currently incomplete because the public N5 endpoint was unreachable; no
+production settings or existing demonstrator were changed.
