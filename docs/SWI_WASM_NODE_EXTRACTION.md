@@ -1,7 +1,8 @@
-# SWI-WASM node extraction: stages 1 and 2
+# SWI-WASM node extraction
 
-Stages 1 and 2 establish an in-repository runtime boundary and an independent
-host. No repository, package release, dependency pin, or live deployment is changed.
+Stages 1 and 2 established an in-repository runtime boundary and an independent
+host. Stage 3 moves that runtime into its own repository and pins its package
+from this consumer. Live deployments are not changed.
 The SWI-WASM engine remains `swipl-wasm@8.2.5` / SWI-Prolog 10.1.19.
 
 ## Ownership inventory
@@ -121,14 +122,38 @@ syntax-error recovery and disposal during query/startup. It is part of the WASM
 CI tier. Existing semantic scenarios retain their assertions and now import
 exported methods rather than reconstructing moved implementations from the page.
 
-## Stages intentionally left for later
+## Stage 3: external runtime dependency
 
-* Move ownership into the new repository, publish artifacts and adopt an exact pin.
-* Generalize demonstrator endpoint selection and generate a static example index.
-* Build a complete distribution under a path prefix; choose a CDN origin and
-  cache/update policy. The runtime's configurable assets prepare this work but
-  do not make the whole demonstrator CDN-ready yet.
-* Add installation and offline support.
+The runtime and its tests now live in `torbjornlager/swi-wasm-node`, version
+`0.1.0`. The consumer pin records the full source revision and SHA-256 of its
+package manifest. `tools/setup_swi.py --browser-root /path/to/swi-wasm-node`
+requires that exact clean checkout, builds an immutable package and validates
+its complete file inventory and hashes before selecting it. Subsequent startup
+revalidates the package and every tracked alias. Missing setup or drift fails.
 
-Until extraction is released, rollback is the preceding demonstrator revision.
-There is one runtime implementation and no legacy selection switch.
+The paths in the inventory above now refer to aliases into
+`.trinity/browser-runtime/current`, rather than maintained source copies.
+The shared example database remains here. The browser package carries a
+checksummed build input from the authoritative native schema; assembly verifies
+that both selected dependencies agree.
+
+Runtime tests live in the package: 95 semantic cases and 60 Prolog cases.
+The demonstrator contributes seven presenter cases and 11 example cases. Its
+WASM tier invokes both sets through an explicit host extension, including the
+consumer tutorial check. The native serialization fixture requires a native
+checkout; standalone package testing selects 94 portable runtime cases and
+reports that optional fixture as unselected.
+
+For an independent static distribution, use the package’s `tools/serve.py` with
+`--package /path/to/package --prefix /release/0.1`. Its complete `web/` tree
+includes default Prolog payloads and a minimal host. The package can be relocated
+without either source checkout. The demonstrator’s `tools/serve_wasm_standalone.py` remains a consumer
+helper for serving its assembled example database overlay.
+
+CI checks out both exact dependencies. Docker fetches both using a BuildKit
+secret; the token needs read access to both private repositories. No deployment
+is implied by changing the source checkout.
+
+Later stages will address full demonstrator static hosting, CDN publication,
+installation and cross-origin deployment policy. Existing node asset URLs and
+language semantics are unchanged by this extraction.

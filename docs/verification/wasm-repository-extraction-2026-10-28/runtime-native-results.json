@@ -1,0 +1,70 @@
+{
+  "source": {
+    "dirty": false,
+    "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f"
+  },
+  "native_integration": true,
+  "host_integration": false,
+  "runs": [
+    {
+      "label": "statechart-unit",
+      "command": [
+        "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+        "-f",
+        "none",
+        "-q",
+        "-p",
+        "browser_prolog=/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/wasm-runtime-tests-f1p4sjc8/wasm",
+        "-s",
+        "tests/test_statechart_wasm.pl",
+        "-g",
+        "swi_wasm_statechart_tests:run",
+        "-t",
+        "halt"
+      ],
+      "exit_code": 0,
+      "seconds": 0.126
+    },
+    {
+      "label": "schema-equivalence",
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "tools/check_statechart_wasm_equivalence.py",
+        "--wasm-dir",
+        "/Users/torbjorn.lager/Documents/GitHub/swi-wasm-node/.build/release/web/wasm",
+        "--native-root",
+        "/Users/torbjorn.lager/Documents/GitHub/trinity-demonstrator/.trinity/native"
+      ],
+      "exit_code": 0,
+      "seconds": 0.041
+    },
+    {
+      "label": "worker-mailbox",
+      "command": [
+        "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/wasm/swi_wasm_actor_worker_smoke.js"
+      ],
+      "exit_code": 0,
+      "seconds": 0.236
+    },
+    {
+      "label": "standalone",
+      "command": [
+        "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/wasm/swi_wasm_standalone.js"
+      ],
+      "exit_code": 0,
+      "seconds": 1.465
+    },
+    {
+      "label": "semantic-contracts",
+      "command": [
+        "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/wasm/swi_wasm_contracts.js"
+      ],
+      "exit_code": 0,
+      "seconds": 127.971
+    }
+  ]
+}

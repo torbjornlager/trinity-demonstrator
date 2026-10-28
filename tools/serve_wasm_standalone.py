@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Serve browser assets and an assembled Prolog payload without a Prolog server.
+"""Serve pinned browser assets with the demonstrator’s assembled example payload.
+
+For runtime-only distribution use swi-wasm-node/tools/serve.py.
 
 Example: python3 tools/serve_wasm_standalone.py --prolog-root /assembled/payload
 Open /vendor/swi-wasm-minimal.html. No native node or demonstrator page is loaded.
@@ -30,6 +32,8 @@ def main():
     parser.add_argument('--prolog-root', required=True, type=Path)
     parser.add_argument('--port', type=int, default=0)
     args = parser.parse_args()
+    from pinned_browser import check
+    check()
     payload = args.prolog_root.resolve(strict=True)
     for name in PAYLOADS:
         if not (payload / name).is_file():

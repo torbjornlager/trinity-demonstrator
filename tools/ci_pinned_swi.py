@@ -38,6 +38,7 @@ def plan(native, wasm, swipl):
     rows += [
         ('default-startup-regressions', ROOT, [sys.executable, 'tests/test_default_swi_startup.py']),
         ('pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_swi_dependency.py']),
+        ('browser-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_browser_dependency.py']),
         ('ci-runner-regressions', ROOT, [sys.executable, 'tests/test_ci_pinned_swi.py']),
         ('packaging-regressions', ROOT, [sys.executable, 'tests/test_swi_extraction_tools.py']),
         ('watchdog-regressions', ROOT, [sys.executable, 'tests/test_ci_timeout.py']),
@@ -112,7 +113,7 @@ def main():
                            stdout=setup_log)
         setup = check(state)
         env.update(WP_NATIVE_MODE='pinned', WP_NATIVE_STATE=str(state),
-                   WP_ASSET_ROOT=str(ROOT), WP_WASM_SOURCE_DIR=setup['wasm_root'],
+                   WP_ASSET_ROOT=str(ROOT), WP_WASM_SOURCE_DIR=setup['wasm_root'], SWI_WASM_PACKAGE_ROOT=setup['browser_package'],
                    PINNED_SWI_TEST_ROOT=str(native), STARTUP_TEST_SWIPL=swipl, SWIPL=swipl)
         record.update(swipl=swipl, swipl_version=subprocess.check_output([swipl, '--version'], text=True).strip(),
                       demonstrator_revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip())

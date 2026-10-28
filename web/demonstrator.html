@@ -10300,25 +10300,8 @@
             return /\bstatechart_(spawn|start|send|stop|running|configuration|in|halt_reason)\b/.test(String(goal || "")) ||
               /(^|[^A-Za-z0-9_])statechart\s*!/.test(String(goal || ""));
           },
-          startSwiWasmLocalChart: function(live) {
-            // A singleton chart is live before same-query monitor installation.
-            // Retain normal completion for a chart that finishes during startup.
-            this.swiWasmStatechartActive = live === true;
-            this.swiWasmLocalChartResult = { done: live !== true, reason: "true" };
-          },
-          stopSwiWasmLocalChart: function(reason) {
-            var result = this.swiWasmLocalChartResult;
-            var wasLive = this.swiWasmStatechartActive || (result && !result.done);
-            this.swiWasmStatechartActive = false;
-            if (!wasLive) {
-              this.clearSwiWasmActorNamesForPid("statechart");
-              return;
-            }
-            this.swiWasmLocalChartResult = { done: true, reason: reason || "true" };
-            // Removal precedes delivery, so repeated halt/status sync cannot
-            // duplicate a down or retire another actor's monitor.
-            this.notifySwiWasmActorMonitors("statechart", reason || "true");
-          },
+
+
           syncSwiWasmStatechartStatus: function(Prolog) {
             var running = false;
             if (!Prolog) {

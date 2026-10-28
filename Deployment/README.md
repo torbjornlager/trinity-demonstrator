@@ -1,5 +1,11 @@
 # Deployment Bundle
 
+Browser runtime assets now come from the exact `swi-wasm-node` package pin as well
+as the native `swi-prolog-node` dependency. Container builds fetch both repositories;
+the existing BuildKit `github_token` secret must have read access to both private
+repositories. Host `.trinity/` state is excluded and rebuilt inside the image.
+
+
 ## Native dependency in container builds
 
 Both SWI Dockerfiles fetch the exact commit from `dependencies/swi-prolog-node.json`,

@@ -1,26 +1,31 @@
 # Trinity demonstrator
 
 The Web Prolog demonstrator provides the portal, tutorials, shared language
-manual, examples, browser runtimes and deployment/integration tooling. Its
+manual, examples and deployment/integration tooling. Its
 native SWI node is supplied by the separate
 [`swi-prolog-node`](https://github.com/torbjornlager/swi-prolog-node) repository.
 The native SWI pack remains named `web_prolog`, with the existing
 `library(web_prolog)` imports.
 
 **Status: pre-release.** The native SWI implementation is maintained only in
-`swi-prolog-node`. This repository contains the demonstrator assets, browser-specific
-Prolog sources, application examples and integration tests. Local startup, CI and
+`swi-prolog-node`. This repository contains demonstrator assets, application examples and integration tests.
+The browser implementation is maintained in `swi-wasm-node`. Local startup, CI and
 container builds all require the exact native revision in
 [`dependencies/swi-prolog-node.json`](dependencies/swi-prolog-node.json).
 There is no in-tree native implementation or legacy startup mode.
 
 ## Browser runtime extraction
 
-Stages 1 and 2 now separate browser runtime machinery from demonstrator
-presentation within this repository. See the
-[ownership inventory, host API and standalone verification instructions](docs/SWI_WASM_NODE_EXTRACTION.md).
-The engine pin and current deployment URLs are retained; a separate repository
-and CDN distribution follow in later stages.
+Stage 3 moves the runtime and its tests to
+[`swi-wasm-node`](https://github.com/torbjornlager/swi-wasm-node).
+The exact source revision and immutable package manifest are recorded in
+[`dependencies/swi-wasm-node.json`](dependencies/swi-wasm-node.json).
+Setup builds and validates that package under ignored `.trinity/browser-runtime/`.
+Tracked relative symlinks preserve the existing public asset URLs. Runtime fixes
+belong upstream; presenter adapters, tutorials and example databases stay here.
+See the [ownership and integration guide](docs/SWI_WASM_NODE_EXTRACTION.md).
+The runtime package can be served as static files beneath a versioned URL prefix;
+CDN distribution of the complete demonstrator remains a later stage.
 
 ## Documentation
 
@@ -66,11 +71,12 @@ this fix and passes the native checkpoint recorded below. The official 10.1.18
 package predates it; custom builds that report 10.1.18 need source/provenance
 verification. Setup also needs Python 3 and Git. Nothing is downloaded or installed by these commands.
 
-From this checkout, prepare an existing native checkout at the revision in
-`dependencies/swi-prolog-node.json`:
+From this checkout, prepare clean native and browser checkouts at the revisions
+in their `dependencies/` pins:
 
 ```bash
-python3 tools/setup_swi.py --native-root /path/to/swi-prolog-node
+python3 tools/setup_swi.py --native-root /path/to/swi-prolog-node \
+  --browser-root /path/to/swi-wasm-node
 swipl load.pl
 ```
 
@@ -89,11 +95,12 @@ If you need a fresh checkout at the recorded pin, fetch it explicitly before set
 
 ```bash
 python3 tools/fetch_swi.py --destination .trinity/native
+python3 tools/fetch_browser.py --destination .trinity/swi-wasm-node
 python3 tools/setup_swi.py --native-root .trinity/native
 swipl load.pl
 ```
 
-Fetching requires read access to the native repository. An existing checkout is
+Fetching requires read access to both dependency repositories. An existing checkout is
 never overwritten; using a separate checkout avoids changing your development branch.
 
 ```prolog
@@ -116,7 +123,7 @@ Then try:
 
 ### Continuous integration
 
-Both `CI / test` and `CI / wasm` check out the exact native dependency on pushes,
+Both `CI / test` and `CI / wasm` check out the exact native and browser dependencies on pushes,
 pull requests and manual runs. The main job runs the dependency's native and
 external-asset integration tiers, this repository's tiered regression suite,
 startup/pin/packaging regressions, a module-origin audit and browser checks. The
@@ -127,7 +134,9 @@ Checks run in fresh processes with bounded process-group watchdogs. Logs and res
 are uploaded even after failure. A private native repository requires the existing
 owner-provided `SWI_NODE_READ_TOKEN` Actions secret; the default workflow token does
 not grant cross-repository access. A failed dependency checkout fails CI without
-substituting another implementation.
+substituting another implementation. The private browser repository needs read access
+through `SWI_WASM_NODE_READ_TOKEN`, falling back to `SWI_NODE_READ_TOKEN`.
+The selected token must cover both dependency repositories.
 
 Run the complete CI boundary locally with an existing pinned checkout:
 
@@ -143,9 +152,10 @@ Node.js must be on PATH for browser checks.
 ## Demonstrator asset locations
 
 Startup configures `WP_ASSET_ROOT` as this demonstrator checkout and
-`WP_WASM_SOURCE_DIR` as the validated payload directory from setup. The five
-browser-specific Prolog sources remain under `prolog/web_prolog/wasm/`; the sixth
-file, `sxml_schema.pl`, is copied from the pinned native package during assembly.
+`WP_WASM_SOURCE_DIR` as the validated payload directory from setup. Four browser Prolog sources and the engine/runtime assets are aliases into the
+validated external package. `shared_db.pl` remains this consumer’s example data;
+`sxml_schema.pl` is assembled from the pinned native dependency and checked for
+equivalence with the browser package’s pinned schema.
 No second native schema is maintained here. Portal, tutorial, manual, example and
 browser-runtime URLs remain unchanged.
 
@@ -182,8 +192,8 @@ WP_CHECK=1 WP_PROFILE=actor WP_AUTH=private swipl Deployment/start_node.pl
 ## Maintenance and tests
 
 Native implementation fixes and their regression tests belong in
-`swi-prolog-node`; demonstrator assets, browser changes and integration tests belong
-here. Update the dependency pin deliberately after testing the selected revision,
+`swi-prolog-node`; browser runtime fixes and runtime tests belong in
+`swi-wasm-node`. Demonstrator assets, presenter adapters and integration tests belong here. Update the dependency pin deliberately after testing the selected revision,
 then rerun setup. See [native maintenance](docs/SWI_NODE_MAINTENANCE.md).
 
 ```bash

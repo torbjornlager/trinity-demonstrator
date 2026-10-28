@@ -36,3 +36,8 @@ tools/*
 .env.*
 **/.env
 **/.env.*
+
+# Exact browser package setup/fetch tools are required by the image.
+!tools/pinned_browser.py
+!tools/setup_browser.py
+!tools/fetch_browser.py

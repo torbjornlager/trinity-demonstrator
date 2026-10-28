@@ -1,0 +1,68 @@
+{
+  "source": {
+    "dirty": false,
+    "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f"
+  },
+  "native_integration": false,
+  "host_integration": false,
+  "runs": [
+    {
+      "label": "statechart-unit",
+      "command": [
+        "/Users/torbjorn.lager/.local/share/trinity-runtimes/swi-current/bin/swipl",
+        "-f",
+        "none",
+        "-q",
+        "-p",
+        "browser_prolog=/var/folders/8p/_fp_26cs6zz3_d8pdwtnh_ym0000gp/T/wasm-runtime-tests-xmsiwptq/wasm",
+        "-s",
+        "tests/test_statechart_wasm.pl",
+        "-g",
+        "swi_wasm_statechart_tests:run",
+        "-t",
+        "halt"
+      ],
+      "exit_code": 0,
+      "seconds": 0.129
+    },
+    {
+      "label": "schema-equivalence",
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "tools/check_statechart_wasm_equivalence.py",
+        "--wasm-dir",
+        "/Users/torbjorn.lager/.local/share/trinity-runtime-tests/wasm-release-0.1.0-2026-10-28/swi-wasm-node/web/wasm"
+      ],
+      "exit_code": 0,
+      "seconds": 0.041
+    },
+    {
+      "label": "worker-mailbox",
+      "command": [
+        "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/wasm/swi_wasm_actor_worker_smoke.js"
+      ],
+      "exit_code": 0,
+      "seconds": 0.129
+    },
+    {
+      "label": "standalone",
+      "command": [
+        "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/wasm/swi_wasm_standalone.js"
+      ],
+      "exit_code": 0,
+      "seconds": 1.431
+    },
+    {
+      "label": "semantic-contracts",
+      "command": [
+        "/Users/torbjorn.lager/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "tests/wasm/swi_wasm_contracts.js"
+      ],
+      "exit_code": 0,
+      "seconds": 128.259
+    }
+  ]
+}

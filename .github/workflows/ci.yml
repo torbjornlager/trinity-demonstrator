@@ -32,6 +32,17 @@ jobs:
           path: .trinity/ci-native
           token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
           persist-credentials: false
+      - name: Read exact browser dependency pin
+        id: browser
+        run: python3 tools/setup_browser.py --github-outputs "$GITHUB_OUTPUT"
+      - name: Check out pinned browser runtime
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.browser.outputs.repository }}
+          ref: ${{ steps.browser.outputs.revision }}
+          path: .trinity/swi-wasm-node
+          token: ${{ secrets.SWI_WASM_NODE_READ_TOKEN || secrets.SWI_NODE_READ_TOKEN || github.token }}
+          persist-credentials: false
       - uses: ./.github/actions/setup-swi
       - uses: actions/setup-node@v6
         with:
@@ -65,6 +76,17 @@ jobs:
           ref: ${{ steps.native.outputs.revision }}
           path: .trinity/ci-native
           token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Read exact browser dependency pin
+        id: browser
+        run: python3 tools/setup_browser.py --github-outputs "$GITHUB_OUTPUT"
+      - name: Check out pinned browser runtime
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.browser.outputs.repository }}
+          ref: ${{ steps.browser.outputs.revision }}
+          path: .trinity/swi-wasm-node
+          token: ${{ secrets.SWI_WASM_NODE_READ_TOKEN || secrets.SWI_NODE_READ_TOKEN || github.token }}
           persist-credentials: false
       - uses: ./.github/actions/setup-swi
       - uses: actions/setup-node@v6

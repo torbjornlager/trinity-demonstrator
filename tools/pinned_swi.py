@@ -27,6 +27,8 @@ def validate(native):
     return dict(repository=pin['repository'],revision=revision,native_root=str(native),pack=pin['pack'])
 
 def validate_payloads(native,wasm):
+    from pinned_browser import check
+    check()
     names=['shared_db.pl','statechart_wasm.pl','statechart_wasm_exec.pl','statechart_wasm_model.pl','statechart_wasm_runtime.pl','sxml_schema.pl']
     for name in names:
         source=(native if name=='sxml_schema.pl' else ROOT)/'prolog/web_prolog/wasm'/name

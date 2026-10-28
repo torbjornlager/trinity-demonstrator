@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse,hashlib,json,os,shlex,subprocess,sys
 from pinned_swi import ROOT,validate,validate_payloads
+from pinned_browser import install as install_browser,check as check_browser
 DEFAULT=ROOT/'.trinity/native-swi.json'
 
 def check(state_file):
@@ -11,12 +12,14 @@ def check(state_file):
     record=validate(native)
     if state['revision']!=record['revision']:raise ValueError('setup pin differs; rerun setup')
     if Path(state['asset_root']).resolve()!=ROOT:raise ValueError('setup belongs to another demonstrator; rerun setup')
+    browser,_=check_browser()
     wasm=Path(state['wasm_root']).resolve(strict=True);validate_payloads(native,wasm)
-    return dict(record,asset_root=str(ROOT),wasm_root=str(wasm))
+    return dict(record,asset_root=str(ROOT),wasm_root=str(wasm),browser_package=str(browser))
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--native-root',type=Path)
+    p.add_argument('--browser-root',type=Path)
     p.add_argument('--state-file',type=Path,default=Path(os.environ.get('WP_NATIVE_STATE',str(DEFAULT))))
     p.add_argument('--validate',action='store_true')
     p.add_argument('--shell',action='store_true',help='validate and emit quoted test environment')
@@ -25,13 +28,14 @@ def main():
         state_file=a.state_file.resolve()
         if a.shell:
             state=check(state_file)
-            for key,field in [('TRINITY_PINNED_SWI_ROOT','native_root'),('WP_ASSET_ROOT','asset_root'),('WP_WASM_SOURCE_DIR','wasm_root')]:
+            for key,field in [('TRINITY_PINNED_SWI_ROOT','native_root'),('WP_ASSET_ROOT','asset_root'),('WP_WASM_SOURCE_DIR','wasm_root'),('SWI_WASM_PACKAGE_ROOT','browser_package')]:
                 print(key+'='+shlex.quote(state[field]))
             return
         if a.validate:
             print(json.dumps(check(state_file)));return
         if not a.native_root:raise ValueError('--native-root is required for setup')
         native=a.native_root.resolve(strict=True);record=validate(native)
+        browser=install_browser(a.browser_root,native)
         names=['shared_db.pl','statechart_wasm.pl','statechart_wasm_exec.pl','statechart_wasm_model.pl','statechart_wasm_runtime.pl','sxml_schema.pl']
         digest=hashlib.sha256()
         digest.update(record['revision'].encode())
@@ -41,7 +45,7 @@ def main():
         if not wasm.exists():
             subprocess.run([sys.executable,str(ROOT/'tools/package_wasm_prolog.py'),'--native-root',str(native),'--browser-root',str(ROOT),'--output',str(wasm)],check=True,stdout=subprocess.DEVNULL)
         validate_payloads(native,wasm)
-        state=dict(record,asset_root=str(ROOT),wasm_root=str(wasm))
+        state=dict(record,asset_root=str(ROOT),wasm_root=str(wasm),browser_package=str(browser))
         temp=state_file.with_name(state_file.name+'.tmp');temp.write_text(json.dumps(state,indent=2)+'\n');os.replace(temp,state_file)
         print(json.dumps(state,indent=2))
     except (OSError,ValueError,KeyError,subprocess.CalledProcessError) as e:

@@ -1,0 +1,27 @@
+{
+  "browser_pin": {
+    "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+    "revision": "278042d4f5928c35cacfe267fe6bd7f83013533f",
+    "version": "0.1.0",
+    "manifest_sha256": "59018548f0b810e88a96f4fec4dab5f4f7f35c11a7544e0d51c7e1cdae99edcf"
+  },
+  "native_pin": {
+    "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+    "revision": "470f20b07f3157b07c8861d10610f2b73cd7efd8",
+    "pack": "web_prolog",
+    "mode": "required for startup, tests and container builds"
+  },
+  "archive_sha256": "1e514d812226bccec3e86219ea83a79c3d99e57015d798fcc657bdc16296b861",
+  "repeat_archive_identical": true,
+  "runtime_scenarios": 95,
+  "portable_runtime_scenarios": 94,
+  "presenter_scenarios": 7,
+  "runtime_prolog_cases": 60,
+  "consumer_prolog_cases": 11,
+  "consumer_tooling_tests": 39,
+  "release_url": "https://github.com/torbjornlager/swi-wasm-node/releases/tag/v0.1.0",
+  "release_workflow": "https://github.com/torbjornlager/swi-wasm-node/actions/runs/40644234086",
+  "release_archive_matches_local": true,
+  "full_ci_check_groups": 31,
+  "full_ci_failed_groups": 0
+}

@@ -23,7 +23,7 @@ FAILED=0
 # Values are emitted as shell-quoted assignments by our local validation tool.
 SETUP=$(python3 tools/setup_swi.py --shell) || exit 2
 eval "$SETUP"
-export TRINITY_PINNED_SWI_ROOT WP_ASSET_ROOT WP_WASM_SOURCE_DIR
+export TRINITY_PINNED_SWI_ROOT WP_ASSET_ROOT WP_WASM_SOURCE_DIR SWI_WASM_PACKAGE_ROOT
 BOOTSTRAP=tools/native_test_bootstrap.pl
 
 selected () {

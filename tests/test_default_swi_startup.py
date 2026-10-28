@@ -64,12 +64,22 @@ class DefaultStartup(unittest.TestCase):
     def test_image_layout_uses_external_native_package(self):
         image=self.work/'image'
         for name in ['demonstrator_startup.pl','load.pl','Deployment/start_node.pl',
-                     'dependencies/swi-prolog-node.json','tools/setup_swi.py',
+                     'dependencies/swi-prolog-node.json','dependencies/swi-wasm-node.json','tools/setup_swi.py',
+                     'tools/pinned_browser.py',
                      'tools/pinned_swi.py','tools/package_wasm_prolog.py',
                      'tools/pinned_swi_bootstrap.pl']:
             dest=image/name;dest.parent.mkdir(parents=True,exist_ok=True)
             shutil.copy2(ROOT/name,dest)
-        shutil.copytree(ROOT/'prolog/web_prolog/wasm',image/'prolog/web_prolog/wasm')
+        shutil.copytree(ROOT/'prolog/web_prolog/wasm',image/'prolog/web_prolog/wasm',symlinks=True)
+        sys.path.insert(0,str(ROOT/'tools'))
+        import pinned_browser
+        pin=json.loads((ROOT/'dependencies/swi-wasm-node.json').read_text())
+        package=image/'.trinity/browser-runtime'/pin['revision']
+        shutil.copytree(ROOT/'.trinity/browser-runtime'/pin['revision'],package)
+        for local,remote in pinned_browser.aliases(False).items():
+            link=image/local;link.parent.mkdir(parents=True,exist_ok=True)
+            if link.exists() or link.is_symlink():link.unlink()
+            link.symlink_to(os.path.relpath(image/'.trinity/browser-runtime/current'/remote,link.parent))
         state=image/'.trinity/native-swi.json'
         subprocess.run([sys.executable,str(image/'tools/setup_swi.py'),
                         '--native-root',str(NATIVE),'--state-file',str(state)],
