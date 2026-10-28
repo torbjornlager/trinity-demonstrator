@@ -1,0 +1,20 @@
+PASS signed-out API returns readable 401, no redirect
+PASS unlisted origin denied without CORS grant
+PASS JSON preflight needs no session cookie
+PASS identity-header preflight denied
+PASS forged proxy identity cannot authenticate
+PASS node-origin login succeeds
+PASS test cookie is HttpOnly and same-site
+PASS authenticated identity reaches real private native node
+PASS signed-in client identity headers are replaced by verified identity
+PASS authenticated stateless native execution
+PASS authenticated allowed-origin WebSocket upgrade
+PASS authenticated cookie cannot bypass WebSocket origin policy
+PASS node-origin logout succeeds
+PASS logout revokes fixture WebSocket connection
+PASS logged-out cookie cannot reconnect
+PASS logged-out cookie cannot upgrade WebSocket
+PASS fresh session reconnects after logout
+PASS fixture expiry closes its active WebSocket
+PASS expired session no longer authorizes HTTP
+{"checks":19,"failed":0,"counts":{"preflight":2,"deniedOrigin":2,"unauthenticated":5,"http":3,"ws":2,"login":2,"logout":1,"expired":1}}

@@ -16,14 +16,24 @@
   }
   var assetBase = base(config.assetBase || '/');
   var nodeBase = config.nodeUrl ? base(config.nodeUrl) : isStatic ? null : base(location.origin);
+  var credentials = config.credentials || 'same-origin';
+  if (['omit', 'same-origin', 'include'].indexOf(credentials) < 0)
+    throw new Error('Node credentials must be omit, same-origin or include');
+  function sessionUrl(path) {
+    if (!path) return null;
+    return endpoint(path);
+  }
   function asset(path) { return new URL(String(path).replace(/^\//, ''), assetBase).href; }
   function endpoint(path) {
     if (!nodeBase) throw new Error('This static demonstrator has no configured remote node');
     if (!/^\/(?!\/)/.test(path)) throw new Error('Node endpoints must be node-relative paths');
-    return new URL(path.slice(1), nodeBase).href;
+    var url = new URL(path.slice(1), nodeBase);
+    if (!url.href.startsWith(nodeBase)) throw new Error('Node endpoint escapes the configured service');
+    return url.href;
   }
   return Object.freeze({
     isStatic: isStatic, assetBase: assetBase, nodeBase: nodeBase,
+    credentials: credentials, loginUrl: sessionUrl(config.loginPath), logoutUrl: sessionUrl(config.logoutPath),
     defaultNode: isStatic && !nodeBase ? 'swi-wasm' : null,
     asset: asset, endpoint: endpoint,
     websocket: function() {

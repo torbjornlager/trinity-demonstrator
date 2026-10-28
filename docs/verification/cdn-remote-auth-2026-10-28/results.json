@@ -1,0 +1,24 @@
+{
+  "checks": 19,
+  "failed": 0,
+  "counts": {
+    "preflight": 2,
+    "deniedOrigin": 2,
+    "unauthenticated": 5,
+    "http": 3,
+    "ws": 2,
+    "login": 2,
+    "logout": 1,
+    "expired": 1
+  },
+  "python_tests": 46,
+  "wasm_scenarios": 102,
+  "wasm_prolog_tests": 71,
+  "browser_distinct_host_checks": 11,
+  "browser_denied_origin_checks": 2,
+  "ui_origin": "http://ui.localtest.me:64810",
+  "node_origin": "http://node.localtest.me:58429",
+  "native_pin": "470f20b07f3157b07c8861d10610f2b73cd7efd8",
+  "browser_pin": "278042d4f5928c35cacfe267fe6bd7f83013533f",
+  "production_deployment_changed": false
+}

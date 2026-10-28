@@ -58,7 +58,9 @@ def page(text,prefix,config):
         script=script.replace('return protocol + "//" + window.location.host + "/ws";', 'return TrinityHost.websocket();')
         script=script.replace('new WebSocket(scheme+"//"+location.host+"/ws")','new WebSocket(TrinityHost.websocket())')
         script=script.replace('new URL(path, window.location.origin)','new URL(TrinityHost.endpoint(path))')
+        script=script.replace('fetch(url, options || {})','fetch(url, Object.assign({credentials:TrinityHost.credentials}, options || {}))')
         script=script.replace('fetch("/node_info",', 'fetch(TrinityHost.endpoint("/node_info"),')
+        script=script.replace('fetch(TrinityHost.endpoint("/node_info"), { headers:', 'fetch(TrinityHost.endpoint("/node_info"), { credentials:TrinityHost.credentials, headers:')
         script=script.replace('        fetch(TrinityHost.endpoint("/node_info"),','        if (!TrinityHost.nodeBase) return;\n        fetch(TrinityHost.endpoint("/node_info"),')
         return script
     return re.sub(r'<script\b[^>]*>[\s\S]*?</script>',scripts,text)
@@ -74,14 +76,20 @@ def verify(directory):
     if inventory(directory)!=m['files']:raise ValueError('static distribution file inventory or hashes differ')
     return m
 
-def build(output,prefix='/',node=None,allow_dirty=False):
+def build(output,prefix='/',node=None,allow_dirty=False,credentials='same-origin',login_path=None,logout_path=None):
     prefix=prefix_path(prefix);node=node_url(node)
+    if credentials not in ('omit','same-origin','include'):raise ValueError('invalid node credentials mode')
+    if (login_path or logout_path) and (not node or credentials!='include'):
+        raise ValueError('session links require a node URL and --node-credentials include')
+    for path in [login_path,logout_path]:
+        if path and (not re.fullmatch(r'/[A-Za-z0-9_/-]+',path) or path.startswith('//') or '..' in path.split('/')):
+            raise ValueError('session paths must be node-relative paths without queries or fragments')
     revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
     dirty=bool(subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain'],text=True).strip())
     if dirty and not allow_dirty:raise ValueError('release builds require clean source; --allow-dirty marks a development preview')
     state=check(Path(os.environ.get('WP_NATIVE_STATE',str(DEFAULT))))
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False)
-    config=dict(mode='static',assetBase=prefix,nodeUrl=node)
+    config=dict(mode='static',assetBase=prefix,nodeUrl=node,credentials=credentials,loginPath=login_path,logoutPath=logout_path)
     for name in PAGES:
         text=page((ROOT/'web'/name).read_text(),prefix,config)
         (output/name).write_text(text)
@@ -118,10 +126,10 @@ def build(output,prefix='/',node=None,allow_dirty=False):
     return m
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path);p.add_argument('--prefix',default='/');p.add_argument('--node-url');p.add_argument('--allow-dirty',action='store_true');p.add_argument('--verify',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--output',type=Path);p.add_argument('--prefix',default='/');p.add_argument('--node-url');p.add_argument('--node-credentials',choices=['omit','same-origin','include'],default='same-origin');p.add_argument('--login-path');p.add_argument('--logout-path');p.add_argument('--allow-dirty',action='store_true');p.add_argument('--verify',type=Path);a=p.parse_args()
     try:
         if a.verify:m=verify(a.verify)
-        elif a.output:m=build(a.output,a.prefix,a.node_url,a.allow_dirty)
+        elif a.output:m=build(a.output,a.prefix,a.node_url,a.allow_dirty,a.node_credentials,a.login_path,a.logout_path)
         else:p.error('--output or --verify is required')
         print(json.dumps(dict(source=m['source'],host=m['host'],files=len(m['files'])),indent=2))
     except (OSError,ValueError,KeyError) as e:p.exit(2,'static demonstrator: '+str(e)+'\n')

@@ -44,6 +44,19 @@ class StaticDistribution(unittest.TestCase):
         self.assertIn('this.requestJson("/call"',html)
         api=(self.output/'examples/APIs/ws-example-1.html').read_text()
         self.assertIn('return TrinityHost.websocket()',api)
+    def test_explicit_cookie_session_configuration(self):
+        m=package.build(self.output,'/release/',node='https://node.example',allow_dirty=True,
+                        credentials='include',login_path='/oauth2/sign_in',logout_path='/oauth2/sign_out')
+        self.assertEqual(m['host']['credentials'],'include')
+        self.assertEqual(m['host']['loginPath'],'/oauth2/sign_in')
+        self.assertIn('Sign in to node',(self.output/'index.html').read_text())
+    def test_invalid_session_links_rejected(self):
+        for config in [dict(node=None,credentials='include',login_path='/login'),
+                       dict(node='https://node.example',credentials='same-origin',login_path='/login'),
+                       dict(node='https://node.example',credentials='include',login_path='//elsewhere/login'),
+                       dict(node='https://node.example',credentials='include',logout_path='/logout?token=secret')]:
+            with self.subTest(config=config),self.assertRaises(ValueError):
+                package.build(self.output,allow_dirty=True,**config)
     def test_corruption_or_extra_file_rejected(self):
         package.build(self.output,allow_dirty=True)
         (self.output/'unexpected').touch()

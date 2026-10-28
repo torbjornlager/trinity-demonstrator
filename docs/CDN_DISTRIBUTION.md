@@ -74,6 +74,14 @@ a native Prolog installation to run the browser node.
 Existing node-hosted startup remains `swipl load.pl` or the existing deployment
 entry point. Static packaging is an additional, explicit operation.
 
+## Remote-node authentication (stage 5)
+
+Explicit cookie inclusion, node-origin sign-in/sign-out links and reconnect
+handling are now available. See [remote authentication configuration and test
+qualification](CDN_REMOTE_AUTH.md). Local separate-origin and distinct-host
+checks use a real private native node. Production HTTPS/provider qualification
+remains necessary. Existing node-hosted defaults are preserved.
+
 ## What still needs to happen before CDN publication
 
 1. Choose the public hosting address and version layout. Upload a tested,

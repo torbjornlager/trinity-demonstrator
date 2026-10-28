@@ -1,0 +1,39 @@
+<!doctype html><meta charset="utf-8"><title>Cross-origin node checks</title>
+<h1>Cross-origin node checks</h1>
+<p>Checks use the real browser HTTP/CORS and cookie implementation against a disposable private native node.</p>
+<button id="run">Run connection checks</button><pre id="result">Ready</pre>
+<script>
+window.WEB_PROLOG_HOST={mode:'static',assetBase:'/releases/auth-test/',nodeUrl:'http://localhost:58426/',credentials:'include'};
+</script>
+<script src="/releases/auth-test/vendor/trinity-host.js"></script>
+<script>
+document.getElementById('run').onclick=async function(){
+ const output=document.getElementById('result');output.textContent='';let failures=0;
+ function check(value,label){output.textContent+=(value?'PASS ':'FAIL ')+label+'\n';if(!value)failures++;}
+ async function request(path,options={}){return fetch(TrinityHost.endpoint(path),{credentials:TrinityHost.credentials,...options});}
+ async function post(path,params,json=false){const r=await request(path,{method:'POST',headers:{'Content-Type':json?'application/json':'application/x-www-form-urlencoded'},body:json?JSON.stringify(params):new URLSearchParams(params)});if(!r.ok)throw Error(path+' returned '+r.status);return r.json();}
+ if(location.origin!==(window.CDN_CHECK_ORIGIN||'http://localhost:64810')){
+  try{await request('/node_info');check(false,'unlisted origin cannot read HTTP response');}catch(e){check(e instanceof TypeError,'unlisted origin cannot read HTTP response');}
+  await new Promise(resolve=>{const ws=new WebSocket(TrinityHost.websocket());const timer=setTimeout(()=>{ws.close();check(false,'unlisted origin WebSocket denied');resolve();},3000);ws.onopen=()=>{clearTimeout(timer);ws.close();check(false,'unlisted origin WebSocket denied');resolve();};ws.onerror=()=>{clearTimeout(timer);check(true,'unlisted origin WebSocket denied');resolve();};});
+ }else{
+  let pid;
+  try{
+   if (window.CDN_CHECK_ORIGIN) {
+    const probe=await fetch('/fixture-cookie-presence',{credentials:'same-origin'}).then(r=>r.json());check(!probe.fixture_cookie_present,'node cookie is absent from UI-host requests');
+   }
+   check(!document.cookie.includes('cdn_fixture_session='),'node session cookie is inaccessible to UI JavaScript');
+   let r=await request('/node_info',{credentials:'omit'});check(r.status===401,'omitted cookies return readable 401');
+   r=await request('/node_info');let info=await r.json();check(r.ok&&info.principal_id==='cdn-test-user'&&info.principal_execution,'cookie authenticates real native principal');
+   r=await request('/call?goal=member(X,%5Ba,b%5D)&limit=1&offset=0&format=json');let data=await r.json();check(r.ok&&data.data[0].X==='a','stateless HTTP query returns first answer');
+   r=await request('/call?goal=member(X,%5Ba,b%5D)&limit=1&offset=1&format=json');data=await r.json();check(r.ok&&data.data[0].X==='b','stateless HTTP query pages next answer');
+   const spawned=await post('/toplevel_spawn',{options:'[session(true)]'},true);pid=spawned.pid;check(spawned.type==='spawned'&&!!pid,'JSON preflight and authenticated session creation');
+   data=await post('/toplevel_call',{pid,goal:'member(X,[first,second])',limit:1,format:'json'});check(data.type==='success'&&data.data[0].X==='first','stateful HTTP call');
+   data=await post('/toplevel_next',{pid,limit:1,format:'json'});check(data.type==='success'&&data.data[0].X==='second','stateful HTTP paging');
+   data=await post('/toplevel_halt',{pid,format:'json'});check(data.type==='halted','stateful session cleanup');pid=null;
+   r=await request('/node_info',{headers:{'X-Web-Prolog-User':'forged-admin'}}).then(()=>true,()=>false);check(!r,'browser rejects identity-header preflight');
+  }catch(e){check(false,e.message);}
+  finally{if(pid)try{await post('/toplevel_halt',{pid,format:'json'});}catch(e){check(false,'cleanup '+e.message);}}
+ }
+ output.textContent+=(failures?'FAILED':'ALL CHECKS PASSED');
+};
+</script>

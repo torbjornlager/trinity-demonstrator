@@ -2712,6 +2712,13 @@
                  target="_blank"
                  rel="noopener noreferrer">&nbsp;Shared DB</a>
             </p>
+            <p v-if="showRemoteSessionControls" class="wb-header-section-note">
+              <a v-if="nodeLoginUrl" :href="nodeLoginUrl" target="_blank" rel="noopener noreferrer">Sign in to node</a>
+              <span v-if="nodeLoginUrl"> · </span>
+              <a v-if="nodeLogoutUrl" :href="nodeLogoutUrl" @click="disconnectRemoteNode" target="_blank" rel="noopener noreferrer">Sign out</a>
+              <span v-if="nodeLogoutUrl"> · </span>
+              <button type="button" class="wb-button subtle" @click="refreshRemoteNode">Reconnect</button>
+            </p>
           </section>
           <section class="wb-header-section wb-header-section-tools">
             <div class="wb-header-actions">
@@ -5472,7 +5479,7 @@
 	            nodeSelfUrl: "",
 	            nodeAnnouncedProfile: "actor",
 	            principalAnnouncedId: "anonymous",
-	            principalExecutionAuthorized: true,
+	            principalExecutionAuthorized: !TrinityHost.isStatic || !TrinityHost.nodeBase,
             tutorialSections: ["all"],
             nodeAnnouncedAuthMode: "open",
             hideLocalNodeInPid: true,
@@ -5601,6 +5608,11 @@
           currentPortalHref: function() {
             return portalHrefForNodeUrl(this.currentPortalNodeUrl);
           },
+          showRemoteSessionControls: function() {
+            return TrinityHost.isStatic && !!TrinityHost.nodeBase && !this.isBrowserSwiWasmMode && !!(TrinityHost.loginUrl || TrinityHost.logoutUrl);
+          },
+          nodeLoginUrl: function() { return TrinityHost.loginUrl; },
+          nodeLogoutUrl: function() { return TrinityHost.logoutUrl; },
           adminPageUrl: function() {
             return TrinityHost.nodeBase ? TrinityHost.endpoint("/admin") : "";
           },
@@ -6438,8 +6450,13 @@
 	            var self = this;
                 if (!TrinityHost.nodeBase) return Promise.resolve();
 	            return fetch(TrinityHost.endpoint("/node_info"), {
+              credentials: TrinityHost.credentials,
               headers: { Accept: "application/json" }
             }).then(function(response) {
+              if (response.status === 401 && TrinityHost.isStatic) {
+                self.disconnectRemoteNode();
+                self.nodeAnnouncedAuthMode = "private";
+              }
               if (!response.ok) {
                 throw new Error(response.status + " " + response.statusText);
               }
@@ -6461,13 +6478,15 @@
 	              if (json && Array.isArray(json.tutorial_sections)) {
 	                self.applyAnnouncedTutorialSections(json.tutorial_sections);
 	              }
-	            }).catch(function() {
+	            }).catch(function(error) {
+                if (TrinityHost.isStatic) self.log("warn", "Node connection unavailable: " + error.message + ". Sign in if required, then Reconnect.", "transport");
 	            });
 	          },
           fetchPortalVersion: function() {
             var self = this;
             if (!TrinityHost.nodeBase) return Promise.resolve();
             return fetch(TrinityHost.endpoint("/version"), {
+              credentials: TrinityHost.credentials,
               headers: { Accept: "application/json" }
             }).then(function(response) {
               if (!response.ok) {
@@ -6496,7 +6515,7 @@
             // protocol surface.
             var self = this;
             if (!TrinityHost.nodeBase) return Promise.resolve();
-            return fetch(TrinityHost.endpoint("/admin/config"), { headers: { Accept: "application/json" } })
+            return fetch(TrinityHost.endpoint("/admin/config"), { credentials: TrinityHost.credentials, headers: { Accept: "application/json" } })
               .then(function(response) { self.nodeIsAdmin = response.ok; })
               .catch(function() { self.nodeIsAdmin = false; });
           },
@@ -6588,6 +6607,11 @@
 	            var previousExecution = this.principalExecutionAuthorized;
 	            this.principalAnnouncedId = normalizedId;
 	            this.principalExecutionAuthorized = executionAuthorized;
+                if (previousExecution && !executionAuthorized && TrinityHost.isStatic && !this.isBrowserSwiWasmMode) {
+                  this.cleanupTransportSessions();
+                  this.queryState = "query";
+                  if (this.terminal) this.resumeTerm(this.terminal);
+                }
 	            if (previousId !== normalizedId || previousExecution !== executionAuthorized) {
 	              this.log("ui", "Principal: " + this.principalSummaryLabel + ".", "transport");
 	              if (!executionAuthorized) {
@@ -6619,6 +6643,7 @@
                 this.tutorialSections.indexOf(section) >= 0;
             },
 	          privateAuthHint: function() {
+                if (TrinityHost.loginUrl) return "Sign in to the node in the other tab, then choose Reconnect.";
 	            return "Node auth is PRIVATE. Browser requests need proxy-injected identity headers.";
 	          },
 	          devAuthHint: function() {
@@ -8884,7 +8909,7 @@
             var logScope = requestOptions.logScope || "http";
             var url = TrinityHost.endpoint(path);
             var headers = { Accept: "application/json" };
-            var fetchOptions = { method: method, headers: headers };
+            var fetchOptions = { method: method, headers: headers, credentials: TrinityHost.credentials };
 
             if (method === "GET" && params) {
               url += "?" + new URLSearchParams(params).toString();
@@ -8898,7 +8923,9 @@
 
             this.log("transport", method + " " + url + (method !== "GET" && params ? " body=" + new URLSearchParams(params).toString() : jsonBody !== undefined ? " body=" + JSON.stringify(jsonBody) : ""), logScope, "request");
 
+            var self = this;
             return fetch(url, fetchOptions).then(function(response) {
+              if (response.status === 401 && TrinityHost.isStatic) self.disconnectRemoteNode();
               return response.text().then(function(text) {
                 var parsed;
                 var requestError;
@@ -9897,6 +9924,22 @@
               this.pendingPromptPid = null;
             }
           },
+          disconnectRemoteNode: function() {
+            if (this.isBrowserSwiWasmMode) return;
+            this.cleanupTransportSessions();
+            this.applyAnnouncedPrincipalInfo("anonymous", false);
+            this.queryState = "query";
+            this.nodeIsAdmin = false;
+            if (this.terminal) {
+              this.terminal.set_prompt(this.basePrompt());
+              this.resumeTerm(this.terminal);
+            }
+          },
+          refreshRemoteNode: function() {
+            if (this.isBrowserSwiWasmMode) return Promise.resolve();
+            this.disconnectRemoteNode();
+            return Promise.all([this.fetchNodeInfo(), this.fetchPortalVersion()]);
+          },
           cleanupTransportSessions: function() {
             this.terminalBusy = false;
             this.pendingPromptPid = null;
@@ -10752,6 +10795,7 @@
             this.refreshPanels();
           },
           handleWindowFocus: function() {
+            if (TrinityHost.isStatic && TrinityHost.credentials === "include" && !this.isBrowserSwiWasmMode) this.fetchNodeInfo();
             if (!this.isSwiWasmMode) {
               this.fetchExamplesIndex();
             }

@@ -1,5 +1,9 @@
 # Deployment Bundle
 
+For a static UI on another origin, see [CDN remote authentication](../docs/CDN_REMOTE_AUTH.md).
+It describes the tested CORS/session policy and the production qualification still
+required; the existing live proxy/node configuration is unchanged.
+
 Browser runtime assets now come from the exact `swi-wasm-node` package pin as well
 as the native `swi-prolog-node` dependency. Container builds fetch both repositories;
 the existing BuildKit `github_token` secret must have read access to both private
