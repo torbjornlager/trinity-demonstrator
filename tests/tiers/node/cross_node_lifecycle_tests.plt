@@ -654,9 +654,9 @@ test(rpc_round_trip_to_remote_node,
 %
 %  A node peer receives toplevel events with a `term` field holding
 %  canonical term text, so variable sharing within a solution, '$VAR'
-%  terms, strings and exception terms survive the hop.
+%  terms, portable character-list text and exception terms survive the hop.
 
-test(remote_toplevel_answers_keep_exact_terms,
+test(remote_toplevel_answers_keep_portable_terms,
      [setup(flush_mailbox), Result == ok]) :-
     with_lifecycle_nodes(remote_toplevel_answers_keep_exact_terms,
         [node_spec(b, [profile(actor), auth(open)])],
@@ -671,7 +671,7 @@ test(remote_toplevel_answers_keep_exact_terms,
             assertion(A == B),
             assertion(A \== C),
             assertion(V == '$VAR'(1)),
-            assertion(S == "s"),
+            assertion(S == [s]),
             assertion(Q == 'a b'),
             assertion(Euro == '€'),
             assertion(Nested == nested('漢字','😀')),

@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-30",
+  "purpose": "Promote character-list text to the native Web Prolog default and deploy it consistently with SWI-WASM and Trealla.",
+  "revisions": {
+    "swi-prolog-node": "11bf73f28901892ec727f4d15715fc3a3ebc7e3a",
+    "swi-wasm-node": "5962bb1885e6f56b8240e1d1d22ce6f3a1c93d1f",
+    "trealla-port": "ee0da36504210b0516330613ceb5663fd1328023",
+    "trinity-conformance": "640f32d7960eeb6e1a0c58c14d2ee0734e30bb0b"
+  },
+  "engines": {
+    "native_swi": "10.1.19",
+    "swipl_wasm_npm": "8.2.5",
+    "browser_swi": "10.1.19",
+    "trealla": "3.14.20"
+  },
+  "language_contract": {
+    "double_quoted_literals": "lists of one-character atoms",
+    "empty_literal": [],
+    "unicode": "one atom per Unicode scalar character",
+    "numeric_lists": "remain numeric lists",
+    "scope": [
+      "public HTTP/WS goals and options",
+      "terminal input",
+      "private and copied source",
+      "shared-database source and reloads",
+      "statechart expressions",
+      "actor messages and portable replies"
+    ],
+    "native_libraries": "Host implementation modules and explicit SWI library string interfaces retain native strings; language boundaries convert text explicitly.",
+    "startup": "No opt-in is required. The former WP_EXPERIMENTAL_TEXT=portable-text-0.2 setting remains accepted for existing launchers."
+  },
+  "regression_gates": {
+    "pinned_native_demonstrator_ci": {
+      "stages": 37,
+      "result": "all final checks passed",
+      "includes_TEXT": true,
+      "initial_complete_run": {
+        "passed": 36,
+        "failed": 1
+      },
+      "demonstrator_T4_rerun": "passed after updating three obsolete native-string assertions; original full-run results retained",
+      "evaluation": "/Users/lager/recovery-20261030-071851/portable-default/ci-final-evaluation.json"
+    },
+    "browser_tooling_and_runtime": "passed (all 5 runtime stages)",
+    "swi_trealla_full_interop": "passed on final exact native revision",
+    "conformance": {
+      "reports": 109,
+      "counts": {
+        "diagnostic_error": 0,
+        "fail": 0,
+        "observed": 58,
+        "pass": 598,
+        "unsupported": 0
+      },
+      "preservation": "passed"
+    },
+    "portable_text_cases": {
+      "swi_default": "26/26",
+      "trealla": "26/26",
+      "legacy_opt_in": "26/26 in both directions"
+    },
+    "previous_text_failures": {
+      "before": 30,
+      "after": 0
+    },
+    "model_examples": "Public model actor/statechart tests now require the exact character-list reply instead of searching for a native-string display substring. Three retained demonstrator node tests now assert exact character-list goal/source, RPC and toplevel values while retaining sharing, Unicode and error assertions."
+  },
+  "initial_diagnostics": [
+    {
+      "kind": "test timing",
+      "detail": "An initial native T3 run missed a secondary supervisor down notification in a zero-timeout poll. Focused and subsequent full-tier runs passed. The final complete CI run passed T3."
+    },
+    {
+      "kind": "SWI stress-test crash",
+      "detail": "An intermediate full-T3 rerun exited with a SWI segmentation fault during the statechart spawn/kill determinism fixture. A subsequent full-T3 rerun and the final complete CI run passed; the original log is retained. No engine change or claim of repairing that engine-level transient is made.",
+      "log": "native-t3-rerun.log"
+    },
+    {
+      "kind": "old test expectations",
+      "detail": "The initial MODEL and MODEL_SXML public-output checks expected contiguous native-string display. They were replaced with exact character-list reply assertions and both pass in the final complete CI run. The remaining three native-string-only node assertions were replaced with exact portable character-list expectations; the full demonstrator T4 tier then passed."
+    }
+  ],
+  "deployment": {
+    "services": [
+      "wp_n1",
+      "wp_n2",
+      "wp_n3",
+      "wp_n4",
+      "wp_admin",
+      "n0"
+    ],
+    "text_setting": "native package default; no experimental environment flag",
+    "trealla_n5": "unchanged; already uses character-list text",
+    "volumes": "retained",
+    "rollback_inventory": "/Users/lager/recovery-20261030-071851/portable-default/rollback-images.json",
+    "live_verification": "/Users/lager/recovery-20261030-071851/portable-default/live-verification.json"
+  },
+  "artifacts": "/Users/lager/recovery-20261030-071851/portable-default"
+}

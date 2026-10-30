@@ -175,7 +175,9 @@ await_model_events(WS, N, Seen, Pid) :-
     N > 0,
     ws_receive(WS, Frame), atom_json_dict(Frame.data, Reply, []),
     ( get_dict(type, Reply, "output")
-    -> term_string(Reply, Text), sub_string(Text, _, _, _, "Stockholm"),
+    -> get_dict(data, Reply, Data),
+       term_string(Output, Data), string_chars("Stockholm.", Expected),
+       Output == Expected,
        N1 is N-1, await_model_events(WS, N1, true, Pid)
     ; get_dict(type, Reply, "spawned")
     -> get_dict(pid, Reply, Pid), N1 is N-1, await_model_events(WS,N1,Seen,Pid)

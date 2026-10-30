@@ -30,7 +30,7 @@ def plan(native, wasm, swipl):
               '-g',
               'pinned_swi_bootstrap:check_origins,forall(module_property(M,file(F)),format("~q ~q~n",[M,F]))',
               '-t', 'halt'])]
-    for tier in ['LINT', 'T0', 'T1_NATIVE', 'T2', 'T3_NATIVE', 'T4_NATIVE', 'T5',
+    for tier in ['LINT', 'TEXT', 'T0', 'T1_NATIVE', 'T2', 'T3_NATIVE', 'T4_NATIVE', 'T5',
                  'T1_INTEGRATION', 'T3_INTEGRATION', 'T4_INTEGRATION']:
         rows.append((tier, native, ['bash', 'tools/test.sh', tier]))
     for tier in ['LINT', 'T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'SERVICE_TEXT', 'MODEL', 'MODEL_SXML', 'JEV']:

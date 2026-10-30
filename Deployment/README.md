@@ -581,3 +581,12 @@ actors at startup through
 - If your ISP uses CGNAT, direct router port forwarding may not work. In that
   case, keep the same Compose layout and replace the public edge with a tunnel
   solution.
+
+### Portable text default
+
+Native SWI and SWI-WASM read double-quoted Web Prolog literals as character
+lists by default (`"abc"` is `[a,b,c]`). The pinned native package supplies this
+default to every node, including private source, shared databases and
+statecharts; Compose needs no experimental opt-in. Native implementation
+modules and library interfaces retain their explicit SWI string conversions.
+The pinned CI runner includes the TEXT tier to prevent a default-mode regression.
