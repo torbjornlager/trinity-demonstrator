@@ -41,7 +41,7 @@ test -f "$CONFORMANCE_ROOT/runner/run.py" || {
 
 docker compose -p "$TEST_PROJECT" -f "$BASE_COMPOSE" \
     -f "$TREALLA_COMPOSE" -f "$TEST_COMPOSE" --env-file /dev/null \
-    up --detach --build --no-deps --wait wp_n5
+    up --detach --build --no-deps --wait wp_n3 wp_n5
 
 python3 "$CONFORMANCE_ROOT/runner/run.py" \
     --manifest "$CONFORMANCE_ROOT/cases/demonstrator-tutorials-0.1.json" \
@@ -51,3 +51,8 @@ python3 "$CONFORMANCE_ROOT/runner/run.py" \
     --advertised-profile actor \
     --candidate trealla-n5 \
     --timeout 15
+
+python3 "$REPO_ROOT/tools/test_n5_sources.py" \
+    --conformance-root "$CONFORMANCE_ROOT" \
+    --ws-url "ws://127.0.0.1:$TEST_PORT/ws" \
+    --header 'X-Web-Prolog-User: owner@example.test'

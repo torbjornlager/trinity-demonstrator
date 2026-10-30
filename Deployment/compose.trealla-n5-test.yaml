@@ -2,6 +2,9 @@
 # Keep production N5 reachable only through Caddy/SSO.
 
 services:
+  # The example backend is private to the disposable test network.
+  wp_n3:
+    ports: !reset []
   wp_n5:
     ports:
       - "127.0.0.1:${TREALLA_N5_TEST_PORT:-13060}:3060"

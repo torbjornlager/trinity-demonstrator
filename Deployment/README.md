@@ -406,9 +406,13 @@ sibling `trinity-conformance` checkout:
 ./tools/test-trealla-n5-tutorials.sh
 ```
 
-The test starts an isolated private N5, publishes it only on loopback, loads
-the tutorial source through `toplevel_spawn`, runs its example query, and
-checks the promise results returned through the WebSocket protocol. Override
+The test starts an isolated private N5 with an internal N3 example backend,
+publishes N5 only on loopback, loads the tutorial source through `toplevel_spawn`, runs its example query, and
+checks the promise results returned through the WebSocket protocol. It also
+loads N5’s same-origin pause-and-resume statechart URL (including its encoded
+space), exercises its events, and checks that unlisted origins stay denied.
+N5 source fetches use the same N3 asset backend as its browser UI, without
+passing through the public sign-in route. Override
 the checkout with `TRINITY_CONFORMANCE_ROOT` or the loopback port with
 `TREALLA_N5_TEST_PORT` when needed.
 

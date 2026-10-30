@@ -38,8 +38,9 @@ services:
       # spawn to N4. Trealla follows the SWI policy: node/1 destinations must
       # match this explicit origin allowlist. The N2 alias uses the internal
       # HTTP backend only after the public origin passes policy checks.
-      WP_LOAD_URI_ORIGINS: https://n2.elfenbenstornet.se,https://n4.elfenbenstornet.se
-      WP_LOAD_URI_ORIGIN_ALIASES: https://n2.elfenbenstornet.se=http://wp_n2:3052
+      # N5 example URLs use the same N3 asset backend as its browser UI.
+      WP_LOAD_URI_ORIGINS: https://n2.elfenbenstornet.se,https://n4.elfenbenstornet.se,https://n5.elfenbenstornet.se
+      WP_LOAD_URI_ORIGIN_ALIASES: https://n2.elfenbenstornet.se=http://wp_n2:3052,https://n5.elfenbenstornet.se=http://wp_n3:3053
       WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
       # Load Trealla's attributed copies of the same three shared-database
       # layers as N4. They are baked into the image for portable deployment.
