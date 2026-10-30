@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-30",
+  "purpose": "Test and adopt Trealla 3.14.20 together with current native server-upgrade and retired-source-option fixes.",
+  "revisions": {
+    "swi-prolog-node": "b997d9b1513e980264b06585b76013ceef30c82b",
+    "swi-wasm-node": "2df7ed4ee7f78ca5fc2bf32a07f32ae07f91caa7",
+    "trealla-port": "ee0da36504210b0516330613ceb5663fd1328023",
+    "trinity-conformance": "640f32d7960eeb6e1a0c58c14d2ee0734e30bb0b"
+  },
+  "engines": {
+    "native_swi": "10.1.19",
+    "trealla": "3.14.20",
+    "swipl_wasm_npm": "8.2.5",
+    "browser_swi": "10.1.19",
+    "test_node": "24.22.2",
+    "platform": "linux/arm64"
+  },
+  "checks": {
+    "pinned_native_and_demonstrator_ci": {
+      "stages": 36,
+      "all_passed": true,
+      "command": "python3 tools/ci_pinned_swi.py --native-root /tests/swi-prolog-node-pinned --swipl /usr/bin/swipl --output /results/release-ci/pinned-ci"
+    },
+    "trealla": {
+      "unit": "passed",
+      "interop": "passed",
+      "interop_port_base": 22060,
+      "unicode_regressions": "passed with matching libraries on 3.13.10 and 3.14.20",
+      "deployment_override": "passed",
+      "deployment_tutorials": "passed"
+    },
+    "browser_package": {
+      "tooling": "passed",
+      "runtime_stages": 5,
+      "all_passed": true
+    },
+    "conformance": {
+      "reports": 109,
+      "counts": {
+        "diagnostic_error": 0,
+        "fail": 30,
+        "observed": 58,
+        "pass": 568,
+        "unsupported": 0
+      },
+      "new_failures": 0,
+      "known_text_differences": [
+        {
+          "report": "native-baseline/swi-portable-text.json",
+          "case_ids": [
+            "TXT-001",
+            "TXT-002",
+            "TXT-003",
+            "TXT-004",
+            "TXT-005",
+            "TXT-006",
+            "TXT-007"
+          ],
+          "count": 7
+        },
+        {
+          "report": "portable-text-default/trealla-portable-text.json",
+          "case_ids": [
+            "TXT-023"
+          ],
+          "count": 1
+        },
+        {
+          "report": "portable-text-default/swi-portable-text.json",
+          "case_ids": [
+            "TXT-001",
+            "TXT-002",
+            "TXT-003",
+            "TXT-004",
+            "TXT-005",
+            "TXT-006",
+            "TXT-007",
+            "TXT-008",
+            "TXT-009",
+            "TXT-010",
+            "TXT-012",
+            "TXT-013",
+            "TXT-015",
+            "TXT-016",
+            "TXT-017",
+            "TXT-018",
+            "TXT-019",
+            "TXT-020",
+            "TXT-021",
+            "TXT-022",
+            "TXT-025",
+            "TXT-026"
+          ],
+          "count": 22
+        }
+      ],
+      "character_list_text_cases": {
+        "swi": "26/26",
+        "trealla": "26/26"
+      },
+      "preservation_checks": "all passed"
+    }
+  },
+  "repairs": [
+    "Validate JSON string surrogate escapes before the bundled parser so malformed Unicode keeps the existing wire error on Trealla 3.14.20; retain older parser normalization.",
+    "Point the Unicode interop fixture at the extracted native package and register the legacy /ws handler only in its dedicated fixture server.",
+    "Keep interoperability listeners below Linux default ephemeral client ports.",
+    "Repair three server-upgrade test syntax errors and qualify the injected send-error fixture; all fourteen parameterized lifecycle cases pass.",
+    "Check the main-thread load error count before executing native tiers, allowing intentional runtime error diagnostics; a malformed-file negative control exits unsuccessfully."
+  ],
+  "test_notes": [
+    "Initial Trealla unit testing under concurrent load exceeded a three-second HTTP client deadline; the full isolated rerun passed all unit tests including all eighty client-context assertions.",
+    "A native alias-retirement test exceeded its three-second deadline when run alongside the interop matrix in the same container; the final isolated CI run passed.",
+    "A first runner change counted an expected runtime diagnostic as a failure even though all 1043 node cases passed; the final gate checks errors only before the tier starts.",
+    "GNU ISOBASE fixtures use the previously recorded compiler adaptation: format-truncation and misleading-indentation warnings are not errors. GNU is not deployed.",
+    "Thirty pre-existing text-representation differences remain in the default native-string diagnostic runs; their failing case identifiers match the pre-adoption reports."
+  ],
+  "artifacts": "/Users/lager/recovery-20261030-071851/adoption-3.14.20",
+  "artifact_audit_sha256": "4aa989c8e040544bd191892e0dcfdab151b376d8402283471fb8290e0043d500",
+  "rollback": {
+    "image_inventory": "/Users/lager/recovery-20261030-071851/adoption-3.14.20/rollback-images.json",
+    "tag_pattern": "local-rollback/<container-name>:before-31420-20261030",
+    "persistent_volumes": "retained"
+  },
+  "deployment_gate": "All required checks completed before live container recreation; operational verification is recorded in artifacts/live-verification.json."
+}

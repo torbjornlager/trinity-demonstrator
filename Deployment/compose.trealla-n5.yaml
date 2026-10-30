@@ -19,7 +19,7 @@ services:
       context: ../../trealla-port
       dockerfile: Deployment/Dockerfile
       args:
-        TREALLA_VERSION: ${TREALLA_N5_VERSION:-v3.13.10}
+        TREALLA_VERSION: ${TREALLA_N5_VERSION:-v3.14.20}
     environment:
       WP_PORT: "3060"
       WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
