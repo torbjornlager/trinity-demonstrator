@@ -254,3 +254,18 @@ reading; normal package defaults and browser text semantics are unchanged.
 Startup rejects source drift, and the previous frozen launchers remain available
 for rollback. Follow [native maintenance](docs/SWI_NODE_MAINTENANCE.md) for future
 fixes and explicit pin updates; do not edit the deployment checkouts.
+
+### ACTOR release verification
+
+Before releasing a native ACTOR dependency change, run the conformance
+repository's `runner/release.py` (or its disposable
+`adapters/local_actor_release.py` fixture adapter). The versioned
+`actor-release-0.1` gate explicitly includes ownership/lifecycle and source-copying
+regressions alongside the core, receive, isolation and wait packs. Use two
+independent execution-only principals; a node-owner browser session is not an
+unauthorized-exit fixture. Passing actor-core alone is insufficient for this gate.
+
+The native SWI dependency now pins `91d5c5257e4ef4e06e56764e6023fe58eddd93c7`,
+which preserves independent monitor notifications during owning-socket teardown.
+This replaces the older pin that lacked that repair. Updating the pin prepares
+future builds; it does not change an already running container.
