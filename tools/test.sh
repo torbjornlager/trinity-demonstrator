@@ -13,7 +13,7 @@ SWIPL="${SWIPL:-swipl}"
 SELECT="$*"
 for tier in "$@"; do
     case "$tier" in
-        LINT|T0|T1|T2|T3|T4|T5|T1_NATIVE|T1_INTEGRATION|T3_NATIVE|T3_INTEGRATION|T4_NATIVE|T4_INTEGRATION|WASM|SERVICE_TEXT|MODEL|MODEL_SXML|JEV) ;;
+        LINT|T0|T1|T2|T3|T4|T5|T1_NATIVE|T1_INTEGRATION|T3_NATIVE|T3_INTEGRATION|T4_NATIVE|T4_INTEGRATION|WASM|SERVICE_TEXT|MODEL|MODEL_SXML|JEV|LINDA) ;;
         *) echo "Unknown test tier: $tier" >&2; exit 2 ;;
     esac
 done
@@ -107,6 +107,7 @@ run_wasm () {
 run_wasm
 
 run_tier SERVICE_TEXT tests/service_text_tests.pl 'run_tests([service_text,service_text_owner_options])'
+run_tier LINDA tests/linda_tests.pl 'run_tests(linda)'
 run_tier MODEL tests/model_service_tests.pl run_tests
 run_tier MODEL_SXML tests/model_statechart_tests.pl 'run_tests(model_statechart)'
 run_tier JEV tests/jev_tests.pl 'run_tests(jev)'

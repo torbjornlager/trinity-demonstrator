@@ -7349,6 +7349,7 @@ test(rpc_3_uses_shared_db_loaded_from_uri, set(X == [a, b])) :-
 test(node_resident_services_are_discoverable_via_rpc,
      true(ServicesSorted == [
          counter-meta(actor, protocol(count_v1)),
+         linda-meta(actor, protocol(linda_v1)),
          pubsub_service-meta(actor, protocol(pubsub_v1))
      ])) :-
     service_directory_file(File),

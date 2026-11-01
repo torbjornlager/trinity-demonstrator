@@ -13,13 +13,10 @@
 services:
   wp_n5:
     build:
-      # Paths in Compose overrides are resolved relative to the first compose
-      # file (Deployment/compose.yaml). The two repositories are siblings in
-      # the development/deployment checkout.
-      context: ../../trealla-port
-      dockerfile: Deployment/Dockerfile
-      args:
-        TREALLA_VERSION: ${TREALLA_N5_VERSION:-v3.14.20}
+      context: ..
+      dockerfile: Deployment/Dockerfile.n5-linda
+      additional_contexts:
+        trealla_runtime: service:wp_n5_runtime
     environment:
       WP_PORT: "3060"
       WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
@@ -42,9 +39,9 @@ services:
       WP_LOAD_URI_ORIGINS: https://n2.elfenbenstornet.se,https://n4.elfenbenstornet.se,https://n5.elfenbenstornet.se
       WP_LOAD_URI_ORIGIN_ALIASES: https://n2.elfenbenstornet.se=http://wp_n2:3052,https://n5.elfenbenstornet.se=http://wp_n3:3053
       WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
-      # Load Trealla's attributed copies of the same three shared-database
-      # layers as N4. They are baked into the image for portable deployment.
-      WP_SHARED_DB_FILES: /app/Deployment/shared_db_common.pl,/app/Deployment/shared_db_actor_common.pl,/app/Deployment/shared_db_n4.pl
+      # Load Trealla's attributed copies of the three shared-database layers
+      # plus the owner-installed Linda client and directory, all image-baked.
+      WP_SHARED_DB_FILES: /app/Deployment/shared_db_common.pl,/app/Deployment/shared_db_actor_common.pl,/app/Deployment/shared_db_n4.pl,/app/owner_services/linda_client.pl,/app/owner_start/shared_db_linda.pl
       WP_SHARED_DB_OVERLAY_FILE: ""
       # Match the SWI node's interactive defaults. Execution time is charged
       # only while a result slice is computing; idle time governs suspended
@@ -59,6 +56,16 @@ services:
     volumes:
       - trealla_n5_state:/state
     pids_limit: 256
+
+  # Build-only base image: the Trealla runtime remains owned by its repository.
+  wp_n5_runtime:
+    deploy:
+      replicas: 0
+    build:
+      context: ../../trealla-port
+      dockerfile: Deployment/Dockerfile
+      args:
+        TREALLA_VERSION: ${TREALLA_N5_VERSION:-v3.14.20}
 
   caddy:
     build:

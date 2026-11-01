@@ -2718,6 +2718,106 @@ ping_pong_remote :-
     The answers are produced on the remote node, but the protocol conversation
     happens through your local shell exactly as if the toplevel were nearby.
 </p>
+
+
+<h2 id="linda">Linda: a shared blackboard</h2>
+
+<p>Linda lets different users' programs communicate through a shared blackboard.
+One program leaves a tuple; another reads or takes a matching tuple. They need
+neither each other's actor addresses nor a shared session. The node owner
+provides the service, just as with the counter service.</p>
+
+<p>Select <strong>n3, n4, or n5</strong> and open <strong>25 linda.pl</strong>
+in the Examples drawer. The file contains usage examples; the five predicates
+below are already supplied by the node. Try them with a partner or two browser
+sessions on the <em>same node</em>. Agree on a group name, here <code>blue</code>,
+to distinguish your tuples from other people's.</p>
+
+<table>
+<thead><tr><th>Call</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td><code>linda_out(Tuple)</code></td><td>Publish a ground tuple.</td></tr>
+<tr><td><code>linda_in(Pattern)</code></td><td>Take a matching tuple, waiting if necessary.</td></tr>
+<tr><td><code>linda_rd(Pattern)</code></td><td>Read a matching tuple, waiting if necessary; leave it on the blackboard.</td></tr>
+<tr><td><code>linda_inp(Pattern)</code></td><td>Take a match, or fail immediately.</td></tr>
+<tr><td><code>linda_rdp(Pattern)</code></td><td>Read a match, or fail immediately.</td></tr>
+</tbody></table>
+
+<h3>Producer and consumer</h3>
+<p>Alice publishes a message. She can disconnect after the call succeeds:</p>
+<pre id="linda-submit">?- linda_out(message(blue, hello)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-submit&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+
+<p>Bob takes it in his own session, binding <code>Message = hello</code>.
+If Bob starts first, his call waits for Alice's message.</p>
+<pre id="linda-take">?- linda_in(message(blue, Message)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-take&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+
+<h3>Synchronization</h3>
+<p>Bob can wait for a signal:</p>
+<pre id="linda-wait">?- linda_in(ready(blue)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-wait&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Alice releases him by publishing that signal:</p>
+<pre id="linda-signal">?- linda_out(ready(blue)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-signal&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+
+<h3>Reading shared data</h3>
+<p>Alice publishes a setting:</p>
+<pre id="linda-setting">?- linda_out(setting(blue, colour, green)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-setting&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Bob, Alice, and other clients can read it repeatedly; a read leaves the tuple
+available. <code>Colour</code> becomes <code>green</code>:</p>
+<pre id="linda-read">?- linda_rd(setting(blue, colour, Colour)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-read&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>A nonblocking read lets a program handle missing data immediately:</p>
+<pre id="linda-probe">?- ( linda_rdp(setting(blue, size, Size))
+   -&gt; write(Size), nl
+   ;  write('No size has been published'), nl ).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-probe&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>When finished, take the setting to remove it:</p>
+<pre id="linda-cleanup">?- linda_inp(setting(blue, colour, green)).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-cleanup&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+
+<p>Patterns use ordinary Prolog unification. Each take removes one occurrence;
+reads preserve it. A call returns one match, and backtracking does not undo a
+completed operation. Each node has its own blackboard. Group names prevent
+accidental interference by convention, not by access control. Restarting the
+service clears its tuples.</p>
+
+<p>These examples follow the producer/consumer, synchronization, and shared-data
+patterns in the
+<a href="https://sicstus.sics.se/sicstus/docs/latest4/html/sicstus.html/lib_002dlinda.html#lib_002dlinda" target="_blank">SICStus Linda documentation</a>.
+The <code>linda_</code> prefix distinguishes this application interface from
+other predicates, including the statechart <code>in/1</code>. The owner setup is
+documented in
+<a href="https://github.com/torbjornlager/trinity-demonstrator/blob/main/examples/services/README.md" target="_blank">the service instructions</a>;
+<a href="https://arxiv.org/pdf/cs/0404052" target="_blank">section 5 of the Qu-Prolog paper</a>
+gives another Prolog Linda example.</p>
+
+<h3 id="linda-erlang-ets">How does this compare with Erlang and ETS?</h3>
+
+<p>Erlang/OTP does not provide a built-in Linda service. Its
+<a href="https://www.erlang.org/doc/system/ref_man_processes.html" target="_blank">process communication</a>
+uses messages addressed to a process, by pid, registered name, or alias.
+A process can wait for a matching message in its own mailbox. A Linda client
+instead asks a shared service for a matching tuple: Alice's program and Bob's
+program agree on the service and tuple format, without knowing one another's
+process addresses.</p>
+
+<p><a href="https://www.erlang.org/doc/apps/stdlib/ets.html" target="_blank">ETS
+(Erlang Term Storage)</a> provides shared tables of tuples, pattern-based searches,
+and atomic operations. It can supply storage for a blackboard, but its table
+operations do not provide Linda's blocking <code>in</code> and <code>rd</code>:
+waiting for a matching tuple to appear requires an additional protocol.
+ETS tables are local to an Erlang node; remote clients need a service to access
+them.</p>
+
+<p>One could build such a Linda service in Erlang using a process that owns the
+tuples and tracks waiting requests, optionally storing tuples in ETS. The
+owner-installed Web Prolog service uses ordinary Prolog unification for matching. The shared blackboard is an application built on message passing;
+it lets different users' programs exchange work and results through data that
+can remain available after the submitting program disconnects.</p>
+
 </section>
 
 

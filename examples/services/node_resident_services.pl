@@ -25,6 +25,7 @@
     op(1000, xfy, if)
 ]).
 :- use_module(library(web_prolog/node), [node/2]).
+:- use_module(linda_service, [start_linda_service/1, stop_linda_service/0, linda_client_file/1]).
 :- use_module(library(http/thread_httpd), [http_stop_server/2]).
 :- use_module(library(lists), [select/3]).
 
@@ -38,8 +39,8 @@ service_directory_file(File) :-
     directory_file_path(Dir, 'service_directory.pl', File).
 
 
-service_directory_options([load_shared_db_file(File)]) :-
-    service_directory_file(File).
+service_directory_options([load_shared_db_file(File), load_shared_db_file(Client)]) :-
+    service_directory_file(File), linda_client_file(Client).
 
 
 start_service_demo_node(Port) :-
@@ -70,12 +71,14 @@ start_pubsub_service(Pid) :-
 
 start_example_services(CounterPid, PubSubPid) :-
     start_counter_service(CounterPid),
-    start_pubsub_service(PubSubPid).
+    start_pubsub_service(PubSubPid),
+    start_linda_service(_).
 
 
 stop_example_services :-
     stop_service(counter),
-    stop_service(pubsub_service).
+    stop_service(pubsub_service),
+    stop_linda_service.
 
 
 stop_service(Name) :-

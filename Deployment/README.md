@@ -227,7 +227,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 - overlay contents:
   `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that calls n4
 - actor-common contents (shared with n4):
-  `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
+  `service/2` entries for `counter`, `pubsub_service`, and `linda`, `echo_actor/0`,
   `count_actor/1`, and the native `ping_pong/0-1` and
   `ping_pong_benchmark/2` predicates
 - shared DB file:
@@ -244,7 +244,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 - overlay contents:
   `deployment_node(n4).` plus `human(plato)` / `human(aristotle)`
 - actor-common contents (shared with n3):
-  `service/2` entries for `counter` and `pubsub_service`, `echo_actor/0`,
+  `service/2` entries for `counter`, `pubsub_service`, and `linda`, `echo_actor/0`,
   `count_actor/1`, and the native `ping_pong/0-1` and
   `ping_pong_benchmark/2` predicates
 - shared DB file:
@@ -566,8 +566,8 @@ After editing any of the shared DB files, rebuild the node containers:
 docker compose up --build -d wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 ```
 
-`n3` and `n4` additionally start the node-resident `counter` and `pubsub_service`
-actors at startup through
+`n3` and `n4` additionally start the node-resident `counter`, `pubsub_service`,
+and `linda` actors at startup through
 [`examples/services/node_resident_services.pl`](../examples/services/node_resident_services.pl).
 
 ## macOS Notes
@@ -581,6 +581,26 @@ actors at startup through
 - If your ISP uses CGNAT, direct router port forwarding may not work. In that
   case, keep the same Compose layout and replace the public edge with a tunnel
   solution.
+
+### Linda on the ACTOR nodes
+
+The owner supplies `linda_out/1`, `linda_in/1`, `linda_rd/1`, `linda_inp/1`, and
+`linda_rdp/1`. The Examples drawer shows only their use. N3 and N4 load
+`examples/services/linda_client.pl` into their shared databases and start the
+owner service during bootstrap.
+
+The Trealla N5 override adds an owner application image layer, built from this
+repository on top of the sibling Trealla runtime. The `wp_n5_runtime` service
+is a zero-replica build dependency; it does not run an additional node.
+`Dockerfile.n5-linda` packages the shared client predicates and the same portable
+owner tuple-space implementation used by N3 and N4. Its deployment adapter
+starts Linda before the normal listener and retains maintenance draining.
+No host source mounts or Trealla runtime changes are needed. Rebuild N5 with
+the active override to deploy owner service changes.
+
+Each node has an independent blackboard, subject to that node's existing access
+policy; N5 remains owner-only behind SSO. See the
+[owner setup and examples](../examples/services/README.md#linda-tuple-space-service).
 
 ### Portable text default
 

@@ -208,7 +208,8 @@ Tiers `T0`–`T5` exercise the external implementation in fresh processes withou
 preloading upper layers. `LINT` checks layering in the pinned package. `WASM` checks
 browser statecharts, Worker/coordinator bridges and real-engine semantics. The
 `T1_NATIVE`, `T3_NATIVE`, `T4_NATIVE` and corresponding `_INTEGRATION` selections
-remain available. The two tests requiring a colocated native/browser tree were
+remain available. `LINDA` checks the tutorial tuple-space example and its owner-installed service
+through a public WebSocket client. The two tests requiring a colocated native/browser tree were
 retired; explicit asset relocation and missing-asset checks remain.
 
 ## Provenance

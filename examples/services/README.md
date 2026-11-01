@@ -29,8 +29,8 @@ addressing named services. On one machine this is often not literally
 `http://localhost:3010`.
 
 `start_service_demo_node/1` is the owner bootstrap entry point: if the node
-is restarted and the owner runs the same bootstrap again, the `counter` and
-`pubsub_service` actors are started and registered again.
+is restarted and the owner runs the same bootstrap again, the `counter`,
+`pubsub_service`, and `linda` actors are started and registered again.
 
 If you want the service pids at startup, use:
 
@@ -44,7 +44,7 @@ For manual control instead of the combined bootstrap, you can still start the
 services yourself:
 
 ```prolog
-?- node(3010, [profile(actor), load_shared_db_file('examples/services/service_directory.pl')]).
+?- service_directory_options(Options), node(3010, [profile(actor)|Options]).
 ?- start_example_services(CounterPid, PubSubPid).
 ```
 
@@ -131,7 +131,9 @@ discover the advertised services declaratively:
 Name = counter,
 Meta = meta(actor, protocol(count_v1)) ;
 Name = pubsub_service,
-Meta = meta(actor, protocol(pubsub_v1)).
+Meta = meta(actor, protocol(pubsub_v1)) ;
+Name = linda,
+Meta = meta(actor, protocol(linda_v1)).
 ```
 
 This keeps discovery separate from process introspection. Clients learn only
@@ -217,3 +219,98 @@ their existing atom/string forms remain supported.
 The [mock-only verification](../../docs/verification/model-jev-text-2026-10-25/REPORT.md)
 covers both reading modes without contacting a provider or using a real API key.
 These application services are examples, not portable built-in predicates.
+
+## Linda tuple-space service
+
+The owner installs both the service and its public application predicates.
+Clients simply call `linda_out/1`, `linda_in/1`, `linda_rd/1`, `linda_inp/1`,
+and `linda_rdp/1`; they do not load or implement a server or request protocol.
+**25 linda.pl** in the Examples drawer contains usage examples only.
+
+On n3, n4, or n5, two programs on the same node can communicate:
+
+```prolog
+% Alice publishes a message, then may disconnect.
+?- linda_out(message(blue, hello)).
+
+% Bob takes it in another session. He may start first: the call waits.
+?- linda_in(message(blue, Message)).
+Message = hello.
+
+% Alice publishes shared data.
+?- linda_out(setting(blue, colour, green)).
+
+% Either user can read it repeatedly without removing it.
+?- linda_rd(setting(blue, colour, Colour)).
+Colour = green.
+
+% Remove it when finished. A missing nonblocking read or take fails.
+?- linda_inp(setting(blue, colour, green)).
+```
+
+`blue` is a group name chosen by the clients, not an access control. Each node
+has a separate blackboard; clients select the same node to communicate. N5
+retains its existing owner-only SSO policy. The service owns tuples independently
+of client connections, but restarting it clears the blackboard.
+
+### SWI owner setup (n3 and n4)
+
+`node_resident_services.pl` starts Linda alongside the counter and pubsub
+services. `start_service_demo_node/1` loads the service directory and
+`linda_client.pl` into the shared database. Manual setup must load both:
+
+```prolog
+?- use_module('examples/services/node_resident_services.pl').
+?- start_service_demo_node(3010).
+```
+
+`start_n3.pl` and `start_n4.pl` install the same shared client source and start
+the owner service. For separate lifecycle control:
+
+```prolog
+?- use_module('examples/services/linda_service.pl').
+?- start_linda_service(Pid).
+?- stop_linda_service.
+```
+
+### Trealla owner setup (n5)
+
+`compose.trealla-n5.yaml` builds the existing Trealla runtime as a zero-replica
+build dependency and adds a small owner application image layer using
+`Dockerfile.n5-linda`. No host source mounts are required. The layer installs
+`linda_service_trealla.pl`, the same `linda_space.pl` implementation used by SWI,
+and the same shared `linda_client.pl` interface.
+
+`start_n5_linda.pl` starts the service before entering the usual Trealla listener.
+The deployment entrypoint retains the existing maintenance/drain behavior.
+The N5 shared-database file list adds the client predicates and Linda directory
+entry. The runtime, private authentication, SSO, and source-origin policy remain
+owned by the existing Trealla deployment.
+
+Rebuild and recreate N5 with the active override:
+
+```sh
+docker compose -f Deployment/compose.yaml \
+  -f Deployment/compose.trealla-n5.yaml --env-file Deployment/.env \
+  up -d --build --no-deps wp_n5
+```
+
+### Owner implementation and verification
+
+`linda_space.pl` holds tuples and pending requests in actor state. Tuples are
+finite ground Prolog terms, duplicates are separate occurrences, the oldest
+matching tuple is selected, and waiting requests are considered in arrival order.
+The client predicates resolve the local service, correlate replies, monitor its
+pid, and cancel interrupted requests. Client monitors remove abandoned waits.
+Cancellation cannot undo a take already processed; a lost acknowledgement does
+not establish whether an operation happened. The teaching service has no
+persistence, quotas, or `eval` operation.
+
+The usage patterns are inspired by the
+[SICStus Linda documentation](https://sicstus.sics.se/sicstus/docs/latest4/html/sicstus.html/lib_002dlinda.html#lib_002dlinda).
+Section 5 of [Multi-threading and Message Communication in Qu-Prolog](https://arxiv.org/pdf/cs/0404052)
+provides a server example using a different implementation.
+
+Run the SWI semantic and browser integration tests with `./tools/test.sh LINDA`.
+`tools/test_linda_service.py` checks the five owner-supplied predicates over real
+WebSocket sessions, including waiting consumers and use after disconnection.

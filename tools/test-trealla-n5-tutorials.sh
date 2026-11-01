@@ -56,3 +56,9 @@ python3 "$REPO_ROOT/tools/test_n5_sources.py" \
     --conformance-root "$CONFORMANCE_ROOT" \
     --ws-url "ws://127.0.0.1:$TEST_PORT/ws" \
     --header 'X-Web-Prolog-User: owner@example.test'
+
+python3 "$REPO_ROOT/tools/test_linda_service.py" \
+    --conformance-root "$CONFORMANCE_ROOT" \
+    --ws-url "ws://127.0.0.1:$TEST_PORT/ws" \
+    --origin https://n5.elfenbenstornet.se \
+    --header 'X-Web-Prolog-User: owner@example.test'

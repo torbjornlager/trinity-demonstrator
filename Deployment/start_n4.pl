@@ -8,6 +8,7 @@
 :- use_module(library(web_prolog/actor_api), [
     whereis_service/2
 ]).
+:- use_module('../examples/services/linda_service.pl', [linda_client_file/1]).
 :- use_module('../examples/services/node_resident_services.pl', [
     start_example_services/2
 ]).
@@ -24,6 +25,7 @@ start_n4 :-
     start_n4_done,
     !.
 start_n4 :-
+    linda_client_file(LindaClientPath),
     common_shared_db_path(CommonSharedDBPath),
     actor_common_shared_db_path(ActorCommonSharedDBPath),
     node_overlay_shared_db_path(n4, OverlaySharedDBPath),
@@ -62,6 +64,7 @@ start_n4 :-
         ]),
         load_shared_db_file(CommonSharedDBPath),
         load_shared_db_file(ActorCommonSharedDBPath),
+        load_shared_db_file(LindaClientPath),
         load_shared_db_file(OverlaySharedDBPath)
     ]),
     with_node_port_context(3055,
@@ -98,7 +101,7 @@ ensure_example_services_started :-
 ensure_example_services_started(0) :-
     throw(error(resource_error(node_resident_services),
                 context(start_n4/0,
-                        'unable to register counter and pubsub_service on n4'))).
+                        'unable to register counter, pubsub_service and linda on n4'))).
 ensure_example_services_started(AttemptsLeft) :-
     start_example_services(_CounterPid, _PubSubPid),
     (   example_services_ready
@@ -112,4 +115,6 @@ example_services_ready :-
     whereis_service(counter, CounterPid),
     CounterPid \== undefined,
     whereis_service(pubsub_service, PubSubPid),
-    PubSubPid \== undefined.
+    PubSubPid \== undefined,
+    whereis_service(linda, LindaPid),
+    LindaPid \== undefined.
