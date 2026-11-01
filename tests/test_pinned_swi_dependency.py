@@ -40,6 +40,18 @@ class PinnedDependency(unittest.TestCase):
             native=self.clone(d);(native/'prolog/untracked.pl').write_text('unexpected.\n')
             result=tool(native,'--check')
             self.assertNotEqual(result.returncode,0)
+    def test_test_execution_rejects_changed_tiers_fixtures_and_lint(self):
+        for relative in ['tests/tiers/t0_actors.pl',
+                         'tests/fixtures/demonstrator-peer.tar.gz',
+                         'tools/generate_dependency_graph.py',
+                         'tests/tiers/untracked_test.pl']:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as d:
+                native=self.clone(d)
+                path=native/relative
+                path.write_bytes((path.read_bytes() if path.exists() else b'')+b'\nchanged.\n')
+                result=tool(native,'--check','--check-tests')
+                self.assertNotEqual(result.returncode,0)
+                self.assertIn('native test files differ from pinned revision',result.stderr)
     def test_browser_drift_is_rejected_before_execution(self):
         with tempfile.TemporaryDirectory() as d:
             payload=Path(d)/'browser'

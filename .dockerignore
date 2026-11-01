@@ -41,3 +41,5 @@ tools/*
 !tools/pinned_browser.py
 !tools/setup_browser.py
 !tools/fetch_browser.py
+!tools/pinned_trealla.py
+!tools/fetch_trealla.py

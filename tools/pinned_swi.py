@@ -28,12 +28,18 @@ def validate(native):
 
 def validate_payloads(native,wasm):
     from pinned_browser import check
-    check()
+    check(native)
     names=['shared_db.pl','statechart_wasm.pl','statechart_wasm_exec.pl','statechart_wasm_model.pl','statechart_wasm_runtime.pl','sxml_schema.pl']
     for name in names:
         source=(native if name=='sxml_schema.pl' else ROOT)/'prolog/web_prolog/wasm'/name
         if (wasm/name).read_bytes()!=source.read_bytes():
             raise ValueError('assembled browser source differs from selected inputs: '+name)
+
+def validate_test_suite(native):
+    dirty = git(native, 'status', '--porcelain', '--untracked-files=all', '--',
+                'tests/tiers', 'tests/fixtures', 'tools/generate_dependency_graph.py')
+    if dirty:
+        raise ValueError('native test files differ from pinned revision: '+dirty)
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
@@ -41,10 +47,12 @@ def main():
     p.add_argument('--swipl',type=Path)
     p.add_argument('--wasm-dir',type=Path)
     p.add_argument('--check',action='store_true',help='validate checkout and print pin without launching SWI')
+    p.add_argument('--check-tests',action='store_true',help='also reject drift in upstream tiers, fixtures and layering lint')
     p.add_argument('arguments',nargs=argparse.REMAINDER)
     a=p.parse_args()
     try:
         native=a.native_root.resolve(strict=True);record=validate(native)
+        if a.check_tests:validate_test_suite(native)
         if a.check:
             print(json.dumps(record,indent=2));return
         if not a.swipl or not a.swipl.is_file():raise ValueError('--swipl must name an existing verified executable')

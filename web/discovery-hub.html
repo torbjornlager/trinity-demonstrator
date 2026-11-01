@@ -204,14 +204,19 @@
     }
 
     // ---- the query the current filter corresponds to ----
+    function prologAtom(value) {
+      return "'" + String(value).replace(/\\/g, "\\\\").replace(/'/g, "''")
+        .replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t") + "'";
+    }
+
     function buildGoal(f) {
       var conj = [];
-      if (f.profileMin) conj.push("node_profile_at_least(Id, " + f.profileMin + ")");
-      if (f.auth) conj.push("node_auth(Id, " + f.auth + ")");
+      if (f.profileMin) conj.push("node_profile_at_least(Id, " + prologAtom(f.profileMin) + ")");
+      if (f.auth) conj.push("node_auth(Id, " + prologAtom(f.auth) + ")");
       if (f.capability) {
         conj.push(f.capability.indexOf("/") >= 0
-          ? "node_provides(Id, '" + f.capability + "')"
-          : "node_service(Id, " + f.capability + ")");
+          ? "node_provides(Id, " + prologAtom(f.capability) + ")"
+          : "node_service(Id, " + prologAtom(f.capability) + ")");
       }
       if (!conj.length) conj.push("node_id(Id)");
       return conj.join(",\n   ");

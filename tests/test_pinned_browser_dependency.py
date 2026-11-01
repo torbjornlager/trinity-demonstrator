@@ -14,6 +14,8 @@ class BrowserDependency(unittest.TestCase):
     def setUp(self):
         temp=tempfile.TemporaryDirectory();self.addCleanup(temp.cleanup)
         self.root=Path(temp.name);self.base=self.root/'.trinity/browser-runtime'
+        (self.root/'dependencies').mkdir()
+        shutil.copy2(ROOT/'dependencies/swi-prolog-node.json',self.root/'dependencies/swi-prolog-node.json')
         self.pin=json.loads((ROOT/'dependencies/swi-wasm-node.json').read_text())
         self.package=self.base/self.pin['revision']
         shutil.copytree(ROOT/'.trinity/browser-runtime'/self.pin['revision'],self.package)
@@ -32,6 +34,24 @@ class BrowserDependency(unittest.TestCase):
         self.pinpath.write_text(json.dumps(self.pin))
     def test_selected_package_and_runtime_aliases(self):
         self.assertEqual(browser.check()[0],self.package)
+    def test_schema_provenance_must_match_native_pin(self):
+        for field,value in [('repository','https://elsewhere.invalid/native.git'),
+                            ('revision','0'*40),('path','unexpected.pl')]:
+            with self.subTest(field=field):
+                original=json.loads((self.package/'manifest.json').read_text())['schema'][field]
+                self.rewrite_manifest(lambda m:m['schema'].update({field:value}))
+                with self.assertRaisesRegex(ValueError,'schema provenance'):browser.check()
+                self.rewrite_manifest(lambda m:m['schema'].update({field:original}))
+    def test_schema_record_digest_is_checked(self):
+        self.rewrite_manifest(lambda m:m['schema'].update(sha256='0'*64))
+        with self.assertRaisesRegex(ValueError,'schema digest'):browser.check()
+    def test_native_schema_bytes_are_checked(self):
+        native=self.root/'native';schema=native/'prolog/web_prolog/wasm/sxml_schema.pl'
+        schema.parent.mkdir(parents=True)
+        schema.write_bytes((self.package/'web/wasm/sxml_schema.pl').read_bytes())
+        self.assertEqual(browser.check(native)[0],self.package)
+        schema.write_text('incompatible_schema.\n')
+        with self.assertRaisesRegex(ValueError,'pinned native schema'):browser.check(native)
     def test_corrupt_asset(self):
         (self.package/'web/vendor/swi-wasm-node.js').write_text('changed')
         with self.assertRaisesRegex(ValueError,'files differ'):browser.check()

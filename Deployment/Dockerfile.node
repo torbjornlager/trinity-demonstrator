@@ -1,7 +1,7 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # Build from the repository root. For a private native dependency, pass
 # --secret id=github_token,src=/path/to/read-token (never a build argument).
-FROM swipl:10.1.19
+FROM swipl:10.1.19@sha256:ede678fbecbd4a3da8e9e210c2290b02011fe21a0fac30de283e099ad3d925d8
 RUN apt-get update && apt-get install -y --no-install-recommends python3 git \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r webprolog \
@@ -22,6 +22,8 @@ ENV WP_PORT=3060
 EXPOSE 3060
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD swipl -q -g "use_module(library(http/http_open)), \
-        ( catch((http_open('http://localhost:3060/healthz', S, [timeout(3)]), close(S)), _, fail) \
+        (getenv('WP_PORT', Port) -> true ; Port='3060'), \
+        format(atom(URL), 'http://127.0.0.1:~w/healthz', [Port]), \
+        ( catch((http_open(URL, S, [timeout(3)]), close(S)), _, fail) \
           -> halt(0) ; halt(1) )" -t 'halt(1)'
 ENTRYPOINT ["swipl", "/app/Deployment/start_node.pl"]

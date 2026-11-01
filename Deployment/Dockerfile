@@ -1,7 +1,7 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # Build from the repository root. For a private native dependency, pass
 # --secret id=github_token,src=/path/to/read-token (never a build argument).
-FROM swipl:10.1.19
+FROM swipl:10.1.19@sha256:ede678fbecbd4a3da8e9e210c2290b02011fe21a0fac30de283e099ad3d925d8
 RUN apt-get update && apt-get install -y --no-install-recommends python3 git \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r webprolog \

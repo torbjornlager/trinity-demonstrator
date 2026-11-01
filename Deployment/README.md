@@ -10,6 +10,20 @@ the existing BuildKit `github_token` secret must have read access to both privat
 repositories. Host `.trinity/` state is excluded and rebuilt inside the image.
 
 
+## Container image pins
+
+All external `FROM` images, Compose `image:` entries, Dockerfile frontends, and
+the N5 smoke test's helper images use `tag@sha256:…` references. These pin the
+multi-platform image index, supporting both ARM64 development and AMD64 CI.
+The `trealla_runtime` base is a Compose named build context produced from the
+source pins below.
+
+To refresh an image, resolve the intended tag with
+`docker buildx imagetools inspect IMAGE:TAG` and use its top-level `Digest:`
+in every matching reference. Confirm the index includes the required platforms,
+then rebuild the affected images and run the deployment smoke tests. Changing a
+tag alone does not update a digest-pinned image.
+
 ## Native dependency in container builds
 
 Both SWI Dockerfiles fetch the exact commit from `dependencies/swi-prolog-node.json`,
@@ -17,6 +31,19 @@ validate it, and assemble the browser payloads before checking node startup.
 Python 3 and Git remain available in the image for startup validation. There is
 no in-tree native implementation or legacy build mode. SWI-Prolog is pinned to
 10.1.19, which includes the required protected-wait fix.
+Setup and startup also require the browser package's schema provenance to match
+the native repository and revision, and its schema bytes to match the native
+schema hash. Update both dependency pins together when moving the native pin.
+
+`start_node.pl` resolves settings as environment > config file > default,
+including `ack_public`, `owner`, shared-database paths and discovery seed files.
+`WP_PUBLIC_URL` must be an absolute HTTP(S) origin, for example
+`https://node.example.com:8443` (an optional trailing slash is accepted).
+Credentials, paths, queries and fragments are rejected because the advertised
+settings represent an origin. `WP_CHECK=1` validates the same URL as startup
+without changing the public HTTP settings or binding a port.
+IPv6 literals retain their brackets in advertised URLs, for example
+`https://[::1]:8443`. Both SWI and Trealla container health checks use `WP_PORT`.
 
 For a private dependency, provide a read token as a BuildKit secret:
 
@@ -364,13 +391,39 @@ execution backend with the native Trealla port. It is deliberately an
 override: the normal `compose.yaml`, SWI N5 image, and normal Caddyfile remain
 unchanged as the rollback configuration.
 
-The override assumes sibling checkouts:
+Both source revisions are fixed in
+[`dependencies/trealla-port.json`](../dependencies/trealla-port.json): the Web
+Prolog port at `2ebaeb9ca78e` and the Trealla v3.14.20 engine at `841f819c7dbd`.
+The build fetches and verifies the full commit SHAs itself. It uses neither a
+sibling working tree nor an upstream tag as a build selector. Change the
+reviewed manifest to update these sources; `TREALLA_N5_VERSION` no longer selects
+the engine.
 
-```text
-parent/
-  trinity-demonstrator/
-  trealla-port/
+The manifest validator rejects wrong revisions, modified or untracked sources,
+and incomplete checkouts. To validate a local checkout or fetch clean pinned
+sources explicitly:
+
+```sh
+python3 tools/pinned_trealla.py --port-root /path/to/trealla-port
+python3 tools/fetch_trealla.py --port-destination .trinity/trealla-port \
+  --engine-destination .trinity/trealla-engine
 ```
+
+These commands never install a system engine or overwrite an existing checkout.
+The Docker build checks the compiled engine version and records both revisions
+in `/usr/share/doc/trealla/runtime-pins.json`. Only committed port files enter the
+application image. Local ignored files and Git credentials are not packaged.
+
+If the port repository requires authentication, pass the same `github_token`
+BuildKit secret used for SWI dependencies:
+
+```sh
+docker build --secret id=github_token,src=/path/to/read-token \
+  -f Deployment/Dockerfile.trealla -t web-prolog-trealla .
+```
+
+For Compose, add the secret to `wp_n5_runtime.build.secrets` in an owner-local
+override. Credentials are never build arguments or saved Git configuration.
 
 GitHub SSO remains the owner-only public boundary. Behind it, Trealla also
 enforces `auth(private)` and accepts the verified owner identity only from
@@ -590,7 +643,7 @@ The owner supplies `linda_out/1`, `linda_in/1`, `linda_rd/1`, `linda_inp/1`, and
 owner service during bootstrap.
 
 The Trealla N5 override adds an owner application image layer, built from this
-repository on top of the sibling Trealla runtime. The `wp_n5_runtime` service
+repository on top of the manifest-pinned Trealla runtime. The `wp_n5_runtime` service
 is a zero-replica build dependency; it does not run an additional node.
 `Dockerfile.n5-linda` packages the shared client predicates and the same portable
 owner tuple-space implementation used by N3 and N4. Its deployment adapter

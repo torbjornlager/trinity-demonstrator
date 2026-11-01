@@ -46,7 +46,7 @@ jobs:
       - uses: ./.github/actions/setup-swi
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '22.23.4'
       - name: Run pinned native, demonstrator and browser checks
         run: >-
           python3 tools/ci_pinned_swi.py
@@ -91,7 +91,7 @@ jobs:
       - uses: ./.github/actions/setup-swi
       - uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '22.23.4'
       - name: Assemble browser sources from pinned schema
         run: python3 tools/setup_swi.py --native-root .trinity/ci-native
       - name: Run WASM tier

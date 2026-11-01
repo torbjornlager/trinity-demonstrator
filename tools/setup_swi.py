@@ -12,7 +12,7 @@ def check(state_file):
     record=validate(native)
     if state['revision']!=record['revision']:raise ValueError('setup pin differs; rerun setup')
     if Path(state['asset_root']).resolve()!=ROOT:raise ValueError('setup belongs to another demonstrator; rerun setup')
-    browser,_=check_browser()
+    browser,_=check_browser(native)
     wasm=Path(state['wasm_root']).resolve(strict=True);validate_payloads(native,wasm)
     return dict(record,asset_root=str(ROOT),wasm_root=str(wasm),browser_package=str(browser))
 

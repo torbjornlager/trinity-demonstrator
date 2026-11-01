@@ -1,37 +1,82 @@
-# Test tiers
+# Test ownership and tiers
 
-Each tier is run by `tools/test.sh` in a **fresh SWI-Prolog process** and
-corresponds to one layer combination from
-[`docs/LAYERED_REAL_NODE_PLAN.md`](../../docs/LAYERED_REAL_NODE_PLAN.md) §4.
+`tools/test.sh` runs the native suite directly from the validated, pinned
+`swi-prolog-node` checkout. There are no runtime test copies in this directory.
+Every tier uses a fresh SWI-Prolog process with a process-group watchdog. Loading
+errors fail the tier before its tests run. A missing tier is an error.
 
-The demonstrator's full suite now lives across these tiers (its own test
-files copied verbatim into `behaviours/` and `node/`, plus the lower-layer
-cases adapted into `t0`–`t2`). The former `LEGACY` tier — the demonstrator
-suite run against an in-tree `src/` copy — was retired once `T0`–`T5`
-subsumed it, and `src/` was removed.
+Native processes run from the native checkout, with `WP_ASSET_ROOT` pointing to
+this demonstrator and `WP_WASM_SOURCE_DIR` pointing to its assembled browser
+payload. The bootstrap configures library lookup without preloading upper layers;
+the upstream layer-honesty assertions remain active. Runtime files, test sources,
+fixtures and the layering lint must match the dependency pin before execution.
+Relative `SWIPL` and `WP_NATIVE_STATE` overrides are resolved before changing
+directories, so the native and local tiers use the same executable and setup.
 
-| tier | loads | runs | layer-honesty assertion |
-|---|---|---|---|
-| T0 | `actors` only | actor tests not needing source options | no isolation/toplevel/distribution/node modules loaded |
-| T1 | + `isolation` + minimal glue | module prep, `src_text/1` & friends | no toplevel/distribution/node |
-| T2 | + `toplevel_actors` | toplevel actor tests | no distribution/node |
-| T3 | + behaviours | server/supervisor/statechart/parallel | no distribution/node |
-| T4 | + `distribution` + node | node_tests, multi-node harness, golden responses | — |
-| T5 | new node ↔ unmodified trinity-demonstrator | wire-level interop both directions | — |
+| Selection | Owner and coverage |
+|---|---|
+| `LINT` | upstream layering lint |
+| `TEXT` | upstream portable-text suite and boundary tests |
+| `T0` | upstream actors, without higher layers |
+| `T1` | upstream isolation and source preparation |
+| `T2` | upstream toplevel actors, including cyclic-answer guards |
+| `T3` | upstream behaviours, including server-upgrade lifecycle |
+| `T4` | upstream native and external-asset integration partitions |
+| `DISCOVERY` | demonstrator hub scheduling/latency and browser query round trips |
+| `T5` | upstream interop against its checksummed historical-server archive |
+| `T1_NATIVE`, `T3_NATIVE`, `T4_NATIVE` | upstream runtime-only partitions |
+| `T1_INTEGRATION`, `T3_INTEGRATION`, `T4_INTEGRATION` | upstream external-asset partitions |
+| `DEMONSTRATOR` | local consumer contracts against the actual example-service bootstrap |
+| `SERVICE_TEXT`, `LINDA`, `MODEL`, `MODEL_SXML`, `JEV` | local application/example tests |
+| `WASM` | browser-package tests and demonstrator-owned browser adapters |
 
-Contract for a tier file (`tN_*.pl`):
+With no arguments the runner executes the complete table, using full `T1`, `T3`
+and `T4` rather than running their partitions a second time. CI uses the split
+partitions for separate logs and runs each native selection only once.
 
-- export `run_tier/0`, which runs the tier's plunit suites and **fails**
-  (nonzero exit) on any failure;
-- begin by asserting layer honesty, e.g.
-  `assertion(\+ current_module(distribution))` — these assertions are the
-  mechanical guarantee that lower layers stay stand-alone;
-- pid-shape note: below T4, pids are opaque (plan §2.4) — tier tests must
-  not assert `integer(Pid)` or `_@_` forms.
+The two upstream `legacy_layout` checks assume assets colocated with the native
+runtime. That layout does not apply here. `T4` therefore runs `run_native` and
+`run_integration` in separate processes, excluding only those two checks. Both
+partitions run even if one fails or times out. Asset relocation tests still
+run upstream; demonstrator startup/pin tests check the external-package layout.
+The retired `T4_LEGACY_LAYOUT` selection remains an error.
 
-Tier files are created by the phase that brings their layer into
-existence; a missing file is a test-run failure.
+## Consolidation audit
 
-All native imports resolve through the validated `swi-prolog-node` dependency.
-The runner configures its search path without preloading the upper layers.
-The browser schema is assembled from that same revision.
+The 57 removed Prolog test/helper files were compared with the pinned upstream
+tree before removal. The substantive differences were resolved as follows:
+
+- Runtime import paths and subprocess bootstraps are provided by the shared
+  runner. Native-relative paths, including the shared database used by the n5
+  overlay test, resolve from the native working directory.
+- The exact counter/Linda/pubsub catalogue assertion is retained in
+  `tests/demonstrator_integration_tests.pl`. Its fixture imports
+  `examples/services/node_resident_services.pl`, rather than maintaining a
+  second copy of that example implementation. It tests all three live services
+  and the owner-installed Linda client. `LINDA` is also an explicit CI gate.
+- Portable-text tests renamed or made unconditional in the demonstrator were
+  already covered by upstream's character-list cases. The pinned runtime uses
+  that mode by default; the upstream conditions are retained unchanged.
+- Local omissions and weaker assertions are replaced by upstream's stronger
+  checks: cyclic answers, lifetime context selection, DCG guards, retired source
+  options, and server upgrades. The previously missing `portable_text_tests.pl`,
+  `portable_text_boundary_tests.pl`, `supervisor_admission_tests.pl`,
+  `spawn_source_validation_tests.pl` and `server_upgrade_lifecycle_tests.pl`
+  are now reached through their upstream tier entry points.
+- T5 uses upstream's checksummed source fixture and its admission tests, replacing
+  the demonstrator copy's dependency on a historical Git tag.
+
+Runtime fixes and runtime regression tests belong upstream. Changes to examples,
+presenter assets, application services and deployment integration belong here.
+Do not restore a copied runtime suite to adapt a demonstrator expectation.
+
+The T4 stall observed during consolidation was traced to an uncollected self-RPC
+in `node:isobase_yield_timeout_callback_is_sandboxed`. Its upstream fixture now
+uses `setup_call_cleanup/3` to collect the pending promise before server teardown,
+checks the original `nb_getval/2` sandbox rejection, and asserts that no
+node-scoped promise remains. The original fixture failed the new resource
+assertion; the repaired test passed 300 consecutive repetitions and three complete
+T4 native runs. The test remains enabled without automatic retries. Both
+dependency pins advance to consume this test-only fix while keeping browser
+schema provenance aligned. The initial failure and diagnostic sample are retained
+with the verification logs.

@@ -7,6 +7,18 @@ PIN=ROOT/'dependencies/swi-wasm-node.json'
 BASE=ROOT/'.trinity/browser-runtime'
 
 def git(root,*args):return subprocess.check_output(['git','-C',str(root),*args],text=True,stderr=subprocess.PIPE).strip()
+def validate_schema(directory,manifest,native=None):
+    pin=json.loads((ROOT/'dependencies/swi-prolog-node.json').read_text())
+    schema=manifest['schema']
+    if (schema['repository'],schema['revision'],schema['path'])!=(pin['repository'],pin['revision'],'prolog/web_prolog/wasm/sxml_schema.pl'):
+        raise ValueError('browser schema provenance differs from native dependency pin')
+    digest=schema['sha256']
+    for path in [directory/'web/wasm/sxml_schema.pl',directory/'third_party/sxml_schema.pl']:
+        if hashlib.sha256(path.read_bytes()).hexdigest()!=digest:
+            raise ValueError('browser schema digest differs from schema record')
+    if native and hashlib.sha256((native/schema['path']).read_bytes()).hexdigest()!=digest:
+        raise ValueError('browser schema differs from pinned native schema')
+
 def validate_package(directory):
     pin=json.loads(PIN.read_text());raw=(directory/'manifest.json').read_bytes()
     if hashlib.sha256(raw).hexdigest()!=pin['manifest_sha256']:raise ValueError('browser package manifest differs from dependency pin')
@@ -17,6 +29,7 @@ def validate_package(directory):
         path=directory/rel
         if Path(rel).is_absolute() or '..' in Path(rel).parts or path.is_symlink() or not path.resolve().is_relative_to(directory.resolve()):raise ValueError('escaping browser package path')
         if hashlib.sha256(path.read_bytes()).hexdigest()!=digest:raise ValueError('browser runtime/package files differ: '+rel)
+    validate_schema(directory,m)
     return m
 
 def aliases(include_tests=True):
@@ -31,8 +44,9 @@ def aliases(include_tests=True):
     for name in ['statechart_wasm.pl','statechart_wasm_exec.pl','statechart_wasm_model.pl','statechart_wasm_runtime.pl']:rows['prolog/web_prolog/wasm/'+name]='web/wasm/'+name
     return rows
 
-def check():
+def check(native=None):
     pin=json.loads(PIN.read_text());directory=BASE/pin['revision'];m=validate_package(directory)
+    if native:validate_schema(directory,m,native)
     current=BASE/'current'
     if not current.is_symlink() or current.resolve()!=directory.resolve():raise ValueError('selected browser package differs from dependency pin; rerun setup')
     for source,target in aliases((ROOT/'tests').is_dir()).items():
@@ -52,7 +66,8 @@ def install(source=None,native=None):
         cmd=[sys.executable,str(source/'tools/package_runtime.py'),'--output',str(directory)]
         if native:cmd+=['--native-root',str(native)]
         subprocess.run(cmd,check=True,stdout=subprocess.PIPE)
-    validate_package(directory)
+    manifest=validate_package(directory)
+    if native:validate_schema(directory,manifest,native)
     current=BASE/'current';temporary=BASE/'current.tmp'
     if temporary.is_symlink():temporary.unlink()
     temporary.symlink_to(directory.name,target_is_directory=True);os.replace(temporary,current)

@@ -46,6 +46,8 @@ run :-
     load_web_prolog,
     load_config_file,
     resolve_config(Config),
+    memberchk(public_url-PublicURL, Config),
+    public_url_settings(PublicURL, _),
     env_atom('WP_TOKENS_FILE', '', TokensFile),
     resolve_default_caps(DefaultCaps),
     resolve_ip_list('WP_IP_BLOCKLIST', IpBlock),
@@ -326,7 +328,7 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
 %   explicitly, so WP_AUTH=open without WP_ACK_PUBLIC=yes is refused.
 ack_public(open) :-
     !,
-    (   getenv('WP_ACK_PUBLIC', yes)
+    (   env_atom('WP_ACK_PUBLIC', no, Ack), Ack == yes
     ->  true
     ;   throw(refuse_open_without_ack)
     ).
@@ -342,7 +344,7 @@ tutorial_sections_option([], [tutorial_sections([all])]) :- !.
 tutorial_sections_option(Sections, [tutorial_sections(Sections)]).
 
 owner_option(private, [owner(Owner)]) :-
-    getenv('WP_OWNER', Owner),
+    env_atom('WP_OWNER', '', Owner),
     Owner \== '',
     !.
 owner_option(_, []).
@@ -353,7 +355,7 @@ owner_option(_, []).
 %  is reachable over /call.  WP_SHARED_DB_OVERLAY_FILE keeps the normal node
 %  database and appends deployment-specific clauses to it.
 shared_db_option([load_shared_db_file(File)]) :-
-    getenv('WP_SHARED_DB_FILE', File),
+    env_atom('WP_SHARED_DB_FILE', '', File),
     File \== '',
     !.
 shared_db_option([load_shared_db_file(File)]) :-
@@ -362,7 +364,7 @@ shared_db_option([load_shared_db_file(File)]) :-
     discovery_directory_path(File).
 shared_db_option([load_shared_db_file(DefaultFile),
                   load_shared_db_file(OverlayFile)]) :-
-    getenv('WP_SHARED_DB_OVERLAY_FILE', OverlayFile),
+    env_atom('WP_SHARED_DB_OVERLAY_FILE', '', OverlayFile),
     OverlayFile \== '',
     !,
     node_startup_options:default_node_shared_db_file(DefaultFile).
@@ -408,19 +410,39 @@ example_service_file(Name, File) :-
 %   src_uri resolve to the public name rather than localhost:Port.
 apply_public_url(Config) :-
     memberchk(public_url-URL, Config),
-    (   URL == ''
-    ->  true
-    ;   uri_components(URL, Components),
-        uri_data(scheme, Components, Scheme),
-        uri_data(authority, Components, Authority),
-        uri_authority_components(Authority, AC),
-        uri_authority_data(host, AC, Host),
-        uri_authority_data(port, AC, Port0),
-        ( integer(Port0) -> Port = Port0 ; default_scheme_port(Scheme, Port) ),
-        set_setting(http:public_scheme, Scheme),
-        set_setting(http:public_host, Host),
-        set_setting(http:public_port, Port)
+    public_url_settings(URL, Settings),
+    forall(member(Name-Value, Settings), set_setting(http:Name, Value)).
+
+% Parse without changing global settings: WP_CHECK and startup share this
+% validation. Only an HTTP(S) origin is a meaningful advertised node URL.
+public_url_settings('', []) :- !.
+public_url_settings(URL, Settings) :-
+    (   catch(valid_public_url(URL, Scheme, Host, Port), _, fail)
+    ->  Settings = [public_scheme-Scheme, public_host-Host, public_port-Port]
+    ;   throw(error(domain_error(public_url, URL),
+                    context(public_url_settings/2,
+                            'WP_PUBLIC_URL must be an absolute HTTP(S) origin with a host and valid port')))
     ).
+
+valid_public_url(URL, Scheme, Host, Port) :-
+    uri_components(URL, Components),
+    uri_data(scheme, Components, Scheme0),
+    atom(Scheme0), downcase_atom(Scheme0, Scheme),
+    memberchk(Scheme, [http, https]),
+    uri_data(authority, Components, Authority),
+    atom(Authority), Authority \== '',
+    uri_authority_components(Authority, AC),
+    uri_authority_data(host, AC, Host),
+    atom(Host), Host \== '',
+    \+ (sub_atom(Host, _, 1, _, C), char_type(C, space)),
+    uri_authority_data(user, AC, User), var(User),
+    uri_authority_data(password, AC, Password), var(Password),
+    uri_authority_data(port, AC, Port0),
+    ( var(Port0) -> default_scheme_port(Scheme, Port) ; Port = Port0 ),
+    integer(Port), between(1, 65535, Port),
+    uri_data(path, Components, Path), memberchk(Path, ['', '/']),
+    uri_data(search, Components, Search), var(Search),
+    uri_data(fragment, Components, Fragment), var(Fragment).
 
 default_scheme_port(https, 443).
 default_scheme_port(http, 80).

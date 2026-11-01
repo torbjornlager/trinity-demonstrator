@@ -73,7 +73,16 @@ Use a verified threaded SWI build containing the protected-wait fix
 as required by the receive adapter. The official **10.1.19** release includes
 this fix and passes the native checkpoint recorded below. The official 10.1.18
 package predates it; custom builds that report 10.1.18 need source/provenance
-verification. Setup also needs Python 3 and Git. Nothing is downloaded or installed by these commands.
+verification. Demonstrator startup and tests conservatively require a threaded
+**10.1.19 or newer** executable and reject older version numbers before loading
+the runtime. Use `SWIPL=/path/to/swipl` to select it for tests (invoke that
+executable directly for `load.pl` or `Deployment/start_node.pl`). Setup also
+needs Python 3 and Git. Nothing is downloaded or installed by these commands.
+
+Each local test tier has a 360-second process-group watchdog, including the
+whole WASM tier. Override it with `TEST_TIER_TIMEOUT_SECONDS=600` when needed;
+timeouts fail the tier and the runner continues with the remaining tiers.
+The WASM tier requires Node.js 22 or newer.
 
 From this checkout, prepare clean native and browser checkouts at the revisions
 in their `dependencies/` pins:
@@ -129,10 +138,10 @@ Then try:
 
 Both `CI / test` and `CI / wasm` check out the exact native and browser dependencies on pushes,
 pull requests and manual runs. The main job runs the dependency's native and
-external-asset integration tiers, this repository's tiered regression suite,
+external-asset integration tiers once, this repository's application and consumer tests,
 startup/pin/packaging regressions, a module-origin audit and browser checks. The
 separate WASM job provides independent browser-runtime feedback. Both use the
-checksum-pinned official SWI-Prolog 10.1.19 release and Node.js 22.
+checksum-pinned official SWI-Prolog 10.1.19 release and Node.js 22.23.4.
 
 Checks run in fresh processes with bounded process-group watchdogs. Logs and results
 are uploaded even after failure. A private native repository requires the existing
@@ -152,6 +161,21 @@ python3 tools/ci_pinned_swi.py --native-root /path/to/pinned/swi-prolog-node \
 The output directory must be new. The runner records setup there and leaves the
 ordinary local setup untouched. It does not fetch repositories or restart live nodes.
 Node.js must be on PATH for browser checks.
+
+For ordinary local testing, run `./tools/test.sh`, or select tiers such as
+`./tools/test.sh T0 T4 DEMONSTRATOR DISCOVERY`. Native `TEXT` and `T0`–`T5` tests are loaded
+directly from the validated dependency; the demonstrator keeps only its consumer
+and application tests. See [test ownership and the consolidation audit](tests/tiers/README.md)
+for the tier map and the two inapplicable colocated-layout checks excluded from T4.
+T4 runs its native and integration partitions in separate processes and reports
+failure if either fails. `DISCOVERY` runs both the hub reliability and browser
+query checks; it is included in the default run and CI.
+
+The optional Trealla N5 backend also uses an exact source manifest:
+[`dependencies/trealla-port.json`](dependencies/trealla-port.json) pins both the
+Web Prolog port and its engine. Its Docker build fetches and validates those
+commits instead of building an arbitrary sibling checkout. See
+[Trealla N5 deployment](Deployment/README.md#optional-trealla-n5).
 
 ## Demonstrator asset locations
 

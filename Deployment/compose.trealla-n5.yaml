@@ -62,10 +62,8 @@ services:
     deploy:
       replicas: 0
     build:
-      context: ../../trealla-port
-      dockerfile: Deployment/Dockerfile
-      args:
-        TREALLA_VERSION: ${TREALLA_N5_VERSION:-v3.14.20}
+      context: ..
+      dockerfile: Deployment/Dockerfile.trealla
 
   caddy:
     build:

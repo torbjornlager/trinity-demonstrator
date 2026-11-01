@@ -18,14 +18,18 @@ class PinnedCI(unittest.TestCase):
                     dict(repository='https://github.com/owner/node.git',revision='main\nother=value')]:
             with patch.object(Path,'read_text',return_value=json.dumps(bad)):
                 with self.assertRaises(ValueError):ci.checkout_outputs()
-    def test_native_and_integration_tiers_use_external_checkout(self):
+    def test_native_and_integration_tiers_use_validated_runner_once(self):
         rows=ci.plan(Path('/external/native'),Path('/assembled'),'/verified/swipl')
-        tiers=[r for r in rows if r[2][:2]==['bash','tools/test.sh'] and r[1]==Path('/external/native')]
+        tiers=[r for r in rows if r[2][:2]==['bash','tools/test.sh'] and not r[0].startswith('demonstrator-') and r[0] not in ['WASM','discovery-regressions']]
         self.assertEqual([r[0] for r in tiers],['LINT','TEXT','T0','T1_NATIVE','T2','T3_NATIVE','T4_NATIVE','T5','T1_INTEGRATION','T3_INTEGRATION','T4_INTEGRATION'])
-        self.assertTrue(all(r[1]==Path('/external/native') for r in tiers))
+        self.assertTrue(all(r[1]==ROOT for r in tiers))
         consumer=[r for r in rows if r[0].startswith('demonstrator-')]
-        self.assertEqual(len(consumer),11)
+        self.assertEqual([r[0] for r in consumer],['demonstrator-'+tier for tier in
+                         ['DEMONSTRATOR','SERVICE_TEXT','LINDA','MODEL','MODEL_SXML','JEV']])
         self.assertTrue(all(r[1]==ROOT for r in consumer))
+        self.assertEqual(len({r[0] for r in rows}),len(rows))
+        discovery=next(r for r in rows if r[0]=='discovery-regressions')
+        self.assertEqual(discovery[2],['bash','tools/test.sh','DISCOVERY'])
         self.assertIn('pinned_swi_bootstrap:check_origins',rows[0][2][-3])
         equivalence=next(r for r in rows if r[0]=='browser-equivalence')
         self.assertIn('/external/native',equivalence[2]);self.assertIn('/assembled',equivalence[2])

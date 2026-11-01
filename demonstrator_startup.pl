@@ -1,4 +1,4 @@
-:- module(demonstrator_startup,[load_native/1,configure_native/0]).
+:- module(demonstrator_startup,[load_native/1,configure_native/0,check_runtime/0]).
 :- use_module(library(process)).
 :- use_module(library(readutil)).
 :- use_module(library(http/json)).
@@ -23,6 +23,7 @@ check_mode :-
 % Configure library lookup without loading upper layers, for tiered tests.
 configure_native :-
     check_mode,
+    check_runtime,
     root(Root),directory_file_path(Root,'tools/setup_swi.py',Validator),
     (getenv('WP_NATIVE_STATE',State0),State0\=='' -> absolute_file_name(State0,State)
     ; directory_file_path(Root,'.trinity/native-swi.json',State)),
@@ -37,3 +38,18 @@ configure_native :-
     setenv('WP_ASSET_ROOT',Config.asset_root),setenv('WP_WASM_SOURCE_DIR',Config.wasm_root),
     directory_file_path(Config.native_root,prolog,Lib),
     asserta(user:file_search_path(library,Lib)).
+
+% The receive adapter needs the protected-wait fix shipped in 10.1.19.
+% Reject older releases before loading any actor code (which can hang).
+check_runtime :-
+    current_prolog_flag(version, Version),
+    current_prolog_flag(threads, Threaded),
+    require_runtime(Version, Threaded).
+
+require_runtime(Version, true) :-
+    Version >= 100119,
+    !.
+require_runtime(Version, Threaded) :-
+    throw(error(domain_error(supported_swi_runtime, runtime(Version, Threaded)),
+                context(configure_native/0,
+                        'Threaded SWI-Prolog 10.1.19 or newer is required (protected-wait fix); invoke a supported swipl executable or set SWIPL for tools/test.sh'))).

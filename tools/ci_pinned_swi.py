@@ -32,18 +32,20 @@ def plan(native, wasm, swipl):
               '-t', 'halt'])]
     for tier in ['LINT', 'TEXT', 'T0', 'T1_NATIVE', 'T2', 'T3_NATIVE', 'T4_NATIVE', 'T5',
                  'T1_INTEGRATION', 'T3_INTEGRATION', 'T4_INTEGRATION']:
-        rows.append((tier, native, ['bash', 'tools/test.sh', tier]))
-    for tier in ['LINT', 'T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'SERVICE_TEXT', 'MODEL', 'MODEL_SXML', 'JEV']:
+        rows.append((tier, ROOT, ['bash', 'tools/test.sh', tier]))
+    for tier in ['DEMONSTRATOR', 'SERVICE_TEXT', 'LINDA', 'MODEL', 'MODEL_SXML', 'JEV']:
         rows.append(('demonstrator-'+tier, ROOT, ['bash', 'tools/test.sh', tier]))
     rows += [
         ('default-startup-regressions', ROOT, [sys.executable, 'tests/test_default_swi_startup.py']),
         ('pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_swi_dependency.py']),
         ('browser-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_browser_dependency.py']),
+        ('trealla-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_trealla.py']),
         ('static-distribution-regressions', ROOT, [sys.executable, 'tests/test_static_demonstrator.py']),
         ('https-sso-probe-regressions', ROOT, [sys.executable, 'tests/test_https_sso_probe.py']),
         ('host-url-regressions', ROOT, ['node', 'tools/test-trinity-host.cjs']),
         ('cross-origin-native-integration', ROOT, ['node', 'tools/test-cdn-remote.cjs']),
         ('portal-runtime-regressions', ROOT, ['node', 'tools/test-portal-runtime.cjs']),
+        ('discovery-regressions', ROOT, ['bash', 'tools/test.sh', 'DISCOVERY']),
         ('ci-runner-regressions', ROOT, [sys.executable, 'tests/test_ci_pinned_swi.py']),
         ('packaging-regressions', ROOT, [sys.executable, 'tests/test_swi_extraction_tools.py']),
         ('watchdog-regressions', ROOT, [sys.executable, 'tests/test_ci_timeout.py']),

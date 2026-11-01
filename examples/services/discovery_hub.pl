@@ -27,7 +27,7 @@ The custodian folds results in and republishes a generation-buffered
 read replica into the node's shared database, where the rules in
 discovery_directory.pl turn it back into queryable relations.
 
-  - The custodian (registry_actor/1) never blocks on the network.
+  - The custodian (registry_actor/2) never blocks on the network.
   - A node never reports its own liveness; the hub *decides* status by
     probing (discovery_directory.pl derives it at read time).
   - The seed tier (id, url, description, shared_db) is never sourced
@@ -300,13 +300,15 @@ seed_to_node(Node) :-
 
 registry_boot(State0) :-
     publish_replica(State0, State1),
+    get_time(Now),
+    Deadline is Now + 30,
     do_sweep(State1),
-    registry_actor(State1).
+    registry_actor(State1, Deadline).
 
-%!  registry_actor(+State) is det.
+%!  registry_actor(+State, +Deadline) is det.
 %
 %   The custodian: holds the records, folds in probe results, and lets
-%   its own receive-timeout drive the 30s sweep.  It does no IO — every
+%   an absolute deadline drive the 30s sweep. It does no IO — every
 %   network fetch lives in a throwaway prober — so a slow node ties up
 %   only its own prober, never the custodian.
 %
@@ -315,23 +317,37 @@ registry_boot(State0) :-
 %   clauses are qualified with this module so that the on_timeout goal
 %   and the clause bodies resolve here and not in `actors`.
 
-registry_actor(State0) :-
+registry_actor(State0, Deadline0) :-
+    get_time(Now),
+    sweep_schedule(Now, Deadline0, Sweep, Deadline, Wait),
+    ( Sweep == true -> do_sweep(State0) ; true ),
     receive(discovery_hub:{
         probe_result(Id, Outcome) ->
             apply_probe(Id, Outcome, State0, State1),
             publish_replica(State1, State2),
-            registry_actor(State2) ;
+            registry_actor(State2, Deadline) ;
 
         nodes(From) ->
             From ! nodes(State0.nodes),
-            registry_actor(State0) ;
+            registry_actor(State0, Deadline) ;
 
         stop ->
             true
     }, [
-        timeout(30),
-        on_timeout(( do_sweep(State0), registry_actor(State0) ))
+        timeout(Wait),
+        on_timeout(registry_actor(State0, Deadline))
     ]).
+
+% Check before receiving as well as on timeout: a busy mailbox must not
+% starve sweeps. If delayed, skip missed ticks rather than burst probes.
+sweep_schedule(Now, Deadline0, Sweep, Deadline, Wait) :-
+    ( Now >= Deadline0
+    -> Sweep = true,
+       Deadline is Deadline0 + (floor((Now - Deadline0) / 30) + 1) * 30
+    ;  Sweep = false,
+       Deadline = Deadline0
+    ),
+    Wait is max(0, Deadline - Now).
 
 
                 /*******************************
@@ -369,10 +385,10 @@ fetch_info(Url, Info, LatencyMs) :-
                   ]),
         json_read_dict(Stream, Info0),
         close(Stream)),
-    readiness_maintenance(Url, Maintenance),
-    Info = Info0.put(maintenance, Maintenance),
     get_time(T1),
-    LatencyMs is integer((T1 - T0) * 1000).
+    LatencyMs is integer((T1 - T0) * 1000),
+    readiness_maintenance(Url, Maintenance),
+    Info = Info0.put(maintenance, Maintenance).
 
 node_info_url(Url, InfoUrl) :-
     atom_string(Url, S),
