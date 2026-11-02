@@ -211,6 +211,43 @@ const { chromium } = require('playwright');
     await page.waitForFunction(() =>
       document.getElementById('voice-status').textContent.includes('denied')
     );
+    // Chrome can end without a result or an error. Keep its last milestone
+    // visible, and ensure none of these incomplete attempts fills a chart slot.
+    await page.evaluate(() => {
+      window.__recognitionError = null;
+    });
+    const attempt = async (events, expected) => {
+      await page.locator('#microphone').click();
+      await page.waitForFunction(() =>
+        document.getElementById('voice-status').textContent.startsWith('Listening…')
+      );
+      await page.evaluate((events) => {
+        const recognizer = window.__recognizers.at(-1);
+        for (const event of events) recognizer[event]?.();
+      }, events);
+      assert.match(await page.locator('#voice-status').textContent(), expected);
+      assert.equal(await page.locator('#selected-color').textContent(), 'Your choice');
+      assert.equal(
+        await page.locator('#microphone').getAttribute('aria-pressed'),
+        'false'
+      );
+    };
+    await attempt(['onend'], /before Chrome reported microphone capture/);
+    await attempt(['onaudiostart', 'onend'], /reported no speech/);
+    await attempt(
+      ['onaudiostart', 'onspeechstart', 'onend'],
+      /detected speech but returned no recognised words/
+    );
+    await attempt(['onnomatch'], /returned no match/);
+    await page.locator('#microphone').click();
+    await page.waitForFunction(() =>
+      document.getElementById('voice-status').textContent.startsWith('Listening…')
+    );
+    await page.locator('#microphone').click();
+    assert.match(await page.locator('#voice-status').textContent(), /stopped by you/);
+    console.log(
+      'PASS silent recognition endings, capture/speech milestones, no-match and manual stop'
+    );
     await page.getByRole('button', { name: 'Green', exact: true }).click();
     await ready('Size');
     await page.getByRole('button', { name: 'Small', exact: true }).click();

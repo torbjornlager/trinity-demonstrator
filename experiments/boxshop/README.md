@@ -39,7 +39,9 @@ recognition and disposes the chart's Workers and timers.
 Speech recognition uses the browser's `SpeechRecognition` or prefixed equivalent.
 It is optional, starts only on an explicit microphone click, and never restarts
 itself automatically. Unsupported browsers, blocked permissions and service
-errors leave text and buttons available. Recognition may use the browser vendor's
+errors leave text and buttons available. Status messages distinguish service
+startup, audio capture, detected speech, missing final results and a manual stop;
+“listening” alone does not establish that usable audio reached recognition. Recognition may use the browser vendor's
 online service; this app provides no server, API key or separate speech account.
 See [MDN's recognition documentation](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition).
 

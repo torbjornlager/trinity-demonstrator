@@ -371,7 +371,8 @@ $('reply-form').addEventListener('submit', (event) => {
 $('microphone').addEventListener('click', () => {
   if (voice.listening) {
     voice.stopListening();
-    $('voice-status').textContent = 'Microphone off.';
+    $('voice-status').textContent =
+      'Listening stopped by you. Tap to speak again when ready.';
   } else voice.listen();
 });
 $('spoken').addEventListener('change', () => {

@@ -75,6 +75,28 @@ export class BrowserVoice {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     this.recognition = recognition;
+    // Starting the service is different from capturing audio or detecting speech.
+    // Preserve those milestones so a silent onend does not hide the useful clue.
+    let audioStarted = false,
+      speechDetected = false,
+      interimText = '';
+    recognition.onaudiostart = () => {
+      if (this.recognition !== recognition) return;
+      audioStarted = true;
+      this.onNotice('Microphone active. Say “blue” or “small” in English, then pause.');
+    };
+    recognition.onspeechstart = () => {
+      if (this.recognition !== recognition) return;
+      speechDetected = true;
+      this.onNotice('Speech detected. Waiting for recognised words…');
+    };
+    recognition.onnomatch = () => {
+      if (this.recognition !== recognition) return;
+      this.stopListening();
+      this.onNotice(
+        'The speech service returned no match. Tap to speak and try “blue” in English.'
+      );
+    };
     recognition.onstart = () => {
       if (this.recognition !== recognition) return;
       this.listening = true;
@@ -91,6 +113,7 @@ export class BrowserVoice {
           this.onTranscript(transcript);
           return;
         }
+        interimText = transcript;
         this.onNotice('Hearing: “' + transcript + '”');
       }
     };
@@ -118,7 +141,24 @@ export class BrowserVoice {
       this.recognition = null;
       this.listening = false;
       this.onChange();
-      this.onNotice('Microphone off. Tap to speak again, or type a reply.');
+      if (interimText)
+        this.onNotice(
+          'Listening ended with only a provisional result: “' +
+            interimText +
+            '”. No reply was sent. Tap to speak again.'
+        );
+      else if (speechDetected)
+        this.onNotice(
+          'Chrome detected speech but returned no recognised words. Tap to speak and try “blue” in English.'
+        );
+      else if (audioStarted)
+        this.onNotice(
+          'Microphone capture started, but Chrome reported no speech. Check the selected microphone and input level.'
+        );
+      else
+        this.onNotice(
+          'Recognition ended before Chrome reported microphone capture. Check Chrome and macOS microphone access.'
+        );
     };
     try {
       // Mark the request immediately, including time spent in a permission prompt.
