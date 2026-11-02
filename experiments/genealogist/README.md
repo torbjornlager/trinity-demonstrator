@@ -63,6 +63,15 @@ Each page has its own Worker session. There is no localStorage, shared server
 state or automatic persistence. Reloading or closing the page destroys its family.
 Save before leaving. The preview server must remain running for asset requests.
 
+## Compare execution models
+
+The published Worker actor version is at
+https://trinity.elfenbenstornet.se/genealogist/. Compare it with the Prolog-driven
+Main thread + DOM version at https://trinity.elfenbenstornet.se/genealogist-main/.
+Both use the same family program, CSS and committed runtime. The main-thread UI
+source and tests are in `../genealogist-main`; its forms, SVG and answer cards
+are driven by `library(dom)` rather than JavaScript rendering.
+
 ## How it works
 
 `genealogist.pl` supplies the facts, kinship rules and validated update predicates.
