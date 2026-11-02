@@ -110,3 +110,21 @@ diagram and recursive queries, rejected cycles, output, failure, Abort while
 waiting, input through `read/1`, and Prolog-file download. The saved program was
 loaded in native SWI-Prolog. JavaScript syntax checks pass. No remote nodes,
 authentication or public deployment are part of this experiment.
+
+## Source layout
+
+The handwritten source favours readable statements, descriptive names and
+comments explaining query lifetime, DOM operations and validation boundaries.
+Both versions keep the same family clauses and CSS rules. JavaScript, HTML and
+CSS use the local `.prettierrc.json`; Prolog uses four-space clause indentation
+with separate goals and documented entry points. A few HTML `prettier-ignore`
+markers preserve meaningful inline spacing around punctuation and line breaks.
+
+To reproduce the web-source formatting from the repository root:
+
+```sh
+npx prettier@3.9.10 --write 'experiments/genealogist/*.{js,css,html}'
+```
+
+Edit these maintained source files, then rebuild the homepage snapshots. Do not
+format the vendored engine or deployed runtime copies by hand.

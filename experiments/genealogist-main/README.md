@@ -64,17 +64,17 @@ reading mode, while preserving whitespace inside quoted terms.
 Promise resolution for input, and Blob download. It schedules searches after DOM
 event callbacks return; Prolog handles the actual events and rendering. The
 UI renders native Prolog terms before the shared session API returns its normal
-formatted binding rows. `genealogist.pl` and CSS remain unchanged; both local
-demos share the updated runtime bytes.
+formatted binding rows. The family program and CSS are identical in both versions, as are the
+packaged runtime bytes.
 
 ## Comparison with the original Worker UI
 
-The Worker app uses 215 JavaScript lines. This app uses 71 JavaScript lines and
-197 Prolog UI lines, for 268 total, excluding the shared runtime, unchanged
-family rules, HTML and CSS. The removed 128-line session adapter is now a runtime
-responsibility, covered by the runtime's cross-mode API tests. Moving it into the
-library removes per-application maintenance; that implementation and its tests
-still need maintenance in the library.
+The formatted Worker app spans 481 JavaScript lines. This app spans 144
+JavaScript lines and 595 Prolog UI lines, for 739 total. These are physical
+source lines, including comments and blank lines, and exclude the shared runtime,
+family program, HTML and CSS. Formatting alone changes these counts; they are
+not a complexity score. Session management belongs to the shared runtime and
+its cross-mode tests, rather than to an application-specific adapter.
 
 The Worker app is smaller and follows the familiar web UI / Prolog engine
 boundary. The Prolog UI keeps family data, edit validation calls, term formatting
@@ -127,3 +127,21 @@ only for previews of uncommitted application source; the manifest explicitly
 records that provenance and source hashes. For an uncommitted runtime package,
 also pass `--development-runtime`; the deployment records this provenance while still verifying every runtime checksum.
 Release builds require a clean runtime by default. Neither helper publishes the site.
+
+## Source layout
+
+The handwritten source favours readable statements, descriptive names and
+comments explaining query lifetime, DOM operations and validation boundaries.
+Both versions keep the same family clauses and CSS rules. JavaScript, HTML and
+CSS use the local `.prettierrc.json`; Prolog uses four-space clause indentation
+with separate goals and documented entry points. A few HTML `prettier-ignore`
+markers preserve meaningful inline spacing around punctuation and line breaks.
+
+To reproduce the web-source formatting from the repository root:
+
+```sh
+npx prettier@3.9.10 --write 'experiments/genealogist-main/*.{js,cjs,css,html}'
+```
+
+Edit these maintained source files, then rebuild the homepage snapshots. Do not
+format the vendored engine or deployed runtime copies by hand.
