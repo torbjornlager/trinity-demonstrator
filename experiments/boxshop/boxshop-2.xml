@@ -1,0 +1,91 @@
+<!--
+
+    Box shop, form-filling style.
+
+    The same task as boxshop-1, built as a form rather than a scripted
+    dialogue. A central selectFormItem state uses eventless guarded
+    transitions to pick the next unfilled slot (welcome, then colour,
+    then size), visits the state that fills it, and returns. Each
+    question state also has an `after` transition that fires if the user
+    stays silent too long, giving the agent a timeout. When every slot is
+    filled the form is complete and the agent reports the order. It shows
+    the form pattern: a dispatcher of eventless transitions together with
+    timed `after` transitions.
+
+    Keep the Logger open and SXML trace selected.
+
+-->
+
+<statechart version="0.2" initial="form">
+    <state id="form" initial="selectFormItem">
+        <datamodel>
+            :- dynamic 
+                welcome/0,
+                color/1,
+                size/1.
+        </datamodel>
+        <state id="selectFormItem">
+            <go to="Welcome" if="\+ welcome"/>
+            <go to="Color"   if="\+ color(_)"/>
+            <go to="Size"    if="\+ size(_)"/>
+            <go to="Respond"/>
+        </state>
+        <state id="Welcome">
+            <onentry>
+                writeln('Welcome to the box shop!'),
+                assert(welcome)
+            </onentry>
+            <go to="selectFormItem"/>
+        </state>
+        <state id="Color">
+            <onentry>
+                writeln('What color do you want?')
+            </onentry>
+            <go to="selectFormItem" on="says(color(Color))">
+                assert(color(Color))
+            </go>
+            <go to="selectFormItem" after="8">
+                writeln('I did not hear you.')
+            </go>
+        </state>
+        <state id="Size">
+            <onentry>
+                writeln('What size do you want?')
+            </onentry>
+            <go to="selectFormItem" on="says(size(Size))">
+                assert(size(Size))
+            </go>
+            <go to="selectFormItem" after="8">
+                writeln('I did not hear you.')
+            </go>
+        </state>
+        <go to="selectFormItem" on="says(_)">
+            writeln('I did not understand.')
+        </go>
+    </state>
+    <final id="Respond">
+        <onentry>
+            size(Size), color(Color),
+            format('You want a ~p ~p box!\n', [Size, Color])
+        </onentry>
+    </final>
+</statechart>
+
+
+<!-- <examples>
+
+?- statechart_spawn(Pid, [
+       src_text(<editor>)
+   ]).
+
+?- $Pid ! says(color(red)).
+
+?- $Pid ! says(color(blue)).
+
+?- $Pid ! says(size(small)).
+
+?- $Pid ! says(size(big)).
+
+?- statechart_halt($Pid, Reply, 1).
+
+-->
