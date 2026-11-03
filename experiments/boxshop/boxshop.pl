@@ -5,7 +5,8 @@ This small grammar translates typed or recognised words into the says/1 events
 that the chart already understands. It does not choose the next question.
 */
 
-:- use_module(library(apply)).
+:- use_module(library(apply), [exclude/3]).
+:- use_module(library(porter_stem), [tokenize_atom/2]).
 
 %% boxshop_event(+Text, -Event) is det.
 %
@@ -13,20 +14,18 @@ that the chart already understands. It does not choose the next question.
 % says(_) fallback; it is never interpreted as executable Prolog source.
 boxshop_event(Text, Event) :-
     string_lower(Text, Lower),
-    string_codes(Lower, Codes),
-    maplist(word_code, Codes, CleanCodes),
-    string_codes(Clean, CleanCodes),
-    split_string(Clean, " ", " \t\r\n", Strings),
-    maplist(atom_string, Words, Strings),
-    (   once(phrase(reply(Value), Words))
+    tokenize_atom(Lower, Tokens),
+    exclude(separator_token, Tokens, ReplyTokens),
+    (   once(phrase(reply(Value), ReplyTokens))
     ->  Event = says(Value)
     ;   Event = says(unknown)
     ).
 
-word_code(Code, Code) :-
-    between(0'a, 0'z, Code),
-    !.
-word_code(_, 0' ).
+% Ignore punctuation and symbols, but keep numbers so the grammar rejects them.
+separator_token(Token) :-
+    atom(Token),
+    atom_codes(Token, [Code]),
+    \+ code_type(Code, alnum).
 
 reply(Value) --> reply_prefix, reply_article, reply_item(Value), reply_box, reply_please.
 
