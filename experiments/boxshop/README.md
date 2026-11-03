@@ -4,7 +4,7 @@ A browser-only demo of the form-filling agent in
 [`12 boxshop-2.xml`](../../examples/statecharts/12%20boxshop-2.xml).
 The browser runs `boxshop-voice.xml`, a voice adaptation that uses `speak/2`
 for each utterance. The SWI-WASM statechart actor owns slot selection, the
-eight-second retries, the unrecognised-input fallback and the final order.
+silence retries, the unrecognised-input fallback and the final order.
 The chat displays spoken prompts and recognised replies. The Statechart,
 Grammar and Logger tabs show the running XML, the reply grammar and live events.
 
@@ -40,9 +40,9 @@ Spoken replies use `speechSynthesis` and prefer a local English voice when one i
 available. Prompts are batched briefly and replace stale utterances. The
 microphone becomes available after the prompt finishes, and replies reach
 the chart after recognition ends. Speech and recognition stop when
-the page is hidden. The chart keeps its original timer: it retries eight seconds
-after entering a question, including time spent speaking or waiting for microphone
-permission. Background messages remain in the transcript but are not spoken.
+the page is hidden. The chart retries for silence only when the recognizer
+reports `no-speech` after a microphone attempt. Waiting to tap the microphone
+or waiting for a prompt to finish does not trigger a retry.
 
 ## Source layout
 

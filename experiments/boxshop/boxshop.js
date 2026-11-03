@@ -28,6 +28,12 @@ const voice = new BrowserVoice({
     voiceStatus('Microphone off. Tap to speak again.');
     void sendReply(text, false);
   },
+  onSilence() {
+    voiceStatus(
+      'No speech detected. Check the microphone input level if this keeps happening.'
+    );
+    void sendReply(null);
+  },
   onNotice: voiceStatus,
   onChange: renderControls,
 });
@@ -212,9 +218,9 @@ async function start() {
 }
 
 async function sendReply(text, confirmed = true) {
-  const reply = text.trim().slice(0, 160);
+  const reply = text?.trim().slice(0, 160);
   if (
-    !reply ||
+    (text !== null && !reply) ||
     state.busy ||
     state.starting ||
     !state.pid ||
@@ -226,12 +232,12 @@ async function sendReply(text, confirmed = true) {
     pid = state.pid;
   state.busy = true;
   clearSpeechBatch();
-  message('user', reply);
+  if (reply) message('user', reply);
   renderControls();
   try {
     // A provisional result is evidence of an attempt, not a confirmed reply.
-    let event = 'says(unknown)';
-    if (confirmed) {
+    let event = text === null ? 'silence' : 'says(unknown)';
+    if (reply && confirmed) {
       const parsed = await node.query(
         'boxshop_event(' + node.prologQuotedText(reply) + ', Event)'
       );

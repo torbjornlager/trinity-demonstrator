@@ -55,8 +55,10 @@ const { chromium } = require('playwright');
           if (speaking) throw new Error('Recognition started during speech');
           setTimeout(() => {
             this.onstart?.();
-            if (window.__recognitionError)
+            if (window.__recognitionError) {
               this.onerror?.({ error: window.__recognitionError });
+              this.onend?.();
+            }
           }, 0);
         }
         abort() {
@@ -110,7 +112,18 @@ const { chromium } = require('playwright');
       window.__spoken.some((text) => text.includes('What color do you want?'))
     );
     assert.equal(await page.evaluate(() => window.__recognizers.length), 0);
-    await conversation.getByText('I did not hear you.').waitFor({ timeout: 12000 });
+    const silence = conversation.getByText('I did not hear you.');
+    // Waiting longer than the old state timer must leave the chat unchanged.
+    await page.waitForTimeout(8200);
+    assert.equal(await silence.count(), 0);
+    await page.evaluate(() => {
+      window.__recognitionError = 'no-speech';
+    });
+    await mic.click();
+    await silence.waitFor();
+    await page.evaluate(() => {
+      window.__recognitionError = null;
+    });
     await page.waitForFunction(() =>
       window.__spoken.some((text) => text.includes('I did not hear you.'))
     );

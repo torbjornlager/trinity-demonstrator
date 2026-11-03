@@ -27,9 +27,6 @@
             <go to="selectFormItem" on="says(color(Color))">
                 assert(color(Color))
             </go>
-            <go to="selectFormItem" after="8">
-                speak('I did not hear you.', [])
-            </go>
         </state>
         <state id="Size">
             <onentry>
@@ -38,10 +35,10 @@
             <go to="selectFormItem" on="says(size(Size))">
                 assert(size(Size))
             </go>
-            <go to="selectFormItem" after="8">
-                speak('I did not hear you.', [])
-            </go>
         </state>
+        <go to="selectFormItem" on="silence">
+            speak('I did not hear you.', [])
+        </go>
         <go to="selectFormItem" on="says(_)">
             speak('I did not understand.', [])
         </go>

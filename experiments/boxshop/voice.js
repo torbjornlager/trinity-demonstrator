@@ -1,8 +1,9 @@
 /** Browser speech transport. Dialogue decisions belong to the statechart. */
 export class BrowserVoice {
-  constructor({ onTranscript, onUnconfirmed, onNotice, onChange }) {
+  constructor({ onTranscript, onUnconfirmed, onSilence, onNotice, onChange }) {
     this.onTranscript = onTranscript;
     this.onUnconfirmed = onUnconfirmed;
+    this.onSilence = onSilence;
     this.onNotice = onNotice;
     this.onChange = onChange;
     this.Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -82,7 +83,8 @@ export class BrowserVoice {
     let audioStarted = false,
       speechDetected = false,
       interimText = '',
-      finalText = null;
+      finalText = null,
+      noSpeech = false;
     recognition.onaudiostart = () => {
       if (this.recognition !== recognition) return;
       audioStarted = true;
@@ -124,6 +126,10 @@ export class BrowserVoice {
     };
     recognition.onerror = (event) => {
       if (this.recognition !== recognition) return;
+      if (event.error === 'no-speech') {
+        noSpeech = true;
+        return;
+      }
       this.stopListening();
       const messages = {
         'not-allowed':
@@ -134,8 +140,6 @@ export class BrowserVoice {
           'Microphone unavailable: no audio input was found. Connect a microphone or select one in your sound settings.',
         network:
           'The speech service could not connect. Check your internet connection and try again.',
-        'no-speech':
-          'No speech was detected. Check the selected microphone and input level, then tap to speak again.',
       };
       this.onNotice(
         messages[event.error] || 'Listening stopped. Tap to speak again.',
@@ -149,6 +153,7 @@ export class BrowserVoice {
       this.onChange();
       if (finalText !== null) this.onTranscript(finalText);
       else if (interimText) this.onUnconfirmed(interimText);
+      else if (noSpeech) this.onSilence();
       else if (speechDetected)
         this.onNotice(
           'The browser detected speech but returned no recognised words. Tap to speak and try “blue” in English.'
