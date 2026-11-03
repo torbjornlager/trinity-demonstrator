@@ -44,13 +44,22 @@ function renderControls() {
   $('start').disabled = !state.loaded || !voice.canListen || !voice.canSpeak;
   $('end').disabled = !state.node && !state.starting;
   $('microphone').disabled =
-    !waiting || state.busy || state.starting || !voice.canListen;
+    !waiting ||
+    state.busy ||
+    state.starting ||
+    !voice.canListen ||
+    speechTimer !== null ||
+    Boolean(voice.utterance);
   $('microphone').setAttribute('aria-pressed', String(voice.listening));
   $('microphone').title = voice.listening ? 'Stop listening' : 'Start listening';
   if (state.starting) $('session-status').textContent = 'Starting the conversation…';
   else if (state.phase === 'Respond')
     $('session-status').textContent = 'Order complete.';
-  else if (waiting) $('session-status').textContent = 'Waiting for your reply.';
+  else if (waiting)
+    $('session-status').textContent =
+      speechTimer !== null || voice.utterance
+        ? 'The Box Shop is speaking…'
+        : 'Waiting for your reply.';
 }
 
 function message(role, text) {
@@ -89,6 +98,7 @@ function output(text) {
     speechBatch = [];
     speechTimer = null;
     if (generation === state.generation && text && !document.hidden) voice.speak(text);
+    renderControls();
   }, 70);
   renderControls();
 }
@@ -215,8 +225,6 @@ async function sendReply(text, confirmed = true) {
     node = state.node,
     pid = state.pid;
   state.busy = true;
-  voice.stopListening();
-  voice.cancelSpeech();
   clearSpeechBatch();
   message('user', reply);
   renderControls();

@@ -37,8 +37,9 @@ Recognition may use the browser vendor's online service.
 See [MDN's recognition documentation](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition).
 
 Spoken replies use `speechSynthesis` and prefer a local English voice when one is
-available. Prompts are batched briefly and replace stale utterances; starting
-recognition interrupts speech to avoid echo. Speech and recognition stop when
+available. Prompts are batched briefly and replace stale utterances. The
+microphone becomes available after the prompt finishes, and replies reach
+the chart after recognition ends. Speech and recognition stop when
 the page is hidden. The chart keeps its original timer: it retries eight seconds
 after entering a question, including time spent speaking or waiting for microphone
 permission. Background messages remain in the transcript but are not spoken.

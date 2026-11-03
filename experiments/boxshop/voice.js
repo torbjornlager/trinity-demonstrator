@@ -70,9 +70,7 @@ export class BrowserVoice {
   }
 
   listen() {
-    if (!this.canListen || this.listening) return;
-    // Push-to-talk permits barge-in and prevents the assistant hearing itself.
-    this.cancelSpeech();
+    if (!this.canListen || this.listening || this.utterance) return;
     const recognition = new this.Recognition();
     recognition.lang = 'en-US';
     recognition.continuous = false;
@@ -83,7 +81,8 @@ export class BrowserVoice {
     // Preserve those milestones so a silent onend does not hide the useful clue.
     let audioStarted = false,
       speechDetected = false,
-      interimText = '';
+      interimText = '',
+      finalText = null;
     recognition.onaudiostart = () => {
       if (this.recognition !== recognition) return;
       audioStarted = true;
@@ -108,13 +107,15 @@ export class BrowserVoice {
       this.onNotice('Listening… say a colour or a size.');
     };
     recognition.onresult = (event) => {
-      if (this.recognition !== recognition) return;
+      if (this.recognition !== recognition || finalText !== null) return;
       for (let index = event.resultIndex; index < event.results.length; index++) {
         const result = event.results[index];
         const transcript = result[0].transcript.trim();
         if (result.isFinal) {
-          this.stopListening();
-          this.onTranscript(transcript);
+          // The one-shot recognizer can still own the microphone after a final
+          // result. Wait for end before allowing the chart to speak again.
+          finalText = transcript;
+          this.onNotice('Finishing recognition…');
           return;
         }
         interimText = transcript;
@@ -146,18 +147,19 @@ export class BrowserVoice {
       this.recognition = null;
       this.listening = false;
       this.onChange();
-      if (interimText) this.onUnconfirmed(interimText);
+      if (finalText !== null) this.onTranscript(finalText);
+      else if (interimText) this.onUnconfirmed(interimText);
       else if (speechDetected)
         this.onNotice(
-          'Chrome detected speech but returned no recognised words. Tap to speak and try “blue” in English.'
+          'The browser detected speech but returned no recognised words. Tap to speak and try “blue” in English.'
         );
       else if (audioStarted)
         this.onNotice(
-          'Microphone capture started, but Chrome reported no speech. Check the selected microphone and input level.'
+          'Microphone capture started, but the browser reported no speech. Check the selected microphone and input level.'
         );
       else
         this.onNotice(
-          'Recognition ended before Chrome reported microphone capture. Check Chrome and macOS microphone access.'
+          'Recognition ended before the browser reported microphone capture. Check browser and system microphone access.'
         );
     };
     try {

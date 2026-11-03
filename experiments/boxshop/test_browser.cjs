@@ -35,7 +35,10 @@ const { chromium } = require('playwright');
             if (!speechAllowed) return;
             if (utterance.volume !== 0) window.__spoken.push(utterance.text);
             speaking = utterance;
-            timer = setTimeout(() => utterance.onend?.({ type: 'end' }), 10);
+            timer = setTimeout(() => {
+              speaking = null;
+              utterance.onend?.({ type: 'end' });
+            }, 150);
           },
         },
       });
@@ -49,6 +52,7 @@ const { chromium } = require('playwright');
           window.__recognizers.push(this);
         }
         start() {
+          if (speaking) throw new Error('Recognition started during speech');
           setTimeout(() => {
             this.onstart?.();
             if (window.__recognitionError)
@@ -94,7 +98,7 @@ const { chromium } = require('playwright');
           result.isFinal = final;
           const recognition = window.__recognizers.at(-1);
           recognition.onresult({ resultIndex: 0, results: [result] });
-          if (!final) recognition.onend();
+          setTimeout(() => recognition.onend(), 250);
         },
         { text, final }
       );
@@ -121,6 +125,7 @@ const { chromium } = require('playwright');
     await hear('blue 123');
     await misunderstood.nth(1).waitFor();
     await hear("I'd like a blue box, please!");
+    assert.equal(await conversation.getByText('What size do you want?').count(), 0);
     await conversation.getByText('What size do you want?').first().waitFor();
     await hear('large');
     await conversation.getByText('You want a big blue box!').waitFor();
