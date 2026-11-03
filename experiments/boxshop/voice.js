@@ -14,6 +14,19 @@ export class BrowserVoice {
     this.utterance = null;
   }
 
+  prepareSpeech() {
+    if (!this.canSpeak) return;
+    // iPadOS WebKit requires the first speak() call during a user gesture.
+    // Chart prompts arrive asynchronously, so initialise speech silently here.
+    const utterance = new SpeechSynthesisUtterance('Ready.');
+    utterance.volume = 0;
+    try {
+      this.synthesis.speak(utterance);
+    } catch {
+      this.onNotice('Could not start spoken output. Try (Re)start again.', true);
+    }
+  }
+
   cancelSpeech() {
     // Clear the identity first: cancel() may dispatch an old utterance's callback.
     this.utterance = null;

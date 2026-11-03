@@ -16,6 +16,7 @@ const { chromium } = require('playwright');
     await page.addInitScript(() => {
       window.__spoken = [];
       window.__recognizers = [];
+      let speechAllowed = false;
       let speaking = null,
         timer = null;
       Object.defineProperty(window, 'speechSynthesis', {
@@ -28,7 +29,11 @@ const { chromium } = require('playwright');
             old?.onerror?.({ type: 'error', error: 'canceled' });
           },
           speak(utterance) {
-            window.__spoken.push(utterance.text);
+            // Model WebKit's initial gesture restriction. Later chart prompts
+            // arrive on a worker callback, outside the (Re)start click.
+            if (window.event?.type === 'click') speechAllowed = true;
+            if (!speechAllowed) return;
+            if (utterance.volume !== 0) window.__spoken.push(utterance.text);
             speaking = utterance;
             timer = setTimeout(() => utterance.onend?.({ type: 'end' }), 10);
           },

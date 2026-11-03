@@ -155,6 +155,7 @@ async function start() {
   $('chart-state').textContent = 'Starting';
   renderControls();
   voiceStatus('Microphone off. Tap to speak after the question.');
+  voice.prepareSpeech();
   const node = SwiWasmNode.create({
     workerUrl: new URL('runtime/swi_wasm_actor_worker.js', location.href).href,
     engineUrl: new URL('runtime/swipl-bundle.js', location.href).href,
