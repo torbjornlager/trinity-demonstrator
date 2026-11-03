@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>The Box Shop · A statechart conversation</title>
+    <title>The Box Shop</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="boxshop.css" />
     <script defer src="runtime/swi_wasm_actor_worker.js"></script>
@@ -11,230 +11,117 @@
     <script type="module" src="boxshop.js"></script>
   </head>
   <body>
-    <header class="site-header">
-      <a class="brand" href="#">
-        <span class="brand-mark" aria-hidden="true">◇</span>
-        The Box Shop
-      </a>
-      <a class="back-link" href="../pocs.html">More Web Prolog experiments ↗</a>
+    <header>
+      <h1>The Box Shop</h1>
+      <a href="../pocs.html">More Web Prolog experiments</a>
     </header>
     <main>
-      <section class="intro">
-        <p class="eyebrow">A LITTLE SHOP. A REAL STATECHART.</p>
-        <h1>
-          Let’s talk
-          <br />
-          inside the box.
-        </h1>
-        <p class="lede">
-          Choose a colour and a size. Speak, type, or tap a choice—the same statechart
-          takes it from there.
-        </p>
-      </section>
-      <div class="shop-grid">
-        <section class="product-panel" aria-labelledby="product-title">
-          <div class="panel-heading">
-            <p class="eyebrow">MADE TO YOUR CONVERSATION</p>
-            <span class="edition">NO. 02</span>
+      <section class="panel chat" aria-labelledby="chat-title">
+        <div class="heading">
+          <h2 id="chat-title">Chat</h2>
+          <div class="actions">
+            <button id="start" type="button" disabled>(Re)start</button>
+            <button id="end" type="button" disabled>End</button>
           </div>
-          <div class="box-stage" aria-hidden="true">
-            <div id="box" class="box">
-              <div class="box-top"></div>
-              <div class="box-front">
-                <span>
-                  BOX
-                  <br />
-                  SHOP
-                </span>
-              </div>
-              <div class="box-side"></div>
-            </div>
-            <div class="box-shadow"></div>
-          </div>
-          <h2 id="product-title">One box. Your way.</h2>
-          <p class="product-description">
-            Two small choices, one finished order.
-            <br />
-            A demo, with nothing to buy.
-          </p>
-          <dl class="specs">
-            <div>
-              <dt>Colour</dt>
-              <dd id="selected-color">Your choice</dd>
-            </div>
-            <div>
-              <dt>Size</dt>
-              <dd id="selected-size">Your choice</dd>
-            </div>
-          </dl>
-          <div id="order-complete" class="order-complete" hidden>
-            <span aria-hidden="true">✓</span>
-            <div>
-              <strong>Your demo order is ready.</strong>
-              <p id="order-summary"></p>
-            </div>
-          </div>
-          <div class="product-footer">
-            <span>POWERED BY SWI-WASM</span>
-            <span>Runs in your browser</span>
-          </div>
-        </section>
-        <section class="conversation-panel" aria-labelledby="conversation-title">
-          <div class="conversation-heading">
-            <div class="assistant-icon" aria-hidden="true">◇</div>
-            <div>
-              <h2 id="conversation-title">Your shop assistant</h2>
-              <p id="session-status" role="status">Ready when you are.</p>
-            </div>
-            <span id="live-dot" class="live-dot" aria-hidden="true"></span>
-          </div>
-          <div
-            id="conversation"
-            class="conversation"
-            role="log"
-            aria-live="polite"
-            aria-relevant="additions"
-          >
-            <div id="conversation-empty" class="conversation-empty">
-              <span aria-hidden="true">“</span>
-              <p>
-                A good conversation
-                <br />
-                starts with hello.
-              </p>
-            </div>
-          </div>
-          <div id="choices" class="choices" aria-label="Suggested replies"></div>
-          <form id="reply-form">
-            <label for="reply">Your reply</label>
-            <div class="reply-row">
-              <input
-                id="reply"
-                aria-describedby="reply-help"
-                maxlength="160"
-                autocomplete="off"
-                placeholder="Try “blue, please”"
-                disabled
-              />
-              <button id="send" type="submit" disabled>Send ↗</button>
-            </div>
-          </form>
-          <p id="reply-help" class="reply-help">Answer one question at a time.</p>
-          <div class="voice-controls">
-            <button
-              id="microphone"
-              class="microphone"
-              type="button"
-              disabled
-              aria-pressed="false"
-            >
-              <span aria-hidden="true">◉</span>
-              Tap to speak
-            </button>
-            <label class="speech-toggle">
-              <input id="spoken" type="checkbox" checked />
-              Spoken replies
-            </label>
-            <button id="replay" class="quiet-button" type="button" disabled>
-              Replay
-            </button>
-          </div>
-          <p id="voice-status" class="voice-status" role="status">
-            Microphone off. You can always type or tap a choice.
-          </p>
-          <div class="session-actions">
-            <button id="start" class="primary" type="button" disabled>
-              Start shopping
-              <span aria-hidden="true">↗</span>
-            </button>
-            <button id="restart" class="quiet-button" type="button" disabled>
-              Start over
-            </button>
-            <button id="end" class="quiet-button" type="button" disabled>
-              End session
-            </button>
-          </div>
-        </section>
-      </div>
-      <section class="chart-panel" aria-labelledby="chart-title">
-        <div class="chart-heading">
-          <div>
-            <p class="eyebrow">THE CONVERSATION HAS A SHAPE</p>
-            <h2 id="chart-title">Follow the statechart.</h2>
-          </div>
-          <span id="chart-state" class="state-label">Not started</span>
         </div>
-        <ol class="chart-states">
-          <li data-state="Welcome">
-            <span>01</span>
-            Welcome
-          </li>
-          <li data-state="Color">
-            <span>02</span>
-            Colour
-          </li>
-          <li data-state="Size">
-            <span>03</span>
-            Size
-          </li>
-          <li data-state="Respond">
-            <span>04</span>
-            Respond
-          </li>
-        </ol>
-        <p class="chart-explanation">
-          <code>selectFormItem</code>
-          selects the next unfilled slot. The chart retries after eight seconds without
-          an accepted reply and confirms the order when both slots are filled.
-        </p>
-        <details>
-          <summary>See the XML and live events</summary>
-          <div class="inspector-grid">
-            <div>
-              <h3>The original boxshop-2.xml</h3>
-              <a href="boxshop-2.xml" target="_blank">Open the chart ↗</a>
-              <pre id="chart-source"></pre>
-            </div>
-            <div>
-              <h3>Statechart trace</h3>
-              <p id="last-event">Events appear when the session starts.</p>
-              <ol id="trace" class="trace"></ol>
-            </div>
-          </div>
-        </details>
+        <p id="session-status" role="status">Loading the Box Shop…</p>
+        <div id="conversation" role="log" aria-live="polite"></div>
+        <button
+          id="microphone"
+          type="button"
+          aria-label="Microphone"
+          aria-pressed="false"
+          title="Start listening"
+          aria-describedby="voice-status"
+          disabled
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <rect x="9" y="3" width="6" height="12" rx="3" />
+            <path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3m-3 0h6" />
+          </svg>
+        </button>
+        <p id="voice-status" role="status">Checking browser speech support…</p>
       </section>
-      <footer>
-        <p>
-          The dialogue runs in a real SWI-WASM statechart actor. Speech and typed
-          replies become
-          <code>says(color(...))</code>
-          or
-          <code>says(size(...))</code>
-          events through a small Prolog grammar.
-        </p>
-        <p>
-          Microphone use is optional. Your browser’s recognition service may process
-          audio online.
-          <a
-            href="https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition"
-            target="_blank"
-            rel="noreferrer"
+      <section class="panel inspector" aria-label="Box Shop inspector">
+        <div class="tabs" role="tablist" aria-label="Inspect the conversation">
+          <button
+            id="tab-statechart"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="statechart-panel"
           >
-            Browser support and speech privacy ↗
-          </a>
-        </p>
-        <p>
-          <a href="boxshop.pl" target="_blank">Read the reply grammar ↗</a>
-          ·
-          <a
-            href="https://github.com/torbjornlager/trinity-demonstrator/tree/main/experiments/boxshop"
-            target="_blank"
-            rel="noreferrer"
+            Statechart
+          </button>
+          <button
+            id="tab-grammar"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="grammar-panel"
+            tabindex="-1"
           >
-            Source and setup ↗
-          </a>
-        </p>
-      </footer>
+            Grammar
+          </button>
+          <button
+            id="tab-logger"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="logger-panel"
+            tabindex="-1"
+          >
+            Logger
+          </button>
+        </div>
+        <section
+          id="statechart-panel"
+          role="tabpanel"
+          aria-labelledby="tab-statechart"
+          tabindex="0"
+        >
+          <p>
+            Current state
+            <strong id="chart-state">Not started</strong>
+          </p>
+          <pre id="chart-source"></pre>
+        </section>
+        <section
+          id="grammar-panel"
+          role="tabpanel"
+          aria-labelledby="tab-grammar"
+          tabindex="0"
+          hidden
+        >
+          <pre id="grammar-source"></pre>
+        </section>
+        <section
+          id="logger-panel"
+          role="tabpanel"
+          aria-labelledby="tab-logger"
+          tabindex="0"
+          hidden
+        >
+          <ol id="trace" aria-label="Session events"></ol>
+        </section>
+      </section>
     </main>
+    <footer>
+      This demo uses your browser’s speech recognition, which may process audio online.
+      <a
+        href="https://github.com/torbjornlager/trinity-demonstrator/tree/main/experiments/boxshop"
+      >
+        Source and setup
+      </a>
+    </footer>
   </body>
 </html>

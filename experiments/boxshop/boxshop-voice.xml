@@ -1,0 +1,55 @@
+<!-- Voice adaptation of examples/statecharts/12 boxshop-2.xml. -->
+<statechart version="0.2" initial="form">
+    <state id="form" initial="selectFormItem">
+        <datamodel>
+            :- dynamic
+                welcome/0,
+                color/1,
+                size/1.
+        </datamodel>
+        <state id="selectFormItem">
+            <go to="Welcome" if="\+ welcome"/>
+            <go to="Color"   if="\+ color(_)"/>
+            <go to="Size"    if="\+ size(_)"/>
+            <go to="Respond"/>
+        </state>
+        <state id="Welcome">
+            <onentry>
+                speak('Welcome to the box shop!', []),
+                assert(welcome)
+            </onentry>
+            <go to="selectFormItem"/>
+        </state>
+        <state id="Color">
+            <onentry>
+                speak('What color do you want?', [])
+            </onentry>
+            <go to="selectFormItem" on="says(color(Color))">
+                assert(color(Color))
+            </go>
+            <go to="selectFormItem" after="8">
+                speak('I did not hear you.', [])
+            </go>
+        </state>
+        <state id="Size">
+            <onentry>
+                speak('What size do you want?', [])
+            </onentry>
+            <go to="selectFormItem" on="says(size(Size))">
+                assert(size(Size))
+            </go>
+            <go to="selectFormItem" after="8">
+                speak('I did not hear you.', [])
+            </go>
+        </state>
+        <go to="selectFormItem" on="says(_)">
+            speak('I did not understand.', [])
+        </go>
+    </state>
+    <final id="Respond">
+        <onentry>
+            size(Size), color(Color),
+            speak('You want a ~a ~a box!', [Size, Color])
+        </onentry>
+    </final>
+</statechart>

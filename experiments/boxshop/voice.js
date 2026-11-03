@@ -1,35 +1,28 @@
 /** Browser speech transport. Dialogue decisions belong to the statechart. */
 export class BrowserVoice {
-  constructor({ onTranscript, onNotice, onChange }) {
+  constructor({ onTranscript, onUnconfirmed, onNotice, onChange }) {
     this.onTranscript = onTranscript;
+    this.onUnconfirmed = onUnconfirmed;
     this.onNotice = onNotice;
     this.onChange = onChange;
     this.Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     this.synthesis = window.speechSynthesis;
     this.canListen = Boolean(this.Recognition);
     this.canSpeak = Boolean(this.synthesis && window.SpeechSynthesisUtterance);
-    this.spoken = this.canSpeak;
     this.listening = false;
-    this.speaking = false;
     this.recognition = null;
     this.utterance = null;
-  }
-
-  setSpoken(enabled) {
-    this.spoken = enabled && this.canSpeak;
-    if (!this.spoken) this.cancelSpeech();
   }
 
   cancelSpeech() {
     // Clear the identity first: cancel() may dispatch an old utterance's callback.
     this.utterance = null;
-    this.speaking = false;
     this.synthesis?.cancel();
     this.onChange();
   }
 
   speak(text) {
-    if (!this.spoken || this.listening) return;
+    if (!this.canSpeak || this.listening) return;
     this.cancelSpeech();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
@@ -40,18 +33,16 @@ export class BrowserVoice {
       voices.find((voice) => voice.lang.startsWith('en')) ||
       null;
     this.utterance = utterance;
-    this.speaking = true;
     const finish = (event) => {
       if (this.utterance !== utterance) return;
       this.utterance = null;
-      this.speaking = false;
       this.onChange();
       if (
         event.type === 'error' &&
         !['interrupted', 'canceled'].includes(event.error)
       ) {
         this.onNotice(
-          'Spoken replies are unavailable right now. Every reply is also shown below.'
+          'Spoken replies are unavailable right now. Check your browser’s speech synthesis settings.'
         );
       }
     };
@@ -122,18 +113,19 @@ export class BrowserVoice {
       this.stopListening();
       const messages = {
         'not-allowed':
-          'Microphone access was denied. You can type or use the choices instead.',
+          'Microphone unavailable: access was denied. Allow microphone access for this site in your browser and for the browser in system settings.',
         'service-not-allowed':
-          'Speech recognition is blocked in this browser. You can still type or use the choices.',
+          'Microphone unavailable: speech recognition is blocked. Check browser permissions or open the page directly in Chrome.',
         'audio-capture':
-          'No microphone was found. You can type or use the choices instead.',
+          'Microphone unavailable: no audio input was found. Connect a microphone or select one in your sound settings.',
         network:
-          'The browser speech service could not connect. Try typing or the choices.',
-        'no-speech': 'No speech was detected. Tap the microphone to try again.',
+          'The speech service could not connect. Check your internet connection and try again.',
+        'no-speech':
+          'No speech was detected. Check the selected microphone and input level, then tap to speak again.',
       };
       this.onNotice(
-        messages[event.error] ||
-          'Listening stopped. You can try again or type your reply.'
+        messages[event.error] || 'Listening stopped. Tap to speak again.',
+        true
       );
     };
     recognition.onend = () => {
@@ -141,12 +133,7 @@ export class BrowserVoice {
       this.recognition = null;
       this.listening = false;
       this.onChange();
-      if (interimText)
-        this.onNotice(
-          'Listening ended with only a provisional result: “' +
-            interimText +
-            '”. No reply was sent. Tap to speak again.'
-        );
+      if (interimText) this.onUnconfirmed(interimText);
       else if (speechDetected)
         this.onNotice(
           'Chrome detected speech but returned no recognised words. Tap to speak and try “blue” in English.'
@@ -169,7 +156,8 @@ export class BrowserVoice {
     } catch {
       this.stopListening();
       this.onNotice(
-        'Speech recognition could not start. You can still type or use the choices.'
+        'Microphone unavailable: recognition could not start. Check microphone permissions and try again.',
+        true
       );
     }
   }

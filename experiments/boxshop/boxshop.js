@@ -1,16 +1,6 @@
 import { BrowserVoice } from './voice.js';
 
 const $ = (id) => document.getElementById(id);
-const palette = {
-  red: '#bd6354',
-  blue: '#6b91ad',
-  green: '#74927a',
-  yellow: '#d8b45e',
-  purple: '#9a83ad',
-  orange: '#ca8c55',
-  black: '#50534e',
-  white: '#dad8c9',
-};
 const state = {
   loaded: false,
   node: null,
@@ -19,9 +9,6 @@ const state = {
   starting: false,
   busy: false,
   phase: null,
-  color: null,
-  size: null,
-  lastPrompt: '',
 };
 let chartSource = '',
   supportSource = '',
@@ -29,71 +16,47 @@ let chartSource = '',
 let speechTimer = null,
   speechBatch = [];
 
+const microphoneUnavailable =
+  'Microphone unavailable. Open this HTTPS page directly in Chrome or another browser with speech recognition.';
+
 const voice = new BrowserVoice({
   onTranscript(text) {
-    $('voice-status').textContent = 'Heard “' + text + '”. Microphone off.';
-    void sendReply(text, 'voice');
+    voiceStatus('Reply recognised. Microphone off.');
+    void sendReply(text);
   },
-  onNotice(text) {
-    $('voice-status').textContent = text;
+  onUnconfirmed(text) {
+    voiceStatus('Microphone off. Tap to speak again.');
+    void sendReply(text, false);
   },
-  onChange() {
-    renderControls();
-  },
+  onNotice: voiceStatus,
+  onChange: renderControls,
 });
 
-function renderControls() {
-  const waiting = Boolean(state.pid && ['Color', 'Size'].includes(state.phase));
-  const editable = waiting && !state.busy && !state.starting;
-  $('start').hidden = Boolean(state.node) || state.starting;
-  $('start').disabled = !state.loaded || state.starting;
-  $('restart').disabled =
-    !state.loaded || state.starting || (!state.node && !state.phase);
-  $('end').disabled = !state.node && !state.starting;
-  $('reply').disabled = !editable;
-  $('send').disabled = !editable;
-  $('reply-help').textContent =
-    state.phase === 'Size'
-      ? 'Try “small” or “large, please”.'
-      : 'Try “blue” or “a blue box”. Answer one question at a time.';
-  $('reply').placeholder =
-    state.phase === 'Size' ? 'Try “large, please”' : 'Try “blue, please”';
-  $('microphone').disabled = !editable || !voice.canListen;
-  $('microphone').setAttribute('aria-pressed', String(voice.listening));
-  $('microphone').replaceChildren();
-  const icon = document.createElement('span');
-  icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = '◉';
-  $('microphone').append(icon, voice.listening ? ' Stop listening' : ' Tap to speak');
-  $('spoken').disabled = !voice.canSpeak;
-  $('replay').disabled =
-    !state.lastPrompt || !voice.spoken || voice.listening || state.busy;
-  for (const button of $('choices').querySelectorAll('button'))
-    button.disabled = !editable;
-  $('live-dot').classList.toggle('active', waiting || state.starting);
-  if (state.starting) $('session-status').textContent = 'Opening the browser engine…';
-  else if (state.phase === 'Respond')
-    $('session-status').textContent = 'Order complete. Thanks for stopping by.';
-  else if (state.phase === 'Color')
-    $('session-status').textContent = 'Choosing a colour · 8-second retry';
-  else if (state.phase === 'Size')
-    $('session-status').textContent = 'Choosing a size · 8-second retry';
+function voiceStatus(text, problem = false) {
+  const status = $('voice-status');
+  status.textContent = text;
+  status.dataset.problem = String(problem);
+  if (problem) log(text);
 }
 
-function message(role, text, origin = '') {
-  $('conversation-empty')?.remove();
+function renderControls() {
+  const waiting = state.pid && ['Color', 'Size'].includes(state.phase);
+  $('start').disabled = !state.loaded || !voice.canListen || !voice.canSpeak;
+  $('end').disabled = !state.node && !state.starting;
+  $('microphone').disabled =
+    !waiting || state.busy || state.starting || !voice.canListen;
+  $('microphone').setAttribute('aria-pressed', String(voice.listening));
+  $('microphone').title = voice.listening ? 'Stop listening' : 'Start listening';
+  if (state.starting) $('session-status').textContent = 'Starting the conversation…';
+  else if (state.phase === 'Respond')
+    $('session-status').textContent = 'Order complete.';
+  else if (waiting) $('session-status').textContent = 'Waiting for your reply.';
+}
+
+function message(role, text) {
   const item = document.createElement('div');
   item.className = 'message ' + role;
-  const label = document.createElement('small');
-  label.textContent =
-    role === 'assistant'
-      ? 'BOX SHOP'
-      : role === 'user'
-        ? origin === 'voice'
-          ? 'YOU · VOICE'
-          : 'YOU'
-        : 'SESSION';
-  item.append(label, document.createTextNode(text));
+  item.textContent = text;
   $('conversation').append(item);
   while ($('conversation').children.length > 100)
     $('conversation').firstElementChild.remove();
@@ -110,9 +73,12 @@ function output(text) {
   for (const line of String(text)
     .split(/\r?\n/)
     .filter((line) => line.trim())) {
-    message('assistant', line);
-    state.lastPrompt = line;
-    speechBatch.push(line);
+    log(line);
+    const prefix = 'BOXSHOP SPEAK: ';
+    if (!line.startsWith(prefix)) continue;
+    const spoken = line.slice(prefix.length);
+    message('assistant', spoken);
+    speechBatch.push(spoken);
   }
   // A single transition can print both a welcome and a question. Speak them
   // together and replace stale prompts, rather than building an unbounded queue.
@@ -127,71 +93,24 @@ function output(text) {
   renderControls();
 }
 
-function choices(phase) {
-  $('choices').replaceChildren();
-  const values =
-    phase === 'Color' ? Object.keys(palette) : phase === 'Size' ? ['small', 'big'] : [];
-  for (const value of values) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = value[0].toUpperCase() + value.slice(1);
-    if (phase === 'Color') button.style.setProperty('--swatch', palette[value]);
-    else button.className = 'size-choice';
-    button.addEventListener('click', () => {
-      void sendReply(value, 'choice');
-    });
-    $('choices').append(button);
-  }
-}
-
-function product() {
-  $('selected-color').textContent = state.color
-    ? state.color[0].toUpperCase() + state.color.slice(1)
-    : 'Your choice';
-  $('selected-size').textContent = state.size
-    ? state.size[0].toUpperCase() + state.size.slice(1)
-    : 'Your choice';
-  $('box').style.setProperty('--box-color', palette[state.color] || '#93a89c');
-  $('box').dataset.size = state.size || '';
-  $('order-complete').hidden = state.phase !== 'Respond';
-  $('order-summary').textContent =
-    state.color && state.size ? `A ${state.size} ${state.color} box.` : '';
-  for (const step of document.querySelectorAll('[data-state]')) {
-    const id = step.dataset.state;
-    step.classList.toggle('active', id === state.phase);
-    step.classList.toggle(
-      'done',
-      (id === 'Welcome' && Boolean(state.pid)) ||
-        (id === 'Color' && Boolean(state.color)) ||
-        (id === 'Size' && Boolean(state.size))
-    );
-    if (id === state.phase) step.setAttribute('aria-current', 'step');
-    else step.removeAttribute('aria-current');
-  }
-}
-
-function trace(text) {
+function log(text) {
   const line = document.createElement('li');
   line.textContent = text;
   $('trace').append(line);
   while ($('trace').children.length > 180) $('trace').firstElementChild.remove();
   $('trace').scrollTop = $('trace').scrollHeight;
-  $('last-event').textContent = text;
+}
+
+function trace(text) {
+  log(text);
   if (pendingEvent && text === `external_event(${pendingEvent.event})`)
     pendingEvent.seen = true;
 
-  // These observations come from the real chart trace, not from a second
-  // JavaScript dialogue controller. The fixed chart uses simple atom slots.
-  const color = /^execution\(assert\(color\(([a-z]+)\)\)\)$/.exec(text);
-  const size = /^execution\(assert\(size\((small|big)\)\)\)$/.exec(text);
-  if (color) state.color = color[1];
-  if (size) state.size = size[1];
   const configuration = /^configuration\(\[(.*)\]\)$/.exec(text);
   if (configuration) {
     const leaf = configuration[1].split(',').at(-1).replaceAll("'", '').trim();
     $('chart-state').textContent = leaf;
     if (['Welcome', 'Color', 'Size', 'Respond'].includes(leaf)) {
-      if (state.phase !== leaf) choices(leaf);
       state.phase = leaf;
       if (pendingEvent?.seen && ['Color', 'Size', 'Respond'].includes(leaf)) {
         const pending = pendingEvent;
@@ -201,7 +120,6 @@ function trace(text) {
       }
     }
   }
-  product();
   renderControls();
 }
 
@@ -227,25 +145,16 @@ function retire() {
 }
 
 async function start() {
-  if (!state.loaded || state.starting) return;
+  if (!state.loaded || !voice.canListen || !voice.canSpeak) return;
   retire();
   const generation = state.generation;
   state.starting = true;
   state.phase = null;
-  state.color = null;
-  state.size = null;
-  state.lastPrompt = '';
   $('conversation').replaceChildren();
   $('trace').replaceChildren();
-  $('reply').value = '';
   $('chart-state').textContent = 'Starting';
-  $('last-event').textContent = 'Starting the statechart…';
-  choices(null);
-  product();
   renderControls();
-  $('voice-status').textContent = voice.canListen
-    ? 'Microphone off. Tap to speak after the assistant asks a question.'
-    : 'Speech input is unavailable in this browser. You can type or tap a choice.';
+  voiceStatus('Microphone off. Tap to speak after the question.');
   const node = SwiWasmNode.create({
     workerUrl: new URL('runtime/swi_wasm_actor_worker.js', location.href).href,
     engineUrl: new URL('runtime/swipl-bundle.js', location.href).href,
@@ -262,32 +171,37 @@ async function start() {
   try {
     await node.open({ source: supportSource });
     if (generation !== state.generation) return;
-    const answer = await node.query(
-      'statechart_spawn(Pid,[trace(true),src_text(' +
-        node.prologQuotedText(chartSource) +
-        ')])'
-    );
+    // Supply the browser-specific speech transport alongside the chart.
+    const answer = await node.query(`
+      statechart_spawn(Pid, [
+        trace(true),
+        src_text(${node.prologQuotedText(chartSource)}),
+        src_list([
+          (speak(Template, Arguments) :-
+            format(string(Text), Template, Arguments),
+            format('BOXSHOP SPEAK: ~s~n', [Text]))
+        ])
+      ])
+    `);
     if (generation !== state.generation) return;
     if (answer.type !== 'success' || !answer.data[0]?.Pid)
       throw new Error(answer.data || 'The statechart did not start');
     state.pid = answer.data[0].Pid;
     state.starting = false;
-    product();
     renderControls();
   } catch (error) {
     if (generation !== state.generation) return;
     retire();
     state.phase = 'Error';
-    choices(null);
     renderControls();
     $('chart-state').textContent = 'Stopped';
-    $('session-status').textContent = 'Could not start. Try Start shopping again.';
+    $('session-status').textContent = 'Could not start. Try (Re)start again.';
     message('system', error.message);
   }
 }
 
-async function sendReply(text, origin = 'typed') {
-  const reply = String(text).trim().slice(0, 160);
+async function sendReply(text, confirmed = true) {
+  const reply = text.trim().slice(0, 160);
   if (
     !reply ||
     state.busy ||
@@ -303,17 +217,20 @@ async function sendReply(text, origin = 'typed') {
   voice.stopListening();
   voice.cancelSpeech();
   clearSpeechBatch();
-  $('reply').value = '';
-  message('user', reply, origin);
+  message('user', reply);
   renderControls();
   try {
-    const parsed = await node.query(
-      'boxshop_event(' + node.prologQuotedText(reply) + ', Event)'
-    );
-    if (generation !== state.generation) return;
-    if (parsed.type !== 'success')
-      throw new Error(parsed.data || 'Could not parse the reply');
-    const event = parsed.data[0].Event;
+    // A provisional result is evidence of an attempt, not a confirmed reply.
+    let event = 'says(unknown)';
+    if (confirmed) {
+      const parsed = await node.query(
+        'boxshop_event(' + node.prologQuotedText(reply) + ', Event)'
+      );
+      if (generation !== state.generation) return;
+      if (parsed.type !== 'success')
+        throw new Error(parsed.data || 'Could not parse the reply');
+      event = parsed.data[0].Event;
+    }
     // Sending to an actor is asynchronous. Wait for its corresponding external
     // event and stable configuration before accepting another UI reply.
     const changed = new Promise((resolve, reject) => {
@@ -338,7 +255,6 @@ async function sendReply(text, origin = 'typed') {
     if (generation !== state.generation) return;
     retire();
     state.phase = 'Error';
-    choices(null);
     $('chart-state').textContent = 'Stopped';
     $('session-status').textContent = 'Session stopped. Start a new conversation.';
     message('system', error.message);
@@ -351,35 +267,48 @@ async function sendReply(text, origin = 'typed') {
 $('start').addEventListener('click', () => {
   void start();
 });
-$('restart').addEventListener('click', () => {
-  void start();
-});
 $('end').addEventListener('click', () => {
   retire();
   state.phase = 'Ended';
-  choices(null);
-  product();
   renderControls();
   $('chart-state').textContent = 'Ended';
   $('session-status').textContent = 'Session ended. Start again whenever you like.';
-  message('system', 'Session ended. Your next conversation starts with a fresh chart.');
-});
-$('reply-form').addEventListener('submit', (event) => {
-  event.preventDefault();
-  void sendReply($('reply').value);
+  voiceStatus('Microphone off.');
+  message('system', 'Session ended.');
 });
 $('microphone').addEventListener('click', () => {
   if (voice.listening) {
     voice.stopListening();
-    $('voice-status').textContent =
-      'Listening stopped by you. Tap to speak again when ready.';
+    voiceStatus('Listening stopped. Tap to speak again when ready.');
   } else voice.listen();
 });
-$('spoken').addEventListener('change', () => {
-  voice.setSpoken($('spoken').checked);
-  renderControls();
-});
-$('replay').addEventListener('click', () => voice.speak(state.lastPrompt));
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+
+function selectTab(selected) {
+  for (const tab of tabs) {
+    const active = tab === selected;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+    $(tab.getAttribute('aria-controls')).hidden = !active;
+  }
+  selected.focus();
+}
+
+for (const [index, tab] of tabs.entries()) {
+  tab.addEventListener('click', () => selectTab(tab));
+  tab.addEventListener('keydown', (event) => {
+    const next = {
+      ArrowLeft: (index - 1 + tabs.length) % tabs.length,
+      ArrowRight: (index + 1) % tabs.length,
+      Home: 0,
+      End: tabs.length - 1,
+    }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    selectTab(tabs[next]);
+  });
+}
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     clearSpeechBatch();
@@ -389,11 +318,10 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', retire);
 
 async function boot() {
-  $('spoken').checked = voice.canSpeak;
   renderControls();
   try {
     [chartSource, supportSource] = await Promise.all(
-      ['boxshop-2.xml', 'boxshop.pl'].map(async (name) => {
+      ['boxshop-voice.xml', 'boxshop.pl'].map(async (name) => {
         const response = await fetch(name);
         if (!response.ok) throw new Error('Cannot load ' + name);
         return response.text();
@@ -403,12 +331,21 @@ async function boot() {
     $('chart-source').textContent = chartSource;
     state.loaded = true;
     renderControls();
-    if (!voice.canListen)
-      $('voice-status').textContent =
-        'Speech input is unavailable in this browser. You can always type or use the choices.';
+    $('grammar-source').textContent = supportSource;
+    $('session-status').textContent =
+      voice.canListen && voice.canSpeak
+        ? 'Press (Re)start to begin.'
+        : 'Speech is unavailable.';
+    if (!voice.canListen) voiceStatus(microphoneUnavailable, true);
+    else if (!voice.canSpeak)
+      voiceStatus(
+        'Spoken output is unavailable. Try a browser with speech synthesis enabled.',
+        true
+      );
+    else voiceStatus('Microphone off until you tap to speak.');
   } catch (error) {
     $('session-status').textContent = 'Could not load the demo. Reload to try again.';
-    $('voice-status').textContent = error.message;
+    voiceStatus(error.message, true);
   }
 }
 
