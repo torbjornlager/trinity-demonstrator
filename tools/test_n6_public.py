@@ -41,6 +41,15 @@ started=time.monotonic()
 data,_=query('spin',cap1,src_text='spin:-spin.',timeout='0.1')
 assert data['type']=='error' and time.monotonic()-started<5,data
 assert query('true',cap1)[0]['type']=='success'
+# Invalid later occurrences are rejected before remote work; rpc-only options
+# cannot borrow promise's template/offset extensions.
+for options,formal in [('[limit(1),limit(0)]','type_error(positive_integer,0)'),
+        ('[timeout(none),timeout(bad)]','type_error(number,bad)'),
+        ('[http_timeout(1),http_timeout(bad)]','type_error(number,bad)'),
+        ('[offset(0)]','domain_error(rpc_option,offset(0))'),
+        ('[template(ignored)]','domain_error(rpc_option,template(ignored))')]:
+    data,_=query(f"catch(rpc('https://n1.elfenbenstornet.se',true,{options}),error(E,_),true),E=={formal}",cap1)
+    assert data['type']=='success',data
 for n in range(1,6):
     data,_=query(f"rpc('https://n{n}.elfenbenstornet.se',member(X,[a,b]))",cap1)
     assert data['type']=='success' and data['data']==[{'X':'a'},{'X':'b'}],(n,data)
