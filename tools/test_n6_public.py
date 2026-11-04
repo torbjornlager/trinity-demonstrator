@@ -44,6 +44,6 @@ assert query('true',cap1)[0]['type']=='success'
 for n in range(1,6):
     data,_=query(f"rpc('https://n{n}.elfenbenstornet.se',member(X,[a,b]))",cap1)
     assert data['type']=='success' and data['data']==[{'X':'a'},{'X':'b'}],(n,data)
-for dest in ['http://169.254.169.254','http://127.0.0.1:8081','https://example.com','https://n1.elfenbenstornet.se:444']:
+for dest in ['http://169.254.169.254','http://127.0.0.1:8081','https://example.com','https://n1.elfenbenstornet.se:444','https://n6.elfenbenstornet.se']:
     data,_=query(f"rpc('{dest}',true)",cap1);assert data['type']=='error',data
 print('PASS public N6: canonical navigation, anonymous cookies, capability continuations, source, shared DB, N1–N5 RPC and denied egress')

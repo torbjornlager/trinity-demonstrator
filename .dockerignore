@@ -46,3 +46,7 @@ tools/*
 !tools/fetch_gprolog.py
 
 !tools/prepare_n6_jail.py
+
+# Local verification artifacts and scratch data are never runtime assets.
+output/
+tmp/

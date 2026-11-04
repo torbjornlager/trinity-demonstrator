@@ -1021,3 +1021,34 @@ default to every node, including private source, shared databases and
 statecharts; Compose needs no experimental opt-in. Native implementation
 modules and library interfaces retain their explicit SWI string conversions.
 The pinned CI runner includes the TEXT tier to prevent a default-mode regression.
+
+### Authenticated pooled peer connections
+
+Public N5 strips client-supplied trusted-identity headers. A pooled SWI connection
+that delegates actor lifetimes therefore needs a destination-bound bearer token
+with `execute` and `internal_transport`; anonymous execution alone cannot claim
+transport lineages. Keep this capability off browser and ordinary visitor tokens.
+Provision the token through the N5 owner's private administration interface.
+
+The SWI launcher accepts `WP_PEER_TRANSPORT_TOKENS_FILE`, containing one Prolog
+list and no other terms, for example:
+
+```prolog
+['https://n5.elfenbenstornet.se'-'OWNER_PROVISIONED_TOKEN'].
+```
+
+Store the file outside served assets, readable only by the owner and node process.
+The URL is the exact public destination, including any port. The launcher rejects
+malformed files and prints only the number of configured peers. To configure N3
+and N4, add `compose.peer-transport.yaml` after the deployment's existing overlays
+and set `WP_N3_PEER_TOKENS_FILE` and `WP_N4_PEER_TOKENS_FILE` to those owner files.
+The overlay mounts them read-only; it does not provision tokens or alter the
+public proxy's identity-header stripping. Runtime/source updates and credential
+rollout must be deployed together before the live actor matrix can pass.
+
+For Docker hosts without bind mounts, use `compose.peer-transport-volumes.yaml`
+instead and set `WP_N3_PEER_TOKENS_VOLUME` / `WP_N4_PEER_TOKENS_VOLUME` to
+external volumes containing `peers.pl`, readable by the image's `webprolog` user.
+Mounts remain read-only. Retain every overlay used by the running deployment;
+when N6 is present, `compose.gprolog-n6-caddy.yaml` must also follow the public
+N5 overlay so rebuilding Caddy retains N6 routing and its network attachment.

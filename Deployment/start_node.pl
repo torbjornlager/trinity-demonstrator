@@ -300,6 +300,7 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
     tutorial_sections_option(TutorialSections0, TutorialOpts),
     owner_option(Auth, OwnerOpts),
     shared_db_option(SharedOpts),
+    peer_transport_options(PeerOpts),
     append([
         [ sandbox(Sandbox),
           profile(Profile),
@@ -320,8 +321,13 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
         LoadUriOpts,
         TutorialOpts,
         OwnerOpts,
-        SharedOpts
+        SharedOpts,
+        PeerOpts
     ], Options).
+
+peer_transport_options(Options) :-
+    env_atom('WP_PEER_TRANSPORT_TOKENS_FILE', '', File),
+    deployment_peer_transport:peer_transport_options(File,Options).
 
 %!  ack_public(+Auth) is det.
 %
@@ -467,6 +473,8 @@ default_scheme_port(http, 80).
 %  Path: WP_CONFIG if set (and the file must then exist), else
 %  ./web-prolog.conf if present, else no file.
 
+:- use_module(peer_transport, []).
+
 :- dynamic config_value/2.
 
 load_config_file :-
@@ -582,6 +590,8 @@ print_config([port-Port, public_url-URL, options-Options]) :-
     ( URL == '' -> true ; format("  public_url:  ~w~n", [URL]) ),
     forall(member(Opt, Options), print_option(Opt)).
 
+print_option(peer_transport_tokens(Tokens)) :- !,
+    length(Tokens,Count),format("  peer_transport_tokens: ~w peers (redacted)~n",[Count]).
 print_option(Opt) :-
     Opt =.. [Name|Args],
     format("  ~w: ~w~n", [Name, Args]).

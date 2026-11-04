@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Low-volume ownership checks against the deployed N1–N4 and owner-only N6.
+"""Low-volume ownership checks against the deployed N1–N4 and private or public N6.
 
 Aggressive admission/forgery tests live in disposable upstream fixtures. This
 check uses fresh cookie jars and synthetic queries, and keeps N6 credentials out
@@ -21,6 +21,8 @@ ROOT=Path(__file__).resolve().parents[1]
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--skip-n6',action='store_true')
+    parser.add_argument('--n6-auth', choices=['public', 'private'], default='public',
+                        help='expected deployed N6 access policy (default: public)')
     args=parser.parse_args()
     for number in range(1,5):
         base=f'https://n{number}.elfenbenstornet.se'
@@ -88,8 +90,11 @@ print(json.dumps(sorted(pid for pid,(parent,_) in rows.items() if parent in cont
     page(owners[0],2,100);page(owners[1],2,100)
     assert not (a|b)&native_children(),'N6: completed probe workers were retained'
     with urlopen(base+'/node_info',timeout=10) as response:info=json.load(response)
-    assert info['auth']=='private' and not info['principal_execution']
-    print('N6: two authenticated query capabilities retain distinct GNU workers; anonymous execution remains disabled')
+    if args.n6_auth == 'private':
+        assert info['auth']=='private' and not info['principal_execution']
+    else:
+        assert info['auth']=='open' and info['principal_execution']
+    print(f'N6: independent authenticated query capabilities and expected {args.n6_auth} access policy passed')
 
 
 if __name__=='__main__':main()

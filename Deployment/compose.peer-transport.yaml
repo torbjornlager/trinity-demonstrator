@@ -1,0 +1,13 @@
+# Opt-in credentials for pooled SWI -> private or public peer connections.
+# The files contain a single Prolog list of exact node URL - bearer token pairs.
+services:
+  wp_n3:
+    environment:
+      WP_PEER_TRANSPORT_TOKENS_FILE: /run/secrets/peer-transport.pl
+    volumes:
+      - ${WP_N3_PEER_TOKENS_FILE:?Set WP_N3_PEER_TOKENS_FILE}:/run/secrets/peer-transport.pl:ro
+  wp_n4:
+    environment:
+      WP_PEER_TRANSPORT_TOKENS_FILE: /run/secrets/peer-transport.pl
+    volumes:
+      - ${WP_N4_PEER_TOKENS_FILE:?Set WP_N4_PEER_TOKENS_FILE}:/run/secrets/peer-transport.pl:ro

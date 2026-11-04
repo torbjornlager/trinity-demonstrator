@@ -225,7 +225,7 @@ class DefaultStartup(unittest.TestCase):
         self.assertEqual(r.returncode,0,r.stderr);self.assertIn(str(package/'prolog/web_prolog/node.pl'),r.stdout)
     def test_image_layout_uses_external_native_package(self):
         image=self.work/'image'
-        for name in ['demonstrator_startup.pl','load.pl','Deployment/start_node.pl',
+        for name in ['demonstrator_startup.pl','load.pl','Deployment/start_node.pl','Deployment/peer_transport.pl',
                      'dependencies/swi-prolog-node.json','dependencies/swi-wasm-node.json','tools/setup_swi.py',
                      'tools/pinned_browser.py',
                      'tools/pinned_swi.py','tools/package_wasm_prolog.py',

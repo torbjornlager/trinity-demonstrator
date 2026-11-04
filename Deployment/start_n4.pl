@@ -1,5 +1,6 @@
 :- use_module(library(settings)).
 :- ['../load.pl'].
+:- use_module(peer_transport, [peer_transport_options/1]).
 :- use_module(shared_db_paths, [
     common_shared_db_path/1,
     actor_common_shared_db_path/1,
@@ -33,7 +34,8 @@ start_n4 :-
     set_setting(http:public_port, 443),
     set_setting(http:public_scheme, https),
     set_setting(node_http_identity:anonymous_visitors, true),
-    node(3055, [
+    peer_transport_options(PeerOptions),
+    append(PeerOptions, [
         sandbox(blacklist),
         profile(actor),
         auth(open),
@@ -67,7 +69,8 @@ start_n4 :-
         load_shared_db_file(ActorCommonSharedDBPath),
         load_shared_db_file(LindaClientPath),
         load_shared_db_file(OverlaySharedDBPath)
-    ]),
+    ], NodeOptions),
+    node(3055, NodeOptions),
     with_node_port_context(3055,
                            update_current_node_runtime(_{
                                ws_endpoint_overrides:[

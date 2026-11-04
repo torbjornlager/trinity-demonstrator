@@ -46,7 +46,9 @@ check_remote_proofs(Port) :-
         aristotle-((mortal(aristotle)@URI)/(human(aristotle)/((human(aristotle)@URI)/true)))
     ]).
 
-:- use_module('tiers/node/multi_node_harness').
+:- getenv('TRINITY_PINNED_SWI_ROOT', NativeRoot),
+   directory_file_path(NativeRoot, 'tests/tiers/node/multi_node_harness.pl', Harness),
+   use_module(Harness).
 :- begin_tests(shared_proof_tree).
 
 test(shared_databases_ship_only_interpreter) :-
