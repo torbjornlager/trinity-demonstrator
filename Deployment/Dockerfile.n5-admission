@@ -1,0 +1,9 @@
+FROM nginx:stable-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949
+COPY Deployment/nginx.n5-admission.conf /etc/nginx/nginx.conf
+# Publish exactly the owner-curated source layers loaded by the Trealla node.
+COPY Deployment/shared_db_common.pl Deployment/shared_db_actor_common.pl Deployment/shared_db_n4.pl Deployment/shared_db_linda.pl /tmp/shared/
+COPY examples/services/linda_client.pl /tmp/shared/
+RUN mkdir -p /srv/n5 && cat /tmp/shared/shared_db_common.pl /tmp/shared/shared_db_actor_common.pl /tmp/shared/shared_db_n4.pl /tmp/shared/linda_client.pl /tmp/shared/shared_db_linda.pl > /srv/n5/shared_db.pl && rm -rf /tmp/shared
+USER nginx
+HEALTHCHECK --interval=10s --timeout=3s --start-period=3s --retries=3 CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

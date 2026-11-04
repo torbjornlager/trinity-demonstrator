@@ -515,6 +515,90 @@ The named `trealla_n5_state` volume is intentionally retained after rollback
 so its audit log and token state remain recoverable. It can be removed later
 only after confirming it is no longer needed.
 
+
+## Public Trealla N5 pilot
+
+The public pilot is opt-in through `compose.trealla-n5-public.yaml`, applied
+**after** the ordinary and Trealla Compose files. N1–N4 retain their existing
+configuration. The owner-only Trealla override and SSO Caddyfile remain the
+rollback configuration.
+
+The pilot keeps N5's 300-second active-query and idle limits, four concurrent
+calls per principal, 16 WebSocket actors per principal, 128 actors overall,
+and its 1 GiB/one-CPU container allowance. It retains blacklist sandboxing and
+the existing exact source-origin allowlist so the qualified tutorials keep
+working. It changes authentication to `open`, explicitly acknowledges public
+execution, and strips visitor-supplied identity/capability headers at both
+proxy layers. Administration paths are absent from the public allowlist.
+
+A non-root, read-only Nginx admission service fronts the execution routes.
+It allows **16 active requests/WebSockets per client IP and 32 overall**.
+Rejected new work receives HTTP 429, `Retry-After: 5`, and a short busy message;
+existing connections are not evicted. Caddy overwrites the client-IP header,
+so internet visitors cannot choose their quota bucket. These are limits on
+active requests and upgraded WebSockets, not idle HTTP keep-alive sockets.
+The proxy is not published on the host. Static demonstrator assets still
+come from N3 and do not consume N5 execution slots.
+
+The owner-installed Trealla Linda service accepts at most **512 stored tuples
+and 256 pending requests**, with at most **4096 logical units per tuple or
+pattern** (term nodes plus atom/number text characters). Excess writes/waits
+raise `linda_error(tuple_space_full)` or `linda_error(pending_requests_full)`;
+oversized terms raise `linda_error(tuple_too_large)`. Reads, takes, probes,
+FIFO ordering and cross-session sharing retain their protocol. No existing
+data is evicted to make room. These bounds apply to the Trealla service;
+the SWI services are unchanged. The service mailbox itself is not a bounded
+queue; connection/actor quotas and container limits remain independent
+protections against send floods.
+
+Public audit/token state and logs use separate volumes, leaving private N5
+state untouched. The public root URL serves a build-time concatenation of
+exactly the five curated shared-DB source layers listed in the Trealla
+override, so the panel's Shared DB link displays N5's sources. Rebuild the
+admission image whenever those layers change.
+
+Build with the existing private-dependency BuildKit secret setup, then deploy:
+
+```sh
+docker compose --env-file Deployment/.env \
+  -f Deployment/compose.yaml -f Deployment/compose.trealla-n5.yaml \
+  -f Deployment/compose.trealla-n5-public.yaml \
+  up -d --build --no-deps --wait wp_n5 n5_admission caddy
+```
+
+To restore owner-only access, omit the public overlay and rebuild/recreate
+`wp_n5` and `caddy` with `--no-deps`. This remounts the private state volume;
+it does not delete public state. Stop the now-unused admission service using
+the public Compose configuration. Do not run `down --volumes` on production.
+
+### Public pilot validation
+
+Use a disposable Compose project and
+`compose.trealla-n5-public-test.yaml` to publish only the candidate admission
+service on loopback port 13060. Build the candidate N5/admission images named
+in that test overlay first (or set its image variables). Use `--no-build` to
+start `wp_n3`, `wp_n5` and `n5_admission` in the disposable project. The test
+N5 overrides owner/admin values with dummy credentials.
+
+Run `tools/test_public_n5.py` against that disposable endpoint **only**: it
+saturates connection quotas and fills then empties Linda. It verifies forged
+identity stripping, sandbox denials, admin exclusion, the shared-DB source,
+origin rejection, a query lasting more than ten seconds, survival of an
+established query at capacity, quota reclamation, and Linda rejection/recovery.
+Also run the conformance `actor-core-0.1` and `demonstrator-tutorials-0.1`
+packs, `tools/test_linda_service.py`, and `tools/test_n5_sources.py` through
+the candidate admission endpoint without authentication headers.
+`tests/linda_public_bounds.pl` covers pending-reader admission and term sizing
+on both SWI and Trealla. Normal tutorial/Linda cases should precede saturation.
+
+During initial qualification, 32 open idle WebSockets used about 147 MiB in
+the Trealla container; 512 simple stored tuples brought usage to about
+198 MiB, and draining them left about 214 MiB. A combined 64-connection and
+1024-tuple stress run approached the 1 GiB ceiling, so those larger trial
+ceilings were rejected. These figures describe the tested workloads, not a
+worst-case memory guarantee. Observe `docker stats`, node `/metrics`, and
+admission rejection logs; retain the engine/container ceilings and isolation.
+
 ## Security Model
 
 This bundle is a practical first step, not a complete hardening story.

@@ -1,0 +1,18 @@
+# Disposable test publication; NEVER include this file in production.
+# Build/tag candidates first. The real node, proxy and private volumes stay
+# untouched when using a separate Compose project such as n5_public_validation.
+services:
+  wp_n3:
+    image: ${N5_PUBLIC_TEST_ASSET_IMAGE:-deployment-wp_n3:latest}
+    ports: !reset []
+  wp_n5:
+    image: ${N5_PUBLIC_TEST_NODE_IMAGE:-trinity-n5-public-candidate:latest}
+    ports: !reset []
+    environment:
+      WP_OWNER: owner@example.test
+      WP_ADMIN_TOKEN: 0123456789abcdef0123456789abcdef
+      WP_DRAIN_GRACE_SECONDS: "0"
+  n5_admission:
+    image: ${N5_PUBLIC_TEST_ADMISSION_IMAGE:-trinity-n5-admission-candidate:latest}
+    ports:
+      - "127.0.0.1:${TREALLA_N5_TEST_PORT:-13060}:8080"

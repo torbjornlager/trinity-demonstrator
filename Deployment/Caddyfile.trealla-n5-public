@@ -1,0 +1,35 @@
+# Public N5 pilot. Administration stays absent from the route allowlist.
+n5.elfenbenstornet.se {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    @options method OPTIONS
+    handle @options {
+        import cors_headers
+        respond 204
+    }
+    @trealla path / /call /ws /healthz /readyz /version /node_info /metrics
+    handle @trealla {
+        import cors_headers
+        reverse_proxy n5_admission:8080 {
+            import common_proxy_headers
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            transport http {
+                read_timeout 0
+                write_timeout 0
+            }
+        }
+    }
+    @n5_ui path /manual /img* /vendor* /portal /demonstrator /calculator /tutorial /swi-wasm-tutorial /isobase-profile-tutorial /isotope-profile-tutorial /actor-profile-tutorial /statechart-behaviour-tutorial /isobase-api-tutorial /isotope-api-tutorial /actor-api-tutorial /jev-sxml-tutorial /editor_frame /examples_index /examples* /statecharts* /wasm* /swipl-bundle.js /swi_wasm_actor_worker.js /sxml-0.2.dtd
+    handle @n5_ui {
+        reverse_proxy wp_n3:3053 {
+            import common_proxy_headers
+        }
+    }
+    respond "Not found" 404
+}

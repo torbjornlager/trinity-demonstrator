@@ -1,0 +1,51 @@
+# Opt-in public pilot. Apply after compose.yaml and compose.trealla-n5.yaml.
+# Omit this overlay to restore the owner-only SSO configuration.
+services:
+  wp_n5:
+    environment:
+      WP_AUTH: open
+      WP_ACK_PUBLIC: "yes"
+      # Keep the existing execution, idle, actor and request budgets.
+    volumes: !override
+      - trealla_n5_public_state:/state
+      - trealla_n5_public_logs:/var/log/webprolog
+
+  n5_admission:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.n5-admission
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    networks:
+      - wp_net
+    expose:
+      - "8080"
+    depends_on:
+      wp_n5:
+        condition: service_healthy
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 32
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  caddy:
+    build:
+      dockerfile: Deployment/Dockerfile.caddy.trealla-n5-public
+    depends_on:
+      n5_admission:
+        condition: service_healthy
+
+volumes:
+  trealla_n5_public_state:
+  trealla_n5_public_logs:
