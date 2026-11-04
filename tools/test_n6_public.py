@@ -37,6 +37,12 @@ for goal,options in [('foo(X)',{'src_text':'foo(a). foo(b).'}),('human(X)',{}),(
     data,_=query(goal,cap1,**options);assert data['type']=='success' and data['data'],data
 data,_=query('large_source_probe',cap1,src_text='%'+'source comment '*5000+'\nlarge_source_probe.')
 assert data['type']=='success',data
+for goal,options in [('A="apa",A==[a,p,a]',{}),
+        ("A=\"å😀\",A==['å','😀'],length(A,2)",{}),
+        ('character_reader_probe(A),A==[a,p,a]',{'src_text':'character_reader_probe("apa").'}),
+        ('phrase(character_reader_probe,A),A==[a,p,a]',{'src_text':'character_reader_probe --> "apa".'})]:
+    data,_=query(goal,cap1,**options)
+    assert data['type']=='success',data
 started=time.monotonic()
 data,_=query('spin',cap1,src_text='spin:-spin.',timeout='0.1')
 assert data['type']=='error' and time.monotonic()-started<5,data
