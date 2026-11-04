@@ -360,6 +360,12 @@
         text-decoration: none;
       }
 
+      .wb-header-node-slot {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
       .wb-header-card.active {
         background: var(--button-active-bg);
         color: var(--brand-ink);
@@ -2756,20 +2762,22 @@
               <div class="wb-header-section-title">Remote non-SWI nodes</div>
             </div>
             <div class="wb-header-card-row">
-              <a v-for="node in headerRemoteNonSwiNodeButtons"
-                 :key="node.id"
-                 :href="node.href"
-                 class="wb-header-card wb-header-card-node"
-                 :class="{active: node.active}"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+              <div v-for="node in headerRemoteNonSwiNodeButtons"
+                   :key="node.id"
+                   class="wb-header-node-slot">
+                <a :href="node.href"
+                   class="wb-header-card wb-header-card-node"
+                   :class="{active: node.active}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+                <p v-if="node.active" class="wb-header-section-note">
+                  <a :href="currentPortalNodeAddress"
+                     target="_blank"
+                     rel="noopener noreferrer">&nbsp;Shared DB</a>
+                </p>
+              </div>
             </div>
-            <p v-if="headerNonSwiNodeSelected" class="wb-header-section-note">
-              <a :href="currentPortalNodeAddress"
-                 target="_blank"
-                 rel="noopener noreferrer">&nbsp;Shared DB</a>
-            </p>
           </section>
           <section class="wb-header-section wb-header-section-tools">
             <div class="wb-header-actions">
@@ -4746,6 +4754,9 @@
         if (port === "3056") {
           return "N5";
         }
+        if (port === "3057") {
+          return "N6";
+        }
         return null;
       }
 
@@ -4775,7 +4786,7 @@
         var seen = {};
         var domainMatch;
 
-        function push(url) {
+        function push(url, runtime) {
           var parsed = normalizeNodeUrl(url);
           if (!parsed || seen[parsed.href]) {
             return;
@@ -4785,11 +4796,17 @@
             id: parsed.href,
             url: parsed.href,
             href: portalHrefForNodeUrl(parsed.href),
+            runtime: runtime,
             label: nodeLabelForUrl(parsed.href)
           });
         }
 
         if (!normalized) {
+          return nodes;
+        }
+
+        if (TrinityHost.remoteNodes && TrinityHost.remoteNodes.length) {
+          TrinityHost.remoteNodes.forEach(function(node) { push(node.url, node.runtime); });
           return nodes;
         }
 
@@ -5402,7 +5419,7 @@
         var profile;
         if (runtime.main || runtime.worker || ["n3", "n4", "n5"].indexOf(node) >= 0) {
           profile = "actor";
-        } else if (node === "n1") {
+        } else if (node === "n1" || node === "n6") {
           profile = "isobase";
         } else if (node === "n2") {
           profile = "isotope";
@@ -5638,6 +5655,7 @@
             portalVersion: "0.3.0",
             portalSwiplVersion: "",
             portalTreallaVersion: "",
+            portalGprologVersion: "",
             tutorialSrc: (function() {
               var base = profileTutorialForCurrentRuntime().path;
               return /^#[A-Za-z0-9_-]+$/.test(String(window.location.hash || "")) ? base + window.location.hash : base;
@@ -5678,7 +5696,7 @@
             return !this.isBrowserSwiWasmMode;
           },
           discoveryHubUrl: function() {
-            return "https://n0.elfenbenstornet.se/discovery-hub";
+            return TrinityHost.discoveryHubUrl || "https://n0.elfenbenstornet.se/discovery-hub";
           },
           loggerEnabledForRuntime: function() {
             return true;
@@ -5706,11 +5724,13 @@
             var nodesByLabel = {};
             var currentLabel = this.isBrowserSwiWasmMode ? "" : nodeLabelForUrl(this.currentPortalNodeUrl);
             this.portalNodes.forEach(function(node) {
-              if (/^N[1-5]$/.test(node.label)) {
+              if (/^N[1-6]$/.test(node.label)) {
                 nodesByLabel[node.label] = node;
               }
             });
-            return ["n1", "n2", "n3", "n4", "n5"].map(function(id) {
+            var ids = ["n1", "n2", "n3", "n4", "n5"];
+            if (nodesByLabel.N6) ids.push("n6");
+            return ids.map(function(id) {
               var label = id.toUpperCase();
               return {
                 id: id,
@@ -5718,18 +5738,20 @@
                   ? nodesByLabel[label].href
                   : portalHrefForNodeUrl("https://" + id + ".elfenbenstornet.se"),
                 label: label,
+                runtime: nodesByLabel[label] && nodesByLabel[label].runtime
+                  || (id === "n6" ? "gprolog" : id === "n5" ? "trealla" : "swi"),
                 active: currentLabel === label
               };
             });
           },
           headerRemoteSwiNodeButtons: function() {
-            return this.headerRemoteNodeButtons.filter(function(node) { return node.id !== "n5"; });
+            return this.headerRemoteNodeButtons.filter(function(node) { return node.runtime === "swi"; });
           },
           headerNonSwiNodeSelected: function() {
             return this.headerRemoteNonSwiNodeButtons.some(function(node) { return node.active; });
           },
           headerRemoteNonSwiNodeButtons: function() {
-            return this.headerRemoteNodeButtons.filter(function(node) { return node.id === "n5"; });
+            return this.headerRemoteNodeButtons.filter(function(node) { return node.runtime !== "swi"; });
           },
           repositoryUrl: function() {
             return PORTAL_REPOSITORY_URL;
@@ -5741,15 +5763,18 @@
             if (this.isBrowserSwiWasmMode || this.portalSwiplVersion) {
               return "SWI-Prolog";
             }
+            if (this.portalGprologVersion) return "GNU Prolog";
             return this.portalTreallaVersion ? "Trealla Prolog" : "Prolog";
           },
           portalRuntimeUrl: function() {
+            if (this.portalRuntimeName === "GNU Prolog") return "https://www.gprolog.org/";
             return this.portalRuntimeName === "Trealla Prolog"
               ? "https://github.com/trealla-prolog/trealla-prolog"
               : (this.portalRuntimeName === "SWI-Prolog"
                   ? "https://www.swi-prolog.org/" : "https://trinity.elfenbenstornet.se/");
           },
           portalRuntimeVersion: function() {
+            if (this.portalRuntimeName === "GNU Prolog") return this.portalGprologVersion;
             return this.portalRuntimeName === "Trealla Prolog"
               ? this.portalTreallaVersion : this.portalSwiplVersion;
           },
@@ -6557,6 +6582,10 @@
               // The demonstrator release is independent of the node package version.
               self.portalSwiplVersion = "";
               self.portalTreallaVersion = "";
+              self.portalGprologVersion = "";
+              if (json && json.gprolog) {
+                self.portalGprologVersion = String(json.gprolog);
+              }
               if (json && json.trealla) {
                 self.portalTreallaVersion = String(json.trealla);
               }
@@ -6701,6 +6730,7 @@
                 this.tutorialSections.indexOf(section) >= 0;
             },
 	          privateAuthHint: function() {
+                if (TrinityHost.ownerLogin) return "Owner login is required for this local preview.";
                 if (TrinityHost.loginUrl) return "Sign in to the node in the other tab, then choose Reconnect.";
 	            return "Node auth is PRIVATE. Browser requests need proxy-injected identity headers.";
 	          },
@@ -8376,7 +8406,7 @@
             }
           },
           reportInteraction: function(payload) {
-            if (TrinityHost.isStatic) return;
+            if (TrinityHost.isStatic || TrinityHost.interactionLogging === false) return;
             var body;
             var self = this;
             if (!payload || typeof payload !== "object") {

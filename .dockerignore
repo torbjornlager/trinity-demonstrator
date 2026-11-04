@@ -43,3 +43,4 @@ tools/*
 !tools/fetch_browser.py
 !tools/pinned_trealla.py
 !tools/fetch_trealla.py
+!tools/fetch_gprolog.py

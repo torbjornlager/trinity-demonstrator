@@ -1,0 +1,99 @@
+# Standalone owner-only pilot. Does not join or restart the production stack.
+name: trinity-n6-local
+services:
+  n6_runtime:
+    image: trinity-n6-runtime:latest
+    deploy:
+      replicas: 0
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.gprolog
+      secrets:
+        - github_token
+
+  n6_assets:
+    image: trinity-n6-assets:latest
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile
+      secrets:
+        - github_token
+    command: ["swipl", "-q", "-s", "/app/Deployment/start_n1.pl", "-g", "start_n1_forever", "-t", "halt"]
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+      - /var/log/webprolog:size=16m,mode=1777
+    environment:
+      HOME: /tmp
+    mem_limit: 512m
+    cpus: 0.50
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  wp_n6:
+    image: trinity-n6-local:latest
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.n6
+      additional_contexts:
+        gprolog_runtime: service:n6_runtime
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    environment:
+      N6_PUBLIC_URL: http://localhost:3057
+      N6_HUB_URL: http://localhost:3058/discovery-hub
+      N6_ASSET_URL: http://n6_assets:3051
+      N6_OWNER_PASSWORD_HASH: ${N6_OWNER_PASSWORD_HASH:?Run python3 tools/setup_n6.py first}
+    ports:
+      - "127.0.0.1:3057:3060"
+    depends_on:
+      n6_assets:
+        condition: service_started
+    mem_limit: 1g
+    cpus: 0.75
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    ulimits:
+      core: 0
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}
+
+  n6_hub:
+    image: trinity-n6-assets:latest
+    command: ["swipl", "/app/Deployment/start_node.pl"]
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+      - /var/log/webprolog:size=16m,mode=1777
+    environment:
+      HOME: /tmp
+      WP_PORT: "3060"
+      WP_PUBLIC_URL: http://localhost:3058
+      WP_DISCOVERY_HUB: "yes"
+      WP_DISCOVERY_SEED_FILE: /app/Deployment/discovery-seed.n6-local.pl
+      WP_PROFILE: relation
+      WP_AUTH: open
+      WP_ACK_PUBLIC: "yes"
+      WP_SANDBOX: blacklist
+    ports:
+      - "127.0.0.1:3058:3060"
+    depends_on:
+      wp_n6:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.50
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+  github_token:
+    environment: TRINITY_BUILD_TOKEN

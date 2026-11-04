@@ -27,6 +27,14 @@ assert.equal(configured.asset('examples/a.pl'),'https://assets.example/releases/
 for(const nodeUrl of ['javascript:alert(1)','https://u:secret@node.example','https://node.example/?token=secret','https://node.example/#fragment','http://node.example'])
  assert.throws(()=>create({nodeUrl},location));
 assert.throws(()=>configured.endpoint('//elsewhere.example/call'));
+const catalog=create({remoteNodes:[{url:'http://localhost:3057',runtime:'gprolog'}],
+ discoveryHubUrl:'http://localhost:3058/discovery-hub'},new URL('http://localhost:3057/demonstrator'));
+assert.equal(catalog.remoteNodes[0].runtime,'gprolog');
+assert.equal(catalog.remoteNodes[0].url,'http://localhost:3057/');
+assert.ok(Object.isFrozen(catalog.remoteNodes) && Object.isFrozen(catalog.remoteNodes[0]));
+assert.equal(catalog.discoveryHubUrl,'http://localhost:3058/discovery-hub');
+assert.throws(()=>create({remoteNodes:[{url:'http://localhost:3057',runtime:'gprolog'}]},location));
+assert.throws(()=>create({remoteNodes:[{url:'https://node.example',runtime:'unknown'}]},location));
 console.log('Host configuration: legacy defaults, static assets, endpoint separation and URL validation passed');
 // Exercise actual presenter methods with a distinct service and asset origin.
 const fs=require('node:fs');

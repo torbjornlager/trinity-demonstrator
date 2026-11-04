@@ -599,6 +599,123 @@ ceilings were rejected. These figures describe the tested workloads, not a
 worst-case memory guarantee. Observe `docker stats`, node `/metrics`, and
 admission rejection logs; retain the engine/container ceilings and isolation.
 
+
+## GNU Prolog N6: owner-only localhost pilot
+
+N6 is a separate optional stack. It uses the manifest-pinned GNU Prolog port
+at `0fb95dbff83a` and engine 1.6.0 at `5976ac516c9f`, recorded in
+`dependencies/gprolog-port.json`. The source checkouts and all runtime changes
+remain upstream; this repository owns the deployment, presenter adapter and
+consumer tests. The Linux build bootstraps GNU serially, runs its engine checks,
+and builds the port with its existing strict Clang settings. It does not disable
+compiler diagnostics or patch native source. Source/base-image pins and an image
+`build-toolchain.json` record the selected implementation and actual compiler,
+libcurl, libc and binary hashes; this is not a byte-for-byte reproducibility claim
+for mutable Debian package repositories.
+
+N6 currently runs only at **http://localhost:3057/demonstrator**. Its dedicated
+Discovery Hub is **http://localhost:3058/discovery-hub**. Both published ports
+bind to `127.0.0.1`; no GNU listener port is published. This stack does not join,
+rebuild or restart production N0–N5. Its private SWI asset service supplies the
+same shared demonstrator and examples; GNU executes every N6 `/call` request.
+The local page adds N6 beside N5 under Remote non-SWI nodes, puts Shared DB
+beneath the selected button, uses the ISOBASE tutorials and disables unavailable
+actor/session examples. Its explicit node catalog keeps the other buttons linked
+to the public N1–N5 services. The public catalog stays at N1–N5 until a separate
+N6 deployment is approved and configured.
+
+### Start and sign in
+
+With Docker, Python and GitHub read access to the pinned source repositories:
+
+```sh
+python3 tools/start_n6.py --build
+```
+
+The script uses `TRINITY_BUILD_TOKEN` when supplied, otherwise the local GitHub
+CLI credential, only as a BuildKit secret. It creates owner credentials once,
+with mode 0600, in `.trinity/n6-access.txt`. The Compose environment file
+`Deployment/.env.n6` contains only a salted PBKDF2 password hash. Both paths are
+ignored by Git and excluded from build contexts. Existing credentials are never
+silently replaced. Read the private file, open the local N6 page, and sign in as
+`owner`. Do not paste credentials into URLs or saved shell commands.
+
+A browser login creates an eight-hour, HttpOnly, SameSite=Strict, host-only
+signed session cookie. Restarting the N6 presenter invalidates its sessions.
+The form has a signed, purpose-separated anti-CSRF token and matching pre-login
+cookie. Embedded browsers that submit `Origin: null` are supported only for a
+login form with those proofs and a same-origin fetch classification; execution
+requests still reject opaque/foreign origins. CLI clients may use HTTP Basic.
+HTTP and non-Secure cookies are appropriate only for this localhost preview;
+there is no public HTTP deployment path. The launcher rejects a non-loopback
+public URL. As with the upstream port, same-account local processes and all
+holders of the owner credential belong to the same trust domain. Cookies are
+not port-isolated, so other services on the localhost hostname must be trusted.
+
+To restart without rebuilding, run `python3 tools/start_n6.py`. To stop only
+this stack, run `python3 tools/start_n6.py --stop`. Credentials are preserved.
+
+### Execution and access boundaries
+
+The unmodified GNU listener retains bearer authentication, local Host checks,
+loopback binding, source policy, live paging and supervised query cleanup.
+The presenter validates the browser host/origin, authenticates the owner, then
+translates an approved request to that local protocol using a private random
+controller credential. Visitor identity headers grant no access. The controller
+credential and password hash are not passed into query-worker environments.
+Owner-authenticated command-line clients on the dedicated Docker network may
+also address `http://wp_n6:3060`; they share the same owner trust domain.
+
+N6 provides ISOBASE, not ISOTOPE or ACTOR: there is no `/ws`, toplevel-session
+or administration API. The curated shared database combines the common family
+and price relations with `human/1` and `deployment_node(n6)`. The root URL shows
+that same source after owner login. Health, version and non-sensitive node
+metadata can be read without a query credential for local discovery; metadata
+marks unauthenticated execution unavailable. Unsupported interaction telemetry
+is disabled rather than reporting a failed logging endpoint.
+
+Initial budgets are a 2-second computation ceiling per HTTP page, 300-second
+idle continuation lifetime, 8 query slots, 256 MiB sampled per query and 512 MiB
+sampled across the GNU node. The adapter has 16 connection slots and preserves
+the GNU transport's 256 KiB request envelope. The container adds a hard 1 GiB
+memory limit, 0.75 CPU and 128 PIDs, a non-root user, read-only filesystem,
+no extra Linux capabilities, no new privileges and no core dumps. Busy query
+admission and idle-first reclamation remain the GNU controller's policy.
+
+Outbound RPC/source access is restricted to the exact HTTPS N1–N5 origins.
+Their IPv4 addresses are pinned at startup; DNS failures stop startup, and a
+peer address change requires restarting N6. Other destinations are denied.
+No owner credential for a peer is installed. GNU can therefore call the public
+SWI/Trealla examples, while calls **into** N6 require the owner credential.
+
+### Qualification and scope
+
+```sh
+python3 tests/test_n6_adapter.py
+node tools/test-node-catalog.cjs
+node tools/test-portal-runtime.cjs
+node tools/test-trinity-host.cjs
+python3 tools/test_n6.py
+python3 tools/test_n6_interop.py
+```
+
+Native Linux qualification also runs the pinned port's `tests.py`,
+`source_tests.py`, `policy_tests.py`, `http_tests.py` and `security_tests.py` in
+the Docker build-check environment. The recovery suite completes 1,000 queries
+with the same before/after heap baseline. Consumer checks cover browser login,
+CSRF/session tampering and expiry, forbidden browser origins, source larger than
+64 KiB, paging, shared data, denied filesystem/outbound access, deadline recovery,
+discovery harvesting, GNU→SWI/Trealla calls and authenticated SWI/Trealla→GNU calls.
+Interop clients run in disposable containers; N6 credentials are never installed
+in the live public peer nodes.
+
+This qualifies the selected trusted-owner localhost pilot, not GNU's entire
+language/mode audit or a public multi-user service. The upstream
+`isobase/THREAT_MODEL.md`, `SECURITY.md` and release checklist retain their scope.
+Moving N6 to a public hostname requires a separate service design and review,
+including TLS/cookies, principal ownership of continuations, abuse controls,
+network containment, broader input testing and production operations.
+
 ## Security Model
 
 This bundle is a practical first step, not a complete hardening story.

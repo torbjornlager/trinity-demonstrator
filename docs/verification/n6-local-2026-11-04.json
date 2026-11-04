@@ -1,0 +1,71 @@
+{
+  "date": "2026-11-04",
+  "scope": "Trusted-owner localhost N6 pilot; no public deployment",
+  "platform": "Linux aarch64",
+  "pins": {
+    "repository": "https://github.com/torbjornlager/gprolog-port.git",
+    "revision": "0fb95dbff83ac23ff0640518680145399587664d",
+    "mode": "required for the optional owner-only localhost N6 pilot",
+    "engine": {
+      "repository": "https://github.com/didoudiaz/gprolog.git",
+      "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+      "version": "1.6.0"
+    }
+  },
+  "source_sha256": {
+    "Deployment/n6_adapter.py": "fe6efac4d26b28c0151fced07de2fd60aa7e7d35ebac857d31a6b0228110f4ed",
+    "Deployment/compose.gprolog-n6-local.yaml": "ee39c3c32c298b650556b57e5884b4d38c0bfe831a283c10a2e5bb4bd60e0029",
+    "Deployment/Dockerfile.gprolog": "5cd9e4334a82b33e98b3bead3a025d4f2f6e2bc901534b842c8934a932dfc7aa",
+    "Deployment/Dockerfile.n6": "ce9684bc1bbf764056f5d12d6020c4345d94df0b33cdb9c0b481fd7d6fa2c531",
+    "Deployment/discovery-seed.n6-local.pl": "86bee17f73232a00978b4339cd209712339ad601a732d4049bbcd45608fd2b20",
+    "Deployment/shared_db_n6.pl": "407acb8ee68c32e15bbffc86a39ffcdfd1c22dd34cead5b0f5d49d191b17e4ca",
+    "web/demonstrator.html": "80ad37ac0bf47a0e7d7d34b2fa6e6bda54c0fe37cf83512a74f55dfbb0eca912",
+    "web/vendor/trinity-host.js": "b43e022aa9f38946f0f0585ff90fc82568ece797dc08efdb061fc43110a4e915",
+    "tools/fetch_gprolog.py": "9fe7cdf7de8aeee49b2138cd32e8d14e21bc2939cfaf8849a027e41db5104653",
+    "tools/start_n6.py": "bffdc01ef3fe01fb35feb98a59fc20ce6ddaafd5bd77b8caf575783703569b9e",
+    "tools/setup_n6.py": "817440793b19b884aceb70a622244bc661410f252829e7e3d731c5010dbdacac"
+  },
+  "validation": {
+    "gnu_engine_checks": "passed",
+    "native_port_checks": [
+      "tests.py",
+      "source_tests.py",
+      "policy_tests.py",
+      "http_tests.py",
+      "security_tests.py"
+    ],
+    "native_recovery": {
+      "queries": 1000,
+      "before": 4144,
+      "after": 4144
+    },
+    "adapter_unit_tests": 5,
+    "consumer_checks": [
+      "test_n6.py",
+      "test_n6_interop.py",
+      "test-node-catalog.cjs",
+      "test-portal-runtime.cjs",
+      "test-trinity-host.cjs",
+      "test_static_demonstrator.py",
+      "test_pinned_trealla.py"
+    ],
+    "browser": {
+      "owner_login": "passed",
+      "profile": "ISOBASE",
+      "runtime": "GNU Prolog",
+      "query": "human(X)",
+      "paged_answers": [
+        "socrates",
+        "plato",
+        "aristotle"
+      ]
+    },
+    "interop": [
+      "GNU to SWI RPC and promise/yield",
+      "GNU to Trealla RPC",
+      "Authenticated SWI to GNU RPC",
+      "Authenticated Trealla to GNU RPC"
+    ]
+  },
+  "production_stack_changed": false
+}

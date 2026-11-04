@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS build
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git python3 build-essential libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+COPY dependencies/gprolog-port.json dependencies/gprolog-port.json
+COPY tools/fetch_gprolog.py tools/
+RUN --mount=type=secret,id=github_token \
+    python3 tools/fetch_gprolog.py --port-destination /src/gprolog-port --engine-destination /src/gprolog --token-file /run/secrets/github_token
+RUN cd /src/gprolog/src && ./configure --with-install-dir=/src/gprolog-port/install \
+      --without-links-dir --without-doc-dir --without-html-dir --without-examples-dir \
+    && make && make install
+RUN make -C /src/gprolog/src check
+# The port's existing strict build is qualified with Clang; do not suppress
+# GCC diagnostics or patch runtime sources in this consumer Dockerfile.
+RUN apt-get update && apt-get install -y --no-install-recommends clang \
+    && rm -rf /var/lib/apt/lists/*
+RUN make -C /src/gprolog-port/isobase CC=clang all \
+    && /src/gprolog-port/install/bin/gprolog --version 2>&1 | grep -F '1.6.0'
+RUN apt-get update && apt-get install -y --no-install-recommends procps \
+    && rm -rf /var/lib/apt/lists/*
+RUN python3 - <<'PY'
+import hashlib, json, subprocess
+from pathlib import Path
+def output(*command):
+    return subprocess.check_output(command, stderr=subprocess.STDOUT, text=True).strip()
+record = dict(platform=output('uname', '-m'), gcc=output('gcc', '--version'),
+              clang=output('clang', '--version'), libcurl=output('curl-config', '--version'),
+              libc=output('getconf', 'GNU_LIBC_VERSION'))
+record['binaries'] = {name: hashlib.sha256(Path('/src/gprolog-port/isobase', name).read_bytes()).hexdigest()
+                      for name in ['isobase-node', 'query-worker', 'query-supervisor']}
+Path('/build/build-toolchain.json').write_text(json.dumps(record, indent=2) + '\n')
+PY
+
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
+RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates libcurl4 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 webprolog \
+    && useradd --uid 10001 --gid webprolog --create-home webprolog
+COPY --from=build /src/gprolog-port/isobase/isobase-node /src/gprolog-port/isobase/query-worker /src/gprolog-port/isobase/query-supervisor /app/isobase/
+COPY --from=build /src/gprolog/COPYING /usr/share/doc/gprolog/COPYING
+COPY --from=build /build/dependencies/gprolog-port.json /usr/share/doc/gprolog/runtime-pins.json
+COPY --from=build /build/build-toolchain.json /usr/share/doc/gprolog/build-toolchain.json
+WORKDIR /app/isobase
+USER webprolog

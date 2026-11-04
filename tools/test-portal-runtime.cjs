@@ -10,7 +10,7 @@ function method(name, fetcher) {
   return new Function('fetch','nodeLabelForUrl','TrinityHost', 'return function('+match[1]+'){'+match[2]+'}')(fetcher, ()=>'localhost:3060', TrinityHost);
 }
 function component(fetcher) {
-  const obj = {portalVersion:'0.3.0',portalSwiplVersion:'',portalTreallaVersion:'',isBrowserSwiWasmMode:false,
+  const obj = {portalVersion:'0.3.0',portalSwiplVersion:'',portalTreallaVersion:'',portalGprologVersion:'',isBrowserSwiWasmMode:false,
     showTerminalGreeting:true,effectiveTransportProfile:'actor',currentPortalNodeUrl:'http://localhost:3060'};
   for (const name of ['portalRuntimeName','portalRuntimeUrl','portalRuntimeVersion']) {
     Object.defineProperty(obj,name,{get(){return method(name).call(this);}});
@@ -40,11 +40,20 @@ function response(json) {return Promise.resolve({ok:true,json:()=>Promise.resolv
   assert.equal(obj.portalTreallaVersion,'');
   assert.equal(obj.portalRuntimeVersion,'10.1.18');
   assert.equal(obj.portalVersion,'0.3.0'); // Native node package versions cannot overwrite it.
+  obj.fetchPortalVersion=method('fetchPortalVersion',()=>response({web_prolog:'gprolog-port',gprolog:'1.6.0'}));
+  await obj.fetchPortalVersion();
+  assert.equal(obj.portalRuntimeName,'GNU Prolog');
+  assert.equal(obj.portalRuntimeUrl,'https://www.gprolog.org/');
+  assert.equal(obj.portalRuntimeVersion,'1.6.0');
+  assert.equal(obj.portalSwiplVersion,'');
+  assert.equal(obj.portalTreallaVersion,'');
+  assert.equal(obj.portalVersion,'0.3.0');
+  assert.match(obj.terminalGreetingText(),/GNU Prolog/);
   obj=component(()=>Promise.reject(new Error('offline')));
   await obj.fetchPortalVersion();
   assert.equal(obj.portalRuntimeName,'Prolog');
   assert.ok(!obj.terminalGreetingText().includes('SWI-Prolog'));
   assert.ok(html.includes('initialNodeInfoReady = Promise.all([initialNodeInfoReady, this.fetchNodeInfo()]);'));
   assert.ok(html.includes('initialNodeInfoReady.then(function()'));
-  console.log('Portal runtime identity: Trealla, native SWI, WASM and unavailable-version checks passed');
+  console.log('Portal runtime identity: GNU, Trealla, native SWI, WASM and unavailable-version checks passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});

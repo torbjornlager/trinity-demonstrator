@@ -31,9 +31,18 @@
     if (!url.href.startsWith(nodeBase)) throw new Error('Node endpoint escapes the configured service');
     return url.href;
   }
+  var remoteNodes = (config.remoteNodes || []).map(function(node) {
+    if (['swi', 'trealla', 'gprolog'].indexOf(node.runtime) < 0)
+      throw new Error('Remote nodes require an explicit supported runtime');
+    return Object.freeze({url:base(node.url), runtime:node.runtime});
+  });
   return Object.freeze({
     isStatic: isStatic, assetBase: assetBase, nodeBase: nodeBase,
     credentials: credentials, loginUrl: sessionUrl(config.loginPath), logoutUrl: sessionUrl(config.logoutPath),
+    remoteNodes: Object.freeze(remoteNodes),
+    discoveryHubUrl: config.discoveryHubUrl ? base(config.discoveryHubUrl).replace(/\/$/, '') : null,
+    ownerLogin: config.ownerLogin === true,
+    interactionLogging: config.interactionLogging !== false,
     defaultNode: isStatic && !nodeBase ? 'swi-wasm' : null,
     asset: asset, endpoint: endpoint,
     websocket: function() {
