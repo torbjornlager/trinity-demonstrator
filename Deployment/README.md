@@ -1052,3 +1052,8 @@ external volumes containing `peers.pl`, readable by the image's `webprolog` user
 Mounts remain read-only. Retain every overlay used by the running deployment;
 when N6 is present, `compose.gprolog-n6-caddy.yaml` must also follow the public
 N5 overlay so rebuilding Caddy retains N6 routing and its network attachment.
+
+The N5 owner adapter maps N3/N4's exact public node URLs to their private Docker
+WebSocket listeners, matching the named SWI launchers. Public URLs stay in PIDs;
+only the dial endpoint changes. This requires the pinned Trealla endpoint hook
+and the shared Compose network. Other destinations use their ordinary URL.

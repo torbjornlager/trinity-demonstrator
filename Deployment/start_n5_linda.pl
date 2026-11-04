@@ -7,3 +7,8 @@ start_node :-
     deployment_start:check_config,
     linda_service_trealla:start_linda_service(_),
     deployment_start:start_node.
+
+% Match N3/N4's owner-installed Docker topology while preserving public PIDs.
+:- multifile distribution:hook_websocket_endpoint/2.
+distribution:hook_websocket_endpoint('https://n3.elfenbenstornet.se', 'ws://wp_n3:3053/ws').
+distribution:hook_websocket_endpoint('https://n4.elfenbenstornet.se', 'ws://wp_n4:3055/ws').
