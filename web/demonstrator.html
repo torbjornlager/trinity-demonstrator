@@ -4812,7 +4812,7 @@
 
         domainMatch = normalized.hostname.match(/^(admin|n[0-9]+)\.(.+)$/i);
         if (domainMatch) {
-          (domainMatch[1].toLowerCase() === "admin" ? ["admin", "n1", "n2", "n3", "n4", "n5"] : ["n1", "n2", "n3", "n4", "n5"]).forEach(function(host) {
+          (domainMatch[1].toLowerCase() === "admin" ? ["admin", "n1", "n2", "n3", "n4", "n5", "n6"] : ["n1", "n2", "n3", "n4", "n5", "n6"]).forEach(function(host) {
             push(normalized.protocol + "//" + host + "." + domainMatch[2]);
           });
           return nodes;

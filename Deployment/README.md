@@ -621,8 +621,8 @@ same shared demonstrator and examples; GNU executes every N6 `/call` request.
 The local page adds N6 beside N5 under Remote non-SWI nodes, puts Shared DB
 beneath the selected button, uses the ISOBASE tutorials and disables unavailable
 actor/session examples. Its explicit node catalog keeps the other buttons linked
-to the public N1–N5 services. The public catalog stays at N1–N5 until a separate
-N6 deployment is approved and configured.
+to the public N1–N5 services. The public catalog also includes the owner-only
+HTTPS N6 service described below.
 
 ### Start and sign in
 
@@ -647,9 +647,9 @@ cookie. Embedded browsers that submit `Origin: null` are supported only for a
 login form with those proofs and a same-origin fetch classification; execution
 requests still reject opaque/foreign origins. CLI clients may use HTTP Basic.
 HTTP and non-Secure cookies are appropriate only for this localhost preview;
-there is no public HTTP deployment path. The launcher rejects a non-loopback
-public URL. As with the upstream port, same-account local processes and all
-holders of the owner credential belong to the same trust domain. Cookies are
+there is no public HTTP deployment path. The launcher accepts only loopback
+or the explicitly enabled, fixed HTTPS N6 hostname. As with the upstream port,
+same-account local processes and all holders of the owner credential belong to the same trust domain. Cookies are
 not port-isolated, so other services on the localhost hostname must be trusted.
 
 To restart without rebuilding, run `python3 tools/start_n6.py`. To stop only
@@ -712,9 +712,61 @@ in the live public peer nodes.
 This qualifies the selected trusted-owner localhost pilot, not GNU's entire
 language/mode audit or a public multi-user service. The upstream
 `isobase/THREAT_MODEL.md`, `SECURITY.md` and release checklist retain their scope.
-Moving N6 to a public hostname requires a separate service design and review,
-including TLS/cookies, principal ownership of continuations, abuse controls,
-network containment, broader input testing and production operations.
+The HTTPS pilot below retains this single trusted-owner model. Anonymous or
+multi-user execution still requires separate qualification, including principal
+ownership of continuations and broader hostile-input testing.
+
+### Owner-only HTTPS N6
+
+With `n6.elfenbenstornet.se` pointing to the demonstrator server:
+
+```sh
+python3 tools/start_n6.py --https --build
+```
+
+This starts the separate `trinity-n6-host` project with no host-published ports.
+It reuses the existing owner credentials without rotating them. Its internal
+admission proxy permits 16 active requests per client and 32 total, with login
+POSTs limited to six per minute and a burst of six. Execution budgets remain
+those listed above. No anonymous query execution is enabled.
+
+Apply `compose.gprolog-n6-caddy.yaml` after the existing production overlays:
+
+```sh
+docker compose --env-file Deployment/.env \
+  -f Deployment/compose.yaml -f Deployment/compose.trealla-n5.yaml \
+  -f Deployment/compose.trealla-n5-public.yaml \
+  -f Deployment/compose.gprolog-n6-caddy.yaml build caddy
+docker compose --env-file Deployment/.env \
+  -f Deployment/compose.yaml -f Deployment/compose.trealla-n5.yaml \
+  -f Deployment/compose.trealla-n5-public.yaml \
+  -f Deployment/compose.gprolog-n6-caddy.yaml up -d --no-deps --no-build caddy
+```
+
+Caddy obtains the HTTPS certificate and routes N6 to its admission proxy. The
+public N6 page requires owner login. HTTPS cookies are Secure and host-only;
+the owner cookie uses the `__Host-` prefix, preventing sibling-domain cookie
+injection. The local preview keeps its separate HTTP cookies. Both presenters
+use independently generated session keys. The shared DB also requires login.
+Caddy and Nginx accept the GNU transport's existing 256 KiB request envelope,
+including source passed in a GET query.
+
+The Discovery Hub probes through a container-only Caddy listener on port 8086,
+which exposes only GET health/version/node metadata. Port 8086 is not published
+and cannot execute queries. This avoids DNS-cache and NAT hairpin dependencies.
+Rebuild/restart the hub after updating its seed; rebuild the standard UI images
+to show N6 from the other nodes.
+
+```sh
+python3 tools/test_n6.py --url https://n6.elfenbenstornet.se \
+  --hub-url https://n0.elfenbenstornet.se
+```
+
+While a local resolver retains NXDOMAIN, `--resolve-ip SERVER_IP` overrides only
+the N6 test lookup and still verifies TLS against its hostname. To stop N6 use
+`python3 tools/start_n6.py --https --stop`. To remove its external route, recreate
+Caddy with the original three production Compose files (omit the N6 overlay).
+The localhost stack and credential file are preserved.
 
 ## Security Model
 

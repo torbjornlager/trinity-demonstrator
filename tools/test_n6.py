@@ -18,9 +18,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', default='http://localhost:3057')
     parser.add_argument('--credentials', type=Path, default=ROOT / '.trinity/n6-access.txt')
+    parser.add_argument('--resolve-ip', help='override only the N6 DNS lookup while preserving TLS verification')
+    parser.add_argument('--hub-url', default='http://localhost:3058')
     args = parser.parse_args()
-    if urlsplit(args.url).hostname not in ('localhost', '127.0.0.1'):
-        parser.error('this owner test is restricted to localhost')
+    if args.url != 'https://n6.elfenbenstornet.se' and urlsplit(args.url).hostname not in ('localhost', '127.0.0.1'):
+        parser.error('test target must be localhost or the approved HTTPS N6 hostname')
+    if args.resolve_ip:
+        import socket, ipaddress
+        ipaddress.ip_address(args.resolve_ip)
+        resolve = socket.getaddrinfo
+        hostname = urlsplit(args.url).hostname
+        socket.getaddrinfo = lambda host, *a, **k: resolve(args.resolve_ip if host == hostname else host, *a, **k)
     fields = dict(line.split(': ', 1) for line in args.credentials.read_text().splitlines() if ': ' in line)
     authorization = 'Basic ' + base64.b64encode(('owner:' + fields['Password']).encode()).decode()
 
@@ -50,12 +58,15 @@ def main():
     assert request('/call?goal=true', False, {'X-Web-Prolog-User': 'owner',
                                            'X-Web-Prolog-Capabilities': 'admin'})[0] == 401
     assert request('/call?goal=true', headers={'Origin': 'http://unrelated.example'})[0] == 403
-    assert request('/call?goal=true', headers={'Host': 'unrelated.example'})[0] == 403
+    wrong_host = request('/call?goal=true', headers={'Host': 'unrelated.example'})
+    assert wrong_host[0] in (403, 404, 421) or wrong_host[0] == 200 and wrong_host[2] == b''
     assert request('/call?goal=true', headers={'Sec-Fetch-Site': 'cross-site'})[0] == 403
     for path in ('/ws', '/admin/config', '/admin/tokens', '/vendor/../call?goal=true'):
         assert request(path)[0] in (400, 404), path
     print('Owner login, forged-header rejection, browser boundary and excluded APIs: passed')
 
+    owner_cookie = '__Host-n6_owner' if args.url.startswith('https:') else 'n6_owner'
+    login_cookie = '__Secure-n6_login' if args.url.startswith('https:') else 'n6_login'
     cookies = http.cookiejar.CookieJar()
     browser = build_opener(HTTPCookieProcessor(cookies))
     with browser.open(args.url + '/login', timeout=15) as response:
@@ -64,14 +75,16 @@ def main():
     with browser.open(Request(args.url + '/login', data=form,
                               headers={'Origin': args.url}), timeout=15) as response:
         assert b'WEB_PROLOG_HOST' in response.read()
-    session = next(cookie for cookie in cookies if cookie.name == 'n6_owner')
+    session = next(cookie for cookie in cookies if cookie.name == owner_cookie)
+    if args.url.startswith('https:'):
+        assert session.secure and next(c for c in cookies if c.name == login_cookie).secure
     assert 'HttpOnly' in session._rest and session._rest['SameSite'] == 'Strict'
     with browser.open(args.url + '/call?goal=true&format=json', timeout=15) as response:
         assert json.load(response)['type'] == 'success'
-    assert request('/call?goal=true', False, {'Cookie': 'n6_owner=forged'})[0] == 401
-    assert request('/call?goal=true', False, {'Cookie': f'n6_owner={session.value}',
+    assert request('/call?goal=true', False, {'Cookie': owner_cookie + '=forged'})[0] == 401
+    assert request('/call?goal=true', False, {'Cookie': f'{owner_cookie}={session.value}',
                                            'Origin': 'https://unrelated.example'})[0] == 403
-    assert request('/call?goal=true', False, {'Cookie': f'n6_owner={session.value}',
+    assert request('/call?goal=true', False, {'Cookie': f'{owner_cookie}={session.value}',
                                            'Origin': 'null', 'Sec-Fetch-Site': 'same-origin'})[0] == 403
     with browser.open(args.url + '/login', timeout=15) as response:
         csrf = re.search(r'name="csrf"[^>]*value="([^"]+)"', response.read().decode())[1]
@@ -127,10 +140,10 @@ def main():
     print('Execution deadline and subsequent worker recovery: passed')
     for goal, expected in [('node_profile(n6,P)', 'isobase'), ('node_auth(n6,A)', 'private'),
                            ('node_status(n6,S)', 'up')]:
-        with urlopen('http://localhost:3058/call?' + urlencode({'goal': goal, 'format': 'json'}), timeout=10) as response:
+        with urlopen(args.hub_url + '/call?' + urlencode({'goal': goal, 'format': 'json'}), timeout=10) as response:
             result = json.load(response)
         assert result['type'] == 'success' and expected in str(result['data']), result
-    print('Local Discovery Hub harvests N6 profile, private access and live status: passed')
+    print('Discovery Hub harvests N6 profile, private access and live status: passed')
 
 
 if __name__ == '__main__':

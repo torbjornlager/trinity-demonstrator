@@ -1,0 +1,12 @@
+# Apply after the existing Trealla public overlays, once N6 is healthy.
+services:
+  caddy:
+    build:
+      dockerfile: Deployment/Dockerfile.caddy.gprolog-n6
+    networks:
+      - wp_net
+      - n6_owner
+networks:
+  n6_owner:
+    name: trinity_n6_host
+    external: true

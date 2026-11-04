@@ -25,6 +25,10 @@ from urllib.parse import parse_qs, unquote, urlsplit
 PUBLIC_URL = os.environ.get('N6_PUBLIC_URL', 'http://localhost:3057').rstrip('/')
 ASSET_URL = os.environ.get('N6_ASSET_URL', 'http://n6_assets:3051')
 HUB_URL = os.environ.get('N6_HUB_URL', 'http://localhost:3058/discovery-hub')
+HTTPS_OWNER = PUBLIC_URL == 'https://n6.elfenbenstornet.se'
+OWNER_COOKIE = '__Host-n6_owner' if HTTPS_OWNER else 'n6_owner'
+LOGIN_COOKIE = '__Secure-n6_login' if HTTPS_OWNER else 'n6_login'
+COOKIE_SECURE = '; Secure' if HTTPS_OWNER else ''
 ROOT = Path('/app/n6')
 PROVIDES = ['ancestor_descendant/2', 'parent_child/2', 'mother_child/2',
             'father_child/2', 'list_price/2', 'price/2', 'human/1', 'deployment_node/1']
@@ -41,7 +45,7 @@ main{max-width:360px;margin:8vh auto;padding:28px;background:white;border:1px so
 h1{color:darkgreen;font-size:26px}label{display:block;margin:18px 0 6px}
 input{box-sizing:border-box;width:100%;font:inherit;padding:8px;border:1px solid #aaa}
 button{font:inherit;background:darkgreen;color:white;border:0;padding:10px 18px;margin-top:24px}
-</style><main><h1>N6 owner login</h1><p>GNU Prolog · ISOBASE · Local preview</p>
+</style><main><h1>N6 owner login</h1><p>GNU Prolog · ISOBASE · Owner preview</p>
 <form method="post" action="/login"><input name="csrf" type="hidden" value="CSRF_TOKEN">
 <label for="username">Username</label>
 <input id="username" name="username" autocomplete="username" required value="owner">
@@ -100,7 +104,7 @@ class Server(ThreadingHTTPServer):
             return True
         try:
             cookie = SimpleCookie(headers.get('Cookie', ''))
-            return self.valid_session(cookie['n6_owner'].value)
+            return self.valid_session(cookie[OWNER_COOKIE].value)
         except (ValueError, KeyError, CookieError):
             return False
 
@@ -194,7 +198,8 @@ class Handler(BaseHTTPRequestHandler):
         allowed = {urlsplit(PUBLIC_URL).netloc.lower(), 'localhost:3057', '127.0.0.1:3057', 'wp_n6:3060'}
         origin = self.headers.get('Origin')
         site = self.headers.get('Sec-Fetch-Site', 'none')
-        same_origin = origin is not None and origin.lower() == 'http://' + host
+        scheme = 'https' if HTTPS_OWNER and host == urlsplit(PUBLIC_URL).netloc else 'http'
+        same_origin = origin is not None and origin.lower() == scheme + '://' + host
         # Some embedded browsers submit forms with an opaque Origin. Only
         # login may use this path, and it additionally requires the signed,
         # purpose-separated hidden token AND the matching HttpOnly cookie.
@@ -208,7 +213,7 @@ class Handler(BaseHTTPRequestHandler):
         if incorrect:
             html = html.replace('<form ', '<p>Incorrect username or password.</p><form ', 1)
         return self.reply(status, html, 'text/html; charset=UTF-8', {
-            'Set-Cookie': 'n6_login=' + token + '; Path=/login; Max-Age=600; HttpOnly; SameSite=Strict'})
+            'Set-Cookie': LOGIN_COOKIE + '=' + token + '; Path=/login; Max-Age=600; HttpOnly; SameSite=Strict' + COOKIE_SECURE})
 
     def do_POST(self):
         if self.path != '/login':
@@ -224,16 +229,16 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, {'error': 'invalid_login_request'})
             cookie = SimpleCookie(self.headers.get('Cookie', ''))
             supplied = fields['csrf'][0]
-            if (not self.server.valid_session(supplied, 'login') or 'n6_login' not in cookie
-                    or not hmac.compare_digest(cookie['n6_login'].value, supplied)):
+            if (not self.server.valid_session(supplied, 'login') or LOGIN_COOKIE not in cookie
+                    or not hmac.compare_digest(cookie[LOGIN_COOKIE].value, supplied)):
                 return self.reply(403, {'error': 'invalid_login_token'})
             value = base64.b64encode((fields['username'][0] + ':' + fields['password'][0]).encode()).decode()
             if not owner_authorized('Basic ' + value, self.server.owner_hash):
                 return self.login_page(401, incorrect=True)
             return self.reply(303, '', 'text/plain', {
                 'Location': '/demonstrator',
-                'Set-Cookie': 'n6_owner=' + self.server.session()
-                              + '; Path=/; Max-Age=28800; HttpOnly; SameSite=Strict'})
+                'Set-Cookie': OWNER_COOKIE + '=' + self.server.session()
+                              + '; Path=/; Max-Age=28800; HttpOnly; SameSite=Strict' + COOKIE_SECURE})
         except (ValueError, UnicodeError, CookieError):
             return self.reply(400, {'error': 'invalid_login_request'})
 
@@ -309,10 +314,11 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     public = urlsplit(PUBLIC_URL)
-    if (public.scheme != 'http' or public.hostname not in ('localhost', '127.0.0.1')
-            or public.port != 3057 or public.path or public.query or public.fragment
-            or public.username or public.password):
-        raise SystemExit('N6 pilot requires the owner-only localhost:3057 deployment')
+    local = (public.scheme == 'http' and public.hostname in ('localhost', '127.0.0.1') and public.port == 3057
+             and not (public.path or public.query or public.fragment or public.username or public.password))
+    network_owner = HTTPS_OWNER and os.environ.get('N6_OWNER_NETWORK_PILOT') == 'yes'
+    if not (local or network_owner):
+        raise SystemExit('N6 requires localhost or the explicitly enabled owner-only HTTPS pilot')
     owner_hash = os.environ.pop('N6_OWNER_PASSWORD_HASH', '')
     fields = owner_hash.split(':')
     if len(fields) != 4 or fields[0] != 'pbkdf2_sha256' or int(fields[1]) < 200000:

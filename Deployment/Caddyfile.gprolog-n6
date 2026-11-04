@@ -1,0 +1,33 @@
+# Owner-only GNU Prolog pilot. Authentication is enforced by the N6 adapter.
+n6.elfenbenstornet.se {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+    reverse_proxy n6_admission:8080 {
+        import common_proxy_headers
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+}
+
+# Container-only metadata probe for the hub; no host port or execution route.
+http://:8086 {
+    @metadata {
+        method GET
+        path /node_info /version /healthz /readyz
+    }
+    handle @metadata {
+        reverse_proxy n6_admission:8080 {
+            import common_proxy_headers
+            header_up Host n6.elfenbenstornet.se
+            header_up -Authorization
+            header_up -Cookie
+            header_up X-Real-IP {remote_host}
+        }
+    }
+    respond "Not found" 404
+}

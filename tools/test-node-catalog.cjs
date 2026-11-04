@@ -35,5 +35,5 @@ assert.equal(state.headerRemoteNonSwiNodeButtons.find(n=>n.active).label,'N6');
 assert.equal(computed('headerNonSwiNodeSelected',state),true);
 assert.equal(computed('currentPortalNodeAddress',state),'http://localhost:3057');
 context.TrinityHost = createHost({},new URL('https://n5.elfenbenstornet.se/demonstrator'));
-assert.equal(context.derivePortalNodeUrls('https://n5.elfenbenstornet.se').map(n=>n.label).join(','),'N1,N2,N3,N4,N5');
-console.log('Node catalog: local N6 placement, active state, shared DB, ISOBASE tutorial and unchanged public catalog passed');
+assert.equal(context.derivePortalNodeUrls('https://n5.elfenbenstornet.se').map(n=>n.label).join(','),'N1,N2,N3,N4,N5,N6');
+console.log('Node catalog: local N6 placement, active state, shared DB, ISOBASE tutorial and public HTTPS N6 catalog passed');

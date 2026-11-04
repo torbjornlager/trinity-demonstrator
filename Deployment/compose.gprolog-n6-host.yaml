@@ -1,0 +1,30 @@
+name: trinity-n6-host
+services:
+  wp_n6:
+    image: trinity-n6-host:latest
+    ports: !reset []
+    environment:
+      N6_PUBLIC_URL: https://n6.elfenbenstornet.se
+      N6_HUB_URL: https://n0.elfenbenstornet.se/discovery-hub
+      N6_OWNER_NETWORK_PILOT: "yes"
+  n6_admission:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.n6-admission
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    depends_on:
+      wp_n6:
+        condition: service_healthy
+    mem_limit: 64m
+    cpus: 0.25
+    pids_limit: 32
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}
+networks:
+  default:
+    name: trinity_n6_host

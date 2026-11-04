@@ -1,0 +1,33 @@
+{
+  "verified_at": "2026-11-04T09:51:29.533234+00:00",
+  "scope": "single trusted-owner HTTPS pilot; anonymous execution disabled",
+  "url": "https://n6.elfenbenstornet.se/demonstrator",
+  "dns": {
+    "public_resolvers": [
+      "1.1.1.1",
+      "8.8.8.8"
+    ],
+    "ipv4": "81.229.12.212",
+    "local_browser": "NXDOMAIN cached; browser navigation unavailable"
+  },
+  "tls": "certificate verified using hostname with explicit DNS resolution override; no verification bypass",
+  "checks": [
+    "5 adapter unit checks",
+    "node catalog, host config and portal runtime tests",
+    "localhost black-box regression",
+    "HTTPS black-box: login/CSRF, Secure prefixed session cookies, forged headers, foreign/opaque execution origins, source >64KiB, paging, shared DB, denied filesystem/outbound access, GNU\u2192SWI/Trealla, timeout/recovery",
+    "live production Discovery Hub N6 isobase/private/up",
+    "internal discovery route denies /call with HTTP404",
+    "login admission burst reaches HTTP429 using isolated synthetic client IP"
+  ],
+  "source_sha256": {
+    "Deployment/n6_adapter.py": "35318a732b53a1747f29b976e80327accffa6dafd74f6dcd190b068842790a8e",
+    "Deployment/Caddyfile.gprolog-n6": "001ab14dcd063dae8f8842ee6ba54105318f7fb15af1e78ec50441ee193d22fd",
+    "Deployment/nginx.n6-admission.conf": "fb142f37daa3fc2ee62d754aaea5ff94bc348a16796a8d553ab5a93620832c04",
+    "Deployment/compose.gprolog-n6-host.yaml": "5a6f115a002be353174533c55b850eef9f240c2f30918b374718867638855a3b",
+    "Deployment/compose.gprolog-n6-caddy.yaml": "0c44dbaeec76f0c8e0af99d3147fd80f7d0fda7352b61e63e27674a36416f87c",
+    "Deployment/discovery-seed.coexist.pl": "8260f77c2547a1aa75080eb687846121c11fba53c90e24a369b0904be2281f4f",
+    "web/demonstrator.html": "50bd2cf6ccdd37bb2da46e21afcdc38d4f580dd0af095f1942d5392de1e8d68a"
+  },
+  "credentials": "Existing owner credentials preserved; no credentials stored in this report"
+}

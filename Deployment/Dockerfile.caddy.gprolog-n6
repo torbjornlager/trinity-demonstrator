@@ -1,0 +1,9 @@
+FROM caddy:2@sha256:36c24ad91a7ff7bc4c87fe22bfa8df3c4b18da0773d73fc12ee2c52b98c0bb7e
+COPY Deployment/Caddyfile /tmp/Caddyfile.base
+COPY Deployment/Caddyfile.trealla-n5-public /tmp/Caddyfile.n5-public
+COPY Deployment/Caddyfile.gprolog-n6 /tmp/Caddyfile.n6
+RUN sed '/^# n5:/,$d' /tmp/Caddyfile.base > /etc/caddy/Caddyfile \
+    && cat /tmp/Caddyfile.n5-public >> /etc/caddy/Caddyfile \
+    && cat /tmp/Caddyfile.n6 >> /etc/caddy/Caddyfile \
+    && sed -i '/protocols h1 h2/a\\        max_header_size 512KB' /etc/caddy/Caddyfile \
+    && caddy validate --config /etc/caddy/Caddyfile

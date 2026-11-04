@@ -47,3 +47,9 @@ seed_node(n5, 'https://n5.elfenbenstornet.se',
      whatever the owner loads.",
     "Behind SSO — sign in to use it.").
 seed_probe_url(n5, 'http://wp_n5:3060').
+
+seed_node(n6, 'https://n6.elfenbenstornet.se',
+    "GNU Prolog ISOBASE owner pilot. Execution requires owner login.",
+    "Common family predicates, human/1, and deployment_node/1.",
+    "Owner-only HTTPS preview.").
+seed_probe_url(n6, 'http://caddy:8086').
