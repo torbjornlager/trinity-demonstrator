@@ -159,9 +159,9 @@ module.exports.cases=function({CLIENT,NATIVE_ROOT,PID,QPID,ROOT,WASM_DIR,abort,a
     }
     check((await query("supervisor_spawn([child(a,[])],_)"))[0]==="error(missing_start_option(a),_)","main terminal honors exception-term setting for missing start");
     check((await query("supervisor_spawn([child(a,[start(true)]),child(a,[start(true)])],_)"))[0]==="error(permission_error(duplicate,supervisor_child_id,a),_)","main terminal preserves duplicate-id exception term");
-    check((await query("spawn(true,_,[monitor(maybe)])"))[0]==="error(type_error(boolean,maybe),_)","other wrapper exceptions use the same setting");
+    check((await query("spawn(true,_,[monitor(maybe)])"))[0]==="error(domain_error(boolean,maybe),_)","other wrapper exceptions use the same setting");
     const concise=await query("spawn(true,_,[monitor(maybe)])","concise");
-    check(concise.length===1&&concise[0].includes("Type error:")&&!concise[0].startsWith("error("),"unchecked setting still produces concise diagnostics");
+    check(concise.length===1&&concise[0].includes("Domain error:")&&!concise[0].startsWith("error("),"unchecked setting still produces concise diagnostics");
     check((await query("throw(custom('a b', '$VAR'(1)))"))[0]==="custom('a b','$VAR'(1))","arbitrary thrown terms preserve quoting and literal $VAR data");
     check((await query("catch(throw(internal),internal,true)")).length===0&&solutions.length===1&&host.swiWasmQueryException===null,"caught exceptions and subsequent successes do not reuse stale errors");
     check(dets[0]===true,"deterministic success remains deterministic through exception capture");

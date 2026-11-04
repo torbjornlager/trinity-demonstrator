@@ -281,12 +281,12 @@ const protocolLogRenderer = {
 };
 const javaScriptObjectRenderer = protocolLogRenderer;
 
-ok(includes("window.swiRpcGetAsync = function(url, httpTimeout)"),
+ok(includes("window.swiRpcGetAsync = function(url, httpTimeout, headerText)"),
    "paged RPC has an asynchronous fetch helper");
 ok(includes("signal: controller.signal") &&
    includes("window.swiAbortRpc = function()"),
    "paged RPC fetch is abortable");
-ok(includes('"    Promise := swiRpcGetAsync(#FinalURL, #HTTPTimeout),"') &&
+ok(includes('"    Promise := swiRpcGetAsync(#FinalURL, #HTTPTimeout, #HeaderText),"') &&
    includes('"    await(Promise, Resp),"'),
    "web_rpc_page awaits each remote page");
 ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
@@ -314,7 +314,7 @@ ok(workerSource.includes('function actorLoadUri(uriText)') &&
    !workerSource.includes('rpc_load_uri(Options, LoadURI)') &&
    !workerSource.includes('loadUri: String(loadUri || "")') &&
    includes('case "src_uri":') &&
-   includes('result = this.loadSwiWasmUriSource(message.uri || "");') &&
+   includes('result = this.loadSwiWasmUriSource(message.documentBase ? new URL(this.swiWasmRemoteNodeUrl(message.uri),message.documentBase).href : message.uri || "");') &&
    includes('resolveBrowserRpcBaseUri(message.node || "")'),
    "worker RPC fetches src_uri source without using it to choose the call target");
 ok(workerSource.includes("function actorEnsureFinalFullStop(text)") &&
@@ -1369,11 +1369,11 @@ ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('"    Offset = 0,"') &&
    includes('"    Offset = 0,"') &&
    workerSource.includes('rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout)') &&
-   workerSource.includes('member(src_predicates(Indicators), Options)') &&
+   workerSource.includes('canonical_source_option(Option, src_predicates(Indicators))') &&
    includes('case "rpc":') &&
    includes('requestSwiWasmWorkerRpc: function(message, ownerPid)') &&
    includes('url.searchParams.set("once", "true")') &&
-   includes('setTimeout(function() { controller.abort(); }, httpTimeout * 1000)'),
+   includes('setTimeout(function() { timedOut = true; controller.abort(); }, httpTimeout * 1000)'),
    "both SWI-WASM rpc/3 models keep initial transport offset internal");
 ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
    workerSource.includes('RefText := actorPromiseStart(') &&
@@ -1471,7 +1471,7 @@ ok(workerSource.includes('post("terminal_output", {') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
    includes('this.sendSwiWasmActorMessage('),
    "SWI-WASM statechart terminal output is delivered to the spawning actor mailbox");
-ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+ok(workerSource.includes('actorStatechartSpawn(#DocumentKind, #XML, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText, #Base)') &&
    workerSource.includes('statechart_spawn_ok(') &&
    workerSource.includes('statechart_spawn_error(') &&
    workerSource.includes('statechart_spawn_worker_result(ResultText, Pid)') &&
@@ -1480,15 +1480,15 @@ ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSou
    workerSource.includes('( member(Term, Terms), clause_source_text(Term, ClauseText) )') &&
    workerSource.includes('retractall(swi_wasm_actor_bridge:io_target(_))') &&
    workerSource.includes('assertz(swi_wasm_actor_bridge:io_target(Target))') &&
-   workerSource.includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
+   workerSource.includes('statechart_document_goal(Base, XML, Trace, Options, Goal)') &&
    includes('window.swiWasmStatechartSpawnWorker') &&
-   includes('validate_statechart_text_source(SourceKind, Source)') &&
+   includes('validate_statechart_text_source(text, XML)') &&
    includes('sxml_schema:sxml_validate_text(XML, Diagnostics)') &&
    includes('statechart_spawn_worker_result(ResultText, Pid)') &&
    includes('statechart_wasm:statechart_running') &&
-   includes('swiWasmStatechartSpawnWorker(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+   includes('swiWasmStatechartSpawnWorker(#DocumentKind, #XML, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText, #Base)') &&
    includes('statechart_wasm:statechart_start(text(XML), SupportSource)') &&
-   includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
+   includes('statechart_document_goal(Base, XML, Trace, Options, Goal)') &&
    includes('var inheritedIoTarget = String(ioTargetText || "")') &&
    includes('parentEntry && parentEntry.role === "statechart_actor"') &&
    includes('ioTarget: inheritedIoTarget') &&
