@@ -18,6 +18,37 @@ from urllib.parse import parse_qs, quote, urlsplit
 MAX_BODY = 1024 * 1024
 
 
+HTTP_TOKEN = frozenset("!#$%&'*+-.^_`|~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+PROXY_HEADERS = frozenset(('x-forwarded-for', 'x-real-ip', 'x-web-prolog-user',
+    'x-web-prolog-principal', 'x-authenticated-user', 'x-web-prolog-capabilities',
+    'x-web-prolog-caps', 'x-web-prolog-internal-proxy', 'x-web-prolog-query-budget'))
+
+
+def request_headers(text, purpose, owner):
+    """Validate worker fields independently of the language-side validator."""
+    if len(text.encode('utf-8')) > 16384 or (text and purpose != 'rpc'):
+        raise ValueError('invalid_request_headers')
+    headers = {}
+    if text and not text.endswith('\n'):
+        raise ValueError('invalid_request_headers')
+    for line in text.split('\n')[:-1]:
+        if '\r' in line or ': ' not in line:
+            raise ValueError('invalid_request_headers')
+        name, value = line.split(': ', 1)
+        if not name or any(c not in HTTP_TOKEN for c in name):
+            raise ValueError('invalid_request_headers')
+        if any((ord(c) < 32 and c != '\t') or ord(c) == 127 for c in value):
+            raise ValueError('invalid_request_headers')
+        key = name.lower()
+        if key == 'host' or key.replace('_', '-') in PROXY_HEADERS:
+            raise ValueError('reserved_proxy_header')
+        if key == 'x-web-prolog-query-owner' and value != owner:
+            raise ValueError('query_owner_mismatch')
+        # http.client accepts bytes; use UTF-8 consistently with the clients.
+        headers.setdefault(key, value.encode('utf-8'))
+    return headers
+
+
 class DeadlineReader(io.RawIOBase):
     def __init__(self, connection, deadline):
         self.connection, self.deadline = connection, deadline
@@ -174,8 +205,9 @@ class BrokerHandler(BaseHTTPRequestHandler):
             if len(raw) != size:
                 return self.reply(400)
             fields = parse_qs(raw.decode('utf-8'), strict_parsing=True, errors='strict',
-                              max_num_fields=4, keep_blank_values=True)
-            if set(fields) != {'url', 'purpose', 'query_owner', 'timeout_ms'} or any(len(v) != 1 for v in fields.values()):
+                              max_num_fields=5, keep_blank_values=True)
+            required = {'url', 'purpose', 'query_owner', 'timeout_ms'}
+            if set(fields) not in (required, required | {'headers'}) or any(len(v) != 1 for v in fields.values()):
                 return self.reply(400)
             url, purpose, owner = (fields[k][0] for k in ('url', 'purpose', 'query_owner'))
             if len(url.encode()) > 262144 or any(ord(c) <= 32 or ord(c) == 127 for c in url):
@@ -191,9 +223,10 @@ class BrokerHandler(BaseHTTPRequestHandler):
             path = quote(target.path or '/', safe="/%:@!$&'()*+,;=-._~")
             if target.query:
                 path += '?' + quote(target.query, safe="=&%+/:?@!$'()*;,-._~")
-            headers = {'Connection': 'close', 'Accept': 'text/plain'}
+            headers = {'connection': 'close', 'accept': 'text/plain'}
+            headers.update(request_headers(fields.get('headers', [''])[0], purpose, owner))
             if owner and purpose == 'rpc':
-                headers['X-Web-Prolog-Query-Owner'] = owner
+                headers['x-web-prolog-query-owner'] = owner
             peer = self.server.peers[target.hostname]
             ipaddress.ip_address(peer)
             connection = PinnedHTTPS(target.hostname, peer, timeout, self.server.context)

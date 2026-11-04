@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/torbjornlager/gprolog-port.git",
-  "revision": "a1bd7f285e39c048aace021002984e2231eabf5c",
+  "revision": "8dff4798b7d8f06f6f89fc471431fe5af0511682",
   "mode": "required for optional private or contained public N6 deployment",
   "engine": {
     "repository": "https://github.com/didoudiaz/gprolog.git",

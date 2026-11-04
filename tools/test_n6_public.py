@@ -50,7 +50,7 @@ assert query('true',cap1)[0]['type']=='success'
 # Invalid later occurrences are rejected before remote work; rpc-only options
 # cannot borrow promise's template/offset extensions.
 for options,formal in [('[limit(1),limit(0)]','type_error(positive_integer,0)'),
-        ('[timeout(none),timeout(bad)]','type_error(number,bad)'),
+        ('[timeout(1),timeout(bad)]','type_error(number,bad)'),
         ('[http_timeout(1),http_timeout(bad)]','type_error(number,bad)'),
         ('[offset(0)]','domain_error(rpc_option,offset(0))'),
         ('[template(ignored)]','domain_error(rpc_option,template(ignored))')]:

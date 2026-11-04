@@ -50,9 +50,20 @@ class EgressTests(unittest.TestCase):
             with patch.object(egress,'PinnedHTTPS',FakeConnection):
                 self.assertEqual(fetch('https://n1.elfenbenstornet.se/call?goal=true'),(200,b'ok'))
                 headers=FakeConnection.calls[-1][-1]
-                self.assertEqual(headers['X-Web-Prolog-Query-Owner'],'a'*64)
+                self.assertEqual(headers['x-web-prolog-query-owner'],'a'*64)
                 self.assertNotIn('Cookie',headers);self.assertNotIn('Authorization',headers)
+                self.assertEqual(fetch('https://n1.elfenbenstornet.se/call', headers="X-Test: first\nx-test: second\nAuthorization: Bearer token\nUser-Agent: sample\nX-Empty: \nX-Unicode: 狐狸\n"), (200,b'ok'))
+                headers=FakeConnection.calls[-1][-1]
+                self.assertEqual(headers['x-test'], b'first')
+                self.assertEqual(headers['authorization'], b'Bearer token')
+                self.assertEqual(headers['user-agent'], b'sample')
+                self.assertEqual(headers['x-empty'], b'')
+                self.assertEqual(headers['x-unicode'], '狐狸'.encode('utf-8'))
                 count=len(FakeConnection.calls)
+                for bad in ['Host: unapproved.example\n', 'bad', 'X-Test: injected\r\n', 'X Test: value\n', 'X-Test: value\x00\n', 'X-Forwarded-For: impersonated\n', 'X_Web_Prolog_User: impersonated\n', 'x-web-prolog-query-owner: mismatch\n']:
+                    self.assertEqual(fetch('https://n1.elfenbenstornet.se/call', headers=bad)[0],400,bad)
+                self.assertEqual(fetch('https://n1.elfenbenstornet.se/source', purpose='source', headers='authorization: Bearer token\n')[0],400)
+                self.assertEqual(len(FakeConnection.calls),count)
                 for url in ['http://n1.elfenbenstornet.se','https://127.0.0.1','https://169.254.169.254','https://n6.elfenbenstornet.se','https://n1.elfenbenstornet.se:444','https://owner:password@n1.elfenbenstornet.se','https://n1.elfenbenstornet.se/#fragment','https://n1.elfenbenstornet.se/\nfoo']:
                     self.assertEqual(fetch(url)[0],403,url)
                 self.assertEqual(len(FakeConnection.calls),count)
