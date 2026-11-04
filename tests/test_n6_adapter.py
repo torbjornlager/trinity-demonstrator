@@ -48,6 +48,45 @@ class N6BoundaryTests(unittest.TestCase):
             server.server_close()
             other.server_close()
 
+    def test_query_owners_are_stable_and_separate_from_login_tokens(self):
+        from email.message import Message
+        server = adapter.Server(('127.0.0.1', 0), None, '', 'fixture')
+        def headers(cookie=None, capability=None):
+            result = Message()
+            if cookie: result['Cookie'] = adapter.OWNER_COOKIE + '=' + cookie
+            if capability is not None: result['X-Web-Prolog-Query-Owner'] = capability
+            return result
+        try:
+            a, b = server.session(), server.session()
+            owner = server.query_owner(headers(a))
+            self.assertEqual(owner, server.query_owner(headers(a)))
+            self.assertNotEqual(owner, server.query_owner(headers(b)))
+            self.assertNotIn(owner, a)
+            cap = server.query_owner(headers(capability='a' * 64))
+            self.assertEqual(cap, server.query_owner(headers(capability='a' * 64)))
+            self.assertNotEqual(cap, server.query_owner(headers(capability='b' * 64)))
+            self.assertNotEqual(cap, 'a' * 64)
+            self.assertNotEqual(owner, server.query_owner(headers(server.session('login'))))
+            for malformed in ('', 'forged', 'a' * 63, 'A' * 64, 'a' * 65):
+                with self.assertRaises(ValueError): server.query_owner(headers(capability=malformed))
+        finally:
+            server.server_close()
+
+    def test_budget_uses_socket_or_canonical_trusted_proxy_address(self):
+        from email.message import Message
+        server = adapter.Server(('127.0.0.1', 0), None, '', 'fixture')
+        fields = Message()
+        fields['X-Real-IP'] = '198.51.100.1'
+        try:
+            direct = server.query_budget(fields, '127.0.0.1')
+            self.assertEqual(direct, server.query_budget({}, '127.0.0.1'))
+            self.assertNotEqual(direct, server.query_budget(fields, '127.0.0.1', True))
+            self.assertEqual(server.query_budget(fields, '127.0.0.1', True),
+                             server.query_budget({}, '198.51.100.1'))
+            with self.assertRaises(ValueError): server.query_budget({}, 'forged')
+        finally:
+            server.server_close()
+
     def test_owner_authentication_rejects_wrong_and_malformed_credentials(self):
         salt = bytes(range(16))
         digest = hashlib.pbkdf2_hmac('sha256', b'fixture-password', salt, 200000).hex()

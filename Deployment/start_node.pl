@@ -44,6 +44,7 @@ main :-
 
 run :-
     load_web_prolog,
+    set_setting(node_http_identity:anonymous_visitors, true),
     load_config_file,
     resolve_config(Config),
     memberchk(public_url-PublicURL, Config),

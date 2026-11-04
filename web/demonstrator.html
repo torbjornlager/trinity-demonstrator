@@ -5901,9 +5901,9 @@
 	            return "ISOBASE";
 	          },
 	          principalSummaryLabel: function() {
-	            return this.principalExecutionAuthorized
-	              ? (this.principalAnnouncedId || "anonymous")
-	              : ((this.principalAnnouncedId || "anonymous") + " (no execution access)");
+                var label = this.principalAnnouncedId || "anonymous";
+                if (/^anon:visitor:/.test(label)) label = "anonymous";
+	            return this.principalExecutionAuthorized ? label : (label + " (no execution access)");
 	          },
           effectiveTransportProfile: function() {
             if (this.nodeAnnouncedProfile === "workbench") {

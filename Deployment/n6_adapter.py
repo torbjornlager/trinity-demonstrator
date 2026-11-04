@@ -12,6 +12,7 @@ import hmac
 import http.client
 from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -108,6 +109,28 @@ class Server(ThreadingHTTPServer):
         except (ValueError, KeyError, CookieError):
             return False
 
+    def query_owner(self, headers):
+        # Native ownership is derived here, never trusted from public identity
+        # headers. A CLI capability or a browser's verified login session forms
+        # its own namespace; the one shared Basic credential is one owner.
+        capability = headers.get('X-Web-Prolog-Query-Owner')
+        if capability is not None:
+            if len(capability) != 64 or any(c not in '0123456789abcdef' for c in capability):
+                raise ValueError('invalid_query_owner')
+            scope = 'capability:' + capability
+        else:
+            cookie = SimpleCookie(headers.get('Cookie', ''))
+            session = cookie[OWNER_COOKIE].value if OWNER_COOKIE in cookie else ''
+            scope = 'session:' + session if self.valid_session(session) else 'basic-owner'
+        return hmac.new(self.session_key, ('query-owner:' + scope).encode(), 'sha256').hexdigest()
+
+    def query_budget(self, headers, peer, trusted_proxy=False):
+        # HTTPS ingress lives on a private network and Caddy overwrites this
+        # address. Direct local clients are charged to the actual socket peer.
+        address = headers.get('X-Real-IP', peer) if trusted_proxy else peer
+        address = str(ipaddress.ip_address(address))
+        return hmac.new(self.session_key, ('query-budget:' + address).encode(), 'sha256').hexdigest()
+
     def get_request(self):
         connection, address = super().get_request()
         connection.settimeout(15)
@@ -191,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(502, {'error': 'n6_upstream_unavailable'})
 
     def browser_boundary(self, opaque_login=False):
-        for key in ('Host', 'Authorization', 'Origin', 'Content-Length', 'Sec-Fetch-Site', 'Cookie'):
+        for key in ('Host', 'Authorization', 'Origin', 'Content-Length', 'Sec-Fetch-Site', 'Cookie', 'X-Web-Prolog-Query-Owner', 'X-Real-IP'):
             if len(self.headers.get_all(key, [])) > 1:
                 return False
         host = self.headers.get('Host', '').lower()
@@ -278,10 +301,17 @@ class Handler(BaseHTTPRequestHandler):
         if path.path == '/':
             return self.reply(200, (ROOT / 'shared_db.pl').read_bytes(), 'text/plain; charset=UTF-8')
         if path.path == '/call':
+            try:
+                query_owner = self.server.query_owner(self.headers)
+                query_budget = self.server.query_budget(self.headers, self.client_address[0], HTTPS_OWNER)
+            except (ValueError, CookieError):
+                return self.reply(400, {'error': 'invalid_query_owner'})
             # The validated outer request is translated to the native local
             # Host/Origin/auth contract. No caller header is trusted upstream.
             return self.proxy('http://127.0.0.1:8081', self.path, {
-                'Host': '127.0.0.1:8081', 'Authorization': 'Bearer ' + self.server.token})
+                'Host': '127.0.0.1:8081', 'Authorization': 'Bearer ' + self.server.token,
+                'X-Web-Prolog-Query-Owner': query_owner,
+                'X-Web-Prolog-Query-Budget': query_budget})
         asset_path = '/img/spider-agent.png' if path.path == '/favicon.ico' else self.path
         if path.path in ASSET_PATHS or path.path == '/favicon.ico' or path.path.startswith(
                 ('/vendor/', '/img/', '/examples/', '/statecharts/', '/wasm/')):
@@ -345,7 +375,9 @@ def main():
     controller = subprocess.Popen([
         '/app/isobase/isobase-node', '--port', '8081', '--auth-token-file', str(token_file),
         '--shared-db', str(ROOT / 'shared_db.pl'), '--outbound-policy', str(policy),
-        '--max-queries', '8', '--time-ms', '2000', '--idle-ms', '300000',
+        '--max-queries', '8', '--max-owner-queries', '4', '--max-budget-queries', '6',
+        '--require-query-owner', '1', '--require-query-budget', '1',
+        '--time-ms', '2000', '--idle-ms', '300000',
         '--memory-mb', '256', '--total-memory-mb', '512'],
         stdout=subprocess.PIPE, text=True)
     try:

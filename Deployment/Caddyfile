@@ -1,4 +1,13 @@
 {
+    log {
+        format filter {
+            wrap json
+            fields {
+                request>headers>X-Web-Prolog-Query-Owner delete
+                request>headers>X-Web-Prolog-Query-Budget delete
+            }
+        }
+    }
 	servers :443 {
 		protocols h1 h2
 	}
@@ -7,10 +16,12 @@
 (cors_headers) {
 	header Access-Control-Allow-Origin *
 	header Access-Control-Allow-Methods "GET, OPTIONS"
-	header Access-Control-Allow-Headers "Content-Type"
+	header Access-Control-Allow-Headers "Content-Type, X-Web-Prolog-Query-Owner"
 }
 
 (common_proxy_headers) {
+	header_up -X-Web-Prolog-Query-Budget
+	header_up X-Forwarded-For {remote_host}
 	header_up -X-Web-Prolog-User
 	header_up -X-Web-Prolog-Principal
 	header_up -X-Web-Prolog-Capabilities

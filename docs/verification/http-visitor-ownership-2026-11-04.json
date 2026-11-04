@@ -1,0 +1,280 @@
+{
+  "verified_at": "2026-11-04T11:03:54.013837+00:00",
+  "scope": "GNU/SWI HTTP visitor ownership and admission fairness; not certification of hostile native execution",
+  "pins": {
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "4834e286e1c3c3ce3e73905e6d78d67e39b82b36",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "gprolog-port": {
+      "repository": "https://github.com/torbjornlager/gprolog-port.git",
+      "revision": "53fd0b755840fd8b2035a0d84055f1d14731e317",
+      "mode": "required for the optional owner-only N6 pilot",
+      "engine": {
+        "repository": "https://github.com/didoudiaz/gprolog.git",
+        "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+        "version": "1.6.0"
+      }
+    },
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "b9502de47528ccab822eadabb22ec2be5dc7ff50",
+      "version": "0.1.0",
+      "manifest_sha256": "c631012ff5507064aec0386cd14ca1662efb6da8290c4358f78d6110a1f9e001"
+    }
+  },
+  "source_sha256": {
+    "Deployment/n6_adapter.py": "350b606ed3c91be0d29e083f84824e4eb84c798a3b2544242bd2c21dc4fea788",
+    "Deployment/Caddyfile": "46ad40ca4301f2022f9b3afb38950b0f0e387302e6c4ece089404a47343087b5",
+    "Deployment/nginx.n6-admission.conf": "fe4a488d6ade353c6daa36e12953c1909abaedbbd8f406149ba37e75bfcde046",
+    "Deployment/start_node.pl": "b99692481db0177785f4e4f7e1a884a9e3af319b6063f35b8680460528cc0833",
+    "Deployment/start_n1.pl": "dbf43b9d86b03ccabdf32f4f924d0f26d04dbe1a8069bd9508791be32336dd00",
+    "Deployment/start_n2.pl": "4a4cdf2ae3f2bc28609dcf943a8f92587f73058231320743de771997e8a88285",
+    "Deployment/start_n3.pl": "8a40a80feb21429ccbecf602828dce6210a1bee2656c00a0b767ab6ccb48f3db",
+    "Deployment/start_n4.pl": "b8d139d4f4afac68998f20e15ba4fe34e9ca2566daa57f1ca3e03b77e365fd0a",
+    "web/demonstrator.html": "c158d87312cecbffbda34b44f909e3084f305dd5f77181a81faa6a2f41255e99",
+    "tools/test_http_visitors.py": "a48ecd15afea6ed3627d43a46f44ce0727312a0cb942fe9da279c03370cfde81"
+  },
+  "deployed_images": {
+    "deployment-wp_n1-1": "sha256:4036214398fee1769ba5394331ed7387eb6b6120051a92caab8c2877614bf145",
+    "deployment-wp_n2-1": "sha256:4036214398fee1769ba5394331ed7387eb6b6120051a92caab8c2877614bf145",
+    "deployment-wp_n3-1": "sha256:4036214398fee1769ba5394331ed7387eb6b6120051a92caab8c2877614bf145",
+    "deployment-wp_n4-1": "sha256:4036214398fee1769ba5394331ed7387eb6b6120051a92caab8c2877614bf145",
+    "web-prolog-hub-n0-1": "sha256:05462fd291196da087cfc4774cb08902a2135dbe7a57bab02bc889e9f793b66a",
+    "deployment-caddy-1": "sha256:48eb6cc8adf661e28f31af791a5e77ac80002c8d479105cc9981700477385238",
+    "trinity-n6-host-wp_n6-1": "sha256:f1540a30b965a38b9d803120f482969694acaf5bc14251688bc7699084e431b2",
+    "trinity-n6-host-n6_admission-1": "sha256:0b7da02d344e742165f451b31596284c6b46db0852709b8ec1b3819a015bd444"
+  },
+  "checks": {
+    "swi_native": {
+      "command": "SWIPL=/usr/local/bin/swipl ./tools/test.sh T4_NATIVE",
+      "result": "passed",
+      "tests": 1049,
+      "includes_http_visitor_fixture": true
+    },
+    "swi_lower_tiers": {
+      "tiers": [
+        "LINT",
+        "TEXT",
+        "T0",
+        "T1_NATIVE",
+        "T2",
+        "T3_NATIVE"
+      ],
+      "result": "passed"
+    },
+    "swi_linux_http_ownership": {
+      "result": "passed",
+      "nonroot": true,
+      "readonly_root": true,
+      "capabilities_dropped": "ALL",
+      "source_hashes_matched_committed_dependency": true
+    },
+    "gnu_macos_local_suite": {
+      "command": "make CC=clang local-test",
+      "result": "passed"
+    },
+    "gnu_linux_local_suite": {
+      "command": "make CC=clang local-test",
+      "result": "passed",
+      "source_hashes_matched_committed_dependency": true,
+      "sanitizer_runtime": "Debian libclang-rt-14-dev installed in disposable test container"
+    },
+    "gnu_compiled_checks": {
+      "result": "partial; not a complete compiled comparison qualification",
+      "passed": [
+        "authentication",
+        "credential lifecycle",
+        "query/recovery",
+        "source",
+        "policy",
+        "RPC source ordering",
+        "outbound policy"
+      ],
+      "not_completed": "Historical protected-peer comparison requires locked SWI 10.1.3; this environment provides 10.1.19. The comparison lock was not changed."
+    },
+    "browser_release_package": {
+      "source": {
+        "dirty": false,
+        "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+        "revision": "b9502de47528ccab822eadabb22ec2be5dc7ff50"
+      },
+      "native_integration": true,
+      "host_integration": false,
+      "runs": [
+        {
+          "label": "statechart-unit",
+          "command": [
+            "/usr/local/bin/swipl",
+            "-f",
+            "none",
+            "-q",
+            "-p",
+            "browser_prolog=/var/folders/cv/q5t08z852cx4mrj16hgnp_fh0000gp/T/wasm-runtime-tests-zjjkovjv/wasm",
+            "-s",
+            "tests/test_statechart_wasm.pl",
+            "-g",
+            "swi_wasm_statechart_tests:run",
+            "-t",
+            "halt"
+          ],
+          "exit_code": 0,
+          "seconds": 0.179
+        },
+        {
+          "label": "schema-equivalence",
+          "command": [
+            "/Library/Developer/CommandLineTools/usr/bin/python3",
+            "tools/check_statechart_wasm_equivalence.py",
+            "--wasm-dir",
+            "/private/tmp/browser-query-owner-release/web/wasm",
+            "--native-root",
+            "/Users/lager/swi-prolog-node"
+          ],
+          "exit_code": 0,
+          "seconds": 0.04
+        },
+        {
+          "label": "query-owner",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/http_query_owner.cjs"
+          ],
+          "exit_code": 0,
+          "seconds": 0.234
+        },
+        {
+          "label": "worker-mailbox",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/swi_wasm_actor_worker_smoke.js"
+          ],
+          "exit_code": 0,
+          "seconds": 0.118
+        },
+        {
+          "label": "standalone",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/swi_wasm_standalone.js"
+          ],
+          "exit_code": 0,
+          "seconds": 1.325
+        },
+        {
+          "label": "semantic-contracts",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/swi_wasm_contracts.js"
+          ],
+          "exit_code": 0,
+          "seconds": 116.243
+        }
+      ]
+    },
+    "consumer_integration": {
+      "tiers": [
+        "DEMONSTRATOR",
+        "DISCOVERY",
+        "T4_INTEGRATION"
+      ],
+      "result": "passed"
+    },
+    "adapter_unit_tests": {
+      "result": "passed",
+      "tests": 7
+    },
+    "static_unit_tests": {
+      "result": "passed",
+      "tests": 7
+    },
+    "frontend_configuration_tests": {
+      "result": "passed",
+      "scripts": [
+        "test-node-catalog.cjs",
+        "test-portal-runtime.cjs",
+        "test-trinity-host.cjs"
+      ]
+    },
+    "live_http_ownership": {
+      "command": "python3 tools/test_http_visitors.py",
+      "result": "passed",
+      "nodes": [
+        "N1",
+        "N2",
+        "N3",
+        "N4",
+        "N6"
+      ],
+      "assertions": [
+        "different clients retain independent continuations",
+        "Secure host-only HTTPS cookies",
+        "browser RPC preflight",
+        "N6 capabilities retain different native worker processes",
+        "N6 anonymous execution disabled"
+      ]
+    },
+    "n6_black_box": {
+      "result": "passed on localhost and HTTPS",
+      "coverage": [
+        "login/CSRF",
+        "session tampering",
+        "foreign browser origins",
+        "large source",
+        "paging",
+        "shared DB",
+        "filesystem/outbound denial",
+        "deadlines/recovery",
+        "GNU to SWI RPC/promise",
+        "GNU to Trealla RPC",
+        "discovery status"
+      ]
+    },
+    "protected_peer_interop": {
+      "result": "passed",
+      "clients": [
+        "disposable SWI",
+        "disposable Trealla"
+      ],
+      "target": "owner-only local GNU N6",
+      "owner_credentials_installed_in_public_peers": false
+    },
+    "browser_live": {
+      "result": "passed",
+      "origin": "https://n4.elfenbenstornet.se/demonstrator?node=swi-wasm",
+      "peer": "https://n1.elfenbenstornet.se",
+      "solutions": [
+        "a",
+        "b",
+        "c"
+      ],
+      "same_timestamp_across_pages": true,
+      "screenshot_sha256": "0e8dfb6ce11963beb21f2a47d5d7a849e525db42a61929f6086e6acab0431ef7"
+    }
+  },
+  "policy": {
+    "N1_N4": "public, anonymous visitors isolated for HTTP paging/session ownership",
+    "N6": "owner-only HTTPS; anonymous execution remains disabled",
+    "N5": "Trealla runtime unchanged by this work",
+    "swi_cached_queries_per_owner_address": 16,
+    "swi_cached_queries_per_address": 32,
+    "gnu_global_query_slots": 8,
+    "gnu_owner_query_slots": 4,
+    "gnu_address_group_query_slots": 6,
+    "existing_execution_deadlines": "unchanged"
+  },
+  "remaining_public_n6_gates": [
+    "Hostile native worker/controller separation and secret isolation have not been qualified",
+    "OS-level egress containment is not established by these application-level destination-policy tests",
+    "No independent network-service security review; upstream trusted-owner threat model remains applicable"
+  ],
+  "notes": [
+    "Linux procfs exit race fixed: ESRCH/ENOENT during a process stat read is a confirmed exit; other accounting failures remain fail-closed.",
+    "SWI private controller/cache meta-call bypass and public RPC proxy-header forgery blocked.",
+    "Live admission saturation was not performed against public visitors; aggressive tests used disposable fixtures.",
+    "Cookies/capabilities are not user accounts. NAT clients share address resource budgets.",
+    "The first broader SWI run hit a transient distributed statechart test timeout; its isolated recheck and final full 1049-test run passed."
+  ]
+}

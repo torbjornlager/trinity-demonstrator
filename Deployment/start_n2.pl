@@ -18,6 +18,7 @@ start_n2 :-
     set_setting(http:public_host, 'n2.elfenbenstornet.se'),
     set_setting(http:public_port, 443),
     set_setting(http:public_scheme, https),
+    set_setting(node_http_identity:anonymous_visitors, true),
     node(3052, [
         sandbox(blacklist),
         profile(isotope),

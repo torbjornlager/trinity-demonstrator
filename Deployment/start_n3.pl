@@ -36,6 +36,7 @@ start_n3 :-
     set_setting(http:public_host, 'n3.elfenbenstornet.se'),
     set_setting(http:public_port, 443),
     set_setting(http:public_scheme, https),
+    set_setting(node_http_identity:anonymous_visitors, true),
     node(3053, [
         sandbox(blacklist),
         profile(actor),

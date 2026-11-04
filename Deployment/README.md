@@ -768,6 +768,52 @@ the N6 test lookup and still verifies TLS against its hostname. To stop N6 use
 Caddy with the original three production Compose files (omit the N6 overlay).
 The localhost stack and credential file are preserved.
 
+## HTTP visitor ownership on N1–N4 and N6
+
+The SWI launchers now enable `node_http_identity:anonymous_visitors`. Browsers
+receive signed, Secure, host-only visitor cookies. HTTP continuations and
+ISOTOPE sessions have visitor ownership; anonymous WebSocket connections get
+independent principals. Native and browser RPC clients carry a cryptographically
+random query capability across pages, including cross-site browser calls without
+cookies. Capability headers stay out of URLs and Caddy runtime logs.
+
+HTTP admission charges both the visitor and Caddy's overwritten client address.
+Existing execution deadlines, page behavior and node/container ceilings remain.
+The SWI continuation cache adds ceilings of 16 entries per owner/address and 32
+per address, within its existing total of 100. Insertions cannot evict another
+owner's work; cache misses retain offset replay. Users behind a NAT share the
+address allowance. Creating new cookies/capabilities does not multiply it.
+Public Prolog RPC cannot forge proxy identity/address headers or call private
+controller/cache entry points, including through meta-calls.
+
+N6 requires separate controller owner and budget namespaces. Its presenter derives
+ownership from a validated login cookie or CLI conversation capability and derives
+the budget group from trusted ingress/socket addresses. Its existing eight query
+slots are bounded to four per owner and six per client-address group (active plus
+retained queries). Admission eviction selects only that owner's idle work. The
+N6 proxy also limits query requests to 120/minute per address with a burst of 60;
+its previous login and connection limits remain in place.
+
+N6 is still owner-only. Ownership and quotas do not establish isolation from
+hostile native workers. See the [qualification record](../docs/verification/http-visitor-ownership-2026-11-04.json)
+for exact pins, checks and the remaining public-release gates. The GNU threat model
+still excludes a generally supported public/multi-user service. This change does
+not claim a security audit of the Trealla N5 runtime.
+
+```sh
+python3 tools/test_http_visitors.py
+python3 tools/test_n6.py --url https://n6.elfenbenstornet.se \
+  --hub-url https://n0.elfenbenstornet.se
+```
+
+The low-volume live check verifies independent paging on N1–N4, HTTPS cookie
+properties, browser RPC preflights and separate N6 workers. Admission saturation,
+identity tampering, session ownership and forged-proxy tests run against disposable
+upstream fixtures, rather than saturating the public services. N6 credentials
+are read from the ignored private access file and never printed or sent to public
+peers. Test programs should retain their query capability or response cookie for
+live pagination; losing it produces a fresh query context.
+
 ## Security Model
 
 This bundle is a practical first step, not a complete hardening story.
