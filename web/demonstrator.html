@@ -2850,14 +2850,13 @@
               </div>
               <div class="portal-splash-runtime">
                 <img class="portal-splash-runtime-logo"
-                     v-if="portalRuntimeName === 'SWI-Prolog'"
                      src="/img/swi-logo.png"
                      alt="SWI-Prolog logo">
                 <div class="portal-splash-runtime-copy">
-                  <span><strong>Powered by</strong> <strong>{{ portalRuntimeName }} {{ portalRuntimeVersion || "version unavailable" }}</strong></span>
-                  <a :href="portalRuntimeUrl"
+                  <span><strong>Powered by</strong> <strong>SWI-Prolog</strong></span>
+                  <a href="https://www.swi-prolog.org/"
                      target="_blank"
-                     rel="noopener noreferrer">{{ portalRuntimeUrl }}</a>
+                     rel="noopener noreferrer">https://www.swi-prolog.org/</a>
                 </div>
               </div>
             </section>
@@ -5636,7 +5635,7 @@
             },
             introVisible: false,
             introSuppressFuture: false,
-            portalVersion: "0.2.0",
+            portalVersion: "0.3.0",
             portalSwiplVersion: "",
             portalTreallaVersion: "",
             tutorialSrc: (function() {
@@ -6555,9 +6554,7 @@
               }
               return response.json();
             }).then(function(json) {
-              if (json && /^\d+\.\d+/.test(String(json.web_prolog || ""))) {
-                self.portalVersion = String(json.web_prolog);
-              }
+              // The demonstrator release is independent of the node package version.
               self.portalSwiplVersion = "";
               self.portalTreallaVersion = "";
               if (json && json.trealla) {

@@ -10,7 +10,7 @@ function method(name, fetcher) {
   return new Function('fetch','nodeLabelForUrl','TrinityHost', 'return function('+match[1]+'){'+match[2]+'}')(fetcher, ()=>'localhost:3060', TrinityHost);
 }
 function component(fetcher) {
-  const obj = {portalVersion:'0.2.0',portalSwiplVersion:'',portalTreallaVersion:'',isBrowserSwiWasmMode:false,
+  const obj = {portalVersion:'0.3.0',portalSwiplVersion:'',portalTreallaVersion:'',isBrowserSwiWasmMode:false,
     showTerminalGreeting:true,effectiveTransportProfile:'actor',currentPortalNodeUrl:'http://localhost:3060'};
   for (const name of ['portalRuntimeName','portalRuntimeUrl','portalRuntimeVersion']) {
     Object.defineProperty(obj,name,{get(){return method(name).call(this);}});
@@ -26,7 +26,7 @@ function response(json) {return Promise.resolve({ok:true,json:()=>Promise.resolv
   await obj.fetchPortalVersion();
   assert.equal(obj.portalRuntimeName,'Trealla Prolog');
   assert.equal(obj.portalRuntimeVersion,'3.14.10');
-  assert.equal(obj.portalVersion,'0.2.0'); // Backend identifier is not a package version.
+  assert.equal(obj.portalVersion,'0.3.0'); // The UI release is independent of the backend.
   assert.match(obj.terminalGreetingText(),/trealla-prolog\/trealla-prolog\]Trealla Prolog/);
   assert.ok(!obj.terminalGreetingText().includes('SWI-Prolog'));
   obj.isBrowserSwiWasmMode=true;
@@ -39,7 +39,7 @@ function response(json) {return Promise.resolve({ok:true,json:()=>Promise.resolv
   assert.equal(obj.portalRuntimeName,'SWI-Prolog');
   assert.equal(obj.portalTreallaVersion,'');
   assert.equal(obj.portalRuntimeVersion,'10.1.18');
-  assert.equal(obj.portalVersion,'0.2.1');
+  assert.equal(obj.portalVersion,'0.3.0'); // Native node package versions cannot overwrite it.
   obj=component(()=>Promise.reject(new Error('offline')));
   await obj.fetchPortalVersion();
   assert.equal(obj.portalRuntimeName,'Prolog');
