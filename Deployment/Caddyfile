@@ -39,6 +39,8 @@
 }
 
 n0.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 	import cors_headers
 	@options method OPTIONS
@@ -55,6 +57,8 @@ n0.elfenbenstornet.se {
 }
 
 n1.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 	import cors_headers
 
@@ -74,6 +78,8 @@ n1.elfenbenstornet.se {
 }
 
 n2.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 	import cors_headers
 
@@ -95,6 +101,8 @@ n2.elfenbenstornet.se {
 }
 
 n3.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 	import cors_headers
 
@@ -126,6 +134,8 @@ n3.elfenbenstornet.se {
 }
 
 n4.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 	import cors_headers
 
@@ -163,6 +173,8 @@ n4.elfenbenstornet.se {
 # Client-supplied trust headers are stripped first, so the only identity
 # the node ever sees is the one oauth2-proxy just verified.
 n5.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 
 	header {

@@ -2,6 +2,8 @@
 # GitHub SSO. Static demonstrator content is borrowed from N3; relative API
 # and WebSocket requests return here and are routed to Trealla.
 n5.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
 	encode zstd gzip
 
 	header {

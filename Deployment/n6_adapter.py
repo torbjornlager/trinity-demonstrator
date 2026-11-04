@@ -23,6 +23,8 @@ import threading
 import time
 from urllib.parse import parse_qs, unquote, urlsplit
 
+PUBLIC_EXECUTION = os.environ.get('N6_PUBLIC_EXECUTION') == 'yes'
+VISITOR_COOKIE = '__Host-n6_visitor' if os.environ.get('N6_PUBLIC_URL', '').startswith('https:') else 'n6_visitor'
 PUBLIC_URL = os.environ.get('N6_PUBLIC_URL', 'http://localhost:3057').rstrip('/')
 ASSET_URL = os.environ.get('N6_ASSET_URL', 'http://n6_assets:3051')
 HUB_URL = os.environ.get('N6_HUB_URL', 'http://localhost:3058/discovery-hub')
@@ -74,7 +76,7 @@ def host_config():
                   runtime='swi' if n < 5 else 'trealla') for n in range(1, 6)]
     nodes.append(dict(url=PUBLIC_URL, runtime='gprolog'))
     return dict(remoteNodes=nodes, discoveryHubUrl=HUB_URL,
-                ownerLogin=True, interactionLogging=False)
+                ownerLogin=not PUBLIC_EXECUTION, interactionLogging=False)
 
 
 class Server(ThreadingHTTPServer):
@@ -101,6 +103,8 @@ class Server(ThreadingHTTPServer):
             return False
 
     def authorized(self, headers):
+        if PUBLIC_EXECUTION:
+            return True
         if owner_authorized(headers.get('Authorization', ''), self.owner_hash):
             return True
         try:
@@ -108,6 +112,20 @@ class Server(ThreadingHTTPServer):
             return self.valid_session(cookie[OWNER_COOKIE].value)
         except (ValueError, KeyError, CookieError):
             return False
+
+    def visitor_context(self, headers):
+        capability = headers.get('X-Web-Prolog-Query-Owner')
+        if capability is not None:
+            if len(capability) != 64 or any(c not in '0123456789abcdef' for c in capability):
+                raise ValueError('invalid_query_owner')
+            return 'capability:' + capability, None
+        cookies = SimpleCookie(headers.get('Cookie', ''))
+        value = cookies[VISITOR_COOKIE].value if VISITOR_COOKIE in cookies else ''
+        if self.valid_session(value, 'visitor'):
+            return 'visitor:' + value, None
+        value = self.session('visitor', 86400)
+        cookie = VISITOR_COOKIE + '=' + value + '; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax' + COOKIE_SECURE
+        return 'visitor:' + value, cookie
 
     def query_owner(self, headers):
         # Native ownership is derived here, never trusted from public identity
@@ -199,6 +217,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
         self.send_header('Connection', 'close')
+        if getattr(self, 'response_cookie', None):
+            self.send_header('Set-Cookie', self.response_cookie)
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
@@ -213,7 +233,7 @@ class Handler(BaseHTTPRequestHandler):
         except (OSError, http.client.HTTPException):
             self.reply(502, {'error': 'n6_upstream_unavailable'})
 
-    def browser_boundary(self, opaque_login=False):
+    def browser_boundary(self, opaque_login=False, navigation=False):
         for key in ('Host', 'Authorization', 'Origin', 'Content-Length', 'Sec-Fetch-Site', 'Cookie', 'X-Web-Prolog-Query-Owner', 'X-Real-IP'):
             if len(self.headers.get_all(key, [])) > 1:
                 return False
@@ -227,8 +247,16 @@ class Handler(BaseHTTPRequestHandler):
         # login may use this path, and it additionally requires the signed,
         # purpose-separated hidden token AND the matching HttpOnly cookie.
         opaque = opaque_login and origin == 'null' and site == 'same-origin'
-        return (host in allowed and (origin is None or same_origin or opaque)
-                and (site in ('same-origin', 'none') or site == 'same-site' and same_origin))
+        public_rpc = (PUBLIC_EXECUTION and urlsplit(self.path).path == '/call'
+            and len(self.headers.get('X-Web-Prolog-Query-Owner', '')) == 64
+            and all(c in '0123456789abcdef' for c in self.headers.get('X-Web-Prolog-Query-Owner', '')))
+        document_navigation = (navigation and self.command == 'GET'
+            and self.headers.get('Sec-Fetch-Mode') == 'navigate'
+            and self.headers.get('Sec-Fetch-Dest') == 'document'
+            and origin is None)
+        return (host in allowed and (origin is None or same_origin or opaque or public_rpc)
+                and (site in ('same-origin', 'none') or site == 'same-site' and same_origin
+                     or document_navigation or public_rpc))
 
     def login_page(self, status=200, incorrect=False):
         token = self.server.session('login', 600)
@@ -239,6 +267,8 @@ class Handler(BaseHTTPRequestHandler):
             'Set-Cookie': LOGIN_COOKIE + '=' + token + '; Path=/login; Max-Age=600; HttpOnly; SameSite=Strict' + COOKIE_SECURE})
 
     def do_POST(self):
+        if PUBLIC_EXECUTION:
+            return self.reply(405, {'error': 'get_required'})
         if self.path != '/login':
             return self.reply(405, {'error': 'get_required'})
         if not self.browser_boundary(opaque_login=True) or self.headers.get('Transfer-Encoding'):
@@ -280,18 +310,29 @@ class Handler(BaseHTTPRequestHandler):
             ok = self.server.controller.poll() is None
             return self.reply(200 if ok else 503, {'status': 'ok' if ok else 'unavailable'})
         authorized = self.server.authorized(self.headers)
+        self.response_cookie = None
+        self.public_identity = None
+        if PUBLIC_EXECUTION and path.path not in ('/version', '/portal', '/portal/'):
+            try:
+                self.public_identity, self.response_cookie = self.server.visitor_context(self.headers)
+            except (ValueError, CookieError):
+                return self.reply(400, {'error': 'invalid_query_owner'})
         # Discovery can inspect non-sensitive metadata without a query credential.
         if path.path == '/node_info':
-            return self.reply(200, dict(self_url=PUBLIC_URL, profile='isobase', auth='private',
+            return self.reply(200, dict(self_url=PUBLIC_URL, profile='isobase', auth='open' if PUBLIC_EXECUTION else 'private',
                                        self_contained=True, provides=PROVIDES, services=[],
-                                       principal_id='owner' if authorized else 'anonymous',
+                                       principal_id=('anon:visitor:' + hashlib.sha256(self.public_identity.encode()).hexdigest()) if PUBLIC_EXECUTION else ('owner' if authorized else 'anonymous'),
                                        principal_execution=authorized, tutorial_sections=['all']))
         if path.path == '/version':
             pins = json.loads(Path('/usr/share/doc/gprolog/runtime-pins.json').read_text())
             return self.reply(200, dict(web_prolog='gprolog-port', gprolog=pins['engine']['version']))
-        if not self.browser_boundary():
+        if path.path in ('/portal', '/portal/'):
+            return self.reply(308, '', 'text/plain', {'Location': '/demonstrator' + ('?' + path.query if path.query else '')})
+        if not self.browser_boundary(navigation=path.path in ('/demonstrator', '/login', '/')):
             return self.reply(403, {'error': 'invalid_browser_request'})
         if path.path == '/login':
+            if PUBLIC_EXECUTION:
+                return self.reply(303, '', 'text/plain', {'Location': '/demonstrator'})
             return self.login_page()
         if not authorized:
             if path.path in ('/demonstrator', '/portal', '/'):
@@ -302,7 +343,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, (ROOT / 'shared_db.pl').read_bytes(), 'text/plain; charset=UTF-8')
         if path.path == '/call':
             try:
-                query_owner = self.server.query_owner(self.headers)
+                query_owner = (hmac.new(self.server.session_key, self.public_identity.encode(), 'sha256').hexdigest()
+                               if PUBLIC_EXECUTION else self.server.query_owner(self.headers))
                 query_budget = self.server.query_budget(self.headers, self.client_address[0], HTTPS_OWNER)
             except (ValueError, CookieError):
                 return self.reply(400, {'error': 'invalid_query_owner'})
@@ -335,6 +377,8 @@ class Handler(BaseHTTPRequestHandler):
                 if value is not None:
                     self.send_header(key, value)
             self.send_header('Connection', 'close')
+            if getattr(self, 'response_cookie', None):
+                self.send_header('Set-Cookie', self.response_cookie)
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.end_headers()
             while chunk := response.read(65536):
@@ -351,8 +395,13 @@ def main():
         raise SystemExit('N6 requires localhost or the explicitly enabled owner-only HTTPS pilot')
     owner_hash = os.environ.pop('N6_OWNER_PASSWORD_HASH', '')
     fields = owner_hash.split(':')
-    if len(fields) != 4 or fields[0] != 'pbkdf2_sha256' or int(fields[1]) < 200000:
+    if not PUBLIC_EXECUTION and (len(fields) != 4 or fields[0] != 'pbkdf2_sha256' or int(fields[1]) < 200000):
         raise SystemExit('N6 requires an owner password hash; use tools/setup_n6.py')
+    if os.environ.get('N6_CONTAINMENT') == 'yes':
+        from n6_contained import serve
+        return serve(Server, ROOT, owner_hash)
+    if PUBLIC_EXECUTION:
+        raise SystemExit('Public execution requires verified Linux containment')
     temporary = Path('/tmp/n6')
     temporary.mkdir(mode=0o700, exist_ok=True)
     if temporary.is_symlink():

@@ -44,3 +44,5 @@ tools/*
 !tools/pinned_trealla.py
 !tools/fetch_trealla.py
 !tools/fetch_gprolog.py
+
+!tools/prepare_n6_jail.py

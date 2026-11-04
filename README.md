@@ -130,7 +130,7 @@ Or load layers selectively:
 
 Then try:
 
-- the shell at <http://localhost:3060/portal>
+- the shell at <http://localhost:3060/demonstrator>
 - the stateless API:
   `http://localhost:3060/call?goal=member(X,[a,b])&format=prolog`
 

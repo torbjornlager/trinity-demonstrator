@@ -1,9 +1,12 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 FROM gprolog_runtime
 COPY Deployment/n6_adapter.py /app/n6/adapter.py
+COPY Deployment/n6_contained.py Deployment/n6_egress.py /app/n6/
+COPY tools/prepare_n6_jail.py /tmp/prepare_n6_jail.py
 COPY Deployment/shared_db_common.pl Deployment/shared_db_n6.pl /app/n6/
 USER root
 RUN cat /app/n6/shared_db_common.pl /app/n6/shared_db_n6.pl > /app/n6/shared_db.pl
+RUN python3 /tmp/prepare_n6_jail.py && rm /tmp/prepare_n6_jail.py
 USER webprolog
 EXPOSE 3060
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \

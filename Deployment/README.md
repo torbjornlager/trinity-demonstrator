@@ -221,7 +221,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 - reduced portal is proxied
 - intended portal surface is runtime-focused: Terminal and Logger
 - proxied routes include:
-  `/`, `/call`, `/manual`, `/node_info`, `/img*`, `/portal`
+  `/`, `/call`, `/manual`, `/node_info`, `/img*`, `/demonstrator`
 - overlay contents:
   `deployment_node(n1).`
 - shared DB file:
@@ -235,7 +235,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 - `profile(isotope)`
 - portal is proxied
 - supports the richer semi-stateful portal UI
-- proxied routes include `/call`, `/portal`, editor/tutorial/example assets,
+- proxied routes include `/call`, `/demonstrator`, editor/tutorial/example assets,
   and the `/toplevel_*` session routes
 - overlay contents:
   `deployment_node(n2).`, `mortal/1`, `ancestor/2`, `descendant/2`,
@@ -249,7 +249,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 
 - public
 - `profile(actor)`
-- `/call`, `/toplevel_*`, `/ws`, `/portal`, examples, statecharts,
+- `/call`, `/toplevel_*`, `/ws`, `/demonstrator`, examples, statecharts,
   manual pages, and related assets are proxied
 - overlay contents:
   `deployment_node(n3).` plus the `mortal/1` / `human/1` chain that calls n4
@@ -266,7 +266,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 
 - public
 - `profile(actor)`
-- `/call`, `/toplevel_*`, `/ws`, `/portal`, examples, statecharts,
+- `/call`, `/toplevel_*`, `/ws`, `/demonstrator`, examples, statecharts,
   manual pages, and related assets are proxied
 - overlay contents:
   `deployment_node(n4).` plus `human(plato)` / `human(aristotle)`
@@ -283,7 +283,7 @@ docker compose logs -f caddy wp_n1 wp_n2 wp_n3 wp_n4 wp_n5 wp_admin
 
 - not proxied publicly by Caddy
 - available only on the host as:
-  `http://127.0.0.1:3054/portal`
+  `http://127.0.0.1:3054/demonstrator`
 - local-only admin surface:
   `http://127.0.0.1:3054/admin`
 - overlay contents:
@@ -301,7 +301,7 @@ If you want the canonical hostname locally, add this to your local
 Then use:
 
 ```text
-http://admin.elfenbenstornet.se:3054/portal
+http://admin.elfenbenstornet.se:3054/demonstrator
 ```
 
 ## Discovery hub (n0)
@@ -600,10 +600,69 @@ worst-case memory guarantee. Observe `docker stats`, node `/metrics`, and
 admission rejection logs; retain the engine/container ceilings and isolation.
 
 
-## GNU Prolog N6: owner-only localhost pilot
+## GNU Prolog N6
+
+The HTTPS service at **https://n6.elfenbenstornet.se/demonstrator** now uses the
+qualified public containment profile. Public queries need no owner login;
+continuations belong to a signed, Secure, HttpOnly visitor cookie or an explicit
+256-bit client conversation capability. The two identity namespaces are separate.
+The original owner-only local and HTTPS configurations below remain available.
+
+Apply the public profile after the local and host overlays:
+
+```sh
+docker compose --env-file Deployment/.env.n6 \
+  -f Deployment/compose.gprolog-n6-local.yaml \
+  -f Deployment/compose.gprolog-n6-host.yaml \
+  -f Deployment/compose.gprolog-n6-public.yaml up -d wp_n6
+```
+
+The root launcher has only KILL, SETGID, SETUID and SYS_CHROOT capabilities.
+It starts a private loopback controller, then permanently drops the presenter to
+UID 10001. Every query group uses a distinct UID/GID, an immutable chroot containing
+only the worker and its libraries, zero capabilities, no-new-privileges and a
+seccomp filter. There is no procfs, writable directory, controller token, ambient
+credential, inherited network socket, or direct IP/packet/netlink access in the
+query environment. Source and public shared clauses arrive on read-only FDs.
+The controller kills and reaps the entire group on completion, timeout, expiry,
+cancellation or presenter exit, including orphaned grandchildren.
+
+A peer-credential checked Unix broker permits only the exact HTTPS N1–N5 origins,
+with public IPv4 addresses pinned at startup, certificate and hostname validation,
+no proxy/redirect/credential forwarding, a 1 MiB UTF-8 response cap, and a two-second
+absolute deadline. Egress limits are 16 active requests per query UID, 128 total,
+and 240/query, 1200/client-address group, 4800/node requests per minute.
+
+Query/page limits remain two seconds, 300 seconds idle, eight total slots, four
+per visitor and six per client-address group. Sampled resident memory remains
+256 MiB/query and 512 MiB/node. Each query UID has a hard limit of 32 processes or
+threads; each process has 64 FDs, zero file/core output, and 2 GiB virtual address
+space (GNU reserves about 1.1 GiB of sparse BSS). The container remains read-only,
+with temporary storage mounted noexec, 1 GiB hard memory and 0.75 CPU; its process
+ceiling is 384 to accommodate the broker and threaded RPCs.
+
+This qualifies this deployment, not arbitrary GNU wrappers or a shared-kernel
+security guarantee. Native allocation bursts can still exhaust and restart the
+bounded N6 container before sampled limits intervene. There is no independent
+security audit or host-kernel isolation claim. Shared database contents are public.
+
+Reproduce the deployment-specific checks:
+
+```sh
+python3 -m unittest tests/test_n6_adapter.py tests/test_n6_egress.py
+python3 tests/n6_egress_tls.py
+python3 tools/test_n6_containment.py --image trinity-n6-host:latest
+python3 tools/test_n6_public.py
+```
+
+See [the qualification record](../docs/verification/n6-public-containment-2026-11-04.json).
+All public `/portal` and `/portal/` requests permanently redirect to
+`/demonstrator`, preserving their query string. Current links use `/demonstrator`.
+
+### Original owner-only localhost profile
 
 N6 is a separate optional stack. It uses the manifest-pinned GNU Prolog port
-at `0fb95dbff83a` and engine 1.6.0 at `5976ac516c9f`, recorded in
+at the revision recorded with engine 1.6.0 at `5976ac516c9f`, recorded in
 `dependencies/gprolog-port.json`. The source checkouts and all runtime changes
 remain upstream; this repository owns the deployment, presenter adapter and
 consumer tests. The Linux build bootstraps GNU serially, runs its engine checks,
@@ -613,7 +672,7 @@ compiler diagnostics or patch native source. Source/base-image pins and an image
 libcurl, libc and binary hashes; this is not a byte-for-byte reproducibility claim
 for mutable Debian package repositories.
 
-N6 currently runs only at **http://localhost:3057/demonstrator**. Its dedicated
+The local private profile runs at **http://localhost:3057/demonstrator**. Its dedicated
 Discovery Hub is **http://localhost:3058/discovery-hub**. Both published ports
 bind to `127.0.0.1`; no GNU listener port is published. This stack does not join,
 rebuild or restart production N0–N5. Its private SWI asset service supplies the
@@ -621,8 +680,7 @@ same shared demonstrator and examples; GNU executes every N6 `/call` request.
 The local page adds N6 beside N5 under Remote non-SWI nodes, puts Shared DB
 beneath the selected button, uses the ISOBASE tutorials and disables unavailable
 actor/session examples. Its explicit node catalog keeps the other buttons linked
-to the public N1–N5 services. The public catalog also includes the owner-only
-HTTPS N6 service described below.
+to the public N1–N5 services. The public catalog also includes the HTTPS N6 service.
 
 ### Start and sign in
 
@@ -794,8 +852,9 @@ retained queries). Admission eviction selects only that owner's idle work. The
 N6 proxy also limits query requests to 120/minute per address with a burst of 60;
 its previous login and connection limits remain in place.
 
-N6 is still owner-only. Ownership and quotas do not establish isolation from
-hostile native workers. See the [qualification record](../docs/verification/http-visitor-ownership-2026-11-04.json)
+The original ownership-only profile is still owner-only. Ownership and quotas
+alone do not establish isolation from hostile native workers; the public profile
+above adds and qualifies OS containment. See the [qualification record](../docs/verification/http-visitor-ownership-2026-11-04.json)
 for exact pins, checks and the remaining public-release gates. The GNU threat model
 still excludes a generally supported public/multi-user service. This change does
 not claim a security audit of the Trealla N5 runtime.
@@ -843,7 +902,7 @@ The logging facility is per node. Traffic sent to `n3` is logged inside
 
 Example flow:
 
-1. Open `https://n3.elfenbenstornet.se/portal` and exercise the node.
+1. Open `https://n3.elfenbenstornet.se/demonstrator` and exercise the node.
 2. Inspect the matching local admin surface on the host:
    `http://127.0.0.1:3053/admin`
 3. If you want the raw JSON, open:

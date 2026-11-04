@@ -1,0 +1,300 @@
+{
+  "date": "2026-11-04",
+  "deployment": "https://n6.elfenbenstornet.se/demonstrator",
+  "status": "public",
+  "dependencies": {
+    "swi-wasm": {
+      "package": "swipl-wasm",
+      "package_version": "8.2.5",
+      "engine_version": "10.1.19",
+      "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+      "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz",
+      "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+      "bundle": "web/swipl-bundle.js",
+      "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b"
+    },
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "34d3defd20ddff237b9b6f74d74cbcc955bf38e8",
+      "version": "0.1.0",
+      "manifest_sha256": "1f8ca525fd8d0f7812a00a26ba15202f727045971faca398219b58ef042bd698"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "2ebaeb9ca78e8ec58578e58bf86dad02a37625b2",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "2d674a311292501132d8f4b2a439881df54f2aa9",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "gprolog-port": {
+      "repository": "https://github.com/torbjornlager/gprolog-port.git",
+      "revision": "1f2077294850da1bca476df7e97b2e52b23bbb59",
+      "mode": "required for optional private or contained public N6 deployment",
+      "engine": {
+        "repository": "https://github.com/didoudiaz/gprolog.git",
+        "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+        "version": "1.6.0"
+      }
+    }
+  },
+  "n6_image_id": "sha256:2b66abe5e942dbba5d582a8877ac2cfabfae128e1782ca1c7423687107a7b7c0",
+  "controls": {
+    "container": {
+      "read_only_root": true,
+      "no_new_privileges": true,
+      "capabilities": [
+        "KILL",
+        "SETGID",
+        "SETUID",
+        "SYS_CHROOT"
+      ],
+      "memory_bytes": 1073741824,
+      "cpus": 0.75,
+      "pids": 384,
+      "tmpfs_noexec": true
+    },
+    "presenter": {
+      "uid": 10001,
+      "capabilities": []
+    },
+    "query": {
+      "unique_uid_gid_range": [
+        20000,
+        60000
+      ],
+      "immutable_chroot": true,
+      "procfs": false,
+      "writable_paths": false,
+      "inherited_credentials": false,
+      "source_fds": [
+        3,
+        4
+      ],
+      "capabilities": [],
+      "seccomp": true,
+      "socket_families": [
+        "AF_UNIX"
+      ],
+      "processes_threads_per_uid": 32,
+      "file_descriptors": 64,
+      "virtual_address_bytes": 2147483648,
+      "file_output_bytes": 0,
+      "core_bytes": 0,
+      "group_cleanup": "completion, timeout, cancellation, expiry, presenter lifetime-pipe EOF"
+    },
+    "egress": {
+      "approved_origins": [
+        "https://n1.elfenbenstornet.se",
+        "https://n2.elfenbenstornet.se",
+        "https://n3.elfenbenstornet.se",
+        "https://n4.elfenbenstornet.se",
+        "https://n5.elfenbenstornet.se"
+      ],
+      "public_ipv4_pins": true,
+      "tls_hostname_and_ca_validation": true,
+      "redirects": false,
+      "proxies": false,
+      "ambient_credentials": false,
+      "deadline_seconds": 2,
+      "response_bytes": 1048576,
+      "active_per_query": 16,
+      "active_global": 128,
+      "requests_per_minute": {
+        "query_uid": 240,
+        "client_group": 1200,
+        "node": 4800
+      },
+      "peer_identity": "SO_PEERCRED plus root-created query lease"
+    },
+    "admission": {
+      "query_slots": 8,
+      "slots_per_owner": 4,
+      "slots_per_ip_group": 6,
+      "seconds_per_page": 2,
+      "idle_seconds": 300,
+      "sampled_memory_mib_query": 256,
+      "sampled_memory_mib_node": 512,
+      "http_queries_per_minute_per_ip": 120,
+      "http_query_burst": 60
+    },
+    "ownership": "signed host-only Secure HttpOnly visitor cookie, or separate explicit 256-bit capability namespace"
+  },
+  "verification": {
+    "deployment_unit_tests": {
+      "result": "pass",
+      "tests": 28
+    },
+    "native_probe": {
+      "result": "pass",
+      "tool": "tools/test_n6_containment.py",
+      "worker_replacement": "disposable test image only",
+      "checks": [
+        "unique unprivileged UID/GID",
+        "zero capabilities",
+        "no controller token/procfs/host files",
+        "no writable directory",
+        "no leaked descriptors or ambient secrets",
+        "IP, IPv6, packet, netlink and non-Unix socketpair denied",
+        "ptrace, namespace changes, privilege escalation and dump re-enabling denied",
+        "process-group escape denied",
+        "hard address-space, FD, process, file and core limits",
+        "fork exhaustion bounded",
+        "orphan group reaping",
+        "presenter-death cleanup"
+      ]
+    },
+    "broker_policy_and_deadline": {
+      "result": "pass",
+      "tool": "tests/test_n6_egress.py"
+    },
+    "real_tls": {
+      "result": "pass",
+      "tool": "tests/n6_egress_tls.py",
+      "checks": [
+        "trusted matching certificate accepted",
+        "wrong hostname rejected",
+        "untrusted CA rejected"
+      ]
+    },
+    "broker_peer_credentials": {
+      "result": "pass",
+      "checks": [
+        "root/non-worker caller rejected",
+        "real query worker approved RPC accepted"
+      ]
+    },
+    "gnu_local_test": {
+      "macos": "pass",
+      "linux_arm64": "pass"
+    },
+    "swi_native": {
+      "result": "pass",
+      "tests": 1050,
+      "visitor_http_suite": "pass"
+    },
+    "browser_package": {
+      "source": {
+        "dirty": false,
+        "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+        "revision": "34d3defd20ddff237b9b6f74d74cbcc955bf38e8"
+      },
+      "native_integration": true,
+      "host_integration": true,
+      "runs": [
+        {
+          "label": "statechart-unit",
+          "command": [
+            "/usr/local/bin/swipl",
+            "-f",
+            "none",
+            "-q",
+            "-p",
+            "browser_prolog=/var/folders/cv/q5t08z852cx4mrj16hgnp_fh0000gp/T/wasm-runtime-tests-l_lv6usy/wasm",
+            "-s",
+            "tests/test_statechart_wasm.pl",
+            "-g",
+            "swi_wasm_statechart_tests:run",
+            "-t",
+            "halt"
+          ],
+          "exit_code": 0,
+          "seconds": 0.145
+        },
+        {
+          "label": "schema-equivalence",
+          "command": [
+            "/Library/Developer/CommandLineTools/usr/bin/python3",
+            "tools/check_statechart_wasm_equivalence.py",
+            "--wasm-dir",
+            "/private/tmp/n6-canonical-browser-package/web/wasm",
+            "--native-root",
+            "/Users/lager/swi-prolog-node"
+          ],
+          "exit_code": 0,
+          "seconds": 0.046
+        },
+        {
+          "label": "query-owner",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/http_query_owner.cjs"
+          ],
+          "exit_code": 0,
+          "seconds": 0.21
+        },
+        {
+          "label": "worker-mailbox",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/swi_wasm_actor_worker_smoke.js"
+          ],
+          "exit_code": 0,
+          "seconds": 0.084
+        },
+        {
+          "label": "standalone",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/swi_wasm_standalone.js"
+          ],
+          "exit_code": 0,
+          "seconds": 1.134
+        },
+        {
+          "label": "semantic-contracts",
+          "command": [
+            "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+            "tests/wasm/swi_wasm_contracts.js"
+          ],
+          "exit_code": 0,
+          "seconds": 114.335
+        }
+      ]
+    },
+    "public_live": {
+      "result": "pass",
+      "tool": "tools/test_n6_public.py",
+      "checks": [
+        "anonymous visitor cookie identity",
+        "independent capability paging",
+        "submitted source and shared DB",
+        "GNU to each N1-N5 RPC",
+        "unapproved/private/loopback egress denied",
+        "N1 and N5 to GNU anonymous RPC",
+        "cross-origin capability request and CORS preflight",
+        "N0-N6 portal and portal-slash redirects preserve query",
+        "N5 button opens N6 without login",
+        "browser GNU human paging",
+        "browser SWI-WASM to GNU RPC",
+        "anonymous browser findall query",
+        "source greater than 64 KiB",
+        "execution deadline and subsequent recovery"
+      ]
+    },
+    "fail_closed_startup": {
+      "result": "pass",
+      "checks": [
+        "public without containment rejected",
+        "non-root containment launcher rejected",
+        "excess launcher capabilities rejected"
+      ]
+    }
+  },
+  "limitations": [
+    "No independent security audit or VM/kernel isolation claim.",
+    "Native allocation bursts may restart the bounded N6 service before sampled resident-memory controls intervene.",
+    "Only selected Linux ARM64 Docker deployment qualified for public execution; other platforms and wrappers are not implied.",
+    "Historical full GNU compiled language comparison remains locked to SWI 10.1.3; installed 10.1.19 does not satisfy that comparison lock.",
+    "Trealla N5 runtime security is not audited by this work."
+  ],
+  "evidence_screenshot": "n6-public-2026-11-04.jpg"
+}

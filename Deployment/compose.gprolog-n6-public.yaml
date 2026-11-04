@@ -1,0 +1,11 @@
+# Apply after local + host overlays. Public execution fails closed without containment.
+services:
+  wp_n6:
+    user: "0:0"
+    cap_drop: [ALL]
+    cap_add: [KILL, SETGID, SETUID, SYS_CHROOT]
+    pids_limit: 384
+    environment:
+      N6_OWNER_PASSWORD_HASH: ""
+      N6_CONTAINMENT: "yes"
+      N6_PUBLIC_EXECUTION: "yes"

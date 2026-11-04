@@ -1,6 +1,13 @@
-# Owner-only GNU Prolog pilot. Authentication is enforced by the N6 adapter.
+# GNU Prolog service. The adapter chooses owner-only or qualified public execution.
 n6.elfenbenstornet.se {
+    @legacy_portal path /portal /portal/
+    redir @legacy_portal /demonstrator?{query} 308
     encode zstd gzip
+    import cors_headers
+    @options method OPTIONS
+    handle @options {
+        respond 204
+    }
     header {
         Strict-Transport-Security "max-age=31536000"
         X-Content-Type-Options "nosniff"

@@ -87,6 +87,20 @@ class N6BoundaryTests(unittest.TestCase):
         finally:
             server.server_close()
 
+    def test_document_navigation_is_allowed_without_weakening_api_boundary(self):
+        from email.message import Message
+        handler = object.__new__(adapter.Handler)
+        handler.command = 'GET'
+        handler.headers = Message()
+        handler.headers['Host'] = 'localhost:3057'
+        handler.headers['Sec-Fetch-Site'] = 'same-site'
+        handler.headers['Sec-Fetch-Mode'] = 'navigate'
+        handler.headers['Sec-Fetch-Dest'] = 'document'
+        self.assertTrue(handler.browser_boundary(navigation=True))
+        self.assertFalse(handler.browser_boundary())
+        handler.headers['Origin'] = 'https://unrelated.example'
+        self.assertFalse(handler.browser_boundary(navigation=True))
+
     def test_owner_authentication_rejects_wrong_and_malformed_credentials(self):
         salt = bytes(range(16))
         digest = hashlib.pbkdf2_hmac('sha256', b'fixture-password', salt, 200000).hex()
