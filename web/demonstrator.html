@@ -227,10 +227,11 @@
       .wb-header {
         flex: 0 0 auto;
         display: flex;
-        align-items: flex-start;
+        --header-unit: clamp(0.6px, 0.04845vw, 1px);
+        align-items: center;
         justify-content: flex-start;
         gap: 0;
-        padding: 18px 22px 12px;
+        padding: calc(27 * var(--header-unit)) calc(44 * var(--header-unit)) calc(18 * var(--header-unit));
         border-bottom: 1px solid var(--line);
         background: var(--bg);
       }
@@ -239,8 +240,8 @@
         position: relative;
         display: flex;
         align-items: center;
-        padding-left: 78px;
-        min-height: 56px;
+        padding-left: calc(160 * var(--header-unit));
+        min-height: calc(132 * var(--header-unit));
         min-width: 0;
         flex: 0 0 auto;
       }
@@ -249,12 +250,12 @@
         position: absolute;
         left: 0;
         top: 50%;
-        width: 65px;
-        height: 65px;
-        padding: 4px;
+        width: calc(134 * var(--header-unit));
+        height: calc(134 * var(--header-unit));
+        padding: calc(8 * var(--header-unit));
         box-sizing: border-box;
         background: #fff;
-        border: 3px solid var(--brand-ink);
+        border: calc(5 * var(--header-unit)) solid var(--brand-ink);
         border-radius: 50%;
         object-fit: contain;
         flex: 0 0 auto;
@@ -265,17 +266,17 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: 4px;
+        gap: calc(12 * var(--header-unit));
         min-width: 0;
-        padding-right: 18px;
-        border-right: 1px solid var(--line);
+        padding-right: calc(54 * var(--header-unit));
       }
 
       .wb-header-side {
         display: flex;
-        align-items: flex-start;
+        align-items: stretch;
         min-width: 0;
-        padding-left: 5px;
+        min-height: calc(112 * var(--header-unit));
+        border-left: 1px solid var(--line);
         flex: 1 1 auto;
       }
 
@@ -286,7 +287,12 @@
         gap: 0;
         min-width: 0;
         flex: 0 0 auto;
-        padding: 0 10px;
+        padding: 0 calc(20 * var(--header-unit));
+      }
+
+      .wb-header-section:first-child {
+        padding-left: calc(30 * var(--header-unit));
+        padding-right: calc(30 * var(--header-unit));
       }
 
       .wb-header-section + .wb-header-section {
@@ -294,14 +300,12 @@
       }
 
       .wb-header-section-node-groups-end {
-        border-right: 1px solid var(--line);
         margin-right: auto;
-        padding-right: 8px;
       }
 
       .wb-header-section-title {
-        margin: 0 0 7px;
-        font-size: clamp(8px, 0.68vw, 11px);
+        margin: 0;
+        font-size: max(12px, calc(16 * var(--header-unit)));
         font-weight: 700;
         line-height: 1;
         color: var(--ink);
@@ -310,8 +314,9 @@
       .wb-header-section-title-row {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        margin: 0 0 7px;
+        gap: calc(10 * var(--header-unit));
+        min-height: calc(24 * var(--header-unit));
+        margin: 0 0 calc(14 * var(--header-unit));
       }
 
       .wb-header-section-title-row .wb-header-section-title {
@@ -321,7 +326,8 @@
       .wb-title {
         margin: 0;
         font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
-        font-size: clamp(22px, 3.35vw, 34px);
+        font-size: calc(68 * var(--header-unit));
+        white-space: nowrap;
         line-height: 0.95;
         color: var(--brand-ink);
         transform: translateY(-2px);
@@ -329,7 +335,7 @@
 
       .wb-subtitle {
         margin: 0;
-        font-size: 15px;
+        font-size: calc(30 * var(--header-unit));
         line-height: 1.2;
         color: var(--subtitle-ink);
       }
@@ -338,7 +344,7 @@
         display: flex;
         flex-wrap: nowrap;
         align-items: stretch;
-        gap: 8px;
+        gap: calc(16 * var(--header-unit));
         width: auto;
       }
 
@@ -346,8 +352,8 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 18px;
-        padding: 0 5px;
+        min-height: calc(37 * var(--header-unit));
+        padding: calc(7 * var(--header-unit)) calc(11 * var(--header-unit));
         border: 1px solid var(--line);
         background: var(--button-bg);
         color: var(--ink);
@@ -367,18 +373,18 @@
       }
 
       .wb-header-card-node {
-        min-width: clamp(24px, 1.9vw, 36px);
-        font-size: clamp(8px, 0.7vw, 11px);
+        min-width: calc(49 * var(--header-unit));
+        font-size: max(12px, calc(17 * var(--header-unit)));
       }
 
       .wb-header-card-runtime {
-        min-width: clamp(50px, 3.8vw, 82px);
-        font-size: clamp(8px, 0.68vw, 10px);
+        min-width: calc(115 * var(--header-unit));
+        font-size: max(12px, calc(17 * var(--header-unit)));
       }
 
       .wb-header-section-note {
-        margin: 7px 0 0;
-        font-size: clamp(8px, 0.58vw, 10px);
+        margin: calc(12 * var(--header-unit)) 0 0;
+        font-size: max(12px, calc(20 * var(--header-unit)));
         line-height: 1.1;
         color: var(--ink);
         overflow-wrap: anywhere;
@@ -386,7 +392,7 @@
       }
 
       .wb-header-section-note a {
-        font-size: calc(100% + 2px);
+        font-size: inherit;
         color: darkgreen;
         text-decoration: none;
       }
@@ -405,15 +411,15 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 12px;
-        height: 12px;
+        width: max(16px, calc(22 * var(--header-unit)));
+        height: max(16px, calc(22 * var(--header-unit)));
         color: var(--muted);
         cursor: help;
       }
 
       .wb-header-note-help svg {
-        width: 12px;
-        height: 12px;
+        width: 100%;
+        height: 100%;
         display: block;
       }
 
@@ -451,16 +457,16 @@
       .wb-header-section.wb-header-section-tools {
         border-left: none;
         padding-right: 0;
-        padding-left: 16px;
-        justify-content: flex-start;
+        padding-left: calc(24 * var(--header-unit));
+        justify-content: center;
       }
 
       .wb-header-actions {
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 6px;
-        margin-top: 10px;
+        gap: calc(16 * var(--header-unit));
+        margin-top: 0;
       }
 
       .wb-main {
@@ -595,11 +601,16 @@
       }
 
       .wb-header-actions .wb-icon-button {
-        width: 32px;
-        height: 32px;
+        width: calc(56 * var(--header-unit));
+        height: calc(56 * var(--header-unit));
         border: none;
         background: transparent;
         border-radius: 0;
+      }
+
+      .wb-header-actions .wb-icon-button svg {
+        width: 100%;
+        height: 100%;
       }
 
       .wb-header-actions .wb-icon-button.active {
@@ -2546,6 +2557,22 @@
         }
       }
 
+      @media (min-width: 761px) and (max-width: 1200px) {
+        .wb-header {
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+
+        .wb-header-side {
+          flex-basis: 100%;
+          border-left: none;
+        }
+
+        .wb-header-section:first-child {
+          padding-left: 0;
+        }
+      }
+
       @media (max-width: 760px) {
         .settings-font-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2575,23 +2602,50 @@
         }
 
         .wb-header {
+          --header-unit: 0.65px;
+          align-items: stretch;
           flex-direction: column;
+        }
+
+        .wb-brand {
+          padding-left: 78px;
+          min-height: 72px;
+        }
+
+        .wb-logo {
+          width: 65px;
+          height: 65px;
+        }
+
+        .wb-brand-copy {
+          padding-right: 0;
+          gap: 6px;
+        }
+
+        .wb-title {
+          font-size: clamp(20px, 4.5vw, 34px);
+          white-space: normal;
+        }
+
+        .wb-subtitle {
+          font-size: clamp(12px, 2.6vw, 18px);
         }
 
         .wb-header-side {
           width: 100%;
+          border-left: none;
           flex-direction: column;
           padding-left: 0;
           padding-top: 18px;
         }
 
-        .wb-header-section {
+        .wb-header-section,
+        .wb-header-section:first-child {
           width: 100%;
           padding: 0 0 18px;
         }
 
         .wb-header-section-node-groups-end {
-          border-right: none;
           margin-right: 0;
           padding-right: 0;
         }
@@ -2613,7 +2667,7 @@
         }
 
         .wb-header-card {
-          flex: 1 1 150px;
+          flex: 0 0 auto;
         }
 
         .wb-header-actions {
@@ -2680,11 +2734,11 @@
                  rel="noopener noreferrer">&nbsp;Shared DB</a>
             </p>
           </section>
-          <section class="wb-header-section wb-header-section-node-groups-end">
+          <section class="wb-header-section">
             <div class="wb-header-section-title-row">
-              <div class="wb-header-section-title">Remote nodes</div>
+              <div class="wb-header-section-title">Remote SWI nodes</div>
               <span class="wb-header-note-help"
-                    :data-tooltip="'Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N5.'"
+                    :data-tooltip="'Open the live Discovery Hub to inspect available nodes, or jump directly to a node demonstrator with N1–N4.'"
                     aria-label="Node help">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
@@ -2698,7 +2752,7 @@
                  class="wb-header-card wb-header-card-node"
                  target="_blank"
                  rel="noopener noreferrer">Discovery Hub</a>
-              <a v-for="node in headerRemoteNodeButtons"
+              <a v-for="node in headerRemoteSwiNodeButtons"
                  :key="node.id"
                  :href="node.href"
                  class="wb-header-card wb-header-card-node"
@@ -2707,7 +2761,7 @@
                  rel="noopener noreferrer"
                  :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
             </div>
-            <p v-if="showCurrentNodeLink" class="wb-header-section-note">
+            <p v-if="!isBrowserSwiWasmMode && !headerNonSwiNodeSelected" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
                  target="_blank"
                  rel="noopener noreferrer">&nbsp;Shared DB</a>
@@ -2718,6 +2772,26 @@
               <a v-if="nodeLogoutUrl" :href="nodeLogoutUrl" @click="disconnectRemoteNode" target="_blank" rel="noopener noreferrer">Sign out</a>
               <span v-if="nodeLogoutUrl"> · </span>
               <button type="button" class="wb-button subtle" @click="refreshRemoteNode">Reconnect</button>
+            </p>
+          </section>
+          <section class="wb-header-section wb-header-section-node-groups-end">
+            <div class="wb-header-section-title-row">
+              <div class="wb-header-section-title">Remote non-SWI nodes</div>
+            </div>
+            <div class="wb-header-card-row">
+              <a v-for="node in headerRemoteNonSwiNodeButtons"
+                 :key="node.id"
+                 :href="node.href"
+                 class="wb-header-card wb-header-card-node"
+                 :class="{active: node.active}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+            </div>
+            <p v-if="headerNonSwiNodeSelected" class="wb-header-section-note">
+              <a :href="currentPortalNodeAddress"
+                 target="_blank"
+                 rel="noopener noreferrer">&nbsp;Shared DB</a>
             </p>
           </section>
           <section class="wb-header-section wb-header-section-tools">
@@ -5671,6 +5745,15 @@
                 active: currentLabel === label
               };
             });
+          },
+          headerRemoteSwiNodeButtons: function() {
+            return this.headerRemoteNodeButtons.filter(function(node) { return node.id !== "n5"; });
+          },
+          headerNonSwiNodeSelected: function() {
+            return this.headerRemoteNonSwiNodeButtons.some(function(node) { return node.active; });
+          },
+          headerRemoteNonSwiNodeButtons: function() {
+            return this.headerRemoteNodeButtons.filter(function(node) { return node.id === "n5"; });
           },
           repositoryUrl: function() {
             return PORTAL_REPOSITORY_URL;
