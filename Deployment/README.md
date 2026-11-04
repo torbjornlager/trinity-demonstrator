@@ -393,7 +393,7 @@ unchanged as the rollback configuration.
 
 Both source revisions are fixed in
 [`dependencies/trealla-port.json`](../dependencies/trealla-port.json): the Web
-Prolog port at `2ebaeb9ca78e` and the Trealla v3.14.20 engine at `841f819c7dbd`.
+Prolog port and the Trealla v3.14.20 engine. The manifest contains both full SHAs.
 The build fetches and verifies the full commit SHAs itself. It uses neither a
 sibling working tree nor an upstream tag as a build selector. Change the
 reviewed manifest to update these sources; `TREALLA_N5_VERSION` no longer selects
@@ -629,7 +629,7 @@ cancellation or presenter exit, including orphaned grandchildren.
 
 A peer-credential checked Unix broker permits only the exact HTTPS N1–N5 origins,
 with public IPv4 addresses pinned at startup, certificate and hostname validation,
-no proxy/redirect/credential forwarding, a 1 MiB UTF-8 response cap, and a two-second
+no ambient proxy, redirect or inbound-credential forwarding, a 1 MiB UTF-8 response cap, and a two-second
 absolute deadline. Egress limits are 16 active requests per query UID, 128 total,
 and 240/query, 1200/client-address group, 4800/node requests per minute.
 
@@ -656,6 +656,15 @@ python3 tools/test_n6_public.py
 ```
 
 See [the qualification record](../docs/verification/n6-public-containment-2026-11-04.json).
+The [Appendix B rollout record](../docs/verification/appendix-b-public-deployment-2026-11-04.json)
+records the current runtime and browser pins, image identities and public checks.
+The GNU worker and broker are promoted together. RPC and promises accept the
+common header, Basic/Bearer authorization and user-agent options, with UTF-8
+values and first-field precedence across case-insensitive aliases. These fields
+never configure source downloads. The broker independently validates fields;
+trusted identity fields and the pinned Host remain protected. Existing access,
+rate and resource policies still apply.
+
 All public `/portal` and `/portal/` requests permanently redirect to
 `/demonstrator`, preserving their query string. Current links use `/demonstrator`.
 

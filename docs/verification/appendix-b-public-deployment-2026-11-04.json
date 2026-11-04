@@ -1,0 +1,161 @@
+{
+  "recorded_at": "2026-11-04T22:36:35.264156+00:00",
+  "scope": "deployed public-node qualification for the common Appendix B runtime changes; not full Appendix B certification",
+  "public_nodes": [
+    "https://n0.elfenbenstornet.se",
+    "https://n1.elfenbenstornet.se",
+    "https://n2.elfenbenstornet.se",
+    "https://n3.elfenbenstornet.se",
+    "https://n4.elfenbenstornet.se",
+    "https://n5.elfenbenstornet.se",
+    "https://n6.elfenbenstornet.se"
+  ],
+  "deployed_consumer_commit": "b3f06c597e6bf189449687ebca4540ba9b749139",
+  "consumer_qualification_commit": "c74f815a00d0c022676c7177d083d922b24ad2da",
+  "pins": {
+    "swi-wasm": {
+      "package": "swipl-wasm",
+      "package_version": "8.2.5",
+      "engine_version": "10.1.19",
+      "engine_commit": "724df2b54cf1dda6fb3327d9167db2ae750c460e",
+      "tarball": "https://registry.npmjs.org/swipl-wasm/-/swipl-wasm-8.2.5.tgz",
+      "integrity": "sha512-wV0VBcuAQToNJzMU86uSKBNPBTfnlRcCA7hbF/8jh+WBNU/R9yY4fwjI/wQ/mLsTa9W27iOrAFBWSnuQyzRdPA==",
+      "bundle": "web/swipl-bundle.js",
+      "bundle_sha256": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b"
+    },
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "56b9391c28a7fd6aa844862b331c0f47f7a5dab9",
+      "version": "0.1.0",
+      "manifest_sha256": "24b4e1e637b48467c7008dc0afcbd03a77fe6f1dd897c5755aa5ede42f219ab0"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "a1e80a6258259286b6fe577b267cd941eda5434a",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "a982e464dd5087637fd412569b54917d6db807b8",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "gprolog-port": {
+      "repository": "https://github.com/torbjornlager/gprolog-port.git",
+      "revision": "8dff4798b7d8f06f6f89fc471431fe5af0511682",
+      "mode": "required for optional private or contained public N6 deployment",
+      "engine": {
+        "repository": "https://github.com/didoudiaz/gprolog.git",
+        "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+        "version": "1.6.0"
+      }
+    }
+  },
+  "public_http_fields": {
+    "pass_count": 354,
+    "fail_count": 0,
+    "nodes": [
+      {
+        "node": 1,
+        "pass": 59,
+        "fail": 0
+      },
+      {
+        "node": 2,
+        "pass": 59,
+        "fail": 0
+      },
+      {
+        "node": 3,
+        "pass": 59,
+        "fail": 0
+      },
+      {
+        "node": 4,
+        "pass": 59,
+        "fail": 0
+      },
+      {
+        "node": 5,
+        "pass": 59,
+        "fail": 0
+      },
+      {
+        "node": 6,
+        "pass": 59,
+        "fail": 0
+      }
+    ]
+  },
+  "public_actor_checks": {
+    "pass_count": 42,
+    "fail_count": 0,
+    "suites": [
+      {
+        "node": 3,
+        "suite": "creation",
+        "pass_count": 6
+      },
+      {
+        "node": 3,
+        "suite": "supervisors",
+        "pass_count": 8
+      },
+      {
+        "node": 4,
+        "suite": "creation",
+        "pass_count": 6
+      },
+      {
+        "node": 4,
+        "suite": "supervisors",
+        "pass_count": 8
+      },
+      {
+        "node": 5,
+        "suite": "creation",
+        "pass_count": 6
+      },
+      {
+        "node": 5,
+        "suite": "supervisors",
+        "pass_count": 8
+      }
+    ]
+  },
+  "public_readiness_browser_and_rpc": {
+    "pass_count": 60,
+    "fail_count": 0
+  },
+  "selected_public_assertions_pass": 456,
+  "selected_public_assertions_fail": 0,
+  "pinned_ci": {
+    "groups": 34,
+    "fail_count": 0,
+    "initial_results": "pinned-ci/results.json",
+    "full_WASM_followup": "pinned-ci-followup.json",
+    "note": "Only test fixtures changed after the built consumer commit; the full WASM tier passes after migrating private signatures and Boolean-domain expectations."
+  },
+  "consumer_wasm_scenarios": 107,
+  "runtime_services_updated": 12,
+  "qualifications": [
+    "No proxy access policy, resource budget, operator credential or persistent volume was weakened or replaced.",
+    "An overlapping initial public check batch reached the existing N1 rate cap. Those results are retained in diagnostics; the successful field rerun uses 1.5 seconds between requests.",
+    "Original CI failures and the old asynchronous supervisor expectation are retained; full corrected checks pass.",
+    "All seven public nodes serve the exact pinned browser and Worker bytes.",
+    "Rollback image tags are retained; disposable candidate containers and volumes were removed.",
+    "This promotion does not claim that every remaining Appendix B requirement is implemented."
+  ],
+  "status": "deployed",
+  "verification": {
+    "repository": "https://github.com/torbjornlager/trinity-conformance.git",
+    "revision": "cb086b813db317e764aaccb2f41e20f96ddf78d2",
+    "path": "reports/2026-11-04-appendix-b-public-deployment",
+    "sha256": "11278da8b89b36b6b5671e664bcfa6edcf8e000979fede37b78f801d2ba65da9"
+  }
+}
