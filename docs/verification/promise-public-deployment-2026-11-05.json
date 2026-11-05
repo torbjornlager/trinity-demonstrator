@@ -1,0 +1,173 @@
+{
+  "recorded_at": "2026-11-05T06:01:33.136828+00:00",
+  "scope": "public promotion of portable runtime capabilities and context-wide browser promises; not full Appendix B certification",
+  "status": "deployed",
+  "deployed_consumer_commit": "080c7068893c2e0113237dcb76f253c394f070a1",
+  "pins": {
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "45908bfecc6cf194d1c24a47e0f8bf7563032e33",
+      "version": "0.1.0",
+      "manifest_sha256": "2a62e1f1ceb57f43bd6a2367b8859539f7ceecf9f3e514692d4569f8da0b827b"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "f1db0b6cd1735f3c52202934facfbb581e0e3203",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "7862394561c10be2ee409c17a212d63be42cb8b4",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "gprolog-port": {
+      "repository": "https://github.com/torbjornlager/gprolog-port.git",
+      "revision": "3452f6b230c2a47253f68a522df47bf5b664489c",
+      "mode": "required for optional private or contained public N6 deployment",
+      "engine": {
+        "repository": "https://github.com/didoudiaz/gprolog.git",
+        "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+        "version": "1.6.0"
+      }
+    }
+  },
+  "source_commits": {
+    "swi-prolog-node": "7862394561c10be2ee409c17a212d63be42cb8b4",
+    "trealla-port": "f1db0b6cd1735f3c52202934facfbb581e0e3203",
+    "gprolog-port": "3452f6b230c2a47253f68a522df47bf5b664489c",
+    "swi-wasm-node": "45908bfecc6cf194d1c24a47e0f8bf7563032e33",
+    "trinity-demonstrator": "080c7068893c2e0113237dcb76f253c394f070a1",
+    "trinity-conformance": "39c084572aaba12cacd6ac98b8423091c55a2bbb"
+  },
+  "consumer_ci_groups": 34,
+  "consumer_wasm_scenarios": 109,
+  "clean_browser_qualification_groups": 6,
+  "public_counts": {
+    "public-verification": {
+      "pass": 60,
+      "fail": 0
+    },
+    "public-capabilities": {
+      "pass": 30,
+      "fail": 0
+    },
+    "public-browser": {
+      "pass": 42,
+      "fail": 0
+    }
+  },
+  "selected_public_assertions_pass": 132,
+  "selected_public_assertions_fail": 0,
+  "runtime_services_updated": 12,
+  "preserved": [
+    "per-service environment fingerprints",
+    "runtime users",
+    "resource and security controls",
+    "persistent mounts",
+    "existing admission services"
+  ],
+  "rollback": "Twelve previous image tags retained in rollback-images.json",
+  "diagnostics": "An initial candidate N6 harness used the wrong working directory; corrected harness passes. Original failure is retained separately. The first live browser harness targeted the optional minimal-host download route; the corrected run uses the supported public demonstrator page and preserves the initial diagnostics.",
+  "evidence_sha256": {
+    "browser-package-manifest.json": "2a62e1f1ceb57f43bd6a2367b8859539f7ceecf9f3e514692d4569f8da0b827b",
+    "browser-release-suite/results.json": "fa6ac7329144b2695a8625b828b60f6ff792086b9153789d80fe13e52f4a0aa2",
+    "browser-release-suite/schema-equivalence.txt": "dc527e011e2a847758848ee6681cdcc733569f99ff8f5c742f1612eb5f05c9f5",
+    "browser-release-suite/semantic-contracts.txt": "a7ebe02c1c4eaad4f5f91cb8998dc58d1c4b0b60e28d0e40f47d9e7e82efb651",
+    "browser-release-suite/session-api-browser.txt": "e2482d95aef7df7f8e38062ea674ef698bf3f8689f338f15f7fd3b9f0113587b",
+    "browser-release-suite/standalone.txt": "07f74fce34ff8f37488d6e59004f89ef24c2f67eebb8558690e64253410bdbf5",
+    "browser-release-suite/statechart-unit.txt": "518f36d4edf385b1102af6ab968ff7993eb1c0b499220262caf5315efda1d7ec",
+    "browser-release-suite/worker-mailbox.txt": "7f7fca869a91bd5c2462bbd33e349eddfe8f23e099edb40aa297a13d326a8bb3",
+    "build-gnu-node.txt": "9f9bb4593d02632e7599402f710f4ae9dffd79865981cc17d346aacaa6f79c5d",
+    "build-gnu-runtime.txt": "083422a41e36620c439e99f3424c2625fd3baad616e9bb3c832fc9ea83c4396a",
+    "build-hub.txt": "6547305edc78658ef4c4102390fd257befef9ca45674b9ccb615a2f775f65350",
+    "build-native.txt": "56581b839ab18890fa4326de6fe10b45e1a7e48777c94a6d445b72f7ff39d0ec",
+    "build-results.json": "6f8d08f280882614c456ebff4b0279dfaab8fa2c1a0fd3f3e25a45528061d879",
+    "build-trealla-node.txt": "580295186d0d3a890196a370976abddc64a4413266aec13e48ed7847d7a04801",
+    "build-trealla-runtime.txt": "a8f10df6b8069d3081b986fc57e5212dcaf4881b33aa7a164cf3243ba7fd8b9b",
+    "build.py": "91ecb969c8281d4cb689d29ab680a883d32537ec7c3d8fec8c47843bf36ddf47",
+    "candidate-n6-containment.txt": "5aa650d4564623fe1fc51e768cd61bb2e1bab3eda19460d93e676aa281821222",
+    "candidate-n6-driver.txt": "4e1bf2183592794d97538d112b2093b05b0a16ca90e035ed3c4cfd1cf4c6ee95",
+    "candidate-n6-fields.json": "49591169b113676c4e0d0e4ca87116c2a3050876ee6c41b6493f3fe9dae88b00",
+    "candidate-n6-fields.txt": "51b795cec041d05d8c19f926bbd1fc97e6186536b284d76aaba2b4b4314db7d3",
+    "candidate-n6-public.txt": "8e6f8915a6a76e3b7a8e774bb6998e2642c66609dcce8d2308edbe361bc269ed",
+    "candidate-n6-worker-broker.json": "dd38941a3523aec08f29c15f085b473be6ac3bde4fdd4a08de11e6bbfeab4a02",
+    "check-browser.cjs": "f1266caddfc183f7fd1ace31eac8fe0f85c7dfd7a03f3f144dd79b6c0772a2db",
+    "check-capabilities.py": "a3b1ec7f5a1e0454cbf88a85da2b3ca2408f7f393a2894eb370069d90bbd8e35",
+    "check-fields.py": "62e06f1f0f45c5179b080b2b0294aab748f805d8e3007353a28571850e3be364",
+    "check-n6.py": "dabcac4b4316ec7bc7ed5d0cfc9e7e832bf43635bc1a9db15651a6cf7f91e3df",
+    "consumer-revision.txt": "cfc972a2fab73748ff7abea395cdeb4e9417ea6e355ddfecb9c3f75e0ea97272",
+    "consumer-scenarios.json": "940e918153affb6d3d13a07044ff45bfd68fc2d46e1c5851d0603ec86ce8ac14",
+    "diagnostics/candidate-n6-driver-initial.txt": "c483d5343f559e8277b1ede54c44191514bbc2af1f77534ece19ccb59dc90e1e",
+    "diagnostics/candidate-n6-public-initial.txt": "87b1f47b158e638b1bd2910cbdccb1ffe93ef7d10a605bef971bc6ae7f15d5c4",
+    "diagnostics/download-route-public-browser.json": "ad2c2f5f50935c2393acf83e29e1f333825e53cd5f84f3e6b49c0432d0fd62ca",
+    "diagnostics/download-route-public-browser.txt": "a22dd756374f2c1588f38cfbb67dd60c6be851107dbb2eadd8c9ea077d6684ca",
+    "finalize.py": "41dd53b87ea2f7638eac324b708ee36553e70b9a30f07ad96f9081ce7b9efd22",
+    "github-browser-ci.json": "f01f902b6dbfbc6506d33f6ed93f46d13e9ab74d98e6382193cfdf47729d1ac2",
+    "github-consumer-ci.json": "ce14a489dc9954edd26111f8dd979a0fe263cfb823536136e46ebd4a1256317b",
+    "inventory.py": "b1ba840a298c005ee33c07b0e18bd44764f25a7cc883b414018e4297024ee95a",
+    "inventory.txt": "1119813f77e6bba15135209a95e6b066497751b39860225bad67b78ed672aa06",
+    "pinned-ci/LINT.txt": "5148f43b35361c051cd524dd09c1eddf2724c8704a81e6fbaecfb3eda38b676a",
+    "pinned-ci/T0.txt": "0ebb7525890b08088de0b00e16c59a171b6cdb887c0ff280e3527ba7cb14aff0",
+    "pinned-ci/T1_INTEGRATION.txt": "905c619502e09925063a8b5f13e9a6eec7698e4fdaad47a00451923d960ce66e",
+    "pinned-ci/T1_NATIVE.txt": "8957499316508569cfdfb20c49e80c73559191f14c6264bdc2b4e00815b3353d",
+    "pinned-ci/T2.txt": "c217cd9fe56041958543ef90bccb41606165def7ce970d76c820181e5ff1759c",
+    "pinned-ci/T3_INTEGRATION.txt": "9348cfb7781260488cc08bfb35fc4778e7ad76c0a6e761aa6bbcdc32d94ecab9",
+    "pinned-ci/T3_NATIVE.txt": "2256acea68bdcb2437c39cbcc69507ce93396793a0deddb72ddc3cdcb2658dda",
+    "pinned-ci/T4_INTEGRATION.txt": "1697efb19c2ec6ad7b478cc105b88e982c7c4e9121bf73add4bd86d41ae016be",
+    "pinned-ci/T4_NATIVE.txt": "fda9917c05f4d03642186b16cbff67985eb3b05b2b6ee901dde95aebd1bd2373",
+    "pinned-ci/T5.txt": "7261658f3b6799a8557ccef3f9bdfce364217bd953ffc4223574838b79276b92",
+    "pinned-ci/TEXT.txt": "c5d847ba4c2fbedd536f2b493fd539bbd5c9f83bff9ffc97c01ee887499684cc",
+    "pinned-ci/WASM.txt": "b18a7a61f81716127397cb3fb4f80aac6b8beed95eed5cd11a70917f4d25b54f",
+    "pinned-ci/browser-equivalence.txt": "dc527e011e2a847758848ee6681cdcc733569f99ff8f5c742f1612eb5f05c9f5",
+    "pinned-ci/browser-pin-regressions.txt": "b3fe14aa23e41ca2d89836feaf3c9d29f8799e9238f8c176b79e5612072f7405",
+    "pinned-ci/ci-runner-regressions.txt": "e62d2e47645f3f3bdb3f48df17d3f99bc6e09a750a4fe8125c55cb31591da44e",
+    "pinned-ci/cross-origin-native-integration.txt": "ce00f280587fbc071d73786cdea17091a4fb18867383aa2cf38816dac76e869a",
+    "pinned-ci/default-startup-regressions.txt": "aab2db8d0989f514791cdaacefd9b2843fc383a6ce760c90840a701c214cfc4e",
+    "pinned-ci/demonstrator-DEMONSTRATOR.txt": "9a75ae72fd8092d0c10ddb155237abb773447b697a00080090de6bc885b6dd70",
+    "pinned-ci/demonstrator-JEV.txt": "5bdfc03b79f85add7ee22e2e13a9fcb9741b1e5eed67aa7cafc27b02e926b6fe",
+    "pinned-ci/demonstrator-LINDA.txt": "7474c364f10b40a6cb40d491f901a8ff3f2a1f13aa2695481c688a87300f2502",
+    "pinned-ci/demonstrator-MODEL.txt": "79e2c2279707384967d15fb88cc1b9917133b0758f0c1f16458ca4df180c808e",
+    "pinned-ci/demonstrator-MODEL_SXML.txt": "6545c16561253a8562a564e20a965173707c5588046731ce278d955b81419e3a",
+    "pinned-ci/demonstrator-SERVICE_TEXT.txt": "4820c5f308a5237ae9b7c340d8435a4d190bc204e26b2921eb90366bd15f5524",
+    "pinned-ci/discovery-regressions.txt": "e22b765e51488bb329666edcb2eba260cc08ebffca02086aed4315d7e6dc7208",
+    "pinned-ci/fetch-regressions.txt": "a82232ff77ffcf3f682db975b9977e509be7f04bf897873c8f20341ca44d90c3",
+    "pinned-ci/host-url-regressions.txt": "e3e1c15f150ddf3f5fb113e5ea8e801fe9fcf0b966ad329ccda00de01140b0fb",
+    "pinned-ci/https-sso-probe-regressions.txt": "feabb4add9e2ca3374e538560634d1ec97dc4f4ce89aab12f3d726e36ea9b2f6",
+    "pinned-ci/native-swi.json": "2ef6bb4765d20d772f807f288d5f9c9842a90f8bab2355c72c9b6518734795b3",
+    "pinned-ci/origin-audit.txt": "f60f44554c30ce5a14121055f59c0c103edb005324e91d5f56c12d1c8a7bcdbf",
+    "pinned-ci/packaging-regressions.txt": "bfa4b49be5c6f11eba2a7ed9ab4c701474964b6f4e56e354b90185b1c584ed8b",
+    "pinned-ci/pin-regressions.txt": "8432190d2ff7d2e3b4ea2644d3e39bcbfabbcdb1e897f5553501bd717f5d0a37",
+    "pinned-ci/portal-runtime-regressions.txt": "604635b07d2387aaa15f99885860780ba7a406224dbbcf3f5c154d13d667cba2",
+    "pinned-ci/provenance.json": "b662d271c34ffda8627a15d5cd8d7a888a41e610fb0c301d1a36dfffc815f064",
+    "pinned-ci/results.json": "fab7d7cb13912de8952d7a6918c5060fe2eeaf2ce120ad8f10ec9a95eae5f283",
+    "pinned-ci/setup.txt": "2ef6bb4765d20d772f807f288d5f9c9842a90f8bab2355c72c9b6518734795b3",
+    "pinned-ci/static-distribution-regressions.txt": "23dc01d7d182706fd51ff8e91eef9f5724778c4b879195c4c96066274871a03c",
+    "pinned-ci/trealla-pin-regressions.txt": "f45733a1b0f0fabcf68c7774598fdccc2ee52dde89a6ed50b7fb376daa5fdca8",
+    "pinned-ci/watchdog-regressions.txt": "27733270c514e021b8edfa26bce132bcc2210fcd3eebea9f913f445dbe8ff756",
+    "public-before.json": "881ab865ee7ecb51c4ca125e1df1c4276f9144c987c9d99adab3db76aa424d6e",
+    "public-browser.json": "28d3781d1d991f5aeaf5bdc61f6b92e2bf896027a2325d1346a065a6b32720b3",
+    "public-browser.txt": "0eb110001477aa7e0732872f88d3b92ff12dd758ed5381266af48f64ca179467",
+    "public-capabilities.json": "eeefb6574143fe75e998eddeb7eca998b264f59aacca67f5b83d905df2e0b69d",
+    "public-capabilities.txt": "57600b362e09fd196a13c00f7c8d2af44a8202c3e9b95dd72ad2e516b8dbf17c",
+    "public-verification.json": "fe8d28d5b04330d62d929b5bfd6fb0909d377f390de7c56533ab705a66997dc0",
+    "public-verification.txt": "0ce090338164dd5187d8b9879e57972b8cd5d94cf868ca65769a58ee9725435c",
+    "rollback-images.json": "c3e08b50fda64533b2235e11283e2c705d1551ee681be89cc594dcb5eed9a692",
+    "rollout-results.json": "cba594d6c6e16645a0c9531ce8e27ff66c90ca1becbbb42d81f8f2c2bd01e668",
+    "rollout.py": "e72d2e50f617cdbecaa6f6bc30e2b6d433fa7150165e48d088bd08d0c90264c0",
+    "rollout.txt": "e2cac745a135b59672334dcc7ad4b01e73090ccbec5dfb31c4a65136f6b30753",
+    "running-runtime-pins.json": "94c2b4957451daf8b17df45ae202e8ec516ae36cebb2d1ee698bdcd7079d6678",
+    "verify-public.py": "726b04e9b99baf93ce0364ff14a8d5181ea34f193df300b15ec864376333f017"
+  },
+  "verification": {
+    "repository": "https://github.com/torbjornlager/trinity-conformance.git",
+    "revision": "3bf722bd4e5efd0f019959d3768cf32b61c220ee",
+    "path": "reports/2026-11-05-public-promise-release",
+    "sha256": "2b8282a049502d053378281feb24cae0b271fef4f1867f9da0fb1d249d94df11"
+  }
+}
