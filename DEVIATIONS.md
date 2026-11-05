@@ -307,3 +307,12 @@ and public promotion are recorded separately in the conformance repository.
 The release qualification found and repaired nested `forall/2` validation on N5.
 Both callbacks now use guarded invocation, preserving lazy unused tests inside
 `findall/3`; every shared library case also has a nested Trealla control.
+
+Standard-library release, 5 November 2026: all twelve public runtime/asset
+services run images built from consumer `1b04f27`. The required library forms
+and exact callable callback errors pass the 112-case shared selection. The N5
+follow-up preserves lazy `forall/2` callbacks inside nested meta-calls. All 36
+pinned CI groups and 2,379 selected public checks pass; persistent state and
+admission configuration are retained.
+
+Release evidence: [standard-library release](https://github.com/torbjornlager/trinity-conformance/tree/codex/conformance-adapter-fixes/reports/2026-11-05-standard-library-release).

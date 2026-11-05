@@ -1074,3 +1074,12 @@ The N5 owner adapter maps N3/N4's exact public node URLs to their private Docker
 WebSocket listeners, matching the named SWI launchers. Public URLs stay in PIDs;
 only the dial endpoint changes. This requires the pinned Trealla endpoint hook
 and the shared Compose network. Other destinations use their ordinary URL.
+
+Standard-library release, 5 November 2026: all twelve public runtime/asset
+services run images built from consumer `1b04f27`. The required library forms
+and exact callable callback errors pass the 112-case shared selection. The N5
+follow-up preserves lazy `forall/2` callbacks inside nested meta-calls. All 36
+pinned CI groups and 2,379 selected public checks pass; persistent state and
+admission configuration are retained.
+
+Release evidence: [standard-library release](https://github.com/torbjornlager/trinity-conformance/tree/codex/conformance-adapter-fixes/reports/2026-11-05-standard-library-release).
