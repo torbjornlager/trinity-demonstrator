@@ -7,10 +7,12 @@ native SWI node is supplied by the separate
 The native SWI pack remains named `web_prolog`, with the existing
 `library(web_prolog)` imports.
 
-The 5 November public release deploys portable runtime capabilities and
-context-wide browser promises to N0–N6. All 34 pinned consumer CI groups and
-132 selected live assertions pass; [the release record](docs/verification/promise-public-deployment-2026-11-05.json)
-records exact pins and evidence. This is scoped qualification, not complete
+The 6 November public release updates N0–N6 to the qualified library, context
+and monitor runtimes. All 147 public monitor assertions pass. Of 303 selected
+public observations, 302 pass; one N5 self-route context probe returns HTTP 502
+and remains an open transport follow-up. The
+[release record](docs/verification/monitor-public-deployment-2026-11-06.json)
+contains exact pins and evidence. This is scoped verification, not complete
 Appendix B conformance.
 
 **Status: pre-release.** The native SWI implementation is maintained only in

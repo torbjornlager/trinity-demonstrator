@@ -1,0 +1,160 @@
+{
+  "status": "deployed_with_transport_followup",
+  "consumer_image_revision": "745d5a53b4f87a730ba9d378be675974ca763335",
+  "runtime_pins": {
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "cfaec8c81426acd46e52dc5c46bc4288d071d74b",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "3905d6360e581b90711f489346d8239629f9cdf1",
+      "version": "0.1.0",
+      "manifest_sha256": "46c3a6bb9f20f7fc88fde50f099ac051f4771c3447c2d2d19e598ddcf37a9e26"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "677be6575a3fea286a8a1bb45103273d99d7cb5a",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "gprolog-port": {
+      "repository": "https://github.com/torbjornlager/gprolog-port.git",
+      "revision": "dfea5e164396e80af7e1708ed0f5f1f98b4ad8ca",
+      "mode": "required for optional private or contained public N6 deployment",
+      "engine": {
+        "repository": "https://github.com/didoudiaz/gprolog.git",
+        "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+        "version": "1.6.0"
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "deployment-wp_n5-1",
+      "image_id": "sha256:a154f4ab1b36ba71ac12d32e85fa6e844a955b3b9d06e253c62a1c80261285e5",
+      "running": true,
+      "health": "healthy",
+      "configuration_preserved": true
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "trinity-n6-host-wp_n6-1",
+      "image_id": "sha256:5139fad0fca8d5d5bd140619b95896139fa5024669f69ac89cf82ff031839d01",
+      "running": true,
+      "health": "healthy",
+      "configuration_preserved": true
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "trinity-n6-local-wp_n6-1",
+      "image_id": "sha256:5139fad0fca8d5d5bd140619b95896139fa5024669f69ac89cf82ff031839d01",
+      "running": true,
+      "health": "healthy",
+      "configuration_preserved": true
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:d4bf3bb6056df054aecf5a27317db23e0d4e5e2ccdba7ca7f33eccba6cb8ad3b",
+      "running": true,
+      "health": "HTTP readiness checked",
+      "configuration_preserved": true
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:6aab32e33e22b0b9f62195e2c2359a3294b75bf7dbe68425200e3271cff3a542",
+      "running": true,
+      "health": "healthy",
+      "configuration_preserved": true
+    }
+  ],
+  "public_checks": {
+    "monitors": {
+      "pass_count": 147,
+      "fail_count": 0
+    },
+    "browser": {
+      "pass_count": 42,
+      "fail_count": 0
+    },
+    "readiness_assets_rpc": {
+      "pass_count": 60,
+      "fail_count": 0
+    },
+    "retained_contexts": {
+      "pass": 50,
+      "fail": 1,
+      "blocked": 0,
+      "error": 0
+    },
+    "pingpong": {
+      "pass_count": 3,
+      "fail_count": 0
+    }
+  },
+  "selected_public_passes": 302,
+  "selected_public_failures": 1,
+  "temporary_credentials_revoked": 9,
+  "source_spawn_policy_unchanged": true,
+  "open_issues": [
+    {
+      "case": "CTX-015-trealla-b",
+      "summary": "N5 self-route promise owner received an HTTP 502 transport error; original short-wait timeout and bounded-retry error are retained. No production deadlines or admission policies changed.",
+      "evidence": "public-contexts/results.json"
+    }
+  ],
+  "evidence": "https://github.com/torbjornlager/trinity-conformance/blob/codex/conformance-adapter-fixes/reports/2026-11-06-monitor-public-release/README.md"
+}
