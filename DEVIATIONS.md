@@ -303,3 +303,7 @@ is in `docs/verification/wasm-character-text-2026-10-25/REPORT.md`.
 The standard-library release pins all four upstream repairs, including exact
 callable callback errors at invocation and lazy unused callbacks. Release checks
 and public promotion are recorded separately in the conformance repository.
+
+The release qualification found and repaired nested `forall/2` validation on N5.
+Both callbacks now use guarded invocation, preserving lazy unused tests inside
+`findall/3`; every shared library case also has a nested Trealla control.
