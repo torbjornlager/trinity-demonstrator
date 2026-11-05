@@ -20,6 +20,7 @@ diagnostic and node metadata additions preserve every pre-existing wire field.
 
 | date | deviation | rationale |
 |------|-----------|-----------|
+| 2026-11-05 | Complete required standard-library facilities in development runtime sources: SWI/browser high-arity `maplist` and `countall`, guarded GNU library entry points, and Trealla callback scope/error handling. | Shared cases check the Appendix B forms and described solution/binding semantics across all five runtime modes. Native/session, sandbox, copied-source and browser-child controls supplement them. Dependency pins and public nodes are unchanged pending a separate release. |
 | 2026-11-05 | Trealla exports public output calls for remote actors after local validation, and decodes incoming formatted SWI text for browser display. | Repairs N5's remote ping-pong hang: the destination previously received Trealla's private `sandbox_format/2` helper and failed, while the example waited for successful completion. Upstream regressions cover copied predicates, inline goals, acknowledged output and normal completion. Committed, pinned and deployed to N0–N6. Live verification covers the repaired public paths. |
 | 2026-11-05 | Retain the Appendix B `localhost` destination for RPC and promises. Trealla resolves its local listener; contained GNU routes only the local stateless endpoint through its trusted broker, preserving caller-fetched source and private databases. | Closes the reported implementation gap without restoring `Host:Port` terms or relaxing external peer egress restrictions. The controller/broker lease records budget and client identity; broker-derived continuation owners and controller credentials remain outside query workers. Committed, pinned and deployed to N0–N6. Live verification covers the repaired public paths. |
 | 2026-11-05 | Browser promise references now belong to the runtime client context and can be collected/disposed across its main engine and Workers. Creator exit and shell replacement retain them; collector interruption releases only its claims. | Aligns promise ownership with Appendix B. Context closure retires promises and closes admission. The clean pinned release is deployed to N0–N6; real-browser checks exercise its served assets in both execution modes. |
@@ -298,3 +299,7 @@ The experimental portable-text profile remains separate from cumulative profiles
 Author-directed migration. Pinned by `portable_text_worker` and
 `portable_text_main` in `tests/wasm/swi_wasm_contracts.js`; boundary and UI evidence
 is in `docs/verification/wasm-character-text-2026-10-25/REPORT.md`.
+
+The standard-library release pins all four upstream repairs, including exact
+callable callback errors at invocation and lazy unused callbacks. Release checks
+and public promotion are recorded separately in the conformance repository.
