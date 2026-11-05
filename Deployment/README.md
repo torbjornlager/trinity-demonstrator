@@ -1124,3 +1124,16 @@ recorded alongside passing reruns; no runtime repair is claimed for either.
 Runtime pins, state, resource controls and credential mounts are unchanged.
 Evidence: [cluster peer-policy release](https://github.com/torbjornlager/trinity-conformance/tree/codex/conformance-adapter-fixes/reports/2026-11-05-cluster-peer-policy).
 This documentation follow-up does not change the deployed image revision.
+
+
+Successor validation release, 5 November 2026: N5 now runs consumer image source
+`a44c23d`, pinned to Trealla port `5741bd7`. One shared integer relation gives
+client and owner calls consistent succ/2 validation, including private/copied
+source and receive paths. All 38 consumer CI groups, 311 Linux candidate library
+controls, and 268 selected public assertions pass. All 123 root Prolog source
+files match the committed qualified runtime. N5's environment, security/resource
+controls and state/log/read-only credential mounts are unchanged; eleven other
+runtime/asset images are unchanged. The engine, native SWI, GNU and browser source
+pins are unchanged. Temporary verification credentials were revoked.
+Evidence: [public successor repair](https://github.com/torbjornlager/trinity-conformance/tree/codex/conformance-adapter-fixes/reports/2026-11-05-successor-public-release).
+This documentation follow-up does not change the deployed image revision.
