@@ -10,8 +10,11 @@
 const fs = require("fs");
 const path = require("path");
 
-const runtime = require("../../web/vendor/swi-wasm-node.js");
-const runtimeSource = fs.readFileSync(path.join(__dirname,"../../web/vendor/swi-wasm-node.js"),"utf8");
+// The test runner selects and validates this package; standalone callers may
+// keep using the consumer's assembled runtime symlinks.
+const runtimeRoot = process.env.SWI_WASM_PACKAGE_ROOT || path.join(__dirname,"../..");
+const runtime = require(path.join(runtimeRoot,"web/vendor/swi-wasm-node.js"));
+const runtimeSource = fs.readFileSync(path.join(runtimeRoot,"web/vendor/swi-wasm-node.js"),"utf8");
 const source = fs.readFileSync(
   path.join(__dirname, "..", "..", "web", "demonstrator.html"),
   "utf8"
@@ -24,7 +27,7 @@ if (!prologQuotedTextMatch) {
 }
 const prologQuotedText = Function("text", prologQuotedTextMatch[1]);
 const workerSource = fs.readFileSync(
-  path.join(__dirname, "..", "..", "web", "swi_wasm_actor_worker.js"),
+  path.join(runtimeRoot, "web", "swi_wasm_actor_worker.js"),
   "utf8"
 );
 const workerToplevelOptionHelpersSource = workerSource.slice(
@@ -1076,7 +1079,7 @@ ok(includes("function settleReject(error)") &&
    includes("remote actor connection timed out:") &&
    includes("remote actor connection closed before ready:"),
    "remote connection settles once: rejects on close-before-open and on timeout, so the connect promise never parks");
-ok(workerSource.includes('action === "input" ? null'),
+ok(workerSource.includes('action === "input" || action === "promise_wait" ? null'),
    "worker input is exempt from the coordinator request timeout");
 ok(includes('root.crypto.getRandomValues(values);') &&
    includes('var values = new Uint8Array(5);') &&
@@ -1371,21 +1374,21 @@ ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout)') &&
    workerSource.includes('canonical_source_option(Option, src_predicates(Indicators))') &&
    includes('case "rpc":') &&
-   includes('requestSwiWasmWorkerRpc: function(message, ownerPid)') &&
+   includes('requestSwiWasmWorkerRpc: function(message, ownerPid, contextResource)') &&
    includes('url.searchParams.set("once", "true")') &&
    includes('setTimeout(function() { timedOut = true; controller.abort(); }, httpTimeout * 1000)'),
    "both SWI-WASM rpc/3 models keep initial transport offset internal");
 ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
-   workerSource.includes('RefText := actorPromiseStart(') &&
+   workerSource.includes('RefPromise := actorPromiseStart(') &&
    workerSource.includes('option(offset(Offset), Options, 0)') &&
    includes('(member(offset(Offset), Opts) -> true ; Offset = 0)') &&
    workerSource.includes('Promise := actorPromiseWait(') &&
    workerSource.includes('settleWait(entry, null)') &&
    workerSource.includes('option(on_timeout(OnTimeout), Options, true)'),
    "both browser models provide non-consuming yield timeouts with the common default");
-ok(workerSource.includes('runtime_property(implementation(swi_wasm_worker)).') &&
+ok(workerSource.includes('runtime_property(actor_isolation(independent)).') &&
    workerSource.includes('runtime_property(inbound_addressable(false)).') &&
-   includes('runtime_property(implementation(swi_wasm_main)).') &&
+   includes('runtime_property(actor_isolation(cooperative)).') &&
    includes('runtime_property(dom(true)).'),
    "browser runtimes expose their host capabilities through runtime_property/1");
 ok(workerSource.includes('self(main@localhost).') === false &&
