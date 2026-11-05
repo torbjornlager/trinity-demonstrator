@@ -1112,3 +1112,15 @@ allowlists; no policy was broadened to make a test pass. The conformance
 repository's `reports/2026-11-05-native-context-release/` retains rollback images,
 exact running pins, policy exclusions and verification evidence. This follow-up
 note does not change the deployed image source revision.
+
+
+Cluster peer-policy release, 5 November 2026: all twelve runtime/asset services
+run images built from consumer `1581acc`. N3/N4 now allow N5 source loading and
+spawning; N5 now allows N3. The final public context selection passes 51/51
+without exclusions, and six external-origin denial controls plus 60 public smoke
+checks pass. All 38 consumer CI groups qualify after a complete WASM rerun.
+One intermediate N5 promise timeout and the initial browser CI failure remain
+recorded alongside passing reruns; no runtime repair is claimed for either.
+Runtime pins, state, resource controls and credential mounts are unchanged.
+Evidence: [cluster peer-policy release](https://github.com/torbjornlager/trinity-conformance/tree/codex/conformance-adapter-fixes/reports/2026-11-05-cluster-peer-policy).
+This documentation follow-up does not change the deployed image revision.
