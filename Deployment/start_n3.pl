@@ -67,7 +67,8 @@ start_n3 :-
             'https://n1.elfenbenstornet.se',
             'https://n2.elfenbenstornet.se',
             'https://n3.elfenbenstornet.se',
-            'https://n4.elfenbenstornet.se'
+            'https://n4.elfenbenstornet.se',
+            'https://n5.elfenbenstornet.se'
         ]),
         load_shared_db_file(CommonSharedDBPath),
         load_shared_db_file(ActorCommonSharedDBPath),
