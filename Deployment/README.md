@@ -1070,6 +1070,21 @@ Mounts remain read-only. Retain every overlay used by the running deployment;
 when N6 is present, `compose.gprolog-n6-caddy.yaml` must also follow the public
 N5 overlay so rebuilding Caddy retains N6 routing and its network attachment.
 
+Native retained-context propagation requires N5 to authenticate outgoing transports
+and their return paths too. The pinned Trealla launcher now accepts the same
+`WP_PEER_TRANSPORT_TOKENS_FILE` format, validates every entry and rejects extra
+terms without printing credentials. Configure exact public destination URLs for
+N3/N4 (and other permitted peers), with owner-issued `execute,internal_transport`
+tokens accepted by those destinations. Ordinary browser credentials remain separate.
+
+Add `compose.peer-transport-n5.yaml` **after** the public N5 overlay, and set
+`WP_N5_PEER_TOKENS_FILE` to the owner-only credential file. On hosts without bind
+mounts, use `compose.peer-transport-n5-volumes.yaml` and
+`WP_N5_PEER_TOKENS_VOLUME` instead. The volume contains `peers.pl`, readable by
+UID 10001. The public N5 overlay overrides its volumes, so reversing this overlay
+order would discard the credential mount. Both variants mount credentials
+read-only; neither creates tokens or changes a running node.
+
 The N5 owner adapter maps N3/N4's exact public node URLs to their private Docker
 WebSocket listeners, matching the named SWI launchers. Public URLs stay in PIDs;
 only the dial endpoint changes. This requires the pinned Trealla endpoint hook

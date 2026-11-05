@@ -1,0 +1,8 @@
+# Add after the public N5 overlay so its volume override retains this mount.
+# Owner-provisioned destination URL - bearer token pairs; no credentials in Git.
+services:
+  wp_n5:
+    environment:
+      WP_PEER_TRANSPORT_TOKENS_FILE: /run/secrets/peer-transport.pl
+    volumes:
+      - ${WP_N5_PEER_TOKENS_FILE:?Set WP_N5_PEER_TOKENS_FILE}:/run/secrets/peer-transport.pl:ro
