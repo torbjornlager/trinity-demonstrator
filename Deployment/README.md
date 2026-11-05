@@ -665,6 +665,13 @@ never configure source downloads. The broker independently validates fields;
 trusted identity fields and the pinned Host remain protected. Existing access,
 rate and resource policies still apply.
 
+The development `localhost` repair adds one broker route for `rpc` and
+`promise`: the fixed local stateless `/call` endpoint. It grants no arbitrary
+loopback or source access. Root-owned leases carry the originating client
+identity and IP budget; the broker derives continuation owners and supplies
+controller credentials without passing them to workers. The controller and
+broker must be promoted together. This repair is not yet in the release pins.
+
 All public `/portal` and `/portal/` requests permanently redirect to
 `/demonstrator`, preserving their query string. Current links use `/demonstrator`.
 

@@ -2,6 +2,8 @@
 from collections import defaultdict
 from http.server import BaseHTTPRequestHandler
 import http.client
+import hashlib
+import hmac
 import io
 import ipaddress
 import os
@@ -103,11 +105,23 @@ class PinnedHTTPS(http.client.HTTPSConnection):
             raise
 
 
+class LocalRPCConnection(http.client.HTTPConnection):
+    """One fixed controller listener, with the same absolute transport deadline."""
+    def __init__(self, port, timeout):
+        super().__init__('127.0.0.1', port, timeout=timeout)
+        self.deadline = time.monotonic() + timeout
+
+    def connect(self):
+        raw = socket.create_connection(('127.0.0.1', self.port), self.timeout)
+        self.sock = DeadlineSocket(raw, self.deadline)
+
+
 class Broker(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
     daemon_threads = True
     request_queue_size = 128
 
-    def __init__(self, path, peers, leases):
+    def __init__(self, path, peers, leases, local_rpc=None):
+        self.local_rpc = local_rpc
         self.peers, self.leases = dict(peers), Path(leases)
         self.context = ssl.create_default_context()
         self.lock = threading.Lock()
@@ -119,18 +133,21 @@ class Broker(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         if not str(path).startswith('\0'):
             os.chmod(path, 0o666)
 
-    def group(self, uid):
+    def lease(self, uid):
         fd = os.open(self.leases / str(uid), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
         try:
             info = os.fstat(fd)
-            if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_size != 65:
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_size != 130:
                 raise ValueError('invalid_lease')
-            value = os.read(fd, 66).decode('ascii').strip()
-            if len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
+            values = os.read(fd, 131).decode('ascii').splitlines()
+            if (len(values) != 2 or any(len(v) != 64 or any(c not in '0123456789abcdef' for c in v) for v in values)):
                 raise ValueError('invalid_lease')
-            return value
+            return tuple(values)
         finally:
             os.close(fd)
+
+    def group(self, uid):
+        return self.lease(uid)[0]
 
     def process_request(self, connection, address):
         pid, uid, gid = struct.unpack('3i', connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
@@ -213,9 +230,16 @@ class BrokerHandler(BaseHTTPRequestHandler):
             if len(url.encode()) > 262144 or any(ord(c) <= 32 or ord(c) == 127 for c in url):
                 return self.reply(403)
             target = urlsplit(url)
-            if (purpose not in ('rpc', 'source') or target.scheme != 'https'
+            # localhost is a language node designator. This reserved route can
+            # reach only /call on the configured controller, never arbitrary
+            # loopback resources, source URLs or administration endpoints.
+            local_rpc = getattr(self.server, 'local_rpc', None)
+            local = (local_rpc is not None and purpose == 'rpc'
+                     and target.scheme == 'http' and target.netloc == 'localhost'
+                     and target.path == '/call' and not target.fragment)
+            if (not local and (purpose not in ('rpc', 'source') or target.scheme != 'https'
                     or target.hostname not in self.server.peers or target.port not in (None, 443)
-                    or target.username is not None or target.password is not None or target.fragment):
+                    or target.username is not None or target.password is not None or target.fragment)):
                 return self.reply(403)
             if owner and (len(owner) != 64 or any(c not in '0123456789abcdef' for c in owner)):
                 return self.reply(400)
@@ -227,9 +251,25 @@ class BrokerHandler(BaseHTTPRequestHandler):
             headers.update(request_headers(fields.get('headers', [''])[0], purpose, owner))
             if owner and purpose == 'rpc':
                 headers['x-web-prolog-query-owner'] = owner
-            peer = self.server.peers[target.hostname]
-            ipaddress.ip_address(peer)
-            connection = PinnedHTTPS(target.hostname, peer, timeout, self.server.context)
+            if local:
+                if not owner:
+                    return self.reply(403)
+                # Credentials remain in the broker. Bind delegated execution to
+                # the authenticated worker's lease budget, never supplied headers.
+                group, context = self.server.lease(self.client_address[1])
+                port, token = local_rpc
+                # A worker-supplied nonce cannot address a different client's
+                # cached continuation, including clients sharing an IP budget.
+                headers['x-web-prolog-query-owner'] = hmac.new(
+                    token.encode(), ('local-rpc:' + context + ':' + owner).encode(),
+                    hashlib.sha256).hexdigest()
+                headers['authorization'] = 'Bearer ' + token
+                headers['x-web-prolog-query-budget'] = group
+                connection = LocalRPCConnection(port, timeout)
+            else:
+                peer = self.server.peers[target.hostname]
+                ipaddress.ip_address(peer)
+                connection = PinnedHTTPS(target.hostname, peer, timeout, self.server.context)
             try:
                 connection.request('GET', path, headers=headers)
                 response = connection.getresponse()

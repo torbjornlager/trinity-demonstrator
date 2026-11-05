@@ -40,6 +40,8 @@ def plan(native, wasm, swipl):
         ('pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_swi_dependency.py']),
         ('browser-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_browser_dependency.py']),
         ('trealla-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_trealla.py']),
+        ('n6-egress-regressions', ROOT, [sys.executable, 'tests/test_n6_egress.py']),
+        ('n6-adapter-regressions', ROOT, [sys.executable, 'tests/test_n6_adapter.py']),
         ('static-distribution-regressions', ROOT, [sys.executable, 'tests/test_static_demonstrator.py']),
         ('https-sso-probe-regressions', ROOT, [sys.executable, 'tests/test_https_sso_probe.py']),
         ('host-url-regressions', ROOT, ['node', 'tools/test-trinity-host.cjs']),
