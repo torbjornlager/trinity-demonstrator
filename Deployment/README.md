@@ -1098,3 +1098,17 @@ pinned CI groups and 2,379 selected public checks pass; persistent state and
 admission configuration are retained.
 
 Release evidence: [standard-library release](https://github.com/torbjornlager/trinity-conformance/tree/codex/conformance-adapter-fixes/reports/2026-11-05-standard-library-release).
+
+
+Native retained-context release, 5 November 2026: all twelve public runtime and
+asset services now run images built from consumer `3c8702a`, with native SWI
+`c826111`, Trealla `62e93c3`, and browser provenance `f5fbafb`. The N5 owner peer
+volume is mounted read-only; its persistent public self-route credential was
+verified after restart. N3/N4 private-Docker transports retain their existing
+trust boundary. State/log volumes, users, limits and admission settings are
+preserved. All 38 consumer CI groups and 2,421 selected public checks pass.
+Nine native context cases are excluded by the unchanged spawn destination
+allowlists; no policy was broadened to make a test pass. The conformance
+repository's `reports/2026-11-05-native-context-release/` retains rollback images,
+exact running pins, policy exclusions and verification evidence. This follow-up
+note does not change the deployed image source revision.
