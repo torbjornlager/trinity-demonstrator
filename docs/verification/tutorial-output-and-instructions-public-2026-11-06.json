@@ -1,0 +1,1184 @@
+{
+  "status": "deployed",
+  "date": "2026-11-06",
+  "scope": "Actor nl/0 output, stateless service-policy tutorial loading, profile-boundary instructions, server-down display, and timeout text. Selected regressions and deployment checks.",
+  "consumer_image_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+  "verification_harness_revision": "adbe35bc9071e3d6bcff538e7bb7117b1c38eed2",
+  "trealla_dependency": {
+    "repository": "https://github.com/torbjornlager/trealla-port.git",
+    "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db",
+    "mode": "required for optional Trealla N5 builds",
+    "engine": {
+      "repository": "https://github.com/trealla-prolog/trealla.git",
+      "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+      "version": "3.14.20"
+    }
+  },
+  "builds": [
+    {
+      "component": "native",
+      "image": "trinity-tutorial-output-native:20261106",
+      "exit_code": 0,
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "seconds": 6.05,
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5"
+    },
+    {
+      "component": "hub",
+      "image": "trinity-tutorial-output-hub:20261106",
+      "exit_code": 0,
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "seconds": 0.45,
+      "image_id": "sha256:82a25f511699111b61cbb98f59685369b95a144cc5023d8fe802b393a46d0ee6"
+    },
+    {
+      "component": "trealla-runtime",
+      "image": "trinity-tutorial-output-trealla-runtime:20261106",
+      "exit_code": 0,
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "seconds": 14.6,
+      "image_id": "sha256:01fbc87f2100aef1ff588e30d24fec8d2d879c8702bfd6d873af2884cdf57fac"
+    },
+    {
+      "component": "n5",
+      "image": "trinity-tutorial-output-n5:20261106",
+      "exit_code": 0,
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "seconds": 2.66,
+      "image_id": "sha256:5d5d20f0d2346e4a47e43e07b4c22984f66b032b739ca8b2e5b3a3a8dc90cf66"
+    }
+  ],
+  "qualification": {
+    "trealla_unit_groups": 96,
+    "trealla_units_passed": true,
+    "trealla_release_image": [
+      "blacklist: sharing, inherited terminal, higher-order call and stream denial: ok",
+      "blacklist: nl/0 and both Linda output branches, copied child and stream denial: ok",
+      "whitelist: sharing, inherited terminal, higher-order call and stream denial: ok",
+      "whitelist: nl/0 and both Linda output branches, copied child and stream denial: ok",
+      "Actor write/1 output: all regressions passed",
+      "PASS copied receive guards retain private inference and sandbox checks"
+    ],
+    "consumer_tiers": [
+      "LINT",
+      "DEMONSTRATOR"
+    ],
+    "consumer_exit_code": 0,
+    "browser_bridge_smoke_passed": true,
+    "local_browser_policy_queries": 24,
+    "local_fridge_recovery_passed": true
+  },
+  "public_checks": {
+    "counts": {
+      "pass": 86,
+      "not_exposed": 2,
+      "fail": 0
+    },
+    "readiness_assets_and_rpc": {
+      "browser_revision": "25be04aadfd2942c39c3dd3616098739daa3feb8",
+      "results": [
+        {
+          "title": "N0 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "relation",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N0 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N0 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N0 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N1 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "isobase",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N1 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N1 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N1 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N2 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "isotope",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N2 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N2 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N2 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N3 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "actor",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N3 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N3 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N3 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N4 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "actor",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N4 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N4 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N4 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N5 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "actor",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N5 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N5 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N5 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N6 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "isobase",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N6 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N6 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N6 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N1 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N2 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N3 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N4 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N5 native query",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        },
+        {
+          "title": "N6 native query",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        },
+        {
+          "title": "N3 to N4 RPC",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N4 to N3 RPC",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N5 to N4 RPC",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        },
+        {
+          "title": "N6 to N1 RPC",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        }
+      ],
+      "counts": {
+        "pass": 38,
+        "fail": 0
+      }
+    },
+    "published_pages": [
+      {
+        "node": 0,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54"
+      },
+      {
+        "node": 0,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 0,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 0,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 0,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      },
+      {
+        "node": 1,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54"
+      },
+      {
+        "node": 1,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 1,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 1,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 1,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      },
+      {
+        "node": 2,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54"
+      },
+      {
+        "node": 2,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 2,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 2,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 2,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      },
+      {
+        "node": 3,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54"
+      },
+      {
+        "node": 3,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 3,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 3,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 3,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      },
+      {
+        "node": 4,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54"
+      },
+      {
+        "node": 4,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 4,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 4,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 4,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      },
+      {
+        "node": 5,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54"
+      },
+      {
+        "node": 5,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 5,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 5,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 5,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      },
+      {
+        "node": 6,
+        "page": "demonstrator",
+        "status": "pass",
+        "sha256": "cfba694056397df408c69f790b93908b9fafe0956ac20211678f76ed4a3cec36",
+        "normalized_sha256": "fec95999369ce2d81ff6eb91948f74aa442a373fcfac3d04de0b409fbc78fd54",
+        "normalization": "Removed exactly the validated N6 WEB_PROLOG_HOST script injected by the unchanged adapter",
+        "host_configuration": {
+          "remoteNodes": [
+            {
+              "url": "https://n1.elfenbenstornet.se",
+              "runtime": "swi"
+            },
+            {
+              "url": "https://n2.elfenbenstornet.se",
+              "runtime": "swi"
+            },
+            {
+              "url": "https://n3.elfenbenstornet.se",
+              "runtime": "swi"
+            },
+            {
+              "url": "https://n4.elfenbenstornet.se",
+              "runtime": "swi"
+            },
+            {
+              "url": "https://n5.elfenbenstornet.se",
+              "runtime": "trealla"
+            },
+            {
+              "url": "https://n6.elfenbenstornet.se",
+              "runtime": "gprolog"
+            }
+          ],
+          "discoveryHubUrl": "https://n0.elfenbenstornet.se/discovery-hub",
+          "ownerLogin": false,
+          "interactionLogging": false
+        }
+      },
+      {
+        "node": 6,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "b74faa4efc4c62359bf5a639c0a70bd5f936749aad564e4200b791a2e7d69a17"
+      },
+      {
+        "node": 6,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "0486b0d02c39ca403227a1a164832b17c0c977e1eb48754a9bf10666d7f055d1"
+      },
+      {
+        "node": 6,
+        "page": "isobase-profile-tutorial",
+        "status": "pass",
+        "sha256": "813c96d28d5658b1b6b38485d43204293a971ed580417b56b941dce7d6c1008c"
+      },
+      {
+        "node": 6,
+        "page": "isotope-profile-tutorial",
+        "status": "pass",
+        "sha256": "d4bdc47a718ed57f089e8588fe64fb924ac80ddd12b100d1373b7444eded73e8"
+      }
+    ],
+    "linda": {
+      "node": 5,
+      "group": "newline_review_1793974783928",
+      "checks": [
+        {
+          "title": "nl/0 emits a terminal newline",
+          "status": "pass"
+        },
+        {
+          "title": "Linda missing tuple output",
+          "status": "pass"
+        },
+        {
+          "title": "Linda shared tuple output in another browser",
+          "status": "pass"
+        },
+        {
+          "title": "explicit stream access remains blocked",
+          "status": "pass"
+        },
+        {
+          "title": "session remains usable",
+          "status": "pass"
+        }
+      ]
+    },
+    "policy_and_recovery_swi": [
+      {
+        "profile": "isobase",
+        "doc": "/tutorial",
+        "decisions": [
+          "permitted",
+          "forbidden",
+          "conflicting",
+          "insufficient(missing_fields)",
+          "insufficient(policy_gap)",
+          "insufficient(policy_gap)"
+        ],
+        "status": "pass"
+      },
+      {
+        "profile": "isobase",
+        "doc": "/actor-profile-tutorial",
+        "decisions": [
+          "permitted",
+          "forbidden",
+          "conflicting",
+          "insufficient(missing_fields)",
+          "insufficient(policy_gap)",
+          "insufficient(policy_gap)"
+        ],
+        "status": "pass"
+      },
+      {
+        "profile": "actor",
+        "doc": "/tutorial",
+        "status": "not_exposed",
+        "reason": "chapter hidden by node tutorial_sections"
+      },
+      {
+        "profile": "actor",
+        "doc": "/actor-profile-tutorial",
+        "decisions": [
+          "permitted",
+          "forbidden",
+          "conflicting",
+          "insufficient(missing_fields)",
+          "insufficient(policy_gap)",
+          "insufficient(policy_gap)"
+        ],
+        "status": "pass"
+      },
+      {
+        "title": "fridge failure display and supervised recovery",
+        "status": "pass"
+      }
+    ],
+    "policy_and_recovery_gnu_trealla": [
+      {
+        "profile": "isobase",
+        "doc": "/tutorial",
+        "decisions": [
+          "permitted",
+          "forbidden",
+          "conflicting",
+          "insufficient(missing_fields)",
+          "insufficient(policy_gap)",
+          "insufficient(policy_gap)"
+        ],
+        "status": "pass"
+      },
+      {
+        "profile": "isobase",
+        "doc": "/actor-profile-tutorial",
+        "decisions": [
+          "permitted",
+          "forbidden",
+          "conflicting",
+          "insufficient(missing_fields)",
+          "insufficient(policy_gap)",
+          "insufficient(policy_gap)"
+        ],
+        "status": "pass"
+      },
+      {
+        "profile": "actor",
+        "doc": "/tutorial",
+        "status": "not_exposed",
+        "reason": "chapter hidden by node tutorial_sections"
+      },
+      {
+        "profile": "actor",
+        "doc": "/actor-profile-tutorial",
+        "decisions": [
+          "permitted",
+          "forbidden",
+          "conflicting",
+          "insufficient(missing_fields)",
+          "insufficient(policy_gap)",
+          "insufficient(policy_gap)"
+        ],
+        "status": "pass"
+      },
+      {
+        "title": "fridge failure display and supervised recovery",
+        "status": "pass"
+      }
+    ],
+    "policy_queries_checked": 36,
+    "chapter_visibility": "Two legacy ACTOR chapter checks were not exposed by existing tutorial_sections; no hidden controls were forced."
+  },
+  "installed_pins": [
+    {
+      "container": "deployment-wp_n1-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n2-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n3-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n4-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_admin-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n5-1",
+      "pins": [
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "web-prolog-hub-n0-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "trinity-n6-host-n6_assets-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "trinity-n6-local-n6_assets-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    },
+    {
+      "container": "trinity-n6-local-n6_hub-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        },
+        {
+          "dependency": "trealla-port",
+          "revision": "21daa1ee5ba8412bb000d354558414c8bd9289db"
+        }
+      ]
+    }
+  ],
+  "services": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "d14d159f0eabca5c9d78389f60deadf3cb9d326854f42fddc1e1e3aee34b3b6d",
+      "configuration_after_sha256": "d14d159f0eabca5c9d78389f60deadf3cb9d326854f42fddc1e1e3aee34b3b6d"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "a5d33f27a5bdc397fb2f4b08a994c33a94444d89cc93eb68ebfa84b1bdb6eebd",
+      "configuration_after_sha256": "a5d33f27a5bdc397fb2f4b08a994c33a94444d89cc93eb68ebfa84b1bdb6eebd"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ed6741cb11aeaf0b9b43f273d0949db19e3c848fac8e0fbc7339621f516b42c7",
+      "configuration_after_sha256": "ed6741cb11aeaf0b9b43f273d0949db19e3c848fac8e0fbc7339621f516b42c7"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "294c60a3b8ad72c1b9bb64bf4a2b9eed7d8b7f335f84c5f634b83a044122f6ef",
+      "configuration_after_sha256": "294c60a3b8ad72c1b9bb64bf4a2b9eed7d8b7f335f84c5f634b83a044122f6ef"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "b66fed5b4fb7167ee998d387cc7811c4b73dcae6788df103fcf4a39a6be96bd1",
+      "configuration_after_sha256": "b66fed5b4fb7167ee998d387cc7811c4b73dcae6788df103fcf4a39a6be96bd1"
+    },
+    {
+      "name": "deployment-wp_n5-1",
+      "image_id": "sha256:5d5d20f0d2346e4a47e43e07b4c22984f66b032b739ca8b2e5b3a3a8dc90cf66",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "271dcd73ad0d34ba635a52985ff0b66bf184e7ca05ded0e226c9d63d252a079e",
+      "configuration_after_sha256": "271dcd73ad0d34ba635a52985ff0b66bf184e7ca05ded0e226c9d63d252a079e"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:82a25f511699111b61cbb98f59685369b95a144cc5023d8fe802b393a46d0ee6",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "bad45b76f228523a86f13c6beb9d4a41850328ef336582a2148f7ccc57ae9313",
+      "configuration_after_sha256": "bad45b76f228523a86f13c6beb9d4a41850328ef336582a2148f7ccc57ae9313"
+    },
+    {
+      "name": "trinity-n6-host-wp_n6-1",
+      "image_id": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "9e2baedc359aca4292db4397a71b0bed2b192c8a99dff85abbe49308af9a8a2e",
+      "configuration_after_sha256": "9e2baedc359aca4292db4397a71b0bed2b192c8a99dff85abbe49308af9a8a2e"
+    },
+    {
+      "name": "trinity-n6-local-wp_n6-1",
+      "image_id": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "65d98fe064ce303965ac37ece762e1939372c066f8cb24a0b28374a6720962a3",
+      "configuration_after_sha256": "65d98fe064ce303965ac37ece762e1939372c066f8cb24a0b28374a6720962a3"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597",
+      "configuration_after_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597",
+      "configuration_after_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "aff7283eab5dffe6f3e058c14d6f0be16a0662c8669405d54e2c23f88eed3511",
+      "configuration_after_sha256": "aff7283eab5dffe6f3e058c14d6f0be16a0662c8669405d54e2c23f88eed3511"
+    },
+    {
+      "name": "deployment-caddy-1",
+      "image_id": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "c238cdb277a0c1dd45e717ac90ed1c59505a0e27ddf45996dd9277042bf2952d",
+      "configuration_after_sha256": "c238cdb277a0c1dd45e717ac90ed1c59505a0e27ddf45996dd9277042bf2952d"
+    },
+    {
+      "name": "trinity-n6-host-n6_admission-1",
+      "image_id": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "bcdb64332ffa71dbadaa40bf22c030d162688a0de0b0f3e9c991e96aa2c58919",
+      "configuration_after_sha256": "bcdb64332ffa71dbadaa40bf22c030d162688a0de0b0f3e9c991e96aa2c58919"
+    },
+    {
+      "name": "deployment-n5_admission-1",
+      "image_id": "sha256:449c614a393ae50cfd5a4c03c5af39545c11d1b142e7e627272bc2796308cb84",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "feec1bb405dc97db632a754d5c756ef1d7ab0a2223d38b2348c0663d0c600fe8",
+      "configuration_after_sha256": "feec1bb405dc97db632a754d5c756ef1d7ab0a2223d38b2348c0663d0c600fe8"
+    },
+    {
+      "name": "deployment-oauth2_n5-1",
+      "image_id": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "e3d6926fc00328f569c48134da58d8da571955004737e62cd722f4005c851485",
+      "configuration_after_sha256": "e3d6926fc00328f569c48134da58d8da571955004737e62cd722f4005c851485"
+    }
+  ],
+  "rollout": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.2,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-0"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.2,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-1"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.17,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-2"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.19,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-3"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.08,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-4"
+    },
+    {
+      "name": "deployment-wp_n5-1",
+      "image_id": "sha256:5d5d20f0d2346e4a47e43e07b4c22984f66b032b739ca8b2e5b3a3a8dc90cf66",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 5.28,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-5"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.52,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-9"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.49,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-10"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:f89b658dccf37acc92a2b251cc1c13fb0a7f45b296a8ac76cd438746809157d5",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.08,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-11"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:82a25f511699111b61cbb98f59685369b95a144cc5023d8fe802b393a46d0ee6",
+      "consumer_revision": "8398e33e4d0e5799658178d242a05f4e93dceee7",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 5.29,
+      "rollback_tag": "tutorial-output-rollback-20261106:service-6"
+    }
+  ],
+  "configuration_preserved": true,
+  "unchanged_gnu_backends": true,
+  "rollback_images_retained": true
+}
