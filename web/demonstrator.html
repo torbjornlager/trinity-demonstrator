@@ -361,30 +361,21 @@
         text-decoration: none;
       }
 
-      .wb-header-node-slot {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        flex: 0 0 auto;
-        width: clamp(24px, 1.9vw, 36px);
+      .wb-header-node-title {
+        position: relative;
       }
 
-      .wb-header-node-slot .wb-header-section-note {
-        white-space: nowrap;
-      }
-
-      .wb-header-node-help {
-        align-self: flex-start;
+      .wb-header-note-help.wb-header-node-help {
+        position: static;
         flex: 0 0 auto;
-        margin-top: 3px;
         padding: 0;
         border: 0;
         background: transparent;
       }
 
       .wb-header-note-help.wb-header-node-help::after {
-        left: auto;
-        right: 0;
+        left: 0;
+        right: auto;
         transform: none;
       }
 
@@ -2655,12 +2646,6 @@
           padding-right: 0;
         }
 
-        .wb-header-note-help.wb-header-node-help::after {
-          /* Align with the first node button on narrow screens. */
-          left: -64px;
-          right: auto;
-        }
-
         .wb-header-section-tools {
           margin-left: 0;
           padding-left: 0;
@@ -2786,25 +2771,8 @@
             </p>
           </section>
           <section class="wb-header-section wb-header-section-node-groups-end">
-            <div class="wb-header-section-title-row">
+            <div class="wb-header-section-title-row wb-header-node-title">
               <div class="wb-header-section-title">Remote non-SWI nodes</div>
-            </div>
-            <div class="wb-header-card-row">
-              <div v-for="node in headerRemoteNonSwiNodeButtons"
-                   :key="node.id"
-                   class="wb-header-node-slot">
-                <a :href="node.href"
-                   class="wb-header-card wb-header-card-node"
-                   :class="{active: node.active}"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
-                <p v-if="node.active" class="wb-header-section-note">
-                  <a :href="currentPortalNodeAddress"
-                     target="_blank"
-                     rel="noopener noreferrer">&nbsp;Shared DB</a>
-                </p>
-              </div>
               <button type="button"
                       class="wb-header-note-help wb-header-node-help"
                       data-tooltip="These nodes run Prolog implementations other than SWI-Prolog: N5 uses Trealla Prolog, and N6 uses GNU Prolog."
@@ -2816,6 +2784,21 @@
                 </svg>
               </button>
             </div>
+            <div class="wb-header-card-row">
+              <a v-for="node in headerRemoteNonSwiNodeButtons"
+                 :key="node.id"
+                 :href="node.href"
+                 class="wb-header-card wb-header-card-node"
+                 :class="{active: node.active}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+            </div>
+            <p v-if="headerNonSwiNodeSelected" class="wb-header-section-note">
+              <a :href="currentPortalNodeAddress"
+                 target="_blank"
+                 rel="noopener noreferrer">&nbsp;Shared DB</a>
+            </p>
           </section>
           <section class="wb-header-section wb-header-section-tools">
             <div class="wb-header-actions">
