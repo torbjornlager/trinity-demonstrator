@@ -10,10 +10,10 @@
 %   fires two promises at two different nodes and only then yields both,
 %   so the two remote computations overlap and the pair finishes in about
 %   the time of one rather than their sum (each is padded with an
-%   artificial delay to make this visible). yield/2-3 accepts the same
-%   waiting controls as receive -- asynch_test_2 gives up with a timeout
-%   if the answer is slow -- and promise/3-4 accepts the same code-shipping
-%   options as rpc, plus template/1 to say which term to bring back and
+%   artificial delay to make this visible). yield/2-3 accepts timeout/1
+%   and on_timeout/1. In asynch_test_2, a timeout runs the failing callback,
+%   which raises timeout_callback_failed(Ref). promise/3-4 accepts the same
+%   code-shipping options as rpc, plus template/1 to say which term to bring back and
 %   offset/1 and limit/1 to slice the remote solution stream
 %   (asynch_test_4).
 %
@@ -71,8 +71,11 @@ asynch_test_4(Answer1, Answer2) :-
 
 ?- asynch_test_1(Answer).
 
-% Give up early: yield with a short timeout returns before the slower
-% remote result is ready, so this one fails.
+% The short wait should expire before the slower remote result is ready.
+% On timeout, on_timeout(fail) raises error(timeout_callback_failed(Ref), _).
+% To return Answer = timeout instead, omit on_timeout(fail) or replace it
+% with on_timeout(Answer = timeout). The timeout leaves the promise available
+% for a later yield with the same reference.
 
 ?- asynch_test_2(Answer).
 
