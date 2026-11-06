@@ -22,7 +22,8 @@
       "click_delay_ms": 121.6,
       "ready_after_click_ms": 13.2,
       "abort_acknowledged": false,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n3.elfenbenstornet.se"
     },
     {
       "engine": "SWI-Prolog",
@@ -33,7 +34,8 @@
       "click_delay_ms": 103.0,
       "ready_after_click_ms": 647.0,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n3.elfenbenstornet.se"
     },
     {
       "engine": "SWI-WASM",
@@ -44,7 +46,8 @@
       "click_delay_ms": 101.1,
       "ready_after_click_ms": 7.2,
       "abort_acknowledged": false,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n3.elfenbenstornet.se"
     },
     {
       "engine": "SWI-WASM",
@@ -55,7 +58,8 @@
       "click_delay_ms": 198.5,
       "ready_after_click_ms": 332.9,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n3.elfenbenstornet.se"
     },
     {
       "engine": "SWI-WASM",
@@ -66,7 +70,8 @@
       "click_delay_ms": 120.6,
       "ready_after_click_ms": 12.8,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n3.elfenbenstornet.se"
     },
     {
       "engine": "SWI-WASM",
@@ -77,10 +82,11 @@
       "click_delay_ms": 121.9,
       "ready_after_click_ms": 11.7,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n3.elfenbenstornet.se"
     },
     {
-      "engine": "GNU Prolog",
+      "engine": "SWI-Prolog",
       "mode": "native",
       "upper_bound": 8,
       "status": "pass",
@@ -88,10 +94,11 @@
       "click_delay_ms": 115.5,
       "ready_after_click_ms": 28.4,
       "abort_acknowledged": false,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n4.elfenbenstornet.se"
     },
     {
-      "engine": "GNU Prolog",
+      "engine": "SWI-Prolog",
       "mode": "native",
       "upper_bound": 14,
       "status": "pass",
@@ -99,7 +106,8 @@
       "click_delay_ms": 102.9,
       "ready_after_click_ms": 321.3,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n4.elfenbenstornet.se"
     },
     {
       "engine": "Trealla",
@@ -110,7 +118,8 @@
       "click_delay_ms": 100.7,
       "ready_after_click_ms": 398.8,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n5.elfenbenstornet.se"
     },
     {
       "engine": "Trealla",
@@ -121,7 +130,8 @@
       "click_delay_ms": 101.0,
       "ready_after_click_ms": 2404.8,
       "abort_acknowledged": true,
-      "fresh_grammar_query": "pass"
+      "fresh_grammar_query": "pass",
+      "node": "https://n5.elfenbenstornet.se"
     }
   ],
   "other_checks": {
@@ -130,5 +140,6 @@
     "layering_lint": "pass",
     "demonstrator_integration": "5/5 pass"
   },
-  "behavior": "Terminal output renders in scheduled batches. Completion flushes pending output in order. Worker Abort cancels undisplayed output from the terminated shell. Logger retains all entries and initially renders 200, with older entries available on demand."
+  "behavior": "Terminal output renders in scheduled batches. Completion flushes pending output in order. Worker Abort cancels undisplayed output from the terminated shell. Logger retains all entries and initially renders 200, with older entries available on demand.",
+  "engine_label_correction": "N4 is an SWI-Prolog ACTOR node. The two N4 cases were previously mislabeled GNU Prolog; their test results are unchanged."
 }
