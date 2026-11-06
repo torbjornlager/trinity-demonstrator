@@ -279,7 +279,7 @@ const wsSend = embeddedWorkbenchMethod(
   "wsSend", "closeWs"
 );
 const conciseSwiWasmOutput = embeddedWorkbenchMethod(
-  "conciseSwiWasmOutput", "echoSwiWasmOutput"
+  "conciseSwiWasmOutput", "queueTerminalOutput"
 );
 const replaceIsotopeSession = embeddedWorkbenchMethod(
   "replaceIsotopeSession", "abortIsotopeComputation"
@@ -386,7 +386,7 @@ ok(conciseSwiWasmOutput("Warning: /worker_user_code.pl:1:") === "" &&
    includes("color: var(--terminal-override-ink) !important;") &&
    includes("--terminal-override-ink: #1d6fa8;") &&
    includes("--terminal-override-ink: #67b8ff;") &&
-   includes('this.echoSwiWasmOutput(term, String(message.data || ""))'),
+   includes('this.echoSwiWasmOutput(term, String(message.data || ""), true)'),
    "SWI-WASM override notices are concise and blue in both themes");
 ok(conciseSwiWasmOutput(
      "% 805 inferences, 3.335 CPU in 3.335 seconds (100% CPU, 241 Lips)"

@@ -157,6 +157,10 @@ wasm_checks () {
         echo "!!! Tier WASM worker smoke FAILED"
         FAILED=1
     fi
+    if ! node tests/wasm/terminal_streaming_smoke.cjs; then
+        echo "!!! Tier WASM terminal streaming smoke FAILED"
+        FAILED=1
+    fi
     if ! node tests/wasm/swi_wasm_rpc_bridge_smoke.js; then
         echo "!!! Tier WASM RPC bridge smoke FAILED"
         FAILED=1

@@ -1,0 +1,134 @@
+{
+  "date": "2026-11-06",
+  "scope": "Local candidate demonstrator HTML served by Playwright over real public backend/runtime assets. No deployment.",
+  "candidate_html_sha256": "c61a34fb433e694a2e5feffe3592e3cf4aa01d69213be74a28283f67dc6b0806",
+  "unchanged_original_exercise": "forall((between(1,8,N), length(S,N), phrase(s(_),S)), writeln(S)).",
+  "stress_variant": "Only the test fixture increases the upper bound to 14 to ensure Abort interrupts active computation.",
+  "published_baseline": {
+    "node": "N3",
+    "status": "fail",
+    "scheduled_click_ms": 100,
+    "actual_click_delay_ms": 20997.2,
+    "busy_at_click": false,
+    "abort_disabled": true
+  },
+  "candidate_cases": [
+    {
+      "engine": "SWI-Prolog",
+      "mode": "native",
+      "upper_bound": 8,
+      "status": "pass",
+      "abort_clicked_while_busy": false,
+      "click_delay_ms": 121.6,
+      "ready_after_click_ms": 13.2,
+      "abort_acknowledged": false,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "SWI-Prolog",
+      "mode": "native",
+      "upper_bound": 14,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 103.0,
+      "ready_after_click_ms": 647.0,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "SWI-WASM",
+      "mode": "worker",
+      "upper_bound": 8,
+      "status": "pass",
+      "abort_clicked_while_busy": false,
+      "click_delay_ms": 101.1,
+      "ready_after_click_ms": 7.2,
+      "abort_acknowledged": false,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "SWI-WASM",
+      "mode": "worker",
+      "upper_bound": 14,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 198.5,
+      "ready_after_click_ms": 332.9,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "SWI-WASM",
+      "mode": "main",
+      "upper_bound": 8,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 120.6,
+      "ready_after_click_ms": 12.8,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "SWI-WASM",
+      "mode": "main",
+      "upper_bound": 14,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 121.9,
+      "ready_after_click_ms": 11.7,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "GNU Prolog",
+      "mode": "native",
+      "upper_bound": 8,
+      "status": "pass",
+      "abort_clicked_while_busy": false,
+      "click_delay_ms": 115.5,
+      "ready_after_click_ms": 28.4,
+      "abort_acknowledged": false,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "GNU Prolog",
+      "mode": "native",
+      "upper_bound": 14,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 102.9,
+      "ready_after_click_ms": 321.3,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "Trealla",
+      "mode": "native",
+      "upper_bound": 8,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 100.7,
+      "ready_after_click_ms": 398.8,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    },
+    {
+      "engine": "Trealla",
+      "mode": "native",
+      "upper_bound": 14,
+      "status": "pass",
+      "abort_clicked_while_busy": true,
+      "click_delay_ms": 101.0,
+      "ready_after_click_ms": 2404.8,
+      "abort_acknowledged": true,
+      "fresh_grammar_query": "pass"
+    }
+  ],
+  "other_checks": {
+    "terminal_streaming_smoke": "pass",
+    "swi_wasm_rpc_bridge_smoke": "pass",
+    "layering_lint": "pass",
+    "demonstrator_integration": "5/5 pass"
+  },
+  "behavior": "Terminal output renders in scheduled batches. Completion flushes pending output in order. Worker Abort cancels undisplayed output from the terminated shell. Logger retains all entries and initially renders 200, with older entries available on demand."
+}

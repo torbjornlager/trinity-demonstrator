@@ -3175,6 +3175,9 @@
                     <div class="logger-message">{{ formatLoggerMessage(entry) }}</div>
                   </div>
                 </div>
+                <button v-if="matchingLogs.length > logDisplayLimit"
+                        type="button" class="terminal-action"
+                        @click="logDisplayLimit += 200">Show older entries</button>
                 <div class="logger-filters">
                   <label v-for="filter in loggerFilters" :key="filter.id" class="logger-chip">
                     <input type="checkbox" v-model="visibleLogKinds" :value="filter.id" @change="handleLoggerFilterChange">
@@ -5547,6 +5550,7 @@
             wsTutorialLoadResolve: null,
             wsTutorialLoadReject: null,
             logEntries: [],
+            logDisplayLimit: 200,
             nextLogId: 1,
 	            protocolLogHighlightFromId: null,
 	            deadPids: {},
@@ -5870,7 +5874,7 @@
             }
             return "Admin";
           },
-          filteredLogs: function() {
+          matchingLogs: function() {
             var self = this;
             return this.logEntries.filter(function(entry) {
               var filterKind = entry.kind === "trace" || entry.kind === "transport"
@@ -5878,6 +5882,9 @@
                 : "info";
               return self.visibleLogKinds.indexOf(filterKind) >= 0;
             });
+          },
+          filteredLogs: function() {
+            return this.matchingLogs.slice(0, this.logDisplayLimit);
           },
           transportModeLabel: function() {
             if (this.transportMode === "actor") {
@@ -6120,6 +6127,8 @@
           } catch (_error) {}
         },
         beforeUnmount: function() {
+          clearTimeout(this._terminalOutputTimer);
+          clearTimeout(this._logFlushTimer);
           if (typeof this.helpPopoverCleanup === "function") {
             this.helpPopoverCleanup();
             this.helpPopoverCleanup = null;
@@ -7850,7 +7859,34 @@
               })
               .join("\n");
           },
-          echoSwiWasmOutput: function(term, data) {
+          queueTerminalOutput: function(term, text) {
+            // Rendering every wire message separately can starve Abort.
+            if (!this._terminalOutputBatch) this._terminalOutputBatch = [];
+            this._terminalOutputBatch.push(text);
+            if (!this._terminalOutputTimer) {
+              this._terminalOutputTimer = setTimeout(function() {
+                this.flushTerminalOutput(term, false);
+              }.bind(this), 50);
+            }
+          },
+          flushTerminalOutput: function(term, all) {
+            clearTimeout(this._terminalOutputTimer);
+            this._terminalOutputTimer = null;
+            var pending = this._terminalOutputBatch || [];
+            var batch = pending.splice(0, all === false ? 200 : pending.length);
+            if (batch.length && term) term.echo(batch.join("\n"));
+            if (pending.length) {
+              this._terminalOutputTimer = setTimeout(function() {
+                this.flushTerminalOutput(term, false);
+              }.bind(this), 50);
+            }
+          },
+          discardTerminalOutput: function() {
+            clearTimeout(this._terminalOutputTimer);
+            this._terminalOutputTimer = null;
+            this._terminalOutputBatch = [];
+          },
+          echoSwiWasmOutput: function(term, data, queued) {
             var text = this.formatDisplayText(
               this.conciseSwiWasmOutput(renderOutputData(data))
             );
@@ -7862,6 +7898,11 @@
                 ? this.formatTimingDisplay(line)
                 : line;
             }.bind(this)).join("\n");
+            if (queued && !/^Warning: [^\s]+ replaces the built-in definition\.$/.test(text)) {
+              this.queueTerminalOutput(term, displayText);
+              return true;
+            }
+            if (queued) this.flushTerminalOutput(term);
             term.echo(displayText, /^Warning: [^\s]+ replaces the built-in definition\.$/.test(text) ? {
               exec: false,
               finalize: function(output) {
@@ -9648,6 +9689,7 @@
             return true;
           },
           abortSwiWasm2Query: function(term) {
+            this.discardTerminalOutput();
             var entry = this.swiWasmActorWorkers[this.swiWasm2ShellPid];
             var survivingPids;
             var abortMessage;
@@ -10035,6 +10077,7 @@
             return Promise.all([this.fetchNodeInfo(), this.fetchPortalVersion()]);
           },
           cleanupTransportSessions: function() {
+            this.discardTerminalOutput();
             this.terminalBusy = false;
             this.pendingPromptPid = null;
             this.resetIsotopeTransport();
@@ -10175,6 +10218,7 @@
             if (!term || pid !== this.swiWasm2ShellPid) {
               return false;
             }
+            if (message.type !== "output") this.flushTerminalOutput(term);
             if (message.type === "success") {
               rows = Array.isArray(message.data) ? message.data : [];
               this.captureBindingsFromRows(rows);
@@ -10200,7 +10244,7 @@
             }
             if (message.type === "output" && Object.prototype.hasOwnProperty.call(message, "data")) {
               this.logSwiWasmWorkerTraffic(message, "response");
-              this.echoSwiWasmOutput(term, String(message.data || ""));
+              this.echoSwiWasmOutput(term, String(message.data || ""), true);
               return true;
             }
             if (message.type === "prompt") {
@@ -11776,6 +11820,7 @@
             if (generation !== this.wsGeneration) {
               return;
             }
+            if (event.type !== "output") this.flushTerminalOutput(term);
             if ((event.type === "halted" || event.type === "down") &&
                 this.completeWsRetirement(event.pid)) {
               return;
@@ -11829,10 +11874,9 @@
             }
             if (event.type === "output") {
               var wsOutputText = renderOutputData(event.data);
-              term.echo(this.formatOutputDisplay(event.data, event.kind));
+              this.queueTerminalOutput(term, this.formatOutputDisplay(event.data, event.kind));
               var wsOutputLogId = this.log(event.kind === "timing" ? "timing" : "info", wsOutputText, "actor");
               this.recordSessionEvent("output", wsOutputText, "actor", event.pid || this.wsPid, wsOutputLogId);
-              term.scroll_to_bottom();
               return;
             }
             if (event.type === "statechart_trace") {
@@ -12060,6 +12104,7 @@
             this.persistLoggerFilters();
             this.persistLoggerLayout();
             if (opts.clear !== false) {
+              this._pendingLogEntries = [];
               this.logEntries = [];
               this.nextLogId = 1;
             }
@@ -12107,7 +12152,8 @@
           log: function(kind, message, scope, direction) {
             var resolvedKind = this.normalizeLogKind(kind || "info");
             var logId = this.nextLogId++;
-            this.logEntries.unshift({
+            if (!this._pendingLogEntries) this._pendingLogEntries = [];
+            this._pendingLogEntries.push({
               id: logId,
               kind: resolvedKind,
               scope: scope || this.activeDockLabel,
@@ -12115,6 +12161,14 @@
               message: String(message),
               direction: direction || null
             });
+            if (!this._logFlushTimer) {
+              this._logFlushTimer = setTimeout(function() {
+                this._logFlushTimer = null;
+                var entries = this._pendingLogEntries;
+                this._pendingLogEntries = [];
+                this.logEntries = entries.reverse().concat(this.logEntries);
+              }.bind(this), 100);
+            }
             return logId;
           },
           formatJavaScriptObject: function(value, level, ancestors) {
@@ -12175,12 +12229,15 @@
             );
           },
           clearLogger: function() {
+            this.logDisplayLimit = 200;
+            this._pendingLogEntries = [];
             this.logEntries = [];
             this.nextLogId = 1;
             this.protocolLogHighlightFromId = null;
             this.focusTerminalSoon(true);
           },
           clearTerminal: function() {
+            this.discardTerminalOutput();
             if (this.terminal) {
               this.terminal.clear();
               this.resetQueryState(this.terminal);
