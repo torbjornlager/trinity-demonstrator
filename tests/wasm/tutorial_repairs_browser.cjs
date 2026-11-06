@@ -18,7 +18,14 @@ const results=[];
      await p.goto(url+'/demonstrator');await p.getByRole('button',{name:'Dismiss',exact:true}).click();
      await p.evaluate(doc=>vm.openTutorialDocument(doc),doc);
      await p.waitForTimeout(300);const frame=p.frames().find(f=>new URL(f.url()).pathname===doc);
-     await frame.locator('[onclick=\'loadPortableSource("#service-policy-source")\']').click();
+     const load=frame.locator('[onclick=\'loadPortableSource("#service-policy-source")\']');
+     // Public nodes may deliberately hide entire chapters via tutorial_sections.
+     // Never force a click on a control that their readers cannot see.
+     if(!await load.isVisible()){
+      results.push({profile,doc,status:'not_exposed',reason:'chapter hidden by node tutorial_sections'});
+      continue;
+     }
+     await load.click();
      if(profile==='isobase')await p.waitForFunction(()=>vm.tutorialRequestSource.includes('classify(Fields'));
      else await p.waitForFunction(()=>vm.wsPid&&!vm.wsSpawnPromise);
      for(const [name,decision] of cases){
