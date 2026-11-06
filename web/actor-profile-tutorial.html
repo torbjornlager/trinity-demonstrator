@@ -2624,6 +2624,90 @@ fridge2(_Other,      List, error(unknown_request), List).
 </section>
 
 
+<!-- recovery-exercises:start -->
+<section id="tutorial-recovery-exercises" data-tutorial-sections="local_actor">
+<h1>Recovery exercises</h1>
+<p>Run these in an ACTOR session, including SWI-WASM. Each exercise ends by
+checking what can still be used after an interruption or failure.</p>
+
+<h2 id="recovery-timeout">1. Time out, then collect the answer</h2>
+<p>Start one remote computation and try a zero-second wait. If the answer
+is not ready, collect it with the <em>same</em> reference:</p>
+<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=ready), Ref,
+           [template(X)]),
+   yield(Ref, First, [timeout(0), on_timeout(First=timeout)]),
+   ( First == timeout -&gt; yield(Ref, Final) ; Final = First ).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-timeout-retry&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Normally <code>First = timeout</code> and
+<code>Final = success([ready],false)</code>. If the answer was already ready,
+<code>First</code> contains that success term too; the branch avoids collecting
+an already consumed promise twice. There is only one <code>promise/4</code>
+call. The local timeout ends a wait, and the remote computation continues.
+Successful collection consumes the promise; no further yield is needed.</p>
+
+<h2 id="recovery-supervision">2. Send a malformed request, then use the replacement</h2>
+<p>Load this small server and a bounded helper for observing its replacement.
+The source below contains everything this exercise needs. Complete its
+shutdown step before running it again.</p>
+<pre id="recovery-server-source">recovery_store(put(Item), Items, ok, [Item|Items]).
+recovery_store(contents, Items, Items, Items).
+
+recovery_replacement(Old, New) :-
+    between(1,200,_),
+    sleep(0.01),
+    whereis(recovery_store, Candidate),
+    Candidate \== undefined,
+    Candidate \== Old,
+    !,
+    New = Candidate.</pre>
+<p class="ask-buttons"><button onclick="consult(&quot;#recovery-server-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
+<p>Create a permanent child and store an item. Keep <code>Sup</code> and
+<code>Before</code> for the following calls:</p>
+<pre id="recovery-server-start">?- supervisor_spawn([
+       child(recovery_store, [
+           start(server(recovery_store, [initial_state([])])),
+           restart(permanent)
+       ])
+   ], Sup, [src_predicates([recovery_store/4])]),
+   whereis(recovery_store, Before),
+   server_request(recovery_store, put(cheese), Stored).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-server-start&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Stored = ok</code>. Now send a request with the wrong shape;
+there is no callback clause for <code>put/2</code>:</p>
+<pre id="recovery-server-malformed">?- catch(server_request(recovery_store, put(cheese,extra), _), Failure, true).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-server-malformed&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>Failure = server_down(false)</code>. The callback failed, so
+the worker terminated; the supervisor creates a replacement. Wait for its new
+PID, inspect its contents, and ask the original supervisor about its children:</p>
+<pre id="recovery-server-check">?- recovery_replacement($Before, After),
+   server_request(recovery_store, contents, Items),
+   supervisor_count_children($Sup, Counts).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-server-check&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p><code>After</code> differs from <code>Before</code>, <code>Items = []</code>,
+and <code>Counts</code> includes <code>active-1</code>. The original supervisor
+survived, but the replacement worker started with the initial empty state.
+The helper tries for about two seconds, then fails if no replacement appears.
+Finish by shutting down the supervisor and its child:</p>
+<pre id="recovery-server-stop">?- supervisor_halt($Sup).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-server-stop&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+
+<h2 id="recovery-abort">3. Abort a wait, then run a fresh query</h2>
+<p>Start a receive for a message that this exercise never sends:</p>
+<pre id="recovery-abort-wait">?- receive({recovery_never_sent -&gt; true}).</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-abort-wait&quot;)" class="btn btn-xs btn-primary" type="button">Call</button>
+<button onclick="abortRecoveryQuery()" class="btn btn-xs btn-warning" type="button">Abort</button></p>
+<p>While it is waiting, press <strong>Abort</strong> above or in the terminal
+toolbar. Wait for the prompt to return, then run:</p>
+<pre id="recovery-abort-fresh">?- AfterAbort = ready.</pre>
+<p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-abort-fresh&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
+<p>Expect <code>AfterAbort = ready</code>. The interrupted wait must not leave
+the terminal stuck or turn this fresh query into a late reply to the old one.
+If an execution limit ends the wait before you press Abort, the fresh query
+should still succeed; repeat the exercise and press Abort sooner to test the
+explicit interruption path.</p>
+</section>
+<!-- recovery-exercises:end -->
+
 <section id="tutorial-programming-with-statecharts" data-tutorial-sections="statecharts">
 <h1>Programming with statecharts</h1>
 
@@ -4559,6 +4643,13 @@ only an assessment; no request is sent.</p>
             return bridge.setRequestSource(tutorialNodeText(id), id);
         }
         return consult(id);
+    }
+    function abortRecoveryQuery() {
+        var bridge = tutorialBridge();
+        if (bridge && typeof bridge.abortComputation === "function") {
+            return bridge.abortComputation();
+        }
+        tutorialUnavailable("abort");
     }
     function consult(id) {
         var bridge = tutorialBridge();
