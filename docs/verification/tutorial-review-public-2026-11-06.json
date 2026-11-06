@@ -1,0 +1,685 @@
+{
+  "date": "2026-11-06",
+  "consumer_revision": "fdc8cc8f2bfdd37928d54daf1f101c90690d9e3b",
+  "native_revision": "4557293a4b5ab541d01cc2da72570690afd3a7f8",
+  "browser_revision": "c27d6450683224d3bbdda50121c3a244e999768e",
+  "changes": [
+    "Discovery Hub N5/N6 descriptions match open access and actual capabilities.",
+    "WebSocket origin normalization uses the atom-only URI boundary and normalizes default ports consistently.",
+    "All remote ping-pong tutorial variants copy their helper predicates and await both actors.",
+    "N6 is included in the N3/N4 explicit browser origin lists."
+  ],
+  "validation": {
+    "native_origin_regressions": 3,
+    "native_lint_and_T4_tests": 1076,
+    "consumer_tiers": [
+      "LINT",
+      "DEMONSTRATOR",
+      "DISCOVERY",
+      "WASM"
+    ],
+    "consumer_result": "all scenarios passed",
+    "public_checks": {
+      "pass": 47,
+      "fail": 0
+    },
+    "recovery_checks": [
+      {
+        "trace": "actor-final-n3.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "actor-final-n4.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "actor-final-n5.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "actor-final-worker.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "actor-final-main.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "general-n3.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "general-n4.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "general-n5.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "general-worker.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "general-main.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "wasm-doc-worker.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      },
+      {
+        "trace": "wasm-doc-main.json",
+        "timeout_then_collect": "pass",
+        "malformed_request_observed": "pass",
+        "replacement_and_empty_state": "pass",
+        "abort_then_fresh_query": "pass"
+      }
+    ],
+    "remote_ping_cases": 42,
+    "remote_ping_origins": [
+      {
+        "host": "https://n0.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      },
+      {
+        "host": "https://n1.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      },
+      {
+        "host": "https://n2.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      },
+      {
+        "host": "https://n3.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      },
+      {
+        "host": "https://n4.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      },
+      {
+        "host": "https://n5.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      },
+      {
+        "host": "https://n6.elfenbenstornet.se",
+        "cases": [
+          {
+            "mode": "worker",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "worker",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "actor-profile-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "swi-wasm-tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          },
+          {
+            "mode": "main",
+            "doc": "tutorial",
+            "status": "pass",
+            "peer": "published N4",
+            "ping_replies": 3,
+            "remote_output": 3,
+            "completed": true,
+            "fresh_query": true
+          }
+        ]
+      }
+    ],
+    "tutorial_matrix": [
+      {
+        "label": "inventory-current",
+        "exit_code": 0,
+        "seconds": 1.81
+      },
+      {
+        "label": "profile-api",
+        "exit_code": 0,
+        "seconds": 66.51
+      },
+      {
+        "label": "catalog-isobase-isotope",
+        "exit_code": 0,
+        "seconds": 135.85
+      },
+      {
+        "label": "general-isobase-isotope",
+        "exit_code": 0,
+        "seconds": 345.68
+      },
+      {
+        "label": "actor-native",
+        "exit_code": 0,
+        "seconds": 303.4
+      },
+      {
+        "label": "catalog-native-actor",
+        "exit_code": 0,
+        "seconds": 346.82
+      },
+      {
+        "label": "actor-browser",
+        "exit_code": 0,
+        "seconds": 310.19
+      },
+      {
+        "label": "catalog-browser",
+        "exit_code": 0,
+        "seconds": 296.47
+      },
+      {
+        "label": "linda-multi-session",
+        "exit_code": 0,
+        "seconds": 15.85
+      },
+      {
+        "label": "model-services",
+        "exit_code": 0,
+        "seconds": 102.97
+      },
+      {
+        "label": "jev-conversations",
+        "exit_code": 0,
+        "seconds": 9.22
+      },
+      {
+        "label": "general-actor-and-browser",
+        "exit_code": 0,
+        "seconds": 270.1
+      },
+      {
+        "label": "swi-wasm-document",
+        "exit_code": 0,
+        "seconds": 136.14
+      },
+      {
+        "label": "actor-api-browser",
+        "exit_code": 0,
+        "seconds": 20.93
+      },
+      {
+        "label": "hub-discovery",
+        "exit_code": 0,
+        "seconds": 6.16
+      },
+      {
+        "label": "general-native-visible-controls-recheck",
+        "exit_code": 0,
+        "seconds": 277.44
+      }
+    ],
+    "native_general_recheck": "all three formerly hidden-first-control cases rerun; zero container automation errors",
+    "full_review_has_open_findings": true
+  },
+  "deployment": {
+    "updated_services": 9,
+    "other_services": 7,
+    "configuration_fingerprints_preserved": 16,
+    "rollback_images_retained": true
+  },
+  "hub_descriptions": [
+    {
+      "Auth": "open",
+      "Description": "\"An ACTOR node for actor messaging, statecharts, and Linda coordination examples.\"",
+      "Id": "n5",
+      "Note": "\"\"",
+      "Profile": "actor",
+      "Status": "up",
+      "Url": "'https://n5.elfenbenstornet.se'"
+    },
+    {
+      "Auth": "open",
+      "Description": "\"GNU Prolog ISOBASE node for stateless relational queries.\"",
+      "Id": "n6",
+      "Note": "\"\"",
+      "Profile": "isobase",
+      "Status": "up",
+      "Url": "'https://n6.elfenbenstornet.se'"
+    }
+  ],
+  "notes": [
+    "Strict regression passes are distinct from observation counts. The ledger documents remaining instructional defects, prerequisites and bounded cases.",
+    "Raw browser traces are retained locally under /tmp/tutorial-closeout-20261106. The permanent compressed observation index omits raw transport events and capability values."
+  ]
+}

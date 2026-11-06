@@ -1,0 +1,224 @@
+{
+  "date": "2026-11-06",
+  "status": "review_complete_with_open_documentation_findings",
+  "basis": "Repair groups reconstructed from preserved original review traces and committed deployment evidence; IDs are ledger IDs, not an assertion that these match the original spoken count of twelve findings.",
+  "reviewed_consumer_revision": "fdc8cc8f2bfdd37928d54daf1f101c90690d9e3b",
+  "items": [
+    {
+      "id": "TR-001",
+      "title": "Sessions after Load on N3 and N4",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-runtime-fixes-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-002",
+      "title": "N5 copied selective-receive guards",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-runtime-fixes-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-003",
+      "title": "Worker statechart startup, examples 13\u201317",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/worker-statechart-startup-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-004",
+      "title": "GNU timeout callback failure",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-runtime-fixes-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-005",
+      "title": "asynch_test_2 instructions",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-runtime-fixes-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-006",
+      "title": "SWI-WASM sleep validation and singleton warnings",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-runtime-fixes-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-007",
+      "title": "N5 newline output and Linda display",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-output-and-instructions-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-008",
+      "title": "Stateless service-policy source loading",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-output-and-instructions-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-009",
+      "title": "Profile-boundary instructions",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-output-and-instructions-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-010",
+      "title": "Server termination display",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-output-and-instructions-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-011",
+      "title": "Timeout exercise wording",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-output-and-instructions-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-012",
+      "title": "Generation output starvation and Abort",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-generation-abort-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-013",
+      "title": "Recovery exercise additions",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/tutorial-recovery-exercises-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-014",
+      "title": "Linda availability in SWI-WASM",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/n5-discovery-and-linda-ui-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-015",
+      "title": "N5 shared predicates and published services in discovery",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/n5-discovery-and-linda-ui-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-016",
+      "title": "Node header placement and Queries menu naming",
+      "status": "fixed_deployed",
+      "historical_evidence": "docs/verification/queries-menu-public-2026-11-06.json",
+      "fresh_review_status": "rechecked in applicable public catalogue/tutorial cases; expected profile errors and bounded waits classified separately"
+    },
+    {
+      "id": "TR-017",
+      "title": "Discovery Hub access descriptions",
+      "status": "fixed_deployed",
+      "fresh_review_status": "verified",
+      "observation": "N5 and N6 descriptions no longer claim private/owner-only access; live metadata reports open.",
+      "evidence": "docs/verification/tutorial-review-public-2026-11-06.json"
+    },
+    {
+      "id": "TR-018",
+      "title": "Browser remote ping-pong: normalized origins and copied helpers",
+      "status": "fixed_deployed",
+      "fresh_review_status": "verified",
+      "observation": "All three tutorial variants complete with three ping replies, three remote outputs and a usable fresh query in both browser modes.",
+      "evidence": "docs/verification/tutorial-review-public-2026-11-06.json"
+    },
+    {
+      "id": "TR-019",
+      "title": "N6 UI origin is not on N3/N4 browser WebSocket allowlists",
+      "status": "fixed_deployed",
+      "fresh_review_status": "verified from every public UI host",
+      "observation": "N6 was missing from the explicit N3/N4 WebSocket origin lists. Added N6 to both. All seven public UI hosts now pass both SWI-WASM modes and all three remote ping-pong tutorial variants.",
+      "evidence": "docs/verification/tutorial-review-public-2026-11-06.json"
+    },
+    {
+      "id": "TR-020",
+      "title": "General tutorial promises span separate ISOBASE requests",
+      "status": "open",
+      "fresh_review_status": "reproduced on N1 and N6",
+      "observation": "#promise1 returns a reference, but #promise2 runs in a different stateless caller context. N1 reports an expired/unknown promise; N6 returns false. The example must keep promise and yield in one query for ISOBASE.",
+      "source": "web/tutorial.html#promise1"
+    },
+    {
+      "id": "TR-021",
+      "title": "General tutorial grammar loading and generation do not match ISOBASE",
+      "status": "open",
+      "fresh_review_status": "reproduced on N1 and N6",
+      "observation": "#dcg1 uses consult, which requires a retained session. N1 masks the missing load because its shared DB already contains s/3; N6 has no s/3. #dcg3 also uses writeln/1, which ISOBASE rejects. Use request-local source and a pure/paged generation query for ISOBASE, or state an ISOTOPE/ACTOR prerequisite.",
+      "source": "web/tutorial.html#dcg1"
+    },
+    {
+      "id": "TR-022",
+      "title": "General tutorial assumes actor helpers that are not loaded",
+      "status": "open",
+      "fresh_review_status": "reproduced on native N3/N4/N5 and SWI-WASM Worker; dedicated profile tutorials checked separately",
+      "observation": "The general tutorial says fridge/1, store/3, take/3 and ping_pong/0 are already provided by the node. The general-page calls encounter missing predicates on native nodes as well as SWI-WASM Worker. Supply explicit source loading; browser readers can also use the dedicated SWI-WASM tutorial. Linda explicitly requires N3/N4/N5 and is a documented prerequisite, not a browser runtime bug.",
+      "source": "web/tutorial.html#epa-fridge-api-spawn"
+    },
+    {
+      "id": "TR-023",
+      "title": "General tutorial source loads invalidate later live actor bindings",
+      "status": "open",
+      "fresh_review_status": "reproduced on native N3/N4; missing toplevel binding also observed on N5 and Worker",
+      "observation": "The expert-agent source Load occurs between toplevel input examples and the later $Pid loop/abort/halt examples, clearing that prerequisite. The fridge2 source Load replaces the session after the server/supervisor has started, retiring the actors and clearing $Sup; subsequent server_upgrade and requests have no fridge actor. Keep each live-actor sequence together and load both server implementations before spawning.",
+      "source": "web/tutorial.html#srv-fridge2-source"
+    }
+  ],
+  "coverage": {
+    "canonical_documents": [
+      "tutorial",
+      "isobase-profile-tutorial",
+      "isobase-api-tutorial",
+      "isotope-profile-tutorial",
+      "isotope-api-tutorial",
+      "actor-profile-tutorial",
+      "actor-api-tutorial",
+      "swi-wasm-tutorial",
+      "jev-sxml-tutorial"
+    ],
+    "alias": "statechart-behaviour-tutorial redirects to the ACTOR statechart chapter",
+    "catalogue_targets": [
+      "N1",
+      "N2",
+      "N3",
+      "N4",
+      "N5",
+      "N6",
+      "SWI-WASM Worker",
+      "SWI-WASM Main"
+    ],
+    "recorded_steps": 4254,
+    "executed_observations": 4123,
+    "hidden_controls_excluded": 131,
+    "unavailable_or_separate_scenario_groups": 86,
+    "observation_groups": 334,
+    "observation_index": "docs/verification/tutorial-review-observations-2026-11-06.json.gz",
+    "public_evidence": "docs/verification/tutorial-review-public-2026-11-06.json"
+  },
+  "interpretation": [
+    "This is an exercise review, not a claim of complete language conformance or a proof that no bugs remain.",
+    "Hidden controls and unavailable catalogue examples are recorded as exclusions. Native-only movie data and Linda prerequisites are respected. Model/Jev services are exercised on N3 as prescribed; Linda uses two sessions on each of N3/N4/N5.",
+    "Infinite clock/ping-pong/output examples and deliberately waiting receives are observed then bounded; paged generators are sampled. Exhaustive answer enumeration and arbitrary actor interleavings are outside this run.",
+    "Deliberate bad calls, invalid sleep arguments, failing timeout callbacks, profile boundary errors and post-termination cleanup are expected outcomes. Alternate menu paths after a chart has terminated need a new spawn; resulting missing-Pid observations are not claimed as passing scenarios.",
+    "A runner double-Abort artifact was discarded and the Main ACTOR tutorial rerun with the actual one-Abort exercise sequence. A hidden-first-control wait was corrected and all three native general tutorial pages rerun."
+  ],
+  "next_steps": [
+    "Keep promise creation and yield in one ISOBASE query; show retained-session usage separately.",
+    "Give ISOBASE grammar exercises request-local source and pure paged answers.",
+    "Load the general tutorial actor helpers explicitly on every supported runtime.",
+    "Keep live toplevel and server sequences together; load upgrade source before starting their actors."
+  ],
+  "counts": {
+    "fixed_deployed": 19,
+    "open": 4
+  }
+}
