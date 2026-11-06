@@ -243,6 +243,7 @@ module.exports.cases=function({CLIENT,NATIVE_ROOT,PID,QPID,ROOT,WASM_DIR,abort,a
         if(!["success","failure","error","timeout","abort","output","prompt"].includes(message.type))return false;
         results.push(message);return true;
       };
+      host.discardTerminalOutput=workbenchMethod("discardTerminalOutput","echoSwiWasmOutput");
       host.abortSwiWasm2Query=workbenchMethod("abortSwiWasm2Query","abortBoundActor");
       const shellGoal="swi_wasm_actor_bridge:ptcp("+PID+",terminal,true)";
       host.spawnSwiWasmWorkerActor(shellGoal,"",PID,"","shell_toplevel");
@@ -258,7 +259,10 @@ module.exports.cases=function({CLIENT,NATIVE_ROOT,PID,QPID,ROOT,WASM_DIR,abort,a
         const oldWorker=host.swiWasmActorWorkers[PID].worker;
         oldWorker.postMessage({command:"toplevel_call",goal:goal,options:"[]"});
         check(await until(()=>startup ? !!host.heldReady : host.swiWasmActorMonitors.length===3,10000),startup?"UI startup wait is active":"UI result wait is active");
+        host._terminalOutputBatch=["output from retired shell"];
+        host._terminalOutputTimer=setTimeout(()=>{throw new Error("retired shell output rendered");},1000);
         host.abortSwiWasm2Query(null);
+        check(host._terminalOutputBatch.length===0&&host._terminalOutputTimer===null,"UI hard Abort cancels queued output from the discarded shell");
         check(host.scopeCount()===0,"UI hard Abort closes the discarded shell's scopes");
         check(host.live().length===1&&host.live()[0]===ordinary,"UI hard Abort stops scoped workers and preserves ordinary actor");
         check(host.swiWasmActorMonitors.length===1&&host.swiWasmActorMonitors[0].ref==="8999999999","UI hard Abort preserves unrelated monitor");
