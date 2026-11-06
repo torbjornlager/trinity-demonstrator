@@ -1464,13 +1464,10 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
-ok(workerSource.includes('"statechart_actor_start :-",') &&
-   workerSource.includes('"statechart_actor_loop :- statechart_actor_wait.",') &&
-   workerSource.includes('var startResult = Prolog.query("user:statechart_actor_start").once()') &&
-   workerSource.includes('if (!startResult || startResult.error)') &&
-   workerSource.indexOf('var startResult = Prolog.query("user:statechart_actor_start").once()') <
-     workerSource.indexOf('post(workerRole === "shell_toplevel" ? "spawned" : "ready", {})'),
-   "a SWI-WASM statechart validates and starts before its worker announces readiness");
+// Startup/readiness is exercised with real engines and child Workers by the
+// pinned runtime's statechart_example_13–17 and
+// statechart_initial_invocation_failure scenarios. Do not require a particular
+// query driver here: the former synchronous query could not await child startup.
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
    includes('/swi_wasm_actor_worker.js?v=20261018-answer-terms-v27') &&
