@@ -59,7 +59,8 @@ start_n3 :-
             'https://n2.elfenbenstornet.se',
             'https://n3.elfenbenstornet.se',
             'https://n4.elfenbenstornet.se',
-            'https://n5.elfenbenstornet.se'
+            'https://n5.elfenbenstornet.se',
+            'https://n6.elfenbenstornet.se'
         ]),
         tutorial_sections([local_actor, toplevels, distributed_actor,
                            behaviours, statecharts]),
