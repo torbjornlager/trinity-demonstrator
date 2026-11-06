@@ -7,7 +7,14 @@ native SWI node is supplied by the separate
 The native SWI pack remains named `web_prolog`, with the existing
 `library(web_prolog)` imports.
 
-The 6 November public release updates N0–N6 to the qualified library, context
+The latest 6 November release fixes trailing-slash node identities and copied
+actor I/O, and hides Trealla's internal transport workers from `actors/1`.
+The affected published UI examples pass on N3, N4, N5 and both browser modes;
+all 45 selected public readiness, asset and RPC checks pass. The
+[release record](docs/verification/node-uri-io-public-2026-11-06.json) identifies
+the deployed images and test evidence.
+
+The earlier 6 November monitor release updated N0–N6 to the qualified library, context
 and monitor runtimes. All 147 public monitor assertions pass. Of 303 selected
 public observations, 302 pass; one N5 self-route context probe returns HTTP 502
 and remains an open transport follow-up. The

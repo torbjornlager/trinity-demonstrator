@@ -1,0 +1,193 @@
+{
+  "date": "2026-11-06",
+  "status": "deployed_and_verified",
+  "consumer_image_revision": "88ad749ec4353d2a88d1f0bde6636dc5a1d0e623",
+  "ui_test_revision": "17d4f192d79b44dc0862385e3ec1302dba43727a",
+  "runtime_pins": {
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "65f94c761796b9b963605c33ad9767e3dd905137",
+      "version": "0.1.0",
+      "manifest_sha256": "2a92794620dbe010cef9c34c0a7548adacc91efbc38f899d55ba75f7a9a913c3"
+    },
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "139f32f9ea59ec08ec701070a888a3f6de935e10",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "696323089baa3cd3c0764d4c6e0035d1242d0cbd",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "gprolog-port": {
+      "repository": "https://github.com/torbjornlager/gprolog-port.git",
+      "revision": "61517dded305fccb5ee5e7218d2eb80ace584bde",
+      "mode": "required for optional private or contained public N6 deployment",
+      "engine": {
+        "repository": "https://github.com/didoudiaz/gprolog.git",
+        "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+        "version": "1.6.0"
+      }
+    }
+  },
+  "services": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "deployment-wp_n5-1",
+      "image_id": "sha256:203c2cba3abe4bd3eb977ba1015c86b02b853ff458fa282cfe16a0d0b3d3c037",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:8b6eaf13ba2c104b81ba3c9eb5ce730a92b5e7df22a713278056dc5dc23fa5f8",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy"
+    },
+    {
+      "name": "trinity-n6-host-wp_n6-1",
+      "image_id": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy"
+    },
+    {
+      "name": "trinity-n6-local-wp_n6-1",
+      "image_id": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:0be468a312d9a5d0ed69e4be8fd32aa32bd7c1be21a5e9de62d019b63cb7abee",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "deployment-caddy-1",
+      "image_id": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    },
+    {
+      "name": "trinity-n6-host-n6_admission-1",
+      "image_id": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy"
+    },
+    {
+      "name": "deployment-n5_admission-1",
+      "image_id": "sha256:449c614a393ae50cfd5a4c03c5af39545c11d1b142e7e627272bc2796308cb84",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy"
+    },
+    {
+      "name": "deployment-oauth2_n5-1",
+      "image_id": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null
+    }
+  ],
+  "validation": {
+    "shared_native_checks": 26,
+    "actor_release_cases_per_runtime": 44,
+    "consumer_tiers": [
+      "LINT",
+      "DEMONSTRATOR",
+      "DISCOVERY",
+      "WASM"
+    ],
+    "consumer_result": "all scenarios passed",
+    "linux_native_focused_tests": 32,
+    "linux_trealla_groups": 4,
+    "public_checks": {
+      "pass": 45,
+      "fail": 0
+    },
+    "editor_checks": 12,
+    "native_tutorial_rounds": 6,
+    "browser_tutorial_combinations": 6,
+    "fresh_queries": "pass"
+  },
+  "scope": "Affected published editor and tutorial examples, not a complete tutorial catalogue rerun",
+  "evidence": "https://github.com/torbjornlager/trinity-conformance/blob/codex/conformance-adapter-fixes/reports/2026-11-06-node-uri-io-public-release/README.md"
+}
