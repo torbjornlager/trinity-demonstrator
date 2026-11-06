@@ -61,7 +61,15 @@ ui_remote(URL) :-
     spawn(ping(3,Pong),Ping,Options),ui_down(Ping),ui_down(Pong).
 `;
         assert.ok(variant.includes('    writeln(Self),'));
-        assert.equal(await page.evaluate(source => vm.loadTutorialProgramIntoCurrentSession(source), variant), true);
+        // Match editing and loading the example: a transient tutorial load would
+        // be replaced by the unchanged editor source on the next shell query.
+        await page.evaluate(source => {
+          vm.prologEditor.setValue(source);
+          vm.prologText = source;
+        }, variant);
+        assert.equal(await page.evaluate(source =>
+          vm.loadExampleProgramIntoCurrentSession(source, '06 ping-pong.pl (remote regression)'), variant), true);
+        await page.waitForFunction(() => vm.wsLoadedText.includes('ui_remote(URL)') && !vm.wsSpawnPromise);
         const remoteBaseline = await baseline();
         for (const url of [peer + '/', peer]) {
           const result = await query(`ui_remote('${url}').`);
