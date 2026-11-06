@@ -1,7 +1,7 @@
 <!--
 Two statecharts, two conversations, one small language model.
 
-Select n3 (ACTOR), load this SXML, and use the Examples-menu queries below.
+Select n3 (ACTOR), load this SXML, and use the Queries-menu queries below.
 Keep the Logger open with SXML trace enabled to watch ready -> thinking -> ready.
 
 This is the statechart counterpart of Web Prolog example 21. Each chart owns

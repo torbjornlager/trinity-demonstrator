@@ -2832,7 +2832,7 @@ explicit interruption path.</p>
     so the diagram updates as events fire and the same events appear in
     the Logger when its <strong>SXML trace</strong> filter is selected.
     <code>Pid</code> is bound to the actor's pid. Spawning also populates
-    the <strong>Examples</strong> menu (the button below the terminal input)
+    the <strong>Queries</strong> menu (the button below the terminal input)
     with all five event queries:
 </p>
 
@@ -2846,7 +2846,7 @@ explicit interruption path.</p>
 </p>
 
 <p>
-    The machine starts in <code>s1</code>. Use the Examples menu to send
+    The machine starts in <code>s1</code>. Use the Queries menu to send
     events one at a time and watch the diagram respond.
 </p>
 
@@ -3390,7 +3390,7 @@ explicit interruption path.</p>
 </p>
 
 <p>
-    Use the Examples menu to send events one at a time.
+    Use the Queries menu to send events one at a time.
 </p>
 
 
@@ -3534,7 +3534,7 @@ explicit interruption path.</p>
 </p>
 
 <p>
-    Use the Examples menu to send the three events.
+    Use the Queries menu to send the three events.
 </p>
 
 
@@ -3582,7 +3582,7 @@ explicit interruption path.</p>
 </pre>
 
 <p>
-    Spawn the machine. The Examples menu will be loaded with a sample query:
+    Spawn the machine. The Queries menu will be loaded with a sample query:
 </p>
 
 <pre id="sc-gcd-spawn">?- statechart_spawn(Pid, [
@@ -3633,7 +3633,7 @@ explicit interruption path.</p>
 
 <p>
     On entering the <code>color</code> state the machine asks "What color do
-    you want?". Use the Examples menu to reply. An adjective alone
+    you want?". Use the Queries menu to reply. An adjective alone
     (<code>[red]</code>, <code>[blue]</code>) or a full noun phrase
     (<code>[a, red, box]</code>) parses; anything else triggers the repair
     transition.
@@ -4138,7 +4138,7 @@ only an assessment; no request is sent.</p>
     The examples above are just a starting point. More statecharts are
     available in the <strong>Examples drawer</strong>; click the arrow to open
     it and select any file from the <em>SXML code</em> section. Loading a
-    file opens it in the editor and populates the terminal's Examples menu
+    file opens it in the editor and populates the terminal's Queries menu
     with its built-in queries, ready to run.
 </p>
 
@@ -4684,7 +4684,7 @@ only an assessment; no request is sent.</p>
 
     tutorialBootstrapBridge();
 
-    // ── Statechart spawn: populate Examples menu then submit query ───────────
+    // ── Statechart spawn: populate Queries menu then submit query ───────────
     function scSpawn(exampleId) {
         _scSelectChart("pause");
         var bridge = tutorialBridge();

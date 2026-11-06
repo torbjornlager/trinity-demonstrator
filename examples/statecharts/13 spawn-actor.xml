@@ -11,7 +11,7 @@
     statechart on one side and a bare receive-loop actor on the other,
     talking by message.
 
-    Run the chart from the Examples menu.
+    Run the chart from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->

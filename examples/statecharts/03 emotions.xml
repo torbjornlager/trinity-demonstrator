@@ -11,7 +11,7 @@
     statechart captures several independent aspects of one actor without
     a combinatorial explosion of states.
 
-    Run the chart and send it events from the Examples menu.
+    Run the chart and send it events from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->

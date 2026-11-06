@@ -11,7 +11,7 @@
     events first, then initialised, and watch the held commands run in
     the order they came in.
 
-    Run the chart and send it events from the Examples menu.
+    Run the chart and send it events from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->
