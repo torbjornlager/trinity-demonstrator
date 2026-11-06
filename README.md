@@ -301,3 +301,11 @@ The native SWI dependency now pins `91d5c5257e4ef4e06e56764e6023fe58eddd93c7`,
 which preserves independent monitor notifications during owning-socket teardown.
 This replaces the older pin that lacked that repair. Updating the pin prepares
 future builds; it does not change an already running container.
+
+The node URI/I/O release pins native SWI and Trealla repairs for trailing-slash
+node identities, public copied I/O calls, and private transport worker visibility.
+The shared native selection and ACTOR release gate qualify both implementations.
+`tests/wasm/node_uri_io_browser.cjs` checks the published ping-pong Queries menu
+and the reported remote `writeln(Self)` variant, actor retirement and a fresh
+query on N3, N4 and N5. Run it with Playwright and `CHROME_PATH`; `UI_REPORT`
+selects its JSON evidence file.
