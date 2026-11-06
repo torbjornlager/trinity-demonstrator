@@ -2275,7 +2275,7 @@ ping(N, Pong_Pid) :-
     Pong_Pid ! ping(Self),
     receive({
         pong -&gt;
-            format('Ping received pong.~n')
+            format('Ping received pong.~n', [])
     }),
     N1 is N - 1,
     ping(N1, Pong_Pid).
@@ -2283,9 +2283,9 @@ ping(N, Pong_Pid) :-
 pong :-
     receive({
         finished -&gt;
-            format('Pong finished.~n') ;
+            format('Pong finished.~n', []) ;
         ping(Ping_Pid) -&gt;
-            format('Pong received ping.~n'),
+            format('Pong received ping.~n', []),
             Ping_Pid ! pong,
             pong
     }).

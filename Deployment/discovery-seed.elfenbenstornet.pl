@@ -8,15 +8,13 @@
 % over the container network (http://n5:3060) while still DISPLAYED at
 % its public URL. This is the seed_probe_url/2 decoupling: a node behind
 % a reverse proxy cannot in general be reached at its own public name
-% from inside the same host (NAT hairpin), and n5 is additionally behind
-% SSO — so the hub reaches it directly instead.
+% from inside the same host (NAT hairpin), so the hub reaches it directly.
+% Access status comes from the node's reported auth mode, not its seed text.
 seed_node(n5, 'https://n5.elfenbenstornet.se',
-    "The layered web-prolog production node, behind GitHub SSO. \c
-     Private (actor) profile; signed-in users get the registered \c
-     capability tier.",
-    "The default node shared database (family / human facts) plus \c
-     whatever the owner loads.",
-    "Behind SSO — sign in to use it.").
+    "An ACTOR node for actor messaging, statecharts, and Linda \c
+     coordination examples.",
+    "Family relations, shared actor examples, and Linda client predicates.",
+    "").
 seed_probe_url(n5, 'http://n5:3060').
 
 % The public demonstrator nodes n1–n4 live in a separate stack and are

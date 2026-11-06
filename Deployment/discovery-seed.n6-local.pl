@@ -5,7 +5,7 @@ seed_node(n3, 'https://n3.elfenbenstornet.se', "SWI-Prolog ACTOR node.", "Shared
 seed_node(n4, 'https://n4.elfenbenstornet.se', "SWI-Prolog ACTOR node.", "Shared actor examples.", "").
 seed_node(n5, 'https://n5.elfenbenstornet.se', "Trealla ACTOR node.", "Owner-curated actor examples and Linda.", "").
 seed_node(n6, 'http://localhost:3057',
-    "Owner-only localhost GNU Prolog ISOBASE preview.",
+    "Local GNU Prolog ISOBASE preview.",
     "Family relations, prices, human/1 and deployment_node(n6).",
-    "Owner login required; no actor or session API.").
+    "Local preview; no actor or session API.").
 seed_probe_url(n6, 'http://wp_n6:3060').

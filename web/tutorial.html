@@ -2608,7 +2608,7 @@ with the supplied answers.</p>
 
 <p>
     The same <code>node(...)</code> option can move the ponger to the other
-    node. Load one helper predicate into your current session:
+    node. Load these helper predicates into your current session:
 </p>
 
 <pre id="cpw-remote-pingpong-source">ping(0, Pong_Pid) :-
@@ -2617,21 +2617,35 @@ with the supplied answers.</p>
 ping(N, Pong_Pid) :-
     self(Self),
     Pong_Pid ! ping(Self),
-    receive({pong -&gt; format('Ping received pong.~n', [])}),
+    receive({
+        pong -&gt;
+            format('Ping received pong.~n', [])
+    }),
     N1 is N - 1,
     ping(N1, Pong_Pid).
 
 pong :-
     receive({
-        finished -&gt; format('Pong finished.~n', []) ;
-        ping(Ping_Pid) -&gt; Ping_Pid ! pong, pong
+        finished -&gt;
+            format('Pong finished.~n', []) ;
+        ping(Ping_Pid) -&gt;
+            format('Pong received ping.~n', []),
+            Ping_Pid ! pong,
+            pong
     }).
 
 ping_pong_remote :-
     spawn(pong, Pong_Pid, [
-        node('{{actor_peer_host}}')
+        node('{{actor_peer_host}}'),
+        src_predicates([pong/0]),
+        monitor(true)
     ]),
-    spawn(ping(3, Pong_Pid)).
+    spawn(ping(3, Pong_Pid), Ping_Pid, [
+        src_predicates([ping/2]),
+        monitor(true)
+    ]),
+    receive({down(Pong_Pid, _, true) -> true}),
+    receive({down(Ping_Pid, _, true) -> true}).
 </pre>
 
 <p class="ask-buttons">

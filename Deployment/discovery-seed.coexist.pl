@@ -41,15 +41,14 @@ seed_node(n4, 'https://n4.elfenbenstornet.se',
 seed_probe_url(n4, 'http://wp_n4:3055').
 
 seed_node(n5, 'https://n5.elfenbenstornet.se',
-    "The layered web-prolog production node, behind GitHub SSO.  Private \c
-     (actor) profile; signed-in users get the registered capability tier.",
-    "The default node shared database (family / human facts) plus \c
-     whatever the owner loads.",
-    "Behind SSO — sign in to use it.").
+    "An ACTOR node for actor messaging, statecharts, and Linda \c
+     coordination examples.",
+    "Family relations, shared actor examples, and Linda client predicates.",
+    "").
 seed_probe_url(n5, 'http://wp_n5:3060').
 
 seed_node(n6, 'https://n6.elfenbenstornet.se',
-    "GNU Prolog ISOBASE owner pilot. Execution requires owner login.",
+    "GNU Prolog ISOBASE node for stateless relational queries.",
     "Common family predicates, human/1, and deployment_node/1.",
-    "Owner-only HTTPS preview.").
+    "").
 seed_probe_url(n6, 'http://caddy:8086').
