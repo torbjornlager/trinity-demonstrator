@@ -1,0 +1,1110 @@
+{
+  "status": "deployed",
+  "scope": "Worker statechart startup and examples 13\u201317; selected release checks, not full Appendix B conformance",
+  "runtime_revision": "6998a7ad81640d23324a326a735159c875ebe8c0",
+  "consumer_image_revision": "c1570843503507789fb9cba6e18a35a804e0273a",
+  "browser_dependency": {
+    "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+    "revision": "6998a7ad81640d23324a326a735159c875ebe8c0",
+    "version": "0.1.0",
+    "manifest_sha256": "c5c5e409e7b58a815f50c92a64c09b5b6df44235208f5a4a30171a1d3343f1ad"
+  },
+  "builds": [
+    {
+      "component": "native",
+      "image": "trinity-statechart-startup-native:20261106",
+      "exit_code": 0,
+      "consumer_revision": "c1570843503507789fb9cba6e18a35a804e0273a",
+      "seconds": 0.66,
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f"
+    },
+    {
+      "component": "hub",
+      "image": "trinity-statechart-startup-hub:20261106",
+      "exit_code": 0,
+      "consumer_revision": "c1570843503507789fb9cba6e18a35a804e0273a",
+      "seconds": 0.49,
+      "image_id": "sha256:844da480109386a8939657532b12ed6828bb3ac43c3ab02b655fa6779294430b"
+    }
+  ],
+  "qualification": {
+    "runtime_runs": [
+      {
+        "label": "worker-mailbox",
+        "command": [
+          "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+          "tests/wasm/swi_wasm_actor_worker_smoke.js"
+        ],
+        "exit_code": 0,
+        "seconds": 0.183
+      },
+      {
+        "label": "standalone",
+        "command": [
+          "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+          "tests/wasm/swi_wasm_standalone.js"
+        ],
+        "exit_code": 0,
+        "seconds": 1.216
+      },
+      {
+        "label": "semantic-contracts",
+        "command": [
+          "/Users/lager/.nvm/versions/node/v22.23.4/bin/node",
+          "tests/wasm/swi_wasm_contracts.js"
+        ],
+        "exit_code": 0,
+        "seconds": 128.079
+      }
+    ],
+    "runtime_semantic_assertions": 2520,
+    "consumer_wasm": {
+      "initial_exit_code": 1,
+      "initial_failure": "obsolete source assertion required the synchronous startup query",
+      "corrected_test": "tests/wasm/swi_wasm_rpc_bridge_smoke.js",
+      "final_exit_code": 0,
+      "final_reported_ok_lines": 2985
+    },
+    "candidate_browser": [
+      {
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "observation": {
+          "pid": "1658253134@localhost",
+          "expectedOutput": [
+            "Received Pong"
+          ],
+          "cleanup": true
+        },
+        "status": "pass"
+      },
+      {
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "observation": {
+          "pid": "2976547923@localhost",
+          "expectedOutput": [
+            "[q(a)]",
+            "[q(b)]",
+            "[q(c)]",
+            "[q(d)]"
+          ],
+          "cleanup": true
+        },
+        "status": "pass"
+      },
+      {
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "observation": {
+          "pid": "4039156732@localhost",
+          "expectedOutput": [
+            "reply(1)"
+          ],
+          "cleanup": true
+        },
+        "status": "pass"
+      },
+      {
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "observation": {
+          "pid": "5037627541@localhost",
+          "expectedOutput": [
+            "[specs-1,active-1,supervisors-0,workers-1]"
+          ],
+          "cleanup": true
+        },
+        "status": "pass"
+      },
+      {
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "observation": {
+          "pid": "7403813844@localhost",
+          "expectedOutput": [
+            "nested(ok)"
+          ],
+          "cleanup": true
+        },
+        "status": "pass"
+      }
+    ]
+  },
+  "public_readiness_assets_and_native_smoke": {
+    "browser_revision": "6998a7ad81640d23324a326a735159c875ebe8c0",
+    "results": [
+      {
+        "title": "N0 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "relation",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N0 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N0 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N0 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N1 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "isobase",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N1 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N1 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N1 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N2 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "isotope",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N2 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N2 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N2 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N3 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "actor",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N3 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N3 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N3 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N4 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "actor",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N4 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N4 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N4 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N5 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "actor",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N5 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N5 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N5 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N6 readiness and profile",
+        "status": "pass",
+        "observation": {
+          "profile": "isobase",
+          "auth": "open"
+        }
+      },
+      {
+        "title": "N6 exact asset swi_wasm_actor_worker.js",
+        "status": "pass",
+        "observation": "c19fb9923d7ad6f3ff74f2871941753f255fb0edcdd84568875e0b70a513728b"
+      },
+      {
+        "title": "N6 exact asset vendor/swi-wasm-node.js",
+        "status": "pass",
+        "observation": "009d345adf238b67b3f2311b2bee805eaa0c6aa2b49d998cf284c0f59600f8dd"
+      },
+      {
+        "title": "N6 exact asset wasm/statechart_wasm.pl",
+        "status": "pass",
+        "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+      },
+      {
+        "title": "N1 native query",
+        "status": "pass",
+        "observation": {
+          "data": [
+            {
+              "ReleaseCheck": "passed",
+              "X": "ok"
+            }
+          ],
+          "more": false,
+          "type": "success"
+        }
+      },
+      {
+        "title": "N2 native query",
+        "status": "pass",
+        "observation": {
+          "data": [
+            {
+              "ReleaseCheck": "passed",
+              "X": "ok"
+            }
+          ],
+          "more": false,
+          "type": "success"
+        }
+      },
+      {
+        "title": "N3 native query",
+        "status": "pass",
+        "observation": {
+          "data": [
+            {
+              "ReleaseCheck": "passed",
+              "X": "ok"
+            }
+          ],
+          "more": false,
+          "type": "success"
+        }
+      },
+      {
+        "title": "N4 native query",
+        "status": "pass",
+        "observation": {
+          "data": [
+            {
+              "ReleaseCheck": "passed",
+              "X": "ok"
+            }
+          ],
+          "more": false,
+          "type": "success"
+        }
+      },
+      {
+        "title": "N5 native query",
+        "status": "pass",
+        "observation": {
+          "type": "success",
+          "data": [
+            {
+              "X": "ok",
+              "ReleaseCheck": "passed"
+            }
+          ],
+          "more": false
+        }
+      },
+      {
+        "title": "N6 native query",
+        "status": "pass",
+        "observation": {
+          "type": "success",
+          "data": [
+            {
+              "X": "ok",
+              "ReleaseCheck": "passed"
+            }
+          ],
+          "more": false
+        }
+      },
+      {
+        "title": "N3 to N4 RPC",
+        "status": "pass",
+        "observation": {
+          "data": [
+            {
+              "ReleaseCheck": "passed",
+              "X": "ok"
+            }
+          ],
+          "more": false,
+          "type": "success"
+        }
+      },
+      {
+        "title": "N4 to N3 RPC",
+        "status": "pass",
+        "observation": {
+          "data": [
+            {
+              "ReleaseCheck": "passed",
+              "X": "ok"
+            }
+          ],
+          "more": false,
+          "type": "success"
+        }
+      },
+      {
+        "title": "N5 to N4 RPC",
+        "status": "pass",
+        "observation": {
+          "type": "success",
+          "data": [
+            {
+              "X": "ok",
+              "ReleaseCheck": "passed"
+            }
+          ],
+          "more": false
+        }
+      },
+      {
+        "title": "N6 to N1 RPC",
+        "status": "pass",
+        "observation": {
+          "type": "success",
+          "data": [
+            {
+              "X": "ok",
+              "ReleaseCheck": "passed"
+            }
+          ],
+          "more": false
+        }
+      }
+    ],
+    "counts": {
+      "pass": 38,
+      "fail": 0
+    }
+  },
+  "public_worker_examples": {
+    "scope": "Published demonstrator UI, Worker mode, actual example loads and <editor> menu calls on N0-N6",
+    "results": [
+      {
+        "node": 0,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "7587314426@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 0,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "6345166525@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 0,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "9065881680@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 0,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "5508737560@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 0,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "2427679053@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 1,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "2916048180@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 1,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1734876405@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 1,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "2259331343@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 1,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "7295634891@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 1,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "8597375270@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 2,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1675975643@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 2,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "9971990320@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 2,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "9167204161@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 2,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "5635391912@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 2,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "9045621598@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 3,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1162058844@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 3,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "9525854855@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 3,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "3254296249@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 3,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "2168653577@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 3,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1647083826@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 4,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "6928851904@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 4,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1539252160@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 4,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "5602877379@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 4,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "2409495609@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 4,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "8284791975@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 5,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "4496277070@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 5,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "5697590308@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 5,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "8858305092@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 5,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "7636702423@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 5,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1292856855@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 6,
+        "file": "13 spawn-actor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "1898393276@localhost",
+        "expected_output": [
+          "Received Pong"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 6,
+        "file": "14 spawn-toplevel.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "4727520401@localhost",
+        "expected_output": [
+          "[q(a)]",
+          "[q(b)]",
+          "[q(c)]",
+          "[q(d)]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 6,
+        "file": "15 spawn-server.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "5867469724@localhost",
+        "expected_output": [
+          "reply(1)"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 6,
+        "file": "16 spawn-supervisor.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "5338862678@localhost",
+        "expected_output": [
+          "[specs-1,active-1,supervisors-0,workers-1]"
+        ],
+        "cleanup": true
+      },
+      {
+        "node": 6,
+        "file": "17 spawn-statechart.xml",
+        "mode": "worker",
+        "status": "pass",
+        "pid": "6762338859@localhost",
+        "expected_output": [
+          "nested(ok)"
+        ],
+        "cleanup": true
+      }
+    ],
+    "counts": {
+      "pass": 35,
+      "fail": 0
+    }
+  },
+  "example_sources": [
+    {
+      "file": "13 spawn-actor.xml",
+      "sha256": "c3b755655faac844155092cbbecb3becdeed7b9197dc9606183a9ccf8316e099"
+    },
+    {
+      "file": "14 spawn-toplevel.xml",
+      "sha256": "9f17985b0db50af3ea7e1100717d60035c137cf317d92d3392273b63c1659e03"
+    },
+    {
+      "file": "15 spawn-server.xml",
+      "sha256": "a713dc454c610b12091bc6a6c469a0baa85b54adebdbc4e5a8a9d53f722d7a87"
+    },
+    {
+      "file": "16 spawn-supervisor.xml",
+      "sha256": "802d89e4f6cf1619fd31cacd16094cf6cf88a430b6ea8c4d3334622bc9e6ab6c"
+    },
+    {
+      "file": "17 spawn-statechart.xml",
+      "sha256": "3729af06d5f0b657de0894242ad10816a1a8eef920d8fe6e4084d363589dd9c8"
+    }
+  ],
+  "installed_asset_provider_pins": [
+    {
+      "container": "deployment-wp_n1-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "deployment-wp_n2-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "deployment-wp_n3-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "deployment-wp_n4-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "deployment-wp_admin-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "trinity-n6-host-n6_assets-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "trinity-n6-local-n6_assets-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "trinity-n6-local-n6_hub-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    },
+    {
+      "container": "web-prolog-hub-n0-1",
+      "pins": {
+        "swi-wasm-node": "6998a7ad81640d23324a326a735159c875ebe8c0",
+        "swi-prolog-node": "cfaec8c81426acd46e52dc5c46bc4288d071d74b"
+      }
+    }
+  ],
+  "services": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "d14d159f0eabca5c9d78389f60deadf3cb9d326854f42fddc1e1e3aee34b3b6d",
+      "configuration_after_sha256": "d14d159f0eabca5c9d78389f60deadf3cb9d326854f42fddc1e1e3aee34b3b6d"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "a5d33f27a5bdc397fb2f4b08a994c33a94444d89cc93eb68ebfa84b1bdb6eebd",
+      "configuration_after_sha256": "a5d33f27a5bdc397fb2f4b08a994c33a94444d89cc93eb68ebfa84b1bdb6eebd"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ed6741cb11aeaf0b9b43f273d0949db19e3c848fac8e0fbc7339621f516b42c7",
+      "configuration_after_sha256": "ed6741cb11aeaf0b9b43f273d0949db19e3c848fac8e0fbc7339621f516b42c7"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "294c60a3b8ad72c1b9bb64bf4a2b9eed7d8b7f335f84c5f634b83a044122f6ef",
+      "configuration_after_sha256": "294c60a3b8ad72c1b9bb64bf4a2b9eed7d8b7f335f84c5f634b83a044122f6ef"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "b66fed5b4fb7167ee998d387cc7811c4b73dcae6788df103fcf4a39a6be96bd1",
+      "configuration_after_sha256": "b66fed5b4fb7167ee998d387cc7811c4b73dcae6788df103fcf4a39a6be96bd1"
+    },
+    {
+      "name": "deployment-wp_n5-1",
+      "image_id": "sha256:a154f4ab1b36ba71ac12d32e85fa6e844a955b3b9d06e253c62a1c80261285e5",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "271dcd73ad0d34ba635a52985ff0b66bf184e7ca05ded0e226c9d63d252a079e",
+      "configuration_after_sha256": "271dcd73ad0d34ba635a52985ff0b66bf184e7ca05ded0e226c9d63d252a079e"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:844da480109386a8939657532b12ed6828bb3ac43c3ab02b655fa6779294430b",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "bad45b76f228523a86f13c6beb9d4a41850328ef336582a2148f7ccc57ae9313",
+      "configuration_after_sha256": "bad45b76f228523a86f13c6beb9d4a41850328ef336582a2148f7ccc57ae9313"
+    },
+    {
+      "name": "trinity-n6-host-wp_n6-1",
+      "image_id": "sha256:5139fad0fca8d5d5bd140619b95896139fa5024669f69ac89cf82ff031839d01",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "9e2baedc359aca4292db4397a71b0bed2b192c8a99dff85abbe49308af9a8a2e",
+      "configuration_after_sha256": "9e2baedc359aca4292db4397a71b0bed2b192c8a99dff85abbe49308af9a8a2e"
+    },
+    {
+      "name": "trinity-n6-local-wp_n6-1",
+      "image_id": "sha256:5139fad0fca8d5d5bd140619b95896139fa5024669f69ac89cf82ff031839d01",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "65d98fe064ce303965ac37ece762e1939372c066f8cb24a0b28374a6720962a3",
+      "configuration_after_sha256": "65d98fe064ce303965ac37ece762e1939372c066f8cb24a0b28374a6720962a3"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597",
+      "configuration_after_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597",
+      "configuration_after_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:717ed5f1ee953264ef1c1d08b8ec7c73a8acfba85bfa420ed8f0e140d651aa2f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "aff7283eab5dffe6f3e058c14d6f0be16a0662c8669405d54e2c23f88eed3511",
+      "configuration_after_sha256": "aff7283eab5dffe6f3e058c14d6f0be16a0662c8669405d54e2c23f88eed3511"
+    },
+    {
+      "name": "deployment-caddy-1",
+      "image_id": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "c238cdb277a0c1dd45e717ac90ed1c59505a0e27ddf45996dd9277042bf2952d",
+      "configuration_after_sha256": "c238cdb277a0c1dd45e717ac90ed1c59505a0e27ddf45996dd9277042bf2952d"
+    },
+    {
+      "name": "trinity-n6-host-n6_admission-1",
+      "image_id": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "bcdb64332ffa71dbadaa40bf22c030d162688a0de0b0f3e9c991e96aa2c58919",
+      "configuration_after_sha256": "bcdb64332ffa71dbadaa40bf22c030d162688a0de0b0f3e9c991e96aa2c58919"
+    },
+    {
+      "name": "deployment-n5_admission-1",
+      "image_id": "sha256:449c614a393ae50cfd5a4c03c5af39545c11d1b142e7e627272bc2796308cb84",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "feec1bb405dc97db632a754d5c756ef1d7ab0a2223d38b2348c0663d0c600fe8",
+      "configuration_after_sha256": "feec1bb405dc97db632a754d5c756ef1d7ab0a2223d38b2348c0663d0c600fe8"
+    },
+    {
+      "name": "deployment-oauth2_n5-1",
+      "image_id": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "e3d6926fc00328f569c48134da58d8da571955004737e62cd722f4005c851485",
+      "configuration_after_sha256": "e3d6926fc00328f569c48134da58d8da571955004737e62cd722f4005c851485"
+    }
+  ],
+  "configuration_preserved": true,
+  "rollback_images_retained": true
+}
