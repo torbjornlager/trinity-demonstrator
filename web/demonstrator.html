@@ -5079,6 +5079,7 @@
 
       function humanizePrologErrorTerm(text) {
         var value = stripRuntimeErrorScaffolding(text);
+        value = value.replace(/^Unknown message:\s*(?=server_down\s*\()/, "");
         var args = unwrapPrologCompound(value, "exception");
         if (args && args.length >= 1) {
           return humanizePrologErrorTerm(args[0]);
@@ -5101,6 +5102,10 @@
             return startupMessage;
           }
           return "Statechart startup error: " + startupMessage;
+        }
+        args = unwrapPrologCompound(value, "server_down");
+        if (args && args.length === 1) {
+          return "Server terminated before replying: " + exceptionDisplayTerm(args[0]);
         }
         if (/^Unknown procedure:\s*/.test(value)) {
           return value;

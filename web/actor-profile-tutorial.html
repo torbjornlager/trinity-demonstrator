@@ -1143,7 +1143,7 @@ price(Item, Price) :-
        count(Count) -&gt; true
    }, [
        timeout(5),
-       on_timeout(writeln('Service not available.~n'))
+       on_timeout(writeln('Service not available.'))
    ]).
 </pre>
 
@@ -2521,9 +2521,10 @@ fridge(take(_Food), List, not_found, List).
 </p>
 
 <p>
-    The shell reports <code>Unknown message: server_down(false)</code>
-    rather than blocking forever, because <code>server_request/3</code>
-    installs a monitor under the hood. Behind the scenes, the supervisor
+    The call throws <code>server_down(false)</code>; the shell reports
+    <code>Server terminated before replying: false</code>.
+    <code>server_request/3</code> detects termination through its monitor,
+    so it does not wait forever for a reply. Behind the scenes, the supervisor
     has already respawned the server under the same registered name, with
     its state reset to the initial empty list. The next call goes through
     to the freshly born server:
@@ -3666,10 +3667,11 @@ A laptop within budget is permitted; restricted services are forbidden.
 VPN requests deliberately overlap: one rule permits them within budget,
 while another forbids them. What should the program conclude?</p>
 
-<p>Load <strong>22 service-policy.pl</strong> from the Examples drawer, or use
-<strong>Load</strong> below. It works on <strong>ISOBASE</strong> (including
-<code>n1</code>), <strong>ISOTOPE</strong>, <strong>ACTOR</strong>, and
-<strong>SWI-WASM</strong>. These are the same rules used by
+<p>Use <strong>Load</strong> below. On <strong>ISOBASE</strong>, the rules
+accompany each subsequent tutorial call; they are not retained by the node.
+On <strong>ISOTOPE</strong>, <strong>ACTOR</strong>, and <strong>SWI-WASM</strong>,
+they are loaded into the current session. The same rules are available as
+<strong>22 service-policy.pl</strong> in the Examples drawer and are used by
 <strong>18 service-request.xml</strong>.</p>
 
 <details><summary>Service-policy source</summary>
@@ -3714,7 +3716,7 @@ classify(Fields, forbidden) :-
 classify(Fields, permitted) :-
     permit(Fields), !.
 classify(_, insufficient(policy_gap)).</pre></details>
-<p class="ask-buttons"><button onclick="consult(&quot;#service-policy-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
+<p class="ask-buttons"><button onclick="loadPortableSource(&quot;#service-policy-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
 
 <p>Each query supplies a ground field list and returns one assessment:</p>
 <pre id="service-policy-laptop">?- classify([service(laptop), cost(700)], Decision).</pre>
@@ -4547,6 +4549,17 @@ only an assessment; no request is sent.</p>
     }
 
     /** Load a source block into the workbench editor or legacy terminal. */
+    // Pure source can accompany each stateless call or live in a session.
+    function loadPortableSource(id) {
+        var bridge = tutorialBridge();
+        var context = bridge && typeof bridge.protocolContext === "function"
+            ? bridge.protocolContext() : null;
+        if (context && /^(?:isobase|stateless)$/i.test(context.profile) &&
+            typeof bridge.setRequestSource === "function") {
+            return bridge.setRequestSource(tutorialNodeText(id), id);
+        }
+        return consult(id);
+    }
     function consult(id) {
         var bridge = tutorialBridge();
         var val = tutorialNodeText(id);

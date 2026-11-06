@@ -132,7 +132,7 @@ prices_total([Price|Prices], Total) :-
     <p>The session is implemented by an actor internally, but the ISOTOPE language does not expose independent processes, pids or mailboxes. Try one representative ACTOR operation:</p>
     <pre id="isotope-spawn"><code>?- spawn(writeln(hello), Pid).</code></pre>
     <div class="actions"><button type="button" data-ask="#isotope-spawn">Call</button></div>
-    <div class="warning"><strong>Expect a profile violation.</strong> Application-visible actor spawn, send, receive, monitoring, linking, server behaviours and statechart actors require ACTOR. The struck-out actor and SXML examples in the drawer make the same boundary visible.</div>
+    <div class="warning"><strong>Expect an error: actor spawning requires ACTOR.</strong> Application-visible actor spawn, send, receive, monitoring, linking, server behaviours and statechart actors require ACTOR. The struck-out actor and SXML examples in the drawer make the same boundary visible.</div>
   </section>
 
   <section id="choice">

@@ -175,6 +175,27 @@ const errorDisplayHelpers = Function("SwiWasmNode",
 )(runtime);
 const exceptionDisplayTerm = errorDisplayHelpers.exceptionDisplayTerm;
 const humanizePrologErrorTerm = errorDisplayHelpers.humanizePrologErrorTerm;
+for (const text of ['server_down(false)', 'Unknown message: server_down(false)',
+                    'error(server_down(false),context(server_request/3,_))']) {
+  ok(humanizePrologErrorTerm(text) === 'Server terminated before replying: false',
+     'server termination has the same display across raw, native and wrapped errors');
+}
+
+for (const name of ['tutorial.html', 'actor-profile-tutorial.html']) {
+  const html = fs.readFileSync(path.join(__dirname, '../../web', name), 'utf8');
+  const match = html.match(/function loadPortableSource\(id\) \{([\s\S]*?)\n    \}/);
+  if (!match) throw new Error('missing portable source loader in '+name);
+  for (const profile of ['isobase','stateless','isotope','actor']) {
+    const actions=[];
+    const bridge={protocolContext:()=>({profile}),setRequestSource:(text,id)=>actions.push(['request',text,id])};
+    const load=Function('tutorialBridge','tutorialNodeText','consult','id',match[1]);
+    load(()=>bridge,()=> 'classify([],ok).',id=>actions.push(['session',id]),'#service-policy-source');
+    const expected=['isobase','stateless'].includes(profile)
+      ? [['request','classify([],ok).','#service-policy-source']]
+      : [['session','#service-policy-source']];
+    ok(JSON.stringify(actions)===JSON.stringify(expected),name+' routes pure source for '+profile);
+  }
+}
 
 const editorRewriteSource = source.slice(
   source.indexOf("function scanQuotedText"),

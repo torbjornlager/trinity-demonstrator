@@ -114,7 +114,7 @@ step(Items, remove(Name), Rest) :-
     <p>Try one representative session operation:</p>
     <pre id="isobase-assert"><code>?- assertz(saved(isobase)).</code></pre>
     <div class="actions"><button type="button" data-ask="#isobase-assert">Call</button></div>
-    <div class="warning"><strong>Expect a profile violation.</strong> Dynamic updates, interactive input and output, independent actors, mailboxes and client-addressable Abort all require a retained execution context and are outside ISOBASE.</div>
+    <div class="warning"><strong>Expect an error: dynamic updates are unavailable in ISOBASE.</strong> Dynamic updates, interactive input and output, independent actors, mailboxes and client-addressable Abort all require a retained execution context and are outside ISOBASE.</div>
     <h3>Timeout instead of Abort</h3>
     <p>The following goal deliberately does not terminate. N1 has no Abort button because there is no retained pid or separate control channel to address:</p>
     <pre id="isobase-timeout"><code>?- repeat, fail.</code></pre>
