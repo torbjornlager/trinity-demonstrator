@@ -365,6 +365,27 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+        flex: 0 0 auto;
+        width: clamp(24px, 1.9vw, 36px);
+      }
+
+      .wb-header-node-slot .wb-header-section-note {
+        white-space: nowrap;
+      }
+
+      .wb-header-node-help {
+        align-self: flex-start;
+        flex: 0 0 auto;
+        margin-top: 3px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .wb-header-note-help.wb-header-node-help::after {
+        left: auto;
+        right: 0;
+        transform: none;
       }
 
       .wb-header-card.active {
@@ -2634,6 +2655,12 @@
           padding-right: 0;
         }
 
+        .wb-header-note-help.wb-header-node-help::after {
+          /* Align with the first node button on narrow screens. */
+          left: -64px;
+          right: auto;
+        }
+
         .wb-header-section-tools {
           margin-left: 0;
           padding-left: 0;
@@ -2778,6 +2805,16 @@
                      rel="noopener noreferrer">&nbsp;Shared DB</a>
                 </p>
               </div>
+              <button type="button"
+                      class="wb-header-note-help wb-header-node-help"
+                      data-tooltip="These nodes run Prolog implementations other than SWI-Prolog: N5 uses Trealla Prolog, and N6 uses GNU Prolog."
+                      aria-label="These nodes run Prolog implementations other than SWI-Prolog: N5 uses Trealla Prolog, and N6 uses GNU Prolog.">
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M9.5 9.3a2.7 2.7 0 0 1 5.1 1c0 1.8-1.8 2.3-2.4 2.9-.4.4-.6.8-.6 1.5"></path>
+                  <circle cx="12" cy="17.2" r="0.8" fill="currentColor" stroke="none"></circle>
+                </svg>
+              </button>
             </div>
           </section>
           <section class="wb-header-section wb-header-section-tools">
@@ -6497,11 +6534,17 @@
             return WEB_PROLOG_EXAMPLE_REQUIRED_PROFILES[example.name] || "actor";
           },
           isExampleUnavailable: function(example) {
+            if (this.isBrowserSwiWasmMode && example.name === "25 linda.pl") {
+              return true;
+            }
             return this.transportModeRank(this.exampleRequiredProfile(example)) >
               this.transportModeRank(this.effectiveTransportProfile);
           },
           exampleUnavailableTitle: function(example) {
             var required;
+            if (this.isBrowserSwiWasmMode && example.name === "25 linda.pl") {
+              return "Requires a remote node with a Linda service; unavailable on SWI-WASM.";
+            }
             if (!this.isExampleUnavailable(example)) {
               return null;
             }

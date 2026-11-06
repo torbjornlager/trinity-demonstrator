@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-06",
+  "scope": "Qualified local Trealla changes and consumer UI before public deployment.",
+  "root_cause": "N5 /node_info hardcoded empty provides and services arrays. The Hub was already harvesting these arrays correctly.",
+  "n5_shared_source_fixture": {
+    "provides": [
+      "ancestor_descendant/2",
+      "authorized/1",
+      "count_actor/1",
+      "echo_actor/0",
+      "father_child/2",
+      "human/1",
+      "linda_call/3",
+      "linda_in/1",
+      "linda_inp/1",
+      "linda_local_address/1",
+      "linda_local_call/2",
+      "linda_out/1",
+      "linda_rd/1",
+      "linda_rdp/1",
+      "linda_result/2",
+      "list_price/2",
+      "local_label/1",
+      "mother_child/2",
+      "online/1",
+      "owns/2",
+      "parent_child/2",
+      "ping/2",
+      "ping_pong/0",
+      "ping_pong/1",
+      "ping_pong_benchmark/2",
+      "pong/1",
+      "price/2",
+      "service/2",
+      "shared_fact/1",
+      "shared_transition_enabled/0"
+    ],
+    "services": [
+      "linda"
+    ],
+    "published_service_fixture": "Live actor explicitly registered as linda; only discovery metadata was exercised."
+  },
+  "checks": {
+    "trealla_unit_suite": "ALL unit TESTS PASSED",
+    "unit_groups": 97,
+    "per_group_timeout_seconds": 120,
+    "initial_run": "The default 30-second deadline expired during the unchanged standard-library group. The full rerun with 120 seconds passed.",
+    "metadata_regressions": "definitions, imports, DCG expansion, layers, exclusions, initialization avoidance, private-source isolation, replacement and clear",
+    "http_metadata_regression": "t97 passed with provides field asserted",
+    "real_hub_probe": "fetch_info and directory node_provides/node_service harvested 30 predicates and linda from the local N5-source listener",
+    "linda_drawer_browser": "Struck out with explanatory tooltip in Worker and main SWI-WASM; available on native N5",
+    "header_browser": "N5/N6 gap remains 8px; help tooltip hover and keyboard focus verified at 1600, 900, 760 and 390px",
+    "browser_bridge_smoke": "pass"
+  },
+  "runtime_source_sha256": {
+    "actors.pl": "a9be8990875ffac0d395e22cb14a9538e66e9464d1abb6cda511e06406212ae1",
+    "isolation.pl": "45aac481d5fbf94fc9807ace3f8dec37da0c3d65c19238a9ef84458fdef3f51b",
+    "node.pl": "6213b61c8661a1746e89869b7817d8a8e08fa5b3890e171fbb737be30dc317a8"
+  },
+  "trealla_revision": "0cecd38a3e2bddd0af23f875ade624d8c4ecb036"
+}

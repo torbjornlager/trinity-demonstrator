@@ -186,8 +186,8 @@ node_directory_row(Id, Status, Profile, Auth, LatencyMs, LastSeen,
 %!  node_provides(?Id, ?Predicate) is nondet.
 %
 %   The harvested capability tier, one row per (node, capability): the
-%   node-resident services a node publishes, and the owner-curated
-%   predicates it advertises (its `provides/1` contract).  These let a
+%   live services a node publishes, and the predicates its shared database
+%   defines or imports, as reported by `/node_info`. These let a
 %   client compose, over a single /call, the discovery payoff:
 %
 %       ?- node_profile(N, actor), node_status(N, up),
