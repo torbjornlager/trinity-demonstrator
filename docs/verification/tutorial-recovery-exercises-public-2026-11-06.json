@@ -1,0 +1,1043 @@
+{
+  "status": "deployed",
+  "date": "2026-11-06",
+  "scope": "Published timeout/retry, malformed-request/supervised-recovery, and Abort/fresh-query exercises in the general, ACTOR and SWI-WASM tutorials.",
+  "consumer_image_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+  "builds": [
+    {
+      "component": "native",
+      "image": "trinity-recovery-exercises-native:20261106",
+      "exit_code": 0,
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "seconds": 5.91,
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af"
+    },
+    {
+      "component": "hub",
+      "image": "trinity-recovery-exercises-hub:20261106",
+      "exit_code": 0,
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "seconds": 0.59,
+      "image_id": "sha256:873cf428851665e9414288850c59a8e5fd1a591e38fdf1e6ee24fc524934660f"
+    }
+  ],
+  "qualification": {
+    "predeployment_report": "docs/verification/tutorial-recovery-exercises-2026-11-06.json",
+    "consumer_tiers": [
+      "LINT",
+      "DEMONSTRATOR"
+    ],
+    "consumer_exit_code": 0,
+    "browser_bridge_smoke_passed": true
+  },
+  "public_checks": {
+    "counts": {
+      "pass": 71,
+      "fail": 0
+    },
+    "recovery_sequences_passed": 36,
+    "test_method": "The browser regressions ran with TUTORIAL_RECOVERY_PUBLISHED=1: published tutorial pages, no candidate HTML substitution.",
+    "readiness_assets_and_rpc": {
+      "browser_revision": "25be04aadfd2942c39c3dd3616098739daa3feb8",
+      "results": [
+        {
+          "title": "N0 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "relation",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N0 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N0 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N0 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N1 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "isobase",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N1 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N1 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N1 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N2 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "isotope",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N2 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N2 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N2 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N3 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "actor",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N3 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N3 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N3 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N4 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "actor",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N4 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N4 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N4 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N5 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "actor",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N5 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N5 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N5 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N6 readiness and profile",
+          "status": "pass",
+          "observation": {
+            "profile": "isobase",
+            "auth": "open"
+          }
+        },
+        {
+          "title": "N6 exact asset swi_wasm_actor_worker.js",
+          "status": "pass",
+          "observation": "ff15c08a47dfc0a9d432355841473a1aeab3043deaf6a6ee1b14835c054b5615"
+        },
+        {
+          "title": "N6 exact asset vendor/swi-wasm-node.js",
+          "status": "pass",
+          "observation": "1f866034811ec5e9d32a714bbac78bac2ab7276e03a0955af1d798219255c9e2"
+        },
+        {
+          "title": "N6 exact asset wasm/statechart_wasm.pl",
+          "status": "pass",
+          "observation": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4"
+        },
+        {
+          "title": "N1 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          },
+          "rechecked_without_concurrent_timeout_exercises": true
+        },
+        {
+          "title": "N2 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N3 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N4 native query",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N5 native query",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        },
+        {
+          "title": "N6 native query",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        },
+        {
+          "title": "N3 to N4 RPC",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N4 to N3 RPC",
+          "status": "pass",
+          "observation": {
+            "data": [
+              {
+                "ReleaseCheck": "passed",
+                "X": "ok"
+              }
+            ],
+            "more": false,
+            "type": "success"
+          }
+        },
+        {
+          "title": "N5 to N4 RPC",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          }
+        },
+        {
+          "title": "N6 to N1 RPC",
+          "status": "pass",
+          "observation": {
+            "type": "success",
+            "data": [
+              {
+                "X": "ok",
+                "ReleaseCheck": "passed"
+              }
+            ],
+            "more": false
+          },
+          "rechecked_without_concurrent_timeout_exercises": true
+        }
+      ],
+      "counts": {
+        "pass": 38,
+        "fail": 0
+      },
+      "scheduling_note": {
+        "initial_capacity_rejections": [
+          {
+            "title": "N1 native query",
+            "status": "pass",
+            "observation": {
+              "data": [
+                {
+                  "ReleaseCheck": "passed",
+                  "X": "ok"
+                }
+              ],
+              "more": false,
+              "type": "success"
+            },
+            "rechecked_without_concurrent_timeout_exercises": true
+          },
+          {
+            "title": "N6 to N1 RPC",
+            "status": "pass",
+            "observation": {
+              "type": "success",
+              "data": [
+                {
+                  "X": "ok",
+                  "ReleaseCheck": "passed"
+                }
+              ],
+              "more": false
+            },
+            "rechecked_without_concurrent_timeout_exercises": true
+          }
+        ],
+        "resolution": "The two timeout exercise sessions occupied the configured N1 inflight limit of two. Rechecked only the rejected probes after the sessions finished; limits were unchanged."
+      }
+    },
+    "published_tutorials": [
+      {
+        "node": 0,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 0,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 0,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      },
+      {
+        "node": 1,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 1,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 1,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      },
+      {
+        "node": 2,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 2,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 2,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      },
+      {
+        "node": 3,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 3,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 3,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      },
+      {
+        "node": 4,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 4,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 4,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      },
+      {
+        "node": 5,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 5,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 5,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      },
+      {
+        "node": 6,
+        "page": "tutorial",
+        "status": "pass",
+        "sha256": "35bb073ae7de7a73ea5f659ed1296862a5669d9443d88cd8d83f8ace5bbb2387"
+      },
+      {
+        "node": 6,
+        "page": "actor-profile-tutorial",
+        "status": "pass",
+        "sha256": "2f555d2df4b3e06bc647d0ad728063bf2fa8683d4d800093bc906a8b1b3e538e"
+      },
+      {
+        "node": 6,
+        "page": "swi-wasm-tutorial",
+        "status": "pass",
+        "sha256": "f9f7441eb6946dadd291bbf6e20afc7969c744b0a38c0309ba07d4680b60cb68"
+      }
+    ],
+    "swi_native_and_browser_modes": [
+      {
+        "mode": "native",
+        "doc": "actor-profile-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "9640539145@'https://n3.elfenbenstornet.se'",
+        "after": "9941043067@'https://n3.elfenbenstornet.se'",
+        "supervisor": "4542159884@'https://n3.elfenbenstornet.se'",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "native",
+        "doc": "tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "9099363226@'https://n3.elfenbenstornet.se'",
+        "after": "8798458052@'https://n3.elfenbenstornet.se'",
+        "supervisor": "6701766674@'https://n3.elfenbenstornet.se'",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "native",
+        "doc": "swi-wasm-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "6037450488@'https://n3.elfenbenstornet.se'",
+        "after": "2808454583@'https://n3.elfenbenstornet.se'",
+        "supervisor": "4218967539@'https://n3.elfenbenstornet.se'",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "worker",
+        "doc": "actor-profile-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "4743660015@localhost",
+        "after": "3082375459@localhost",
+        "supervisor": "1769992003@localhost",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "worker",
+        "doc": "tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "2590637947@localhost",
+        "after": "3129770169@localhost",
+        "supervisor": "1902368891@localhost",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "worker",
+        "doc": "swi-wasm-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "9713067563@localhost",
+        "after": "8333459662@localhost",
+        "supervisor": "1801560708@localhost",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "main",
+        "doc": "actor-profile-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "6557835754@localhost",
+        "after": "6703127525@localhost",
+        "supervisor": "5230224034@localhost",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "main",
+        "doc": "tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "7524473227@localhost",
+        "after": "2196502426@localhost",
+        "supervisor": "5443710181@localhost",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "main",
+        "doc": "swi-wasm-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "8115389914@localhost",
+        "after": "2210060392@localhost",
+        "supervisor": "6405731289@localhost",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      }
+    ],
+    "trealla_native": [
+      {
+        "mode": "native",
+        "doc": "actor-profile-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "3088920666@'https://n5.elfenbenstornet.se'",
+        "after": "2665410635@'https://n5.elfenbenstornet.se'",
+        "supervisor": "2532201739@'https://n5.elfenbenstornet.se'",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "native",
+        "doc": "tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "1016498799@'https://n5.elfenbenstornet.se'",
+        "after": "2447278244@'https://n5.elfenbenstornet.se'",
+        "supervisor": "3030348483@'https://n5.elfenbenstornet.se'",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      },
+      {
+        "mode": "native",
+        "doc": "swi-wasm-tutorial",
+        "first": "timeout",
+        "final": "success([ready],false)",
+        "before": "1374790986@'https://n5.elfenbenstornet.se'",
+        "after": "2808281667@'https://n5.elfenbenstornet.se'",
+        "supervisor": "3071664187@'https://n5.elfenbenstornet.se'",
+        "items": "[]",
+        "cleanup": true,
+        "abort_and_fresh_query": true,
+        "status": "pass"
+      }
+    ]
+  },
+  "installed_asset_provider_pins": [
+    {
+      "container": "deployment-wp_n1-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n2-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n3-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_n4-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "deployment-wp_admin-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "web-prolog-hub-n0-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "trinity-n6-host-n6_assets-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "trinity-n6-local-n6_assets-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    },
+    {
+      "container": "trinity-n6-local-n6_hub-1",
+      "pins": [
+        {
+          "dependency": "swi-prolog-node",
+          "revision": "08976dee3fdbb06166e3b81d17105b3c6d96389f"
+        },
+        {
+          "dependency": "swi-wasm-node",
+          "revision": "25be04aadfd2942c39c3dd3616098739daa3feb8"
+        }
+      ]
+    }
+  ],
+  "services": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "d14d159f0eabca5c9d78389f60deadf3cb9d326854f42fddc1e1e3aee34b3b6d",
+      "configuration_after_sha256": "d14d159f0eabca5c9d78389f60deadf3cb9d326854f42fddc1e1e3aee34b3b6d"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "a5d33f27a5bdc397fb2f4b08a994c33a94444d89cc93eb68ebfa84b1bdb6eebd",
+      "configuration_after_sha256": "a5d33f27a5bdc397fb2f4b08a994c33a94444d89cc93eb68ebfa84b1bdb6eebd"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ed6741cb11aeaf0b9b43f273d0949db19e3c848fac8e0fbc7339621f516b42c7",
+      "configuration_after_sha256": "ed6741cb11aeaf0b9b43f273d0949db19e3c848fac8e0fbc7339621f516b42c7"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "294c60a3b8ad72c1b9bb64bf4a2b9eed7d8b7f335f84c5f634b83a044122f6ef",
+      "configuration_after_sha256": "294c60a3b8ad72c1b9bb64bf4a2b9eed7d8b7f335f84c5f634b83a044122f6ef"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "b66fed5b4fb7167ee998d387cc7811c4b73dcae6788df103fcf4a39a6be96bd1",
+      "configuration_after_sha256": "b66fed5b4fb7167ee998d387cc7811c4b73dcae6788df103fcf4a39a6be96bd1"
+    },
+    {
+      "name": "deployment-wp_n5-1",
+      "image_id": "sha256:5d5d20f0d2346e4a47e43e07b4c22984f66b032b739ca8b2e5b3a3a8dc90cf66",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "271dcd73ad0d34ba635a52985ff0b66bf184e7ca05ded0e226c9d63d252a079e",
+      "configuration_after_sha256": "271dcd73ad0d34ba635a52985ff0b66bf184e7ca05ded0e226c9d63d252a079e"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:873cf428851665e9414288850c59a8e5fd1a591e38fdf1e6ee24fc524934660f",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "bad45b76f228523a86f13c6beb9d4a41850328ef336582a2148f7ccc57ae9313",
+      "configuration_after_sha256": "bad45b76f228523a86f13c6beb9d4a41850328ef336582a2148f7ccc57ae9313"
+    },
+    {
+      "name": "trinity-n6-host-wp_n6-1",
+      "image_id": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "9e2baedc359aca4292db4397a71b0bed2b192c8a99dff85abbe49308af9a8a2e",
+      "configuration_after_sha256": "9e2baedc359aca4292db4397a71b0bed2b192c8a99dff85abbe49308af9a8a2e"
+    },
+    {
+      "name": "trinity-n6-local-wp_n6-1",
+      "image_id": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "65d98fe064ce303965ac37ece762e1939372c066f8cb24a0b28374a6720962a3",
+      "configuration_after_sha256": "65d98fe064ce303965ac37ece762e1939372c066f8cb24a0b28374a6720962a3"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597",
+      "configuration_after_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597",
+      "configuration_after_sha256": "ca39700fb28649d38bfea764f375329f815001a940bad6565165bfd94d993597"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "updated": true,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "aff7283eab5dffe6f3e058c14d6f0be16a0662c8669405d54e2c23f88eed3511",
+      "configuration_after_sha256": "aff7283eab5dffe6f3e058c14d6f0be16a0662c8669405d54e2c23f88eed3511"
+    },
+    {
+      "name": "deployment-caddy-1",
+      "image_id": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "c238cdb277a0c1dd45e717ac90ed1c59505a0e27ddf45996dd9277042bf2952d",
+      "configuration_after_sha256": "c238cdb277a0c1dd45e717ac90ed1c59505a0e27ddf45996dd9277042bf2952d"
+    },
+    {
+      "name": "trinity-n6-host-n6_admission-1",
+      "image_id": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "bcdb64332ffa71dbadaa40bf22c030d162688a0de0b0f3e9c991e96aa2c58919",
+      "configuration_after_sha256": "bcdb64332ffa71dbadaa40bf22c030d162688a0de0b0f3e9c991e96aa2c58919"
+    },
+    {
+      "name": "deployment-n5_admission-1",
+      "image_id": "sha256:449c614a393ae50cfd5a4c03c5af39545c11d1b142e7e627272bc2796308cb84",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": "healthy",
+      "configuration_before_sha256": "feec1bb405dc97db632a754d5c756ef1d7ab0a2223d38b2348c0663d0c600fe8",
+      "configuration_after_sha256": "feec1bb405dc97db632a754d5c756ef1d7ab0a2223d38b2348c0663d0c600fe8"
+    },
+    {
+      "name": "deployment-oauth2_n5-1",
+      "image_id": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d",
+      "updated": false,
+      "running": true,
+      "configuration_preserved": true,
+      "health": null,
+      "configuration_before_sha256": "e3d6926fc00328f569c48134da58d8da571955004737e62cd722f4005c851485",
+      "configuration_after_sha256": "e3d6926fc00328f569c48134da58d8da571955004737e62cd722f4005c851485"
+    }
+  ],
+  "rollout": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.15,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-0"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.19,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-1"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.16,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-2"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.2,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-3"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.09,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-4"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.3,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-9"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.32,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-10"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:244fc07bce23c0bebc8f7f8263af95ea2051be18a3ad674cb9af6030447410af",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.07,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-11"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:873cf428851665e9414288850c59a8e5fd1a591e38fdf1e6ee24fc524934660f",
+      "consumer_revision": "67bd14bba7952595e6b207c069daaa3771f7aa04",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 5.29,
+      "rollback_tag": "recovery-exercises-rollback-20261106:service-6"
+    }
+  ],
+  "configuration_preserved": true,
+  "execution_backends_n5_n6_unchanged": true,
+  "rollback_images_retained": true
+}
