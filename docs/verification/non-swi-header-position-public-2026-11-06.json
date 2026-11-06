@@ -1,0 +1,268 @@
+{
+  "date": "2026-11-06",
+  "deployed_consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+  "html_sha256": "c7d6c4ba4da1608bc800c4cb5079c5c06c1b21adb32b530e52b5564e7c8dc001",
+  "changes": [
+    "Non-SWI help icon follows the Remote non-SWI nodes heading.",
+    "The Shared DB link is a single row below the node buttons, aligned under N5 for either selected non-SWI node.",
+    "The Shared DB URL continues to target the selected node."
+  ],
+  "qualification": {
+    "browser_bridge_smoke": "pass",
+    "layering_lint": "pass",
+    "demonstrator_integration": "5/5 pass",
+    "packaged_asset_content_and_revision": "pass"
+  },
+  "builds": [
+    {
+      "component": "native",
+      "image": "trinity-non-swi-header-native:20261106",
+      "exit_code": 0,
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "seconds": 5.94,
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9"
+    },
+    {
+      "component": "hub",
+      "image": "trinity-non-swi-header-hub:20261106",
+      "exit_code": 0,
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "seconds": 0.5,
+      "image_id": "sha256:cbb033fdc5275724466df25c856b4408961cf4b340142611765a2b3e8a1e40e8"
+    }
+  ],
+  "rollout": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.22,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-0"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.29,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-1"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.28,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-2"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.22,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-3"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.1,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-4"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.43,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-9"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.44,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-10"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:4810a1037f53b3265ebc3d23ad21ab0bd8f417a562af7c80b4b7f0fbd59bb8c9",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.09,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-11"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:cbb033fdc5275724466df25c856b4408961cf4b340142611765a2b3e8a1e40e8",
+      "consumer_revision": "79589e0154bdb562408f4b2230750180cfec98b2",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 5.27,
+      "rollback_tag": "non-swi-header-rollback-20261106:service-6"
+    }
+  ],
+  "public_checks": {
+    "counts": {
+      "pass": 47,
+      "fail": 0
+    },
+    "passed": [
+      "N0 readiness and profile",
+      "N0 exact asset swi_wasm_actor_worker.js",
+      "N0 exact asset vendor/swi-wasm-node.js",
+      "N0 exact asset wasm/statechart_wasm.pl",
+      "N0 exact asset demonstrator.html",
+      "N1 readiness and profile",
+      "N1 exact asset swi_wasm_actor_worker.js",
+      "N1 exact asset vendor/swi-wasm-node.js",
+      "N1 exact asset wasm/statechart_wasm.pl",
+      "N1 exact asset demonstrator.html",
+      "N2 readiness and profile",
+      "N2 exact asset swi_wasm_actor_worker.js",
+      "N2 exact asset vendor/swi-wasm-node.js",
+      "N2 exact asset wasm/statechart_wasm.pl",
+      "N2 exact asset demonstrator.html",
+      "N3 readiness and profile",
+      "N3 exact asset swi_wasm_actor_worker.js",
+      "N3 exact asset vendor/swi-wasm-node.js",
+      "N3 exact asset wasm/statechart_wasm.pl",
+      "N3 exact asset demonstrator.html",
+      "N4 readiness and profile",
+      "N4 exact asset swi_wasm_actor_worker.js",
+      "N4 exact asset vendor/swi-wasm-node.js",
+      "N4 exact asset wasm/statechart_wasm.pl",
+      "N4 exact asset demonstrator.html",
+      "N5 readiness and profile",
+      "N5 exact asset swi_wasm_actor_worker.js",
+      "N5 exact asset vendor/swi-wasm-node.js",
+      "N5 exact asset wasm/statechart_wasm.pl",
+      "N5 exact asset demonstrator.html",
+      "N6 readiness and profile",
+      "N6 exact asset swi_wasm_actor_worker.js",
+      "N6 exact asset vendor/swi-wasm-node.js",
+      "N6 exact asset wasm/statechart_wasm.pl",
+      "N6 exact asset demonstrator.html",
+      "N1 native query",
+      "N2 native query",
+      "N3 native query",
+      "N4 native query",
+      "N5 native query",
+      "N6 native query",
+      "N3 to N4 RPC",
+      "N4 to N3 RPC",
+      "N5 to N4 RPC",
+      "N6 to N1 RPC",
+      "N5 shared database and live service metadata",
+      "Discovery Hub harvested N5 shared predicates and Linda"
+    ]
+  },
+  "published_layout_checks": [
+    {
+      "node": "n5",
+      "width": 1600,
+      "status": "pass",
+      "shared_x": 810.765625,
+      "n5_x": 810.765625,
+      "href": "https://n5.elfenbenstornet.se/"
+    },
+    {
+      "node": "n5",
+      "width": 900,
+      "status": "pass",
+      "shared_x": 330.84375,
+      "n5_x": 330.84375,
+      "href": "https://n5.elfenbenstornet.se/"
+    },
+    {
+      "node": "n5",
+      "width": 760,
+      "status": "pass",
+      "shared_x": 22,
+      "n5_x": 22,
+      "href": "https://n5.elfenbenstornet.se/"
+    },
+    {
+      "node": "n5",
+      "width": 390,
+      "status": "pass",
+      "shared_x": 22,
+      "n5_x": 22,
+      "href": "https://n5.elfenbenstornet.se/"
+    },
+    {
+      "node": "n5",
+      "width": 320,
+      "status": "pass",
+      "shared_x": 22,
+      "n5_x": 22,
+      "href": "https://n5.elfenbenstornet.se/"
+    },
+    {
+      "node": "n6",
+      "width": 1600,
+      "status": "pass",
+      "shared_x": 810.765625,
+      "n5_x": 810.765625,
+      "href": "https://n6.elfenbenstornet.se/"
+    },
+    {
+      "node": "n6",
+      "width": 900,
+      "status": "pass",
+      "shared_x": 330.84375,
+      "n5_x": 330.84375,
+      "href": "https://n6.elfenbenstornet.se/"
+    },
+    {
+      "node": "n6",
+      "width": 760,
+      "status": "pass",
+      "shared_x": 22,
+      "n5_x": 22,
+      "href": "https://n6.elfenbenstornet.se/"
+    },
+    {
+      "node": "n6",
+      "width": 390,
+      "status": "pass",
+      "shared_x": 22,
+      "n5_x": 22,
+      "href": "https://n6.elfenbenstornet.se/"
+    },
+    {
+      "node": "n6",
+      "width": 320,
+      "status": "pass",
+      "shared_x": 22,
+      "n5_x": 22,
+      "href": "https://n6.elfenbenstornet.se/"
+    }
+  ],
+  "layout_assertions": [
+    "N5\u2013N6 gap remains 8px.",
+    "Help icon is beside and vertically aligned with the heading.",
+    "Shared DB starts at the N5 column and is below both node buttons.",
+    "Shared DB URL belongs to the currently selected node.",
+    "Tooltip opens on hover and focus and fits the viewport."
+  ],
+  "runtime_configuration": {
+    "running_services": 16,
+    "configurations_preserved": 16,
+    "services_updated": 9,
+    "services_unchanged": 7
+  },
+  "rollback_images_retained": true
+}
