@@ -321,6 +321,10 @@ then a query (a RELATION node serves conjunctions of advertised relations):
 The browser directory at `https://n0.elfenbenstornet.se/discovery-hub`
 renders the register live (status dots, a ~10 s poll, `provides`/`services`
 chips) with a query builder that runs the composed goal on the hub.
+Cards show the Prolog implementation beneath the node ID when the deployment
+seed declares it, for example `seed_implementation(n5, 'Trealla Prolog').`
+The label is available even when the node is down and can be queried with
+`node_implementation(Id, Name)`.
 
 n0 is its own compose file so it can join the main stack's network and
 probe the peers internally (no NAT hairpin):

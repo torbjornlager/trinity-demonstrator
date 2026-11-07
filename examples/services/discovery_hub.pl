@@ -52,6 +52,7 @@ that probe locally-started nodes instead of the public deployment).
 
 :- dynamic seed_node/5.
 :- dynamic seed_probe_url/2.        % Id, internal probe URL (optional)
+:- dynamic seed_implementation/2.  % Id, Prolog implementation name (optional)
 
 
                 /*******************************
@@ -150,7 +151,8 @@ hub_self_url(Port, Url) :-
 %!  clear_seed is det.
 %
 %   Replace the curated seed.  Each term is seed_node(Id, Url,
-%   Description, SharedDb, Note).  n0 (the hub's own card) is supplied
+%   Description, SharedDb, Note) or an optional metadata fact as for
+%   load_seed_file/1.  n0 (the hub's own card) is supplied
 %   automatically at start if absent, so a seed need only list the
 %   peers.
 
@@ -161,7 +163,8 @@ set_seed(SeedTerms) :-
 %!  load_seed_file(+File) is det.
 %
 %   Replace the seed from a plain Prolog file holding `seed_node/5.`
-%   facts and, optionally, `seed_probe_url/2.` facts — the latter give a
+%   facts and, optionally, `seed_implementation/2.` facts naming the
+%   Prolog implementation and `seed_probe_url/2.` facts giving a
 %   node an *internal* probe address distinct from its public display
 %   URL (e.g. a co-located node reached as `http://n5:3060` over the
 %   container network rather than hairpinning to its public name).  n0 is
@@ -190,6 +193,7 @@ read_seed_stream(Stream, Terms) :-
 
 valid_seed_term(seed_node(_, _, _, _, _)).
 valid_seed_term(seed_probe_url(_, _)).
+valid_seed_term(seed_implementation(_, _)).
 
 assert_seed_term(seed_node(Id, Url, Desc, SharedDb, Note)) :-
     !,
@@ -197,12 +201,16 @@ assert_seed_term(seed_node(Id, Url, Desc, SharedDb, Note)) :-
 assert_seed_term(seed_probe_url(Id, Url)) :-
     !,
     assertz(seed_probe_url(Id, Url)).
+assert_seed_term(seed_implementation(Id, Implementation)) :-
+    !,
+    assertz(seed_implementation(Id, Implementation)).
 assert_seed_term(Term) :-
     throw(error(type_error(seed_term, Term), _)).
 
 clear_seed :-
     retractall(seed_node(_, _, _, _, _)),
-    retractall(seed_probe_url(_, _)).
+    retractall(seed_probe_url(_, _)),
+    retractall(seed_implementation(_, _)).
 
 %!  ensure_seed(+SelfUrl) is det.
 %
@@ -225,6 +233,10 @@ ensure_seed(SelfUrl) :-
            "discovery_directory.pl: the published read replica \c
             (node_record/2 and the node_* query relations).",
            "This is the registry."))
+    ),
+    (  seed_implementation(n0, _)
+    -> true
+    ;  assertz(seed_implementation(n0, 'SWI-Prolog'))
     ).
 
 %!  default_seed is det.
@@ -257,7 +269,9 @@ default_seed :-
          demonstrations.  Pair it with n3 for distributed messaging.",
         "Common base + the same actor-common layer as n3, plus an n4 \c
          overlay providing human(plato) / human(aristotle).",
-        "")).
+        "")),
+    forall(member(Id, [n1, n2, n3, n4]),
+           assertz(seed_implementation(Id, 'SWI-Prolog'))).
 
 %!  seed_to_node(-Node) is nondet.
 %
@@ -268,6 +282,7 @@ default_seed :-
 seed_to_node(Node) :-
     seed_node(Id, Url, Desc, SharedDb, Note),
     ( seed_probe_url(Id, ProbeUrl) -> true ; ProbeUrl = Url ),
+    ( seed_implementation(Id, Implementation) -> true ; Implementation = '' ),
     Node = node{
         id: Id,
         url: Url,
@@ -276,6 +291,7 @@ seed_to_node(Node) :-
         description: Desc,
         shared_db: SharedDb,
         note: Note,
+        implementation: Implementation,
         profile: unknown,
         auth: unknown,
         version: "",

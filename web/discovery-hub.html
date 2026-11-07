@@ -256,6 +256,9 @@
     function nodeCard(r) {
       var st = STATUS[r.status] || STATUS.unknown;
       var profile = (r.profile && r.profile !== "unknown") ? r.profile : "";
+      var implementation = r.implementation
+        ? '<div class="text-muted small">' + esc(r.implementation) + '</div>'
+        : "";
       var badges = "";
       if (profile) badges += '<span class="badge bg-' + (PROFILE_COLOR[profile] || "secondary") + '-lt text-uppercase">' + esc(profile) + "</span> ";
       if (r.auth && r.auth !== "unknown") badges += '<span class="badge bg-' + (r.auth === "private" ? "orange" : "green") + '-lt">' + esc(r.auth) + "</span> ";
@@ -283,7 +286,7 @@
           '<div class="card dh-card' + (r.status === "down" ? " is-down" : "") + '">' +
             '<div class="card-status-start bg-' + st.color + '"></div>' +
             '<div class="card-header">' +
-              '<h3 class="card-title text-uppercase">' + esc(r.id) + "</h3>" +
+              '<div><h3 class="card-title text-uppercase mb-0">' + esc(r.id) + "</h3>" + implementation + '</div>' +
               '<div class="card-actions"><span class="status status-' + st.color + '">' + dot + " " + esc(st.label) + "</span></div>" +
             "</div>" +
             '<div class="card-body">' +
@@ -349,7 +352,8 @@
         return Promise.all([
           optionalCall("node_service(Id,Service)"),
           optionalCall("node_provides(Id,Predicate)"),
-          optionalCall("node_self_contained(Id,SelfContained)")
+          optionalCall("node_self_contained(Id,SelfContained)"),
+          optionalCall("node_implementation(Id,Implementation)")
         ]).then(function (extras) {
           return [directory].concat(extras);
         });
@@ -367,10 +371,11 @@
         if (successful(res[1])) (res[1].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].services.push(unq(d.Service)); });
         if (successful(res[2])) (res[2].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].provides.push(unq(d.Predicate)); });
         if (successful(res[3])) (res[3].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].selfContained = d.SelfContained; });
+        if (successful(res[4])) (res[4].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].implementation = unq(d.Implementation); });
         ALL = Object.keys(byId).map(function (k) { return byId[k]; });
         rebuildCapList();
         render();
-        var partial = res.slice(1).some(function (j) { return !successful(j); });
+        var partial = res.slice(1, 4).some(function (j) { return !successful(j); });
         document.getElementById("dh-alert").innerHTML = partial
           ? '<div class="alert alert-warning"><strong>Directory loaded.</strong> Capability details are temporarily incomplete.</div>'
           : "";  // a recovered poll clears any stale "unreachable" banner

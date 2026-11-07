@@ -31,6 +31,7 @@ relation_filter(node_record(_, _)).
 relation_filter(node_id(_)).
 relation_filter(node_url(_, _)).
 relation_filter(node_profile(_, _)).
+relation_filter(node_implementation(_, _)).
 relation_filter(node_auth(_, _)).
 relation_filter(node_status(_, _)).
 relation_filter(node_card(_, _, _, _, _, _)).
@@ -49,6 +50,7 @@ relation_filter(node_profile_at_least(_, _)).
 provides(node_record/2).
 provides(node_directory_row/9).
 provides(node_profile/2).
+provides(node_implementation/2).
 provides(node_auth/2).
 provides(node_status/2).
 provides(node_service/2).
@@ -136,6 +138,16 @@ node_profile(Id, Profile) :-
     node_record(Id, Record),
     get_dict(profile, Record, Profile),
     Profile \== unknown.
+
+%!  node_implementation(?Id, -Implementation) is nondet.
+%
+%   The Prolog implementation named in the deployment seed, if known.
+
+node_implementation(Id, Implementation) :-
+    node_record(Id, Record),
+    get_dict(implementation, Record, Name),
+    Name \== '',
+    Implementation = Name.
 
 node_auth(Id, Auth) :-
     node_record(Id, Record),

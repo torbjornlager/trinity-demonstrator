@@ -14,6 +14,7 @@ seed_node(n1, 'https://n1.elfenbenstornet.se',
     "Family predicates plus human(plato), human(aristotle), and \c
      deployment_node(n1).",
     "").
+seed_implementation(n1, 'SWI-Prolog').
 seed_probe_url(n1, 'http://wp_n1:3051').
 
 seed_node(n2, 'https://n2.elfenbenstornet.se',
@@ -22,6 +23,7 @@ seed_node(n2, 'https://n2.elfenbenstornet.se',
     "Common family predicates plus mortal/1, ancestor/2, descendant/2, \c
      human(socrates), and a distributed human/1.",
     "").
+seed_implementation(n2, 'SWI-Prolog').
 seed_probe_url(n2, 'http://wp_n2:3052').
 
 seed_node(n3, 'https://n3.elfenbenstornet.se',
@@ -30,6 +32,7 @@ seed_node(n3, 'https://n3.elfenbenstornet.se',
     "Common base + actor-common layer + the n3 overlay, with registered \c
      counter / pubsub_service services.",
     "").
+seed_implementation(n3, 'SWI-Prolog').
 seed_probe_url(n3, 'http://wp_n3:3053').
 
 seed_node(n4, 'https://n4.elfenbenstornet.se',
@@ -38,6 +41,7 @@ seed_node(n4, 'https://n4.elfenbenstornet.se',
     "Common base + the same actor-common layer as n3, plus an n4 overlay \c
      providing human(plato) / human(aristotle).",
     "").
+seed_implementation(n4, 'SWI-Prolog').
 seed_probe_url(n4, 'http://wp_n4:3055').
 
 seed_node(n5, 'https://n5.elfenbenstornet.se',
@@ -45,10 +49,12 @@ seed_node(n5, 'https://n5.elfenbenstornet.se',
      coordination examples.",
     "Family relations, shared actor examples, and Linda client predicates.",
     "").
+seed_implementation(n5, 'Trealla Prolog').
 seed_probe_url(n5, 'http://wp_n5:3060').
 
 seed_node(n6, 'https://n6.elfenbenstornet.se',
-    "GNU Prolog ISOBASE node for stateless relational queries.",
+    "ISOBASE node for stateless relational queries.",
     "Common family predicates, human/1, and deployment_node/1.",
     "").
+seed_implementation(n6, 'GNU Prolog').
 seed_probe_url(n6, 'http://caddy:8086').

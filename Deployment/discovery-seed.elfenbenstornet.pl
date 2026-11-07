@@ -15,6 +15,7 @@ seed_node(n5, 'https://n5.elfenbenstornet.se',
      coordination examples.",
     "Family relations, shared actor examples, and Linda client predicates.",
     "").
+seed_implementation(n5, 'Trealla Prolog').
 seed_probe_url(n5, 'http://n5:3060').
 
 % The public demonstrator nodes n1–n4 live in a separate stack and are
@@ -27,6 +28,7 @@ seed_node(n1, 'https://n1.elfenbenstornet.se',
     "Family predicates from the common deployment layer, plus \c
      human(plato), human(aristotle), and deployment_node(n1).",
     "").
+seed_implementation(n1, 'SWI-Prolog').
 
 seed_node(n2, 'https://n2.elfenbenstornet.se',
     "The semi-stateful HTTP node.  Adds toplevel sessions, private \c
@@ -34,6 +36,7 @@ seed_node(n2, 'https://n2.elfenbenstornet.se',
     "Common family predicates plus mortal/1, ancestor/2, descendant/2, \c
      human(socrates), and a distributed human/1.",
     "").
+seed_implementation(n2, 'SWI-Prolog').
 
 seed_node(n3, 'https://n3.elfenbenstornet.se',
     "The fully stateful node.  Adds /ws, direct actor messaging, \c
@@ -41,6 +44,7 @@ seed_node(n3, 'https://n3.elfenbenstornet.se',
     "Common base + actor-common layer + the n3 overlay, with registered \c
      counter / pubsub_service services.",
     "").
+seed_implementation(n3, 'SWI-Prolog').
 
 seed_node(n4, 'https://n4.elfenbenstornet.se',
     "A second public ACTOR node for cross-node actor and statechart \c
@@ -48,3 +52,4 @@ seed_node(n4, 'https://n4.elfenbenstornet.se',
     "Common base + the same actor-common layer as n3, plus an n4 overlay \c
      providing human(plato) / human(aristotle).",
     "").
+seed_implementation(n4, 'SWI-Prolog').

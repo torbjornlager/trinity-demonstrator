@@ -285,7 +285,10 @@ integration_setup :-
     node(Peer, [profile(isobase)]),
     set_seed([
         seed_node(n1, 'http://localhost:3971', "live peer", "peer db", ""),
-        seed_node(n2, 'http://localhost:3999', "dead", "none", "")
+        seed_implementation(n1, 'SWI-Prolog'),
+        seed_node(n2, 'http://localhost:3999', "dead", "none", ""),
+        seed_implementation(n2, 'GNU Prolog'),
+        seed_node(n3, 'http://localhost:3999', "unspecified", "none", "")
     ]),
     hub_port(Hub),
     start_discovery_hub(Hub).
@@ -311,10 +314,19 @@ test(dead_node_is_down, S == down) :-
     hub_url(Hub),
     rpc(Hub, node_status(n2, S)).
 
-test(seed_tier_preserved_through_probe, Url == 'http://localhost:3971') :-
+test(seed_tier_preserved_through_probe,
+     [Url, Implementation] == ['http://localhost:3971', 'SWI-Prolog']) :-
     hub_url(Hub),
+    wait_until(rpc(Hub, node_status(n1, up)), 25),
     rpc(Hub, node_record(n1, R)),
-    get_dict(url, R, Url).               % seed url, not overwritten by probe
+    get_dict(url, R, Url),
+    rpc(Hub, node_implementation(n1, Implementation)).
+
+test(implementations_are_available_without_a_successful_probe,
+     Implementations == ['GNU Prolog']) :-
+    hub_url(Hub),
+    findall(Name, rpc(Hub, (node_status(Id, down),
+                           node_implementation(Id, Name))), Implementations).
 
 test(hub_appears_in_its_own_directory, S == up) :-
     hub_url(Hub),
