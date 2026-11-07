@@ -575,7 +575,9 @@ price(Item, Price) :- list_price(Item, Price).</pre>
 
 <pre id="dcg4">?- rpc('https://n1.elfenbenstornet.se', phrase(s(_),Sentence), [
        limit(10)
-   ]), writeln(Sentence), fail.
+   ]),
+   writeln(Sentence),
+   fail.
 </pre>
 
 <p class="ask-buttons">
