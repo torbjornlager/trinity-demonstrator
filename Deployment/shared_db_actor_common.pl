@@ -26,7 +26,6 @@ count_actor(Count0) :-
     }).
 
 
-
 % Native ping-pong benchmark.  The worker predicates live in this shared
 % database, so the spawned actors can call them directly: no src_* source
 % transfer or private source installation is part of the measurement.
@@ -45,7 +44,7 @@ ping_pong_benchmark(RoundTrips, Microseconds) :-
     get_time(T0),
     ping_pong(RoundTrips),
     get_time(T1),
-    Microseconds is round((T1-T0) * 1_000_000).
+    Microseconds is round((T1 - T0) * 1_000_000).
 
 ping(0, PongPid) :-
     PongPid ! finished.
@@ -66,8 +65,8 @@ pong(MasterPid) :-
     }).
 
 
-authorized(alice). 
-owns(alice, printer2). 
+authorized(alice).
+owns(alice, printer2).
 online(printer2).
 
 % Owner-installed local service address; callers use linda_out/1 etc.

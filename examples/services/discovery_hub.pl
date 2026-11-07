@@ -106,10 +106,10 @@ attach_discovery_hub(Port, RegistryPid) :-
 %   `url` public while making the liveness probe actually succeed.
 
 localize_probe_url(Port, Node0, Node) :-
-    (   Node0.id == n0
-    ->  format(atom(LocalUrl), 'http://localhost:~w', [Port]),
-        Node = Node0.put(probe_url, LocalUrl)
-    ;   Node = Node0
+    (  Node0.id == n0
+    -> format(atom(LocalUrl), 'http://localhost:~w', [Port]),
+       Node = Node0.put(probe_url, LocalUrl)
+    ;  Node = Node0
     ).
 
 %!  stop_discovery_hub is det.
@@ -122,11 +122,11 @@ stop_discovery_hub :-
     stop_registry_service.
 
 stop_registry_service :-
-    (   whereis_service(registry, Pid),
-        Pid \== undefined
-    ->  catch(exit(Pid, kill), _, true),
-        catch(unregister_service(registry), _, true)
-    ;   catch(unregister_service(registry), _, true)
+    (  whereis_service(registry, Pid),
+       Pid \== undefined
+    -> catch(exit(Pid, kill), _, true),
+       catch(unregister_service(registry), _, true)
+    ;  catch(unregister_service(registry), _, true)
     ).
 
 directory_source_file(File) :-
@@ -135,10 +135,10 @@ directory_source_file(File) :-
     directory_file_path(Dir, 'discovery_directory.pl', File).
 
 hub_self_url(Port, Url) :-
-    (   catch(node:with_node_port_context(Port, self_node_url(Url0)), _, fail),
-        Url0 \== ''
-    ->  Url = Url0
-    ;   format(atom(Url), 'http://localhost:~w', [Port])
+    (  catch(node:with_node_port_context(Port, self_node_url(Url0)), _, fail),
+       Url0 \== ''
+    -> Url = Url0
+    ;  format(atom(Url), 'http://localhost:~w', [Port])
     ).
 
 
@@ -180,12 +180,12 @@ read_seed_terms(File, Terms) :-
 
 read_seed_stream(Stream, Terms) :-
     read_term(Stream, Term, []),
-    (   Term == end_of_file
-    ->  Terms = []
-    ;   valid_seed_term(Term)
-    ->  Terms = [Term|Rest],
-        read_seed_stream(Stream, Rest)
-    ;   throw(error(type_error(seed_term, Term), _))
+    (  Term == end_of_file
+    -> Terms = []
+    ;  valid_seed_term(Term)
+    -> Terms = [Term|Rest],
+       read_seed_stream(Stream, Rest)
+    ;  throw(error(type_error(seed_term, Term), _))
     ).
 
 valid_seed_term(seed_node(_, _, _, _, _)).
@@ -211,20 +211,20 @@ clear_seed :-
 %   plan §7); if the configured seed already names n0, respect it.
 
 ensure_seed(SelfUrl) :-
-    (   seed_node(_, _, _, _, _)
-    ->  true
-    ;   default_seed
+    (  seed_node(_, _, _, _, _)
+    -> true
+    ;  default_seed
     ),
-    (   seed_node(n0, _, _, _, _)
-    ->  true
-    ;   assertz(seed_node(n0, SelfUrl,
-            "The discovery hub.  A RELATION node that publishes the live \c
-             register of the other nodes as named query relations over \c
-             the stateless /call API.  (It runs an actor internally to \c
-             probe them; that surface is not public.)",
-            "discovery_directory.pl: the published read replica \c
-             (node_record/2 and the node_* query relations).",
-            "This is the registry."))
+    (  seed_node(n0, _, _, _, _)
+    -> true
+    ;  assertz(seed_node(n0, SelfUrl,
+           "The discovery hub.  A RELATION node that publishes the live \c
+            register of the other nodes as named query relations over \c
+            the stateless /call API.  (It runs an actor internally to \c
+            probe them; that surface is not public.)",
+           "discovery_directory.pl: the published read replica \c
+            (node_record/2 and the node_* query relations).",
+           "This is the registry."))
     ).
 
 %!  default_seed is det.
@@ -333,7 +333,7 @@ registry_actor(State0, Deadline0) :-
 
         stop ->
             true
-    }, [
+    },[
         timeout(Wait),
         on_timeout(registry_actor(State0, Deadline))
     ]).
@@ -341,7 +341,7 @@ registry_actor(State0, Deadline0) :-
 % Check before receiving as well as on timeout: a busy mailbox must not
 % starve sweeps. If delayed, skip missed ticks rather than burst probes.
 sweep_schedule(Now, Deadline0, Sweep, Deadline, Wait) :-
-    ( Now >= Deadline0
+    (  Now >= Deadline0
     -> Sweep = true,
        Deadline is Deadline0 + (floor((Now - Deadline0) / 30) + 1) * 30
     ;  Sweep = false,
@@ -365,9 +365,9 @@ do_sweep(State) :-
            spawn(probe_one(Node.id, Node.probe_url, Me), _Pid, [link(false)])).
 
 probe_one(Id, Url, Registry) :-
-    (   catch(fetch_info(Url, Info, LatencyMs), _, fail)
-    ->  Registry ! probe_result(Id, ok(Info, LatencyMs))
-    ;   Registry ! probe_result(Id, error)
+    (  catch(fetch_info(Url, Info, LatencyMs), _, fail)
+    -> Registry ! probe_result(Id, ok(Info, LatencyMs))
+    ;  Registry ! probe_result(Id, error)
     ).
 
 %!  fetch_info(+Url, -Info, -LatencyMs) is semidet.
@@ -397,9 +397,12 @@ node_info_url(Url, InfoUrl) :-
 
 readiness_maintenance(Url, Maintenance) :-
     readyz_url(Url, ReadyUrl),
-    (   catch(http_status(ReadyUrl, Status), _, fail)
-    ->  ( Status =:= 503 -> Maintenance = true ; Maintenance = false )
-    ;   Maintenance = false
+    (  catch(http_status(ReadyUrl, Status), _, fail)
+    -> (  Status =:= 503
+       -> Maintenance = true
+       ;  Maintenance = false
+       )
+    ;  Maintenance = false
     ).
 
 readyz_url(Url, ReadyUrl) :-
@@ -436,9 +439,9 @@ apply_probe(Id, Outcome, State0, State) :-
     State = State0.put(nodes, Nodes).
 
 update_matching(Id, Outcome, Now, Node0, Node) :-
-    (   Node0.id == Id
-    ->  apply_outcome(Outcome, Now, Node0, Node)
-    ;   Node = Node0
+    (  Node0.id == Id
+    -> apply_outcome(Outcome, Now, Node0, Node)
+    ;  Node = Node0
     ).
 
 apply_outcome(ok(Info, LatencyMs), Now, Node0, Node) :-
@@ -462,9 +465,9 @@ apply_outcome(error, Now, Node0, Node) :-
     Node = Node0.put(last_error, Now).
 
 info_field(Key, Info, Value) :-
-    (   get_dict(Key, Info, Raw)
-    ->  to_atom(Raw, Value)
-    ;   Value = unknown
+    (  get_dict(Key, Info, Raw)
+    -> to_atom(Raw, Value)
+    ;  Value = unknown
     ).
 
 %!  info_list(+Key, +Info, -List) is det.
@@ -472,10 +475,10 @@ info_field(Key, Info, Value) :-
 %   Harvest a self-reported capability array (services / provides) from
 %   the probed node's /node_info into a list of atoms; absent ⇒ [].
 info_list(Key, Info, List) :-
-    (   get_dict(Key, Info, Raw),
-        is_list(Raw)
-    ->  maplist(to_atom, Raw, List)
-    ;   List = []
+    (  get_dict(Key, Info, Raw),
+       is_list(Raw)
+    -> maplist(to_atom, Raw, List)
+    ;  List = []
     ).
 
 %!  info_bool(+Key, +Info, -Value) is det.
@@ -484,12 +487,14 @@ info_list(Key, Info, List) :-
 %   absent or unrecognised ⇒ unknown.  json_read_dict may surface JSON
 %   booleans as true/false or @(true)/@(false).
 info_bool(Key, Info, Value) :-
-    (   get_dict(Key, Info, Raw)
-    ->  (   ( Raw == true ; Raw == @(true) )  -> Value = true
-        ;   ( Raw == false ; Raw == @(false) ) -> Value = false
-        ;   Value = unknown
-        )
-    ;   Value = unknown
+    (  get_dict(Key, Info, Raw)
+    -> (  (Raw == true ; Raw == @(true))
+       -> Value = true
+       ;  (Raw == false ; Raw == @(false))
+       -> Value = false
+       ;  Value = unknown
+       )
+    ;  Value = unknown
     ).
 
 to_atom(A, A) :- atom(A), !.

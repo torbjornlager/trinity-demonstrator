@@ -40,7 +40,8 @@ service_directory_file(File) :-
 
 
 service_directory_options([load_shared_db_file(File), load_shared_db_file(Client)]) :-
-    service_directory_file(File), linda_client_file(Client).
+    service_directory_file(File),
+    linda_client_file(Client).
 
 
 start_service_demo_node(Port) :-
@@ -82,11 +83,11 @@ stop_example_services :-
 
 
 stop_service(Name) :-
-    (   whereis_service(Name, Pid),
-        Pid \== undefined
-    ->  catch(exit(Pid, kill), _, true),
-        catch(unregister_service(Name), _, true)
-    ;   catch(unregister_service(Name), _, true)
+    (  whereis_service(Name, Pid),
+       Pid \== undefined
+    -> catch(exit(Pid, kill), _, true),
+       catch(unregister_service(Name), _, true)
+    ;  catch(unregister_service(Name), _, true)
     ).
 
 
@@ -115,8 +116,8 @@ pubsub_actor(Subscribers0) :-
         subscribe(Pid) ->
             pubsub_actor([Pid|Subscribers0]) ;
         unsubscribe(Pid) ->
-            (   select(Pid, Subscribers0, Subscribers)
-            ->  pubsub_actor(Subscribers)
-            ;   pubsub_actor(Subscribers0)
+            (  select(Pid, Subscribers0, Subscribers)
+            -> pubsub_actor(Subscribers)
+            ;  pubsub_actor(Subscribers0)
             )
     }).

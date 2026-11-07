@@ -1974,14 +1974,13 @@ human(Who) :-
     still resolves to the shared price list on <code>n1</code>:
 </p>
 
-<pre id="rpc-shadow-price">?- rpc('https://n1.elfenbenstornet.se',
-       price(widget, Price),
-       [src_text("
+<pre id="rpc-shadow-price">?- rpc('https://n1.elfenbenstornet.se', price(widget, Price), [
+       src_text("
            price(Item, Price) :-
                list_price(Item, ListPrice),
                Price is ListPrice * 0.9.
-       ")]
-   ).
+       ")
+   ]).
 </pre>
 
 <p class="ask-buttons">

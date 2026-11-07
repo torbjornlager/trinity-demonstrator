@@ -10,7 +10,8 @@
 :- prolog_load_context(directory, Dir), assertz(linda_directory(Dir)).
 
 linda_client_file(File) :-
-    linda_directory(Dir), directory_file_path(Dir, 'linda_client.pl', File).
+    linda_directory(Dir),
+    directory_file_path(Dir, 'linda_client.pl', File).
 
 start_linda(Pid) :- spawn(linda_loop([], []), Pid, [link(false)]).
 
@@ -21,7 +22,8 @@ start_linda_service(Pid) :-
           (exit(Pid, kill), throw(Error))).
 
 stop_linda_service :-
-    ( whereis_service(linda, Pid), Pid \== undefined
+    (  whereis_service(linda, Pid), Pid \== undefined
     -> exit(Pid, kill)
-    ; true ),
+    ;  true
+    ),
     unregister_service(linda).

@@ -78,9 +78,9 @@ record_with_status(Rec0, Record) :-
     Now is integer(NowF),
     get_dict(last_seen, Rec0, Seen),
     get_dict(last_error, Rec0, Err),
-    (   get_dict(maintenance, Rec0, Maintenance)
-    ->  true
-    ;   Maintenance = false
+    (  get_dict(maintenance, Rec0, Maintenance)
+    -> true
+    ;  Maintenance = false
     ),
     node_live_status(Now, Seen, Err, Maintenance, Status),
     put_dict(status, Rec0, Status, Record).
@@ -95,13 +95,15 @@ record_with_status(Rec0, Record) :-
 %   a healthy node to down (plan §4).
 
 node_live_status(Now, Seen, Err, Maintenance, Status) :-
-    (   Seen > 0,
-        Now - Seen =< 75
-    ->  (   Maintenance == true -> Status = maintenance
-        ;   Err > Seen          -> Status = unreachable
-        ;   Status = up
-        )
-    ;   Status = down
+    (  Seen > 0,
+       Now - Seen =< 75
+    -> (  Maintenance == true
+       -> Status = maintenance
+       ;  Err > Seen
+       -> Status = unreachable
+       ;  Status = up
+       )
+    ;  Status = down
     ).
 
 
@@ -212,9 +214,9 @@ node_provides(Id, Predicate) :-
 %   record predates the field).
 node_self_contained(Id, SelfContained) :-
     node_record(Id, Record),
-    (   get_dict(self_contained, Record, SC)
-    ->  SelfContained = SC
-    ;   SelfContained = unknown
+    (  get_dict(self_contained, Record, SC)
+    -> SelfContained = SC
+    ;  SelfContained = unknown
     ).
 
 

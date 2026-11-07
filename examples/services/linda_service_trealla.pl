@@ -7,12 +7,15 @@
 :- include(linda_bounded_space).
 
 start_linda_service(Pid) :-
-    spawn(linda_bounded_loop([], []), Pid,
-          [link(false),
-           src_predicates([linda_bounded_loop/2, linda_bounded_request/7,
-                           linda_admission_error/4, linda_term_budget/3,
-                           linda_args_budget/5, linda_request/7, linda_match/4,
-                           linda_select/3, linda_wake/4,
-                           linda_cancel_pending/4, linda_drop_monitor/3])]),
+    spawn(linda_bounded_loop([], []), Pid, [
+        link(false),
+        src_predicates([
+            linda_bounded_loop/2, linda_bounded_request/7,
+            linda_admission_error/4, linda_term_budget/3,
+            linda_args_budget/5, linda_request/7, linda_match/4,
+            linda_select/3, linda_wake/4,
+            linda_cancel_pending/4, linda_drop_monitor/3
+        ])
+    ]),
     catch(register_service(linda, Pid), Error,
           (exit(Pid, kill), throw(Error))).

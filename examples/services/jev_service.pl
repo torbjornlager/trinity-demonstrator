@@ -20,13 +20,13 @@ at node startup; the underlying transport reads `TYPESAFE_API_KEY` and optional
 :- dynamic service_state/2.              % Busy, next admission time
 
 configure_jev_service :-
-    (   current_public_execution_profile(_)
-    ->  permission_error(configure, jev_service, public_actor)
-    ;   true
+    (  current_public_execution_profile(_)
+    -> permission_error(configure, jev_service, public_actor)
+    ;  true
     ),
-    (   getenv('TYPESAFE_API_KEY', Key), Key \== ''
-    ->  true
-    ;   existence_error(configuration, 'TYPESAFE_API_KEY')
+    (  getenv('TYPESAFE_API_KEY', Key), Key \== ''
+    -> true
+    ;  existence_error(configuration, 'TYPESAFE_API_KEY')
     ),
     with_mutex(jev_admission,
         ( retractall(service_state(_, _)),
@@ -39,16 +39,17 @@ configure_jev_service :-
 %   This is a tutorial spending guard, not a general multi-tenant quota system.
 
 jev_deployment_observation(Text, Result) :-
-    (   bounded_native_text(Text,500,Native,Length),Length>0
-    ->  setup_call_cleanup(
-            admit(Request),
-            perform(Request, Native, Result),
-            release(Request))
-    ;   Result = unavailable(invalid_text)
+    (  bounded_native_text(Text, 500, Native, Length), Length > 0
+    -> setup_call_cleanup(
+           admit(Request),
+           perform(Request, Native, Result),
+           release(Request))
+    ;  Result = unavailable(invalid_text)
     ).
 
 valid_text(Text) :-
-    bounded_native_text(Text,500,_,Length),Length>0.
+    bounded_native_text(Text, 500, _, Length),
+    Length > 0.
 
 admit(Request) :-
     with_mutex(jev_admission, admit_locked(Request)).

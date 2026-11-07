@@ -33,28 +33,36 @@ configure_model_service(Endpoint) :-
 
 % Retain the one-prompt interface for existing callers.
 model_answer(Prompt, Result) :-
-    ( bounded_native_text(Prompt,500,Native,N), N > 0
+    (  bounded_native_text(Prompt, 500, Native, N), N > 0
     -> model_chat([user(Native)], Result)
-    ; Result = error(invalid_prompt) ).
+    ;  Result = error(invalid_prompt)
+    ).
 
 model_chat(Messages, Result) :-
-    ( valid_messages(Messages, JSON)
+    (  valid_messages(Messages, JSON)
     -> setup_call_cleanup(
            message_queue_create(Queue, [max_size(1)]),
            request_model(JSON, Queue, Reply),
-           message_queue_destroy(Queue)),
+           message_queue_destroy(Queue)
+       ),
        model_reply(Reply, Result)
-    ; Result = error(invalid_messages) ).
+    ;  Result = error(invalid_messages)
+    ).
 
-model_reply(answer(Native),answer(Text)) :- !,language_text(Native,Text).
-model_reply(Reply,Reply).
+model_reply(answer(Native), answer(Text)) :-
+    !,
+    language_text(Native, Text).
+model_reply(Reply, Reply).
 
 % Only alternating user/assistant text, ending with a user turn. No system
 % messages, extra JSON keys, tools, URLs or generation settings are accepted.
 valid_messages(Messages, JSON) :-
-    ground(Messages), is_list(Messages),
-    length(Messages, Count), memberchk(Count, [1,3,5]),
-    conversation(Messages, user, JSON, Size), Size =< 2000.
+    ground(Messages),
+    is_list(Messages),
+    length(Messages, Count),
+    memberchk(Count, [1, 3, 5]),
+    conversation(Messages, user, JSON, Size),
+    Size =< 2000.
 
 conversation([user(Text)], user, [_{role:"user",content:Native}], Size) :-
     bounded_native_text(Text,500,Native,Size),Size>0.
@@ -74,10 +82,13 @@ request_model(Messages, Queue, Result) :-
     % abort, retaining the single inference slot until the HTTP call ends.
     setup_call_cleanup(
         start_request(Messages, Queue, Admission),
-        ( Admission == started
-        -> ( thread_get_message(Queue, Result, [timeout(40)])
-           -> true ; Result = error(model_unavailable) )
-        ; Result = Admission ),
+        (  Admission == started
+        -> (  thread_get_message(Queue, Result, [timeout(40)])
+           -> true
+           ;  Result = error(model_unavailable)
+           )
+        ;  Result = Admission
+        ),
         true).
 
 start_request(Messages, Queue, Admission) :-
