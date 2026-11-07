@@ -76,13 +76,13 @@ reply(Ref, Reply) :-
 % Each call uses a fresh connection and principal; Alice leaves before Bob
 % takes her tuple. Public calls come entirely from the owner shared database.
 different_users_example(Port) :-
-    run_public_goal(Port, "(linda_out(message(blue,hello)),writeln(verified))"),
-    run_public_goal(Port, "(linda_in(message(blue,M)),M=hello,writeln(verified))").
+    run_public_goal(Port, "(linda_out(message(my_group,hello)),writeln(verified))"),
+    run_public_goal(Port, "(linda_in(message(my_group,M)),M=hello,writeln(verified))").
 
 public_data_example(Port) :-
-    run_public_goal(Port, "(linda_out(setting(blue,colour,green)),writeln(verified))"),
-    run_public_goal(Port, "(linda_rd(setting(blue,colour,C)),C=green,writeln(verified))"),
-    run_public_goal(Port, "(linda_rdp(setting(blue,colour,green)),linda_inp(setting(blue,colour,green)),\\+linda_rdp(setting(blue,colour,_)),writeln(verified))").
+    run_public_goal(Port, "(linda_out(setting(my_group,colour,green)),writeln(verified))"),
+    run_public_goal(Port, "(linda_rd(setting(my_group,colour,C)),C=green,writeln(verified))"),
+    run_public_goal(Port, "(linda_rdp(setting(my_group,colour,green)),linda_inp(setting(my_group,colour,green)),\\+linda_rdp(setting(my_group,colour,_)),writeln(verified))").
 
 space_out(S,T) :- linda_service:linda_call(S,out(T),ok).
 space_in(S,T) :- linda_service:linda_call(S,in(T),tuple(T)).

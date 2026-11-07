@@ -231,24 +231,24 @@ On n3, n4, or n5, two programs on the same node can communicate:
 
 ```prolog
 % Alice publishes a message, then may disconnect.
-?- linda_out(message(blue, hello)).
+?- linda_out(message(my_group, hello)).
 
 % Bob takes it in another session. He may start first: the call waits.
-?- linda_in(message(blue, Message)).
+?- linda_in(message(my_group, Message)).
 Message = hello.
 
 % Alice publishes shared data.
-?- linda_out(setting(blue, colour, green)).
+?- linda_out(setting(my_group, colour, green)).
 
 % Either user can read it repeatedly without removing it.
-?- linda_rd(setting(blue, colour, Colour)).
+?- linda_rd(setting(my_group, colour, Colour)).
 Colour = green.
 
 % Remove it when finished. A missing nonblocking read or take fails.
-?- linda_inp(setting(blue, colour, green)).
+?- linda_inp(setting(my_group, colour, green)).
 ```
 
-`blue` is a group name chosen by the clients, not an access control. Each node
+`my_group` is a group name chosen by the clients, not an access control. Each node
 has a separate blackboard; clients select the same node to communicate. N5
 retains its existing owner-only SSO policy. The service owns tuples independently
 of client connections, but restarting it clears the blackboard.

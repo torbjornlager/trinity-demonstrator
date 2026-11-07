@@ -2774,7 +2774,7 @@ provides the service, just as with the counter service.</p>
 <p>Select <strong>n3, n4, or n5</strong> and open <strong>25 linda.pl</strong>
 in the Examples drawer. The file contains usage examples; the five predicates
 below are already supplied by the node. Try them with a partner or two browser
-sessions on the <em>same node</em>. Agree on a group name, here <code>blue</code>,
+sessions on the <em>same node</em>. Agree on a group name, here <code>my_group</code>,
 to distinguish your tuples from other people's.</p>
 
 <table>
@@ -2789,32 +2789,32 @@ to distinguish your tuples from other people's.</p>
 
 <h3>Producer and consumer</h3>
 <p>Alice publishes a message. She can disconnect after the call succeeds:</p>
-<pre id="linda-submit">?- linda_out(message(blue, hello)).</pre>
+<pre id="linda-submit">?- linda_out(message(my_group, hello)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-submit&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 
 <p>Bob takes it in his own session, binding <code>Message = hello</code>.
 If Bob starts first, his call waits for Alice's message.</p>
-<pre id="linda-take">?- linda_in(message(blue, Message)).</pre>
+<pre id="linda-take">?- linda_in(message(my_group, Message)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-take&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 
 <h3>Synchronization</h3>
 <p>Bob can wait for a signal:</p>
-<pre id="linda-wait">?- linda_in(ready(blue)).</pre>
+<pre id="linda-wait">?- linda_in(ready(my_group)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-wait&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>Alice releases him by publishing that signal:</p>
-<pre id="linda-signal">?- linda_out(ready(blue)).</pre>
+<pre id="linda-signal">?- linda_out(ready(my_group)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-signal&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 
 <h3>Reading shared data</h3>
 <p>Alice publishes a setting:</p>
-<pre id="linda-setting">?- linda_out(setting(blue, colour, green)).</pre>
+<pre id="linda-setting">?- linda_out(setting(my_group, colour, green)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-setting&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>Bob, Alice, and other clients can read it repeatedly; a read leaves the tuple
 available. <code>Colour</code> becomes <code>green</code>:</p>
-<pre id="linda-read">?- linda_rd(setting(blue, colour, Colour)).</pre>
+<pre id="linda-read">?- linda_rd(setting(my_group, colour, Colour)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-read&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>A nonblocking read lets a program handle missing data immediately:</p>
-<pre id="linda-probe">?- (  linda_rdp(setting(blue, size, Size))
+<pre id="linda-probe">?- (  linda_rdp(setting(my_group, size, Size))
    -&gt; write(Size),
       nl
    ;  write('No size has been published'),
@@ -2822,7 +2822,7 @@ available. <code>Colour</code> becomes <code>green</code>:</p>
    ).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-probe&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>When finished, take the setting to remove it:</p>
-<pre id="linda-cleanup">?- linda_inp(setting(blue, colour, green)).</pre>
+<pre id="linda-cleanup">?- linda_inp(setting(my_group, colour, green)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-cleanup&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 
 <p>Patterns use ordinary Prolog unification. Each take removes one occurrence;
