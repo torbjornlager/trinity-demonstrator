@@ -2285,8 +2285,17 @@ independently verify that the facts are true.</p>
 <h2>Ping-pong across nodes</h2>
 
 <p>
-    The same <code>node(...)</code> option can create the "ponger" on the other
-    node.
+    The pinger runs on the node selected in the demonstrator. The
+    <code>node(...)</code> option starts the ponger at
+    <code>{{ping_pong_peer_host}}</code>, and
+    <code>src_predicates([pong/0])</code> ships its definition there.
+    On N3, N4, or the SWI-WASM demonstrator opened from either node, the
+    ponger runs on Trealla Prolog (N5). From N5 it runs on SWI-Prolog (N4).
+</p>
+
+<p>
+    Click <strong>Load</strong> to load the program, then click
+    <strong>Call</strong> to run three round trips.
 </p>
 
 <pre id="cpw-remote-pingpong-source">ping(0, Pong_Pid) :-
@@ -2314,7 +2323,7 @@ pong :-
 
 ping_pong_remote :-
     spawn(pong, Pong_Pid, [
-        node('{{actor_peer_host}}'),
+        node('{{ping_pong_peer_host}}'),
         src_predicates([pong/0]),
         monitor(true)
     ]),
@@ -2339,10 +2348,11 @@ ping_pong_remote :-
 </p>
 
 <p>
-    Output from both actors appears in this terminal. The ponger is remote, but
-    it inherits this toplevel's opaque terminal capability; ordinary messages,
-    results, links, and monitors continue to use their normal distributed actor
-    routes.
+    The terminal shows three <code>Pong received ping.</code> lines and
+    three <code>Ping received pong.</code> lines, followed by a finish
+    message from each actor. The remote ponger can print here because it
+    inherits this toplevel's terminal capability. The query succeeds after
+    both monitors report normal termination.
 </p>
 
 
@@ -4607,7 +4617,11 @@ only an assessment; no request is sent.</p>
         var bridge = tutorialBridge();
         var currentHost = tutorialCurrentHost();
         try {
-            recursiveReplaceActorPeerHost(document.body, tutorialActorPeerHost(currentHost));
+            var actorPeerHost = tutorialActorPeerHost(currentHost);
+            var pingPongPeerHost = /^https?:\/\/n[34]\.elfenbenstornet\.se$/.test(currentHost)
+                ? "https://n5.elfenbenstornet.se" : actorPeerHost;
+            recursiveReplaceActorPeerHost(document.body, actorPeerHost);
+            recursiveReplacePlaceholder(document.body, "{{ping_pong_peer_host}}", pingPongPeerHost);
             buildTutorialToc();
             if (bridge && typeof bridge.appearanceOptions === "function") {
                 applyTutorialAppearance(bridge.appearanceOptions());
