@@ -1705,10 +1705,17 @@ checking what can still be used after an interruption or failure.</p>
 <h2 id="recovery-timeout">1. Time out, then collect the answer</h2>
 <p>Start one remote computation and try a zero-second wait. If the answer
 is not ready, collect it with the <em>same</em> reference:</p>
-<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=ready), Ref,
-           [template(X)]),
-   yield(Ref, First, [timeout(0), on_timeout(First=timeout)]),
-   ( First == timeout -&gt; yield(Ref, Final) ; Final = First ).</pre>
+<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=ready), Ref, [
+       template(X)
+   ]),
+   yield(Ref, First, [
+       timeout(0),
+       on_timeout(First = timeout)
+   ]),
+   (  First == timeout
+   -&gt; yield(Ref, Final)
+   ;  Final = First
+   ).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#recovery-timeout-retry&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>Normally <code>First = timeout</code> and
 <code>Final = success([ready],false)</code>. If the answer was already ready,
