@@ -59,8 +59,8 @@ build_ring(N, Last, First) :-
 clear_actors :-
     self(Self),
     actors(All),
-    forall( ( member(Pid, All), Pid \== Self ),
-            exit(Pid, cleared) ).
+    forall((member(Pid, All), Pid \== Self),
+           exit(Pid, cleared)).
 
 %%  ring(+N, +Laps)
 %
@@ -73,14 +73,14 @@ ring(N, Laps) :-
     run_laps(First, 1, Laps).
 
 run_laps(First, Lap, Laps) :-
-    (   Lap =< Laps
-    ->  First ! token,
-        receive({ token -> true }),
-        format("Lap ~w of ~w complete.~n", [Lap, Laps]),
-        Lap1 is Lap + 1,
-        run_laps(First, Lap1, Laps)
-    ;   First ! stop,
-        receive({ stop -> writeln('Ring shut down.') })
+    (  Lap =< Laps
+    -> First ! token,
+       receive({token -> true}),
+       format("Lap ~w of ~w complete.~n", [Lap, Laps]),
+       Lap1 is Lap + 1,
+       run_laps(First, Lap1, Laps)
+    ;  First ! stop,
+       receive({stop -> writeln('Ring shut down.')})
     ).
 
 

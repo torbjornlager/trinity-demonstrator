@@ -35,17 +35,17 @@ mytoplevel(Pid, Options) :-
 session(Pid, Parent) :-
     receive({
         '$call'(Template, Goal) ->
-            (   call_cleanup(Goal, Det=true),
-                (   var(Det)
-                ->  Parent ! success(Pid, Template, true),
-                    receive({
-                        '$next' -> fail ;
-                        '$stop' -> true
-                    }),
-                    !
-                ;   Parent ! success(Pid, Template, false)
-                )
-            ;   Parent ! failure(Pid)
+            (  call_cleanup(Goal, Det = true),
+               (  var(Det)
+               -> Parent ! success(Pid, Template, true),
+                  receive({
+                      '$next' -> fail ;
+                      '$stop' -> true
+                  }),
+                  !
+               ;  Parent ! success(Pid, Template, false)
+               )
+            ;  Parent ! failure(Pid)
             )
     }),
     session(Pid, Parent).
@@ -72,14 +72,18 @@ mytoplevel_stop(Pid) :-
 % Start a goal and collect the first solution (X = a). The success
 % message also says whether more solutions remain.
 
-?- mytoplevel_call($Pid, X, member(X, [a,b,c])),
-   receive({Msg -> true}).
+?- mytoplevel_call($Pid, X, member(X, [a, b, c])),
+   receive({
+       Msg -> true
+   }).
 
 % Ask for the next solution (X = b); each '$next' drives one step of
 % backtracking inside the actor. Repeat to reach X = c.
 
 ?- mytoplevel_next($Pid),
-   receive({Msg -> true}).
+   receive({
+       Msg -> true
+   }).
 
 % Abandon the search. The actor loops back to idle, ready for another
 % '$call'.

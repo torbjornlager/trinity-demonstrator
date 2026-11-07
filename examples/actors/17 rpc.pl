@@ -32,7 +32,9 @@ edge(c, d).
 edge(a, d).
 
 path(X, Y) :- edge(X, Y).
-path(X, Y) :- edge(X, Z), path(Z, Y).
+path(X, Y) :-
+    edge(X, Z),
+    path(Z, Y).
 
 
 /** <examples>
@@ -40,12 +42,12 @@ path(X, Y) :- edge(X, Z), path(Z, Y).
 % Call a built-in on a remote node; backtracking enumerates X = a, b, c
 % across the network.
 
-?- rpc('https://n1.elfenbenstornet.se', member(X, [a,b,c])).
+?- rpc('https://n1.elfenbenstornet.se', member(X, [a, b, c])).
 
 % Supply the code the call needs -- as a clause list, then as text.
 
 ?- rpc('https://n1.elfenbenstornet.se', p(X), [
-       src_list([p(a),p(b),p(c)])
+       src_list([p(a), p(b), p(c)])
    ]).
 
 ?- rpc('https://n1.elfenbenstornet.se', p(X), [
@@ -61,12 +63,12 @@ path(X, Y) :- edge(X, Z), path(Z, Y).
 
 % A three-node call: n3 runs the goal, loading its code from n2.
 
-?- rpc('https://n3.elfenbenstornet.se', ancestor_descendant(X,Y), [
+?- rpc('https://n3.elfenbenstornet.se', ancestor_descendant(X, Y), [
        src_uri('https://n2.elfenbenstornet.se')
    ]).
 
-?- rpc(localhost, ancestor_descendant(X,Y),
-       [src_uri('https://n2.elfenbenstornet.se')
+?- rpc(localhost, ancestor_descendant(X, Y), [
+       src_uri('https://n2.elfenbenstornet.se')
    ]).
 
 */

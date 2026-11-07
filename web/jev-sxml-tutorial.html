@@ -124,12 +124,20 @@ unavailable(transport)</code></pre>
     <pre id="jev-stage1-spawn"><code>?- jev_agent_spawn(Pid).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-stage1-spawn">Spawn Stage 1</button></div>
     <pre id="jev-stage1-deploy"><code>?- self(Me), $Pid ! say(Me, deploy, "Please prepare a deployment"),
-   receive({agent_reply(deploy, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       agent_reply(deploy, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-stage1-deploy">Prepare simulated preview</button></div>
     <pre id="jev-stage1-status"><code>?- self(Me), $Pid ! say(Me, status, "What is the deployment status?"),
-   receive({agent_reply(status, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       agent_reply(status, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-stage1-status">Ask status</button></div>
     <pre id="jev-stage1-stop"><code>?- $Pid ! stop.</code></pre>
     <div class="actions"><button class="secondary" type="button" data-ask="#jev-stage1-stop">Stop Stage 1</button></div>
@@ -174,30 +182,46 @@ unavailable(transport)</code></pre>
     <h2>10. The same observation in two states</h2>
     <h3>Affirm while idle</h3>
     <pre id="jev-idle-yes"><code>?- self(Me), $Pid ! say(Me, idle_yes, "yes"),
-   receive({demo_reply(idle_yes, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       demo_reply(idle_yes, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-idle-yes">Say “yes” while idle</button></div>
     <p>Expect <code>action(explain_context)</code> and <code>transition(none)</code>.</p>
 
     <h3>Create a pending commitment</h3>
     <pre id="jev-stage2-deploy"><code>?- self(Me), $Pid ! say(Me, deploy, "Please prepare a deployment"),
-   receive({demo_reply(deploy, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       demo_reply(deploy, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-stage2-deploy">Prepare deployment proposal</button></div>
     <p>The <code>request_deploy</code> observation enters <code>awaiting_confirmation</code>. No deployment occurs.</p>
 
     <h3>Affirm while awaiting confirmation</h3>
     <pre id="jev-awaiting-yes"><code>?- self(Me), $Pid ! say(Me, confirm, "yes"),
-   receive({demo_reply(confirm, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       demo_reply(confirm, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-awaiting-yes">Say “yes” to confirm</button></div>
     <p>The same symbolic <code>affirm</code> now selects <code>simulate_deploy(Proposal)</code> and returns to <code>idle</code>. The proposal contains the reference, original request text, and intent saved when the chart entered <code>awaiting_confirmation</code>; the larger raw provider response is not retained in interaction state.</p>
 
     <h3>Denial cancels</h3>
     <p>Prepare another proposal with the preceding button, then:</p>
     <pre id="jev-awaiting-no"><code>?- self(Me), $Pid ! say(Me, cancel, "no"),
-   receive({demo_reply(cancel, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       demo_reply(cancel, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-awaiting-no">Say “no” to cancel</button></div>
   </section>
 
@@ -206,8 +230,12 @@ unavailable(transport)</code></pre>
     <p>Both stages accept an intent winner only when Choice confidence is at least <code>0.70</code>. This is an application-specific teaching value, not a universal or calibrated threshold.</p>
     <pre id="jev-ambiguous"><code>?- self(Me), $Pid ! say(Me, ambiguous,
        "Yes, deploy it -- actually no, do not deploy it."),
-   receive({demo_reply(ambiguous, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       demo_reply(ambiguous, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-ambiguous">Send contradictory input</button></div>
     <p>The 2026-09-25 live probe returned <code>deny</code> with <code>deny=0.74</code>, <code>other=0.24</code>, <code>request_deploy=0.02</code>, and confidence <code>0.66</code>. Exact results may change. The deterministic policy asks for clarification and leaves the chart state unchanged.</p>
     <p>This is deterministic control over uncertain evidence, not probabilistic control flow. The chart does not branch into alternative probabilistic states.</p>
@@ -217,8 +245,12 @@ unavailable(transport)</code></pre>
     <h2>12. Swedish below the observation boundary</h2>
     <p>Prepare a proposal, then try Swedish affirmation:</p>
     <pre id="jev-swedish"><code>?- self(Me), $Pid ! say(Me, swedish, "ja"),
-   receive({demo_reply(swedish, Report) -&gt; true},
-           [timeout(20), on_timeout(fail)]).</code></pre>
+   receive({
+       demo_reply(swedish, Report) -&gt; true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).</code></pre>
     <div class="actions"><button type="button" data-ask="#jev-swedish">Say “ja”</button></div>
     <p>If the sensor produces <code>affirm</code>, the Prolog and SXML layers use the same clauses and transition as English <code>yes</code>. Likewise <code>nej</code> can produce <code>deny</code>. This is language independence of the symbolic interface; a few successful probes do not establish multilingual accuracy.</p>
   </section>

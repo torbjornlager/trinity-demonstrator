@@ -69,8 +69,12 @@ husband(calpurnia, caesar).
 ?- self(S),
    S ! goodbye("Bob"),
    S ! hello("Alice"),
-   receive({ hello(Name1)   -> format("Hello, ~s!~n", [Name1]) }),
-   receive({ goodbye(Name2) -> format("Goodbye, ~s!~n", [Name2]) }).
+   receive({
+       hello(Name1) -> format("Hello, ~s!~n", [Name1])
+   }),
+   receive({
+       goodbye(Name2) -> format("Goodbye, ~s!~n", [Name2])
+   }).
 
 
 % --- Guards as ordinary tests -----------------------------------------
@@ -78,7 +82,11 @@ husband(calpurnia, caesar).
 % by the pattern. Again each receive gets its own variable (N1, N2).
 
 ?- self(S), S ! number(42), S ! number(-7),
-   receive({ number(N1) if N1 > 0  -> format("Positive: ~w~n", [N1]) }),
-   receive({ number(N2) if N2 =< 0 -> format("Non-positive: ~w~n", [N2]) }).
+   receive({
+       number(N1) if N1 > 0 -> format("Positive: ~w~n", [N1])
+   }),
+   receive({
+       number(N2) if N2 =< 0 -> format("Non-positive: ~w~n", [N2])
+   }).
 
 */

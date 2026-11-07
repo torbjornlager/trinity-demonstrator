@@ -47,7 +47,9 @@ count_server(Count0) :-
 % the count climb -- the state persists in the running actor.
 
 ?- self(Me), $Pid ! count(Me),
-   receive({count(N) -> true}).
+   receive({
+       count(N) -> true
+   }).
 
 % Shut the server down.
 

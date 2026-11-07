@@ -45,14 +45,17 @@ chat_actor(History) :-
     }).
 
 chat_exchange(Text, History, Result, NextHistory) :-
-    ( chat_text_size(Text, N), N > 0, N =< 500
+    (  chat_text_size(Text, N), N > 0, N =< 500
     -> append(History, [user(Text)], Messages),
        model_chat(Messages, Result),
-       ( Result = answer(Reply)
+       (  Result = answer(Reply)
        -> append(Messages, [assistant(Reply)], Complete),
           chat_trim(Complete, NextHistory)
-       ; NextHistory = History )
-    ; Result = error(invalid_prompt), NextHistory = History ).
+       ;  NextHistory = History
+       )
+    ;  Result = error(invalid_prompt),
+       NextHistory = History
+    ).
 
 chat_reply(From, Ref, answer(Text)) :-
     From ! answer(Ref, Text).
@@ -62,10 +65,11 @@ chat_reply(From, Ref, error(Reason)) :-
 chat_trim(History, Kept) :-
     length(History, Count),
     chat_size(History, Size),
-    ( Count =< 4, Size =< 1500
+    (  Count =< 4, Size =< 1500
     -> Kept = History
-    ; History = [user(_), assistant(_)|Rest],
-      chat_trim(Rest, Kept) ).
+    ;  History = [user(_), assistant(_)|Rest],
+       chat_trim(Rest, Kept)
+    ).
 
 chat_size([], 0).
 chat_size([Message|Rest], Size) :-
@@ -73,16 +77,25 @@ chat_size([Message|Rest], Size) :-
     chat_size(Rest, Tail), Size is N + Tail.
 
 % Native strings remain accepted; portable literals are character lists.
+
 chat_text_size(Text, N) :-
-    ( string(Text) -> string_length(Text, N)
-    ; is_list(Text), maplist(chat_character, Text), length(Text, N)
+    (  string(Text)
+    -> string_length(Text, N)
+    ;  is_list(Text),
+       maplist(chat_character, Text),
+       length(Text, N)
     ).
-chat_character(Char) :- atom(Char), atom_length(Char, 1).
+chat_character(Char) :-
+    atom(Char),
+    atom_length(Char, 1).
 
 start_chat(Pid) :-
     spawn(chat_actor([]), Pid, [
-        src_predicates([chat_actor/1, chat_exchange/4, chat_reply/3,
-                        chat_trim/2, chat_size/2, chat_text_size/2, chat_character/1]),
+        src_predicates([
+            chat_actor/1, chat_exchange/4, chat_reply/3,
+            chat_trim/2, chat_size/2, chat_text_size/2,
+            chat_character/1
+        ]),
         monitor(true)
     ]).
 
@@ -99,49 +112,78 @@ start_chat(Pid) :-
 % Poll without holding the public query open. If it fails, try again
 % shortly. A model_error reply explains why an attempt was rejected.
 
-?- receive({answer(a1, Text) -> true ; model_error(a1, Reason) -> true},
-           [timeout(0), on_timeout(fail)]).
+?- receive({
+       answer(a1, Text) -> true ;
+       model_error(a1, Reason) -> true
+   },[
+       timeout(0),
+       on_timeout(fail)
+   ]).
 
 % At least ten seconds later, give B a different name.
 
 ?- self(Me), $B ! ask(Me, b1, "My name is Bob. Please remember my name.").
 
-?- receive({answer(b1, Text) -> true ; model_error(b1, Reason) -> true},
-           [timeout(0), on_timeout(fail)]).
+?- receive({
+       answer(b1, Text) -> true ;
+       model_error(b1, Reason) -> true
+   },[
+       timeout(0),
+       on_timeout(fail)
+   ]).
 
 % At least ten seconds later, ask A to recall its own conversation.
 % Only Alice's exchange is sent with this question; B's history is separate.
 
 ?- self(Me), $A ! ask(Me, a2, "What is my name?").
 
-?- receive({answer(a2, Text) -> true ; model_error(a2, Reason) -> true},
-           [timeout(0), on_timeout(fail)]).
+?- receive({
+       answer(a2, Text) -> true ;
+       model_error(a2, Reason) -> true
+   },[
+       timeout(0),
+       on_timeout(fail)
+   ]).
 
 % At least ten seconds later, ask B the same question.
 
 ?- self(Me), $B ! ask(Me, b2, "What is my name?").
 
-?- receive({answer(b2, Text) -> true ; model_error(b2, Reason) -> true},
-           [timeout(0), on_timeout(fail)]).
+?- receive({
+       answer(b2, Text) -> true ;
+       model_error(b2, Reason) -> true
+   },[
+       timeout(0),
+       on_timeout(fail)
+   ]).
 
 % Reset A only. No inference is needed, so no ten-second wait is required.
 % The acknowledgement means the actor has reached the reset operation.
 
 ?- self(Me), $A ! reset(Me, reset_a).
 
-?- receive({reset(reset_a) -> true}, [timeout(0), on_timeout(fail)]).
+?- receive({
+       reset(reset_a) -> true
+   },[
+       timeout(0),
+       on_timeout(fail)
+   ]).
 
 % Ask A its name again after the inference cooldown. Its earlier history
 % is gone. The model may say it does not know, or it may invent a name.
 
 ?- self(Me), $A ! ask(Me, a3, "What is my name?").
 
-?- receive({answer(a3, Text) -> true ; model_error(a3, Reason) -> true},
-           [timeout(0), on_timeout(fail)]).
+?- receive({
+       answer(a3, Text) -> true ;
+       model_error(a3, Reason) -> true
+   },[
+       timeout(0),
+       on_timeout(fail)
+   ]).
 
 % Stop both actors when finished. stop/reset are processed between asks;
 % they do not interrupt an inference already in progress.
 
 ?- $A ! stop, $B ! stop.
-
 */

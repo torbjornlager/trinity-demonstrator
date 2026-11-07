@@ -33,18 +33,18 @@ sleep :-
 doForks(ForkList) :-
     receive({
         {grabforks, {Left, Right}} ->
-            subtract(ForkList, [Left,Right], ForkList1),
-            doForks(ForkList1);
+            subtract(ForkList, [Left, Right], ForkList1),
+            doForks(ForkList1) ;
         {releaseforks, {Left, Right}} ->
-            doForks([Left, Right| ForkList]);
+            doForks([Left, Right|ForkList]) ;
         {available, {Left, Right}, Sender} ->
-            (   member(Left, ForkList),
-                member(Right, ForkList)
-            ->  Bool = true
-            ;   Bool = false
+            (  member(Left, ForkList),
+               member(Right, ForkList)
+            -> Bool = true
+            ;  Bool = false
             ),
             Sender ! {areAvailable, Bool},
-            doForks(ForkList);
+            doForks(ForkList) ;
         {die} ->
             format("Forks put away.~n")
     }).
@@ -54,7 +54,7 @@ areAvailable(Forks, Have) :-
     forks ! {available, Forks, Self},
     receive({
         {areAvailable, false} ->
-            Have = false;
+            Have = false ;
         {areAvailable, true} ->
             Have = true
     }).
@@ -63,11 +63,11 @@ processWaitList([], false).
 processWaitList([H|T], Result) :-
     {Client, Forks} = H,
     areAvailable(Forks, Have),
-    (   Have == true
-    ->  Client ! {served},
-        Result = true
-    ;   Have == false
-    ->  processWaitList(T, Result)
+    (  Have == true
+    -> Client ! {served},
+       Result = true
+    ;  Have == false
+    -> processWaitList(T, Result)
     ).
 
 doWaiter([], 0, 0, false) :-
@@ -78,30 +78,30 @@ doWaiter(WaitList, ClientCount, EatingCount, Busy) :-
     receive({
         {waiting, Client} ->
             WaitList1 = [Client|WaitList],
-            (   Busy == false,
-                EatingCount < 2
-            ->  processWaitList(WaitList1, Busy1)
-            ;   Busy1 = Busy
+            (  Busy == false,
+               EatingCount < 2
+            -> processWaitList(WaitList1, Busy1)
+            ;  Busy1 = Busy
             ),
-            doWaiter(WaitList1, ClientCount, EatingCount, Busy1);
+            doWaiter(WaitList1, ClientCount, EatingCount, Busy1) ;
         {eating, Client} ->
             subtract(WaitList, [Client], WaitList1),
-            EatingCount1 is EatingCount+1,
-            doWaiter(WaitList1, ClientCount, EatingCount1, false);
+            EatingCount1 is EatingCount + 1,
+            doWaiter(WaitList1, ClientCount, EatingCount1, false) ;
         {finished} ->
             processWaitList(WaitList, R1),
-            EatingCount1 is EatingCount-1,
+            EatingCount1 is EatingCount - 1,
             doWaiter(WaitList, ClientCount, EatingCount1, R1) ;
         {leaving} ->
             ClientCount1 is ClientCount - 1,
-            flag(left_received, N, N+1),
+            flag(left_received, N, N + 1),
             doWaiter(WaitList, ClientCount1, EatingCount, Busy)
     }).
 
 philosopher(Name, _Forks, 0) :-
     format("~s is leaving.~n", [Name]),
     waiter ! {leaving},
-    flag(left, N, N+1).
+    flag(left, N, N + 1).
 philosopher(Name, Forks, Cycle) :-
     self(Self),
     format("~s is thinking (cycle ~w).~n", [Name, Cycle]),

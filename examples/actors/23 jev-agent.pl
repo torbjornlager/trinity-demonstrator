@@ -6,9 +6,11 @@
 
 jev_agent_spawn(Pid) :-
     spawn(jev_agent, Pid, [
-        src_predicates([jev_agent/0, jev_agent_loop/0, jev_observation/2,
-                        jev_stage1_decision/3, jev_confident/1,
-                        jev_intent/2]),
+        src_predicates([
+            jev_agent/0, jev_agent_loop/0, jev_observation/2,
+            jev_stage1_decision/3, jev_confident/1,
+            jev_intent/2
+        ]),
         monitor(true)
     ]).
 
@@ -22,7 +24,7 @@ jev_agent_loop :-
             jev_stage1_decision(Observation, Action, Reply),
             From ! agent_reply(Ref,
                       report(Text, Observation, action(Action), Reply)),
-            jev_agent_loop;
+            jev_agent_loop ;
         stop ->
             true
     }).
@@ -31,13 +33,13 @@ jev_observation(Text, Observation) :-
     catch(jev_deployment_observation(Text, Candidate),
           error(existence_error(procedure, _), _),
           Candidate = unavailable(configuration)),
-    (   Candidate = observation(choice(_, _, _), score(_, _, _, _),
-                                noul(_), provenance(Raw)),
-        is_dict(Raw)
-    ->  Observation = Candidate
-    ;   Candidate = unavailable(Reason)
-    ->  Observation = unavailable(Reason)
-    ;   Observation = unavailable(malformed_observation)
+    (  Candidate = observation(choice(_, _, _), score(_, _, _, _),
+                               noul(_), provenance(Raw)),
+       is_dict(Raw)
+    -> Observation = Candidate
+    ;  Candidate = unavailable(Reason)
+    -> Observation = unavailable(Reason)
+    ;  Observation = unavailable(malformed_observation)
     ).
 
 jev_stage1_decision(unavailable(Reason), retry_later,
@@ -79,12 +81,20 @@ jev_intent(observation(choice(Intent, _, _), _, _, _), Intent).
 ?- jev_agent_spawn(Pid).
 
 ?- self(Me), $Pid ! say(Me, deploy, "Please prepare a deployment"),
-   receive({agent_reply(deploy, Report) -> true},
-           [timeout(20), on_timeout(fail)]).
+   receive({
+       agent_reply(deploy, Report) -> true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).
 
 ?- self(Me), $Pid ! say(Me, status, "What is the deployment status?"),
-   receive({agent_reply(status, Report) -> true},
-           [timeout(20), on_timeout(fail)]).
+   receive({
+       agent_reply(status, Report) -> true
+   },[
+       timeout(20),
+       on_timeout(fail)
+   ]).
 
 ?- $Pid ! stop.
 

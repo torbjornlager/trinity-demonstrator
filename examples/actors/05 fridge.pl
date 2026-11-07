@@ -28,15 +28,15 @@ fridge(FoodList0) :-
         store(From, Food) ->
             self(Self),
             From ! Self-ok,
-            fridge([Food|FoodList0]);
+            fridge([Food|FoodList0]) ;
         take(From, Food) ->
             self(Self),
-            (   select(Food, FoodList0, FoodList)
-            ->  From ! Self-ok(Food),
-                fridge(FoodList)
-            ;   From ! Self-not_found,
-                fridge(FoodList0)
-            );
+            (  select(Food, FoodList0, FoodList)
+            -> From ! Self-ok(Food),
+               fridge(FoodList)
+            ;  From ! Self-not_found,
+               fridge(FoodList0)
+            ) ;
         terminate ->
             true
     }).

@@ -25,8 +25,11 @@ prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
       | Options
     ]).
 prove((A, B), (ProofA, ProofB)) :- !,
-    prove(A, ProofA), prove(B, ProofB).
-prove(A, A/Proof) :- clause(A, B), prove(B, Proof).
+    prove(A, ProofA),
+    prove(B, ProofB).
+prove(A, A/Proof) :-
+    clause(A, B),
+    prove(B, Proof).
 
 /** <examples>
 

@@ -33,9 +33,12 @@
 ?- linda_rd(setting(blue, colour, Colour)).
 
 % A nonblocking read lets the program handle missing data immediately.
-?- ( linda_rdp(setting(blue, size, Size))
-   -> write(Size), nl
-   ;  write('No size has been published'), nl ).
+?- (  linda_rdp(setting(blue, size, Size))
+   -> write(Size),
+      nl
+   ;  write('No size has been published'),
+      nl
+   ).
 
 % Clean up the shared setting by taking it.
 ?- linda_inp(setting(blue, colour, green)).

@@ -527,14 +527,20 @@ forbid(Fields) :-
 % Check completeness first, then conflict, prohibition, permission, and gap.
 
 classify(Fields, insufficient(missing_fields)) :-
-    \+ complete(Fields), !.
+    \+ complete(Fields),
+    !.
 classify(Fields, conflicting) :-
-    permit(Fields), forbid(Fields), !.
+    permit(Fields),
+    forbid(Fields),
+    !.
 classify(Fields, forbidden) :-
-    forbid(Fields), !.
+    forbid(Fields),
+    !.
 classify(Fields, permitted) :-
-    permit(Fields), !.
-classify(_, insufficient(policy_gap)).</pre></details>
+    permit(Fields),
+    !.
+classify(_, insufficient(policy_gap)).
+</pre></details>
 <p class="ask-buttons"><button onclick="loadPortableSource(&quot;#service-policy-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
 
 <p>Each query supplies a ground field list and returns one assessment:</p>
@@ -866,10 +872,10 @@ human(Who) :-
 read_and_write :-
     writeln('Type a term or \'stop\''),
     read(Something),
-    (   Something == stop
-    -&gt;  true
-    ;   writeln(Something),
-        read_and_write
+    (  Something == stop
+    -&gt; true
+    ;  writeln(Something),
+       read_and_write
     ).
 </pre>
 
@@ -1030,8 +1036,12 @@ prove(rpc(URI, A, Options), Query@URI/Proof) :- !,
       | Options
     ]).
 prove((A, B), (ProofA, ProofB)) :- !,
-    prove(A, ProofA), prove(B, ProofB).
-prove(A, A/Proof) :- clause(A, B), prove(B, Proof).</pre></details>
+    prove(A, ProofA),
+    prove(B, ProofB).
+prove(A, A/Proof) :-
+    clause(A, B),
+    prove(B, Proof).
+</pre></details>
 <p class="ask-buttons"><button onclick="consult(&quot;#dpt-prove-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button></p>
 
 <p>In this deployment, <code>n3</code> contains:</p>
@@ -1490,7 +1500,7 @@ known_with_birthdate(Me, He, Date) :-
    receive({
        down(Pid, _, _) -&gt;
            writeln('Unexpected down message.')
-   }, [
+   },[
        timeout(1.2),
        on_timeout(writeln('No down message arrived.'))
    ]).
@@ -1714,7 +1724,7 @@ wait_goodbye :-
 <pre id="mpc-timeout">?- receive({
        person(Name) -&gt;
            format("Hello, ~w!~n", [Name])
-   }, [
+   },[
        timeout(1),
        on_timeout(writeln('No person arrived.'))
    ]).
@@ -1739,7 +1749,7 @@ wait_goodbye :-
         Priority-Message if Priority &gt; 10 -&gt;
             Messages = [Message|MoreMessages],
             important(MoreMessages)
-    }, [
+    },[
         timeout(0),
         on_timeout(normal(Messages))
     ]).
@@ -1749,7 +1759,7 @@ normal(Messages) :-
         _-Message -&gt;
             Messages = [Message|MoreMessages],
             normal(MoreMessages)
-    }, [
+    },[
         timeout(0),
         on_timeout(Messages = [])
     ]).
@@ -1883,15 +1893,15 @@ normal(Messages) :-
         store(From, Food) -&gt;
             self(Self),
             From ! Self-ok,
-            fridge([Food|FoodList0]);
+            fridge([Food|FoodList0]) ;
         take(From, Food) -&gt;
             self(Self),
-            (   select(Food, FoodList0, FoodList)
-            -&gt;  From ! Self-ok(Food),
-                fridge(FoodList)
-            ;   From ! Self-not_found,
-                fridge(FoodList0)
-            );
+            (  select(Food, FoodList0, FoodList)
+            -&gt; From ! Self-ok(Food),
+               fridge(FoodList)
+            ;  From ! Self-not_found,
+               fridge(FoodList0)
+            ) ;
         terminate -&gt;
             true
     }).
@@ -2380,16 +2390,30 @@ remote knowledge service.</p>
 % Inference engine
 
 prove(true) :- !.
-prove((A, B)) :- !, prove(A), prove(B).
-prove(A) :- clause(A, B), prove(B).
-prove(A) :- askable(A, Q), input(Q, T), T == yes.
+prove((A, B)) :-
+    !,
+    prove(A),
+    prove(B).
+prove(A) :-
+    clause(A, B),
+    prove(B).
+prove(A) :-
+    askable(A, Q),
+    input(Q, T),
+    T == yes.
 
 % Knowledge base
 
-good_pet(X) :- bird(X), small(X).
-good_pet(X) :- cuddly(X), yellow(X).
+good_pet(X) :-
+    bird(X),
+    small(X).
+good_pet(X) :-
+    cuddly(X),
+    yellow(X).
 
-bird(X) :- has_feathers(X), tweets(X).
+bird(X) :-
+    has_feathers(X),
+    tweets(X).
 
 askable(tweets(_), &#x27;Does it tweet?&#x27;).
 askable(small(_), &#x27;Is it small?&#x27;).
@@ -2400,10 +2424,14 @@ askable(yellow(_), &#x27;Is it yellow?&#x27;).
 % Expert system
 
 expert_ask(Query, Pid, Options) :-
-    append([session(false),
-            src_predicates([prove/1, good_pet/1, bird/1, askable/2,
-                            has_feathers/1, tweets/1, small/1,
-                            cuddly/1, yellow/1])], Options, SpawnOptions),
+    append([
+        session(false),
+        src_predicates([
+            prove/1, good_pet/1, bird/1, askable/2,
+            has_feathers/1, tweets/1, small/1,
+            cuddly/1, yellow/1
+        ])
+    ], Options, SpawnOptions),
     toplevel_spawn(Pid, SpawnOptions),
     toplevel_call(Pid, prove(Query), [
         limit(1),
@@ -2413,7 +2441,7 @@ expert_ask(Query, Pid, Options) :-
 % Simulation
 
 simulation(Options) :-
-    random_member(Name, [tweety,pingu]),
+    random_member(Name, [tweety, pingu]),
     format(&#x27;A1: Is ~w a good pet?~n&#x27;, [Name]),
     expert_ask(good_pet(Name), Pid, Options),
     interact(Pid, Name).
@@ -2428,11 +2456,12 @@ interact(Pid, Name) :-
             throw(Error) ;
         prompt(Pid, Question) -&gt;
             format(&#x27;A2: ~w~n&#x27;, [Question]),
-            random_member(Answer, [yes,no]),
+            random_member(Answer, [yes, no]),
             respond(Pid, Answer),
             format(&#x27;A1: ~w~n&#x27;, [Answer]),
             interact(Pid, Name)
-    }).</pre>
+    }).
+</pre>
 </details>
 <p class="ask-buttons">
   <button onclick="consult(&quot;#expert-agent-source&quot;)" class="btn btn-xs btn-load" type="button">Load</button>
@@ -2785,9 +2814,12 @@ available. <code>Colour</code> becomes <code>green</code>:</p>
 <pre id="linda-read">?- linda_rd(setting(blue, colour, Colour)).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-read&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>A nonblocking read lets a program handle missing data immediately:</p>
-<pre id="linda-probe">?- ( linda_rdp(setting(blue, size, Size))
-   -&gt; write(Size), nl
-   ;  write('No size has been published'), nl ).</pre>
+<pre id="linda-probe">?- (  linda_rdp(setting(blue, size, Size))
+   -&gt; write(Size),
+      nl
+   ;  write('No size has been published'),
+      nl
+   ).</pre>
 <p class="ask-buttons"><button onclick="pasteAndAskExample(&quot;#linda-probe&quot;)" class="btn btn-xs btn-primary" type="button">Call</button></p>
 <p>When finished, take the setting to remove it:</p>
 <pre id="linda-cleanup">?- linda_inp(setting(blue, colour, green)).</pre>
@@ -2863,7 +2895,8 @@ can remain available after the submitting program disconnects.</p>
 
 <pre id="srv-fridge-source">fridge(store(Food), List, ok, [Food|List]).
 fridge(take(Food),  List, ok(Food), Rest) :-
-    select(Food, List, Rest), !.
+    select(Food, List, Rest),
+    !.
 fridge(take(_Food), List, not_found, List).
 </pre>
 
@@ -2960,7 +2993,8 @@ fridge(take(_Food), List, not_found, List).
 
 <pre id="srv-fridge2-source">fridge2(store(Food), List, ok, [Food|List]).
 fridge2(take(Food),  List, ok(Food), Rest) :-
-    select(Food, List, Rest), !.
+    select(Food, List, Rest),
+    !.
 fridge2(take(_Food), List, not_found, List).
 fridge2(_Other,      List, error(unknown_request), List).
 </pre>

@@ -31,13 +31,18 @@ forbid(Fields) :-
 % Check completeness first, then conflict, prohibition, permission, and gap.
 
 classify(Fields, insufficient(missing_fields)) :-
-    \+ complete(Fields), !.
+    \+ complete(Fields),
+    !.
 classify(Fields, conflicting) :-
-    permit(Fields), forbid(Fields), !.
+    permit(Fields),
+    forbid(Fields),
+    !.
 classify(Fields, forbidden) :-
-    forbid(Fields), !.
+    forbid(Fields),
+    !.
 classify(Fields, permitted) :-
-    permit(Fields), !.
+    permit(Fields),
+    !.
 classify(_, insufficient(policy_gap)).
 
 /** <examples>

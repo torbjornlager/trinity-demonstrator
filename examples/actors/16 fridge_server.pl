@@ -35,7 +35,8 @@
 
 fridge(store(Food), List, ok, [Food|List]).
 fridge(take(Food),  List, ok(Food), Rest) :-
-    select(Food, List, Rest), !.
+    select(Food, List, Rest),
+    !.
 fridge(take(_Food), List, not_found, List).
 
 
@@ -47,7 +48,8 @@ fridge(take(_Food), List, not_found, List).
 
 fridge2(store(Food), List, ok, [Food|List]).
 fridge2(take(Food),  List, ok(Food), Rest) :-
-    select(Food, List, Rest), !.
+    select(Food, List, Rest),
+    !.
 fridge2(take(_Food), List, not_found, List).
 fridge2(_Other,      List, error(unknown_request), List).
 

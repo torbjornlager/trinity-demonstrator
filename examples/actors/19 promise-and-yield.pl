@@ -22,40 +22,36 @@
 %
 %	@author Asynchronous RPC examples, in Web Prolog.
 
-
 asynch_test_1(Answer) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref, [
+    promise('https://n3.elfenbenstornet.se', (X = a, sleep(0.5)), Ref, [
         template(X)
     ]),
     yield(Ref, Answer).
 
-
 asynch_test_2(Answer) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref),
+    promise('https://n3.elfenbenstornet.se', (X = a, sleep(0.5)), Ref),
     yield(Ref, Answer, [
         timeout(0.1),
         on_timeout(fail)
     ]).
-    
-    
+
 asynch_test_3(Answer1, Answer2) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref1, [
+    promise('https://n3.elfenbenstornet.se', (X = a, sleep(0.5)), Ref1, [
         template(X)
     ]),
-	promise('https://n4.elfenbenstornet.se', (Y=b,sleep(0.5)), Ref2, [
+    promise('https://n4.elfenbenstornet.se', (Y = b, sleep(0.5)), Ref2, [
         template(Y)
     ]),
     yield(Ref1, Answer1),
     yield(Ref2, Answer2).
 
-
 asynch_test_4(Answer1, Answer2) :-
-	promise('https://n3.elfenbenstornet.se', (p(X),sleep(0.2)), Ref1, [
+    promise('https://n3.elfenbenstornet.se', (p(X), sleep(0.2)), Ref1, [
         template(X),
         offset(1),
         src_text("p(a). p(b).")
     ]),
-	promise('https://n4.elfenbenstornet.se', (p(Y),sleep(0.1)), Ref2, [
+    promise('https://n4.elfenbenstornet.se', (p(Y), sleep(0.1)), Ref2, [
         template(Y),
         limit(1),
         src_list([p(c), p(d)])

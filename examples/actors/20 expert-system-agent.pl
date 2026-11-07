@@ -12,16 +12,30 @@
 % Inference engine
 
 prove(true) :- !.
-prove((A, B)) :- !, prove(A), prove(B).
-prove(A) :- clause(A, B), prove(B).
-prove(A) :- askable(A, Q), input(Q, T), T == yes.
+prove((A, B)) :-
+    !,
+    prove(A),
+    prove(B).
+prove(A) :-
+    clause(A, B),
+    prove(B).
+prove(A) :-
+    askable(A, Q),
+    input(Q, T),
+    T == yes.
 
 % Knowledge base
 
-good_pet(X) :- bird(X), small(X).
-good_pet(X) :- cuddly(X), yellow(X).
+good_pet(X) :-
+    bird(X),
+    small(X).
+good_pet(X) :-
+    cuddly(X),
+    yellow(X).
 
-bird(X) :- has_feathers(X), tweets(X).
+bird(X) :-
+    has_feathers(X),
+    tweets(X).
 
 askable(tweets(_), 'Does it tweet?').
 askable(small(_), 'Is it small?').
@@ -32,24 +46,28 @@ askable(yellow(_), 'Is it yellow?').
 % Expert system
 
 expert_ask(Query, Pid, Options) :-
-    append([session(false),
-            src_predicates([prove/1, good_pet/1, bird/1, askable/2,
-                            has_feathers/1, tweets/1, small/1,
-                            cuddly/1, yellow/1])], Options, SpawnOptions),
+    append([
+        session(false),
+        src_predicates([
+            prove/1, good_pet/1, bird/1, askable/2,
+            has_feathers/1, tweets/1, small/1,
+            cuddly/1, yellow/1
+        ])
+    ], Options, SpawnOptions),
     toplevel_spawn(Pid, SpawnOptions),
     toplevel_call(Pid, prove(Query), [
-        limit(1), 
+        limit(1),
         once(true)
     ]).
-    
+
 % Simulation
 
 simulation(Options) :-
-    random_member(Name, [tweety,pingu]),
+    random_member(Name, [tweety, pingu]),
     format('A1: Is ~w a good pet?~n', [Name]),
     expert_ask(good_pet(Name), Pid, Options),
     interact(Pid, Name).
-    
+
 interact(Pid, Name) :-
     receive({
         failure(Pid) ->
@@ -60,7 +78,7 @@ interact(Pid, Name) :-
             throw(Error) ;
         prompt(Pid, Question) ->
             format('A2: ~w~n', [Question]),
-            random_member(Answer, [yes,no]),
+            random_member(Answer, [yes, no]),
             respond(Pid, Answer),
             format('A1: ~w~n', [Answer]),
             interact(Pid, Name)

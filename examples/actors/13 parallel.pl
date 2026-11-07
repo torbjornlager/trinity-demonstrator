@@ -45,8 +45,8 @@ par_yield(Pids, Pid, Goal) :-
             tidy_up_all(Pids),
             throw(E)
     }).
-    
-    
+
+
 %%  myfirst_solution(-Solution, +Goals)
 %
 %   A racing combinator: run all Goals in parallel and keep the result of
@@ -75,7 +75,9 @@ first_solve(Solution, Goal, Pid) :-
         monitor(true)
     ]).
 
-wait_first([], _) :- !, fail.
+wait_first([], _) :-
+    !,
+    fail.
 wait_first(Pids, Solution) :-
     receive({
         _ - Solution ->
@@ -104,7 +106,7 @@ drain_mailbox(Pid) :-
     receive({
         Msg if arg(1, Msg, Pid) ->
             drain_mailbox(Pid)
-    }, [
+    },[
         timeout(0)
     ]).
 
@@ -114,21 +116,21 @@ drain_mailbox(Pid) :-
 % All three goals succeed. time/1 shows the whole thing takes about as
 % long as the SLOWEST goal, not their sum -- they really did run at once.
 
-?- time(myparallel([(X=a,sleep(1)),(Y=b,sleep(3)),(Z=c,sleep(2))])).
+?- time(myparallel([(X = a, sleep(1)), (Y = b, sleep(3)), (Z = c, sleep(2))])).
 
 % One goal fails: myparallel/1 fails fast, killing the others rather than
 % waiting for them.
 
-?- time(myparallel([(X=a,sleep(1)),(Y=b,fail),(Z=c,sleep(2))])).
+?- time(myparallel([(X = a, sleep(1)), (Y = b, fail), (Z = c, sleep(2))])).
 
 % One goal throws (sleep(a) is a type error): the exception propagates
 % out, again after tearing the siblings down.
 
-?- time(myparallel([(X=a,sleep(1)),(Y=b,sleep(a)),(Z=c,sleep(2))])).
+?- time(myparallel([(X = a, sleep(1)), (Y = b, sleep(a)), (Z = c, sleep(2))])).
 
 % Race two goals; the faster one (1s) wins and binds X=b, the slower is
 % cancelled.
 
-?- time(myfirst_solution(X, [(sleep(2),X=a),(sleep(1),X=b)])).
+?- time(myfirst_solution(X, [(sleep(2), X = a), (sleep(1), X = b)])).
 
 */
