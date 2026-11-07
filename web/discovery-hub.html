@@ -346,16 +346,20 @@
     }
 
     function tick() {
-      callJSON("node_directory_row(Id,Status,Profile,Auth,_,LastSeen,Url,Description,Note)")
-      .then(function (directory) {
+      // Fetch labels with the directory so the capability batch stays within
+      // the hub's three concurrent /call requests.
+      Promise.all([
+        callJSON("node_directory_row(Id,Status,Profile,Auth,_,LastSeen,Url,Description,Note)"),
+        optionalCall("node_implementation(Id,Implementation)")
+      ]).then(function (rows) {
+        var directory = rows[0];
         if (!successful(directory)) throw new Error("the hub did not answer the directory query");
         return Promise.all([
           optionalCall("node_service(Id,Service)"),
           optionalCall("node_provides(Id,Predicate)"),
-          optionalCall("node_self_contained(Id,SelfContained)"),
-          optionalCall("node_implementation(Id,Implementation)")
+          optionalCall("node_self_contained(Id,SelfContained)")
         ]).then(function (extras) {
-          return [directory].concat(extras);
+          return [directory].concat(extras, rows[1]);
         });
       }).then(function (res) {
         if (!successful(res[0])) throw new Error("the hub did not answer the directory query");
