@@ -234,12 +234,19 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     set_actor_context(Pid, Parent, Inbox),
     compile_term([(:- import(actors)), (:- import(exit/1 from actors))])@Private,
     ( current_module(isotope_rpc), nonvar(Goal), Goal = Module:Entry,
-      Module == toplevel_actors, nonvar(Entry), functor(Entry, ptcp, 2) ->
+      Module == toplevel_actors, nonvar(Entry), functor(Entry, ptcp, 3) ->
         compile_term([(:- import(rpc/2 from isotope_rpc)),
                       (:- import(rpc/3 from isotope_rpc)),
                       (:- import(promise/3 from isotope_rpc)),
                       (:- import(promise/4 from isotope_rpc)),
                       (:- import(yield/2 from isotope_rpc))])@Private
+    ; true
+    ),
+    ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
+        compile_term([(:- import(toplevel_spawn/1 from toplevel_actors)),
+                      (:- import(toplevel_spawn/2 from toplevel_actors)),
+                      (:- import(toplevel_call/2 from toplevel_actors)),
+                      (:- import(toplevel_call/3 from toplevel_actors))])@Private
     ; true
     ),
     open(string(Text), read, Stream),

@@ -350,6 +350,7 @@ class Bridge:
             return dict(fields, command=command)
         if command == "spawn":
             options = dict(fields)
+            browser = options.pop("browser_options", None)
             mode = options.pop("prompt_correlation", None)
             source = options.pop("src_text", "")
             if "prompt_correlation" in fields and not isinstance(mode, bool):
@@ -359,6 +360,8 @@ class Bridge:
             if options != {"options": "[session(true)]"}:
                 raise ValueError("Expected spawn options [session(true)]")
             request = {"command": command}
+            if browser is not None:
+                request["browser_options"] = browser
             if mode is not None:
                 request["prompt_correlation"] = mode
             if source:
@@ -378,7 +381,7 @@ class Bridge:
                 raise PromptReferenceError("Expected the reference from the current prompt")
         required_state = {
             "call": "idle", "next": "next", "stop": "next",
-            "poll": "poll", "respond": "prompt",
+            "poll": "poll", "respond": "prompt", "browser_ack": "poll",
         }.get(command)
         if required_state is not None and state != required_state:
             raise ValueError(f"Cannot {command} while the session is in state {state}")
@@ -391,6 +394,9 @@ class Bridge:
             if not goal.strip() or not 1 <= limit <= 100:
                 raise ValueError("Expected a goal and a limit from 1 to 100")
             request.update(goal=goal, limit=limit)
+            if "browser_options" in fields:
+                request.update(browser_options=fields["browser_options"],
+                               browser_origin=fields["browser_origin"])
         elif command == "respond":
             value = fields["input"].strip()
             if value.endswith("."):
@@ -460,9 +466,16 @@ class Handler(BaseHTTPRequestHandler):
         if path.path == "/node_info" and self.server.private_settings is not None:
             self.serve_node_info()
             return
-        if not self.admit_request(executes=path.path == "/call"):
+        websocket = path.path == "/ws" and getattr(self.server, "actor_ws", None)
+        if not self.admit_request(executes=path.path == "/call" or bool(websocket)):
             return
-        if path.path == "/call":
+        if websocket:
+            if self.headers.get_all("Origin") != [self.server.private_settings[1]]:
+                self.send_error(403)
+                return
+            self.close_connection = True
+            websocket(self)
+        elif path.path == "/call":
             self.serve_stateless(path.query)
         elif path.path in ("/", "/demonstrator") and self.server.private_settings is not None:
             self.reply(200, "text/html; charset=utf-8", (HERE / "n7_pilot.html").read_bytes())
@@ -573,11 +586,11 @@ class Handler(BaseHTTPRequestHandler):
         content_type = self.headers.get_content_type()
         if command in ("spawn", "actor_probe") and content_type == "application/json":
             fields = json.loads(body)
-            if isinstance(fields, dict):
+            if isinstance(fields, dict) and (command != "spawn" or "browser_options" not in fields):
                 return fields
         elif command not in ("spawn", "actor_probe") and content_type == "application/x-www-form-urlencoded":
             fields = parse_qs(body, keep_blank_values=True)
-            if all(len(values) == 1 for values in fields.values()):
+            if "browser_options" not in fields and all(len(values) == 1 for values in fields.values()):
                 return {key: values[0] for key, values in fields.items()}
         raise ValueError("Unexpected request body")
 
@@ -682,8 +695,17 @@ def main():
                         help="allow stateless RPC and source fetches to this exact HTTP(S) origin")
     parser.add_argument("--shell-assets", type=Path,
                         help="serve a prepared same-origin static demonstrator at /n7-shell/")
+    parser.add_argument("--actor-ws", action="store_true", help="enable the private ACTOR WebSocket preview")
     args = parser.parse_args()
     private = private_settings(parser, args)
+    actor_ws = None
+    if args.actor_ws:
+        if private is None or not args.pilot_image:
+            parser.error("--actor-ws requires a private packaged pilot")
+        try:
+            from n7_actor_ws import serve as actor_ws
+        except ImportError as error:
+            parser.error(f"--actor-ws requires the N7 WebSocket dependencies: {error}")
     shell_assets = args.shell_assets.resolve() if args.shell_assets is not None else None
     if shell_assets is not None and (private is None or not (shell_assets / "index.html").is_file()):
         parser.error("--shell-assets requires a private adapter and a packaged index.html")
@@ -720,6 +742,7 @@ def main():
 
     with server_type(("127.0.0.1", args.port), Handler) as server:
         server.private_settings = private
+        server.actor_ws = actor_ws
         server.shell_assets = shell_assets
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

@@ -90,7 +90,7 @@ def http(opener, url, *, body=None, headers=None, status=200):
         return response.headers, response.read()
 
 
-def check_https(origin, ca, shell=False, *, shell_absent=False):
+def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -145,6 +145,8 @@ def check_https(origin, ca, shell=False, *, shell_absent=False):
     owner = client(redirect=True)
     _, body = http(owner, origin + "/demonstrator")
     expect(b"Start paging" in body and b"Send reply" in body, True)
+    if actor_core is not None:
+        check_actor_ws(origin, ca, actor_core, anonymous, wrong, wrong_email, owner, spoof)
     if shell:
         _, body = http(client(redirect=True), origin + "/n7-shell/")
         expect(b"WEB_PROLOG_HOST" in body and b"/n7-shell/editor_frame.html" in body, True)
@@ -193,6 +195,38 @@ def check_https(origin, ca, shell=False, *, shell_absent=False):
     print("N7 HTTPS metadata, admission, stateless JSON with source, paging and prompt reply passed")
 
 
+def check_actor_ws(origin, ca, runner, anonymous, wrong, wrong_email, owner, spoof):
+    upgrade = {"Origin": origin, "Connection": "Upgrade", "Upgrade": "websocket",
+               "Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ=="}
+    endpoint = origin + "/ws"
+    http(anonymous, endpoint, headers={**upgrade, **spoof}, status=401)
+    http(wrong, endpoint, headers=upgrade, status=401)
+    http(wrong_email, endpoint, headers=upgrade, status=403)
+    http(owner, endpoint, headers={**upgrade, "Origin": "https://other.example.test"}, status=404)
+    http(owner, endpoint, headers={"Origin": origin}, status=400)
+    request = Request(endpoint)
+    next(handler.cookiejar for handler in owner.handlers
+         if isinstance(handler, HTTPCookieProcessor)).add_cookie_header(request)
+    cookie = request.get_header("Cookie")
+    if not cookie:
+        raise AssertionError("Expected a fixture owner session cookie")
+    # Some macOS Python builds ignore SSL_CERT_FILE when loading default roots.
+    trust_fixture_ca = """
+import functools, runpy, ssl, sys
+sys.argv.pop(0)
+ssl.create_default_context = functools.partial(ssl.create_default_context, cafile=sys.argv.pop(0))
+runner = sys.argv[0]
+sys.path.insert(0, runner.rsplit('/', 1)[0])
+runpy.run_path(runner, run_name='__main__')
+"""
+    result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca), str(runner.resolve()),
+                             "--ws-url", endpoint.replace("https:", "wss:", 1),
+                             "--advertised-profile", "actor", "--origin", origin,
+                             "--header", "Cookie: " + cookie, "--candidate", "n7-owner-preview",
+                             "--report", str(ca.parent / "actor-core.json")])
+    expect(result.returncode, 0)
+
+
 def free_port():
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -212,6 +246,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="trinity-eclipse-n7:local")
     parser.add_argument("--shell", action="store_true", help="also exercise the packaged full demonstrator")
+    parser.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
     args = parser.parse_args()
     with ExitStack() as stack:
         scratch = Path(stack.enter_context(TemporaryDirectory(prefix="n7-https-")))
@@ -233,6 +268,8 @@ def main():
                             "--prefix", "/n7-shell/", "--node-url", origin, "--allow-dirty",
                             "--output", str(assets)], check=True)
             shell_args = ["--shell-assets", str(assets)]
+        if args.actor_core is not None:
+            shell_args.append("--actor-ws")
         adapter = subprocess.Popen(
             [sys.executable, str(ROOT / "experiments/eclipse-clp/isotope_http.py"),
              "--pilot-image", args.image, "--port", str(adapter_port), "--private-origin", origin,
@@ -278,7 +315,7 @@ def main():
 
         try:
             wait_for(tls_ready)
-            check_https(origin, ca, shell=args.shell)
+            check_https(origin, ca, shell=args.shell, actor_core=args.actor_core)
         except Exception:
             subprocess.run(compose + ["logs", "--tail", "25"], env=env)
             print(Path(log.name).read_text()[-3000:])

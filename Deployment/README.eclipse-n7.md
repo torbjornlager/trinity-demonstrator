@@ -235,6 +235,28 @@ Run `python3 tools/test_n7_https.py --image trinity-eclipse-n7:shell-preview --s
 to exercise the preview with disposable TLS and GitHub fixtures. The preview
 uses the same access policy as the live shell.
 
+### Local ACTOR WebSocket preview
+
+The packaged adapter accepts `--actor-ws` to enable `/ws` behind the same
+owner gate as the HTTP routes. The upgrade requires the configured HTTPS
+origin. The WebSocket owns its toplevel sessions and closes them on disconnect.
+Discovery continues to advertise ISOTOPE during the preview.
+
+After bootstrapping the checkout, install the optional transport dependencies
+in a local virtual environment and run ACTOR core through the HTTPS fixture:
+
+```sh
+python3 -m venv .trinity/n7-actor-venv
+.trinity/n7-actor-venv/bin/python -m pip install -r experiments/eclipse-clp/requirements-actor-ws.txt
+.trinity/n7-actor-venv/bin/python tools/test_n7_https.py --shell \
+  --image trinity-eclipse-n7:eclipse-node-dev \
+  --actor-core .trinity/deps/trinity-conformance/runner/run.py
+```
+
+The fixture signs in with a synthetic GitHub owner and tests WebSocket
+admission, ACTOR core, and the existing HTTP routes. Its ACTOR report is
+stored in the fixture's private temporary directory and removed on exit.
+
 ## Local verification
 
 The packaged image passed PT-004 through PT-020 using simulated owner

@@ -2,17 +2,40 @@
 :- use_module(actors).
 :- use_module(solution_buffer).
 :- lib(prolog_extras).
+:- lib(format).
 
 :- export toplevel_spawn/1, toplevel_spawn/2.
 :- export toplevel_call/2, toplevel_call/3.
 :- export toplevel_next/1, toplevel_next/2.
 :- export toplevel_stop/1, toplevel_stop/2, toplevel_abort/1.
-:- export ptcp/2.  % Runtime entry point, called from the private actor module.
+:- export ptcp/3.  % Runtime entry point, called from the private actor module.
+:- export toplevel_spawn_browser/2.
+:- export browser_format/2.
+
+browser_format(Control, Args) :-
+    setup_call_cleanup(
+        open(string(""), write, Stream),
+        ( format(Stream, Control, Args), get_stream_info(Stream, name, Text) ),
+        close(Stream)
+    ),
+    self(Pid),
+    engine_self(Engine),
+    get_engine_property(Engine, store, Store),
+    store_get(Store, web_prolog_ptcp, Session),
+    shelf_get(Session, 3, Target),
+    send(Target, browser_output(Pid, Text)),
+    receive_ptcp({ '$browser_ack' -> true }).
 
 toplevel_spawn(Pid) :-
     toplevel_spawn(Pid, []).
 
 toplevel_spawn(Pid, Options) :-
+    spawn_toplevel(Pid, Options, local).
+
+toplevel_spawn_browser(Pid, Options) :-
+    spawn_toplevel(Pid, Options, browser).
+
+spawn_toplevel(Pid, Options, Kind) :-
     ( is_list(Options) -> true
     ; throw(error(type_error(list, Options), toplevel_spawn/2))
     ),
@@ -21,7 +44,7 @@ toplevel_spawn(Pid, Options) :-
     ( memberchk(src_text(_), SpawnOptions) -> PrivateOptions = SpawnOptions
     ; PrivateOptions = [src_text("")|SpawnOptions]
     ),
-    spawn(toplevel_actors:ptcp(Target, Session), Pid, PrivateOptions).
+    spawn(toplevel_actors:ptcp(Target, Session, Kind), Pid, PrivateOptions).
 
 split_spawn_options([], Session, Target, Session, Target, []).
 split_spawn_options([Option|Options], Session0, Target0, Session, Target, Rest) :-
@@ -59,7 +82,7 @@ toplevel_stop(Pid, Target) :-
 toplevel_abort(Pid) :-
     post_actor_event(Pid, interrupt_ptcp).
 
-ptcp(DefaultTarget, Session) :-
+ptcp(DefaultTarget, Session, _Kind) :-
     self(Pid),
     actor_module(Pid, Module),
     shelf_create(control(recovering, 0, DefaultTarget), Control),
@@ -137,6 +160,7 @@ stale_command('$stop').
 stale_command('$stop'(_)).
 stale_command('$input'(_, _)).
 stale_command('$input'(_, _, _)).
+stale_command('$browser_ack').
 
 run_call(Pid, Module, DefaultTarget, Goal0, Options, Control) :-
     plain_goal(Goal0, Goal),

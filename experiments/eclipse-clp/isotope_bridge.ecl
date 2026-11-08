@@ -801,19 +801,36 @@ reply(Stream, Event) :-
     flush(Stream).
 
 dispatch("spawn", Fields, _, {[type:spawned, pid:Id]}) :-
-    probe_source_options(Fields, Source),
-    toplevel_spawn(actor(Id), [session(true)|Source]).
+    ( memberchk(browser_options:Text, Fields) ->
+        parse_goal(Text, isotope_bridge, Options, _),
+        browser_spawn_source(Options, Fields, Source),
+        toplevel_spawn_browser(actor(Id), [session(true)|Source])
+    ; probe_source_options(Fields, Source),
+      toplevel_spawn(actor(Id), [session(true)|Source])
+    ).
 dispatch("call", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
     memberchk(goal:Text, Fields),
     memberchk(limit:Limit, Fields),
     actor_module(actor(Id), Module),
     parse_goal(Text, Module, RawGoal, Bindings),
-    interactive_goal(RawGoal, Goal),
+    ( memberchk(browser_options:OptionsText, Fields) ->
+        memberchk(browser_origin:OriginText, Fields),
+        atom_string(Origin, OriginText),
+        relay_browser_origin(Origin),
+        parse_goal(OptionsText, Module, Options, _),
+        ( is_list(Options), maplist(browser_call_option, Options) -> true
+        ; throw(error(domain_error(browser_call_options, Options), toplevel_call/3)) ),
+        import_browser_term(RawGoal, Origin, Imported),
+        interactive_goal(Imported, Interactive),
+        browser_goal(Interactive, Goal),
+        append(Options, [limit(Limit)], PageOptions)
+    ; interactive_goal(RawGoal, Goal), PageOptions = [limit(Limit)]
+    ),
     Pid = actor(Id),
     self(Relay),
     toplevel_call(Pid, (send(Relay, http_started(Pid)), Goal),
-                  [template(Bindings), limit(Limit)]),
+                  [template(Bindings)|PageOptions]),
     % A pending Abort must interrupt this call, even if it arrived before
     % the actor had picked the call out of its mailbox.
     receive({ http_started(Pid) -> await_event(Id, Context, Event) },
@@ -825,6 +842,9 @@ dispatch("next", Fields, Context, Event) :-
 dispatch("poll", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
     await_event(Id, Context, Event).
+dispatch("browser_ack", Fields, _, {[type:acknowledged, pid:Id]}) :-
+    memberchk(pid:Id, Fields),
+    send(actor(Id), '$browser_ack').
 dispatch("respond", Fields, _, {[type:responded, pid:Id]}) :-
     memberchk(pid:Id, Fields),
     memberchk(prompt_ref:Ref, Fields),
@@ -888,10 +908,70 @@ interactive_goal((A;B), (X;Y)) :- !, interactive_goal(A, X), interactive_goal(B,
 interactive_goal((A->B), (X->Y)) :- !, interactive_goal(A, X), interactive_goal(B, Y).
 interactive_goal(Goal, Goal).
 
+browser_spawn_source(Options, Fields, Source) :-
+    ( is_list(Options), maplist(browser_spawn_option, Options) -> true
+    ; throw(error(domain_error(browser_spawn_options, Options), toplevel_spawn/2)) ),
+    ( memberchk(src_list(Clauses), Options) ->
+        \+ memberchk(src_text(_), Options), \+ memberchk(src_text:_, Fields),
+        maplist(browser_source_clause, Clauses, Lines),
+        concat_string(Lines, Text), Source = [src_text(Text)]
+    ; memberchk(src_text(Text), Options) ->
+        \+ memberchk(src_text:_, Fields), Source = [src_text(Text)]
+    ; probe_source_options(Fields, Source)
+    ).
+
+browser_spawn_option(Option) :-
+    nonvar(Option),
+    ( Option == session(true)
+    ; Option = src_list(Clauses), is_list(Clauses)
+    ; Option = src_text(Text), (atom(Text) ; string(Text))
+    ).
+
+browser_source_clause(Clause, Line) :-
+    probe_term_text(Clause, Text),
+    concat_string([Text, ".\n"], Line).
+
+browser_call_option(Option) :-
+    nonvar(Option),
+    ( Option = limit(N), integer(N), N >= 1, N =< 100
+    ; Option = offset(N), integer(N), N >= 0
+    ; Option = once(Value), (Value == true ; Value == false)
+    ).
+
+browser_goal(Goal, Goal) :- var(Goal), !.
+browser_goal(format(Control, Args), toplevel_actors:browser_format(Control, Args)) :- !.
+browser_goal((A,B), (X,Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
+browser_goal((A;B), (X;Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
+browser_goal((A->B), (X->Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
+browser_goal(receive({Clauses}), receive({Translated})) :- !, browser_goal(Clauses, Translated).
+browser_goal(receive({Clauses}, Options), receive({Translated}, Options)) :- !,
+    browser_goal(Clauses, Translated).
+browser_goal(Goal, Goal).
+
+relay_browser_origin(Origin) :-
+    engine_self(Engine),
+    get_engine_property(Engine, store, Store),
+    ( var(Origin) -> store_get(Store, browser_origin, Origin)
+    ; store_set(Store, browser_origin, Origin)
+    ).
+
+import_browser_term(Term, _, Term) :- var(Term), !.
+import_browser_term(Wire@Node, Origin, actor(Id)) :-
+    Node == Origin, integer(Wire), Wire >= 1000000000, Wire =< 9999999999, !,
+    Id is Wire - 1000000000.
+import_browser_term(Term, Origin, Imported) :-
+    compound(Term), !,
+    Term =.. [Name|Args],
+    ( foreach(Arg, Args), foreach(Value, Values), param(Origin) do
+        import_browser_term(Arg, Origin, Value) ),
+    Imported =.. [Name|Values].
+import_browser_term(Term, _, Term).
+
 query_event(Pid, success(Pid, _, _)).
 query_event(Pid, failure(Pid)).
 query_event(Pid, error(Pid, _)).
 query_event(Pid, output(Pid, _)).
+query_event(Pid, browser_output(Pid, _)).
 query_event(Pid, prompt(Pid, _)).
 
 await_event(Id, Context, Event) :-
@@ -929,6 +1009,9 @@ await_event(Id, Context, Event) :-
             term_string(Error, Text),
             Event = {[type:error, pid:Id, data:Text]}
     ;
+        browser_output(Pid, Text) ->
+            Event = {[type:output, pid:Id, data:Text, browser_ack:true]}
+    ;
         output(Pid, Value) ->
             event_text(Value, Text),
             Event = {[type:output, pid:Id, data:Text]}
@@ -952,7 +1035,23 @@ answer_row([Binding|Bindings], {Fields}) :-
     maplist(binding_field, [Binding|Bindings], Fields).
 
 binding_field(Name=Value, Name:Text) :-
-    term_string(Value, Text).
+    ( relay_browser_origin(Origin) ->
+        browser_binding_text(Value, Origin, Text)
+    ; term_string(Value, Text)
+    ).
+
+browser_binding_text(Value, Origin, Text) :-
+    ( nonvar(Value), Value = actor(Id), integer(Id) ->
+        Wire is 1000000000 + Id,
+        probe_term_text(Origin, Node),
+        sprintf(Text, "%d@%s", [Wire, Node])
+    ; setup_call_cleanup(
+          open(string(""), write, Stream),
+          ( write_term(Stream, Value, [quoted(true), compact(true)]),
+            get_stream_info(Stream, name, Text) ),
+          close(Stream)
+      )
+    ).
 
 retire(Id, Text, {[type:error, pid:Id, retired:true, data:Text]}) :-
     exit(actor(Id), http_session_closed).
