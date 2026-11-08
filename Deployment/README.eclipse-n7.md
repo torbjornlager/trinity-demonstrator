@@ -240,7 +240,8 @@ uses the same access policy as the live shell.
 The packaged adapter accepts `--actor-ws` to enable `/ws` behind the same
 owner gate as the HTTP routes. The upgrade requires the configured HTTPS
 origin. The WebSocket owns its toplevel sessions and closes them on disconnect.
-Discovery continues to advertise ISOTOPE during the preview.
+Add `--advertise-actor` to announce ACTOR in `/node_info` and let the owner
+shell select `/ws`. With only `--actor-ws`, discovery advertises ISOTOPE.
 
 After bootstrapping the checkout, install the optional transport dependencies
 in a local virtual environment and run ACTOR core through the HTTPS fixture:

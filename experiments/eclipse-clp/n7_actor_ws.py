@@ -65,7 +65,7 @@ def serve(handler):
 class ActorConnection:
     def __init__(self, bridge, origin, send):
         self.bridge, self.origin, self.send = bridge, origin, send
-        self.negotiated = False
+        self.io_ack = False
         self.sessions = set()
         self.prompts = {}
         self.output = {}
@@ -93,12 +93,10 @@ class ActorConnection:
         if command == "transport_hello":
             if request.get("version", 1) != 1:
                 raise ValueError("Unsupported ACTOR transport version")
-            self.negotiated = True
+            self.io_ack = request.get("io_ack") is True
             self.emit({"type": "transport_welcome", "version": 1,
                        "protocol": "web_prolog_browser_actor", "browser_pids": True, "io_ack": True})
             return
-        if not self.negotiated:
-            raise ValueError("Send transport_hello before toplevel commands")
         if command == "toplevel_spawn":
             fields = {"options": "[session(true)]", "prompt_correlation": True,
                       "browser_options": self.options(request)}
@@ -116,9 +114,7 @@ class ActorConnection:
             if request.get("status") != "ok":
                 self.relay(self.bridge.request("abort", {"pid": pid}))
             else:
-                if needs_ack:
-                    self.bridge.request("browser_ack", {"pid": pid})
-                self.relay(self.bridge.request("poll", {"pid": pid}))
+                self.relay(self.resume_output(pid, needs_ack))
             return
         action = command.removeprefix("toplevel_")
         if action == command or action not in SESSION_COMMANDS:
@@ -160,6 +156,11 @@ class ActorConnection:
         return options
 
     def relay(self, event):
+        while event["type"] == "output" and not self.io_ack:
+            pid = event["pid"]
+            needs_ack = event.pop("browser_ack", False)
+            self.emit(dict(event, pid=PID_BASE + pid))
+            event = self.resume_output(pid, needs_ack)
         event = dict(event)
         pid = event.get("pid")
         if pid is not None:
@@ -172,6 +173,11 @@ class ActorConnection:
             event["data"] = event["data"].removesuffix("\n").removesuffix("\r")
             event = {"type": "io_request", "request_id": ref, "event": event}
         self.emit(event)
+
+    def resume_output(self, pid, needs_ack):
+        if needs_ack:
+            self.bridge.request("browser_ack", {"pid": pid})
+        return self.bridge.request("poll", {"pid": pid})
 
     def close(self):
         for pid in self.sessions:

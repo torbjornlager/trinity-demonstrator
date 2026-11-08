@@ -90,7 +90,7 @@ def http(opener, url, *, body=None, headers=None, status=200):
         return response.headers, response.read()
 
 
-def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None):
+def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None, profile="isotope"):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -107,7 +107,7 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None)
     expect(bool(re.fullmatch(r"\d+\.\d+\.\d+", info.pop("version"))), True)
     if shell:
         expect(info.pop("http_session_options"), ["src_text", "prompt_correlation"])
-    expect(info, {"self_url": origin, "implementation": "ECLiPSe CLP", "profile": "isotope",
+    expect(info, {"self_url": origin, "implementation": "ECLiPSe CLP", "profile": profile,
                   "auth": "private", "services": [], "provides": []})
     http(anonymous, origin + "/node_info", body=b"{}", status=401)
     http(anonymous, origin + "/call?goal=true", headers=spoof, status=401)
@@ -217,7 +217,30 @@ sys.argv.pop(0)
 ssl.create_default_context = functools.partial(ssl.create_default_context, cafile=sys.argv.pop(0))
 runner = sys.argv[0]
 sys.path.insert(0, runner.rsplit('/', 1)[0])
-runpy.run_path(runner, run_name='__main__')
+suite = runpy.run_path(runner)
+if suite['main']():
+    sys.exit(1)
+
+# The packaged shell opens a session without sending transport_hello.
+def option(name):
+    return sys.argv[sys.argv.index(name) + 1]
+
+ws = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                        extra_headers=(option('--header'),))
+try:
+    ws.send_json(dict(command='toplevel_spawn', options='[session(true)]'))
+    spawned = ws.recv_json()
+    assert spawned['type'] == 'spawned', spawned
+    pid = spawned['pid']
+    ws.send_json(dict(command='toplevel_call', pid=pid, goal='format("shell output~n",[])'))
+    output = ws.recv_json()
+    assert (output['type'], output['data']) == ('output', 'shell output\\n'), output
+    assert ws.recv_json()['type'] == 'success'
+    ws.send_json(dict(command='toplevel_halt', pid=pid))
+    assert ws.recv_json()['type'] == 'halted'
+finally:
+    ws.close()
+print('Shell WebSocket session and output passed without capability negotiation')
 """
     result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca), str(runner.resolve()),
                              "--ws-url", endpoint.replace("https:", "wss:", 1),
@@ -247,7 +270,10 @@ def main():
     parser.add_argument("--image", default="trinity-eclipse-n7:local")
     parser.add_argument("--shell", action="store_true", help="also exercise the packaged full demonstrator")
     parser.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
+    parser.add_argument("--advertise-actor", action="store_true", help="exercise ACTOR discovery metadata")
     args = parser.parse_args()
+    if args.advertise_actor and args.actor_core is None:
+        parser.error("--advertise-actor requires --actor-core")
     with ExitStack() as stack:
         scratch = Path(stack.enter_context(TemporaryDirectory(prefix="n7-https-")))
         provider = stack.enter_context(ThreadingHTTPServer(("127.0.0.1", 0), GitHubFixture))
@@ -270,6 +296,8 @@ def main():
             shell_args = ["--shell-assets", str(assets)]
         if args.actor_core is not None:
             shell_args.append("--actor-ws")
+        if args.advertise_actor:
+            shell_args.append("--advertise-actor")
         adapter = subprocess.Popen(
             [sys.executable, str(ROOT / "experiments/eclipse-clp/isotope_http.py"),
              "--pilot-image", args.image, "--port", str(adapter_port), "--private-origin", origin,
@@ -315,7 +343,8 @@ def main():
 
         try:
             wait_for(tls_ready)
-            check_https(origin, ca, shell=args.shell, actor_core=args.actor_core)
+            check_https(origin, ca, shell=args.shell, actor_core=args.actor_core,
+                        profile="actor" if args.advertise_actor else "isotope")
         except Exception:
             subprocess.run(compose + ["logs", "--tail", "25"], env=env)
             print(Path(log.name).read_text()[-3000:])

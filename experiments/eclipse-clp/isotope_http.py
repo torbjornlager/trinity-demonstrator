@@ -516,7 +516,7 @@ class Handler(BaseHTTPRequestHandler):
             "self_url": origin,
             "implementation": "ECLiPSe CLP",
             "version": self.server.runtime_version,
-            "profile": "isotope",
+            "profile": getattr(self.server, "advertised_profile", "isotope"),
             "auth": "private",
             "services": [],
             "provides": [],
@@ -696,7 +696,10 @@ def main():
     parser.add_argument("--shell-assets", type=Path,
                         help="serve a prepared same-origin static demonstrator at /n7-shell/")
     parser.add_argument("--actor-ws", action="store_true", help="enable the private ACTOR WebSocket preview")
+    parser.add_argument("--advertise-actor", action="store_true", help="advertise the enabled WebSocket transport as ACTOR")
     args = parser.parse_args()
+    if args.advertise_actor and not args.actor_ws:
+        parser.error("--advertise-actor requires --actor-ws")
     private = private_settings(parser, args)
     actor_ws = None
     if args.actor_ws:
@@ -743,6 +746,7 @@ def main():
     with server_type(("127.0.0.1", args.port), Handler) as server:
         server.private_settings = private
         server.actor_ws = actor_ws
+        server.advertised_profile = "actor" if args.advertise_actor else "isotope"
         server.shell_assets = shell_assets
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
