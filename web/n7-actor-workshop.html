@@ -14,7 +14,8 @@
     in the ECLiPSe CLP shell. The results appear in the terminal beside this page.</p>
   <nav aria-label="Workshop exercises">
     <a href="#counters">Counter actors</a> · <a href="#mailbox">Mailbox ordering</a> ·
-    <a href="#prompt">Prompted updates</a> · <a href="#monitor">Actor exit</a>
+    <a href="#prompt">Prompted updates</a> · <a href="#monitor">Actor exit</a> ·
+    <a href="#names">Actor names</a>
   </nav>
 
   <section id="counters">
@@ -100,6 +101,22 @@ stop_counters :-
     <pre id="stop-counters">?- stop_counters.</pre>
     <button type="button" data-ask="#stop-counters">Stop both counters</button>
     <p>Start them again to begin with empty totals.</p>
+  </section>
+  <section id="names">
+    <h2>Send to an actor by name</h2>
+    <pre id="register-ping">?- self(Me),
+   spawn(receive({ping(From) -&gt; From ! pong}, [timeout(5)]), Pid),
+   register(workshop_ping, Pid),
+   whereis(workshop_ping, Found), Found == Pid,
+   monitor(workshop_ping, Ref),
+   workshop_ping ! ping(Me),
+   receive({pong -&gt; true}, [timeout(2), on_timeout(fail)]),
+   receive({down(Pid, Ref, true) -&gt; true}, [timeout(2), on_timeout(fail)]),
+   whereis(workshop_ping, After), After == undefined.</pre>
+    <button type="button" data-ask="#register-ping">Register and ping a worker</button>
+    <p>The name is shared by owner sessions on this node. The worker replies
+      once and exits. When the monitor reports its exit, the name is free again.
+      Use <code>unregister(Name)</code> to release a name while its actor keeps running.</p>
   </section>
 </main>
 <script>

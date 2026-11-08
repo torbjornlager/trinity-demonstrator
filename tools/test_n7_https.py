@@ -292,6 +292,12 @@ try:
     answer()
     call('add-red')
     answer(Red='3')
+    if 'id="register-ping"' in workshop:
+        call('register-ping')
+        answer(After='undefined')
+        call('register-ping')
+        answer(After='undefined')
+        print('N7 ACTOR workshop named send, monitoring, and name reuse passed')
     ws.send_json(dict(command='toplevel_halt', pid=pid))
     assert ws.recv_json()['type'] == 'halted'
 finally:

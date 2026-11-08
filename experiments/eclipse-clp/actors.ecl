@@ -4,6 +4,7 @@
 :- export op(800, xfx, !).
 :- export receive/1, receive/2.
 :- export monitor/2, demonitor/1, demonitor/2.
+:- export register/2, unregister/1, whereis/2.
 :- export exit/1, exit/2.
 :- export output/1, output/2, input/2, input/3, respond/2, respond/3.
 :- export retarget_prompt/3.
@@ -21,6 +22,7 @@
 
 :- local store(actor_registry).
 :- local record(actor_monitors).
+:- local record(actor_names).
 :- tool(spawn/2, spawn_/3).
 :- tool(spawn/3, spawn_/4).
 
@@ -319,6 +321,55 @@ self(Pid) :-
 Pid ! Message :-
     send(Pid, Message).
 
+% Share the lifecycle lock with the reaper so registration cannot race
+% with retirement. This registry is shared by the node's owner sessions.
+register(Name, Pid) :-
+    require_actor_name(Name, register/2),
+    ( ground(Pid) -> true ; throw(error(instantiation_error, register/2)) ),
+    store_get(actor_registry, runtime, runtime(_, _, Lock)),
+    with_mutex(Lock, register_actor(Name, Pid)).
+
+register_actor(Name, Pid) :-
+    ( recorded(actor_names, registered(_, Pid), _) ->
+        throw(process_already_has_a_name(Pid))
+    ; ( Name == main ; recorded(actor_names, registered(Name, _), _) ) ->
+        throw(name_is_in_use(Name))
+    ; store_get(actor_registry, Pid, actor(Engine, _, _)),
+      \+ store_get(actor_registry, exit_reason(Pid), _),
+      get_engine_property(Engine, status, Status),
+      \+ finished_status(Status) ->
+        recordz(actor_names, registered(Name, Pid))
+    ;
+        throw(error(existence_error(process, Pid),
+                    context(actors:register/2, 'local actor no longer exists')))
+    ).
+
+unregister(Name) :-
+    require_actor_name(Name, unregister/1),
+    store_get(actor_registry, runtime, runtime(_, _, Lock)),
+    with_mutex(Lock, remove_actor_name(Name, _)).
+
+whereis(Name, Pid) :-
+    require_actor_name(Name, whereis/2),
+    ( registered_actor(Name, Found) -> Pid = Found ; Pid = undefined ).
+
+require_actor_name(Name, Caller) :-
+    ( atom(Name) -> true
+    ; var(Name) -> throw(error(instantiation_error, Caller))
+    ; throw(error(type_error(atom, Name), Caller))
+    ).
+
+registered_actor(Name, Pid) :-
+    atom(Name),
+    recorded(actor_names, registered(Name, Pid), _).
+
+remove_actor_name(Name, Pid) :-
+    ( recorded(actor_names, registered(Name, Pid), Entry) -> erase(Entry)
+    ; true ).
+
+send(Name, Message) :-
+    registered_actor(Name, Pid), !,
+    send(Pid, Message).
 send(Pid, Message) :-
     ( ground(Pid), store_get(actor_registry, Pid, actor(_, Inbox, _)) ->
         record_wait_append(Inbox, Message, block, 9999999)
@@ -517,6 +568,7 @@ retire_actor(Engine, Status, Reports) :-
     stored_keys_and_values(actor_registry, Entries),
     ( memberchk(Pid-actor(Engine, _, _), Entries) ->
         store_delete(actor_registry, Pid),
+        remove_actor_name(_, Pid),
         % Joining a completed threaded engine leaves it available for reuse.
         % Explicitly close it so retired actors release their native threads.
         ( Status = exited(_) -> true ; engine_post(Engine, exit(3))@eclipse_language ),
@@ -557,12 +609,15 @@ stop_linked_children([Child|Children], Reports) :-
 
 % Installation, delivery and removal share the pid lifecycle mutex. Once
 % demonitor releases it, any down for this ref has already been enqueued.
-monitor(Pid, Ref) :-
-    ( nonvar(Pid) -> true ; throw(error(instantiation_error, monitor/2)) ),
+monitor(Target, Ref) :-
+    ( nonvar(Target) -> true ; throw(error(instantiation_error, monitor/2)) ),
     self(Watcher),
     store_get(actor_registry, runtime, runtime(_, _, Lock)),
     fresh_reference(Ref),
-    with_mutex(Lock, install_monitor(Watcher, Pid, Ref)).
+    with_mutex(Lock,
+        ( ( registered_actor(Target, Found) -> Pid = Found ; Pid = Target ),
+          install_monitor(Watcher, Pid, Ref)
+        )).
 
 install_monitor(Watcher, Pid, Ref) :-
     ( ground(Pid),
