@@ -40,6 +40,11 @@
 				copy_headers X-Auth-Request-User X-Auth-Request-Email
 				@anonymous status 401
 				handle_response @anonymous {
+					@shell {
+						method GET
+						path /n7-shell/ /n7-shell/index.html
+					}
+					redir @shell /oauth2/start?rd=/n7-shell/ 302
 					@page {
 						method GET
 						path / /demonstrator /examples/APIs/http_example-1.html

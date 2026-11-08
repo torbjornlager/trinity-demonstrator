@@ -179,6 +179,27 @@ The manifest records whether the image's baked config matches
 N7 sidecar and adapter after the edge rollback if removing the pilot.
 To roll back just the adapter, restore its saved plist and bootstrap it again.
 
+## Full demonstrator preview
+
+The compact pilot stays at `/demonstrator`. The opt-in full shell uses the
+same origin and owner gate at `/n7-shell/`. Build the browser dependencies
+against their pinned revisions, then prepare a static distribution with the
+same HTTPS origin as the private adapter.
+
+```sh
+python3 tools/package_demonstrator.py --prefix /n7-shell/ \
+  --node-url https://n7.elfenbenstornet.se --output /path/to/n7-shell
+```
+
+Start the matching preview engine and adapter with
+`--shell-assets /path/to/n7-shell`. Use the preview Caddy route so an anonymous
+shell visit signs in and returns to the shell. The browser keeps the HTTP
+session, editor source and prompt replies on the owner-only N7 origin.
+
+Run `python3 tools/test_n7_https.py --image trinity-eclipse-n7:shell-preview --shell`
+to exercise the preview with disposable TLS and GitHub fixtures. The preview
+is separate from the deployed pilot release.
+
 ## Local verification
 
 The packaged image passed PT-004 through PT-020 using simulated owner

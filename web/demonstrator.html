@@ -5555,6 +5555,7 @@
             pendingCompletionKind: null,
             solutionLimit: 1,
             pendingPromptPid: null,
+            pendingPromptRef: null,
             editorDirty: true,
             isotopePid: null,
             isotopeLoadedText: "",
@@ -5588,6 +5589,7 @@
 	            deadPids: {},
 	            nodeSelfUrl: "",
 	            nodeAnnouncedProfile: "actor",
+	            nodeHttpSessionOptions: [],
 	            principalAnnouncedId: "anonymous",
 	            principalExecutionAuthorized: !TrinityHost.isStatic || !TrinityHost.nodeBase,
             tutorialSections: ["all"],
@@ -6619,6 +6621,14 @@
 	              }
 	              if (json && Array.isArray(json.tutorial_sections)) {
 	                self.applyAnnouncedTutorialSections(json.tutorial_sections);
+	              }
+	              self.nodeHttpSessionOptions = json && Array.isArray(json.http_session_options)
+	                ? json.http_session_options : [];
+	              if (self.nodeHttpSessionOptions.includes("prompt_correlation") &&
+	                  window.location.pathname.startsWith("/n7-shell/")) {
+	                return self.requestJson("/n7-shell/session.json").then(function(session) {
+	                  self.applyAnnouncedPrincipalInfo(session.principal_id, session.principal_execution);
+	                });
 	              }
 	            }).catch(function(error) {
                 if (TrinityHost.isStatic) self.log("warn", "Node connection unavailable: " + error.message + ". Sign in if required, then Reconnect.", "transport");
@@ -9615,11 +9625,12 @@
             }
             term.echo("");
           },
-          showPrompt: function(term, promptText, pid) {
+          showPrompt: function(term, promptText, pid, promptRef) {
             var logId;
             var prompt = String(promptText);
             this.queryState = "prompt";
             this.pendingPromptPid = pid || this.pendingPromptPid || this.isotopePid || this.wsPid;
+            this.pendingPromptRef = typeof promptRef === "string" ? promptRef : null;
             if (prompt === "yes_or_no") {
               var self = this;
               var widgetId = "ynw-" + Date.now();
@@ -11276,6 +11287,13 @@
             var body = {
               options: this.toplevelSpawnOptionsText(loadText, true)
             };
+            if (this.nodeHttpSessionOptions.includes("src_text")) {
+              body.options = "[session(true)]";
+              if (loadText !== "") body.src_text = loadText;
+            }
+            if (this.nodeHttpSessionOptions.includes("prompt_correlation")) {
+              body.prompt_correlation = true;
+            }
             return this.requestJson("/toplevel_spawn", {
               method: "POST",
               logScope: "isotope",
@@ -11396,11 +11414,12 @@
               return;
             }
             if (event.type === "prompt") {
+              var isotopePromptRef = event.prompt_ref == null ? null : String(event.prompt_ref);
               var promptEntry = this.recordSessionEvent("prompt", String(event.data), "isotope", event.pid || this.isotopePid);
               if (promptEntry) {
-                promptEntry.logId = this.showPrompt(term, event.data, event.pid || this.isotopePid);
+                promptEntry.logId = this.showPrompt(term, event.data, event.pid || this.isotopePid, isotopePromptRef);
               } else {
-                this.showPrompt(term, event.data, event.pid || this.isotopePid);
+                this.showPrompt(term, event.data, event.pid || this.isotopePid, isotopePromptRef);
               }
               this.resumeTerm(term);
               return;
@@ -11560,14 +11579,14 @@
             var generation = this.currentIsotopeGeneration();
             this.recordSessionEvent("session", "Input sent: " + this.clipText(inputTerm, 80), "isotope", pid);
             this.pauseTerm(term);
+            var params = {pid: pid, input: inputTerm, format: "json"};
+            if (this.pendingPromptPid && this.pendingPromptRef !== null) {
+              params.prompt_ref = this.pendingPromptRef;
+            }
             this.requestJson("/toplevel_respond", {
               method: "POST",
               logScope: "isotope",
-              params: {
-                pid: pid,
-                input: inputTerm,
-                format: "json"
-              }
+              params: params
             }).then(function(event) {
               if (self.isStaleIsotopeGeneration(generation)) {
                 return;

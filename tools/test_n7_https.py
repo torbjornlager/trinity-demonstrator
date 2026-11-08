@@ -90,7 +90,7 @@ def http(opener, url, *, body=None, headers=None, status=200):
         return response.headers, response.read()
 
 
-def check_https(origin, ca):
+def check_https(origin, ca, shell=False):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -105,6 +105,8 @@ def check_https(origin, ca):
     expect(headers["Access-Control-Allow-Origin"], hub)
     info = json.loads(body)
     expect(bool(re.fullmatch(r"\d+\.\d+\.\d+", info.pop("version"))), True)
+    if shell:
+        expect(info.pop("http_session_options"), ["src_text", "prompt_correlation"])
     expect(info, {"self_url": origin, "implementation": "ECLiPSe CLP", "profile": "isotope",
                   "auth": "private", "services": [], "provides": []})
     http(anonymous, origin + "/node_info", body=b"{}", status=401)
@@ -112,6 +114,11 @@ def check_https(origin, ca):
     headers, _ = http(anonymous, origin + "/demonstrator", headers=spoof, status=302)
     expect(headers["Location"], "/oauth2/start?rd=/demonstrator")
     http(anonymous, origin + "/toplevel_spawn", body=b"{}", headers=spoof, status=401)
+    if shell:
+        headers, _ = http(anonymous, origin + "/n7-shell/", status=302)
+        expect(headers["Location"], "/oauth2/start?rd=/n7-shell/")
+        http(anonymous, origin + "/n7-shell/vendor/trinity-host.js", status=401)
+        http(anonymous, origin + "/n7-shell/session.json", status=401)
 
     wrong = client()
     headers, _ = http(wrong, origin + "/oauth2/start?rd=/demonstrator", status=302)
@@ -130,14 +137,23 @@ def check_https(origin, ca):
     owner = client(redirect=True)
     _, body = http(owner, origin + "/demonstrator")
     expect(b"Start paging" in body and b"Send reply" in body, True)
+    if shell:
+        _, body = http(owner, origin + "/n7-shell/")
+        expect(b"WEB_PROLOG_HOST" in body and b"/n7-shell/editor_frame.html" in body, True)
+        http(owner, origin + "/n7-shell/vendor/trinity-host.js")
+        http(owner, origin + "/n7-shell/%2e%2e/proxy-token", status=404)
+        _, data = http(owner, origin + "/n7-shell/session.json")
+        expect(json.loads(data), {"principal_id": "owner", "principal_execution": True})
     query = urlencode({"goal": "fixture_value(X)", "format": "json",
                        "src_text": "fixture_value(owner)."})
     response_headers, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
     expect(response_headers.get_content_type(), "application/json")
     expect(json.loads(data), {"type": "success", "data": [{"X": "owner"}], "more": False})
     headers = {"Origin": origin, "Content-Type": "application/json"}
-    _, data = http(owner, origin + "/toplevel_spawn", headers=headers,
-                   body=b'{"options":"[session(true)]","prompt_correlation":true}')
+    spawn = {"options": "[session(true)]", "prompt_correlation": True}
+    if shell:
+        spawn["src_text"] = "shell_source(editor)."
+    _, data = http(owner, origin + "/toplevel_spawn", headers=headers, body=json.dumps(spawn).encode())
     spawned = json.loads(data)
     expect(spawned["type"], "spawned")
     pid = spawned["pid"]
@@ -149,6 +165,8 @@ def check_https(origin, ca):
         return json.loads(data)
 
     try:
+        if shell:
+            expect(post("call", goal="shell_source(X)")["data"], [{"X": "editor"}])
         expect(post("call", goal="member(X,[a,b,c])", limit=1)["data"], [{"X": "a"}])
         expect(post("next")["data"], [{"X": "b"}])
         last = post("next")
@@ -182,6 +200,7 @@ def wait_for(check):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="trinity-eclipse-n7:local")
+    parser.add_argument("--shell", action="store_true", help="also exercise the packaged full demonstrator")
     args = parser.parse_args()
     with ExitStack() as stack:
         scratch = Path(stack.enter_context(TemporaryDirectory(prefix="n7-https-")))
@@ -196,10 +215,17 @@ def main():
         token_file.touch(mode=0o600)
         token_file.write_text(token)
         log = stack.enter_context((scratch / "adapter.log").open("w+"))
+        shell_args = []
+        if args.shell:
+            assets = scratch / "shell"
+            subprocess.run([sys.executable, str(ROOT / "tools/package_demonstrator.py"),
+                            "--prefix", "/n7-shell/", "--node-url", origin, "--allow-dirty",
+                            "--output", str(assets)], check=True)
+            shell_args = ["--shell-assets", str(assets)]
         adapter = subprocess.Popen(
             [sys.executable, str(ROOT / "experiments/eclipse-clp/isotope_http.py"),
              "--pilot-image", args.image, "--port", str(adapter_port), "--private-origin", origin,
-             "--owner", EMAIL, "--proxy-token-file", str(token_file)], stdout=log, stderr=log,
+             "--owner", EMAIL, "--proxy-token-file", str(token_file), *shell_args], stdout=log, stderr=log,
         )
 
         def stop_adapter():
@@ -241,7 +267,7 @@ def main():
 
         try:
             wait_for(tls_ready)
-            check_https(origin, ca)
+            check_https(origin, ca, shell=args.shell)
         except Exception:
             subprocess.run(compose + ["logs", "--tail", "25"], env=env)
             print(Path(log.name).read_text()[-3000:])

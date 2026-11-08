@@ -68,9 +68,9 @@ serve(Replies) :-
         http_closed -> true
     }).
 
-route_request(Request, "spawn", _, _) :- !,
+route_request(Request, "spawn", _, Fields) :- !,
     self(Router),
-    spawn(open_session(Router, Request), _).
+    spawn(open_session(Router, Request, Fields), _).
 route_request(Request, "stateless", _, Fields) :- !,
     self(Router),
     spawn(stateless_request(response(Router, Request), Fields), _).
@@ -748,9 +748,9 @@ stateless_page(Pid, GoalText, Fields, Offset, Limit, Once, Answer) :-
     ),
     call_page(Pid, Goal, Template, Offset, Limit, Once, Answer).
 
-open_session(Router, Request) :-
+open_session(Router, Request, Fields) :-
     Context = response(Router, Request),
-    request_event("spawn", [], Context, Event),
+    request_event("spawn", Fields, Context, Event),
     ( Event = {[type:spawned, pid:Id]} ->
         self(Relay),
         send(Router, http_opened(Request, Id, Relay)),
@@ -800,8 +800,9 @@ reply(Stream, Event) :-
     nl(Stream),
     flush(Stream).
 
-dispatch("spawn", _, _, {[type:spawned, pid:Id]}) :-
-    toplevel_spawn(actor(Id), [session(true)]).
+dispatch("spawn", Fields, _, {[type:spawned, pid:Id]}) :-
+    probe_source_options(Fields, Source),
+    toplevel_spawn(actor(Id), [session(true)|Source]).
 dispatch("call", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
     memberchk(goal:Text, Fields),

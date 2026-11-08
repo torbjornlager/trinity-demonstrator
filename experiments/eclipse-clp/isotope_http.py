@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
 from itertools import count
 import json
+from mimetypes import guess_type
 import os
 from pathlib import Path
 import re
@@ -18,12 +19,13 @@ import subprocess
 import tarfile
 from threading import BoundedSemaphore, Condition, Thread
 from time import monotonic
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 from uuid import uuid4
 
 HERE = Path(__file__).resolve().parent
 DEMO_ROUTE = "/examples/APIs/http_example-1.html"
 DEMO = HERE.parents[1] / DEMO_ROUTE.lstrip("/")
+SHELL_PREFIX = "/n7-shell/"
 ROUTES = {
     "/actor_probe": "actor_probe",
     "/toplevel_spawn": "spawn",
@@ -349,13 +351,18 @@ class Bridge:
         if command == "spawn":
             options = dict(fields)
             mode = options.pop("prompt_correlation", None)
+            source = options.pop("src_text", "")
             if "prompt_correlation" in fields and not isinstance(mode, bool):
                 raise ValueError("Expected prompt_correlation to be a boolean")
+            if not isinstance(source, str):
+                raise ValueError("Expected src_text to be a string")
             if options != {"options": "[session(true)]"}:
                 raise ValueError("Expected spawn options [session(true)]")
             request = {"command": command}
             if mode is not None:
                 request["prompt_correlation"] = mode
+            if source:
+                request["src_text"] = source
             return request
 
         pid = int(fields["pid"])
@@ -459,10 +466,28 @@ class Handler(BaseHTTPRequestHandler):
             self.serve_stateless(path.query)
         elif path.path in ("/", "/demonstrator") and self.server.private_settings is not None:
             self.reply(200, "text/html; charset=utf-8", (HERE / "n7_pilot.html").read_bytes())
+        elif path.path == SHELL_PREFIX + "session.json" and self.server.shell_assets is not None:
+            self.reply(200, "application/json", b'{"principal_id":"owner","principal_execution":true}')
+        elif path.path.startswith(SHELL_PREFIX) and self.server.shell_assets is not None:
+            self.serve_shell_asset(path.path)
         elif self.path == DEMO_ROUTE:
             self.reply(200, "text/html; charset=utf-8", DEMO.read_bytes())
         else:
             self.send_error(404)
+
+    def serve_shell_asset(self, path):
+        root = self.server.shell_assets
+        relative = unquote(path[len(SHELL_PREFIX):]) or "index.html"
+        try:
+            asset = (root / relative).resolve()
+            if not asset.is_relative_to(root) or not asset.is_file():
+                self.send_error(404)
+                return
+            body = asset.read_bytes()
+        except (OSError, RuntimeError, ValueError):
+            self.send_error(404)
+            return
+        self.reply(200, guess_type(asset)[0] or "application/octet-stream", body)
 
     def serve_node_info(self):
         host, origin, _, _ = self.server.private_settings
@@ -483,6 +508,8 @@ class Handler(BaseHTTPRequestHandler):
             "services": [],
             "provides": [],
         }
+        if self.server.shell_assets is not None:
+            info["http_session_options"] = ["src_text", "prompt_correlation"]
         self.reply(200, "application/json; charset=utf-8", json.dumps(info).encode())
 
     def serve_stateless(self, query):
@@ -653,8 +680,13 @@ def main():
     parser.add_argument("--proxy-token-file", type=Path, help="file holding the private proxy token")
     parser.add_argument("--allow-peer", action="append", default=[], metavar="ORIGIN",
                         help="allow stateless RPC and source fetches to this exact HTTP(S) origin")
+    parser.add_argument("--shell-assets", type=Path,
+                        help="serve a prepared same-origin static demonstrator at /n7-shell/")
     args = parser.parse_args()
     private = private_settings(parser, args)
+    shell_assets = args.shell_assets.resolve() if args.shell_assets is not None else None
+    if shell_assets is not None and (private is None or not (shell_assets / "index.html").is_file()):
+        parser.error("--shell-assets requires a private adapter and a packaged index.html")
     allowed_peers = set()
     for value in args.allow_peer:
         try:
@@ -688,6 +720,7 @@ def main():
 
     with server_type(("127.0.0.1", args.port), Handler) as server:
         server.private_settings = private
+        server.shell_assets = shell_assets
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             text=True, encoding="utf-8",
