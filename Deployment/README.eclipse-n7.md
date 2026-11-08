@@ -132,15 +132,20 @@ The live N7 adapter currently allowlists only `https://n3.elfenbenstornet.se`.
 Capture the running release from the repository root.
 
 ```sh
-python3 tools/n7_recovery.py capture --output .trinity/n7-recovery-2026-11-08
-python3 tools/test_n7_recovery.py .trinity/n7-recovery-2026-11-08
+export N7_RECOVERY_DIR=/absolute/path/to/new-n7-recovery
+N7_COMPACT_BUNDLE=/absolute/path/to/previous-compact-bundle
+python3 tools/n7_recovery.py capture --output "$N7_RECOVERY_DIR"
+python3 tools/test_n7_recovery.py "$N7_RECOVERY_DIR" --compact-rollback "$N7_COMPACT_BUNDLE"
 ```
 
 The private bundle contains the running engine image under a separate recovery
 tag, the adapter, both edge configurations, the OAuth route template, and the
-exact catalog and Discovery Hub assets served by the edge. Capture checks that
-the live route matches the template and that the edge changes are N7
-additions. The rehearsal uses disposable peers and GitHub OAuth fixtures.
+exact catalog and Discovery Hub assets served by the edge. When the full shell
+is enabled, it includes that static package and its source revision and
+verifies every asset against the package manifest. Capture checks that the live
+route matches the template and that the edge changes are N7 additions.
+The optional `--compact-rollback` argument takes the previous compact-only
+bundle. The rehearsal uses disposable peers and GitHub OAuth fixtures.
 
 Keep the existing N5 and N7 environment files, N7 proxy token file, and the
 separate N7 settings file with the OAuth cookie secret alongside the backup.
@@ -151,7 +156,6 @@ path. Write the LaunchAgent outside the bundle, using the verified owner
 email and the same token file that supplies `N7_PROXY_TOKEN` to the edge.
 
 ```sh
-export N7_RECOVERY_DIR=/absolute/path/to/n7-recovery-2026-11-08
 python3 "$N7_RECOVERY_DIR/tools/n7_recovery.py" load "$N7_RECOVERY_DIR"
 python3 "$N7_RECOVERY_DIR/tools/n7_recovery.py" launch-plist "$N7_RECOVERY_DIR" \
   --owner "$WP_N5_OWNER" --token-file "$N7_PROXY_TOKEN_FILE" \
@@ -161,7 +165,8 @@ python3 "$N7_RECOVERY_DIR/tools/n7_recovery.py" launch-plist "$N7_RECOVERY_DIR" 
 Install the staged plist as `~/Library/LaunchAgents/se.elfenbenstornet.trinity-n7-adapter.plist`
 and bootstrap it in the user's GUI domain. For a replacement, back up the
 current plist and boot out that job first. The generated plist uses the
-recorded engine image and the single N3 origin.
+recorded engine image and the single N3 origin. Full-shell bundles also set
+`--shell-assets` to the verified package inside the bundle.
 
 For edge recovery, start only `oauth2_n7` from the bundled
 `Deployment/compose.eclipse-n7-https.yaml` in project `trinity-n7-https`,
@@ -177,9 +182,10 @@ only `caddy` using the same base Compose files and the recorded edge image.
 The manifest records whether the image's baked config matches
 `Caddyfile.rollback`. For this capture it matches byte-for-byte. Stop the
 N7 sidecar and adapter after the edge rollback if removing the pilot.
-To roll back just the adapter, restore its saved plist and bootstrap it again.
+To return to the compact-only pilot, use the previous bundle for both the edge
+and the adapter. This also restores the old catalog and Hub destinations.
 
-## Full demonstrator preview
+## Full demonstrator shell
 
 The compact pilot stays at `/demonstrator`. The opt-in full shell uses the
 same origin and owner gate at `/n7-shell/`. Build the browser dependencies
@@ -198,7 +204,7 @@ session, editor source and prompt replies on the owner-only N7 origin.
 
 Run `python3 tools/test_n7_https.py --image trinity-eclipse-n7:shell-preview --shell`
 to exercise the preview with disposable TLS and GitHub fixtures. The preview
-is separate from the deployed pilot release.
+uses the same access policy as the live shell.
 
 ## Local verification
 

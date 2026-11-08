@@ -90,7 +90,7 @@ def http(opener, url, *, body=None, headers=None, status=200):
         return response.headers, response.read()
 
 
-def check_https(origin, ca, shell=False):
+def check_https(origin, ca, shell=False, *, shell_absent=False):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -119,6 +119,8 @@ def check_https(origin, ca, shell=False):
         expect(headers["Location"], "/oauth2/start?rd=/n7-shell/")
         http(anonymous, origin + "/n7-shell/vendor/trinity-host.js", status=401)
         http(anonymous, origin + "/n7-shell/session.json", status=401)
+    elif shell_absent:
+        http(anonymous, origin + "/n7-shell/", status=401)
 
     wrong = client()
     headers, _ = http(wrong, origin + "/oauth2/start?rd=/demonstrator", status=302)
@@ -127,23 +129,32 @@ def check_https(origin, ca, shell=False):
     headers, _ = http(wrong, headers["Location"], status=500)
     expect(any(value.startswith("__Host-n7_oauth=") for value in headers.get_all("Set-Cookie", [])), False)
     http(wrong, origin + "/toplevel_spawn", body=b"{}", status=401)
+    http(wrong, origin + "/demonstrator", status=302)
+    if shell:
+        http(wrong, origin + "/n7-shell/", status=302)
 
     wrong_email = client()
     headers, _ = http(wrong_email, origin + "/oauth2/start?rd=/demonstrator", status=302)
     headers, _ = http(wrong_email, headers["Location"] + "&account=" + OWNER_OTHER_EMAIL, status=302)
     http(wrong_email, headers["Location"], status=302)
     http(wrong_email, origin + "/toplevel_spawn", body=b"{}", headers=spoof, status=403)
+    http(wrong_email, origin + "/demonstrator", status=403)
+    if shell:
+        http(wrong_email, origin + "/n7-shell/", status=403)
 
     owner = client(redirect=True)
     _, body = http(owner, origin + "/demonstrator")
     expect(b"Start paging" in body and b"Send reply" in body, True)
     if shell:
-        _, body = http(owner, origin + "/n7-shell/")
+        _, body = http(client(redirect=True), origin + "/n7-shell/")
         expect(b"WEB_PROLOG_HOST" in body and b"/n7-shell/editor_frame.html" in body, True)
+        expect(b'"nodeUrl":' + json.dumps(origin + "/").encode() in body, True)
         http(owner, origin + "/n7-shell/vendor/trinity-host.js")
         http(owner, origin + "/n7-shell/%2e%2e/proxy-token", status=404)
         _, data = http(owner, origin + "/n7-shell/session.json")
         expect(json.loads(data), {"principal_id": "owner", "principal_execution": True})
+    elif shell_absent:
+        http(owner, origin + "/n7-shell/", status=404)
     query = urlencode({"goal": "fixture_value(X)", "format": "json",
                        "src_text": "fixture_value(owner)."})
     response_headers, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})

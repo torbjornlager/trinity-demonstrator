@@ -45,6 +45,26 @@ def digest(path):
     return h.hexdigest()
 
 
+def inventory(directory):
+    files = {}
+    for path in sorted(directory.rglob("*")):
+        if path.is_symlink():
+            raise ValueError("Recovery files must not contain symlinks")
+        if path.is_file() and path != directory / "manifest.json":
+            files[path.relative_to(directory).as_posix()] = digest(path)
+    return files
+
+
+def shell_identity(directory):
+    manifest = json.loads((directory / "manifest.json").read_text())
+    host = manifest["host"]
+    if (host["assetBase"] != "/n7-shell/" or host["nodeUrl"] != ORIGIN + "/"
+            or host["credentials"] != "same-origin" or manifest["source"]["dirty"]
+            or "index.html" not in manifest["files"] or inventory(directory) != manifest["files"]):
+        raise ValueError("The live shell package failed integrity or origin checks")
+    return {"revision": manifest["source"]["revision"], "manifest_sha256": digest(directory / "manifest.json")}
+
+
 def check_rollback(base, deployed):
     changes = SequenceMatcher(None, base.splitlines(), deployed.splitlines(), autojunk=False)
     insertions = []
@@ -80,12 +100,21 @@ def verify_site(edge, oauth, args, template, main, base):
 
 def capture(output, edge, oauth, base_path, launch_agent, image):
     args = plistlib.loads(launch_agent.read_bytes())["ProgramArguments"]
+    image = image or args[args.index("--pilot-image") + 1]
     if (args[args.index("--private-origin") + 1] != ORIGIN
             or args[args.index("--pilot-image") + 1] != image
             or args.count("--allow-peer") != 1
             or args[args.index("--allow-peer") + 1] != N3
             or any(x.startswith("--allow-peer=") for x in args)):
         raise ValueError("Expected the live N7 image, origin and N3-only allowlist")
+    adapter = Path(args[1]).resolve()
+    for source in (adapter, adapter.with_name("n7_pilot.html"),
+                   adapter.parents[2] / "examples/APIs/http_example-1.html"):
+        relative = source.relative_to(adapter.parents[2])
+        if digest(source) != digest(ROOT / relative):
+            raise ValueError(f"Deployed adapter file differs from source: {relative}")
+    shell = Path(args[args.index("--shell-assets") + 1]).resolve() if "--shell-assets" in args else None
+    shell_record = shell_identity(shell) if shell is not None else None
     release_id = docker("image", "inspect", "--format", "{{.Id}}", image).decode().strip()
     engines = [name for name in docker("ps", "--format", "{{.Names}}").decode().splitlines()
                if re.fullmatch(r"trinity-n7-[0-9a-f]+", name)]
@@ -117,11 +146,16 @@ def capture(output, edge, oauth, base_path, launch_agent, image):
         # Use a separate tag so loading the archive cannot retag the live image.
         docker("tag", image, release_tag)
         docker("image", "save", "--output", str(output / "engine.tar"), release_tag)
-        files = {str(path.relative_to(output)): digest(path)
-                 for path in sorted(output.rglob("*")) if path.is_file()}
+        if shell is not None:
+            shutil.copytree(shell, output / "shell")
+            if shell_identity(output / "shell") != shell_record:
+                raise ValueError("The shell assets changed during capture")
+        files = inventory(output)
         manifest = {"image": release_tag, "image_id": release_id, "edge_image": edge_image,
                     "edge_image_id": edge_image_id, "rollback_matches_edge_image": base == baked_base,
                     "origin": ORIGIN, "allowed_peers": [N3], "files": files}
+        if shell_record is not None:
+            manifest["shell"] = shell_record
         (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     except BaseException:
         shutil.rmtree(output)
@@ -131,10 +165,11 @@ def capture(output, edge, oauth, base_path, launch_agent, image):
 
 def verify(bundle):
     manifest = json.loads((bundle / "manifest.json").read_text())
-    actual = {str(path.relative_to(bundle)): digest(path)
-              for path in bundle.rglob("*") if path.is_file() and path != bundle / "manifest.json"}
+    actual = inventory(bundle)
     if actual != manifest["files"] or manifest["origin"] != ORIGIN or manifest["allowed_peers"] != [N3]:
         raise ValueError("Recovery bundle failed integrity verification")
+    if "shell" in manifest and shell_identity(bundle / "shell") != manifest["shell"]:
+        raise ValueError("Recovery shell identity differs from the manifest")
     return manifest
 
 
@@ -146,13 +181,15 @@ def load_image(bundle, manifest):
     return manifest["image"]
 
 
-def adapter_command(bundle, manifest, port, owner, token_file, *, origin=None, peers=None):
+def adapter_command(bundle, manifest, port, owner, token_file, *, origin=None, peers=None, shell_assets=None):
     argv = [sys.executable, str(bundle / "experiments/eclipse-clp/isotope_http.py"),
             "--pilot-image", manifest["image"], "--port", str(port),
             "--private-origin", origin or manifest["origin"], "--owner", owner,
             "--proxy-token-file", str(token_file)]
     for peer in manifest["allowed_peers"] if peers is None else peers:
         argv.extend(["--allow-peer", peer])
+    if "shell" in manifest:
+        argv.extend(["--shell-assets", str(shell_assets or bundle / "shell")])
     return argv
 
 
@@ -175,7 +212,7 @@ def main():
     stage.add_argument("--rollback-caddyfile", type=Path)
     stage.add_argument("--edge", default="deployment-caddy-1")
     stage.add_argument("--oauth", default="trinity-n7-https-oauth2_n7-1")
-    stage.add_argument("--image", default="trinity-eclipse-n7:local")
+    stage.add_argument("--image", help="require this image tag in the live LaunchAgent")
     stage.add_argument("--launch-agent", type=Path,
                        default=Path.home() / "Library/LaunchAgents" / (LABEL + ".plist"))
     for action in ("verify", "load", "launch-plist"):

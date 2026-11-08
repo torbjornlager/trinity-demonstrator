@@ -70,12 +70,28 @@ def edge_request(port, node, path):
         connection.close()
 
 
+def stage_edge(bundle, layout, fixture_port):
+    for name in ("Caddyfile", "Caddyfile.rollback"):
+        (layout / name).write_text(localize((bundle / name).read_text(), fixture_port))
+    shutil.copyfile(bundle / "n7.Caddyfile", layout / "n7.Caddyfile")
+    shutil.copytree(bundle / "assets", layout / "assets", dirs_exist_ok=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("bundle", type=Path)
-    bundle = parser.parse_args().bundle.resolve()
+    parser.add_argument("--compact-rollback", type=Path, help="also restore an earlier compact-only N7 bundle")
+    args = parser.parse_args()
+    bundle = args.bundle.resolve()
     manifest = verify(bundle)
+    compact = args.compact_rollback.resolve() if args.compact_rollback else None
+    previous = verify(compact) if compact else None
+    if previous is not None and ("shell" not in manifest or "shell" in previous
+                                 or previous["edge_image_id"] != manifest["edge_image_id"]):
+        parser.error("--compact-rollback requires a compact-only bundle with the same edge image")
     load_image(bundle, manifest)
+    if previous is not None:
+        load_image(compact, previous)
     image = docker("image", "inspect", "--format", "{{.Id}}", manifest["edge_image"]).decode().strip()
     expect(image, manifest["edge_image_id"])
 
@@ -90,10 +106,18 @@ def main():
         stack.callback(docker, "network", "rm", network)
         layout = work / "layout"
         layout.mkdir()
-        for name in ("Caddyfile", "Caddyfile.rollback"):
-            (layout / name).write_text(localize((bundle / name).read_text(), fixture_port))
-        shutil.copyfile(bundle / "n7.Caddyfile", layout / "n7.Caddyfile")
-        shutil.copytree(bundle / "assets", layout / "assets")
+        stage_edge(bundle, layout, fixture_port)
+        shell_assets = None
+        if "shell" in manifest:
+            shell_assets = work / "shell"
+            shutil.copytree(bundle / "shell", shell_assets)
+            old_url = json.dumps(manifest["origin"] + "/").encode()
+            new_url = json.dumps(origin + "/").encode()
+            for page in shell_assets.rglob("*.html"):
+                original = page.read_bytes()
+                local = original.replace(b'"nodeUrl":' + old_url, b'"nodeUrl":' + new_url)
+                if local != original:
+                    page.write_bytes(local)
         token = token_hex(32)
         token_file = work / "proxy-token"
         token_file.touch(mode=0o600)
@@ -151,19 +175,23 @@ volumes:
         expect(edge_request(http_port, 0, "/discovery-hub")[0],
                b"upstream n0.elfenbenstornet.se /discovery-hub")
 
-        log = stack.enter_context((work / "adapter.log").open("w+"))
         # Map the single allowed peer to the disposable fixture, as with the OAuth origin.
         peer = f"http://127.0.0.1:{fixture_port}"
-        adapter = subprocess.Popen(adapter_command(bundle, manifest, adapter_port, EMAIL, token_file,
-                                                   origin=origin, peers=[peer]), stdout=log, stderr=log)
-
-        def stop_adapter():
+        def stop_adapter(adapter):
             if adapter.poll() is None:
                 adapter.send_signal(signal.SIGTERM)
                 adapter.wait(timeout=12)
 
-        stack.callback(stop_adapter)
-        wait_for(lambda: "Private proxy origin" in Path(log.name).read_text())
+        def start_adapter(source, release, name, assets=None):
+            log = stack.enter_context((work / name).open("w+"))
+            command = adapter_command(source, release, adapter_port, EMAIL, token_file,
+                                      origin=origin, peers=[peer], shell_assets=assets)
+            adapter = subprocess.Popen(command, stdout=log, stderr=log)
+            stack.callback(stop_adapter, adapter)
+            wait_for(lambda: "Private proxy origin" in Path(log.name).read_text())
+            return adapter
+
+        adapter = start_adapter(bundle, manifest, "adapter.log", shell_assets)
         compose(active, "up", "-d", "--no-deps", "oauth2_n7", "caddy")
         ca = work / "ca.crt"
         wait_for(lambda: compose(active, "cp", "caddy:/data/caddy/pki/authorities/local/root.crt",
@@ -180,7 +208,7 @@ volumes:
                 return False
 
         wait_for(https_ready)
-        check_https(origin, ca)
+        check_https(origin, ca, shell=shell_assets is not None)
         check_existing_nodes()
         for node in range(7):
             assets = layout / "assets/n7-catalog-v1" / ("n6" if node == 6 else "shared") / "web"
@@ -188,11 +216,15 @@ volumes:
                                    ("/vendor/trinity-host.js?v=n7-catalog-v1", "vendor/trinity-host.js")):
                 body, headers = edge_request(http_port, node, path)
                 expect(body, (assets / relative).read_bytes())
+                if shell_assets is not None and relative == "demonstrator.html":
+                    assert b'node.href = parsed.origin + "/n7-shell/";' in body
                 if node == 6:
                     expect(headers["set-cookie"], "n6_fixture=admitted")
                     expect(headers["cache-control"], "no-store")
-        expect(edge_request(http_port, 0, "/discovery-hub")[0],
-               (layout / "assets/n7-discovery-v1/discovery-hub.html").read_bytes())
+        hub = edge_request(http_port, 0, "/discovery-hub")[0]
+        expect(hub, (layout / "assets/n7-discovery-v1/discovery-hub.html").read_bytes())
+        if shell_assets is not None:
+            assert b'r.id === "n7" ? "/n7-shell/"' in hub
         command = [*active, "exec", "-T", "caddy", "curl", "-fsS", "http://127.0.0.1:8087/node_info"]
         metadata = json.loads(subprocess.check_output(command, env=env))
         expect((metadata["implementation"], metadata["auth"]), ("ECLiPSe CLP", "private"))
@@ -214,9 +246,25 @@ volumes:
         expect(query(peer.replace("127.0.0.1", "localhost"))["type"], "error")
         print("Recovered Hub, catalog, internal metadata, N6 admission headers and single-peer policy")
 
+        if previous is not None:
+            stop_adapter(adapter)
+            adapter = start_adapter(compact, previous, "compact-rollback.log")
+            stage_edge(compact, layout, fixture_port)
+            compose(active, "up", "-d", "--no-deps", "--force-recreate", "caddy")
+            wait_for(https_ready)
+            check_https(origin, ca, shell_absent=True)
+            check_existing_nodes()
+            expect(edge_request(http_port, 0, "/discovery-hub")[0],
+                   (compact / "assets/n7-discovery-v1/discovery-hub.html").read_bytes())
+            for node in range(7):
+                variant = "n6" if node == 6 else "shared"
+                expect(edge_request(http_port, node, "/demonstrator")[0],
+                       (compact / f"assets/n7-catalog-v1/{variant}/web/demonstrator.html").read_bytes())
+            print("Compact rollback kept its owner gate and removed the full shell and its links")
+
         compose(base, "up", "-d", "--no-deps", "--force-recreate", "caddy")
         compose(base, "stop", "oauth2_n7")
-        stop_adapter()
+        stop_adapter(adapter)
         wait_for(lambda: compose(base, "exec", "-T", "caddy", "curl", "-fsS",
                                  "-H", "Host: n0.elfenbenstornet.se",
                                  "http://localhost:18080/call", check=False).returncode == 0)
@@ -226,12 +274,15 @@ volumes:
         for node in range(7):
             expect(edge_request(http_port, node, "/demonstrator")[0],
                    f"upstream n{node}.elfenbenstornet.se /demonstrator".encode())
-        try:
-            urlopen(origin + "/node_info", context=tls, timeout=2).close()
-        except URLError:
-            pass
-        else:
-            raise AssertionError("N7 remained reachable after rollback")
+        for path in ("/demonstrator", "/n7-shell/"):
+            try:
+                urlopen(origin + path, context=tls, timeout=2).close()
+            except HTTPError as error:
+                raise AssertionError(f"N7 route still responded after rollback: {path}") from error
+            except URLError:
+                pass
+            else:
+                raise AssertionError(f"N7 route remained reachable after rollback: {path}")
         print("Rollback restored N0–N6 fixture routes and retired the N7 pilot")
 
 
