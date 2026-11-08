@@ -82,9 +82,10 @@ toplevel_stop(Pid, Target) :-
 toplevel_abort(Pid) :-
     post_actor_event(Pid, interrupt_ptcp).
 
-ptcp(DefaultTarget, Session, _Kind) :-
+ptcp(DefaultTarget, Session, Kind) :-
     self(Pid),
     actor_module(Pid, Module),
+    ( Kind == browser -> set_browser_prompt_correlation ; true ),
     shelf_create(control(recovering, 0, DefaultTarget), Control),
     engine_self(Engine),
     get_engine_property(Engine, store, Store),

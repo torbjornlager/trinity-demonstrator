@@ -8,6 +8,7 @@
 :- export output/1, output/2, input/2, input/3, respond/2, respond/3.
 :- export retarget_prompt/3.
 :- export set_io_target/1, clear_io_target/0.
+:- export set_browser_prompt_correlation/0.
 :- export set_linked_spawn_transport/2.
 :- export set_peer_send_transport/2.
 :- export set_prompt_relay/1.
@@ -361,12 +362,24 @@ input(Prompt, Value, Options) :-
     ; current_io_target(Target) -> true
     ; actor_parent(Target)
     ),
-    ( memberchk(correlate(true), Options) ->
+    ( ( memberchk(correlate(true), Options) ; browser_prompt_target(Target) ) ->
         correlated_input(Pid, Target, Prompt, Value)
     ;
         send_input_prompt(Target, Pid, plain, Prompt),
         wait_input(legacy, Value)
     ).
+
+% Browser toplevels must correlate input from loaded predicates as well as
+% input written directly in a query. Nested actors keep their own I/O rules.
+set_browser_prompt_correlation :-
+    mailbox_store(Store),
+    store_set(Store, browser_prompt_correlation, true).
+
+browser_prompt_target(Target) :-
+    mailbox_store(Store),
+    store_get(Store, browser_prompt_correlation, true),
+    current_io_target(Bridge),
+    Target == Bridge.
 
 correlated_input(Pid, Target, Prompt, Value) :-
     fresh_reference(Ref),

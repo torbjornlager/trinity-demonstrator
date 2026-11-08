@@ -210,11 +210,20 @@ def check_actor_ws(origin, ca, runner, anonymous, wrong, wrong_email, owner, spo
     cookie = request.get_header("Cookie")
     if not cookie:
         raise AssertionError("Expected a fixture owner session cookie")
+    workshop_path = ca.parent / "workshop.html"
+    try:
+        with owner.open(origin + "/n7-shell/n7-actor-workshop.html", timeout=10) as response:
+            workshop_path.write_bytes(response.read())
+    except HTTPError as error:
+        if error.code != 404:
+            raise
     # Some macOS Python builds ignore SSL_CERT_FILE when loading default roots.
     trust_fixture_ca = """
-import functools, runpy, ssl, sys
+import functools, html, re, runpy, ssl, sys
+from pathlib import Path
 sys.argv.pop(0)
 ssl.create_default_context = functools.partial(ssl.create_default_context, cafile=sys.argv.pop(0))
+workshop_path = Path(sys.argv.pop(0))
 runner = sys.argv[0]
 sys.path.insert(0, runner.rsplit('/', 1)[0])
 suite = runpy.run_path(runner)
@@ -241,8 +250,56 @@ try:
 finally:
     ws.close()
 print('Shell WebSocket session and output passed without capability negotiation')
+
+if not workshop_path.is_file():
+    sys.exit(0)
+workshop = workshop_path.read_text()
+
+def block(id):
+    return html.unescape(re.search(r'<pre id="' + id + r'">(.*?)</pre>', workshop, re.S)[1]).strip()
+
+ws = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                        extra_headers=(option('--header'),))
+try:
+    ws.send_json(dict(command='toplevel_spawn', options='[session(true)]', src_text=block('workshop-source')))
+    spawned = ws.recv_json()
+    assert spawned['type'] == 'spawned', spawned
+    pid = spawned['pid']
+
+    def call(id):
+        ws.send_json(dict(command='toplevel_call', pid=pid, goal=block(id)[3:-1], options='[limit(1)]'))
+
+    def answer(**bindings):
+        event = ws.recv_json()
+        assert event['type'] == 'success' and event['more'] is False, event
+        assert len(event['data']) == 1 and all(event['data'][0].get(k) == v for k, v in bindings.items()), event
+
+    for id, bindings in [('start-counters', {}), ('add-red', {'Red': '3'}), ('add-red', {'Red': '6'}),
+                         ('two-updates', {'Red': '8', 'Blue': '5'})]:
+        call(id)
+        answer(**bindings)
+    call('prompt-red')
+    prompt = ws.recv_json()
+    assert (prompt['type'], prompt['data']) == ('prompt', 'Amount to add (an integer)'), prompt
+    ws.send_json(dict(command='toplevel_respond', pid=pid, input='7.'))
+    assert ws.recv_json()['type'] == 'responded'
+    answer(Total='15')
+    call('watch-exit')
+    answer(Reason='workshop_done')
+    call('stop-counters')
+    answer()
+    call('start-counters')
+    answer()
+    call('add-red')
+    answer(Red='3')
+    ws.send_json(dict(command='toplevel_halt', pid=pid))
+    assert ws.recv_json()['type'] == 'halted'
+finally:
+    ws.close()
+print('N7 ACTOR workshop counters, prompts, and monitors passed')
 """
-    result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca), str(runner.resolve()),
+    result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca),
+                             str(workshop_path), str(runner.resolve()),
                              "--ws-url", endpoint.replace("https:", "wss:", 1),
                              "--advertised-profile", "actor", "--origin", origin,
                              "--header", "Cookie: " + cookie, "--candidate", "n7-owner-preview",

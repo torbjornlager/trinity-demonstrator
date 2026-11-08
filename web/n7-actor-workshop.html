@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>N7 ACTOR workshop</title>
+  <link rel="stylesheet" href="/vendor/fonts/ibm-plex-mono.css">
+  <link rel="stylesheet" href="/vendor/tutorial-common.css">
+</head>
+<body>
+<main id="tutorial" class="tutorial">
+  <h1>N7 ACTOR workshop</h1>
+  <p>Try independent actors, selective receive, monitors and interactive input
+    in the ECLiPSe CLP shell. The results appear in the terminal beside this page.</p>
+  <nav aria-label="Workshop exercises">
+    <a href="#counters">Counter actors</a> · <a href="#mailbox">Mailbox ordering</a> ·
+    <a href="#prompt">Prompted updates</a> · <a href="#monitor">Actor exit</a>
+  </nav>
+
+  <section id="counters">
+    <h2>Run two independent counters</h2>
+    <p>Load the program, then start the counters. Each actor keeps its own total
+      in a recursive argument. The shell remembers their PIDs by name.</p>
+    <pre id="workshop-source">:- dynamic workshop_counter/2.
+
+counter_loop(Total) :-
+    receive({
+        add(From, Name, Amount) -&gt;
+            Next is Total + Amount,
+            From ! total(Name, Next),
+            counter_loop(Next)
+    ;   stop -&gt; true
+    }).
+
+start_counter(Name) :-
+    ( workshop_counter(Name, _) -&gt; true
+    ; spawn(counter_loop(0), Pid),
+      assertz(workshop_counter(Name, Pid))
+    ).
+
+send_add(Name, Amount) :-
+    once(workshop_counter(Name, Pid)),
+    self(Me),
+    Pid ! add(Me, Name, Amount).
+
+add_to(Name, Amount, Total) :-
+    send_add(Name, Amount),
+    receive({total(Name, Total) -&gt; true}).
+
+two_updates(Red, Blue) :-
+    send_add(red, 2),
+    send_add(blue, 5),
+    receive({total(blue, Blue) -&gt; true}),
+    receive({total(red, Red) -&gt; true}).
+
+prompt_add(Name, Total) :-
+    input('Amount to add (an integer)', Amount),
+    integer(Amount),
+    add_to(Name, Amount, Total).
+
+stop_counters :-
+    ( workshop_counter(Name, Pid) -&gt;
+        Pid ! stop,
+        retractall(workshop_counter(Name, Pid)),
+        stop_counters
+    ; true
+    ).</pre>
+    <button type="button" data-load="#workshop-source">Load workshop program</button>
+    <pre id="start-counters">?- start_counter(red), start_counter(blue).</pre>
+    <button type="button" data-ask="#start-counters">Start both counters</button>
+    <pre id="add-red">?- add_to(red, 3, Red).</pre>
+    <button type="button" data-ask="#add-red">Add 3 to red</button>
+    <p>Try the same call twice. Red starts at 3 and reaches 6. Blue is still at 0.</p>
+  </section>
+
+  <section id="mailbox">
+    <h2>Receive replies in the order you choose</h2>
+    <pre id="two-updates">?- two_updates(Red, Blue).</pre>
+    <button type="button" data-ask="#two-updates">Update both counters</button>
+    <p>The shell asks red first but waits for blue first. A red reply that
+      arrives early stays in the mailbox for the second receive.</p>
+  </section>
+
+  <section id="prompt">
+    <h2>Drive an actor from a terminal prompt</h2>
+    <pre id="prompt-red">?- prompt_add(red, Total).</pre>
+    <button type="button" data-ask="#prompt-red">Ask how much to add</button>
+    <p>Enter an integer such as <code>7.</code> at the terminal prompt. The
+      loaded predicate forwards your number to the red actor
+      and returns its new total.</p>
+  </section>
+
+  <section id="monitor">
+    <h2>Observe a worker exit and clean up</h2>
+    <pre id="watch-exit">?- spawn(exit(workshop_done), Pid, [monitor(true)]),
+   receive({down(Pid, _, Reason) -&gt; true}).</pre>
+    <button type="button" data-ask="#watch-exit">Watch a worker exit</button>
+    <p>The monitor delivers a <code>down</code> message with reason
+      <code>workshop_done</code>.</p>
+    <pre id="stop-counters">?- stop_counters.</pre>
+    <button type="button" data-ask="#stop-counters">Stop both counters</button>
+    <p>Start them again to begin with empty totals.</p>
+  </section>
+</main>
+<script>
+  (function () {
+    function applyAppearance(options) {
+      var root = document.documentElement;
+      root.setAttribute("data-theme", options.theme === "dark" ? "dark" : "light");
+      if (options.fontFamily) root.style.setProperty("--mono-font", options.fontFamily);
+      if (options.fontSize) root.style.setProperty("--mono-size", parseInt(options.fontSize, 10) + "px");
+      if (options.fontWeight) root.style.setProperty("--mono-weight", options.fontWeight);
+    }
+    window.tutorialFrameBridge = {applyAppearance: applyAppearance};
+    window.addEventListener("message", function (event) {
+      if (event.origin === location.origin && event.data && event.data.type === "webprolog-appearance") {
+        applyAppearance(event.data);
+      }
+    });
+    var api = window.parent !== window && window.parent.webPrologTutorialBridge;
+    if (!api) return;
+    if (typeof api.appearanceOptions === "function") applyAppearance(api.appearanceOptions());
+    document.querySelectorAll("button[data-ask], button[data-load]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var id = button.dataset.ask || button.dataset.load;
+        var text = document.querySelector(id).textContent;
+        if (button.dataset.ask) api.askExample(text.replace(/^\s*\?-\s*/, "").trim(), id);
+        else api.consultSource(text, id);
+      });
+    });
+  }());
+</script>
+</body>
+</html>

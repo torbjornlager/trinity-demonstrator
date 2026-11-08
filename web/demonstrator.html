@@ -5494,6 +5494,17 @@
             behaviourLabel: ""
           };
         }
+        if (!runtime.main && !runtime.worker && TrinityHost.assetBase === "/n7-shell/") {
+          return {
+            profile: profile,
+            path: "/n7-actor-workshop",
+            label: "N7 ACTOR workshop",
+            apiPath: "/actor-api-tutorial",
+            apiLabel: "The stateful WebSocket API",
+            behaviourPath: "",
+            behaviourLabel: ""
+          };
+        }
         return {
           profile: profile,
           path: "/actor-profile-tutorial",
@@ -11803,7 +11814,11 @@
                 };
                 spawnLoadSpec = requestedLoadSpec || self.spawnLoadSpec();
                 var spawnLoadText = spawnLoadSpec.text;
-                spawnCmd.options = self.toplevelSpawnOptionsText(spawnLoadText, true);
+                if (TrinityHost.assetBase === "/n7-shell/" && spawnLoadText !== "") {
+                  spawnCmd.src_text = spawnLoadText;
+                } else {
+                  spawnCmd.options = self.toplevelSpawnOptionsText(spawnLoadText, true);
+                }
                 self.wsSpawnLoadText = spawnLoadText;
                 self.wsSpawnLoadOrigin = spawnLoadSpec.origin;
                 self.wsPendingExampleSpawn = spawnLoadSpec.origin === "editor" && spawnLoadText !== ""
