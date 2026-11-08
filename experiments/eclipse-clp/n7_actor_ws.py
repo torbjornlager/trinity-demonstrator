@@ -166,7 +166,7 @@ class ActorConnection:
             if not isinstance(value, str):
                 raise ValueError("Expected a Prolog input term")
             fields.update(input=value, prompt_ref=ref)
-        reply = self.bridge.request(action, fields)
+        reply = self.bridge.request(action, fields, timeout=18 if action in ("call", "next") else 6)
         if reply["type"] in ("abort", "halted", "responded"):
             self.prompts.pop(pid, None)
         if reply["type"] in ("abort", "halted"):
@@ -177,7 +177,7 @@ class ActorConnection:
                 self.bridge.browser_output.pop(pid, None)
         self.relay(reply)
         if reply["type"] == "responded":
-            self.relay(self.bridge.request("poll", {"pid": pid}))
+            self.relay(self.bridge.request("poll", {"pid": pid}, timeout=18))
 
     @staticmethod
     def options(request):
@@ -208,7 +208,7 @@ class ActorConnection:
     def resume_output(self, pid, needs_ack):
         if needs_ack:
             self.bridge.request("browser_ack", {"pid": pid})
-        return self.bridge.request("poll", {"pid": pid})
+        return self.bridge.request("poll", {"pid": pid}, timeout=18)
 
     def close(self):
         with self.bridge.state_changed:

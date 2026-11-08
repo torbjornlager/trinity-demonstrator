@@ -2,9 +2,12 @@
 :- lib(format).
 :- lib(lists).
 :- lib(prolog_extras).
+:- ensure_loaded(library(swi)).
 
 :- export spawn/1, actors/1.
 :- export browser_goal/2, browser_format/2, source_body/2.
+:- export flush/0, browser_time/1, browser_sleep/1, browser_random_between/3.
+:- export browser_call_cleanup/2.
 :- export send/3, cancel/1.
 :- export spawn/2, spawn/3, self/1, send/2, (!)/2.
 :- export op(800, xfx, !).
@@ -32,6 +35,8 @@
 :- local record(delayed_sends).
 :- tool(spawn/1, spawn_/2).
 :- tool(source_body/2, source_body_/3).
+:- tool(browser_time/1, browser_time_/2).
+:- tool(browser_call_cleanup/2, browser_call_cleanup_/3).
 :- tool(spawn/2, spawn_/3).
 :- tool(spawn/3, spawn_/4).
 
@@ -306,7 +311,9 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     ; true
     ),
     compile_term([(:- import(actors)), (:- import(exit/1 from actors)),
-                  (:- import(select/3 from lists))])@Private,
+                  (:- import(select/3 from lists)),
+                  (:- import(subtract/3 from lists)),
+                  (:- import(forall/2 from swi))])@Private,
     ( current_module(isotope_rpc), nonvar(Goal), Goal = Module:Entry,
       Module == toplevel_actors, nonvar(Entry), functor(Entry, ptcp, 3) ->
         compile_term([(:- import(rpc/2 from isotope_rpc)),
@@ -339,7 +346,7 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     ),
     compile_term(Compiled)@Private,
     yield(ready, run),
-    once(call(Goal)@Private).
+    run_actor_goal(Goal, Private).
 
 % Restrict the first loader to local clauses and dynamic declarations.
 % In particular, never pass module-changing directives to the compiler.
@@ -379,7 +386,11 @@ local_clause_head(Head) :-
 
 run_actor(Pid, Parent, Inbox, Goal, Module) :-
     set_actor_context(Pid, Parent, Inbox),
-    once(call(Goal)@Module).
+    run_actor_goal(Goal, Module).
+
+run_actor_goal(Goal, Module) :-
+    ( browser_session(_) -> browser_goal(Goal, Call) ; Call = Goal ),
+    once(call(Call)@Module).
 
 set_actor_context(Pid, Parent, Inbox) :-
     set_self(Pid),
@@ -406,9 +417,16 @@ browser_source_clause(Clause, Clause).
 browser_goal(Goal, Goal) :- var(Goal), !.
 browser_goal(format(Control), actors:browser_format(Control, [])) :- !.
 browser_goal(format(Control, Args), actors:browser_format(Control, Args)) :- !.
+browser_goal(time(Goal), actors:browser_time(Translated)) :- !,
+    browser_goal(Goal, Translated).
+browser_goal(call_cleanup(Goal, Cleanup), actors:browser_call_cleanup(Call, Done)) :- !,
+    browser_goal(Goal, Call), browser_goal(Cleanup, Done).
+browser_goal(sleep(Time), actors:browser_sleep(Time)) :- !.
+browser_goal(random_between(Low, High, Random), actors:browser_random_between(Low, High, Random)) :- !.
 browser_goal(writeln(Term), actors:browser_format("~w~n", [Term])) :- !.
 browser_goal(read(Value), input('|:', Value, [correlate(true)])) :- !.
 browser_goal(clause(Head, Body), actors:source_body(Head, Body)) :- !.
+browser_goal(call(Goal), call(Translated)) :- !, browser_goal(Goal, Translated).
 browser_goal((A,B), (X,Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
 browser_goal((A;B), (X;Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
 browser_goal((A->B), (X->Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
@@ -439,6 +457,55 @@ browser_format(Control, Args) :-
         send(main, browser_child_output(Session, Text))
     ; toplevel_actors:browser_format(Control, Args)
     ).
+
+flush :-
+    receive({ Message -> flush_message(Message), flush }, [timeout(0)]).
+
+flush_message(Message) :-
+    ( browser_session(_) -> browser_format("Shell got ~w~n", [Message])
+    ; output(Message)
+    ).
+
+browser_time_(Goal, Module) :-
+    setup_call_cleanup(elapsed(Start), call(Goal)@Module, report_elapsed(Start)).
+
+report_elapsed(Start) :-
+    elapsed(End),
+    Seconds is End - Start,
+    browser_session(Session),
+    sprintf(Text, "%% %.3f seconds elapsed%n", [Seconds]),
+    send(main, browser_child_output(Session, Text)).
+
+browser_sleep(Time) :-
+    ( number(Time) -> sleep(Time)
+    ; var(Time) -> throw(error(instantiation_error, sleep/1))
+    ; throw(error(type_error(number, Time), sleep/1))
+    ).
+
+browser_random_between(Low, High, Random) :-
+    integer(Low), integer(High), Low =< High,
+    frandom(Fraction),
+    Random is Low + fix(floor(Fraction * (High - Low + 1))).
+
+% ECLiPSe copies the native cleanup goal when it registers it. Run a
+% deterministic cleanup directly so its bindings reach the caller.
+browser_call_cleanup_(Goal, Cleanup, Module) :-
+    shelf_create(cleaned(false), State),
+    setup_call_cleanup(
+        true,
+        ( sepia_kernel:get_cut(Before),
+          call(Goal)@Module,
+          sepia_kernel:get_cut(After),
+          ( Before == After ->
+              shelf_set(State, 1, true),
+              once(call(Cleanup)@Module)
+          ; true )
+        ),
+        finish_browser_cleanup(State, Cleanup, Module)
+    ).
+
+finish_browser_cleanup(State, Cleanup, Module) :-
+    ( shelf_get(State, 1, false) -> call(Cleanup)@Module ; true ).
 
 set_self(Pid) :-
     mailbox_store(Store),

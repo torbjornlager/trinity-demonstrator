@@ -158,8 +158,8 @@ class Bridge:
         except json.JSONDecodeError as error:
             raise RuntimeError("Invalid JSON from the ECLiPSe bridge") from error
 
-    def request(self, command, fields, *, expired_at=None):
-        deadline = monotonic() + 6 if self.stop_backend is not None else None
+    def request(self, command, fields, *, expired_at=None, timeout=6):
+        deadline = monotonic() + timeout if self.stop_backend is not None else None
         try:
             return self.dispatch(command, fields, deadline, expired_at)
         except (TimeoutError, FutureTimeout):

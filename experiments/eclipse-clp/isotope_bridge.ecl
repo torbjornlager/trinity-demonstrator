@@ -759,6 +759,11 @@ open_session(Router, Request, Fields) :-
     request_event("spawn", Fields, Context, Event),
     ( Event = {[type:spawned, pid:Id]} ->
         self(Relay),
+        ( memberchk(browser_options:_, Fields) ->
+            engine_self(Engine),
+            get_engine_property(Engine, store, Store),
+            store_set(Store, browser_event_timeout, 15)
+        ; true ),
         send(Router, http_opened(Request, Id, Relay)),
         serve_session(Router)
     ;
@@ -971,6 +976,9 @@ query_event(Pid, browser_output(Pid, _)).
 query_event(Pid, prompt(Pid, _)).
 
 await_event(Id, Context, Event) :-
+    engine_self(Engine),
+    get_engine_property(Engine, store, Store),
+    ( store_get(Store, browser_event_timeout, Wait) -> true ; Wait = 3 ),
     Pid = actor(Id),
     receive({
         http_request(AbortRequest, "abort", Id, Fields) ->
@@ -1018,7 +1026,7 @@ await_event(Id, Context, Event) :-
     ;
         prompt(Pid, _) ->
             retire(Id, "HTTP prompts require correlation", Event)
-    }, [timeout(3), on_timeout(retire(Id, "Query event timed out", Event))]).
+    }, [timeout(Wait), on_timeout(retire(Id, "Query event timed out", Event))]).
 
 event_text(Value, Text) :-
     ( string(Value) -> Text = Value
