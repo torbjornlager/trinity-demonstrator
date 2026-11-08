@@ -9,7 +9,7 @@ local_dir="$root/.trinity/n7-local"
 dist="$local_dir/eclipse-dist"
 deps="$root/.trinity/deps"
 conformance="$deps/trinity-conformance"
-runner="$conformance/reports/2026-11-08-n7-packaged-conformance/run.py"
+runner="$conformance/runner/n7_packaged.py"
 swi_load="$deps/swi-prolog-node/load.pl"
 
 for file in "$dist/eclipse_basic.tgz" "$runner" "$conformance/runner/validate_reports.py" "$swi_load"; do

@@ -12,8 +12,8 @@ Docker socket. This pilot can run alongside the existing nodes.
 
 Install Git, Python 3, Docker with Buildx and Compose (with Linux ARM64 support),
 threaded SWI-Prolog 10.1.19 or newer on `PATH`, and Node.js 22. Set `N7_NODE`
-to the Node.js executable if needed. The SWI fetch commands require Git read
-access to the pinned dependency repositories.
+to the Node.js executable if needed. Fetching the dependencies requires Git
+read access to their GitHub repositories.
 
 ```sh
 git clone --branch codex/n7-shell-preview --single-branch \
@@ -25,15 +25,16 @@ python3 tools/setup_swi.py --native-root .trinity/deps/swi-prolog-node \
   --browser-root .trinity/deps/swi-wasm-node
 ```
 
-The N7 conformance runner is pinned to a revision that is currently available
-in the local `trinity-conformance` repository. Replace `/path/to/trinity-conformance`
-with the path to a checkout that contains that revision.
+Fetch the pinned N7 conformance runner from GitHub. If you set up this checkout
+using the older local conformance instructions, run this block to update the
+dependency to the published revision.
 
 ```sh
 n7_conformance=.trinity/deps/trinity-conformance
 git init --quiet "$n7_conformance"
-git -C "$n7_conformance" fetch --depth=1 --no-tags /path/to/trinity-conformance \
-  5e4ecdd92a4f7e3eaa80c86a598809ab6be9801c
+git -C "$n7_conformance" fetch --depth=1 --no-tags \
+  https://github.com/torbjornlager/trinity-conformance.git \
+  15cfacebd4625d891f0ecea9c551edcc70678bd9
 git -C "$n7_conformance" checkout --detach FETCH_HEAD
 ```
 
