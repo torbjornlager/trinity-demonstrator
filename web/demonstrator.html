@@ -2775,8 +2775,8 @@
               <div class="wb-header-section-title">Remote non-SWI nodes</div>
               <button type="button"
                       class="wb-header-note-help wb-header-node-help"
-                      data-tooltip="These nodes run Prolog implementations other than SWI-Prolog: N5 uses Trealla Prolog, and N6 uses GNU Prolog."
-                      aria-label="These nodes run Prolog implementations other than SWI-Prolog: N5 uses Trealla Prolog, and N6 uses GNU Prolog.">
+                      data-tooltip="N5 uses Trealla Prolog, N6 uses GNU Prolog, and N7 is the owner-only ECLiPSe CLP pilot."
+                      aria-label="N5 uses Trealla Prolog, N6 uses GNU Prolog, and N7 is the owner-only ECLiPSe CLP pilot.">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
                   <path d="M9.5 9.3a2.7 2.7 0 0 1 5.1 1c0 1.8-1.8 2.3-2.4 2.9-.4.4-.6.8-.6 1.5"></path>
@@ -2792,7 +2792,8 @@
                  :class="{active: node.active}"
                  target="_blank"
                  rel="noopener noreferrer"
-                 :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+                 :title="node.runtimeName ? node.runtimeName + (node.ownerOnly ? ' · owner-only pilot' : '') : null"
+                 :aria-label="'Open ' + node.label + (node.ownerOnly ? ' owner-only pilot' : ' demonstrator')">{{ node.label }}</a>
             </div>
             <p v-if="headerNonSwiNodeSelected" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
@@ -4088,7 +4089,7 @@
     
     
 
-    <script src="/vendor/trinity-host.js"></script>
+    <script src="/vendor/trinity-host.js?v=n7-catalog-v1"></script>
     <script src="/vendor/jquery.min.js"
             crossorigin="anonymous"></script>
     <script src="/vendor/vue.global.prod.js"></script>
@@ -4816,29 +4817,40 @@
             return;
           }
           seen[parsed.href] = true;
-          nodes.push({
+          var node = {
             id: parsed.href,
             url: parsed.href,
             href: portalHrefForNodeUrl(parsed.href),
             runtime: runtime,
             label: nodeLabelForUrl(parsed.href)
-          });
+          };
+          if (parsed.origin === "https://n7.elfenbenstornet.se") {
+            node.runtime = "eclipse";
+            node.runtimeName = "ECLiPSe CLP";
+            node.ownerOnly = true;
+          }
+          nodes.push(node);
         }
 
         if (!normalized) {
           return nodes;
         }
 
+        domainMatch = normalized.hostname.match(/^(admin|n[0-9]+)\.(.+)$/i);
+        var trinityDomain = domainMatch && domainMatch[2].toLowerCase() === "elfenbenstornet.se";
         if (TrinityHost.remoteNodes && TrinityHost.remoteNodes.length) {
           TrinityHost.remoteNodes.forEach(function(node) { push(node.url, node.runtime); });
+          if (trinityDomain) push("https://n7.elfenbenstornet.se");
           return nodes;
         }
 
-        domainMatch = normalized.hostname.match(/^(admin|n[0-9]+)\.(.+)$/i);
         if (domainMatch) {
           (domainMatch[1].toLowerCase() === "admin" ? ["admin", "n1", "n2", "n3", "n4", "n5", "n6"] : ["n1", "n2", "n3", "n4", "n5", "n6"]).forEach(function(host) {
             push(normalized.protocol + "//" + host + "." + domainMatch[2]);
           });
+          if (trinityDomain) {
+            push("https://n7.elfenbenstornet.se");
+          }
           return nodes;
         }
 
@@ -5754,14 +5766,16 @@
             var nodesByLabel = {};
             var currentLabel = this.isBrowserSwiWasmMode ? "" : nodeLabelForUrl(this.currentPortalNodeUrl);
             this.portalNodes.forEach(function(node) {
-              if (/^N[1-6]$/.test(node.label)) {
+              if (/^N[1-7]$/.test(node.label)) {
                 nodesByLabel[node.label] = node;
               }
             });
             var ids = ["n1", "n2", "n3", "n4", "n5"];
             if (nodesByLabel.N6) ids.push("n6");
+            if (nodesByLabel.N7) ids.push("n7");
             return ids.map(function(id) {
               var label = id.toUpperCase();
+              var node = nodesByLabel[label];
               return {
                 id: id,
                 href: nodesByLabel[label]
@@ -5770,6 +5784,8 @@
                 label: label,
                 runtime: nodesByLabel[label] && nodesByLabel[label].runtime
                   || (id === "n6" ? "gprolog" : id === "n5" ? "trealla" : "swi"),
+                runtimeName: node && node.runtimeName,
+                ownerOnly: node && node.ownerOnly,
                 active: currentLabel === label
               };
             });

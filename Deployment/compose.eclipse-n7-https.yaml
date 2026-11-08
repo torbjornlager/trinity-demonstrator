@@ -1,0 +1,50 @@
+name: trinity-n7-https
+services:
+  n7_https:
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.caddy.eclipse-n7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${N7_HTTPS_PORT:-18443}:${N7_HTTPS_PORT:-18443}"
+    environment:
+      N7_ORIGIN: ${N7_ORIGIN:?Set the N7 HTTPS origin}
+      N7_TLS_DIRECTIVE: ${N7_TLS_DIRECTIVE:-tls internal}
+      N7_GITHUB_LOGIN: ${OAUTH2_PROXY_GITHUB_USERS:?Use the N5 GitHub login}
+      N7_OWNER_EMAIL: ${WP_N5_OWNER:?Use the N5 owner email}
+      N7_PROXY_TOKEN: ${N7_PROXY_TOKEN:?Set the N7 proxy token}
+      N7_HTTP_UPSTREAM: ${N7_HTTP_UPSTREAM:-host.docker.internal:18087}
+    volumes:
+      - n7_tls:/data
+    depends_on: [oauth2_n7]
+    mem_limit: 128m
+    cpus: 0.25
+
+  oauth2_n7:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0@sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d
+    restart: unless-stopped
+    environment:
+      OAUTH2_PROXY_HTTP_ADDRESS: "0.0.0.0:4180"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_UPSTREAMS: "static://202"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PROVIDER: github
+      OAUTH2_PROXY_CLIENT_ID: ${N7_OAUTH2_CLIENT_ID:?Set the dedicated N7 OAuth client ID}
+      OAUTH2_PROXY_CLIENT_SECRET: ${N7_OAUTH2_CLIENT_SECRET:?Set the dedicated N7 OAuth client secret}
+      OAUTH2_PROXY_COOKIE_SECRET: ${N7_OAUTH2_COOKIE_SECRET:?Set a separate N7 cookie secret}
+      OAUTH2_PROXY_REDIRECT_URL: ${N7_ORIGIN:?Set the N7 HTTPS origin}/oauth2/callback
+      OAUTH2_PROXY_COOKIE_NAME: __Host-n7_oauth
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_COOKIE_SAMESITE: lax
+      OAUTH2_PROXY_COOKIE_EXPIRE: 8h
+      OAUTH2_PROXY_SESSION_COOKIE_MINIMAL: "true"
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_GITHUB_USERS: ${OAUTH2_PROXY_GITHUB_USERS:?Use the N5 GitHub login}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    cpus: 0.25
+
+volumes:
+  n7_tls:

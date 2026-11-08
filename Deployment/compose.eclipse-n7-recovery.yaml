@@ -1,0 +1,22 @@
+# Apply last, with the same project and other edge Compose files.
+services:
+  caddy:
+    environment:
+      N7_ORIGIN: ${N7_ORIGIN:?Set the N7 HTTPS origin}
+      N7_TLS_DIRECTIVE: ${N7_EDGE_TLS_DIRECTIVE-}
+      N7_DISCOVERY_HOST: ${N7_DISCOVERY_HOST:-n7.elfenbenstornet.se}
+      N7_GITHUB_LOGIN: ${OAUTH2_PROXY_GITHUB_USERS:?Set the N7 owner login}
+      N7_OWNER_EMAIL: ${WP_N5_OWNER:?Set the N7 owner email}
+      N7_PROXY_TOKEN: ${N7_PROXY_TOKEN:?Set the N7 proxy token}
+      N7_HTTP_UPSTREAM: ${N7_HTTP_UPSTREAM:-host.docker.internal:18087}
+    volumes:
+      - "${N7_RECOVERY_DIR:?Set the absolute recovery bundle directory}/Caddyfile:/etc/caddy/Caddyfile:ro"
+      - "${N7_RECOVERY_DIR}/n7.Caddyfile:/etc/caddy/n7.Caddyfile:ro"
+      - "${N7_RECOVERY_DIR}/assets/n7-catalog-v1:/config/n7-catalog-v1:ro"
+      - "${N7_RECOVERY_DIR}/assets/n7-discovery-v1:/config/n7-discovery-v1:ro"
+    networks:
+      - n7_recovery
+networks:
+  n7_recovery:
+    name: ${N7_EDGE_NETWORK:-trinity-n7-https_default}
+    external: true

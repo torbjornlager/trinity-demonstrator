@@ -58,3 +58,10 @@ seed_node(n6, 'https://n6.elfenbenstornet.se',
     "").
 seed_implementation(n6, 'GNU Prolog').
 seed_probe_url(n6, 'http://caddy:8086').
+
+seed_node(n7, 'https://n7.elfenbenstornet.se',
+    "Owner-only ISOTOPE pilot for ECLiPSe CLP.",
+    "",
+    "GitHub sign-in is required to run queries.").
+seed_implementation(n7, 'ECLiPSe CLP').
+seed_probe_url(n7, 'http://caddy:8087').

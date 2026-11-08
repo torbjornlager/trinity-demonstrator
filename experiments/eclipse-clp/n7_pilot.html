@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>N7 · ECLiPSe pilot</title>
+<style>
+  body { font: 1rem/1.5 system-ui, sans-serif; margin: 3rem auto; padding: 0 1rem; max-width: 42rem; }
+  button, input { font: inherit; }
+  pre { padding: 1rem; background: #f2f4f6; white-space: pre-wrap; }
+</style>
+<h1>N7 · ECLiPSe pilot</h1>
+<p>Page through three answers or reply to a correlated prompt.</p>
+<p>
+  <button id="start" type="button">Start paging</button>
+  <button id="next" type="button" disabled>Next answer</button>
+  <button id="ask" type="button">Ask for a term</button>
+  <button id="halt" type="button" disabled>Close session</button>
+</p>
+<form id="reply-form" hidden>
+  <label for="reply">Prolog term ending in a period</label>
+  <input id="reply" value="hello." required>
+  <button id="respond" type="submit">Send reply</button>
+</form>
+<pre id="result" role="status" aria-live="polite">Ready</pre>
+<script>
+  const byId = id => document.getElementById(id);
+  const buttons = ["start", "next", "ask", "halt", "respond"];
+  let pid, promptRef, more = false;
+
+  async function post(command, fields = {}) {
+    const spawn = command === "spawn";
+    const response = await fetch("/toplevel_" + command, {
+      method: "POST",
+      headers: {"Content-Type": spawn ? "application/json" : "application/x-www-form-urlencoded"},
+      body: spawn ? JSON.stringify({options: "[session(true)]", prompt_correlation: true})
+                  : new URLSearchParams({pid, format: "json", ...fields})
+    });
+    if (response.status === 401) throw new Error("Sign in again by reloading this page.");
+    const event = await response.json();
+    if (!response.ok || event.type === "error") {
+      if (event.code === "session_lost") {
+        pid = promptRef = undefined;
+        more = false;
+      }
+      throw new Error(event.data || "Request failed");
+    }
+    return event;
+  }
+
+  function show(event) {
+    more = event.type === "success" && event.more;
+    promptRef = event.type === "prompt" ? event.prompt_ref : undefined;
+    byId("result").textContent = JSON.stringify(event, null, 2);
+  }
+
+  async function closeSession() {
+    if (pid !== undefined) {
+      show(await post("halt"));
+      pid = undefined;
+    }
+  }
+
+  async function start(goal) {
+    await closeSession();
+    pid = (await post("spawn")).pid;
+    show(await post("call", {goal, limit: "1"}));
+  }
+
+  async function run(action) {
+    for (const id of buttons) byId(id).disabled = true;
+    try {
+      await action();
+    } catch (error) {
+      byId("result").textContent = error.message;
+    } finally {
+      byId("start").disabled = false;
+      byId("ask").disabled = false;
+      byId("halt").disabled = pid === undefined;
+      byId("next").disabled = !more;
+      byId("reply-form").hidden = promptRef === undefined;
+      byId("respond").disabled = promptRef === undefined;
+    }
+  }
+
+  byId("start").onclick = () => run(() => start("member(X,[a,b,c])"));
+  byId("next").onclick = () => run(async () => show(await post("next")));
+  byId("ask").onclick = () => run(() => start("read(X)"));
+  byId("halt").onclick = () => run(closeSession);
+  byId("reply-form").onsubmit = event => {
+    event.preventDefault();
+    run(async () => {
+      await post("respond", {input: byId("reply").value, prompt_ref: promptRef});
+      promptRef = undefined;
+      show(await post("poll"));
+    });
+  };
+</script>
+</html>

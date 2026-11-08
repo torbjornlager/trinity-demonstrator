@@ -276,7 +276,7 @@
       var shellUrl = r.url ? r.url.replace(/\/$/, "") + "/demonstrator" : "";
       var link = r.url
         ? '<div class="btn-list ms-auto">' +
-            '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" class="btn btn-sm' + dis + '" title="Shared data and programs">Data</a>' +
+            (r.id === "n7" ? "" : '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" class="btn btn-sm' + dis + '" title="Shared data and programs">Data</a>') +
             '<a href="' + esc(shellUrl) + '" target="_blank" rel="noopener" class="btn btn-sm btn-primary' + dis + '" title="Open a shell against this node">Shell</a>' +
           "</div>"
         : "";
@@ -345,7 +345,36 @@
         '<div class="alert alert-warning"><strong>Hub unreachable.</strong> ' + esc(msg) + "</div>";
     }
 
+    // The running registry reads its seed at startup. Probe the pilot directly
+    // so this page can discover it before the next registry deployment.
+    async function discoverN7() {
+      var url = "https://n7.elfenbenstornet.se";
+      var controller = new AbortController();
+      var timeout = setTimeout(function () { controller.abort(); }, 4000);
+      try {
+        var response = await fetch(url + "/node_info", {
+          credentials: "omit", cache: "no-store", signal: controller.signal
+        });
+        if (!response.ok) return null;
+        var info = await response.json();
+        if (info.self_url !== url || info.profile !== "isotope" || info.auth !== "private" ||
+            info.implementation !== "ECLiPSe CLP" || !/^\d+\.\d+\.\d+$/.test(info.version)) return null;
+        return {
+          id: "n7", status: "up", profile: info.profile, auth: info.auth,
+          lastSeen: Date.now() / 1000, url: url,
+          description: "Owner-only ECLiPSe CLP pilot. Sign in with GitHub to run queries.",
+          implementation: info.implementation + " " + info.version,
+          services: [], provides: []
+        };
+      } catch (_) {
+        return null;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
     function tick() {
+      var pilot = discoverN7();
       // Fetch labels with the directory so the capability batch stays within
       // the hub's three concurrent /call requests.
       Promise.all([
@@ -361,7 +390,7 @@
         ]).then(function (extras) {
           return [directory].concat(extras, rows[1]);
         });
-      }).then(function (res) {
+      }).then(async function (res) {
         if (!successful(res[0])) throw new Error("the hub did not answer the directory query");
         var byId = {};
         (res[0].data || []).forEach(function (d) {
@@ -376,6 +405,8 @@
         if (successful(res[2])) (res[2].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].provides.push(unq(d.Predicate)); });
         if (successful(res[3])) (res[3].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].selfContained = d.SelfContained; });
         if (successful(res[4])) (res[4].data || []).forEach(function (d) { if (byId[d.Id]) byId[d.Id].implementation = unq(d.Implementation); });
+        var n7 = await pilot;
+        if (n7) byId.n7 = n7;
         ALL = Object.keys(byId).map(function (k) { return byId[k]; });
         rebuildCapList();
         render();
