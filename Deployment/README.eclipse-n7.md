@@ -17,51 +17,23 @@ dependencies requires Git read access to their GitHub repositories.
 
 ```sh
 git clone --branch codex/n7-shell-preview --single-branch \
-  https://github.com/torbjornlager/trinity-demonstrator.git eclipse-node
-cd eclipse-node
-python3 tools/fetch_swi.py --destination .trinity/deps/swi-prolog-node
-python3 tools/fetch_browser.py --destination .trinity/deps/swi-wasm-node
-python3 tools/setup_swi.py --native-root .trinity/deps/swi-prolog-node \
-  --browser-root .trinity/deps/swi-wasm-node
+  https://github.com/torbjornlager/trinity-demonstrator.git eclipse-node &&
+./eclipse-node/tools/bootstrap_n7.sh
 ```
 
-Fetch the pinned N7 conformance runner from GitHub. If you set up this checkout
-using the older local conformance instructions, run this block to update the
-dependency to the published revision.
+If you already cloned the branch, run `./tools/bootstrap_n7.sh` from the
+checkout root. The script fetches the pinned SWI-Prolog, SWI-WASM, and
+conformance sources from GitHub and downloads the pinned ECLiPSe 7.2_13 Linux
+ARM64 archive from the official ECLiPSe CLP site. It verifies the archive's
+SHA-256 before running the build and checks. On a retry it reuses the pinned
+checkouts and verifies any existing archive again.
 
-```sh
-n7_conformance=.trinity/deps/trinity-conformance
-git init --quiet "$n7_conformance"
-git -C "$n7_conformance" fetch --depth=1 --no-tags \
-  https://github.com/torbjornlager/trinity-conformance.git \
-  15cfacebd4625d891f0ecea9c551edcc70678bd9
-git -C "$n7_conformance" checkout --detach FETCH_HEAD
-```
-
-Download the pinned ECLiPSe 7.2_13 Linux ARM64 archive from the official
-ECLiPSe CLP site. The build and checks run only after the downloaded archive
-matches the SHA-256 pinned in `Deployment/Dockerfile.eclipse-n7`.
-
-```sh
-n7_dist=.trinity/n7-local/eclipse-dist
-n7_archive="$n7_dist/eclipse_basic.tgz"
-mkdir -p "$n7_dist" &&
-curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-  --output "$n7_archive.download" \
-  https://eclipseclp.org/Distribution/Builds/7.2_13/aarch64_linux/eclipse_basic.tgz &&
-printf '%s  %s\n' \
-  7599e154cca23b5601ed133df2f0481c43baf115b8cd6d7757795729d815e0d5 \
-  "$n7_archive.download" | shasum -a 256 -c &&
-mv "$n7_archive.download" "$n7_archive" &&
-./tools/check_n7.sh
-```
-
-The command builds `trinity-eclipse-n7:eclipse-node-dev`, tests both N7 routes
-with a local sign-in fixture, runs conformance with a disposable SWI peer, and
-checks the demonstrator catalog. It saves each run's conformance reports under
-the Git-ignored `.trinity/n7-local/conformance.*` directory. The local fixtures
-use synthetic credentials, so setup only requires the sources and runtime
-archive above.
+The bootstrap calls `./tools/check_n7.sh` to build
+`trinity-eclipse-n7:eclipse-node-dev`, test both N7 routes with a local sign-in
+fixture, run conformance with a disposable SWI peer, and check the demonstrator
+catalog. Run `./tools/check_n7.sh` directly to repeat those checks after setup.
+Conformance reports go under the Git-ignored `.trinity/n7-local/conformance.*`
+directory. The local fixtures use synthetic credentials.
 
 ### Build and probe the adapter separately
 
