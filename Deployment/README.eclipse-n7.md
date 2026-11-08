@@ -8,6 +8,20 @@ Docker socket. This pilot can run alongside the existing nodes.
 
 ## Build and run locally
 
+In the configured N7 development checkout, build the image and run the local
+HTTPS, conformance, and node catalog checks together:
+
+```sh
+./tools/check_n7.sh
+```
+
+The command uses Docker with Buildx and Compose, Python 3, `swipl` on `PATH`,
+and Node.js 22 (`N7_NODE` can point to its executable). It expects the pinned
+SWI-Prolog, SWI-WASM, and conformance checkouts under `.trinity/deps/` and the
+reviewed `eclipse_basic.tgz` under `.trinity/n7-local/eclipse-dist/`. It builds
+`trinity-eclipse-n7:eclipse-node-dev`, tests both N7 routes with a local sign-in
+fixture, and saves each conformance run under `.trinity/n7-local/conformance.*`.
+
 From the repository root, put the reviewed Linux ARM64 `eclipse_basic.tgz` in
 a dedicated build context. The Dockerfile pins the Debian base and checks the
 archive's SHA-256 before extraction. The image includes the runtime's notices.
