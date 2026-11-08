@@ -5494,7 +5494,7 @@
             behaviourLabel: ""
           };
         }
-        if (!runtime.main && !runtime.worker && TrinityHost.assetBase === "/n7-shell/") {
+        if (!runtime.main && !runtime.worker && new URL(TrinityHost.assetBase).pathname === "/n7-shell/") {
           return {
             profile: profile,
             path: "/n7-actor-workshop",
@@ -11814,7 +11814,7 @@
                 };
                 spawnLoadSpec = requestedLoadSpec || self.spawnLoadSpec();
                 var spawnLoadText = spawnLoadSpec.text;
-                if (TrinityHost.assetBase === "/n7-shell/" && spawnLoadText !== "") {
+                if (new URL(TrinityHost.assetBase).pathname === "/n7-shell/" && spawnLoadText !== "") {
                   spawnCmd.src_text = spawnLoadText;
                 } else {
                   spawnCmd.options = self.toplevelSpawnOptionsText(spawnLoadText, true);
