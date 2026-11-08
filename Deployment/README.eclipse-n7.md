@@ -10,10 +10,10 @@ Docker socket. This pilot can run alongside the existing nodes.
 
 ### Set up a fresh checkout
 
-Install Git, Python 3, Docker with Buildx and Compose (with Linux ARM64 support),
-threaded SWI-Prolog 10.1.19 or newer on `PATH`, and Node.js 22. Set `N7_NODE`
-to the Node.js executable if needed. Fetching the dependencies requires Git
-read access to their GitHub repositories.
+Install Git, Python 3, `curl`, `shasum`, Docker with Buildx and Compose (with
+Linux ARM64 support), threaded SWI-Prolog 10.1.19 or newer on `PATH`, and
+Node.js 22. Set `N7_NODE` to the Node.js executable if needed. Fetching the
+dependencies requires Git read access to their GitHub repositories.
 
 ```sh
 git clone --branch codex/n7-shell-preview --single-branch \
@@ -38,15 +38,21 @@ git -C "$n7_conformance" fetch --depth=1 --no-tags \
 git -C "$n7_conformance" checkout --detach FETCH_HEAD
 ```
 
-Copy the reviewed Linux ARM64 ECLiPSe archive into the local build context and
-check its checksum. Then run the build and all three checks.
+Download the pinned ECLiPSe 7.2_13 Linux ARM64 archive from the official
+ECLiPSe CLP site. The build and checks run only after the downloaded archive
+matches the SHA-256 pinned in `Deployment/Dockerfile.eclipse-n7`.
 
 ```sh
-mkdir -p .trinity/n7-local/eclipse-dist
-cp /path/to/eclipse_basic.tgz .trinity/n7-local/eclipse-dist/eclipse_basic.tgz
+n7_dist=.trinity/n7-local/eclipse-dist
+n7_archive="$n7_dist/eclipse_basic.tgz"
+mkdir -p "$n7_dist" &&
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+  --output "$n7_archive.download" \
+  https://eclipseclp.org/Distribution/Builds/7.2_13/aarch64_linux/eclipse_basic.tgz &&
 printf '%s  %s\n' \
   7599e154cca23b5601ed133df2f0481c43baf115b8cd6d7757795729d815e0d5 \
-  .trinity/n7-local/eclipse-dist/eclipse_basic.tgz | shasum -a 256 -c
+  "$n7_archive.download" | shasum -a 256 -c &&
+mv "$n7_archive.download" "$n7_archive" &&
 ./tools/check_n7.sh
 ```
 
