@@ -141,6 +141,7 @@ class Bridge:
         self.state_changed = Condition()
         self.request_ids = count(1)
         self.pending = {}
+        self.browser_output = {}
         self.busy = {}
         self.poll_deadlines = {}
         self.read_error = None
@@ -249,6 +250,12 @@ class Bridge:
                         Thread(target=self.run_egress, args=(reply,), daemon=True).start()
                     else:
                         self.finish_egress(reply, "error", "peer_capacity")
+                    continue
+                if reply.get("type") == "browser_child_output":
+                    with self.state_changed:
+                        deliver = self.browser_output.get(reply["pid"])
+                    if deliver is not None:
+                        deliver(reply)
                     continue
                 with self.state_changed:
                     request_id = reply.pop("request_id")

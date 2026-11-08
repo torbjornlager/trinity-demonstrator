@@ -65,6 +65,12 @@ serve(Replies) :-
                              operation:Operation, url:Url, params:Params]}),
             serve(Replies)
     ;
+        browser_child_output(actor(Id), Text) ->
+            ( store_get(http_sessions, Id, _) ->
+                reply(Replies, {[type:browser_child_output, pid:Id, data:Text]})
+            ; true ),
+            serve(Replies)
+    ;
         http_closed -> true
     }).
 
@@ -937,16 +943,6 @@ browser_call_option(Option) :-
     ; Option = offset(N), integer(N), N >= 0
     ; Option = once(Value), (Value == true ; Value == false)
     ).
-
-browser_goal(Goal, Goal) :- var(Goal), !.
-browser_goal(format(Control, Args), toplevel_actors:browser_format(Control, Args)) :- !.
-browser_goal((A,B), (X,Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
-browser_goal((A;B), (X;Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
-browser_goal((A->B), (X->Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
-browser_goal(receive({Clauses}), receive({Translated})) :- !, browser_goal(Clauses, Translated).
-browser_goal(receive({Clauses}, Options), receive({Translated}, Options)) :- !,
-    browser_goal(Clauses, Translated).
-browser_goal(Goal, Goal).
 
 relay_browser_origin(Origin) :-
     engine_self(Engine),

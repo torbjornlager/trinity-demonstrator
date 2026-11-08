@@ -2,6 +2,8 @@
 
 from contextlib import suppress
 import json
+from queue import Full, Queue
+from threading import Event, Lock, Thread
 from uuid import uuid4
 
 from wsproto import ConnectionType, WSConnection
@@ -30,15 +32,22 @@ def serve(handler):
         handler.send_error(400, "Invalid WebSocket upgrade")
         return
 
-    connection = ActorConnection(handler.server.bridge, handler.server.private_settings[1],
-                                 lambda event: handler.connection.sendall(wire.send(event)))
+    wire_lock = Lock()
+
+    def send(event):
+        with wire_lock:
+            handler.connection.sendall(wire.send(event))
+
+    connection = ActorConnection(handler.server.bridge, handler.server.private_settings[1], send)
     handler.connection.settimeout(60)
     try:
         connection.send(AcceptConnection(extra_headers=[(b"cache-control", b"no-store")]))
         chunks, size = [], 0
         while data := handler.rfile.read1(4096):
-            wire.receive_data(data)
-            for event in wire.events():
+            with wire_lock:
+                wire.receive_data(data)
+                events = list(wire.events())
+            for event in events:
                 if isinstance(event, CloseConnection):
                     connection.send(event.response())
                     return
@@ -69,6 +78,24 @@ class ActorConnection:
         self.sessions = set()
         self.prompts = {}
         self.output = {}
+        self.child_output = Queue(maxsize=64)
+        self.closed = Event()
+        Thread(target=self.send_child_output, daemon=True).start()
+
+    def enqueue_child_output(self, event):
+        # Keep slow browsers off the bridge reader thread.
+        with suppress(Full):
+            self.child_output.put_nowait(event)
+
+    def send_child_output(self):
+        try:
+            while not self.closed.is_set():
+                event = self.child_output.get()
+                if event is None:
+                    return
+                self.emit({"type": "output", "pid": PID_BASE + event["pid"], "data": event["data"]})
+        except (OSError, LocalProtocolError):
+            pass
 
     def emit(self, event):
         self.send(TextMessage(data=json.dumps(event)))
@@ -105,6 +132,8 @@ class ActorConnection:
             reply = self.bridge.request("spawn", fields)
             if reply["type"] == "spawned":
                 self.sessions.add(reply["pid"])
+                with self.bridge.state_changed:
+                    self.bridge.browser_output[reply["pid"]] = self.enqueue_child_output
             if "request_id" in request:
                 reply["request_id"] = request["request_id"]
             self.relay(reply)
@@ -144,6 +173,8 @@ class ActorConnection:
             self.output = {key: value for key, value in self.output.items() if value[0] != pid}
         if reply["type"] == "halted":
             self.sessions.discard(pid)
+            with self.bridge.state_changed:
+                self.bridge.browser_output.pop(pid, None)
         self.relay(reply)
         if reply["type"] == "responded":
             self.relay(self.bridge.request("poll", {"pid": pid}))
@@ -180,6 +211,12 @@ class ActorConnection:
         return self.bridge.request("poll", {"pid": pid})
 
     def close(self):
+        with self.bridge.state_changed:
+            for pid in self.sessions:
+                self.bridge.browser_output.pop(pid, None)
+        self.closed.set()
+        with suppress(Full):
+            self.child_output.put_nowait(None)
         for pid in self.sessions:
             with suppress(LookupError, OSError, RuntimeError, ValueError):
                 self.bridge.request("halt", {"pid": pid})

@@ -1,5 +1,11 @@
 :- module(actors).
+:- lib(format).
+:- lib(lists).
+:- lib(prolog_extras).
 
+:- export spawn/1, actors/1.
+:- export browser_goal/2, browser_format/2, source_body/2.
+:- export send/3, cancel/1.
 :- export spawn/2, spawn/3, self/1, send/2, (!)/2.
 :- export op(800, xfx, !).
 :- export receive/1, receive/2.
@@ -23,6 +29,9 @@
 :- local store(actor_registry).
 :- local record(actor_monitors).
 :- local record(actor_names).
+:- local record(delayed_sends).
+:- tool(spawn/1, spawn_/2).
+:- tool(source_body/2, source_body_/3).
 :- tool(spawn/2, spawn_/3).
 :- tool(spawn/3, spawn_/4).
 
@@ -43,12 +52,15 @@ start_actor_runtime :-
     engine_create(Reaper, [thread, detached(true)]),
     engine_resume_thread(Reaper, reap_actors(Reports, Lock)).
 
+spawn_(Goal, Module) :- spawn_(Goal, _, Module).
+
 spawn_(Goal, Pid, Module) :-
     spawn_(Goal, Pid, [], Module).
 
 spawn_(Goal, Pid, Options, Module) :-
     self(Parent),
-    spawn_options(Options, Parent, Link, Monitor, Source, Destination),
+    spawn_options(Options, Parent, Link, Monitor, SourceOption, Destination),
+    spawn_source(SourceOption, Module, Source),
     ( Destination == local ->
         spawn_local(Goal, Pid, Parent, Link, Monitor, Source, Module)
     ; Destination = remote(Node),
@@ -72,6 +84,7 @@ spawn_local(Goal, Pid, Parent, Link, Monitor, Source, Module) :-
             prepare_and_start(Pid, Parent, Engine, Inbox, Link, Monitor, Private, Goal, Text, Lock),
             Error,
             ( engine_post(Engine, exit(0))@eclipse_language,
+              discard_source(Private),
               erase_module(Private),
               throw(Error)
             )
@@ -98,12 +111,65 @@ spawn_options_([Option|Options], options(Link, Monitor, Source, Destination), Pa
     ; nonvar(Option), Option = src_text(Text), Source == none ->
         source_string(Text, String),
         Next = options(Link, Monitor, text(String), Destination)
+    ; nonvar(Option), Option = src_predicates(Indicators), Source == none,
+      is_list(Indicators) ->
+        Next = options(Link, Monitor, predicates(Indicators), Destination)
     ; nonvar(Option), Option = node(Node), Destination == local, atom(Node) ->
         Next = options(Link, Monitor, Source, remote(Node))
     ;
         throw(error(domain_error(local_spawn_option, Option), spawn/3))
     ),
     spawn_options_(Options, Next, Parsed).
+
+% Copy only the selected predicates into the child, as SWI does. Keep
+% the original terms for static predicates and read live dynamic clauses.
+spawn_source(none, _, none).
+spawn_source(text(Text), _, text(Text)).
+spawn_source(predicates(Indicators), Module, text(Text)) :-
+    findall(Clause,
+        ( member(Indicator, Indicators), selected_clause(Indicator, Module, Clause) ),
+        Clauses),
+    open(string(""), write, Stream),
+    setup_call_cleanup(true,
+        ( write_source(Clauses, Stream), get_stream_info(Stream, name, Text) ),
+        close(Stream)).
+
+selected_clause(Indicator, Module, Clause) :-
+    ( nonvar(Indicator), Indicator = Name/Arity, local_indicators(Indicator) -> true
+    ; throw(error(type_error(predicate_indicator, Indicator), spawn/3))
+    ),
+    ( get_flag(Indicator, stability, dynamic)@Module,
+      Clause = (:- dynamic(Indicator))
+    ; functor(Head, Name, Arity),
+      source_body_(Head, Body, Module),
+      Clause = (Head :- Body)
+    ).
+
+source_body_(Head, Body, Module) :-
+    functor(Head, Name, Arity),
+    ( get_flag(Name/Arity, stability, dynamic)@Module ->
+        clause(Head, Body)@Module
+    ; store_get(actor_registry, source(Module), Clauses),
+      member(Clause, Clauses),
+      ( Clause = (ClauseHead :- Body) -> Head = ClauseHead
+      ; functor(Clause, Name, Arity), Clause = Head, Body = true )
+    ).
+
+write_source([], _).
+write_source([Clause|Rest], Stream) :-
+    write_term(Stream, Clause, [quoted(true), portable(true)]),
+    write(Stream, ".\n"),
+    write_source(Rest, Stream).
+
+actors(Pids) :-
+    ( browser_session(_) -> Browser = true ; Browser = false ),
+    stored_keys_and_values(actor_registry, Entries),
+    findall(Pid,
+        ( member(Pid-actor(Engine, _, _), Entries), Pid = actor(_),
+          get_engine_property(Engine, status, Status), \+ finished_status(Status),
+          ( Browser == false
+          ; get_engine_property(Engine, store, Store), store_get(Store, browser_session, _) ) ),
+        Pids).
 
 % The embedding transport owns the wire connection.
 set_linked_spawn_transport(Node, Transport) :-
@@ -235,7 +301,12 @@ clear_pending_spawn_monitor(Pid) :-
 
 prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     set_actor_context(Pid, Parent, Inbox),
-    compile_term([(:- import(actors)), (:- import(exit/1 from actors))])@Private,
+    ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
+        mailbox_store(Store), store_set(Store, browser_session, Pid)
+    ; true
+    ),
+    compile_term([(:- import(actors)), (:- import(exit/1 from actors)),
+                  (:- import(select/3 from lists))])@Private,
     ( current_module(isotope_rpc), nonvar(Goal), Goal = Module:Entry,
       Module == toplevel_actors, nonvar(Entry), functor(Entry, ptcp, 3) ->
         compile_term([(:- import(rpc/2 from isotope_rpc)),
@@ -261,7 +332,12 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
         ( close(Stream), throw(Error) )
     ),
     close(Stream),
-    compile_term(Clauses)@Private,
+    store_set(actor_registry, source(Private), Clauses),
+    ( browser_session(_) ->
+        maplist(browser_source_clause, Clauses, Compiled)
+    ; Compiled = Clauses
+    ),
+    compile_term(Compiled)@Private,
     yield(ready, run),
     once(call(Goal)@Private).
 
@@ -280,6 +356,7 @@ read_source(Stream, Module, Clauses) :-
 source_clause(Term) :-
     ( nonvar(Term), Term = (:- dynamic(Spec)), local_indicators(Spec) -> true
     ; nonvar(Term), Term = (Head :- _) -> local_clause_head(Head)
+    ; nonvar(Term), Term = (Head --> _) -> local_clause_head(Head)
     ; local_clause_head(Term) -> true
     ; throw(error(domain_error(actor_source_clause, Term), spawn/3))
     ).
@@ -294,7 +371,7 @@ local_clause_head(Head) :-
     nonvar(Head),
     ( atom(Head) ; compound(Head) ),
     functor(Head, Name, _),
-    ( memberchk(Name, [':', '@', ':-', '?-', '-->', end_of_file]) ->
+    ( memberchk(Name, [':', '@', ':-', '?-', ',', '-->', end_of_file]) ->
         throw(error(domain_error(actor_source_head, Head), spawn/3))
     ;
         true
@@ -308,7 +385,60 @@ set_actor_context(Pid, Parent, Inbox) :-
     set_self(Pid),
     mailbox_store(Store),
     store_set(Store, web_prolog_parent, Parent),
+    ( store_get(actor_registry, Parent, actor(Engine, _, _)),
+      get_engine_property(Engine, store, ParentStore),
+      store_get(ParentStore, browser_session, Session) ->
+        store_set(Store, browser_session, Session)
+    ; true
+    ),
     attach_mailbox(Inbox).
+
+browser_session(Session) :-
+    mailbox_store(Store),
+    store_get(Store, browser_session, Session).
+
+browser_source_clause((Head :- Body), (Head :- Translated)) :- !,
+    browser_goal(Body, Translated).
+browser_source_clause(Clause, Clause).
+
+% Only rewrite executable positions. In a receive, guards and actions
+% are goals, while the pattern is data.
+browser_goal(Goal, Goal) :- var(Goal), !.
+browser_goal(format(Control), actors:browser_format(Control, [])) :- !.
+browser_goal(format(Control, Args), actors:browser_format(Control, Args)) :- !.
+browser_goal(writeln(Term), actors:browser_format("~w~n", [Term])) :- !.
+browser_goal(read(Value), input('|:', Value, [correlate(true)])) :- !.
+browser_goal(clause(Head, Body), actors:source_body(Head, Body)) :- !.
+browser_goal((A,B), (X,Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
+browser_goal((A;B), (X;Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
+browser_goal((A->B), (X->Y)) :- !, browser_goal(A, X), browser_goal(B, Y).
+browser_goal(receive({Clauses}), receive({Translated})) :- !,
+    browser_receive_clauses(Clauses, Translated).
+browser_goal(receive({Clauses}, Options), receive({Translated}, Options)) :- !,
+    browser_receive_clauses(Clauses, Translated).
+browser_goal(Goal, Goal).
+
+browser_receive_clauses(Clauses, Clauses) :- var(Clauses), !.
+browser_receive_clauses({}, {}) :- !.
+browser_receive_clauses((A;B), (X;Y)) :- !,
+    browser_receive_clauses(A, X), browser_receive_clauses(B, Y).
+browser_receive_clauses((Head -> Body), ((Pattern if Test) -> Action)) :-
+    nonvar(Head), Head = (Pattern if Guard), !,
+    browser_goal(Guard, Test), browser_goal(Body, Action).
+browser_receive_clauses((Pattern -> Body), (Pattern -> Action)) :- !,
+    browser_goal(Body, Action).
+browser_receive_clauses(Clauses, Clauses).
+
+browser_format(Control, Args) :-
+    self(Pid),
+    ( browser_session(Session), Pid \== Session ->
+        open(string(""), write, Stream),
+        setup_call_cleanup(true,
+            ( format(Stream, Control, Args), get_stream_info(Stream, name, Text) ),
+            close(Stream)),
+        send(main, browser_child_output(Session, Text))
+    ; toplevel_actors:browser_format(Control, Args)
+    ).
 
 set_self(Pid) :-
     mailbox_store(Store),
@@ -384,6 +514,43 @@ send(Pid, Message) :-
                     context(actor:send/2, 'no actor registered under name')))
     ;
         true
+    ).
+
+% A timer is linked to its scheduling actor. Publish its cancellation
+% record before letting the timer start, including when the delay is zero.
+send(Pid, Message, Options) :-
+    ( is_list(Options) -> true ; throw(error(type_error(list, Options), send/3)) ),
+    ( memberchk(delay(Delay), Options) -> true ; Delay = 0 ),
+    ( number(Delay), Delay >= 0 -> true
+    ; throw(error(domain_error(nonnegative_delay, Delay), send/3))
+    ),
+    self(Owner),
+    spawn_(delayed_delivery(Pid, Message, Delay), Timer, actors),
+    store_get(actor_registry, runtime, runtime(_, _, Lock)),
+    with_mutex(Lock,
+        ( ( memberchk(id(Id), Options) ->
+              recordz(delayed_sends, timer(Owner, Id, Timer))
+          ; true ),
+          send(Timer, '$start_timer')
+        )).
+
+delayed_delivery(Pid, Message, Delay) :-
+    receive({ '$start_timer' -> true }),
+    receive({ '$cancel_timer' -> true },
+            [timeout(Delay), on_timeout(send(Pid, Message))]).
+
+cancel(Id) :-
+    self(Owner),
+    store_get(actor_registry, runtime, runtime(_, _, Lock)),
+    with_mutex(Lock, cancel_timers(Owner, Id)).
+
+cancel_timers(Owner, Id) :-
+    copy_term(Id, Pattern),
+    ( recorded(delayed_sends, timer(Owner, Pattern, Timer), Entry) ->
+        erase(Entry),
+        send(Timer, '$cancel_timer'),
+        cancel_timers(Owner, Id)
+    ; true
     ).
 
 set_peer_send_transport(Node, Transport) :-
@@ -569,6 +736,7 @@ retire_actor(Engine, Status, Reports) :-
     ( memberchk(Pid-actor(Engine, _, _), Entries) ->
         store_delete(actor_registry, Pid),
         remove_actor_name(_, Pid),
+        ( recorded(delayed_sends, timer(_, _, Pid), TimerEntry) -> erase(TimerEntry) ; true ),
         % Joining a completed threaded engine leaves it available for reuse.
         % Explicitly close it so retired actors release their native threads.
         ( Status = exited(_) -> true ; engine_post(Engine, exit(3))@eclipse_language ),
@@ -591,9 +759,16 @@ retire_actor(Engine, Status, Reports) :-
 retire_actor_module(Pid) :-
     ( store_get(actor_registry, actor_module(Pid), Module) ->
         store_delete(actor_registry, actor_module(Pid)),
+        discard_source(Module),
         erase_module(Module)
     ;
         true
+    ).
+
+discard_source(Module) :-
+    ( store_get(actor_registry, source(Module), _) ->
+        store_delete(actor_registry, source(Module))
+    ; true
     ).
 
 stop_linked_children([], _).
@@ -717,6 +892,8 @@ discard_deferred_(Test, Module) :-
 receive_(Clauses, Module) :-
     receive_(Clauses, [], Module).
 
+receive_({}, Options, Module) :- !,
+    receive_({(_ if fail) -> true}, Options, Module).
 receive_({Clauses}, Options, Module) :-
     mailbox_store(Store),
     store_get(Store, web_prolog_mailbox, mailbox(Inbox, Deferred)),
