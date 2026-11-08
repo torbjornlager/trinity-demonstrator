@@ -8,19 +8,55 @@ Docker socket. This pilot can run alongside the existing nodes.
 
 ## Build and run locally
 
-In the configured N7 development checkout, build the image and run the local
-HTTPS, conformance, and node catalog checks together:
+### Set up a fresh checkout
+
+Install Git, Python 3, Docker with Buildx and Compose (with Linux ARM64 support),
+threaded SWI-Prolog 10.1.19 or newer on `PATH`, and Node.js 22. Set `N7_NODE`
+to the Node.js executable if needed. The SWI fetch commands require Git read
+access to the pinned dependency repositories.
 
 ```sh
+git clone --branch codex/n7-shell-preview --single-branch \
+  https://github.com/torbjornlager/trinity-demonstrator.git eclipse-node
+cd eclipse-node
+python3 tools/fetch_swi.py --destination .trinity/deps/swi-prolog-node
+python3 tools/fetch_browser.py --destination .trinity/deps/swi-wasm-node
+python3 tools/setup_swi.py --native-root .trinity/deps/swi-prolog-node \
+  --browser-root .trinity/deps/swi-wasm-node
+```
+
+The N7 conformance runner is pinned to a revision that is currently available
+in the local `trinity-conformance` repository. Replace `/path/to/trinity-conformance`
+with the path to a checkout that contains that revision.
+
+```sh
+n7_conformance=.trinity/deps/trinity-conformance
+git init --quiet "$n7_conformance"
+git -C "$n7_conformance" fetch --depth=1 --no-tags /path/to/trinity-conformance \
+  5e4ecdd92a4f7e3eaa80c86a598809ab6be9801c
+git -C "$n7_conformance" checkout --detach FETCH_HEAD
+```
+
+Copy the reviewed Linux ARM64 ECLiPSe archive into the local build context and
+check its checksum. Then run the build and all three checks.
+
+```sh
+mkdir -p .trinity/n7-local/eclipse-dist
+cp /path/to/eclipse_basic.tgz .trinity/n7-local/eclipse-dist/eclipse_basic.tgz
+printf '%s  %s\n' \
+  7599e154cca23b5601ed133df2f0481c43baf115b8cd6d7757795729d815e0d5 \
+  .trinity/n7-local/eclipse-dist/eclipse_basic.tgz | shasum -a 256 -c
 ./tools/check_n7.sh
 ```
 
-The command uses Docker with Buildx and Compose, Python 3, `swipl` on `PATH`,
-and Node.js 22 (`N7_NODE` can point to its executable). It expects the pinned
-SWI-Prolog, SWI-WASM, and conformance checkouts under `.trinity/deps/` and the
-reviewed `eclipse_basic.tgz` under `.trinity/n7-local/eclipse-dist/`. It builds
-`trinity-eclipse-n7:eclipse-node-dev`, tests both N7 routes with a local sign-in
-fixture, and saves each conformance run under `.trinity/n7-local/conformance.*`.
+The command builds `trinity-eclipse-n7:eclipse-node-dev`, tests both N7 routes
+with a local sign-in fixture, runs conformance with a disposable SWI peer, and
+checks the demonstrator catalog. It saves each run's conformance reports under
+the Git-ignored `.trinity/n7-local/conformance.*` directory. The local fixtures
+use synthetic credentials, so setup only requires the sources and runtime
+archive above.
+
+### Build and probe the adapter separately
 
 From the repository root, put the reviewed Linux ARM64 `eclipse_basic.tgz` in
 a dedicated build context. The Dockerfile pins the Debian base and checks the
