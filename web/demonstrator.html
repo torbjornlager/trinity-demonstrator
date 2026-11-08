@@ -2775,8 +2775,8 @@
               <div class="wb-header-section-title">Remote non-SWI nodes</div>
               <button type="button"
                       class="wb-header-note-help wb-header-node-help"
-                      data-tooltip="N5 uses Trealla Prolog, N6 uses GNU Prolog, and N7 is the owner-only ECLiPSe CLP pilot."
-                      aria-label="N5 uses Trealla Prolog, N6 uses GNU Prolog, and N7 is the owner-only ECLiPSe CLP pilot.">
+                      data-tooltip="N5 uses Trealla Prolog, N6 uses GNU Prolog, and N7 is the owner-only ECLiPSe CLP shell."
+                      aria-label="N5 uses Trealla Prolog, N6 uses GNU Prolog, and N7 is the owner-only ECLiPSe CLP shell.">
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="9"></circle>
                   <path d="M9.5 9.3a2.7 2.7 0 0 1 5.1 1c0 1.8-1.8 2.3-2.4 2.9-.4.4-.6.8-.6 1.5"></path>
@@ -2792,8 +2792,8 @@
                  :class="{active: node.active}"
                  target="_blank"
                  rel="noopener noreferrer"
-                 :title="node.runtimeName ? node.runtimeName + (node.ownerOnly ? ' · owner-only pilot' : '') : null"
-                 :aria-label="'Open ' + node.label + (node.ownerOnly ? ' owner-only pilot' : ' demonstrator')">{{ node.label }}</a>
+                 :title="node.runtimeName ? node.runtimeName + (node.ownerOnly ? ' · owner-only shell' : '') : null"
+                 :aria-label="'Open ' + node.label + (node.ownerOnly ? ' owner-only shell' : ' demonstrator')">{{ node.label }}</a>
             </div>
             <p v-if="headerNonSwiNodeSelected" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
@@ -4825,6 +4825,7 @@
             label: nodeLabelForUrl(parsed.href)
           };
           if (parsed.origin === "https://n7.elfenbenstornet.se") {
+            node.href = parsed.origin + "/n7-shell/";
             node.runtime = "eclipse";
             node.runtimeName = "ECLiPSe CLP";
             node.ownerOnly = true;

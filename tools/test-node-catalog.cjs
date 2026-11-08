@@ -39,7 +39,10 @@ const publicOrigin = 'https://n5.elfenbenstornet.se';
 const publicNodes = context.derivePortalNodeUrls(publicOrigin);
 assert.equal(publicNodes.map(n=>n.label).join(','),'N1,N2,N3,N4,N5,N6,N7');
 const n7 = publicNodes.find(n=>n.label==='N7');
-assert.equal(n7.href,'https://n7.elfenbenstornet.se/demonstrator');
+assert.equal(n7.href,'https://n7.elfenbenstornet.se/n7-shell/');
+for (const node of publicNodes.filter(n=>n.label!=='N7')) {
+  assert.equal(node.href,new URL('/demonstrator',node.url).href);
+}
 assert.equal(n7.runtime,'eclipse');
 assert.equal(n7.runtimeName,'ECLiPSe CLP');
 assert.equal(n7.ownerOnly,true);
@@ -48,6 +51,7 @@ publicState.headerRemoteNodeButtons = computed('headerRemoteNodeButtons',publicS
 assert.equal(computed('headerRemoteNonSwiNodeButtons',publicState).map(n=>n.label).join(','),'N5,N6,N7');
 assert.equal(computed('headerRemoteSwiNodeButtons',publicState).map(n=>n.label).join(','),'N1,N2,N3,N4');
 assert.equal(publicState.headerRemoteNodeButtons.find(n=>n.label==='N7').ownerOnly,true);
+assert.equal(publicState.headerRemoteNodeButtons.find(n=>n.label==='N7').href,n7.href);
 assert.equal(context.derivePortalNodeUrls('https://n5.example.test').some(n=>n.label==='N7'),false);
 context.TrinityHost = createHost({remoteNodes:[{url:n7.url,runtime:'eclipse'}]},new URL(publicOrigin));
 assert.equal(context.derivePortalNodeUrls(publicOrigin)[0].runtimeName,'ECLiPSe CLP');
