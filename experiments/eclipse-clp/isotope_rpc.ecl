@@ -5,7 +5,12 @@
 :- ensure_loaded(stateless_rpc).
 :- import goal_template_texts/4 from stateless_rpc.
 :- lib(prolog_extras).
-:- export rpc/2, rpc/3, promise/3, promise/4, yield/2.
+:- export rpc/2, rpc/3, promise/3, promise/4, yield/2, yield/3.
+:- tool(rpc/2, rpc_/3).
+:- tool(rpc/3, rpc_/4).
+:- tool(promise/3, promise_/4).
+:- tool(promise/4, promise_/5).
+:- tool(yield/3, yield_/4).
 :- export call_page/7, clear_promises/0, init_egress/0.
 :- local store(egress).
 
@@ -13,9 +18,9 @@ init_egress :-
     shelf_create(sequence(0), Counter),
     store_set(egress, counter, Counter).
 
-rpc(Node, Goal) :- rpc(Node, Goal, []).
-rpc(Node0, Goal, Options) :-
-    request_options(Node0, Options, false, Node, Source, Offset, Limit, Once),
+rpc_(Node, Goal, Module) :- rpc_(Node, Goal, [], Module).
+rpc_(Node0, Goal, Options, Module) :-
+    request_options(Node0, Options, Module, false, Node, Source, Offset, Limit, Once),
     term_variables(Goal, Variables),
     Template =.. [v|Variables],
     rpc_rows(Node, Goal, Template, Source, Offset, Limit, Once).
@@ -33,10 +38,10 @@ rpc_rows(Node, Goal, Template, Source, Offset, Limit, Once) :-
     ; fail
     ).
 
-promise(Node, Goal, Reference) :- promise(Node, Goal, Reference, []).
-promise(Node0, Goal, Reference, Options) :-
+promise_(Node, Goal, Reference, Module) :- promise_(Node, Goal, Reference, [], Module).
+promise_(Node0, Goal, Reference, Options, Module) :-
     ( var(Reference) -> true ; throw(error(uninstantiation_error(Reference), promise/4)) ),
-    request_options(Node0, Options, true, Node, Source, Offset, Limit, Once),
+    request_options(Node0, Options, Module, true, Node, Source, Offset, Limit, Once),
     option_value(template, Options, Goal, Template),
     promise_store(Store, Pending),
     length(Pending, Count),
@@ -53,21 +58,36 @@ promise_worker(Node, Goal, Template, Source, Offset, Limit, Once, Result) :-
     recordz(Result, Answer).
 
 yield(Reference, Answer) :-
+    yield_(Reference, Answer, [], isotope_rpc).
+
+yield_(Reference, Answer, Options, Module) :-
+    ( is_list(Options), checklist(yield_option, Options) -> true
+    ; throw(error(domain_error(yield_options, Options), yield/3)) ),
     promise_store(Store, Pending),
-    ( integer(Reference), select(promise(Reference, _, Result), Pending, Rest) ->
-        wait_result(Result, 50, Value),
+    ( integer(Reference), select(promise(Reference, _, Result), Pending, Rest) -> true
+    ; throw(error(existence_error(promise, Reference), yield/3)) ),
+    option_value(timeout, Options, 2.5, Seconds),
+    elapsed(Now),
+    Deadline is Now + Seconds,
+    ( wait_result(Result, Deadline, Value) ->
         store_set(Store, isotope_promises, Rest),
         Answer = Value
-    ; throw(error(existence_error(promise, Reference), yield/2))
-    ).
+    ; memberchk(timeout(_), Options) ->
+        option_value(on_timeout, Options, true, Goal),
+        ( once(call(Goal)@Module) -> ( var(Answer) -> Answer = timeout ; true )
+        ; throw(error(timeout_callback_failed(Reference), yield/3)) )
+    ; throw(error(time_limit_exceeded, yield/2)) ).
 
-wait_result(Result, Attempts, Answer) :-
-    ( record_wait_remove(Result, Answer, 0.05) -> true
-    ; Attempts > 1 ->
-        Left is Attempts - 1,
-        wait_result(Result, Left, Answer)
-    ; throw(error(time_limit_exceeded, yield/2))
-    ).
+yield_option(Option) :-
+    nonvar(Option),
+    ( Option = timeout(Seconds), number(Seconds), Seconds >= 0
+    ; Option = on_timeout(Goal), nonvar(Goal), callable(Goal) ).
+
+wait_result(Result, Deadline, Answer) :-
+    elapsed(Now),
+    Remaining is max(0, min(0.05, Deadline - Now)),
+    ( record_wait_remove(Result, Answer, Remaining) -> true
+    ; Now < Deadline, wait_result(Result, Deadline, Answer) ).
 
 promise_store(Store, Pending) :-
     engine_self(Engine),
@@ -81,7 +101,7 @@ clear_promises :-
       ( foreach(promise(_, Worker, _), Pending) do exit(Worker, query_finished) )
     ).
 
-request_options(Node0, Options, Promise, Node, Source, Offset, Limit, Once) :-
+request_options(Node0, Options, Module, Promise, Node, Source, Offset, Limit, Once) :-
     ( atom(Node0) -> atom_string(Node0, Node)
     ; string(Node0) -> Node = Node0
     ; throw(error(type_error(atom_or_string, Node0), rpc/3))
@@ -92,7 +112,7 @@ request_options(Node0, Options, Promise, Node, Source, Offset, Limit, Once) :-
     option_value(offset, Options, 0, Offset),
     option_value(limit, Options, 100, Limit),
     option_value(once, Options, false, Once),
-    option_value(src_text, Options, "", Text),
+    source_options_text(Options, Module, Text),
     ( memberchk(src_uri(Uri0), Options) ->
         ( atom(Uri0) -> atom_string(Uri0, Uri) ; Uri = Uri0 ),
         egress_request("source", Uri, [], Loaded),
@@ -110,7 +130,7 @@ valid_option(limit(N), _) :- integer(N), N >= 1, N =< 100.
 valid_option(once(B), _) :- ( B == true ; B == false ).
 valid_option(offset(N), true) :- integer(N), N >= 0.
 valid_option(template(_), true).
-valid_option(src_text(Text), _) :- ( atom(Text) ; string(Text) ).
+valid_option(Option, _) :- source_option(Option).
 valid_option(src_uri(Uri), _) :- ( atom(Uri) ; string(Uri) ).
 
 option_value(Name, Options, Default, Value) :-

@@ -26,25 +26,25 @@ browser_format(Control, Args) :-
     send(Target, browser_output(Pid, Text)),
     receive_ptcp({ '$browser_ack' -> true }).
 
-toplevel_spawn(Pid) :-
-    toplevel_spawn(Pid, []).
+:- tool(toplevel_spawn/1, toplevel_spawn_/2).
+:- tool(toplevel_spawn/2, toplevel_spawn_/3).
 
-toplevel_spawn(Pid, Options) :-
-    spawn_toplevel(Pid, Options, local).
+toplevel_spawn_(Pid, Module) :-
+    toplevel_spawn_(Pid, [], Module).
+
+toplevel_spawn_(Pid, Options, Module) :-
+    spawn_toplevel(Pid, Options, local, Module).
 
 toplevel_spawn_browser(Pid, Options) :-
-    spawn_toplevel(Pid, Options, browser).
+    spawn_toplevel(Pid, Options, browser, toplevel_actors).
 
-spawn_toplevel(Pid, Options, Kind) :-
+spawn_toplevel(Pid, Options, Kind, Module) :-
     ( is_list(Options) -> true
     ; throw(error(type_error(list, Options), toplevel_spawn/2))
     ),
     self(Self),
     split_spawn_options(Options, false, Self, Session, Target, SpawnOptions),
-    ( memberchk(src_text(_), SpawnOptions) -> PrivateOptions = SpawnOptions
-    ; PrivateOptions = [src_text("")|SpawnOptions]
-    ),
-    spawn(toplevel_actors:ptcp(Target, Session, Kind), Pid, PrivateOptions).
+    spawn(toplevel_actors:ptcp(Target, Session, Kind), Pid, [src_text("")|SpawnOptions])@Module.
 
 split_spawn_options([], Session, Target, Session, Target, []).
 split_spawn_options([Option|Options], Session0, Target0, Session, Target, Rest) :-

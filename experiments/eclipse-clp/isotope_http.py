@@ -643,7 +643,8 @@ def bridge_archive():
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
         for name in ("actors.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
-                     "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl"):
+                     "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl",
+                     "server_behaviours.ecl"):
             archive.add(HERE / name, arcname=name)
     return buffer.getvalue()
 

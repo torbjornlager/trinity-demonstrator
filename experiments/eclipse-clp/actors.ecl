@@ -7,7 +7,7 @@
 :- export spawn/1, actors/1.
 :- export browser_goal/2, browser_format/2, source_body/2.
 :- export flush/0, browser_time/1, browser_sleep/1, browser_random_between/3.
-:- export browser_call_cleanup/2.
+:- export browser_call_cleanup/2, browser_random_member/2.
 :- export send/3, cancel/1.
 :- export spawn/2, spawn/3, self/1, send/2, (!)/2.
 :- export op(800, xfx, !).
@@ -26,6 +26,7 @@
 :- export op(1000, xfy, if).
 :- export start_actor_runtime/0, attach_mailbox/1.
 :- export actor_module/2, discard_deferred/1, post_actor_event/2.
+:- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
 :- tool(post_actor_event/2, post_actor_event_/3).
 :- tool(discard_deferred/1, discard_deferred_/2).
 
@@ -100,7 +101,7 @@ spawn_options(Options, Parent, Link, Monitor, Source, Destination) :-
     ( is_list(Options) -> true
     ; throw(error(type_error(list, Options), spawn/3))
     ),
-    spawn_options_(Options, options(unset, unset, none, local),
+    spawn_options_(Options, options(unset, unset, [], local),
                    options(LinkOption, MonitorOption, Source, Destination)),
     ( LinkOption == false -> Link = detached ; Link = linked(Parent) ),
     ( MonitorOption == true -> Monitor = watch(Parent) ; Monitor = none ).
@@ -113,12 +114,8 @@ spawn_options_([Option|Options], options(Link, Monitor, Source, Destination), Pa
     ; nonvar(Option), Option = monitor(Value), Monitor == unset,
       ( Value == true ; Value == false ) ->
         Next = options(Link, Value, Source, Destination)
-    ; nonvar(Option), Option = src_text(Text), Source == none ->
-        source_string(Text, String),
-        Next = options(Link, Monitor, text(String), Destination)
-    ; nonvar(Option), Option = src_predicates(Indicators), Source == none,
-      is_list(Indicators) ->
-        Next = options(Link, Monitor, predicates(Indicators), Destination)
+    ; source_option(Option) ->
+        Next = options(Link, Monitor, [Option|Source], Destination)
     ; nonvar(Option), Option = node(Node), Destination == local, atom(Node) ->
         Next = options(Link, Monitor, Source, remote(Node))
     ;
@@ -128,12 +125,31 @@ spawn_options_([Option|Options], options(Link, Monitor, Source, Destination), Pa
 
 % Copy only the selected predicates into the child, as SWI does. Keep
 % the original terms for static predicates and read live dynamic clauses.
-spawn_source(none, _, none).
-spawn_source(text(Text), _, text(Text)).
-spawn_source(predicates(Indicators), Module, text(Text)) :-
+spawn_source([], _, none) :- !.
+spawn_source(Reversed, Module, text(Text)) :-
+    reverse(Reversed, Options),
+    source_options_text(Options, Module, Text).
+
+source_option(Option) :-
+    nonvar(Option),
+    ( Option = src_text(Text), (atom(Text) ; string(Text))
+    ; Option = src_list(Clauses), is_list(Clauses)
+    ; Option = src_predicates(Indicators), is_list(Indicators)
+    ).
+
+source_options_text(Options, Module, Text) :-
+    findall(Part, (member(Option, Options), source_part(Option, Module, Part)), Parts),
+    join_string(Parts, "\n", Text).
+
+source_part(src_text(Text), _, String) :- source_string(Text, String).
+source_part(src_list(Clauses), _, Text) :- serialize_source(Clauses, Text).
+source_part(src_predicates(Indicators), Module, Text) :-
     findall(Clause,
         ( member(Indicator, Indicators), selected_clause(Indicator, Module, Clause) ),
         Clauses),
+    serialize_source(Clauses, Text).
+
+serialize_source(Clauses, Text) :-
     open(string(""), write, Stream),
     setup_call_cleanup(true,
         ( write_source(Clauses, Stream), get_stream_info(Stream, name, Text) ),
@@ -310,7 +326,8 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
         mailbox_store(Store), store_set(Store, browser_session, Pid)
     ; true
     ),
-    compile_term([(:- import(actors)), (:- import(exit/1 from actors)),
+    compile_term([(:- local op(200, xfx, '@')),
+                  (:- import(actors)), (:- import(exit/1 from actors)),
                   (:- import(select/3 from lists)),
                   (:- import(subtract/3 from lists)),
                   (:- import(forall/2 from swi))])@Private,
@@ -320,33 +337,40 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
                       (:- import(rpc/3 from isotope_rpc)),
                       (:- import(promise/3 from isotope_rpc)),
                       (:- import(promise/4 from isotope_rpc)),
-                      (:- import(yield/2 from isotope_rpc))])@Private
+                      (:- import(yield/2 from isotope_rpc)),
+                      (:- import(yield/3 from isotope_rpc))])@Private
     ; true
     ),
     ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
-        compile_term([(:- import(toplevel_spawn/1 from toplevel_actors)),
+        compile_term([(:- import(supervisor_spawn/3 from server_behaviours)),
+                      (:- import(supervisor_halt/1 from server_behaviours)),
+                      (:- import(server_request/3 from server_behaviours)),
+                      (:- import(server_promise/3 from server_behaviours)),
+                      (:- import(server_yield/2 from server_behaviours)),
+                      (:- import(server_upgrade/3 from server_behaviours)),
+                      (:- import(toplevel_spawn/1 from toplevel_actors)),
                       (:- import(toplevel_spawn/2 from toplevel_actors)),
                       (:- import(toplevel_call/2 from toplevel_actors)),
                       (:- import(toplevel_call/3 from toplevel_actors))])@Private
     ; true
     ),
-    open(string(Text), read, Stream),
-    catch(
-        ( read_source(Stream, Private, Clauses) -> true
-        ; throw(error(syntax_error(src_text), spawn/3))
-        ),
-        Error,
-        ( close(Stream), throw(Error) )
-    ),
-    close(Stream),
-    store_set(actor_registry, source(Private), Clauses),
+    load_actor_source(Text, Private),
+    yield(ready, run),
+    run_actor_goal(Goal, Private).
+
+load_actor_source(Text, Module) :-
+    setup_call_cleanup(open(string(Text), read, Stream),
+        ( read_source(Stream, Module, Clauses) -> true
+        ; throw(error(syntax_error(src_text), spawn/3)) ),
+        close(Stream)),
     ( browser_session(_) ->
         maplist(browser_source_clause, Clauses, Compiled)
     ; Compiled = Clauses
     ),
-    compile_term(Compiled)@Private,
-    yield(ready, run),
-    run_actor_goal(Goal, Private).
+    compile_term(Compiled)@Module,
+    ( store_get(actor_registry, source(Module), Previous) -> true ; Previous = [] ),
+    append(Previous, Clauses, Source),
+    store_set(actor_registry, source(Module), Source).
 
 % Restrict the first loader to local clauses and dynamic declarations.
 % In particular, never pass module-changing directives to the compiler.
@@ -423,6 +447,7 @@ browser_goal(call_cleanup(Goal, Cleanup), actors:browser_call_cleanup(Call, Done
     browser_goal(Goal, Call), browser_goal(Cleanup, Done).
 browser_goal(sleep(Time), actors:browser_sleep(Time)) :- !.
 browser_goal(random_between(Low, High, Random), actors:browser_random_between(Low, High, Random)) :- !.
+browser_goal(random_member(Item, List), actors:browser_random_member(Item, List)) :- !.
 browser_goal(writeln(Term), actors:browser_format("~w~n", [Term])) :- !.
 browser_goal(read(Value), input('|:', Value, [correlate(true)])) :- !.
 browser_goal(clause(Head, Body), actors:source_body(Head, Body)) :- !.
@@ -486,6 +511,16 @@ browser_random_between(Low, High, Random) :-
     integer(Low), integer(High), Low =< High,
     frandom(Fraction),
     Random is Low + fix(floor(Fraction * (High - Low + 1))).
+
+browser_random_member(Item, List) :-
+    length(List, Length),
+    browser_random_between(1, Length, Index),
+    list_item(Index, List, Item).
+
+list_item(1, [Item|_], Item) :- !.
+list_item(Index, [_|Rest], Item) :-
+    Next is Index - 1,
+    list_item(Next, Rest, Item).
 
 % ECLiPSe copies the native cleanup goal when it registers it. Run a
 % deterministic cleanup directly so its bindings reach the caller.

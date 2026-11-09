@@ -2,6 +2,7 @@
 :- use_module(actors).
 :- use_module(toplevel_actors).
 :- use_module(isotope_rpc).
+:- ensure_loaded(server_behaviours).
 :- import exit/1, exit/2 from actors.
 :- lib(json).
 :- lib(prolog_extras).
