@@ -6,6 +6,7 @@
 :- ensure_loaded(web_prolog_library).
 
 :- export spawn/1, actors/1.
+:- export portable_goal/2.
 :- export browser_goal/2, browser_format/2, browser_chart_trace/1, source_body/2.
 :- export flush/0, browser_time/1, browser_sleep/1, browser_random_between/3.
 :- export browser_call_cleanup/2, browser_random_member/2.
@@ -39,6 +40,8 @@
 :- local record(delayed_sends).
 :- tool(spawn/1, spawn_/2).
 :- tool(source_body/2, source_body_/3).
+:- tool(portable_call/1, portable_call_/2).
+:- export portable_call/1.
 :- tool(browser_time/1, browser_time_/2).
 :- tool(browser_call_cleanup/2, browser_call_cleanup_/3).
 :- tool(spawn/2, spawn_/3).
@@ -443,9 +446,10 @@ load_actor_source(Text, Module) :-
         ; throw(error(syntax_error(src_text), spawn/3)) ),
         close(Stream)),
     ( browser_session(_) ->
-        maplist(browser_source_clause, Clauses, Compiled)
-    ; Compiled = Clauses
+        maplist(browser_source_clause, Clauses, BrowserClauses)
+    ; BrowserClauses = Clauses
     ),
+    maplist(portable_source_clause, BrowserClauses, Compiled),
     declare_shared_shadows(Clauses, Module),
     compile_term(Compiled)@Module,
     ( store_get(actor_registry, source(Module), Previous) -> true ; Previous = [] ),
@@ -518,7 +522,8 @@ run_actor(Pid, Parent, Inbox, Goal, Module) :-
 
 run_actor_goal(Goal, Module) :-
     ( browser_session(_) -> browser_goal(Goal, Call) ; Call = Goal ),
-    once(call(Call)@Module).
+    portable_goal(Call, Prepared),
+    once(call(Prepared)@Module).
 
 set_actor_context(Pid, Parent, Inbox) :-
     set_self(Pid),
@@ -535,6 +540,37 @@ set_actor_context(Pid, Parent, Inbox) :-
 browser_session(Session) :-
     mailbox_store(Store),
     store_get(Store, browser_session, Session).
+
+portable_source_clause((Head :- Body), (Head :- Prepared)) :- !,
+    portable_goal(Body, Prepared).
+portable_source_clause(Clause, Clause).
+
+% Keep transparent control structures in the caller so cuts keep their scope.
+portable_goal(Goal, Goal) :- var(Goal), !.
+portable_goal((A,B), (X,Y)) :- !, portable_goal(A, X), portable_goal(B, Y).
+portable_goal((A;B), (X;Y)) :- !, portable_goal(A, X), portable_goal(B, Y).
+portable_goal((A->B), (X->Y)) :- !, portable_goal(A, X), portable_goal(B, Y).
+portable_goal(catch(A,E,B), catch(X,E,Y)) :- !,
+    portable_goal(A, X), portable_goal(B, Y).
+portable_goal(once(A), once(X)) :- !, portable_goal(A, X).
+portable_goal(findall(T,A,L), findall(T,X,L)) :- !, portable_goal(A, X).
+portable_goal(\+ A, \+ actors:portable_call(A)) :- !.
+portable_goal(call(A), actors:portable_call(A)) :- !.
+portable_goal(Goal, Goal).
+
+portable_call_(Goal, Module) :-
+    ( var(Goal) -> throw(error(instantiation_error, call/1))
+    ; callable_body(Goal) -> true
+    ; throw(error(type_error(callable,Goal), call/1))
+    ),
+    portable_goal(Goal, Prepared),
+    call(Prepared)@Module.
+
+callable_body(Goal) :- var(Goal), !.
+callable_body((A,B)) :- !, callable_body(A), callable_body(B).
+callable_body((A;B)) :- !, callable_body(A), callable_body(B).
+callable_body((A->B)) :- !, callable_body(A), callable_body(B).
+callable_body(Goal) :- ( atom(Goal) ; compound(Goal) ).
 
 browser_source_clause((Head :- Body), (Head :- Translated)) :- !,
     browser_goal(Body, Translated).

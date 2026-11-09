@@ -199,8 +199,9 @@ run_call(Pid, Module, DefaultTarget, Goal0, Options, Control) :-
 % own cleanup implementation uses get_cut/1 to detect residual alternatives.
 % The buffer retains the partial page, and a shelf retains next options.
 run_answers(Pid, Module, Goal, Template, Once, Page, Control) :-
+    portable_goal(Goal, Prepared),
     ( sepia_kernel:get_cut(Before),
-      call(Goal)@Module,
+      call(Prepared)@Module,
       sepia_kernel:get_cut(After),
       add_solution(Page, Template, Full),
       ( Before == After ->
