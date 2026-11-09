@@ -5494,25 +5494,16 @@
             behaviourLabel: ""
           };
         }
-        if (!runtime.main && !runtime.worker && new URL(TrinityHost.assetBase).pathname === "/n7-shell/") {
-          return {
-            profile: profile,
-            path: "/n7-actor-workshop",
-            label: "N7 ACTOR workshop",
-            apiPath: "/actor-api-tutorial",
-            apiLabel: "The stateful WebSocket API",
-            behaviourPath: "",
-            behaviourLabel: ""
-          };
-        }
+        var showBehaviourTutorial = runtime.main || runtime.worker ||
+          new URL(TrinityHost.assetBase).pathname !== "/n7-shell/";
         return {
           profile: profile,
           path: "/actor-profile-tutorial",
           label: "The ACTOR profile",
           apiPath: "/actor-api-tutorial",
           apiLabel: "The stateful WebSocket API",
-          behaviourPath: "/jev-sxml-tutorial",
-          behaviourLabel: "Jev agent experiment"
+          behaviourPath: showBehaviourTutorial ? "/jev-sxml-tutorial" : "",
+          behaviourLabel: showBehaviourTutorial ? "Jev agent experiment" : ""
         };
       }
 

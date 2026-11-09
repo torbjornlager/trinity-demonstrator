@@ -56,7 +56,9 @@ assert.equal(context.derivePortalNodeUrls('https://n5.example.test').some(n=>n.l
 context.TrinityHost = createHost({remoteNodes:[{url:n7.url,runtime:'eclipse'}]},new URL(publicOrigin));
 assert.equal(context.derivePortalNodeUrls(publicOrigin)[0].runtimeName,'ECLiPSe CLP');
 context.TrinityHost = createHost({mode:'static', assetBase:'/n7-shell/', nodeUrl:n7.url},new URL(n7.href));
-assert.equal(context.profileTutorialForCurrentRuntime('actor').path,'/n7-actor-workshop');
+assert.equal(context.profileTutorialForCurrentRuntime('actor').path,'/actor-profile-tutorial');
+assert.equal(context.profileTutorialForCurrentRuntime('actor').label,'The ACTOR profile');
+assert.equal(context.profileTutorialForCurrentRuntime('actor').behaviourPath,'');
 assert.equal(context.profileTutorialForCurrentRuntime('isotope').path,'/isotope-profile-tutorial');
 const n6Origin = 'https://n6.elfenbenstornet.se';
 context.TrinityHost = createHost({remoteNodes:[...remoteNodes.slice(0,5),{url:n6Origin,runtime:'gprolog'}]},new URL(n6Origin));
