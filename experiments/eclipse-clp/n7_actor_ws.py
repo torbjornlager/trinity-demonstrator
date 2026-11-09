@@ -93,9 +93,12 @@ class ActorConnection:
                 event = self.child_output.get()
                 if event is None:
                     return
-                self.emit({"type": event.get("kind", "output"),
+                message = {"type": event.get("kind", "output"),
                            "pid": PID_BASE + event.get("actor_id", event["pid"]),
-                           "data": event["data"]})
+                           "data": event["data"]}
+                if "stdout" in event:
+                    message["stdout"] = event["stdout"]
+                self.emit(message)
         except (OSError, LocalProtocolError):
             pass
 

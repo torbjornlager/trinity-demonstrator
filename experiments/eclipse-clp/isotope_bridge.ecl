@@ -75,7 +75,7 @@ serve(Replies) :-
     ;
         browser_child_output(actor(Id), Text) ->
             ( store_get(http_sessions, Id, _) ->
-                reply(Replies, {[type:browser_child_output, pid:Id, data:Text]})
+                reply(Replies, {[type:browser_child_output, pid:Id, data:Text, stdout:Text]})
             ; true ),
             serve(Replies)
     ;
@@ -1029,7 +1029,7 @@ await_event(Id, Context, Event) :-
             Event = {[type:error, pid:Id, data:Text]}
     ;
         browser_output(Pid, Text) ->
-            Event = {[type:output, pid:Id, data:Text, browser_ack:true]}
+            Event = {[type:output, pid:Id, data:Text, stdout:Text, browser_ack:true]}
     ;
         output(Pid, Value) ->
             event_text(Value, Text),

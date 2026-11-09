@@ -7918,10 +7918,10 @@
               })
               .join("\n");
           },
-          queueTerminalOutput: function(term, text) {
+          queueTerminalOutput: function(term, text, stream) {
             // Rendering every wire message separately can starve Abort.
             if (!this._terminalOutputBatch) this._terminalOutputBatch = [];
-            this._terminalOutputBatch.push(text);
+            this._terminalOutputBatch.push({ text: text, stream: stream });
             if (!this._terminalOutputTimer) {
               this._terminalOutputTimer = setTimeout(function() {
                 this.flushTerminalOutput(term, false);
@@ -7933,17 +7933,59 @@
             this._terminalOutputTimer = null;
             var pending = this._terminalOutputBatch || [];
             var batch = pending.splice(0, all === false ? 200 : pending.length);
-            if (batch.length && term) term.echo(batch.join("\n"));
+            if (!term) return;
+            var streamText = "";
+            var lines = [];
+            batch.forEach(function(chunk) {
+              if (chunk.stream) {
+                if (lines.length) {
+                  term.echo(lines.join("\n"));
+                  lines = [];
+                }
+                streamText += chunk.text;
+              } else {
+                this.echoTerminalStream(term, streamText);
+                streamText = "";
+                this.endTerminalStream(term);
+                lines.push(chunk.text);
+              }
+            }.bind(this));
+            if (lines.length) term.echo(lines.join("\n"));
+            this.echoTerminalStream(term, streamText);
             if (pending.length) {
               this._terminalOutputTimer = setTimeout(function() {
                 this.flushTerminalOutput(term, false);
               }.bind(this), 50);
             }
           },
+          echoTerminalStream: function(term, text) {
+            if (!text) return;
+            // jQuery Terminal appends to a partial line until it sees a newline.
+            text = text.replace(/\r\n/g, "\n");
+            term.echo(text, { newline: false });
+            this._terminalStreamOpen = !text.endsWith("\n");
+          },
+          endTerminalStream: function(term) {
+            if (this._terminalStreamOpen && term) {
+              term.echo("");
+              this._terminalStreamOpen = false;
+            }
+          },
+          finishTerminalOutput: function(term) {
+            this.flushTerminalOutput(term);
+            this.endTerminalStream(term);
+          },
+          queueNodeOutput: function(term, event) {
+            var stream = typeof event.stdout === "string";
+            this.queueTerminalOutput(term, stream
+              ? this.formatDisplayText(event.stdout)
+              : this.formatOutputDisplay(event.data, event.kind), stream);
+          },
           discardTerminalOutput: function() {
             clearTimeout(this._terminalOutputTimer);
             this._terminalOutputTimer = null;
             this._terminalOutputBatch = [];
+            this.endTerminalStream(this.terminal);
           },
           echoSwiWasmOutput: function(term, data, queued) {
             var text = this.formatDisplayText(
@@ -8328,6 +8370,7 @@
             return escaped;
           },
           echoTerminalCommand: function(term, command, promptText) {
+            this.finishTerminalOutput(term);
             var prompt = promptText !== undefined
               ? String(promptText)
               : (term && typeof term.get_prompt === "function" ? String(term.get_prompt() || this.basePrompt()) : this.basePrompt());
@@ -9577,6 +9620,7 @@
             }, "Principal rate limits cleared.");
           },
           finishSuccess: function(term, rows, more) {
+            this.finishTerminalOutput(term);
             var rawText = this.reportResultRows(rows);
             var displayText = this.formatDisplayText(rawText);
             var logId;
@@ -9606,6 +9650,7 @@
             return logId;
           },
           finishFailure: function(term) {
+            this.finishTerminalOutput(term);
             var logId;
             this.consumePendingCompletionMessage();
             term.echo("false.");
@@ -9616,6 +9661,7 @@
             return logId;
           },
           finishError: function(term, message) {
+            this.finishTerminalOutput(term);
             var logId;
             var errorText = this.formatErrorDisplay(message);
             this.consumePendingCompletionMessage();
@@ -9633,6 +9679,7 @@
             term.echo("");
           },
           showPrompt: function(term, promptText, pid, promptRef) {
+            this.finishTerminalOutput(term);
             var logId;
             var prompt = String(promptText);
             this.queryState = "prompt";
@@ -11404,7 +11451,7 @@
             }
             if (event.type === "output") {
               var outputText = renderOutputData(event.data);
-              term.echo(this.formatOutputDisplay(event.data, event.kind));
+              this.queueNodeOutput(term, event);
               var outputLogId = this.log(event.kind === "timing" ? "timing" : "info", outputText, "isotope");
               this.recordSessionEvent("output", outputText, "isotope", event.pid || this.isotopePid, outputLogId);
               term.scroll_to_bottom();
@@ -11946,7 +11993,7 @@
             }
             if (event.type === "output") {
               var wsOutputText = renderOutputData(event.data);
-              this.queueTerminalOutput(term, this.formatOutputDisplay(event.data, event.kind));
+              this.queueNodeOutput(term, event);
               var wsOutputLogId = this.log(event.kind === "timing" ? "timing" : "info", wsOutputText, "actor");
               this.recordSessionEvent("output", wsOutputText, "actor", event.pid || this.wsPid, wsOutputLogId);
               return;
