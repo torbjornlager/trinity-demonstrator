@@ -1,0 +1,1008 @@
+{
+  "suite": "portable-core-0.1",
+  "results": {
+    "swi-engine": [
+      {
+        "id": "PC-001",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-004",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": "exception(type_error(callable,(fail,1)))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": "exception(type_error(callable,(fail,\\+1)))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": "exception(type_error(list,2))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": "success",
+        "status": "observed"
+      }
+    ],
+    "trealla-engine": [
+      {
+        "id": "PC-001",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-004",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": "exception(type_error(callable,(fail,1)))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": "exception(type_error(list,[t|1]))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": "exception(syntax_error(start_expected))",
+        "status": "observed"
+      }
+    ],
+    "gnu-engine": [
+      {
+        "id": "PC-001",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-004",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": "exception(type_error(callable,(fail,1)))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": "exception(type_error(list,[t|1]))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": "exception(syntax_error('user_input:1 (char:10) expression expected'))",
+        "status": "observed"
+      }
+    ],
+    "eclipse-engine": [
+      {
+        "id": "PC-001",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-004",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": "success",
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": "read_failure",
+        "status": "observed"
+      }
+    ],
+    "wasm-engine": [
+      {
+        "id": "PC-001",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-004",
+        "observation": "success",
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": "exception(type_error(callable,(fail,1)))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": "exception(type_error(callable,(fail,\\+1)))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": "exception(type_error(list,2))",
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": "failure",
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": "success",
+        "status": "observed"
+      }
+    ],
+    "swi-http": [
+      {
+        "id": "PC-001",
+        "observation": {
+          "http_status": 200,
+          "body": "success([sample([a,b],[],[c|tail],'two words',-9007199254740991,9007199254740991,1.5)],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair(_11528,_11528,_11532)],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": {
+          "http_status": 200,
+          "body": "success([ok],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-004",
+        "observation": {
+          "http_status": 200,
+          "body": "success([kept],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(callable,','(fail,1)),context(:(public_goal_guard,/(runtime_call_goal,2)),_14112))).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(callable,','(fail,\\+(1))),context(:(public_goal_guard,/(runtime_call_goal,2)),_2520))).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(list,2),context(/(length,2),_14024))).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": {
+          "http_status": 200,
+          "body": "success(['.'(a,[])],false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair('[]',[])],false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": {
+          "http_status": 200,
+          "body": "success([f()],false).\n"
+        },
+        "status": "observed"
+      }
+    ],
+    "trealla-http": [
+      {
+        "id": "PC-001",
+        "observation": {
+          "http_status": 200,
+          "body": "success([sample([a,b],[],[c|tail],'two words',-9007199254740991,9007199254740991,1.5)],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair(_3505,_3505,_3506)],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": {
+          "http_status": 200,
+          "body": "success([ok],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-004",
+        "observation": {
+          "http_status": 200,
+          "body": "success([kept],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(callable,(fail,1)),call/1)).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(list,[t|1]),sort/2)).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": {
+          "http_status": 200,
+          "body": "success([[a]],false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair([],[])],false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(syntax_error(start_expected),read_term_from_atom/3)).\n"
+        },
+        "status": "observed"
+      }
+    ],
+    "eclipse-http": [
+      {
+        "id": "PC-001",
+        "observation": {
+          "http_status": 200,
+          "body": "success([sample([a, b], [], [c|tail], 'two words', -9007199254740991, 9007199254740991, 1.5)], false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair(A, A, B)], false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": {
+          "http_status": 200,
+          "body": "success([ok], false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-004",
+        "observation": {
+          "http_status": 200,
+          "body": "success([kept], false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": {
+          "http_status": 200,
+          "body": "success([[a]], false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair([], [])], false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": {
+          "http_status": 200,
+          "body": "error(invalid_stateless_query).\n"
+        },
+        "status": "observed"
+      }
+    ],
+    "gnu-http": [
+      {
+        "id": "PC-001",
+        "observation": {
+          "http_status": 200,
+          "body": "success([sample([a,b],[],[c|tail],'two words',-9007199254740991,9007199254740991,1.5)],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-002",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair(_A0_V0,_A0_V0,_A0_V1)],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-003",
+        "observation": {
+          "http_status": 200,
+          "body": "success([ok],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-004",
+        "observation": {
+          "http_status": 200,
+          "body": "success([kept],false).\n"
+        },
+        "status": "pass"
+      },
+      {
+        "id": "PC-005",
+        "reference_outcome": "type_error(callable,(fail,1))",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(callable,1),/(iso_execute,1))).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-006",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(callable,1),/(iso_execute,1))).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-007",
+        "reference_outcome": "type_error(list,[t|1])",
+        "observation": {
+          "http_status": 200,
+          "body": "failure.\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-008",
+        "reference_outcome": "failure",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(type_error(list,2),/(length,2))).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-009",
+        "observation": {
+          "http_status": 200,
+          "body": "success([[a]],false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-010",
+        "observation": {
+          "http_status": 200,
+          "body": "success([pair([],[])],false).\n"
+        },
+        "status": "observed"
+      },
+      {
+        "id": "PC-011",
+        "observation": {
+          "http_status": 200,
+          "body": "error(error(syntax_error('constant term stream:1 (char:17) expression expected'),/(read_term_from_atom,3))).\n"
+        },
+        "status": "observed"
+      }
+    ]
+  },
+  "replay": [
+    {
+      "id": "PC-001",
+      "sender": "swi-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "swi-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "swi-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "swi-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "swi-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "swi-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "swi-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "swi-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "trealla-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "trealla-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "trealla-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "trealla-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "trealla-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "trealla-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "trealla-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "trealla-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "eclipse-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "eclipse-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "eclipse-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "eclipse-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "eclipse-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "eclipse-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "eclipse-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "eclipse-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "gnu-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "gnu-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "gnu-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-001",
+      "sender": "gnu-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "gnu-http",
+      "receiver": "swi-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "gnu-http",
+      "receiver": "trealla-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "gnu-http",
+      "receiver": "eclipse-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok], false).\n"
+      }
+    },
+    {
+      "id": "PC-002",
+      "sender": "gnu-http",
+      "receiver": "gnu-http",
+      "status": "pass",
+      "observation": {
+        "http_status": 200,
+        "body": "success([ok],false).\n"
+      }
+    }
+  ]
+}

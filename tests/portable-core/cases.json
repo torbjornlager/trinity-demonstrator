@@ -1,0 +1,97 @@
+{
+  "suite": "portable-core-0.1",
+  "cases": [
+    {
+      "id": "PC-001",
+      "title": "Bracket lists and ordinary data",
+      "goal": "Value=sample([a,b],[],[c|tail],'two words',-9007199254740991,9007199254740991,1.5)",
+      "template": "Value",
+      "answer": "success([sample([a,b],[],[c|tail],'two words',-9007199254740991,9007199254740991,1.5)],false).",
+      "replay_goal": "portable_core_reply(success([sample([a,b],[],[c|tail],'two words',-9007199254740991,9007199254740991,1.5)],false))"
+    },
+    {
+      "id": "PC-002",
+      "title": "Repeated variables preserve identity and distinct variables stay distinct",
+      "goal": "Value=pair(A,A,B),var(A),var(B),A\\==B",
+      "template": "Value",
+      "answer": "success([pair(A,A,B)],false).",
+      "replay_goal": "portable_core_reply(success([pair(A,B,C)],false)),var(A),var(B),var(C),A==B,A\\==C"
+    },
+    {
+      "id": "PC-003",
+      "title": "Double quotes read as Unicode characters",
+      "goal": "Value=\"å😀\",Value==['å','😀'],Empty=\"\",Empty==[]",
+      "answer": "success([ok],false).",
+      "engine_diagnostic": true
+    },
+    {
+      "id": "PC-004",
+      "title": "A cut inside a meta-call leaves the caller's alternative",
+      "goal": "G=(!,fail),(call(G);Value=kept)",
+      "template": "Value",
+      "answer": "success([kept],false)."
+    },
+    {
+      "id": "PC-005",
+      "title": "An unreachable number in a conjunction is a callable error",
+      "goal": "G=(fail,1),call(G)",
+      "expected": "type_error(callable,(fail,1))",
+      "node_call_check": {
+        "goal": "catch((G=(fail,1),call(G),fail),error(type_error(callable,(fail,1)),_),true)",
+        "answer": "success([ok],false)."
+      }
+    },
+    {
+      "id": "PC-006",
+      "title": "An unreachable negation fails before calling its argument",
+      "goal": "G=(fail,\\+1),call(G)",
+      "expected": "failure",
+      "node_call_check": {"answer": "failure."}
+    },
+    {
+      "id": "PC-007",
+      "title": "Malformed sort output",
+      "goal": "sort([],[t|1])",
+      "expected": "type_error(list,[t|1])"
+    },
+    {
+      "id": "PC-008",
+      "title": "Length of a non-list",
+      "goal": "length(2,0)",
+      "expected": "failure"
+    },
+    {
+      "id": "PC-009",
+      "title": "Construct a dot functor and observe its wire spelling",
+      "goal": "functor(Value,'.',2),arg(1,Value,a),arg(2,Value,[])",
+      "engine_goal": "functor(Value,'.',2),arg(1,Value,a),arg(2,Value,[]),Value==[a]",
+      "template": "Value",
+      "node_wire_check": true
+    },
+    {
+      "id": "PC-010",
+      "title": "Quoted empty-list atom and the empty list",
+      "goal": "Value=pair('[]',[])",
+      "engine_goal": "'[]'==[]",
+      "template": "Value",
+      "node_wire_check": true
+    },
+    {
+      "id": "PC-011",
+      "title": "Zero-arity compound syntax",
+      "goal": "Value=f()",
+      "template": "Value",
+      "node_wire_check": true
+    },
+    {
+      "id": "PC-012",
+      "title": "A reached negation checks its argument",
+      "goal": "G=(true,\\+1),call(G)",
+      "expected": "type_error(callable,1)",
+      "node_call_check": {
+        "goal": "catch((G=(true,\\+1),call(G),fail),error(type_error(callable,1),_),true)",
+        "answer": "success([ok],false)."
+      }
+    }
+  ]
+}

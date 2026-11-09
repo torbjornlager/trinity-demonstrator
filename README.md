@@ -63,6 +63,9 @@ select tested common behavior, including GNU Prolog at ISOBASE level. They keep
 unresolved and unmeasured behavior explicit; passing a selection is not complete
 profile certification.
 
+The [portable core draft](docs/PORTABLE_CORE_PROFILE.md) defines common term
+and query rules and records engine, HTTP, and answer replay results.
+
 ## Native dependency architecture
 
 | layer | library | gives you |

@@ -56,6 +56,8 @@ def plan(native, wasm, swipl):
         ('fetch-regressions', ROOT, [sys.executable, 'tests/test_fetch_swi.py']),
         ('browser-equivalence', ROOT, [sys.executable, 'tools/check_statechart_wasm_equivalence.py',
                                      '--native-root', str(native), '--wasm-dir', str(wasm)]),
+        ('portable-core-engines', ROOT, [sys.executable, 'tools/probe_portable_core.py',
+                                         '--swi', swipl, '--wasm', 'node']),
         ('WASM', ROOT, ['bash', 'tools/test.sh', 'WASM']),
     ]
     return rows
