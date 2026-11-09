@@ -313,6 +313,34 @@ print('N7 ACTOR workshop counters, prompts, and monitors passed')
     expect(result.returncode, 0)
 
 
+def check_shared_database(origin, ca, assets):
+    tls = ssl.create_default_context(cafile=str(ca))
+    source = origin + "/n7-shell/shared-db.pl"
+    anonymous = build_opener(HTTPSHandler(context=tls), NoRedirect())
+    http(anonymous, source, status=401)
+    owner = build_opener(HTTPSHandler(context=tls), HTTPCookieProcessor(CookieJar()))
+    http(owner, origin + "/n7-shell/")
+    headers, body = http(owner, source)
+    expect(headers.get_content_type(), "text/plain")
+    expect(body, (assets / "shared-db.pl").read_bytes())
+
+    def query(goal, src_text=""):
+        params = urlencode({"goal": goal, "src_text": src_text, "format": "json"})
+        _, response = http(owner, origin + "/call?" + params, headers={"Origin": origin})
+        result = json.loads(response)
+        expect(result["type"], "success")
+        return result["data"]
+
+    expect(query("ancestor_descendant(mike,sally),human(plato),shared_fact(n4_shared_db),price(widget,X)"),
+           [{"X": "100"}])
+    expect(query("price(widget,X)", "price(widget,1)."), [{"X": "1"}])
+    expect(query("price(widget,X)"), [{"X": "100"}])
+    expect(query("linda_local_address(Address),linda_out(n7_db_probe(ok)),linda_inp(n7_db_probe(X))"),
+           [{"Address": "linda", "X": "ok"}])
+    query("ping_pong_benchmark(3,T),T >= 0")
+    print("N7 shared database source, private shadowing, actor benchmark and Linda passed")
+
+
 def free_port():
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -408,6 +436,8 @@ def main():
             wait_for(tls_ready)
             check_https(origin, ca, shell=args.shell, actor_core=args.actor_core,
                         profile="actor" if args.advertise_actor else "isotope")
+            if args.shell:
+                check_shared_database(origin, ca, assets)
         except Exception:
             subprocess.run(compose + ["logs", "--tail", "25"], env=env)
             print(Path(log.name).read_text()[-3000:])

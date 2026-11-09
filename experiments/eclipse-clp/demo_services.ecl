@@ -76,7 +76,13 @@ statechart_halt(Pid, Reply, Timeout) :-
 
 init_linda :-
     spawn(linda_loop([], []), Space, [link(false)]),
+    spawn(linda_contact(Space), Contact, [link(false)]),
+    register(linda, Contact),
     store_set(linda_service, space, Space).
+
+linda_contact(Space) :-
+    receive({ linda_connect(Client, Ref) -> Client ! linda_connected(Ref, Space) }),
+    linda_contact(Space).
 
 linda_out(Tuple) :- linda_call(out(Tuple), ok).
 linda_in(Tuple) :- linda_call(in(Tuple), tuple(Tuple)).

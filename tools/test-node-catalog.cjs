@@ -56,6 +56,7 @@ assert.equal(context.derivePortalNodeUrls('https://n5.example.test').some(n=>n.l
 context.TrinityHost = createHost({remoteNodes:[{url:n7.url,runtime:'eclipse'}]},new URL(publicOrigin));
 assert.equal(context.derivePortalNodeUrls(publicOrigin)[0].runtimeName,'ECLiPSe CLP');
 context.TrinityHost = createHost({mode:'static', assetBase:'/n7-shell/', nodeUrl:n7.url},new URL(n7.href));
+assert.equal(computed('currentPortalNodeAddress',{currentPortalNodeUrl:n7.url}),new URL('/n7-shell/shared-db.pl',n7.url).href);
 assert.equal(context.profileTutorialForCurrentRuntime('actor').path,'/actor-profile-tutorial');
 assert.equal(context.profileTutorialForCurrentRuntime('actor').label,'The ACTOR profile');
 assert.equal(context.profileTutorialForCurrentRuntime('actor').behaviourPath,'');

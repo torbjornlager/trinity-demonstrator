@@ -15,6 +15,13 @@ ROOT=Path(__file__).resolve().parents[1]
 PAGES=[p.name for p in sorted((ROOT/'web').glob('*.html')) if p.name not in ('admin.html','discovery-hub.html')]
 ROUTES={name[:-5]:name for name in PAGES}
 ROUTES.update(portal='index.html',demonstrator='index.html',manual='manual.html',editor_frame='editor_frame.html')
+N5_SHARED_DB_FILES = (
+    'Deployment/shared_db_common.pl',
+    'Deployment/shared_db_actor_common.pl',
+    'Deployment/shared_db_n4.pl',
+    'examples/services/linda_client.pl',
+    'Deployment/shared_db_linda.pl',
+)
 
 def prefix_path(value):
     if not re.fullmatch(r'/(?:[A-Za-z0-9_.-]+/)*',value) or any(x in ('.','..') for x in value.split('/')):
@@ -94,6 +101,8 @@ def build(output,prefix='/',node=None,allow_dirty=False,credentials='same-origin
         text=page((ROOT/'web'/name).read_text(),prefix,config)
         (output/name).write_text(text)
     shutil.copy2(output/'demonstrator.html',output/'index.html')
+    if prefix == '/n7-shell/':
+        (output/'shared-db.pl').write_bytes(b''.join((ROOT/path).read_bytes() for path in N5_SHARED_DB_FILES))
     for name,source in [('vendor',ROOT/'web/vendor'),('img',ROOT/'img'),('examples',ROOT/'examples')]:
         shutil.copytree(source,output/name,ignore=lambda directory,names:[n for n in names if n.startswith('.') or n=='__pycache__'])
     for name in ['swi_wasm_actor_worker.js','swipl-bundle.js']:

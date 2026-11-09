@@ -5735,6 +5735,10 @@
           currentPortalNodeAddress: function() {
             var normalized = normalizeNodeUrl(this.currentPortalNodeUrl);
             if (normalized) {
+              if (TrinityHost.nodeBase && new URL(TrinityHost.assetBase).pathname === "/n7-shell/" &&
+                  normalized.origin === new URL(TrinityHost.nodeBase).origin) {
+                return TrinityHost.endpoint("/n7-shell/shared-db.pl");
+              }
               return normalized.href.replace(/\/$/, "");
             }
             return String(this.currentPortalNodeUrl || window.location.origin).replace(/\/$/, "");

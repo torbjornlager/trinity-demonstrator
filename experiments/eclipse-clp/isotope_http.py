@@ -551,7 +551,9 @@ class Handler(BaseHTTPRequestHandler):
         except (OSError, RuntimeError, ValueError):
             self.send_error(404)
             return
-        self.reply(200, guess_type(asset)[0] or "application/octet-stream", body)
+        content_type = ("text/plain; charset=utf-8" if relative == "shared-db.pl"
+                        else guess_type(asset)[0] or "application/octet-stream")
+        self.reply(200, content_type, body)
 
     def serve_node_info(self):
         host, origin, _, _ = self.server.private_settings
@@ -688,8 +690,12 @@ def bridge_archive():
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
         for name in ("actors.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
                      "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl",
-                     "server_behaviours.ecl", "demo_services.ecl"):
+                     "server_behaviours.ecl", "demo_services.ecl", "n5_shared_db.ecl",
+                     "n5_actor_compat.sed"):
             archive.add(HERE / name, arcname=name)
+        for name in ("shared_db_common.pl", "shared_db_actor_common.pl",
+                     "shared_db_n4.pl", "shared_db_linda.pl"):
+            archive.add(HERE.parents[1] / "Deployment" / name, arcname=name)
         archive.add(HERE.parents[1] / "examples/services/linda_space.pl", arcname="linda_space.pl")
     return buffer.getvalue()
 
@@ -713,6 +719,8 @@ def development_engine(parser, runtime_dir):
         'dd bs="$BRIDGE_ARCHIVE_SIZE" count=1 iflag=fullblock status=none '
         '| tar -xf - -C /tmp/src; '
         'cd /tmp/src; '
+        'sed -f n5_actor_compat.sed shared_db_actor_common.pl > shared_db_actor_eclipse.pl; '
+        "sed -n '/^linda_local_address(/p' shared_db_linda.pl > shared_db_linda_address.pl; "
         'exec "$LD_LIBRARY_PATH/eclipse.exe" -D /eclipse -b isotope_bridge.ecl '
         '-e isotope_bridge:run',
     ]

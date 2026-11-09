@@ -341,6 +341,9 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
                       (:- import(yield/3 from isotope_rpc))])@Private
     ; true
     ),
+    ( current_module(n5_shared_db) ->
+        compile_term([(:- import(n5_shared_db))])@Private
+    ; true ),
     ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
         compile_term([(:- import(supervisor_spawn/3 from server_behaviours)),
                       (:- import(supervisor_halt/1 from server_behaviours)),
@@ -356,6 +359,12 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     ),
     ( browser_session(_) ->
         compile_term([(:- import(demo_services))])@Private
+    ; current_module(n5_shared_db) ->
+        compile_term([(:- import(linda_out/1 from demo_services)),
+                      (:- import(linda_in/1 from demo_services)),
+                      (:- import(linda_rd/1 from demo_services)),
+                      (:- import(linda_inp/1 from demo_services)),
+                      (:- import(linda_rdp/1 from demo_services))])@Private
     ; true ),
     load_actor_source(Text, Private),
     yield(ready, run),
@@ -370,10 +379,35 @@ load_actor_source(Text, Module) :-
         maplist(browser_source_clause, Clauses, Compiled)
     ; Compiled = Clauses
     ),
+    declare_shared_shadows(Clauses, Module),
     compile_term(Compiled)@Module,
     ( store_get(actor_registry, source(Module), Previous) -> true ; Previous = [] ),
     append(Previous, Clauses, Source),
     store_set(actor_registry, source(Module), Source).
+
+% ECLiPSe requires an explicit local declaration before compiling a
+% definition that shadows an imported predicate.
+declare_shared_shadows(Clauses, Module) :-
+    ( current_module(n5_shared_db) ->
+        findall((:- local(Indicator)),
+            ( member(Clause, Clauses),
+              source_indicator(Clause, Indicator),
+              current_module_predicate(exported, Indicator)@n5_shared_db ),
+            Declarations),
+        sort(Declarations, Unique),
+        ( Unique == [] -> true ; compile_term(Unique)@Module )
+    ; true ).
+
+source_indicator((:- dynamic(Spec)), Indicator) :- !,
+    source_dynamic_indicator(Spec, Indicator).
+source_indicator((Head --> _), Name/Arity) :- !,
+    functor(Head, Name, Extra), Arity is Extra + 2.
+source_indicator((Head :- _), Name/Arity) :- !, functor(Head, Name, Arity).
+source_indicator(Head, Name/Arity) :- functor(Head, Name, Arity).
+
+source_dynamic_indicator((A, B), Indicator) :- !,
+    ( source_dynamic_indicator(A, Indicator) ; source_dynamic_indicator(B, Indicator) ).
+source_dynamic_indicator(Indicator, Indicator).
 
 % Restrict the first loader to local clauses and dynamic declarations.
 % In particular, never pass module-changing directives to the compiler.

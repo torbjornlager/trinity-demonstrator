@@ -4,6 +4,7 @@
 :- use_module(isotope_rpc).
 :- ensure_loaded(server_behaviours).
 :- ensure_loaded(demo_services).
+:- ensure_loaded(n5_shared_db).
 :- import init_linda/0 from demo_services.
 :- import exit/1, exit/2 from actors.
 :- lib(json).
