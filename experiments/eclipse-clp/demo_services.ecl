@@ -7,9 +7,14 @@
 
 :- export init_linda/0.
 :- export model_chat/2, jev_deployment_observation/2.
+:- export published_counter/1.
 :- export statechart_spawn/2, statechart_halt/3, run_chart/1.
 :- export linda_out/1, linda_in/1, linda_rd/1, linda_inp/1, linda_rdp/1.
 :- local store(linda_service).
+
+published_counter(Count) :-
+    egress_request("published_counter", "https://n3.elfenbenstornet.se", [], Text),
+    number_string(Count, Text).
 
 % The host adapter still checks the fixed SWI service peer against its
 % allowlist. Keep inference and observation in the owner-installed service.

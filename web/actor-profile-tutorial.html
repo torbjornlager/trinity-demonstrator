@@ -1129,7 +1129,7 @@ price(Item, Price) :-
 
 <h2>Using a published service</h2>
 
-<p>
+<p id="published-counter-description">
     A node can publish an actor under a stable service name. Clients do not
     need the actor's pid: they send to a qualified address of the form
     <code>Name@Node</code>, where <code>Node</code> is the node's canonical URL,
@@ -1151,6 +1151,14 @@ price(Item, Price) :-
   <button onclick="pasteAndAskExample(&quot;#epa-published-counter&quot;)" class="btn btn-xs btn-primary" type="button">Call
 </button>
 </p>
+<script>
+    if (window.WEB_PROLOG_HOST && window.WEB_PROLOG_HOST.assetBase === "/n7-shell/") {
+        document.getElementById("published-counter-description").textContent =
+            "N7 opens a short-lived ACTOR session at N3. That session sends count(From) " +
+            "to N3’s published counter and returns the reply to the N7 shell.";
+        document.getElementById("epa-published-counter").textContent = "?- published_counter(Count).";
+    }
+</script>
 
 <p>
     The result binds <code>Count</code> to the service's next counter value.

@@ -3,7 +3,10 @@
 from contextlib import suppress
 import json
 from queue import Full, Queue
+from socket import create_connection
+from ssl import create_default_context
 from threading import Event, Lock, Thread
+from time import monotonic
 from uuid import uuid4
 
 from wsproto import ConnectionType, WSConnection
@@ -14,6 +17,70 @@ from wsproto.utilities import LocalProtocolError, RemoteProtocolError
 PID_BASE = 1_000_000_000
 MAX_MESSAGE = 16384
 SESSION_COMMANDS = {"call", "next", "stop", "abort", "halt", "respond"}
+
+
+def published_counter(host):
+    """Ask the published N3 counter from a short-lived N3 toplevel."""
+    wire = WSConnection(ConnectionType.CLIENT)
+    deadline = monotonic() + 2
+    with create_connection((host, 443), timeout=1) as raw:
+        with create_default_context().wrap_socket(raw, server_hostname=host) as connection:
+            def send(event):
+                connection.settimeout(max(0.001, deadline - monotonic()))
+                connection.sendall(wire.send(event))
+
+            def events():
+                while monotonic() < deadline:
+                    connection.settimeout(max(0.001, deadline - monotonic()))
+                    data = connection.recv(4096)
+                    if not data:
+                        break
+                    wire.receive_data(data)
+                    for event in wire.events():
+                        if isinstance(event, Ping):
+                            send(event.response())
+                        else:
+                            yield event
+                raise ValueError("counter_peer_closed")
+
+            def receive():
+                chunks = []
+                size = 0
+                for event in incoming:
+                    if not isinstance(event, TextMessage):
+                        raise ValueError("invalid_counter_peer_message")
+                    size += len(event.data.encode("utf-8"))
+                    if size > MAX_MESSAGE:
+                        raise ValueError("counter_peer_message_too_large")
+                    chunks.append(event.data)
+                    if event.message_finished:
+                        return json.loads("".join(chunks))
+
+            incoming = events()
+            try:
+                send(Request(host=host, target="/ws"))
+                if not isinstance(next(incoming), AcceptConnection):
+                    raise ValueError("counter_peer_upgrade_failed")
+                send(TextMessage(data=json.dumps({"command": "toplevel_spawn", "options": "[session(true)]"})))
+                spawned = receive()
+                if spawned["type"] != "spawned" or type(spawned.get("pid")) is not int:
+                    raise ValueError("counter_peer_spawn_failed")
+                pid = spawned["pid"]
+                goal = (
+                    "self(Self), counter@'https://n3.elfenbenstornet.se' ! count(Self), "
+                    "receive({count(Count) -> true}, [timeout(1), on_timeout(fail)])"
+                )
+                send(TextMessage(data=json.dumps({
+                    "command": "toplevel_call", "pid": pid, "goal": goal, "options": "[limit(1)]"
+                })))
+                answer = receive()
+                if answer["type"] != "success" or len(answer["data"]) != 1:
+                    raise ValueError("counter_service_unavailable")
+                count = int(answer["data"][0]["Count"])
+                send(CloseConnection(code=1000))
+                return str(count)
+            except (LocalProtocolError, RemoteProtocolError) as error:
+                raise ValueError("invalid_counter_peer_protocol") from error
 
 
 def serve(handler):

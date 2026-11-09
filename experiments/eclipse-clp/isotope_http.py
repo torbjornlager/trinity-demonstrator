@@ -86,6 +86,11 @@ def fetch_peer(allowed_peers, request):
     parsed, origin = peer_url(request["url"])
     if origin not in allowed_peers:
         raise ValueError("peer_not_allowed")
+    if request["operation"] == "published_counter":
+        if request["url"] != "https://n3.elfenbenstornet.se" or request["params"] != {}:
+            raise ValueError("invalid_counter_peer")
+        from n7_actor_ws import published_counter
+        return published_counter(parsed.hostname)
     if request["operation"] == "call":
         params = request["params"]
         if (parsed.path not in ("", "/") or parsed.query
