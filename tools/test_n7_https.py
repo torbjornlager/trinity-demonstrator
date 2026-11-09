@@ -257,6 +257,30 @@ try:
     output = ws.recv_json()
     assert (output['type'], output['data']) == ('output', 'shell output\\n'), output
     assert ws.recv_json()['type'] == 'success'
+
+    def shell_call(goal):
+        ws.send_json(dict(command='toplevel_call', pid=pid, goal=goal, options='[limit(1)]'))
+        event = ws.recv_json()
+        assert event['type'] == 'success' and event['more'] is False, (goal, event)
+        assert len(event['data']) == 1, (goal, event)
+        return event['data'][0]
+
+    child = shell_call("toplevel_spawn(Child,[session(true),monitor(true),src_list([p(a),p(b)])])")['Child']
+    shell_call(f"toplevel_call({child},assert((p :- p))),receive({{success({child},_,false) -> true}})")
+
+    def start_loop():
+        shell_call(f"self(Shell),toplevel_call({child},(send(Shell,started),p)),receive({{started -> true}})")
+
+    start_loop()
+    shell_call(f"toplevel_abort({child}),receive({{abort({child}) -> true}})")
+    shell_call(f"toplevel_call({child},p(X),[template(X),limit(1)]),"
+               f"receive({{success({child},[a],true) -> true}}),toplevel_stop({child})")
+    start_loop()
+    assert shell_call(f"toplevel_halt({child},Reply)") == {'Reply': 'true'}
+    shell_call(f"receive({{down({child},{child},true) -> true}}),actors(Actors),"
+               f"(member({child},Actors) -> throw(child_still_running) ; true)")
+    print('Nested toplevel abort, reuse, stop, halt, and spawn monitor passed')
+
     ws.send_json(dict(command='toplevel_halt', pid=pid))
     assert ws.recv_json()['type'] == 'halted'
 finally:

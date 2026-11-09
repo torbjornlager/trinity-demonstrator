@@ -8,6 +8,7 @@
 :- export toplevel_call/2, toplevel_call/3.
 :- export toplevel_next/1, toplevel_next/2.
 :- export toplevel_stop/1, toplevel_stop/2, toplevel_abort/1.
+:- export toplevel_halt/1, toplevel_halt/2.
 :- export ptcp/3.  % Runtime entry point, called from the private actor module.
 :- export toplevel_spawn_browser/2.
 :- export browser_format/2.
@@ -81,6 +82,19 @@ toplevel_stop(Pid, Target) :-
 
 toplevel_abort(Pid) :-
     post_actor_event(Pid, interrupt_ptcp).
+
+toplevel_halt(Pid) :-
+    exit(Pid, true).
+
+% Wait on a private monitor so any spawn-time down remains for the caller.
+toplevel_halt(Pid, true) :-
+    setup_call_cleanup(
+        monitor(Pid, Ref),
+        ( toplevel_halt(Pid),
+          receive_ptcp({ down(_, Ref, _) -> true })
+        ),
+        demonitor(Ref, [flush])
+    ).
 
 ptcp(DefaultTarget, Session, Kind) :-
     self(Pid),

@@ -410,7 +410,11 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
                       (:- import(toplevel_call/2 from toplevel_actors)),
                       (:- import(toplevel_call/3 from toplevel_actors)),
                       (:- import(toplevel_next/1 from toplevel_actors)),
-                      (:- import(toplevel_next/2 from toplevel_actors))])@Private
+                      (:- import(toplevel_next/2 from toplevel_actors)),
+                      (:- import(toplevel_stop/1 from toplevel_actors)),
+                      (:- import(toplevel_abort/1 from toplevel_actors)),
+                      (:- import(toplevel_halt/1 from toplevel_actors)),
+                      (:- import(toplevel_halt/2 from toplevel_actors))])@Private
     ; true
     ),
     ( browser_session(_) ->
