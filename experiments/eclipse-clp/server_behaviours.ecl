@@ -5,7 +5,7 @@
 :- lib(prolog_extras).
 :- lib(lists).
 
-:- export supervisor_spawn/3, supervisor_halt/1.
+:- export supervisor_spawn/2, supervisor_spawn/3, supervisor_halt/1.
 :- export server_spawn/3, server_spawn/4, server_halt/2.
 :- export server_request/3, server_request/4, server_promise/3, server_yield/2.
 :- export server_upgrade/2, server_upgrade/3, server_run/3.
@@ -15,6 +15,7 @@
 :- tool(server_spawn/3, server_spawn_/4).
 :- tool(server_spawn/4, server_spawn_/5).
 :- tool(server_upgrade/2, server_upgrade_/3).
+:- tool(supervisor_spawn/2, supervisor_spawn_/3).
 :- tool(supervisor_spawn/3, supervisor_spawn_/4).
 :- tool(server_upgrade/3, server_upgrade_/4).
 
@@ -158,6 +159,9 @@ require_source_options(Options, Caller) :-
     ( is_list(Options), checklist(source_option, Options) -> true
     ; throw(error(domain_error(server_source_options, Options), Caller)) ).
 
+supervisor_spawn_(Specs, Sup, Module) :-
+    supervisor_spawn_(Specs, Sup, [], Module).
+
 supervisor_spawn_(Specs, Sup, Options, Module) :-
     supervisor_config(Options, Config, SourceOptions, Link, Monitor),
     normalise_children(Specs, Children),
@@ -200,14 +204,21 @@ normalise_children(Specs, Children) :-
     ).
 
 normalise_child(Raw, spec(Name, Start, Restart, Type, Shutdown)) :-
-    ( nonvar(Raw), Raw = child(Name, Options), atom(Name),
-      is_list(Options), checklist(child_option, Options),
+    ( nonvar(Raw), Raw = child(Name, Options) -> true
+    ; throw(error(domain_error(supervisor_child_spec, Raw), supervisor_spawn/3)) ),
+    require_child_name(Name, supervisor_spawn/3),
+    ( is_list(Options), checklist(child_option, Options),
       memberchk(start(Start), Options) -> true
     ; throw(error(domain_error(supervisor_child_spec, Raw), supervisor_spawn/3)) ),
     behaviour_option(restart, Options, permanent, Restart),
     behaviour_option(type, Options, worker, Type),
     ( Type == supervisor -> Default = infinity ; Default = 5 ),
     behaviour_option(shutdown, Options, Default, Shutdown).
+
+require_child_name(Name, Caller) :-
+    ( var(Name) -> throw(error(instantiation_error, Caller))
+    ; atom(Name) -> true
+    ; throw(error(type_error(atom, Name), Caller)) ).
 
 child_option(Option) :-
     nonvar(Option),
@@ -242,14 +253,21 @@ start_children([Spec|Specs], Source, [child(Spec, Pid)|Children]) :-
 
 start_child(spec(Name, Start, _, _, _), Source, Pid) :-
     ( Start = server(Callback, Options) ->
+        ( is_list(Options), checklist(server_child_option, Options) -> true
+        ; throw(error(domain_error(supervisor_server_options, Options), supervisor_spawn/3)) ),
         behaviour_option(initial_state, Options, [], State),
+        findall(Option, (member(Option, Options), source_option(Option)), Sources),
         start_named_server(name(Name), Callback, State, Pid,
-                           [src_text(Source), monitor(true)], server_behaviours)
+                           [src_text(Source), monitor(true)|Sources], server_behaviours)
     ; Start = start_sub_supervisor(Specs, Options) ->
         normalise_children(Specs, Children),
         supervisor_config(Options, Config, _, _, _),
         launch_supervisor(Children, Config, Source, true, Pid)
     ; spawn(Start, Pid, [src_text(Source), monitor(true)]) ).
+
+server_child_option(Option) :-
+    nonvar(Option),
+    ( Option = initial_state(_) ; source_option(Option) ).
 
 supervisor_halt(Sup) :-
     server_target(Sup, Pid),
@@ -262,9 +280,15 @@ supervisor_halt(Sup) :-
 supervisor_which_children(Sup, Infos) :- supervisor_request(Sup, which, Infos).
 supervisor_count_children(Sup, Counts) :- supervisor_request(Sup, count, Counts).
 supervisor_spawn_child(Sup, Spec, Reply) :- supervisor_request(Sup, start(Spec), Reply).
-supervisor_terminate_child(Sup, Name, Reply) :- supervisor_request(Sup, terminate(Name), Reply).
-supervisor_respawn_child(Sup, Name, Reply) :- supervisor_request(Sup, respawn(Name), Reply).
-supervisor_delete_child(Sup, Name, Reply) :- supervisor_request(Sup, delete(Name), Reply).
+supervisor_terminate_child(Sup, Name, Reply) :-
+    require_child_name(Name, supervisor_terminate_child/3),
+    supervisor_request(Sup, terminate(Name), Reply).
+supervisor_respawn_child(Sup, Name, Reply) :-
+    require_child_name(Name, supervisor_respawn_child/3),
+    supervisor_request(Sup, respawn(Name), Reply).
+supervisor_delete_child(Sup, Name, Reply) :-
+    require_child_name(Name, supervisor_delete_child/3),
+    supervisor_request(Sup, delete(Name), Reply).
 
 supervisor_request(Sup, Request, Reply) :-
     self(From),

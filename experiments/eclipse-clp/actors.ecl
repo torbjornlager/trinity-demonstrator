@@ -411,7 +411,9 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
         compile_term([(:- import(n5_shared_db))])@Private
     ; true ),
     ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
-        compile_term([(:- import(supervisor_spawn/3 from server_behaviours)),
+        compile_term([(:- import(setup_call_cleanup/3 from prolog_extras)),
+                      (:- import(supervisor_spawn/2 from server_behaviours)),
+                      (:- import(supervisor_spawn/3 from server_behaviours)),
                       (:- import(supervisor_halt/1 from server_behaviours)),
                       (:- import(supervisor_which_children/2 from server_behaviours)),
                       (:- import(supervisor_count_children/2 from server_behaviours)),
