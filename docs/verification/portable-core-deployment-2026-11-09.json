@@ -1,0 +1,150 @@
+{
+  "consumer_revision": "50259c21e240c00ea132c509cc16a2b0d3fc4588",
+  "source_branch": "codex/conformance-deployment-fixes",
+  "runtime_integration": {
+    "branch": "portable-core-live-0.1",
+    "n1_to_n4_native_swi": "188e033eef62adc49fe1ae4ecaf54b8db1d13783",
+    "n1_to_n4_browser_package": "22ce88dda43fadfa3b1c2fbe09ec7f5a262ab05f",
+    "n1_to_n4_browser_manifest_sha256": "af208661657725118d9c2f762e8ff7432da4452159f99505feee3eecd5bb9946",
+    "n5_trealla_port": "3e0081c9625ebcb86eb5b55bb274c8f07621478c",
+    "n6_gnu_port": "94960dde7c97891f78f30aad1f0e59b9f58f7709",
+    "n7_eclipse_bridge": "33f0f1b82ced9f21da4a9a208056e4bcc1935607"
+  },
+  "services": {
+    "n1": {
+      "container_before": "deployment-wp_n1-1",
+      "image_before": "sha256:5926c437e9e8d7528386d2a3eb335a0feb323bc4fc425f07a8945dd5d9b798dd",
+      "image_after": "sha256:fc4fda5f4fb41f27e34ca3f4435ed5b460e6dd09f3fc0c45a38067f4e205024d",
+      "rollback_tag": "trinity-portable-rollback:n1"
+    },
+    "n2": {
+      "container_before": "deployment-wp_n2-1",
+      "image_before": "sha256:5926c437e9e8d7528386d2a3eb335a0feb323bc4fc425f07a8945dd5d9b798dd",
+      "image_after": "sha256:fc4fda5f4fb41f27e34ca3f4435ed5b460e6dd09f3fc0c45a38067f4e205024d",
+      "rollback_tag": "trinity-portable-rollback:n2"
+    },
+    "n3": {
+      "container_before": "deployment-wp_n3-1",
+      "image_before": "sha256:c1d1b932286b63906efa9f5115afeb9fb506ba416210313f34439bfd4aa49cce",
+      "image_after": "sha256:e383cfb87f1888a1071df9ccbb6a8b4f4c6055498a7bf94440d3ee02bae79eb4",
+      "rollback_tag": "trinity-portable-rollback:n3"
+    },
+    "n4": {
+      "container_before": "deployment-wp_n4-1",
+      "image_before": "sha256:28ed6fef27cc3bd4640557bc2181ea128bd9cf9673070d20e44daf545cce58cf",
+      "image_after": "sha256:ec433297a059152124a5ccc1f8098819951987580f326338a7b1144ceee84c6a",
+      "rollback_tag": "trinity-portable-rollback:n4"
+    },
+    "n5": {
+      "container_before": "deployment-wp_n5-1",
+      "image_before": "sha256:363ce7ca590837c4b3e2386ed8cf095c7d91d1f8af19674a8820fe151b04e386",
+      "image_after": "sha256:65ea31b7a6527682e86ef152e100ec8778d8c6bf56d1c656fcfddb389499e52e",
+      "rollback_tag": "trinity-portable-rollback:n5"
+    },
+    "admin": {
+      "container_before": "deployment-wp_admin-1",
+      "image_before": "sha256:36fcb08645320fff1c370eec1093f71736877aea3ec0bbe07b4da137f60c8fdc",
+      "image_after": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220",
+      "rollback_tag": "trinity-portable-rollback:admin"
+    },
+    "n0": {
+      "container_before": "web-prolog-hub-n0-1",
+      "image_before": "sha256:63719c470f6e3cb6127eaecc16d7506c1880e4b6d0d1c55554265d08f89b9ee7",
+      "image_after": "sha256:e345e3b85fc7d6cbecff8947c9b35d30a8b3e3ec1f751647c91f652f5a353d58",
+      "rollback_tag": "trinity-portable-rollback:n0"
+    },
+    "n6-assets": {
+      "container_before": "trinity-n6-host-n6_assets-1",
+      "image_before": "sha256:36fcb08645320fff1c370eec1093f71736877aea3ec0bbe07b4da137f60c8fdc",
+      "image_after": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220",
+      "rollback_tag": "trinity-portable-rollback:n6-assets"
+    },
+    "n6-local-assets": {
+      "container_before": "trinity-n6-local-n6_assets-1",
+      "image_before": "sha256:36fcb08645320fff1c370eec1093f71736877aea3ec0bbe07b4da137f60c8fdc",
+      "image_after": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220",
+      "rollback_tag": "trinity-portable-rollback:n6-local-assets"
+    },
+    "n6-local-hub": {
+      "container_before": "trinity-n6-local-n6_hub-1",
+      "image_before": "sha256:36fcb08645320fff1c370eec1093f71736877aea3ec0bbe07b4da137f60c8fdc",
+      "image_after": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220",
+      "rollback_tag": "trinity-portable-rollback:n6-local-hub"
+    },
+    "n6-local": {
+      "container_before": "trinity-n6-local-wp_n6-1",
+      "image_before": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "image_after": "sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225",
+      "rollback_tag": "trinity-portable-rollback:n6-local"
+    },
+    "n6": {
+      "container_before": "trinity-n6-host-wp_n6-1",
+      "image_before": "sha256:dbd3fd31603561b5570db235d9de623d5a400e57d6a3d01557815df4b321bd60",
+      "image_after": "sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225",
+      "rollback_tag": "trinity-portable-rollback:n6"
+    },
+    "n7": {
+      "container_before": "trinity-n7-94e046311a294a68b708844bd20c51d4",
+      "image_before": "sha256:81bd99df99768217511430363e0a3ee35baf6f167c7cd68643bad39843e8f7b5",
+      "image_after": "sha256:9e0abc9e1876be14c2859d9de02e8a61ea9542fbea36bc3d76b157a76ff38cfb",
+      "rollback_tag": "trinity-portable-rollback:n7"
+    }
+  },
+  "integration_gate": {
+    "rpc": {
+      "pass": 24
+    },
+    "replay": {
+      "pass": 32
+    },
+    "retained": {
+      "pass": 3
+    }
+  },
+  "live_checks": {
+    "compose_runtime_policy": "12 matched environment, mount, network, and resource settings",
+    "n3_n4_n6": "call outcomes and short page followed by original exception passed",
+    "n7": "private call outcomes passed, anonymous execution returned 401",
+    "node_info": {
+      "n0": {
+        "profile": "relation",
+        "auth": "open"
+      },
+      "n1": {
+        "profile": "isobase",
+        "auth": "open"
+      },
+      "n2": {
+        "profile": "isotope",
+        "auth": "open"
+      },
+      "n3": {
+        "profile": "actor",
+        "auth": "open"
+      },
+      "n4": {
+        "profile": "actor",
+        "auth": "open"
+      },
+      "n5": {
+        "profile": "actor",
+        "auth": "open"
+      },
+      "n6": {
+        "profile": "isobase",
+        "auth": "open"
+      },
+      "n7": {
+        "profile": "actor",
+        "auth": "private"
+      }
+    },
+    "rpc_n6_to_n3": "success([[answer(shared),raised(portable_rollout_fault(later))]],false).",
+    "browser_assets_sha256": {
+      "n3/swi_wasm_actor_worker.js": "b4adf620406f324adcc6e3a80a918b52ff5b3ebf5557550ce63a6c8d08fbe248",
+      "n3/vendor/swi-wasm-node.js": "94d69163ebbee7de7a6fb19e4b35783a649e756c8a1a09217f48f818a8744482",
+      "n6/swi_wasm_actor_worker.js": "b4adf620406f324adcc6e3a80a918b52ff5b3ebf5557550ce63a6c8d08fbe248",
+      "n6/vendor/swi-wasm-node.js": "94d69163ebbee7de7a6fb19e4b35783a649e756c8a1a09217f48f818a8744482"
+    }
+  }
+}
