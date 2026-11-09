@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test the N7 HTTPS route with OAuth2 Proxy and a local GitHub API fixture."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 from http.cookiejar import CookieJar
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,6 +25,7 @@ from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, HTTPSHandle
 ROOT = Path(__file__).resolve().parents[1]
 OWNER, EMAIL = "n7-test-owner", "owner@example.test"
 OWNER_OTHER_EMAIL = "n7-owner-other-email"
+CURL_FIXTURE_IMAGE = "curlimages/curl@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06"
 
 
 def expect(actual, expected):
@@ -410,15 +412,129 @@ def wait_for(check):
     raise RuntimeError("N7 fixture did not start")
 
 
+def check_stateless_admission(origin, ca, network, *, anonymous=False, prefix=""):
+    tls = HTTPSHandler(context=ssl.create_default_context(cafile=str(ca)))
+    client = build_opener(tls, NoRedirect())
+    endpoint = origin + prefix
+    quick = "true"
+    slow = "forall(between(1,1000000000,_),true)"
+    if anonymous:
+        caller_headers = []
+        _, data = http(client, endpoint + "/node_info")
+        expect(json.loads(data)["auth"], "open")
+        expect(json.loads(data)["self_url"], endpoint)
+        for route in ("/", "/demonstrator", "/n7-shell/", "/ws", "/oauth2/start", "/toplevel_spawn"):
+            http(client, endpoint + route, status=404)
+        for route in ("/call?goal=true&format=json", "/node_info", "/toplevel_spawn"):
+            http(client, endpoint + route, body=b"{}", status=404)
+        http(client, endpoint + "/call?goal=true&format=json", headers={"Sec-Fetch-Site": "cross-site"}, status=403)
+        _, answer = http(client, endpoint + "/call?goal=true&format=json")
+        expect(json.loads(answer)["type"], "success")
+        query = urlencode({"goal": "open('/etc/os-release',read,S)", "format": "json"})
+        _, answer = http(client, endpoint + "/call?" + query)
+        assert "permission_error(call, sandboxed" in json.loads(answer)["data"], answer
+        if prefix:
+            http(client, origin + "/n7-shell/", status=302)
+            for route in ("/call?goal=true&format=json", "/ws", "/toplevel_spawn"):
+                http(client, origin + route, status=401)
+    else:
+        jar = CookieJar()
+        owner = build_opener(tls, HTTPCookieProcessor(jar))
+        http(client, origin + "/call?goal=true&format=json",
+             headers={"Origin": origin, "X-Web-Prolog-Client-IP": "192.0.2.1"}, status=401)
+        _, data = http(owner, origin + "/oauth2/start?rd=/node_info")
+        expect(json.loads(data)["auth"], "private")
+        cookie = next(item for item in jar if item.name == "__Host-n7_oauth")
+        caller_headers = [f"Cookie: {cookie.name}={cookie.value}", f"Origin: {origin}"]
+    expect(json.loads(data)["request_isolation"], "container")
+    port = urlsplit(origin).port
+    ca.chmod(0o644)
+
+    def worker_names():
+        return subprocess.check_output(
+            ["docker", "ps", "--filter", "name=^/trinity-n7-request-", "--format", "{{.Names}}"],
+            text=True, timeout=3,
+        ).splitlines()
+
+    with ExitStack() as clients:
+        containers = []
+        for _ in range(2):
+            name = "n7-admission-client-" + token_hex(4)
+            subprocess.run(["docker", "run", "--rm", "-d", "--name", name, "--network", network,
+                            "--entrypoint", "sleep", CURL_FIXTURE_IMAGE, "90"],
+                           stdout=subprocess.DEVNULL, check=True, timeout=30)
+            clients.callback(subprocess.run, ["docker", "rm", "-f", name], stdout=subprocess.DEVNULL, timeout=5)
+            subprocess.run(["docker", "cp", str(ca), name + ":/tmp/n7-ca.crt"], check=True)
+            containers.append(name)
+        first, second = containers
+
+        def call(client, goal, spoof=None):
+            headers = caller_headers.copy()
+            if spoof:
+                headers.extend([f"X-Web-Prolog-Client-IP: {spoof}", f"X-Forwarded-For: {spoof}"])
+            output = subprocess.check_output(
+                ["docker", "exec", "-i", client, "curl", "--silent", "--show-error", "--max-time", "10",
+                 "--cacert", "/tmp/n7-ca.crt", "--connect-to", f"localhost:{port}:n7_https:{port}",
+                 "--header", "@-", "--write-out", "\n%{http_code}:%header{retry-after}",
+                 endpoint + "/call?" + urlencode({"format": "json", "goal": goal})],
+                input="\n".join(headers) + "\n", text=True, timeout=12,
+            )
+            body, result = output.rsplit("\n", 1)
+            status, retry_after = result.split(":", 1)
+            return int(status), json.loads(body), retry_after
+
+        baseline = set(worker_names())
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            running = pool.submit(call, first, slow)
+
+            def worker_started():
+                if running.done():
+                    raise AssertionError(f"Slow call ended before the isolation check: {running.result()}")
+                return bool(set(worker_names()) - baseline)
+
+            wait_for(worker_started)
+            expect(call(first, quick, "192.0.2.10"),
+                   (429, {"type": "error", "code": "client_capacity"}, "1"))
+            expect(call(first, quick, "192.0.2.11"),
+                   (429, {"type": "error", "code": "client_capacity"}, "1"))
+            expect(call(second, quick, "192.0.2.10")[:2],
+                   (200, {"type": "success", "data": [{}], "more": False}))
+            expect(running.done(), False)
+            status, body, _ = running.result(timeout=8)
+            expect((status, body["type"]), (200, "error"))
+            assert "time_limit_exceeded" in body["data"], body
+
+        for _ in range(2):
+            expect(call(first, quick)[0], 200)
+        status, body, retry_after = call(first, quick, "192.0.2.12")
+        expect((status, body), (429, {"type": "error", "code": "rate_limit"}))
+        assert 1 <= int(retry_after) <= 60, retry_after
+        expect(call(second, quick, "192.0.2.12")[0], 200)
+    print("N7 HTTPS client fairness, spoof resistance, and rate limits passed")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="trinity-eclipse-n7:local")
     parser.add_argument("--shell", action="store_true", help="also exercise the packaged full demonstrator")
     parser.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
     parser.add_argument("--advertise-actor", action="store_true", help="exercise ACTOR discovery metadata")
+    parser.add_argument("--stateless-admission", action="store_true",
+                        help="test the stateless preview with two HTTPS clients on the Docker network")
+    parser.add_argument("--anonymous-staging", action="store_true",
+                        help="test the anonymous staging site with two HTTPS clients on the Docker network")
+    parser.add_argument("--anonymous-preview", action="store_true",
+                        help="test the anonymous /preview routes on the owner HTTPS site")
     args = parser.parse_args()
     if args.advertise_actor and args.actor_core is None:
         parser.error("--advertise-actor requires --actor-core")
+    anonymous = args.anonymous_staging or args.anonymous_preview
+    stateless = args.stateless_admission or anonymous
+    prefix = "/preview" if args.anonymous_preview else ""
+    if stateless and (args.shell or args.actor_core is not None):
+        parser.error("The stateless fixtures run separately from the shell and ACTOR fixtures")
+    if sum((args.stateless_admission, args.anonymous_staging, args.anonymous_preview)) > 1:
+        parser.error("Choose one stateless fixture")
     with ExitStack() as stack:
         scratch = Path(stack.enter_context(TemporaryDirectory(prefix="n7-https-")))
         provider = stack.enter_context(ThreadingHTTPServer(("127.0.0.1", 0), GitHubFixture))
@@ -443,10 +559,17 @@ def main():
             shell_args.append("--actor-ws")
         if args.advertise_actor:
             shell_args.append("--advertise-actor")
+        if stateless:
+            shell_args.extend(["--stateless-whitelist", "--stateless-calls-per-minute", "3"])
+        if anonymous:
+            shell_args.append("--anonymous-stateless")
+        if prefix:
+            shell_args.extend(["--stateless-public-prefix", prefix])
         adapter = subprocess.Popen(
             [sys.executable, str(ROOT / "experiments/eclipse-clp/isotope_http.py"),
              "--pilot-image", args.image, "--port", str(adapter_port), "--private-origin", origin,
-             "--owner", EMAIL, "--proxy-token-file", str(token_file), *shell_args], stdout=log, stderr=log,
+             "--owner", "n7-stateless-staging" if anonymous else EMAIL,
+             "--proxy-token-file", str(token_file), *shell_args], stdout=log, stderr=log,
         )
 
         def stop_adapter():
@@ -457,19 +580,36 @@ def main():
         stack.callback(stop_adapter)
         wait_for(lambda: "Private proxy origin" in Path(log.name).read_text())
         override = scratch / "fixture.yaml"
-        override.write_text(f"""services:
+        fixture = f"""services:
   oauth2_n7:
     environment:
       OAUTH2_PROXY_LOGIN_URL: http://127.0.0.1:{provider_port}/authorize
       OAUTH2_PROXY_REDEEM_URL: http://host.docker.internal:{provider_port}/token
       OAUTH2_PROXY_VALIDATE_URL: http://host.docker.internal:{provider_port}/
-""")
+"""
         env = {**os.environ, "N7_ORIGIN": origin, "N7_HTTPS_PORT": str(https_port),
                "N7_HTTP_UPSTREAM": f"host.docker.internal:{adapter_port}", "N7_TLS_DIRECTIVE": "tls internal",
                "OAUTH2_PROXY_GITHUB_USERS": OWNER, "WP_N5_OWNER": EMAIL, "N7_PROXY_TOKEN": token,
                "N7_OAUTH2_CLIENT_ID": "n7-local-client", "N7_OAUTH2_CLIENT_SECRET": token_hex(16),
                "N7_OAUTH2_COOKIE_SECRET": token_urlsafe(32)}
-        compose = ["docker", "compose", "-p", f"n7-test-{token_hex(4)}", "--env-file", "/dev/null",
+        if anonymous:
+            fixture += "  n7_https:\n"
+            if args.anonymous_staging:
+                fixture += """    build:
+      args:
+        N7_CADDYFILE: Caddyfile.eclipse-n7-staging
+"""
+            fixture += f"""    environment:
+      N7_STAGE_ORIGIN: {origin}
+      N7_STAGE_TLS_DIRECTIVE: tls internal
+      N7_STAGE_HTTP_UPSTREAM: host.docker.internal:{adapter_port}
+      N7_STAGE_PROXY_TOKEN: {token}
+"""
+            if prefix:
+                fixture += "      N7_PREVIEW_IMPORT: /etc/caddy/n7-preview.Caddyfile\n"
+        override.write_text(fixture)
+        project = f"n7-test-{token_hex(4)}"
+        compose = ["docker", "compose", "-p", project, "--env-file", "/dev/null",
                    "-f", str(ROOT / "Deployment/compose.eclipse-n7-https.yaml"), "-f", str(override)]
         stack.callback(subprocess.run, compose + ["down", "-v", "--rmi", "local"], env=env, stdout=subprocess.DEVNULL)
         subprocess.run(compose + ["up", "-d"], env=env, check=True)
@@ -478,16 +618,30 @@ def main():
                                         env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0)
 
         def tls_ready():
+            route, expected = (prefix + "/node_info", 200) if anonymous else ("/oauth2/auth", 401)
             try:
-                with urlopen(origin + "/oauth2/auth", context=ssl.create_default_context(cafile=str(ca)), timeout=1):
-                    return True
+                with urlopen(origin + route, context=ssl.create_default_context(cafile=str(ca)), timeout=1) as response:
+                    return response.status == expected
             except HTTPError as error:
-                return error.code == 401
+                return error.code == expected
             except (OSError, URLError):
                 return False
 
         try:
             wait_for(tls_ready)
+            if stateless:
+                if anonymous:
+                    request = Request(f"http://127.0.0.1:{adapter_port}/call?goal=true&format=json",
+                                      headers={"Host": urlsplit(origin).netloc,
+                                               "X-Web-Prolog-Client-IP": "192.0.2.1",
+                                               "X-Web-Prolog-User": "n7-stateless-staging"})
+                    try:
+                        with urlopen(request, timeout=3) as response:
+                            raise AssertionError(f"Direct adapter request returned {response.status}")
+                    except HTTPError as error:
+                        expect(error.code, 403)
+                check_stateless_admission(origin, ca, project + "_default", anonymous=anonymous, prefix=prefix)
+                return
             check_https(origin, ca, shell=args.shell, actor_core=args.actor_core,
                         profile="actor" if args.advertise_actor else "isotope",
                         unicode_literals=True)

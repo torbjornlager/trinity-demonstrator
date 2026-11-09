@@ -31,7 +31,7 @@ run :-
     store_set(http_sessions, probe_echo, Echo),
     get_flag(version_as_list, VersionParts),
     sprintf(Version, "%d.%d.%d", VersionParts),
-    reply(Replies, {[type:ready, version:Version]}),
+    reply(Replies, {[type:ready, version:Version, stateless_whitelist:true]}),
     serve(Replies).
 
 read_requests(Main) :-
@@ -92,9 +92,10 @@ serve(Replies) :-
 route_request(Request, "spawn", _, Fields) :- !,
     self(Router),
     spawn(open_session(Router, Request, Fields), _).
-route_request(Request, "stateless", _, Fields) :- !,
+route_request(Request, Command, _, Fields) :-
+    memberchk(Command, ["stateless", "stateless_whitelist"]), !,
     self(Router),
-    spawn(stateless_request(response(Router, Request), Fields), _).
+    spawn(stateless_request(response(Router, Request), Command, Fields), _).
 route_request(Request, "actor_probe", _, Fields) :- !,
     self(Router),
     store_get(http_sessions, probe_echo, Echo),
@@ -718,9 +719,9 @@ probe_send(Address@Node, Message, {[type:send, pid:Pid, node:NodeText, message:T
 
 % Every offset request gets a fresh toplevel. The relay's exit also
 % terminates a child suspended at a page boundary.
-stateless_request(Context, Fields) :-
+stateless_request(Context, Command, Fields) :-
     catch(
-        ( stateless_answer(Fields, Answer) -> true
+        ( stateless_answer(Command, Fields, Answer) -> true
         ; Answer = error(invalid_stateless_query)
         ),
         Error,
@@ -740,19 +741,24 @@ stateless_event(failure, {[type:failure]}).
 stateless_event(error(Error), {[type:error, data:Text]}) :-
     term_string(Error, Text).
 
-stateless_answer(Fields, Answer) :-
+stateless_answer(Command, Fields, Answer) :-
     memberchk(goal:GoalText, Fields),
     memberchk(src_text:Source, Fields),
     memberchk(offset:Offset, Fields),
     memberchk(limit:Limit, Fields),
     memberchk(once:Once, Fields),
+    ( Command == "stateless_whitelist" ->
+        ( Source == "" -> true ; stateless_denied(load, src_text) ),
+        ( Offset =< 1000 -> true
+        ; throw(error(domain_error(stateless_preview_offset, Offset), stateless_whitelist)) )
+    ; true ),
     setup_call_cleanup(
         toplevel_spawn(Pid, [src_text(Source)]),
-        stateless_page(Pid, GoalText, Fields, Offset, Limit, Once, Answer),
+        stateless_page(Command, Pid, GoalText, Fields, Offset, Limit, Once, Answer),
         exit(Pid, query_finished)
     ).
 
-stateless_page(Pid, GoalText, Fields, Offset, Limit, Once, Answer) :-
+stateless_page(Command, Pid, GoalText, Fields, Offset, Limit, Once, Answer) :-
     actor_module(Pid, Module),
     ( memberchk(format:"json", Fields) ->
         parse_goal(GoalText, Module, Goal, Template)
@@ -761,7 +767,50 @@ stateless_page(Pid, GoalText, Fields, Offset, Limit, Once, Answer) :-
         concat_string(["rpc_query((", GoalText, "),(", TemplateText, "))"], Query),
         parse_goal(Query, Module, rpc_query(Goal, Template), _)
     ),
-    call_page(Pid, Goal, Template, Offset, Limit, Once, Answer).
+    ( Command == "stateless_whitelist" ->
+        check_stateless_goal(Goal),
+        Executable = (Goal, (acyclic_term(Template) -> true
+                      ; throw(error(representation_error(cyclic_term), stateless_whitelist))))
+    ; Executable = Goal ),
+    call_page(Pid, Executable, Template, Offset, Limit, Once, Answer).
+
+% Check executable positions in the parsed term before calling it. With no
+% source loading, the allowed indicators resolve only to installed predicates.
+% Arithmetic evaluation can invoke native predicates in ECLiPSe, so is/2
+% and arithmetic comparisons require a separate expression policy.
+check_stateless_goal(Goal) :-
+    ( var(Goal) -> stateless_denied(call, variable_goal)
+    ; functor(Goal, Name, Arity),
+      Indicator = Name/Arity,
+      ( stateless_primitive(Indicator) -> true
+      ; stateless_meta(Indicator, Positions) ->
+          ( foreach(Position, Positions), param(Goal) do
+              arg(Position, Goal, Nested),
+              check_stateless_goal(Nested)
+          )
+      ; stateless_denied(call, Indicator)
+      )
+    ).
+
+stateless_denied(Action, Target) :-
+    throw(error(permission_error(Action, sandboxed, Target), stateless_whitelist)).
+
+stateless_primitive(Indicator) :-
+    memberchk(Indicator, [true/0, fail/0, (=)/2, (==)/2, (\==)/2,
+                          var/1, nonvar/1, ground/1, atom/1, integer/1, number/1,
+                          member/2, memberchk/2, append/3, length/2, select/3,
+                          nth0/3, nth0/4, nth1/3, nth1/4, between/3, succ/2]).
+
+stateless_meta((',')/2, [1,2]).
+stateless_meta((';')/2, [1,2]).
+stateless_meta((->)/2, [1,2]).
+stateless_meta((\+)/1, [1]).
+stateless_meta(call/1, [1]).
+stateless_meta(once/1, [1]).
+stateless_meta(findall/3, [2]).
+stateless_meta(forall/2, [1,2]).
+stateless_meta(call_nth/2, [1]).
+stateless_meta(countall/2, [1]).
 
 open_session(Router, Request, Fields) :-
     Context = response(Router, Request),

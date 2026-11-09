@@ -156,6 +156,101 @@ source files.
 
 The live N7 adapter currently allowlists only `https://n3.elfenbenstornet.se`.
 
+### Stateless whitelist preview
+
+Start a disposable packaged adapter with the private settings from above
+and add `--stateless-whitelist`. The preview serves `GET /call` under the
+same owner check and exposes `GET /node_info` for discovery. Its metadata
+reports `sandbox: whitelist` and `execution_policy: stateless_preview`.
+It implements a subset of ISOBASE.
+
+The engine checks the parsed goal against an explicit list of pure term
+and list predicates. It checks the goal arguments of control structures
+and collectors such as `findall/3`, and accepts `call/1` only when its goal
+is visible at validation time. Arithmetic evaluation, module-qualified
+calls, native I/O and source loading are outside the preview. Answer
+templates remain data, and the engine rejects cyclic answers before
+serialization. The maximum offset is 1,000.
+
+The flag requires a compatible packaged engine and is incompatible with
+shell assets, WebSockets and peer egress. To test a newly built image
+through the owner admission check and the actual engine, run:
+
+```sh
+python3 tools/test_n7_stateless_whitelist.py --image trinity-eclipse-n7:local
+```
+
+Each admitted query starts a fresh container with the pilot limits. The
+adapter removes it before releasing its slot. Two queries can run at once,
+with at most one per client IP. Caddy strips incoming
+`X-Web-Prolog-Client-IP` and sets it from its direct peer address on the
+authenticated upstream request. The adapter requires the proxy credential
+and one valid IP address. It ignores client-supplied forwarding headers for
+admission. Clients sharing an address also share a budget.
+
+The default rate is 60 admitted queries per address in a rolling minute.
+Use `--stateless-calls-per-minute COUNT` to adjust it. Over-budget requests
+receive HTTP 429 with `Retry-After` and never enter a queue. Worker saturation
+does not consume the rate budget. The normal Prolog execution limit still
+applies. If the worker stops responding, a separate six-second deadline covers startup
+and the bridge exchange, and only that worker is removed. If Docker
+cannot confirm cleanup, the adapter stops admitting new queries.
+
+The test pauses one worker, checks that a second can answer, fills both
+slots, and checks that rejected requests can retry after cleanup.
+Discovery reports `request_isolation: container` in this mode. To test
+the address policy through Caddy and the local OAuth fixture, use:
+
+```sh
+python3 tools/test_n7_https.py --image trinity-eclipse-n7:local --stateless-admission
+```
+
+The HTTPS test uses two Docker clients with distinct source addresses
+and the same fixture owner login. It checks that forged IP headers cannot
+evade either limit and that the second client retains its budget.
+
+### Anonymous stateless rehearsal
+
+On the existing N7 HTTPS host, import
+`Deployment/Caddyfile.eclipse-n7-preview` inside the N7 site block and set
+`--stateless-public-prefix /preview` on the separate preview adapter.
+The import exposes only `GET /preview/call` and `GET /preview/node_info`.
+Use a dedicated proxy token for this import. The existing shell and API
+paths continue to use the owner login. Verify the combined site locally:
+
+```sh
+python3 tools/test_n7_https.py --image trinity-eclipse-n7:local --anonymous-preview
+```
+
+### Separate staging hostname
+
+Use a separate hostname, loopback port, proxy token, and adapter for the
+anonymous rehearsal. Start the packaged adapter as above with the staging
+origin, `--port 18097`, `--owner n7-stateless-staging`, and these flags:
+
+```sh
+--stateless-whitelist --anonymous-stateless --stateless-calls-per-minute 20
+```
+
+The staging Caddy site in `Deployment/Caddyfile.eclipse-n7-staging` routes
+only `GET /call` and `GET /node_info`. It supplies the adapter credential
+and sets the address budget from the connection it receives. The adapter
+still requires its proxy credential. Requests carrying cross-site browser
+fetch metadata are rejected.
+
+Run the staging site with fixture TLS before adding the site to the public
+edge. The test exercises anonymous calls, blocked routes, direct adapter
+admission, and spoofed addresses from two independent clients.
+
+```sh
+python3 tools/test_n7_https.py --image trinity-eclipse-n7:local --anonymous-staging
+```
+
+For public TLS, point the staging DNS record at the edge. Keep its Caddy
+import separate from the owner site so removing the import and stopping
+the staging adapter retires the rehearsal. Confirm that two external
+networks receive independent budgets before opening the main N7 endpoint.
+
 ## Recovery bundle
 
 Capture the running release from the repository root.

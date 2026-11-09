@@ -1,0 +1,22 @@
+@n7_preview path /preview /preview/*
+handle @n7_preview {
+	route {
+		uri strip_prefix /preview
+		@preview_query {
+			method GET
+			path /call /node_info
+		}
+		handle @preview_query {
+			reverse_proxy {$N7_STAGE_HTTP_UPSTREAM:host.docker.internal:18097} {
+				header_up -Cookie
+				header_up -Authorization
+				header_up -X-Auth-Request-User
+				header_up -X-Auth-Request-Email
+				header_up X-Web-Prolog-User n7-stateless-staging
+				header_up X-Web-Prolog-Proxy-Token {$N7_STAGE_PROXY_TOKEN}
+				header_up X-Web-Prolog-Client-IP {remote_host}
+			}
+		}
+		respond "Not found" 404
+	}
+}

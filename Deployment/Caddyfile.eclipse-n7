@@ -6,6 +6,8 @@
 		Referrer-Policy "no-referrer"
 	}
 
+	import {$N7_PREVIEW_IMPORT:/etc/caddy/n7-preview.d/*}
+
 	@discovery_metadata {
 		method GET
 		path /node_info
@@ -17,6 +19,7 @@
 			header_up -Authorization
 			header_up -X-Web-Prolog-User
 			header_up -X-Web-Prolog-Proxy-Token
+			header_up -X-Web-Prolog-Client-IP
 		}
 	}
 
@@ -26,6 +29,7 @@
 			header_up -X-Auth-Request-Email
 			header_up -X-Web-Prolog-User
 			header_up -X-Web-Prolog-Proxy-Token
+			header_up -X-Web-Prolog-Client-IP
 		}
 	}
 
@@ -35,6 +39,7 @@
 			request_header -X-Auth-Request-Email
 			request_header -X-Web-Prolog-User
 			request_header -X-Web-Prolog-Proxy-Token
+			request_header -X-Web-Prolog-Client-IP
 			forward_auth {$N7_OAUTH_UPSTREAM:oauth2_n7:4180} {
 				uri /oauth2/auth
 				copy_headers X-Auth-Request-User X-Auth-Request-Email
@@ -60,6 +65,7 @@
 			reverse_proxy {$N7_HTTP_UPSTREAM:host.docker.internal:18087} {
 				header_up X-Web-Prolog-User {http.request.header.X-Auth-Request-Email}
 				header_up X-Web-Prolog-Proxy-Token {$N7_PROXY_TOKEN}
+				header_up X-Web-Prolog-Client-IP {remote_host}
 				header_up -Cookie
 				header_up -Authorization
 			}
@@ -80,6 +86,7 @@ http://:8087 {
 			header_up -Authorization
 			header_up -X-Web-Prolog-User
 			header_up -X-Web-Prolog-Proxy-Token
+			header_up -X-Web-Prolog-Client-IP
 		}
 	}
 	respond "Not found" 404

@@ -2,13 +2,17 @@
 """Serve the ECLiPSe HTTP bridge locally or behind a trusted owner proxy."""
 
 import argparse
+from collections import OrderedDict, deque
 from concurrent.futures import Future, TimeoutError as FutureTimeout
+from contextlib import suppress
 from hmac import compare_digest
 from http.client import HTTPConnection, HTTPSConnection, HTTPException
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import io
+from ipaddress import IPv6Address, ip_address
 from itertools import count
 import json
+from math import ceil
 from mimetypes import guess_type
 import os
 from pathlib import Path
@@ -17,8 +21,8 @@ from select import select
 import signal
 import subprocess
 import tarfile
-from threading import BoundedSemaphore, Condition, Thread
-from time import monotonic
+from threading import BoundedSemaphore, Condition, Event, Lock, Thread
+from time import monotonic, sleep
 from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 from uuid import uuid4
 import xml.etree.ElementTree as ET
@@ -40,11 +44,25 @@ ROUTES = {
 }
 
 
+PILOT_REPLY_LIMIT = 512 * 1024
+
+
 class PromptReferenceError(ValueError):
     pass
 
 
 class CapacityError(RuntimeError):
+    pass
+
+
+class StatelessAdmissionError(RuntimeError):
+    def __init__(self, code, retry_after=1):
+        super().__init__(code)
+        self.code = code
+        self.retry_after = retry_after
+
+
+class EngineUnavailable(RuntimeError):
     pass
 
 
@@ -200,6 +218,31 @@ def unicode_binding_text(text):
     return re.sub(r"(?:\\[23][0-7]{2})+|\\.", decode, text)
 
 
+def read_bridge_reply(stream, limit=-1):
+    line = stream.readline(limit + 1 if limit > 0 else -1)
+    if not line:
+        raise RuntimeError("ECLiPSe bridge closed its output")
+    if 0 < limit < len(line.encode("utf-8")):
+        raise RuntimeError("ECLiPSe reply exceeded the pilot size limit")
+    try:
+        return json.loads(line)
+    except json.JSONDecodeError:
+        # json_write/3 quotes UTF-8 bytes with Prolog octal escapes.
+        encoded = re.sub(rb"\\(?:[0-3][0-7]{2}|.)", json_byte_escape, line.encode("utf-8"))
+        try:
+            return json.loads(encoded)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            raise RuntimeError("Invalid JSON from the ECLiPSe bridge") from None
+
+
+def normalize_answer(reply):
+    event = reply.get("event", reply) if reply["type"] == "stateless" else reply
+    if event["type"] == "success":
+        for row in event["data"]:
+            for name, value in row.items():
+                row[name] = unicode_binding_text(value)
+
+
 class Bridge:
     def __init__(self, process, on_failure=None, allowed_peers=(), shell_assets=None):
         self.process = process
@@ -220,22 +263,7 @@ class Bridge:
         self.read_error = None
 
     def read_reply(self):
-        limit = 512 * 1024 if self.on_failure is not None else -1
-        line = self.process.stdout.readline(limit + 1 if limit > 0 else -1)
-        if not line:
-            raise RuntimeError("ECLiPSe bridge closed its output")
-        if 0 < limit < len(line.encode("utf-8")):
-            raise RuntimeError("ECLiPSe reply exceeded the pilot size limit")
-        try:
-            return json.loads(line)
-        except json.JSONDecodeError as error:
-            # json_write/3 quotes UTF-8 bytes with Prolog octal escapes.
-            # Match complete escapes so a quoted backslash stays literal.
-            encoded = re.sub(rb"\\(?:[0-3][0-7]{2}|.)", json_byte_escape, line.encode("utf-8"))
-            try:
-                return json.loads(encoded)
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                raise RuntimeError("Invalid JSON from the ECLiPSe bridge") from error
+        return read_bridge_reply(self.process.stdout, PILOT_REPLY_LIMIT if self.on_failure is not None else -1)
 
     def request(self, command, fields, *, expired_at=None, timeout=6):
         deadline = monotonic() + timeout if self.on_failure is not None else None
@@ -324,11 +352,7 @@ class Bridge:
         try:
             while True:
                 reply = self.read_reply()
-                event = reply.get("event", reply) if reply["type"] == "stateless" else reply
-                if event["type"] == "success":
-                    for row in event["data"]:
-                        for name, value in row.items():
-                            row[name] = unicode_binding_text(value)
+                normalize_answer(reply)
                 if reply.get("type") == "egress":
                     if self.egress_slots.acquire(blocking=False):
                         Thread(target=self.run_egress, args=(reply,), daemon=True).start()
@@ -521,6 +545,19 @@ def stateless_request(fields):
                 offset=offset, limit=limit, once=once == "true")
 
 
+def proxy_client_ip(headers):
+    values = headers.get_all("X-Web-Prolog-Client-IP", [])
+    if len(values) != 1 or "%" in values[0]:
+        raise ValueError("Expected one client IP from the trusted proxy")
+    try:
+        address = ip_address(values[0])
+    except ValueError:
+        raise ValueError("Invalid client IP from the trusted proxy") from None
+    if isinstance(address, IPv6Address) and address.ipv4_mapped is not None:
+        return address.ipv4_mapped
+    return address
+
+
 class Handler(BaseHTTPRequestHandler):
     def setup(self):
         super().setup()
@@ -544,10 +581,15 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_error(403)
                 return False
             fetch_site = self.headers.get_all("Sec-Fetch-Site", [])
-            if executes and (fetch_site not in ([], ["same-origin"])
-                             or ("Origin" not in self.headers and not fetch_site)):
-                self.send_error(403)
-                return False
+            if executes:
+                if self.server.anonymous_stateless:
+                    allowed = fetch_site in ([], ["same-origin"], ["none"])
+                else:
+                    allowed = (fetch_site in ([], ["same-origin"])
+                               and ("Origin" in self.headers or bool(fetch_site)))
+                if not allowed:
+                    self.send_error(403)
+                    return False
         return True
 
     def end_headers(self):
@@ -571,6 +613,8 @@ class Handler(BaseHTTPRequestHandler):
             websocket(self)
         elif path.path == "/call":
             self.serve_stateless(path.query)
+        elif self.server.stateless_whitelist:
+            self.send_error(404)
         elif path.path in ("/", "/demonstrator") and self.server.private_settings is not None:
             self.reply(200, "text/html; charset=utf-8", (HERE / "n7_pilot.html").read_bytes())
         elif path.path == SHELL_PREFIX + "session.json" and self.server.shell_assets is not None:
@@ -603,22 +647,29 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get_all("Host") != [host]:
             self.send_error(404)
             return
-        bridge = self.server.bridge
-        if (not self.server.runtime_version or bridge.read_error is not None
-                or bridge.process.poll() is not None):
+        if self.server.stateless_whitelist:
+            healthy = not self.server.isolated_engine.cleanup_failed.is_set()
+        else:
+            bridge = self.server.bridge
+            healthy = bridge.read_error is None and bridge.process.poll() is None
+        if not self.server.runtime_version or not healthy:
             self.send_error(503)
             return
         info = {
-            "self_url": origin,
+            "self_url": origin + self.server.public_prefix,
             "implementation": "ECLiPSe CLP",
             "version": self.server.runtime_version,
             "profile": getattr(self.server, "advertised_profile", "isotope"),
-            "auth": "private",
+            "auth": "open" if self.server.anonymous_stateless else "private",
             "services": [],
             "provides": [],
         }
         if self.server.shell_assets is not None:
             info["http_session_options"] = ["src_text", "prompt_correlation"]
+        if self.server.stateless_whitelist:
+            info["sandbox"] = "whitelist"
+            info["execution_policy"] = "stateless_preview"
+            info["request_isolation"] = "container"
         self.reply(200, "application/json; charset=utf-8", json.dumps(info).encode())
 
     def serve_stateless(self, query):
@@ -629,7 +680,10 @@ class Handler(BaseHTTPRequestHandler):
             if any(len(values) != 1 for values in parameters.values()):
                 raise ValueError("Duplicate query parameter")
             fields = {name: values[0] for name, values in parameters.items()}
-            reply = self.server.bridge.request("stateless", fields)
+            if self.server.stateless_whitelist:
+                reply = self.server.isolated_engine.request(fields, proxy_client_ip(self.headers))
+            else:
+                reply = self.server.bridge.request("stateless", fields)
             if reply["type"] != "stateless":
                 raise RuntimeError(reply)
             if fields["format"] == "json":
@@ -644,6 +698,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400, str(error))
         except CapacityError as error:
             self.send_error(429, str(error))
+        except StatelessAdmissionError as error:
+            body = json.dumps({"type": "error", "code": error.code}).encode()
+            self.reply(429, "application/json", body, retry_after=error.retry_after)
+        except EngineUnavailable as error:
+            self.send_error(503, str(error))
+        except TimeoutError as error:
+            self.send_error(504, str(error))
         except (OSError, RuntimeError) as error:
             self.send_error(502, str(error))
         else:
@@ -653,7 +714,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self.admit_request(executes=True):
             return
         command = ROUTES.get(self.path)
-        if command is None or (command == "actor_probe" and self.server.private_settings is not None):
+        if (self.server.stateless_whitelist or command is None
+                or (command == "actor_probe" and self.server.private_settings is not None)):
             self.send_error(404)
             return
         try:
@@ -690,11 +752,13 @@ class Handler(BaseHTTPRequestHandler):
                 return {key: values[0] for key, values in fields.items()}
         raise ValueError("Unexpected request body")
 
-    def reply(self, status, content_type, body):
+    def reply(self, status, content_type, body, *, retry_after=None):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("X-Eclipse-Bridge", "parallel-sessions")
+        if retry_after is not None:
+            self.send_header("Retry-After", str(retry_after))
         self.end_headers()
         self.wfile.write(body)
 
@@ -770,13 +834,134 @@ def development_engine(parser, runtime_dir):
     return command, archive
 
 
-def pilot_engine(image, name):
-    return ["docker", "run", "--rm", "-i", "--pull=never", "--platform", "linux/arm64",
+def pilot_engine(image, name, action="run"):
+    return ["docker", action, "--rm", "-i", "--pull=never", "--platform", "linux/arm64",
             "--name", name, "--network", "none", "--read-only",
             "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777",
             "--user", "65532:65532", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
             "--cpus", "0.75", "--memory", "384m", "--memory-swap", "384m", "--pids-limit", "64",
             "--ulimit", "core=0:0", "--log-driver", "none", image]
+
+
+class IsolatedStatelessEngine:
+    def __init__(self, image, calls_per_minute):
+        self.image = image
+        self.calls_per_minute = calls_per_minute
+        self.admission = Lock()
+        self.active_clients = set()
+        self.recent_calls = OrderedDict()
+        self.cleanup_failed = Event()
+
+    def reserve(self, client_ip):
+        with self.admission:
+            if self.cleanup_failed.is_set():
+                raise EngineUnavailable("ECLiPSe worker cleanup could not be confirmed")
+            if client_ip in self.active_clients:
+                raise StatelessAdmissionError("client_capacity")
+            if len(self.active_clients) >= 2:
+                raise StatelessAdmissionError("capacity")
+            now = monotonic()
+            cutoff = now - 60
+            # Keep a bounded table ordered by each address's latest admission.
+            while self.recent_calls:
+                oldest = next(iter(self.recent_calls.values()))
+                if oldest[-1] > cutoff:
+                    break
+                self.recent_calls.popitem(last=False)
+            calls = self.recent_calls.get(client_ip)
+            if calls is None:
+                if len(self.recent_calls) >= 1024:
+                    raise StatelessAdmissionError("rate_limit", ceil(oldest[-1] - cutoff))
+                calls = self.recent_calls[client_ip] = deque()
+            while calls and calls[0] <= cutoff:
+                calls.popleft()
+            if len(calls) >= self.calls_per_minute:
+                raise StatelessAdmissionError("rate_limit", ceil(calls[0] - cutoff))
+            calls.append(now)
+            self.recent_calls.move_to_end(client_ip)
+            self.active_clients.add(client_ip)
+
+    def request(self, fields, client_ip):
+        request = dict(stateless_request(fields), command="stateless_whitelist", request_id=1)
+        self.reserve(client_ip)
+        try:
+            return self.exchange(request)
+        finally:
+            with self.admission:
+                self.active_clients.remove(client_ip)
+
+    def exchange(self, request=None):
+        name = "trinity-n7-request-" + uuid4().hex
+        deadline = monotonic() + 6
+        process = None
+        reader = None
+        try:
+            # Create first so a delayed attach cannot start a replacement
+            # container after cleanup has removed this one.
+            try:
+                subprocess.run(pilot_engine(self.image, name, "create"), check=True, timeout=6,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.TimeoutExpired:
+                self.cleanup_failed.set()
+                raise TimeoutError("ECLiPSe worker creation exceeded the deadline") from None
+            except subprocess.CalledProcessError:
+                raise RuntimeError("Could not create the ECLiPSe worker") from None
+            process = subprocess.Popen(["docker", "start", "-ai", name], stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                       text=True, encoding="utf-8")
+            result = Future()
+            reader = Thread(target=self.read_exchange, args=(process, request, result))
+            reader.start()
+            return result.result(timeout=Bridge.remaining(deadline))
+        except FutureTimeout:
+            raise TimeoutError("ECLiPSe worker exceeded the request deadline") from None
+        finally:
+            try:
+                self.remove(name)
+            finally:
+                if process is not None:
+                    process.kill()
+                    process.wait()
+                    if reader is not None and reader.ident is not None:
+                        reader.join()
+                    process.stdout.close()
+                    with suppress(BrokenPipeError):
+                        process.stdin.close()
+
+    @staticmethod
+    def read_exchange(process, request, result):
+        try:
+            ready = read_bridge_reply(process.stdout, PILOT_REPLY_LIMIT)
+            if ready.get("type") != "ready" or ready.get("stateless_whitelist") is not True:
+                raise RuntimeError("ECLiPSe image does not support the stateless whitelist")
+            if request is None:
+                result.set_result(ready["version"])
+                return
+            process.stdin.write(json.dumps(request, ensure_ascii=False) + "\n")
+            process.stdin.flush()
+            reply = read_bridge_reply(process.stdout, PILOT_REPLY_LIMIT)
+            if reply.get("type") != "stateless" or reply.get("request_id") != request["request_id"]:
+                raise RuntimeError("Unexpected ECLiPSe stateless reply")
+            normalize_answer(reply)
+            result.set_result(reply)
+        except (OSError, RuntimeError, KeyError, TypeError, ValueError) as error:
+            result.set_exception(RuntimeError(f"ECLiPSe worker failed: {error}"))
+
+    def remove(self, name):
+        deadline = monotonic() + 5
+        try:
+            while monotonic() < deadline:
+                removed = subprocess.run(["docker", "rm", "-f", name], timeout=Bridge.remaining(deadline),
+                                         capture_output=True, text=True)
+                if removed.returncode == 0 or f"No such container: {name}" in removed.stderr:
+                    return
+                if "already in progress" not in removed.stderr:
+                    break
+                sleep(0.05)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        self.cleanup_failed.set()
+        raise EngineUnavailable("ECLiPSe worker cleanup could not be confirmed")
 
 
 def remove_engine(name):
@@ -801,10 +986,26 @@ def main():
                         help="serve a prepared same-origin static demonstrator at /n7-shell/")
     parser.add_argument("--actor-ws", action="store_true", help="enable the private ACTOR WebSocket preview")
     parser.add_argument("--advertise-actor", action="store_true", help="advertise the enabled WebSocket transport as ACTOR")
+    parser.add_argument("--stateless-whitelist", action="store_true",
+                        help="enable the private stateless execution policy preview")
+    parser.add_argument("--anonymous-stateless", action="store_true",
+                        help="allow anonymous stateless requests through the credentialed staging proxy")
+    parser.add_argument("--stateless-public-prefix", choices=["/preview"], default="",
+                        help="advertise the path prefix used by the anonymous stateless proxy")
+    parser.add_argument("--stateless-calls-per-minute", type=int, default=60, metavar="COUNT",
+                        help="maximum admitted preview queries per client IP in a rolling minute (default: 60)")
     args = parser.parse_args()
     if args.advertise_actor and not args.actor_ws:
         parser.error("--advertise-actor requires --actor-ws")
     private = private_settings(parser, args)
+    if args.anonymous_stateless and not args.stateless_whitelist:
+        parser.error("--anonymous-stateless requires --stateless-whitelist")
+    if args.stateless_public_prefix and not args.anonymous_stateless:
+        parser.error("--stateless-public-prefix requires --anonymous-stateless")
+    if args.stateless_whitelist and (not args.pilot_image or args.actor_ws or args.shell_assets or args.allow_peer):
+        parser.error("--stateless-whitelist requires a packaged pilot without ACTOR WebSocket, shell assets, or peers")
+    if not 1 <= args.stateless_calls_per_minute <= 120:
+        parser.error("--stateless-calls-per-minute must be between 1 and 120")
     actor_ws = None
     if args.actor_ws:
         if private is None or not args.pilot_image:
@@ -832,11 +1033,12 @@ def main():
     if args.pilot_image:
         if private is None:
             parser.error("--pilot-image requires private proxy settings")
-        name = "trinity-n7-" + uuid4().hex
-        command, archive = pilot_engine(args.pilot_image, name), None
+        if not args.stateless_whitelist:
+            name = "trinity-n7-" + uuid4().hex
+            command, archive = pilot_engine(args.pilot_image, name), None
 
-        def stop_backend():
-            remove_engine(name)
+            def stop_backend():
+                remove_engine(name)
 
         server_type = PilotServer
 
@@ -850,8 +1052,24 @@ def main():
     with server_type(("127.0.0.1", args.port), Handler) as server:
         server.private_settings = private
         server.actor_ws = actor_ws
-        server.advertised_profile = "actor" if args.advertise_actor else "isotope"
+        server.advertised_profile = ("isobase" if args.stateless_whitelist
+                                     else "actor" if args.advertise_actor else "isotope")
+        server.stateless_whitelist = args.stateless_whitelist
+        server.anonymous_stateless = args.anonymous_stateless
+        server.public_prefix = args.stateless_public_prefix
         server.shell_assets = shell_assets
+        if args.stateless_whitelist:
+            server.daemon_threads = False  # Let admitted workers clean up on adapter shutdown.
+            server.isolated_engine = IsolatedStatelessEngine(args.pilot_image, args.stateless_calls_per_minute)
+            try:
+                server.runtime_version = server.isolated_engine.exchange()
+                print(f"Private proxy origin {private[1]} (isolated stateless workers)", flush=True)
+                server.serve_forever()
+            except KeyboardInterrupt:
+                pass
+            except (OSError, RuntimeError) as error:
+                raise SystemExit(f"Could not start the ECLiPSe worker: {error}") from None
+            return
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             text=True, encoding="utf-8",
