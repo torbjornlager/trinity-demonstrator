@@ -144,8 +144,15 @@ Owner-authenticated `/call` requests accept `format=prolog` or
 module. The source loader accepts local clauses and dynamic declarations.
 
 Queries can use `rpc(localhost, ...)` and `promise(localhost, ...)` inside
-the engine. Each request gets a fresh module. Promises belong to the running
-query and can be collected with `yield/2`.
+the engine. A fresh query gets its own module. On the owner adapter, a page
+with more answers leaves a continuation in the cache. A request with the
+same query, source, answer format and effective template resumes it at the
+next offset, even if the page size changes. The adapter keeps up to four
+idle continuations and stops the oldest when it needs room. Idle time does
+not expire an entry. On a cache miss, the query starts again and
+skips answers before the requested offset. The isolated whitelist preview
+runs each request in its own worker. Promises belong to the running query
+and can be collected with `yield/2`.
 
 The engine container has no network access. To enable cross-node RPC or
 `src_uri` loading, start the host adapter with one `--allow-peer ORIGIN`

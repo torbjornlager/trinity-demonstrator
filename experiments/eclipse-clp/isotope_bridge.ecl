@@ -29,6 +29,7 @@ run :-
     spawn(read_requests(Main), _),
     spawn(probe_echo(none), Echo),
     store_set(http_sessions, probe_echo, Echo),
+    store_set(http_sessions, stateless_cache, []),
     get_flag(version_as_list, VersionParts),
     sprintf(Version, "%d.%d.%d", VersionParts),
     reply(Replies, {[type:ready, version:Version, stateless_whitelist:true]}),
@@ -68,6 +69,11 @@ serve(Replies) :-
             write_response(Replies, Request, Event),
             serve(Replies)
     ;
+        http_cache_page(Request, Event, Key, Offset, Relay) ->
+            cache_stateless_page(Key, Offset, Relay),
+            write_response(Replies, Request, Event),
+            serve(Replies)
+    ;
         http_egress(Key, Id, Operation, Url, Params) ->
             reply(Replies, {[type:egress, egress_id:Key, actor_id:Id,
                              operation:Operation, url:Url, params:Params]}),
@@ -92,10 +98,19 @@ serve(Replies) :-
 route_request(Request, "spawn", _, Fields) :- !,
     self(Router),
     spawn(open_session(Router, Request, Fields), _).
-route_request(Request, Command, _, Fields) :-
-    memberchk(Command, ["stateless", "stateless_whitelist"]), !,
+route_request(Request, "stateless", _, Fields) :- !,
     self(Router),
-    spawn(stateless_request(response(Router, Request), Command, Fields), _).
+    Context = response(Router, Request),
+    stateless_key(Fields, Key),
+    memberchk(offset:Offset, Fields),
+    ( take_stateless_page(Key, Offset, Relay) ->
+        send(Relay, stateless_next(Context, Fields))
+    ;
+        spawn(stateless_request(Context, "stateless", Fields), _)
+    ).
+route_request(Request, "stateless_whitelist", _, Fields) :- !,
+    self(Router),
+    spawn(stateless_request(response(Router, Request), "stateless_whitelist", Fields), _).
 route_request(Request, "actor_probe", _, Fields) :- !,
     self(Router),
     store_get(http_sessions, probe_echo, Echo),
@@ -717,22 +732,51 @@ probe_send(Address@Node, Message, {[type:send, pid:Pid, node:NodeText, message:T
     atom_string(Node, NodeText),
     probe_term_text(Message, Text).
 
-% Every offset request gets a fresh toplevel. The relay's exit also
-% terminates a child suspended at a page boundary.
+% The root owns the cache. Each entry keeps its original relay and child
+% together so subsequent pages and any query I/O reach the same mailbox.
+stateless_key(Fields, query(Format, Goal, Template, Source, Once)) :-
+    memberchk(format:Format, Fields),
+    memberchk(goal:Goal, Fields),
+    ( Format == "json" -> Template = bindings ; memberchk(template:Template, Fields) ),
+    memberchk(src_text:Source, Fields),
+    memberchk(once:Once, Fields).
+
+take_stateless_page(Key, Offset, Relay) :-
+    store_get(http_sessions, stateless_cache, Entries),
+    select(cached(Key, Offset, Relay), Entries, Rest), !,
+    store_set(http_sessions, stateless_cache, Rest).
+
+cache_stateless_page(Key, Offset, Relay) :-
+    store_get(http_sessions, stateless_cache, Entries),
+    % Keep at most four idle continuations on the owner adapter.
+    ( length(Entries, 4) ->
+        Entries = [cached(_, _, Oldest)|Kept],
+        send(Oldest, http_close)
+    ; Kept = Entries ),
+    append(Kept, [cached(Key, Offset, Relay)], Updated),
+    store_set(http_sessions, stateless_cache, Updated).
+
 stateless_request(Context, Command, Fields) :-
     catch(
-        ( stateless_answer(Command, Fields, Answer) -> true
-        ; Answer = error(invalid_stateless_query)
+        ( stateless_query(Context, Command, Fields) -> true
+        ; stateless_reply(Context, Fields, error(invalid_stateless_query))
         ),
         Error,
-        Answer = error(Error)
+        stateless_reply(Context, Fields, error(Error))
     ),
+    !.
+
+stateless_reply(Context, Fields, Answer) :-
+    stateless_response(Fields, Answer, Response),
+    reply_to(Context, Response).
+
+stateless_response(Fields, Answer, Response) :-
     ( memberchk(format:"json", Fields) ->
         stateless_event(Answer, Event),
-        reply_to(Context, {[type:stateless, event:Event]})
+        Response = {[type:stateless, event:Event]}
     ;
         sprintf(Body, "%Qw.%n", [Answer]),
-        reply_to(Context, {[type:stateless, body:Body]})
+        Response = {[type:stateless, body:Body]}
     ).
 
 stateless_event(success(Answers, More), {[type:success, data:Data, more:More]}) :-
@@ -741,12 +785,9 @@ stateless_event(failure, {[type:failure]}).
 stateless_event(error(Error), {[type:error, data:Text]}) :-
     term_string(Error, Text).
 
-stateless_answer(Command, Fields, Answer) :-
-    memberchk(goal:GoalText, Fields),
+stateless_query(Context, Command, Fields) :-
     memberchk(src_text:Source, Fields),
     memberchk(offset:Offset, Fields),
-    memberchk(limit:Limit, Fields),
-    memberchk(once:Once, Fields),
     ( Command == "stateless_whitelist" ->
         ( Source == "" -> true ; stateless_denied(load, src_text) ),
         ( Offset =< 1000 -> true
@@ -754,11 +795,48 @@ stateless_answer(Command, Fields, Answer) :-
     ; true ),
     setup_call_cleanup(
         toplevel_spawn(Pid, [src_text(Source)]),
-        stateless_page(Command, Pid, GoalText, Fields, Offset, Limit, Once, Answer),
+        serve_stateless_page(Context, Command, Fields, Pid, initial),
         exit(Pid, query_finished)
     ).
 
-stateless_page(Command, Pid, GoalText, Fields, Offset, Limit, Once, Answer) :-
+serve_stateless_page(Context, Command, Fields, Pid, Phase) :-
+    catch(
+        ( ( stateless_page(Phase, Command, Pid, Fields, Answer) -> true
+          ; Answer = error(invalid_stateless_query) ),
+          finish_stateless_page(Context, Command, Fields, Answer, Cached)
+        ),
+        Error,
+        ( stateless_reply(Context, Fields, error(Error)), Cached = false )
+    ),
+    ( Cached == true ->
+        receive({ stateless_next(NextContext, NextFields) -> Action = next
+                ; http_close -> Action = close }),
+        ( Action == next -> serve_stateless_page(NextContext, Command, NextFields, Pid, next)
+        ; true )
+    ; true ).
+
+finish_stateless_page(Context, "stateless", Fields, Answer, true) :-
+    Answer = success(Rows, true), !,
+    stateless_response(Fields, Answer, Response),
+    stateless_key(Fields, Key),
+    memberchk(offset:Offset, Fields),
+    length(Rows, Count),
+    NextOffset is Offset + Count,
+    Context = response(Router, Request),
+    self(Relay),
+    send(Router, http_cache_page(Request, Response, Key, NextOffset, Relay)).
+finish_stateless_page(Context, _, Fields, Answer, false) :-
+    stateless_reply(Context, Fields, Answer).
+
+stateless_page(next, _, Pid, Fields, Answer) :-
+    memberchk(limit:Limit, Fields),
+    toplevel_next(Pid, [limit(Limit)]),
+    await_call_page(Pid, Answer).
+stateless_page(initial, Command, Pid, Fields, Answer) :-
+    memberchk(goal:GoalText, Fields),
+    memberchk(offset:Offset, Fields),
+    memberchk(limit:Limit, Fields),
+    memberchk(once:Once, Fields),
     actor_module(Pid, Module),
     ( memberchk(format:"json", Fields) ->
         parse_goal(GoalText, Module, Goal, Template)

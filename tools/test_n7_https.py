@@ -412,6 +412,44 @@ def wait_for(check):
     raise RuntimeError("N7 fixture did not start")
 
 
+def check_stateless_cache(origin, ca):
+    tls = ssl.create_default_context(cafile=str(ca))
+    owner = build_opener(HTTPSHandler(context=tls), HTTPCookieProcessor(CookieJar()))
+    http(owner, origin + "/demonstrator")
+
+    def page(offset, limit, **overrides):
+        fields = {"goal": "stamp(Stamp), member(X, [a,b,c,d])",
+                  "src_text": "stamp(Stamp) :- make_ref(Stamp).",
+                  "format": "json", "offset": offset, "limit": limit}
+        fields.update(overrides)
+        _, body = http(owner, origin + "/call?" + urlencode(fields), headers={"Origin": origin})
+        return json.loads(body) if fields["format"] == "json" else body.decode()
+
+    first = page(0, 1)
+    stamp = first["data"][0]["Stamp"]
+    expect(first, {"type": "success", "more": True, "data": [{"Stamp": stamp, "X": "a"}]})
+    # Same goal and offset, different source. This request must miss the cache.
+    changed = page(1, 2, src_text="stamp(changed).")
+    expect(changed["data"], [{"Stamp": "changed", "X": x} for x in ("b", "c")])
+    second = page(1, 2)
+    expect(second, {"type": "success", "more": True,
+                    "data": [{"Stamp": stamp, "X": x} for x in ("b", "c")]})
+    last = page(3, 1)
+    expect(last, {"type": "success", "more": False, "data": [{"Stamp": stamp, "X": "d"}]})
+    expect(page(3, 1)["data"][0]["Stamp"] != stamp, True)
+
+    term = page(0, 1, format="prolog", template="pair(Stamp,X)")
+    match = re.fullmatch(r"success\(\[pair\((ref\(\d+\)|\d+),\s*a\)\],\s*true\)\.\s*", term)
+    expect(match is not None, True)
+    expect(re.sub(r"\s+", "", page(1, 3, format="prolog", template="pair(Stamp,X)")),
+           "success([" + ",".join(f"pair({match[1]},{x})" for x in ("b", "c", "d")) + "],false).")
+
+    goal = "member(X,[a,b]), (X == a -> true ; output(late))"
+    expect(page(0, 1, goal=goal, src_text="")["more"], True)
+    expect(page(1, 1, goal=goal, src_text=""), {"type": "error", "data": "stateless_output"})
+    print("N7 stateless pages resumed without rerunning the query prefix in JSON and Prolog")
+
+
 def check_stateless_admission(origin, ca, network, *, anonymous=False, prefix=""):
     tls = HTTPSHandler(context=ssl.create_default_context(cafile=str(ca)))
     client = build_opener(tls, NoRedirect())
@@ -645,6 +683,7 @@ def main():
             check_https(origin, ca, shell=args.shell, actor_core=args.actor_core,
                         profile="actor" if args.advertise_actor else "isotope",
                         unicode_literals=True)
+            check_stateless_cache(origin, ca)
             if args.shell:
                 check_shared_database(origin, ca, assets)
         except Exception:

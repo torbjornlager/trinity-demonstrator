@@ -1,7 +1,7 @@
 :- module(demo_services).
 :- use_module(actors).
 :- import exit/2 from actors.
-:- import rpc/3, egress_request/4, query_page/8 from isotope_rpc.
+:- import egress_request/4, query_page/8 from isotope_rpc.
 :- lib(prolog_extras).
 :- import select/3 from lists.
 
@@ -19,19 +19,31 @@ published_counter(Count) :-
 % The host adapter still checks the fixed SWI service peer against its
 % allowlist. Keep inference and observation in the owner-installed service.
 model_chat(Messages, Result) :-
-    ( catch(once(rpc('https://n3.elfenbenstornet.se',
-                     model_chat(Messages, Reply), [once(true)])),
-            error(rpc_error(_), _), fail) ->
-        Result = Reply
+    ( catch(query_page("https://n3.elfenbenstornet.se",
+                       model_chat(Messages, Reply), Reply, "", 0, 1, true, Answer),
+            error(rpc_error(_), _), fail),
+      Answer = success([ModelReply], _) ->
+        model_reply(ModelReply, Result)
     ; Result = error(unavailable) ).
 
+model_reply(answer(Text), answer(String)) :- text_string(Text, String), !.
+model_reply(Reply, Reply).
+
 jev_deployment_observation(Text, Result) :-
-    % SWI dictionaries can contain other dictionaries. Serialize only the
-    % provenance as text, keeping the typed observation available to ECLiPSe.
+    % Keep the typed observation and its scalar fields. SWI dicts have
+    % different syntax on the wire, so carry those fields as opaque text.
     Goal = (jev_deployment_observation(Text, Raw),
-            ( Raw = observation(Choice, Score, Noul, provenance(Dict)) ->
-                term_string(Dict, Portable),
-                Reply = observation(Choice, Score, Noul, provenance(swi_dict(Portable)))
+            ( Raw = observation(choice(Intent, Probabilities, Confidence),
+                                score(Value, Legend, Distribution, Certainty),
+                                Noul, provenance(Provenance)) ->
+                term_string(Probabilities, ProbabilitiesText),
+                term_string(Legend, LegendText),
+                term_string(Distribution, DistributionText),
+                term_string(Provenance, ProvenanceText),
+                Reply = observation(choice(Intent, swi_dict(ProbabilitiesText), Confidence),
+                                    score(Value, swi_dict(LegendText),
+                                          swi_dict(DistributionText), Certainty),
+                                    Noul, provenance(swi_dict(ProvenanceText)))
             ; Reply = Raw )),
     ( catch(query_page("https://n3.elfenbenstornet.se", Goal, Reply, "", 0, 1, true, Answer),
             error(rpc_error(_), _), fail),

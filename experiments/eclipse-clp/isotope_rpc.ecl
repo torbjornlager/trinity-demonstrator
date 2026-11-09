@@ -12,6 +12,7 @@
 :- tool(promise/4, promise_/5).
 :- tool(yield/3, yield_/4).
 :- export call_page/7, clear_promises/0, init_egress/0, egress_request/4, query_page/8.
+:- export await_call_page/2.
 :- local store(egress).
 
 init_egress :-
@@ -165,6 +166,9 @@ valid_answer(Answer) :-
 call_page(Pid, Goal, Template, Offset, Limit, Once, Answer) :-
     toplevel_call(Pid, Goal, [template(Template), offset(Offset),
                              limit(Limit), once(Once)]),
+    await_call_page(Pid, Answer).
+
+await_call_page(Pid, Answer) :-
     receive({
         success(Pid, Rows, More) -> Answer = success(Rows, More)
     ;
