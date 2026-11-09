@@ -8951,6 +8951,7 @@
             this.activeOffset = 0;
             this.activeLoadText = "";
             this.pendingPromptPid = null;
+            this.pendingPromptRef = null;
             if (term) {
               if (typeof term.set_command === "function") {
                 term.set_command("");
@@ -11947,6 +11948,13 @@
             if (this.handleWsTutorialLoadEvent(event)) {
               return;
             }
+            if (event.type === "error" && event.code === "invalid_prompt_ref") {
+              this.log("warn", "Input rejected: invalid or missing prompt reference.", "actor");
+              if (this.queryState === "prompt") {
+                this.resumeTerm(term);
+              }
+              return;
+            }
             this.captureBindingsFromEvent(event);
             if (this.wsPendingCallLoad && event.pid === this.wsPid && event.type !== "statechart_trace") {
               if (event.type === "error" || event.type === "down") {
@@ -12009,9 +12017,9 @@
             if (event.type === "prompt") {
               var wsPromptEntry = this.recordSessionEvent("prompt", String(event.data), "actor", event.pid || this.wsPid);
               if (wsPromptEntry) {
-                wsPromptEntry.logId = this.showPrompt(term, event.data, event.pid || this.wsPid);
+                wsPromptEntry.logId = this.showPrompt(term, event.data, event.pid || this.wsPid, event.prompt_ref);
               } else {
-                this.showPrompt(term, event.data, event.pid || this.wsPid);
+                this.showPrompt(term, event.data, event.pid || this.wsPid, event.prompt_ref);
               }
               this.resumeTerm(term);
               return;
@@ -12168,11 +12176,15 @@
             }
             this.recordSessionEvent("session", "Input sent: " + this.clipText(inputText.trim() === "" ? "''" : inputText.trim(), 80), "actor", pid);
             this.pauseTerm(term);
-            this.wsSend({
+            var reply = {
               command: "toplevel_respond",
               pid: pid,
               input: inputText.trim() === "" ? "''" : inputText.trim()
-            });
+            };
+            if (this.pendingPromptPid && this.pendingPromptRef !== null) {
+              reply.prompt_ref = this.pendingPromptRef;
+            }
+            this.wsSend(reply);
           },
           abortWs: function(term) {
             if (!this.wsPid) {

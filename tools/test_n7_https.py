@@ -284,6 +284,25 @@ try:
     shell_call("make_ref(First),make_ref(Second),ground(First),ground(Second),"
                "(First == Second -> throw(reused_reference) ; true),"
                "self(Self),send(Self,First),receive({Reply if Reply == First -> true})")
+    ws.send_json(dict(command='toplevel_call', pid=pid,
+                      goal='input(prompt_ref(123,question),A),input(second,B)'))
+    first = ws.recv_json()
+    assert (first['type'], first['data']) == ('prompt', 'prompt_ref(123,question)'), first
+    first_ref = first['prompt_ref']
+    ws.send_json(dict(command='toplevel_respond', pid=pid, prompt_ref=first_ref, input='one.'))
+    assert ws.recv_json()['type'] == 'responded'
+    second = ws.recv_json()
+    assert (second['type'], second['data']) == ('prompt', 'second'), second
+    second_ref = second['prompt_ref']
+    assert isinstance(first_ref, str) and isinstance(second_ref, str)
+    assert first_ref != second_ref
+    for fields in ({'prompt_ref': first_ref}, {}, {'prompt_ref': 123}):
+        ws.send_json(dict(command='toplevel_respond', pid=pid, input='invalid.', **fields))
+        rejected = ws.recv_json()
+        assert (rejected['type'], rejected['code'], rejected['pid']) == ('error', 'invalid_prompt_ref', pid), rejected
+    ws.send_json(dict(command='toplevel_respond', pid=pid, prompt_ref=second_ref, input='two.'))
+    assert ws.recv_json()['type'] == 'responded'
+    assert ws.recv_json()['data'] == [{'A': 'one', 'B': 'two'}]
     shell_call("maplist(=,[a],[a]),foldl(throw,[],state,Final),Final==state")
     child = shell_call("toplevel_spawn(Child,[session(true),monitor(true),src_list([p(a),p(b)])])")['Child']
     shell_call(f"toplevel_call({child},assert((p :- p))),receive({{success({child},_,false) -> true}})")
@@ -337,7 +356,7 @@ try:
     call('prompt-red')
     prompt = ws.recv_json()
     assert (prompt['type'], prompt['data']) == ('prompt', 'Amount to add (an integer)'), prompt
-    ws.send_json(dict(command='toplevel_respond', pid=pid, input='7.'))
+    ws.send_json(dict(command='toplevel_respond', pid=pid, prompt_ref=prompt['prompt_ref'], input='7.'))
     assert ws.recv_json()['type'] == 'responded'
     answer(Total='15')
     call('watch-exit')

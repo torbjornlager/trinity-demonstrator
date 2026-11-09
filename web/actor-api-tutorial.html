@@ -113,6 +113,7 @@ const socket = new WebSocket(`${protocol}//${location.host}/ws`);</code></pre>
     <pre id="actor-prompt"><code>?- read(Term), writeln(Term).</code></pre>
     <div class="actions"><button type="button" data-ask="#actor-prompt">Run prompt lab</button></div>
     <p>Enter a complete term ending with a full stop when the terminal shows <code>|:</code>. The shell's standard <code>read/1</code> is implemented over the actor prompt protocol. The Logger shows <code>prompt</code> arriving, <code>toplevel_respond</code> leaving, then subsequent output and completion arriving immediately.</p>
+    <p>The prompt carries a fresh <code>prompt_ref</code>. The shell echoes that field with the reply so an earlier reply cannot answer the current prompt.</p>
     <div class="flow">toplevel_call → prompt<br>toplevel_respond → output → success</div>
   </section>
 

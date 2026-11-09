@@ -231,9 +231,14 @@ class ActorConnection:
                 raise ValueError("Expected a Prolog goal")
             fields.update(goal=goal, browser_options=self.options(request), browser_origin=self.origin)
         elif action == "respond":
-            ref = self.prompts[pid]
-            if "prompt_ref" in request and request["prompt_ref"] != ref:
-                raise ValueError("Expected the reference from the current prompt")
+            ref = self.prompts.get(pid)
+            if ref is None or request.get("prompt_ref") != ref:
+                error = {"type": "error", "code": "invalid_prompt_ref", "pid": wire_pid,
+                         "data": "Expected the reference from the current prompt"}
+                if "request_id" in request:
+                    error["request_id"] = request["request_id"]
+                self.emit(error)
+                return
             value = request["input"]
             if not isinstance(value, str):
                 raise ValueError("Expected a Prolog input term")

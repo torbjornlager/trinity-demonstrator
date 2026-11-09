@@ -1157,7 +1157,10 @@ await_event(Id, Context, Event) :-
             Event = {[type:output, pid:Id, data:Text]}
     ;
         prompt(Pid, prompt_ref(ref(Ref), Prompt)) ->
-            probe_prompt_text(Prompt, Text),
+            ( relay_browser_origin(_), \+ text_string(Prompt, _) ->
+                browser_term_text(Prompt, Text)
+            ; probe_prompt_text(Prompt, Text)
+            ),
             Event = {[type:prompt, pid:Id, data:Text, prompt_ref:Ref]}
     ;
         prompt(Pid, _) ->
@@ -1185,13 +1188,15 @@ browser_binding_text(Value, Origin, Text) :-
         Wire is 1000000000 + Id,
         probe_term_text(Origin, Node),
         sprintf(Text, "%d@%s", [Wire, Node])
-    ; setup_call_cleanup(
-          open(string(""), write, Stream),
-          ( write_term(Stream, Value, [quoted(true), compact(true)]),
-            get_stream_info(Stream, name, Text) ),
-          close(Stream)
-      )
+    ; browser_term_text(Value, Text)
     ).
+
+browser_term_text(Term, Text) :-
+    setup_call_cleanup(
+        open(string(""), write, Stream),
+        ( write_term(Stream, Term, [quoted(true), compact(true)]),
+          get_stream_info(Stream, name, Text) ),
+        close(Stream)).
 
 retire(Id, Text, {[type:error, pid:Id, retired:true, data:Text]}) :-
     exit(actor(Id), http_session_closed).
