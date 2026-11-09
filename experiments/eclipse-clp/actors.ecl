@@ -6,6 +6,7 @@
 :- ensure_loaded(web_prolog_library).
 
 :- export spawn/1, actors/1.
+:- export parallel/1, first_solution/2, first_solution/3.
 :- export browser_goal/2, browser_format/2, browser_chart_trace/1, source_body/2.
 :- export flush/0, browser_time/1, browser_sleep/1, browser_random_between/3.
 :- export browser_call_cleanup/2, browser_random_member/2.
@@ -43,6 +44,9 @@
 :- tool(browser_call_cleanup/2, browser_call_cleanup_/3).
 :- tool(spawn/2, spawn_/3).
 :- tool(spawn/3, spawn_/4).
+:- tool(parallel/1, parallel_/2).
+:- tool(first_solution/2, first_solution_/3).
+:- tool(first_solution/3, first_solution_/4).
 
 :- tool(receive/1, receive_/2).
 :- tool(receive/2, receive_/3).
@@ -383,6 +387,7 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     ),
     compile_term([(:- local op(200, xfx, '@')),
                   (:- import(actors)), (:- import(exit/1 from actors)),
+                  (:- import(parallel/1 from actors)),
                   (:- local macro(type(string), unicode_literal/2, [])),
                   (:- import(web_prolog_library)),
                   (:- import(memberchk/2 from web_prolog_library)),
@@ -519,6 +524,161 @@ run_actor(Pid, Parent, Inbox, Goal, Module) :-
 run_actor_goal(Goal, Module) :-
     ( browser_session(_) -> browser_goal(Goal, Call) ; Call = Goal ),
     once(call(Call)@Module).
+
+parallel_(Goals, Module) :-
+    worker_goals(Goals, parallel/1),
+    ( foreach(Goal, Goals), foreach(job(Goal, Vars), Jobs) do
+        term_variables(Goal, Vars)
+    ),
+    run_workers(Jobs, Module, all).
+
+first_solution_(Solution, Goals, Module) :-
+    first_solution_(Solution, Goals, [], Module).
+
+first_solution_(Solution, Goals, Options, Module) :-
+    worker_goals(Goals, first_solution/3),
+    ( var(Options) -> throw(error(instantiation_error, first_solution/3))
+    ; is_list(Options) -> true
+    ; throw(error(type_error(list, Options), first_solution/3))
+    ),
+    ( foreach(Option, Options) do validate_worker_option(Option) ),
+    ( memberchk(on_fail(OnFail), Options) -> true ; OnFail = continue ),
+    ( memberchk(on_error(OnError), Options) -> true ; OnError = stop ),
+    ( foreach(Goal, Goals), foreach(job(Goal, Solution), Jobs), param(Solution) do true ),
+    run_workers(Jobs, Module, first(Reply, OnFail, OnError)),
+    Solution = Reply.
+
+worker_goals(Goals, Predicate) :-
+    ( var(Goals) -> throw(error(instantiation_error, Predicate))
+    ; is_list(Goals) -> true
+    ; throw(error(type_error(list, Goals), Predicate))
+    ),
+    ( foreach(Goal, Goals), param(Predicate) do
+        ( var(Goal) -> throw(error(instantiation_error, Predicate))
+        ; ( atom(Goal) ; compound(Goal) ) -> true
+        ; throw(error(type_error(callable, Goal), Predicate))
+        )
+    ).
+
+validate_worker_option(Option) :-
+    ( var(Option) -> throw(error(instantiation_error, first_solution/3))
+    ; ( Option = on_fail(Policy) ; Option = on_error(Policy) ) ->
+        ( var(Policy) -> throw(error(instantiation_error, first_solution/3))
+        ; \+ atom(Policy) -> throw(error(type_error(atom, Policy), first_solution/3))
+        ; memberchk(Policy, [stop,continue]) -> true
+        ; throw(error(domain_error(first_solution_policy, Policy), first_solution/3))
+        )
+    ; throw(error(domain_error(first_solution_option, Option), first_solution/3))
+    ).
+
+run_workers(Jobs, Module, Mode) :-
+    self(Caller),
+    make_ref(Ref),
+    shelf_create(owned([]), Scope),
+    setup_call_cleanup(
+        true,
+        finish_worker_call(Jobs, Module, Caller, Ref, Scope, Mode),
+        close_workers(Ref, Scope)
+    ).
+
+% ECLiPSe's cleanup event can run after this predicate returns. Close the
+% scope explicitly before exposing a result, failure or exception.
+finish_worker_call(Jobs, Module, Caller, Ref, Scope, Mode) :-
+    catch(
+        ( start_workers(Jobs, Module, Caller, Ref, Scope, Pending),
+          collect_workers(Pending, Ref, Scope, Mode) ->
+            Success = true
+        ; Success = false
+        ),
+        Error,
+        ( close_workers(Ref, Scope), throw(Error) )
+    ),
+    close_workers(Ref, Scope),
+    Success == true.
+
+start_workers([], _, _, _, _, []).
+start_workers([job(Goal, Template)|Jobs], Module, Caller, Ref, Scope,
+              [Pid-waiting(Template)|Pending]) :-
+    % Publish each worker and record ownership together, before an Abort can
+    % unwind the caller. The shelf also survives failure and exceptions.
+    worker_atomic(start_worker(Goal, Module, Caller, Ref, Scope, Pid, Template)),
+    start_workers(Jobs, Module, Caller, Ref, Scope, Pending).
+
+start_worker(Goal, Module, Caller, Ref, Scope, Pid, Template) :-
+    spawn(worker_run(Goal, Module, Caller, Ref, Pid, Template),
+          Pid, [link(true), monitor(true)]),
+    shelf_get(Scope, 1, Owned),
+    shelf_set(Scope, 1, [Pid|Owned]).
+
+worker_run(Goal, Module, Caller, Ref, Pid, Template) :-
+    run_actor_goal(Goal, Module),
+    send(Caller, '$worker_result'(Ref, Pid, Template)).
+
+collect_workers([], _, _, Mode) :- !, Mode == all.
+collect_workers(Pending, Ref, Scope, Mode) :-
+    % Bound the native mailbox wait so the toplevel can deliver Abort.
+    receive({
+        '$worker_result'(Ref, Pid, Reply) if worker_pending(Pid, Pending) ->
+            accept_worker_reply(Pid, Reply, Pending, Ref, Scope, Mode)
+    ;
+        down(Pid, Pid, Reason) if worker_pending(Pid, Pending) ->
+            once(select(Pid-Status, Pending, Rest)),
+            release_worker(Pid, Scope),
+            worker_down(Status, Pid, Reason, Rest, Ref, Scope, Mode)
+    }, [timeout(0.05), on_timeout(collect_workers(Pending, Ref, Scope, Mode))]).
+
+worker_pending(Pid, Pending) :-
+    ground(Pid),
+    memberchk(Pid-_, Pending).
+
+accept_worker_reply(Pid, Reply, Pending, Ref, Scope, all) :-
+    once(select(Pid-waiting(Template), Pending, Rest)),
+    Template = Reply,
+    collect_workers([Pid-answered|Rest], Ref, Scope, all).
+accept_worker_reply(_, Reply, _, _, _, first(Reply, _, _)).
+
+worker_down(answered, _, _, Pending, Ref, Scope, Mode) :- !,
+    collect_workers(Pending, Ref, Scope, Mode).
+worker_down(waiting(_), _, false, Pending, Ref, Scope, Mode) :- !,
+    Mode = first(_, continue, _),
+    collect_workers(Pending, Ref, Scope, Mode).
+worker_down(waiting(_), Pid, Reason, Pending, Ref, Scope, Mode) :-
+    ( Mode = first(_, _, continue) ->
+        collect_workers(Pending, Ref, Scope, Mode)
+    ; Reason = exception(Error) ->
+        throw(Error)
+    ; throw(worker_exit(Pid, Reason))
+    ).
+
+release_worker(Pid, Scope) :-
+    shelf_get(Scope, 1, Owned),
+    once(select(Pid, Owned, Rest)),
+    shelf_set(Scope, 1, Rest).
+
+worker_atomic(Goal) :-
+    ( events_defer ->
+        catch(( call(Goal) -> Success = true ; Success = false ), Error,
+              ( events_nodefer, throw(Error) )),
+        events_nodefer,
+        Success == true
+    ; once(call(Goal))
+    ).
+
+close_workers(Ref, Scope) :-
+    worker_atomic(reap_workers(Ref, Scope)).
+
+reap_workers(Ref, Scope) :-
+    shelf_get(Scope, 1, Owned),
+    ( foreach(Pid, Owned) do exit(Pid, kill) ),
+    ( foreach(Pid, Owned), param(Ref, Scope) do
+        % The reaper removes the actor before sending down. Only after this
+        % barrier can we drain its result without racing a late send.
+        monitor(Pid, Barrier),
+        receive({ down(Pid, Barrier, _) -> true }),
+        demonitor(Pid, [flush]),
+        receive({ '$worker_result'(Ref, Pid, _) -> true }, [timeout(0)]),
+        release_worker(Pid, Scope)
+    ).
 
 set_actor_context(Pid, Parent, Inbox) :-
     set_self(Pid),
