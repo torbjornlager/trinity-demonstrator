@@ -731,7 +731,8 @@ class PilotServer(ThreadingHTTPServer):
 def bridge_archive():
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
-        for name in ("actors.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
+        for name in ("actors.ecl", "web_prolog_library.ecl", "solution_buffer.ecl",
+                     "toplevel_actors.ecl",
                      "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl",
                      "server_behaviours.ecl", "demo_services.ecl", "n5_shared_db.ecl",
                      "n5_actor_compat.sed"):
