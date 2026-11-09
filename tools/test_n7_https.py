@@ -167,7 +167,7 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
         query = urlencode({"goal": """fixture_chars(X), X == "aé€😀", X == [a,'é','€','😀'], "" == []""",
                            "format": "json", "src_text": 'fixture_chars("aé€😀").'})
         _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
-        expect(json.loads(data)["type"], "success")
+        expect(json.loads(data)["data"], [{"X": "[a, 'é', '€', '😀']"}])
     headers = {"Origin": origin, "Content-Type": "application/json"}
     spawn = {"options": "[session(true)]", "prompt_correlation": True}
     if shell:
@@ -201,7 +201,7 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
             expect((prompt["type"], prompt["data"]), ("prompt", "Réponse 😀"))
             reply = post("respond", input='"é😀".', prompt_ref=prompt["prompt_ref"])
             expect(reply["type"], "responded")
-            expect(post("poll")["type"], "success")
+            expect(post("poll")["data"], [{"X": "['é', '😀']"}])
     finally:
         expect(post("halt")["type"], "halted")
     print("N7 HTTPS metadata, admission, stateless JSON with source, paging and prompt reply passed")

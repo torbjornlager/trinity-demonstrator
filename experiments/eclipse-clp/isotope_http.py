@@ -178,6 +178,23 @@ def json_byte_escape(match):
     return bytes([byte])
 
 
+def unicode_binding_text(text):
+    def decode(match):
+        escapes = match[0]
+        if len(escapes) == 2:
+            return escapes
+        raw = bytes(int(escapes[i + 1:i + 4], 8) for i in range(0, len(escapes), 4))
+        return "".join(
+            char if char.isprintable() else "".join(
+                f"\\{byte:03o}" for byte in char.encode("utf-8", "surrogateescape")
+            )
+            for char in raw.decode("utf-8", "surrogateescape")
+        )
+
+    # Consume ordinary escapes as a unit, including a literal backslash.
+    return re.sub(r"(?:\\[23][0-7]{2})+|\\.", decode, text)
+
+
 class Bridge:
     def __init__(self, process, on_failure=None, allowed_peers=(), shell_assets=None):
         self.process = process
@@ -302,6 +319,11 @@ class Bridge:
         try:
             while True:
                 reply = self.read_reply()
+                event = reply.get("event", reply) if reply["type"] == "stateless" else reply
+                if event["type"] == "success":
+                    for row in event["data"]:
+                        for name, value in row.items():
+                            row[name] = unicode_binding_text(value)
                 if reply.get("type") == "egress":
                     if self.egress_slots.acquire(blocking=False):
                         Thread(target=self.run_egress, args=(reply,), daemon=True).start()
