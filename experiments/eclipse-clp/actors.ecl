@@ -3,6 +3,7 @@
 :- lib(lists).
 :- lib(prolog_extras).
 :- ensure_loaded(library(swi)).
+:- ensure_loaded(web_prolog_library).
 
 :- export spawn/1, actors/1.
 :- export browser_goal/2, browser_format/2, browser_chart_trace/1, source_body/2.
@@ -28,6 +29,7 @@
 :- export actor_module/2, discard_deferred/1, post_actor_event/2.
 :- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
 :- export unicode_literal/2, text_string/2.
+:- export make_ref/1.
 :- tool(post_actor_event/2, post_actor_event_/3).
 :- tool(discard_deferred/1, discard_deferred_/2).
 
@@ -382,6 +384,11 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     compile_term([(:- local op(200, xfx, '@')),
                   (:- import(actors)), (:- import(exit/1 from actors)),
                   (:- local macro(type(string), unicode_literal/2, [])),
+                  (:- import(web_prolog_library)),
+                  (:- import(memberchk/2 from web_prolog_library)),
+                  (:- import(succ/2 from web_prolog_library)),
+                  (:- import(maplist/2 from web_prolog_library)),
+                  (:- import(maplist/3 from web_prolog_library)),
                   (:- import(select/3 from lists)),
                   (:- import(subtract/3 from lists)),
                   (:- import(forall/2 from swi))])@Private,
@@ -863,6 +870,9 @@ clear_io_target :-
     ;
         true
     ).
+
+make_ref(Ref) :-
+    fresh_reference(Ref).
 
 fresh_reference(ref(Id)) :-
     store_get(actor_registry, runtime, runtime(_, Counter, _)),

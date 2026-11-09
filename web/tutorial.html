@@ -3112,7 +3112,7 @@ checking what can still be used after an interruption or failure.</p>
 <h2 id="recovery-timeout">1. Time out, then collect the answer</h2>
 <p>Start one remote computation and try a zero-second wait. If the answer
 is not ready, collect it with the <em>same</em> reference:</p>
-<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=ready), Ref, [
+<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (forall(between(1,3000000,_), true), X=ready), Ref, [
        template(X)
    ]),
    yield(Ref, First, [

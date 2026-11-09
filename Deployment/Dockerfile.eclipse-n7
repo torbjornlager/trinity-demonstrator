@@ -11,6 +11,7 @@ RUN --mount=type=bind,from=eclipse_dist,source=eclipse_basic.tgz,target=/tmp/ecl
 
 WORKDIR /bridge
 COPY --chmod=644 experiments/eclipse-clp/actors.ecl experiments/eclipse-clp/solution_buffer.ecl \
+     experiments/eclipse-clp/web_prolog_library.ecl \
      experiments/eclipse-clp/toplevel_actors.ecl experiments/eclipse-clp/isotope_bridge.ecl \
      experiments/eclipse-clp/isotope_rpc.ecl experiments/eclipse-clp/stateless_rpc.ecl \
      experiments/eclipse-clp/server_behaviours.ecl experiments/eclipse-clp/demo_services.ecl \

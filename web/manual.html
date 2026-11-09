@@ -1048,7 +1048,7 @@ yield(+Ref, -Answer, +Options) is det.</pre>
 <article class="predicate-entry" id="make_ref/1"><div class="predicate-head"><div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">make_ref/1</span></div><div class="predicate-family">actor</div></div>
 <pre>make_ref(-Ref) is det.</pre>
 <p>Produces a fresh opaque correlation reference suitable for messages. Compare references with <code>==</code> and do not depend on their representation. This does not install a monitor or request a notification.</p></article>
-<article class="predicate-entry" id="sleep/1"><div class="predicate-head"><div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">sleep/1</span></div><div class="predicate-family">isobase</div></div>
+<article class="predicate-entry" id="sleep/1"><div class="predicate-head"><div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">sleep/1</span></div><div class="predicate-family">isotope</div></div>
 <pre>sleep(+Seconds) is det.</pre>
 <p>Suspends execution for nonnegative, possibly fractional seconds, without consuming mailbox messages. Control signals or execution limits may interrupt it. An actor may also express a delay with a timed <code>receive/2</code>.</p></article>
 <h2 id="sec:node-introspection">Node introspection</h2>

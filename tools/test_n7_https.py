@@ -163,6 +163,19 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
     response_headers, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
     expect(response_headers.get_content_type(), "application/json")
     expect(json.loads(data), {"type": "success", "data": [{"X": "owner"}], "more": False})
+    library_query = urlencode({
+        "goal": "nth1(2,L,b,[a,c]),L==[a,b,c],countall(between(1,4,_),4),"
+                "call_nth(between(1,4,Selected),3),"
+                "maplist(add,[1,2],[3,4],Sums),Sums==[4,6],"
+                "foldl(add,Sums,0,Total)",
+        "src_text": "add(A,B,C) :- C is A+B.",
+        "format": "json",
+    })
+    _, data = http(owner, origin + "/call?" + library_query, headers={"Origin": origin})
+    library_result = json.loads(data)
+    expect((library_result["type"], library_result["more"]), ("success", False))
+    expect({key: library_result["data"][0][key] for key in ("Selected", "Total")},
+           {"Selected": "3", "Total": "10"})
     if unicode_literals:
         query = urlencode({"goal": """fixture_chars(X), X == "aé€😀", X == [a,'é','€','😀'], "" == []""",
                            "format": "json", "src_text": 'fixture_chars("aé€😀").'})
@@ -184,6 +197,7 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
         return json.loads(data)
 
     try:
+        expect(post("call", goal="sleep(0.01)")["type"], "success")
         if shell:
             expect(post("call", goal="shell_source(X)")["data"], [{"X": "editor"}])
         expect(post("call", goal="member(X,[a,b,c])", limit=1)["data"], [{"X": "a"}])
@@ -265,6 +279,10 @@ try:
         assert len(event['data']) == 1, (goal, event)
         return event['data'][0]
 
+    shell_call("make_ref(First),make_ref(Second),ground(First),ground(Second),"
+               "(First == Second -> throw(reused_reference) ; true),"
+               "self(Self),send(Self,First),receive({Reply if Reply == First -> true})")
+    shell_call("maplist(=,[a],[a]),foldl(throw,[],state,Final),Final==state")
     child = shell_call("toplevel_spawn(Child,[session(true),monitor(true),src_list([p(a),p(b)])])")['Child']
     shell_call(f"toplevel_call({child},assert((p :- p))),receive({{success({child},_,false) -> true}})")
 

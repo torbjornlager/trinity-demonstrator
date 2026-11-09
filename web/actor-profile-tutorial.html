@@ -2022,9 +2022,9 @@ human(Who) :-
     A client can bound the wait and give timeout an explicit result:
 </p>
 
-<pre id="rpc-promise-timeout">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref),
+<pre id="rpc-promise-timeout">?- promise('https://n1.elfenbenstornet.se', (forall(between(1,3000000,_), true), X=a), Ref, [template(X)]),
    yield(Ref, Answer, [
-       timeout(0.3),
+       timeout(0.01),
        on_timeout(Answer = timeout)
    ]).
 </pre>
@@ -2035,8 +2035,7 @@ human(Who) :-
 </p>
 
 <p>
-    Because the remote goal sleeps for one second, the first wait normally
-    produces <code>Answer = timeout</code>. Timing out does not cancel or
+    The first wait is only 10 milliseconds, so it may produce <code>Answer = timeout</code>. Timing out does not cancel or
     consume the promise: another call to <code>yield/2-3</code> with the same
     reference can still collect its answer.
 </p>
@@ -2048,10 +2047,10 @@ human(Who) :-
     waits briefly on each iteration and does other work between attempts:
 </p>
 
-<pre id="rpc-promise-poll">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref),
+<pre id="rpc-promise-poll">?- promise('https://n1.elfenbenstornet.se', (forall(between(1,3000000,_), true), X=a), Ref, [template(X)]),
    repeat,
      yield(Ref, Answer, [
-         timeout(0.3),
+         timeout(0.01),
          on_timeout(Answer = timeout)
      ]),
      (  Answer == timeout
@@ -2070,10 +2069,9 @@ human(Who) :-
 
 <p>
     Each timeout binding is undone when the loop backtracks, while the promise
-    remains pending. Once the answer arrives, the cut ends the loop. After a
-    few progress messages, the final bindings have the form
-    <code>Ref = 1, Answer = success([(sleep(1),a=a)],false)</code>; the reference
-    value and number of polling iterations depend on the runtime and timing.
+    remains pending. Once the answer arrives, the cut ends the loop. The final
+    answer is <code>success([a],false)</code>. The reference value and number
+    of progress messages depend on the runtime and timing.
 </p>
 
 </section>
@@ -2675,7 +2673,7 @@ checking what can still be used after an interruption or failure.</p>
 <h2 id="recovery-timeout">1. Time out, then collect the answer</h2>
 <p>Start one remote computation and try a zero-second wait. If the answer
 is not ready, collect it with the <em>same</em> reference:</p>
-<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=ready), Ref, [
+<pre id="recovery-timeout-retry">?- promise('https://n1.elfenbenstornet.se', (forall(between(1,3000000,_), true), X=ready), Ref, [
        template(X)
    ]),
    yield(Ref, First, [
