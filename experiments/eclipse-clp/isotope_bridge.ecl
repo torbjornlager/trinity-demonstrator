@@ -17,6 +17,9 @@
 % The root routes requests and is the only writer to the JSON pipe.
 % Each relay owns a toplevel child and waits on its PTCP mailbox.
 run :-
+    % ECLiPSe 7.2.13 can segfault in ecl_mark_engine while compiling
+    % actor source concurrently. Keep stack GC on and avoid dictionary GC.
+    set_flag(gc_interval_dict, 0),
     start_actor_runtime,
     init_egress,
     init_linda,

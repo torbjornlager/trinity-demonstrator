@@ -169,13 +169,13 @@ def bundled_chart_source(shell_assets):
 
 
 class Bridge:
-    def __init__(self, process, stop_backend=None, allowed_peers=(), shell_assets=None):
+    def __init__(self, process, on_failure=None, allowed_peers=(), shell_assets=None):
         self.process = process
-        self.stop_backend = stop_backend
+        self.on_failure = on_failure
         self.allowed_peers = allowed_peers
         self.shell_assets = shell_assets
         self.egress_slots = BoundedSemaphore(4)
-        if stop_backend is not None:
+        if on_failure is not None:
             os.set_blocking(process.stdin.fileno(), False)
         self.sessions = {}
         self.prompt_modes = {}
@@ -188,7 +188,7 @@ class Bridge:
         self.read_error = None
 
     def read_reply(self):
-        limit = 512 * 1024 if self.stop_backend is not None else -1
+        limit = 512 * 1024 if self.on_failure is not None else -1
         line = self.process.stdout.readline(limit + 1 if limit > 0 else -1)
         if not line:
             raise RuntimeError("ECLiPSe bridge closed its output")
@@ -200,7 +200,7 @@ class Bridge:
             raise RuntimeError("Invalid JSON from the ECLiPSe bridge") from error
 
     def request(self, command, fields, *, expired_at=None, timeout=6):
-        deadline = monotonic() + timeout if self.stop_backend is not None else None
+        deadline = monotonic() + timeout if self.on_failure is not None else None
         try:
             return self.dispatch(command, fields, deadline, expired_at)
         except (TimeoutError, FutureTimeout):
@@ -279,8 +279,8 @@ class Bridge:
                 result.set_exception(self.read_error)
             self.pending.clear()
             self.state_changed.notify_all()
-        if self.stop_backend is not None:
-            self.stop_backend()
+        if self.on_failure is not None:
+            self.on_failure()
 
     def read_responses(self):
         try:
@@ -329,7 +329,7 @@ class Bridge:
                     self.write_request(
                         {"command": "egress_result", "request_id": request["egress_id"],
                          "pid": request["actor_id"], "status": status, "body": body},
-                        monotonic() + 1 if self.stop_backend is not None else None,
+                        monotonic() + 1 if self.on_failure is not None else None,
                     )
         except (OSError, KeyError):
             self.fail("Could not deliver the ECLiPSe peer response")
@@ -386,7 +386,7 @@ class Bridge:
             self.sessions[request["pid"]] = (state, None)
         elif kind in ("stop", "abort"):
             self.sessions[request["pid"]] = ("idle", None)
-        if self.stop_backend is not None and pid is not None:
+        if self.on_failure is not None and pid is not None:
             if kind in ("output", "responded"):
                 self.poll_deadlines[pid] = monotonic() + 10
             elif self.sessions.get(pid) != ("poll", None):
@@ -813,7 +813,10 @@ def main():
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             text=True, encoding="utf-8",
         ) as process:
-            server.bridge = Bridge(process, stop_backend, allowed_peers, shell_assets)
+            # A failed pilot must release its listening port so its supervisor
+            # can bring up a fresh backend instead of serving a dead bridge.
+            on_failure = server.shutdown if stop_backend is not None else None
+            server.bridge = Bridge(process, on_failure, allowed_peers, shell_assets)
             try:
                 if archive is not None:
                     process.stdin.buffer.write(archive)
@@ -833,6 +836,8 @@ def main():
                 else:
                     print(f"Private proxy origin {private[1]}", flush=True)
                 server.serve_forever()
+                if server.bridge.read_error is not None:
+                    raise SystemExit(str(server.bridge.read_error))
             except KeyboardInterrupt:
                 pass
             except (OSError, RuntimeError) as error:
