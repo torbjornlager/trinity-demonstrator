@@ -679,15 +679,14 @@ await_reverse_reply(Expected, Reply) :-
 probe_term_text(Term, Text) :-
     setup_call_cleanup(
         open(string(""), write, Stream),
-        ( write_term(Stream, Term, [quoted(true), portable(true)]),
+        ( write_term(Stream, Term, [quoted(true), portable(true), max_depth(0)]),
           get_stream_info(Stream, name, Text)
         ),
         close(Stream)
     ).
 
 probe_prompt_text(Prompt, Text) :-
-    ( is_list(Prompt), maplist(probe_prompt_character, Prompt, Codes) ->
-        string_list(Text, Codes)
+    ( text_string(Prompt, Text) -> true
     ; event_text(Prompt, Text)
     ).
 
@@ -704,11 +703,6 @@ probe_prompt_event(Id, Mode, Prompt, {[type:prompt, pid:Id, data:Text|Fields]}) 
     ; Fields = []
     ),
     probe_prompt_text(Prompt, Text).
-
-probe_prompt_character(Character, Code) :-
-    atom(Character),
-    atom_string(Character, Text),
-    string_list(Text, [Code]).
 
 reverse_expect_down(Pid, Ref, Expected) :-
     receive({
@@ -950,7 +944,7 @@ browser_spawn_option(Option) :-
     nonvar(Option),
     ( Option == session(true)
     ; Option = src_list(Clauses), is_list(Clauses)
-    ; Option = src_text(Text), (atom(Text) ; string(Text))
+    ; Option = src_text(Text), text_string(Text, _)
     ).
 
 browser_source_clause(Clause, Line) :-
@@ -1036,7 +1030,7 @@ await_event(Id, Context, Event) :-
             Event = {[type:output, pid:Id, data:Text]}
     ;
         prompt(Pid, prompt_ref(ref(Ref), Prompt)) ->
-            event_text(Prompt, Text),
+            probe_prompt_text(Prompt, Text),
             Event = {[type:prompt, pid:Id, data:Text, prompt_ref:Ref]}
     ;
         prompt(Pid, _) ->

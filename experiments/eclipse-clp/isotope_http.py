@@ -168,6 +168,16 @@ def bundled_chart_source(shell_assets):
     return "\n".join(clauses)
 
 
+def json_byte_escape(match):
+    escape = match[0]
+    if len(escape) != 4:
+        return escape
+    byte = int(escape[1:], 8)
+    if byte < 128:
+        return f"\\u{byte:04x}".encode("ascii")
+    return bytes([byte])
+
+
 class Bridge:
     def __init__(self, process, on_failure=None, allowed_peers=(), shell_assets=None):
         self.process = process
@@ -197,7 +207,13 @@ class Bridge:
         try:
             return json.loads(line)
         except json.JSONDecodeError as error:
-            raise RuntimeError("Invalid JSON from the ECLiPSe bridge") from error
+            # json_write/3 quotes UTF-8 bytes with Prolog octal escapes.
+            # Match complete escapes so a quoted backslash stays literal.
+            encoded = re.sub(rb"\\(?:[0-3][0-7]{2}|.)", json_byte_escape, line.encode("utf-8"))
+            try:
+                return json.loads(encoded)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                raise RuntimeError("Invalid JSON from the ECLiPSe bridge") from error
 
     def request(self, command, fields, *, expired_at=None, timeout=6):
         deadline = monotonic() + timeout if self.on_failure is not None else None

@@ -47,7 +47,7 @@ variable_names([Variable|Variables], Index, [Name=Variable|Names]) :-
 query_text(Term, Names, Text) :-
     setup_call_cleanup(
         open(string(""), write, Stream),
-        ( write_term(Stream, Term, [quoted(true), variable_names(Names)]),
+        ( write_term(Stream, Term, [quoted(true), max_depth(0), variable_names(Names)]),
           get_stream_info(Stream, name, Text)
         ),
         close(Stream)

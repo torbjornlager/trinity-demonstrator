@@ -27,6 +27,7 @@
 :- export start_actor_runtime/0, attach_mailbox/1.
 :- export actor_module/2, discard_deferred/1, post_actor_event/2.
 :- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
+:- export unicode_literal/2, text_string/2.
 :- tool(post_actor_event/2, post_actor_event_/3).
 :- tool(discard_deferred/1, discard_deferred_/2).
 
@@ -132,7 +133,7 @@ spawn_source(Reversed, Module, text(Text)) :-
 
 source_option(Option) :-
     nonvar(Option),
-    ( Option = src_text(Text), (atom(Text) ; string(Text))
+    ( Option = src_text(Text), text_string(Text, _)
     ; Option = src_list(Clauses), is_list(Clauses)
     ; Option = src_predicates(Indicators), is_list(Indicators)
     ).
@@ -178,7 +179,7 @@ source_body_(Head, Body, Module) :-
 
 write_source([], _).
 write_source([Clause|Rest], Stream) :-
-    write_term(Stream, Clause, [quoted(true), portable(true)]),
+    write_term(Stream, Clause, [quoted(true), portable(true), max_depth(0)]),
     write(Stream, ".\n"),
     write_source(Rest, Stream).
 
@@ -271,10 +272,62 @@ remote_actor_down(Proxy, Pid, Reason) :-
         )).
 
 source_string(Text, String) :-
-    ( string(Text) -> String = Text
-    ; atom(Text) -> atom_string(Text, String)
+    ( text_string(Text, String) -> true
     ; throw(error(type_error(text, Text), spawn/3))
     ).
+
+text_string(Text, String) :-
+    ( string(Text) -> String = Text
+    ; atom(Text) -> atom_string(Text, String)
+    ; is_list(Text), phrase(character_bytes(Text), Bytes), string_list(String, Bytes)
+    ).
+
+character_bytes([]) --> [].
+character_bytes([Char|Chars]) -->
+    { atom(Char), atom_string(Char, Text), string_list(Text, Bytes),
+      utf8_character(Bytes, Bytes, []) },
+    byte_sequence(Bytes),
+    character_bytes(Chars).
+
+byte_sequence([]) --> [].
+byte_sequence([Byte|Bytes]) --> [Byte], byte_sequence(Bytes).
+
+% The native reader handles quote syntax and escapes. Its strings contain
+% bytes, so group each UTF-8 scalar before interning a character atom.
+unicode_literal(String, Chars) :-
+    string_list(String, Bytes),
+    ( utf8_chars(Bytes, Chars) -> true
+    ; throw(error(representation_error(utf8), read/2))
+    ).
+
+utf8_chars([], []).
+utf8_chars(Bytes, [Char|Chars]) :-
+    utf8_character(Bytes, Character, Rest),
+    string_list(Text, Character),
+    atom_string(Char, Text),
+    utf8_chars(Rest, Chars).
+
+utf8_character([Lead|Bytes], [Lead|Tail], Rest) :-
+    ( Lead < 128 -> Tail = [], Rest = Bytes
+    ; Lead >= 194, Lead =< 223 ->
+        utf8_continuation(Bytes, Tail, Rest, 1)
+    ; Lead >= 224, Lead =< 239 ->
+        ( Lead =:= 224 -> Low = 160 ; Low = 128 ),
+        ( Lead =:= 237 -> High = 159 ; High = 191 ),
+        Bytes = [Second|More], Second >= Low, Second =< High,
+        Tail = [Second|Last], utf8_continuation(More, Last, Rest, 1)
+    ; Lead >= 240, Lead =< 244,
+      ( Lead =:= 240 -> Low = 144 ; Low = 128 ),
+      ( Lead =:= 244 -> High = 143 ; High = 191 ),
+      Bytes = [Second|More], Second >= Low, Second =< High,
+      Tail = [Second|Last], utf8_continuation(More, Last, Rest, 2)
+    ).
+
+utf8_continuation(Bytes, [], Bytes, 0) :- !.
+utf8_continuation([Byte|Bytes], [Byte|Tail], Rest, Count) :-
+    Byte >= 128, Byte =< 191,
+    Next is Count - 1,
+    utf8_continuation(Bytes, Tail, Rest, Next).
 
 % Like SWI's child-side preparation handshake, readiness precedes
 % publication and application execution. The preparatory resume is
@@ -328,6 +381,7 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     ),
     compile_term([(:- local op(200, xfx, '@')),
                   (:- import(actors)), (:- import(exit/1 from actors)),
+                  (:- local macro(type(string), unicode_literal/2, [])),
                   (:- import(select/3 from lists)),
                   (:- import(subtract/3 from lists)),
                   (:- import(forall/2 from swi))])@Private,
@@ -512,14 +566,15 @@ browser_receive_clauses((Pattern -> Body), (Pattern -> Action)) :- !,
 browser_receive_clauses(Clauses, Clauses).
 
 browser_format(Control, Args) :-
+    ( text_string(Control, Format) -> true ; Format = Control ),
     self(Pid),
     ( browser_session(Session), Pid \== Session ->
         open(string(""), write, Stream),
         setup_call_cleanup(true,
-            ( format(Stream, Control, Args), get_stream_info(Stream, name, Text) ),
+            ( format(Stream, Format, Args), get_stream_info(Stream, name, Text) ),
             close(Stream)),
         send(main, browser_child_output(Session, Text))
-    ; toplevel_actors:browser_format(Control, Args)
+    ; toplevel_actors:browser_format(Format, Args)
     ).
 
 browser_chart_trace(Event) :-

@@ -90,7 +90,8 @@ def http(opener, url, *, body=None, headers=None, status=200):
         return response.headers, response.read()
 
 
-def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None, profile="isotope"):
+def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
+                profile="isotope", unicode_literals=False):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -162,6 +163,11 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
     response_headers, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
     expect(response_headers.get_content_type(), "application/json")
     expect(json.loads(data), {"type": "success", "data": [{"X": "owner"}], "more": False})
+    if unicode_literals:
+        query = urlencode({"goal": """fixture_chars(X), X == "aé€😀", X == [a,'é','€','😀'], "" == []""",
+                           "format": "json", "src_text": 'fixture_chars("aé€😀").'})
+        _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
+        expect(json.loads(data)["type"], "success")
     headers = {"Origin": origin, "Content-Type": "application/json"}
     spawn = {"options": "[session(true)]", "prompt_correlation": True}
     if shell:
@@ -190,6 +196,12 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
         expect(prompt["type"], "prompt")
         expect(post("respond", input="owner_reply.", prompt_ref=prompt["prompt_ref"])["type"], "responded")
         expect(post("poll")["data"], [{"X": "owner_reply"}])
+        if unicode_literals:
+            prompt = post("call", goal="""input("Réponse 😀",X), X == ['é','😀']""")
+            expect((prompt["type"], prompt["data"]), ("prompt", "Réponse 😀"))
+            reply = post("respond", input='"é😀".', prompt_ref=prompt["prompt_ref"])
+            expect(reply["type"], "responded")
+            expect(post("poll")["type"], "success")
     finally:
         expect(post("halt")["type"], "halted")
     print("N7 HTTPS metadata, admission, stateless JSON with source, paging and prompt reply passed")
@@ -435,7 +447,8 @@ def main():
         try:
             wait_for(tls_ready)
             check_https(origin, ca, shell=args.shell, actor_core=args.actor_core,
-                        profile="actor" if args.advertise_actor else "isotope")
+                        profile="actor" if args.advertise_actor else "isotope",
+                        unicode_literals=True)
             if args.shell:
                 check_shared_database(origin, ca, assets)
         except Exception:
