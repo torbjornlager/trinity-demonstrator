@@ -5,7 +5,7 @@
 :- ensure_loaded(library(swi)).
 
 :- export spawn/1, actors/1.
-:- export browser_goal/2, browser_format/2, source_body/2.
+:- export browser_goal/2, browser_format/2, browser_chart_trace/1, source_body/2.
 :- export flush/0, browser_time/1, browser_sleep/1, browser_random_between/3.
 :- export browser_call_cleanup/2, browser_random_member/2.
 :- export send/3, cancel/1.
@@ -354,6 +354,9 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
                       (:- import(toplevel_call/3 from toplevel_actors))])@Private
     ; true
     ),
+    ( browser_session(_) ->
+        compile_term([(:- import(demo_services))])@Private
+    ; true ),
     load_actor_source(Text, Private),
     yield(ready, run),
     run_actor_goal(Goal, Private).
@@ -448,6 +451,8 @@ browser_goal(call_cleanup(Goal, Cleanup), actors:browser_call_cleanup(Call, Done
 browser_goal(sleep(Time), actors:browser_sleep(Time)) :- !.
 browser_goal(random_between(Low, High, Random), actors:browser_random_between(Low, High, Random)) :- !.
 browser_goal(random_member(Item, List), actors:browser_random_member(Item, List)) :- !.
+browser_goal(write(Term), actors:browser_format("~w", [Term])) :- !.
+browser_goal(nl, actors:browser_format("~n", [])) :- !.
 browser_goal(writeln(Term), actors:browser_format("~w~n", [Term])) :- !.
 browser_goal(read(Value), input('|:', Value, [correlate(true)])) :- !.
 browser_goal(clause(Head, Body), actors:source_body(Head, Body)) :- !.
@@ -482,6 +487,12 @@ browser_format(Control, Args) :-
         send(main, browser_child_output(Session, Text))
     ; toplevel_actors:browser_format(Control, Args)
     ).
+
+browser_chart_trace(Event) :-
+    ( browser_session(Session), self(Actor) ->
+        term_string(Event, Text),
+        send(main, browser_child_trace(Session, Actor, Text))
+    ; true ).
 
 flush :-
     receive({ Message -> flush_message(Message), flush }, [timeout(0)]).

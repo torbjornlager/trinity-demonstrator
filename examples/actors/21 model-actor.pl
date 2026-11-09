@@ -1,6 +1,7 @@
 %%  Two actors, two conversations, one small language model.
 %
-%   Select n3 (ACTOR) and load this source. chat_actor(History) carries
+%   Select n3 (ACTOR) or the owner-only N7 shell with access to n3.
+%   Load this source. chat_actor(History) carries
 %   its conversation in a recursive argument, just as a counter actor
 %   carries its count. Every spawned actor starts with a separate [].
 %

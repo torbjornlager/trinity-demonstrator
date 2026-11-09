@@ -11,7 +11,7 @@
 :- tool(promise/3, promise_/4).
 :- tool(promise/4, promise_/5).
 :- tool(yield/3, yield_/4).
-:- export call_page/7, clear_promises/0, init_egress/0.
+:- export call_page/7, clear_promises/0, init_egress/0, egress_request/4, query_page/8.
 :- local store(egress).
 
 init_egress :-

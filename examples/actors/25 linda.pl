@@ -1,6 +1,6 @@
 %% Linda: programs belonging to different users share a blackboard.
 %
-% Select n3, n4, or n5. The node owner supplies the Linda service and these
+% Select n3, n4, n5, or the owner-only N7 shell. The node supplies these
 % predicates; this file contains only examples of using them.
 %
 % Try with a partner or two browser sessions on the SAME node. Agree on a

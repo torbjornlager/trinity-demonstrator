@@ -21,6 +21,7 @@ from threading import BoundedSemaphore, Condition, Thread
 from time import monotonic
 from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 from uuid import uuid4
+import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
 DEMO_ROUTE = "/examples/APIs/http_example-1.html"
@@ -128,11 +129,51 @@ def fetch_peer(allowed_peers, request):
         connection.close()
 
 
+def bundled_chart_source(shell_assets):
+    if shell_assets is None:
+        raise ValueError("shell_assets_required")
+    chart_path = shell_assets / "examples/statecharts/20 jev-deployment-assistant.xml"
+    root = ET.parse(chart_path).getroot()
+    if (root.tag != "statechart" or root.get("version") != "0.2"
+            or set(root.attrib) != {"version", "initial"}):
+        raise ValueError("unsupported_chart")
+    datamodel = root.find("datamodel")
+    states = root.findall("state")
+    state_ids = {state.get("id") for state in states}
+    initial = root.get("initial")
+    if (datamodel is None or datamodel.attrib or len(datamodel)
+            or len(root.findall("datamodel")) != 1
+            or len(state_ids) != len(states) or initial not in state_ids
+            or any(not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z_0-9]*", name)
+                   for name in state_ids)
+            or any(element.tag not in {"datamodel", "state"} for element in root)):
+        raise ValueError("unsupported_chart")
+    clauses = [datamodel.text or "", f"n7_chart_initial({initial})."]
+    for state in states:
+        name = state.get("id")
+        if set(state.attrib) != {"id"}:
+            raise ValueError("unsupported_chart_state")
+        for transition in state:
+            target = transition.get("to", name)
+            event = transition.get("on")
+            guard = transition.get("if", "true")
+            action = (transition.text or "").strip() or "true"
+            if (transition.tag != "go" or target not in state_ids or not event or len(transition)
+                    or set(transition.attrib) - {"on", "to", "if"}):
+                raise ValueError("unsupported_chart_transition")
+            clauses.append(
+                f"n7_chart_step({name}, N7Event, {target}) :- "
+                f"N7Event = ({event}), once(({guard})), !, ({action})."
+            )
+    return "\n".join(clauses)
+
+
 class Bridge:
-    def __init__(self, process, stop_backend=None, allowed_peers=()):
+    def __init__(self, process, stop_backend=None, allowed_peers=(), shell_assets=None):
         self.process = process
         self.stop_backend = stop_backend
         self.allowed_peers = allowed_peers
+        self.shell_assets = shell_assets
         self.egress_slots = BoundedSemaphore(4)
         if stop_backend is not None:
             os.set_blocking(process.stdin.fileno(), False)
@@ -270,9 +311,12 @@ class Bridge:
     def run_egress(self, request):
         try:
             try:
-                body = fetch_peer(self.allowed_peers, request)
+                if request["operation"] == "demo_chart":
+                    body = bundled_chart_source(self.shell_assets)
+                else:
+                    body = fetch_peer(self.allowed_peers, request)
                 status = "ok"
-            except (ValueError, KeyError, TypeError, OSError, HTTPException):
+            except (ValueError, KeyError, TypeError, OSError, HTTPException, ET.ParseError):
                 status, body = "error", "peer_request_failed"
             self.finish_egress(request, status, body)
         finally:
@@ -644,8 +688,9 @@ def bridge_archive():
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
         for name in ("actors.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
                      "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl",
-                     "server_behaviours.ecl"):
+                     "server_behaviours.ecl", "demo_services.ecl"):
             archive.add(HERE / name, arcname=name)
+        archive.add(HERE.parents[1] / "examples/services/linda_space.pl", arcname="linda_space.pl")
     return buffer.getvalue()
 
 
@@ -760,7 +805,7 @@ def main():
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             text=True, encoding="utf-8",
         ) as process:
-            server.bridge = Bridge(process, stop_backend, allowed_peers)
+            server.bridge = Bridge(process, stop_backend, allowed_peers, shell_assets)
             try:
                 if archive is not None:
                     process.stdin.buffer.write(archive)

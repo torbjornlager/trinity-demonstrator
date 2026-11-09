@@ -3,6 +3,8 @@
 :- use_module(toplevel_actors).
 :- use_module(isotope_rpc).
 :- ensure_loaded(server_behaviours).
+:- ensure_loaded(demo_services).
+:- import init_linda/0 from demo_services.
 :- import exit/1, exit/2 from actors.
 :- lib(json).
 :- lib(prolog_extras).
@@ -16,6 +18,7 @@
 run :-
     start_actor_runtime,
     init_egress,
+    init_linda,
     get_stream(output, Replies),
     set_stream(output, error),
     self(Main),
@@ -69,6 +72,13 @@ serve(Replies) :-
         browser_child_output(actor(Id), Text) ->
             ( store_get(http_sessions, Id, _) ->
                 reply(Replies, {[type:browser_child_output, pid:Id, data:Text]})
+            ; true ),
+            serve(Replies)
+    ;
+        browser_child_trace(actor(Id), actor(Chart), Text) ->
+            ( store_get(http_sessions, Id, _) ->
+                reply(Replies, {[type:browser_child_output, pid:Id, actor_id:Chart,
+                                 kind:statechart_trace, data:Text]})
             ; true ),
             serve(Replies)
     ;

@@ -8,7 +8,7 @@ jev_sxml_agent_spawn(Pid) :-
     spawn(jev_sxml_agent, Pid, [
         src_predicates([
             jev_sxml_agent/0, jev_sxml_agent_loop/1,
-            jev_observation/2
+            jev_observation/2, jev_provenance/1
         ]),
         monitor(true)
     ]).
@@ -36,12 +36,16 @@ jev_observation(Text, Observation) :-
           Candidate = unavailable(configuration)),
     (  Candidate = observation(choice(_, _, _), score(_, _, _, _),
                                noul(_), provenance(Raw)),
-       is_dict(Raw)
+       jev_provenance(Raw)
     -> Observation = Candidate
     ;  Candidate = unavailable(Reason)
     -> Observation = unavailable(Reason)
     ;  Observation = unavailable(malformed_observation)
     ).
+
+% ECLiPSe transports nested SWI dictionary provenance as opaque text.
+jev_provenance(swi_dict(Text)) :- !, string(Text).
+jev_provenance(Raw) :- is_dict(Raw).
 
 /** <examples>
 
