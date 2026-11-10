@@ -438,6 +438,30 @@ try:
                "Down==yes")
     print('Nested synchronous pages, stale reply rejection, async compatibility, and child exit passed')
 
+    shell_call("toplevel_spawn(Top,[session(true)]),"
+               "toplevel_call_synch(Top,member(X,[a,b]),All),"
+               "All==success(Top,[member(a,[a,b]),member(b,[a,b])],false),var(X),"
+               "toplevel_call_synch(Top,(member(Y,[a,b,c,d]),(Y==b->receive({release->true});true)),"
+               "First,[template(Y),limit(1)]),First==success(Top,[a],true),"
+               "catch(toplevel_next_synch(Top,_,[template(Y)]),"
+               "error(domain_error(toplevel_next_synch_option,template(_)),_),Invalid=yes),Invalid==yes,"
+               "toplevel_next_synch(Top,Late,[timeout(0.02)]),var(Late),send(Top,release),"
+               "self(Self),toplevel_next_synch(Top,Last,[target(Self),limit(2),timeout(2),"
+               "on_timeout(throw(missing_last))]),Last==success(Top,[c,d],false),"
+               "toplevel_halt(Top)")
+    shell_call("assert((next_wait_callback(X):-member(X,[waited,again]))),"
+               "toplevel_spawn(Top,[session(true)]),"
+               "findall(B,toplevel_next_synch(Top,_,[timeout(0),on_timeout(next_wait_callback(B))]),"
+               "[waited]),"
+               "(toplevel_next_synch(Top,_,[timeout(0),on_timeout(fail)])->throw(unexpected_success);true),"
+               "catch(toplevel_next_synch(Top,_,[timeout(0),on_timeout(throw(wait_expired))]),"
+               "wait_expired,Expired=yes),Expired==yes,"
+               "catch(toplevel_next_synch(Top,_,[timeout(bad)]),"
+               "error(type_error(number,bad),_),BadTimeout=yes),BadTimeout==yes,"
+               "toplevel_call_synch(Top,true,Answer),Answer==success(Top,[true],false),"
+               "toplevel_halt(Top)")
+    print('Synchronous default call, next options, timeout callbacks, and late next reply passed')
+
     if chart_uris:
         atom = suite['prolog_quote_atom']
         start = '<statechart version="0.2" initial="s">'

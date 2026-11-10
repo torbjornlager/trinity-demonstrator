@@ -7,7 +7,8 @@
 :- export toplevel_spawn/1, toplevel_spawn/2.
 :- export toplevel_call/2, toplevel_call/3.
 :- export toplevel_next/1, toplevel_next/2.
-:- export toplevel_call_synch/4, toplevel_next_synch/2.
+:- export toplevel_call_synch/3, toplevel_call_synch/4.
+:- export toplevel_next_synch/2, toplevel_next_synch/3.
 :- export toplevel_stop/1, toplevel_stop/2, toplevel_abort/1.
 :- export toplevel_halt/1, toplevel_halt/2.
 :- lib(timeout).
@@ -31,7 +32,10 @@ browser_format(Control, Args) :-
 
 :- tool(toplevel_spawn/1, toplevel_spawn_/2).
 :- tool(toplevel_spawn/2, toplevel_spawn_/3).
+:- tool(toplevel_call_synch/3, toplevel_call_synch_/4).
 :- tool(toplevel_call_synch/4, toplevel_call_synch_/5).
+:- tool(toplevel_next_synch/2, toplevel_next_synch_/3).
+:- tool(toplevel_next_synch/3, toplevel_next_synch_/4).
 
 toplevel_spawn_(Pid, Module) :-
     toplevel_spawn_(Pid, [], Module).
@@ -88,40 +92,63 @@ toplevel_next(Pid, Options) :-
     next_options(Options, all, main, _, _),
     send(Pid, '$next'(Options)).
 
+toplevel_call_synch_(Pid, Goal, Answer, Module) :-
+    toplevel_call_synch_(Pid, Goal, Answer, [], Module).
+
 toplevel_call_synch_(Pid, Goal, Answer, Options, Module) :-
-    self(Self),
-    ( is_list(Options) -> split_sync_options(Options, Self, Query, Wait)
-    ; throw(error(type_error(list, Options), toplevel_call_synch/4))
-    ),
-    option_value(on_timeout, Wait, true, Callback),
-    fresh_reference(Request),
-    synchronous_request(Pid, '$call'(Goal, ['$request_ref'(Request),target(Self)|Query]),
+    synchronous_options(call, Options, Request, Query, Wait, Callback),
+    synchronous_request(Pid, '$call'(Goal, Query),
                         Request, Answer, Wait, Callback, Module).
 
-toplevel_next_synch(Pid, Answer) :-
-    self(Self),
-    fresh_reference(Request),
-    synchronous_request(Pid, '$next'(['$request_ref'(Request),target(Self)]),
-                        Request, Answer, [], true, toplevel_actors).
+toplevel_next_synch_(Pid, Answer, Module) :-
+    toplevel_next_synch_(Pid, Answer, [], Module).
 
-split_sync_options([], _, [], []).
-split_sync_options([Option|Options], Self, Query, Wait) :-
-    ( nonvar(Option), Option = target(Target) ->
-        ( var(Target) -> throw(error(instantiation_error, toplevel_call_synch/4))
+toplevel_next_synch_(Pid, Answer, Options, Module) :-
+    synchronous_options(next, Options, Request, Query, Wait, Callback),
+    synchronous_request(Pid, '$next'(Query),
+                        Request, Answer, Wait, Callback, Module).
+
+synchronous_options(Kind, Options, Request, ['$request_ref'(Request),target(Self)|Query], Wait, Callback) :-
+    self(Self),
+    sync_option_context(Kind, Caller, _),
+    ( var(Options) -> throw(error(instantiation_error, Caller))
+    ; is_list(Options) -> split_sync_options(Options, Kind, Self, Query, Wait)
+    ; throw(error(type_error(list, Options), Caller))
+    ),
+    option_value(on_timeout, Wait, true, Callback),
+    fresh_reference(Request).
+
+sync_option_context(call, toplevel_call_synch/4, toplevel_call_synch_option).
+sync_option_context(next, toplevel_next_synch/3, toplevel_next_synch_option).
+
+split_sync_options([], _, _, [], []).
+split_sync_options([Option|Options], Kind, Self, Query, Wait) :-
+    sync_option_context(Kind, Caller, Domain),
+    ( var(Option) -> throw(error(instantiation_error, Caller))
+    ; Option = target(Target) ->
+        ( var(Target) -> throw(error(instantiation_error, Caller))
         ; Target == Self -> true
-        ; throw(error(domain_error(synchronous_toplevel_target, Target), toplevel_call_synch/4))
+        ; throw(error(domain_error(synchronous_toplevel_target, Target), Caller))
         ),
         Query = Qs, Wait = Ws
-    ; nonvar(Option), Option = timeout(Seconds), number(Seconds) ->
+    ; Option = timeout(Seconds) ->
+        ( var(Seconds) -> throw(error(instantiation_error, Caller))
+        ; number(Seconds) -> true
+        ; throw(error(type_error(number, Seconds), Caller))
+        ),
         Query = Qs, Wait = [Option|Ws]
-    ; nonvar(Option), Option = on_timeout(Callback), nonvar(Callback), callable(Callback) ->
+    ; Option = on_timeout(Callback) ->
+        ( var(Callback) -> throw(error(instantiation_error, Caller))
+        ; callable(Callback) -> true
+        ; throw(error(type_error(callable, Callback), Caller))
+        ),
         Query = Qs, Wait = [Option|Ws]
-    ; nonvar(Option), valid_option(Option, call) ->
+    ; valid_option(Option, Kind) ->
         Query = [Option|Qs], Wait = Ws
     ;
-        throw(error(domain_error(toplevel_call_synch_option, Option), toplevel_call_synch/4))
+        throw(error(domain_error(Domain, Option), Caller))
     ),
-    split_sync_options(Options, Self, Qs, Ws).
+    split_sync_options(Options, Kind, Self, Qs, Ws).
 
 synchronous_request(Pid, Command, Request, Answer, Options, Callback, Module) :-
     setup_call_cleanup(
