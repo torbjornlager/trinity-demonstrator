@@ -195,8 +195,8 @@ supervisor_spawn_(Specs, Sup, Options, Module) :-
     ( Monitor == true -> true ; demonitor(Sup, [flush]) ).
 
 supervisor_config(Options, config(Strategy, Intensity, Period), Sources, Startup, Monitor) :-
-    ( is_list(Options), checklist(supervisor_option, Options) -> true
-    ; throw(error(domain_error(supervisor_options, Options), supervisor_spawn/3)) ),
+    require_creation_list(Options, supervisor_spawn/3),
+    checklist(validate_supervisor_option, Options),
     behaviour_option(strategy, Options, one_for_one, Strategy),
     behaviour_option(intensity, Options, 1, Intensity),
     behaviour_option(period, Options, 5, Period),
@@ -204,15 +204,26 @@ supervisor_config(Options, config(Strategy, Intensity, Period), Sources, Startup
     behaviour_option(monitor, Options, false, Monitor),
     findall(Option, (member(Option, Options), source_option(Option)), Sources).
 
-supervisor_option(Option) :-
-    nonvar(Option),
-    ( Option = strategy(S), nonvar(S), memberchk(S, [one_for_one, one_for_all, rest_for_one])
-    ; Option = intensity(N), integer(N), N >= 0
-    ; Option = period(T), number(T), T > 0
-    ; supervisor_start_option(Option)
-    ; Option = monitor(B), boolean(B)
-    ; source_option(Option)
-    ).
+validate_supervisor_option(Option) :-
+    Caller = supervisor_spawn/3,
+    require_creation_value(Option, Caller),
+    ( Option = strategy(Strategy) ->
+        require_creation_value(Strategy, Caller),
+        ( memberchk(Strategy, [one_for_one, one_for_all, rest_for_one]) -> true
+        ; throw(error(domain_error(supervisor_strategy, Strategy), Caller)) )
+    ; Option = intensity(Count) ->
+        require_creation_value(Count, Caller),
+        ( integer(Count) -> true ; throw(error(type_error(integer, Count), Caller)) ),
+        ( Count >= 0 -> true ; throw(error(domain_error(not_less_than_zero, Count), Caller)) )
+    ; Option = period(Period) ->
+        require_creation_value(Period, Caller),
+        ( number(Period) -> true ; throw(error(type_error(number, Period), Caller)) ),
+        ( Period > 0 -> true ; throw(error(domain_error(supervisor_period, Period), Caller)) )
+    ; Option = link(Link) -> validate_creation_boolean(Link, Caller)
+    ; Option = monitor(Monitor) -> validate_creation_boolean(Monitor, Caller)
+    ; supervisor_start_option(Option) -> true
+    ; source_option(Option) -> true
+    ; throw(error(domain_error(spawn_option, Option), Caller)) ).
 
 supervisor_start_option(link(B)) :- boolean(B).
 supervisor_start_option(name(Name)) :- atom(Name), Name \== undefined.
@@ -226,37 +237,76 @@ behaviour_option(Name, Options, Default, Value) :-
     ( memberchk(Option, Options) -> arg(1, Option, Value) ; Value = Default ).
 
 normalise_children(Specs, Children) :-
-    ( is_list(Specs) -> maplist(normalise_child, Specs, Children)
-    ; throw(error(type_error(list, Specs), supervisor_spawn/3)) ),
+    require_creation_list(Specs, supervisor_spawn/3),
+    require_acyclic_spec(Specs),
+    maplist(normalise_child, Specs, Children),
     ( foreach(spec(Name, _, _, _, _), Children), fromto([], Seen, [Name|Seen], _) do
-        ( memberchk(Name, Seen) -> throw(error(duplicate_child(Name), supervisor_spawn/3))
+        ( memberchk(Name, Seen) ->
+            throw(error(permission_error(duplicate, supervisor_child_id, Name), supervisor_spawn/3))
         ; true )
     ).
 
 normalise_child(Raw, spec(Name, Start, Restart, Type, Shutdown)) :-
-    ( nonvar(Raw), Raw = child(Name, Options) -> true
-    ; throw(error(domain_error(supervisor_child_spec, Raw), supervisor_spawn/3)) ),
-    require_child_name(Name, supervisor_spawn/3),
-    ( is_list(Options), checklist(child_option, Options),
-      memberchk(start(Start), Options) -> true
-    ; throw(error(domain_error(supervisor_child_spec, Raw), supervisor_spawn/3)) ),
+    Caller = supervisor_spawn/3,
+    require_creation_value(Raw, Caller),
+    require_acyclic_spec(Raw),
+    ( Raw = child(Name, Options) -> true
+    ; throw(error(type_error(supervisor_child_spec, Raw), Caller)) ),
+    require_creation_atom(Name, Caller),
+    require_creation_list(Options, Caller),
+    checklist(validate_child_option, Options),
+    ( memberchk(start(Start), Options) -> true
+    ; throw(error(missing_start_option(Name), Caller)) ),
     behaviour_option(restart, Options, permanent, Restart),
     behaviour_option(type, Options, worker, Type),
     ( Type == supervisor -> Default = infinity ; Default = 5 ),
     behaviour_option(shutdown, Options, Default, Shutdown).
 
-require_child_name(Name, Caller) :-
-    ( var(Name) -> throw(error(instantiation_error, Caller))
-    ; atom(Name) -> true
-    ; throw(error(type_error(atom, Name), Caller)) ).
+require_acyclic_spec(Spec) :-
+    ( acyclic_term(Spec) -> true
+    ; throw(error(representation_error(cyclic_term), supervisor_spawn/3)) ).
 
-child_option(Option) :-
-    nonvar(Option),
-    ( Option = start(Goal), callable_callback(Goal)
-    ; Option = restart(R), nonvar(R), memberchk(R, [permanent, transient, temporary])
-    ; Option = type(T), nonvar(T), memberchk(T, [worker, supervisor])
-    ; Option = shutdown(S), ( S == infinity ; S == brutal_kill ; number(S), S >= 0 )
-    ).
+require_child_name(Name, Caller) :-
+    require_creation_atom(Name, Caller).
+
+validate_child_option(Option) :-
+    Caller = supervisor_spawn/3,
+    require_creation_value(Option, Caller),
+    ( Option = start(Goal) ->
+        validate_child_start(Goal, Caller)
+    ; Option = restart(Policy) ->
+        require_creation_value(Policy, Caller),
+        ( memberchk(Policy, [permanent, transient, temporary]) -> true
+        ; throw(error(domain_error(supervisor_child_restart, Policy), Caller)) )
+    ; Option = type(Type) ->
+        require_creation_value(Type, Caller),
+        ( memberchk(Type, [worker, supervisor]) -> true
+        ; throw(error(type_error(oneof([worker, supervisor]), Type), Caller)) )
+    ; Option = shutdown(Shutdown) ->
+        require_creation_value(Shutdown, Caller),
+        ( ( Shutdown == infinity ; Shutdown == brutal_kill ; number(Shutdown), Shutdown >= 0 ) -> true
+        ; throw(error(domain_error(supervisor_child_shutdown, Shutdown), Caller)) )
+    ; throw(error(domain_error(supervisor_child_option, Option), Caller)) ).
+
+validate_child_start(Goal, Caller) :-
+    validate_child_callable(Goal, Caller),
+    ( Goal = start_sub_supervisor(Specs, Options) ->
+        supervisor_config(Options, _, _, _, _),
+        normalise_children(Specs, _)
+    ; Goal = server(Callback, Options) ->
+        validate_child_callable(Callback, Caller),
+        require_creation_list(Options, Caller),
+        ( checklist(server_child_option, Options) -> true
+        ; throw(error(domain_error(supervisor_server_options, Options), Caller)) )
+    ; true ).
+
+validate_child_callable(Goal, Caller) :-
+    require_creation_value(Goal, Caller),
+    ( Goal = Module:Inner ->
+        require_creation_atom(Module, Caller),
+        validate_child_callable(Inner, Caller)
+    ; callable_callback(Goal) -> true
+    ; throw(error(type_error(callable, Goal), Caller)) ).
 
 launch_supervisor(Children, Config, Source, Startup, Sup) :-
     self(Parent),
@@ -309,7 +359,9 @@ supervisor_halt(Sup) :-
 
 supervisor_which_children(Sup, Infos) :- supervisor_request(Sup, which, Infos).
 supervisor_count_children(Sup, Counts) :- supervisor_request(Sup, count, Counts).
-supervisor_spawn_child(Sup, Spec, Reply) :- supervisor_request(Sup, start(Spec), Reply).
+supervisor_spawn_child(Sup, Raw, Reply) :-
+    normalise_child(Raw, Spec),
+    supervisor_request(Sup, start(Spec), Reply).
 supervisor_terminate_child(Sup, Name, Reply) :-
     require_child_name(Name, supervisor_terminate_child/3),
     supervisor_request(Sup, terminate(Name), Reply).
@@ -352,8 +404,8 @@ supervisor_call(count, Children, _, Children,
     findall(1, member(supervisor, Types), Sups),
     length(Sups, Supervisors),
     Workers is Active - Supervisors.
-supervisor_call(start(Raw), Children, Source, Next, Reply) :- !,
-    catch((normalise_child(Raw, Spec), Spec = spec(Name, _, _, _, _),
+supervisor_call(start(Spec), Children, Source, Next, Reply) :- !,
+    catch((Spec = spec(Name, _, _, _, _),
            ( select_child(Name, Children, _, _, _) ->
                Reply = error(already_present), Next = Children
            ; start_child(Spec, Source, Pid),

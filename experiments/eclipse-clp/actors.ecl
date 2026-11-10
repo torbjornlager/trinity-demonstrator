@@ -32,6 +32,8 @@
 :- export actor_module/2, discard_deferred/1, post_actor_event/2.
 :- export actor_browser_session/2.
 :- export issued_actor_pid/1.
+:- export require_creation_list/2, require_creation_value/2, require_creation_atom/2.
+:- export validate_creation_boolean/2, first_creation_option/3.
 :- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
 :- export unicode_literal/2, text_string/2.
 :- export make_ref/1.
@@ -116,47 +118,84 @@ spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module) :-
     ).
 
 spawn_options(Options, Parent, Link, startup(Monitor, Name, Io), Source, Destination) :-
-    ( is_list(Options) -> true
-    ; throw(error(type_error(list, Options), spawn/3))
-    ),
-    ( member(Marker, Options), Marker == '$state_owned',
-      select('$state_owned', Options, UnownedOptions) ->
-        Link = owned(Parent)
-    ; UnownedOptions = Options ),
-    spawn_options_(UnownedOptions, options(unset, unset, [], local, none, none),
-                   options(LinkOption, MonitorOption, Source, Destination, Name, Io)),
-    ( nonvar(Link) -> true
+    require_creation_list(Options, spawn/3),
+    spawn_options_(Options, options(unset, unset, [], unset, unset, unset), Parsed),
+    Parsed = options(LinkOption, MonitorOption, Source, Node, NameOption, IoOption),
+    ( member(Marker, Options), Marker == '$state_owned' -> Link = owned(Parent)
     ; LinkOption == false -> Link = detached
     ; Link = linked(Parent) ),
-    ( MonitorOption == true -> Monitor = watch(Parent) ; Monitor = none ).
+    ( MonitorOption == true -> Monitor = watch(Parent) ; Monitor = none ),
+    ( Node == unset -> Destination = local ; Destination = Node ),
+    ( NameOption == unset -> Name = none ; Name = NameOption ),
+    ( IoOption == unset -> Io = none ; Io = IoOption ).
 
 spawn_options_([], Options, Options).
 spawn_options_([Option|Options], options(Link, Monitor, Source, Destination, Name, Io), Parsed) :-
-    ( nonvar(Option), Option = link(Value), Link == unset,
-      ( Value == true ; Value == false ) ->
-        Next = options(Value, Monitor, Source, Destination, Name, Io)
-    ; nonvar(Option), Option = monitor(Value), Monitor == unset,
-      ( Value == true ; Value == false ) ->
-        Next = options(Link, Value, Source, Destination, Name, Io)
+    require_creation_value(Option, spawn/3),
+    ( Option = link(Value) ->
+        validate_creation_boolean(Value, spawn/3),
+        first_creation_option(Link, Value, Selected),
+        Next = options(Selected, Monitor, Source, Destination, Name, Io)
+    ; Option = monitor(Value) ->
+        validate_creation_boolean(Value, spawn/3),
+        first_creation_option(Monitor, Value, Selected),
+        Next = options(Link, Selected, Source, Destination, Name, Io)
+    ; Option = node(Node) ->
+        require_creation_atom(Node, spawn/3),
+        first_creation_option(Destination, remote(Node), Selected),
+        Next = options(Link, Monitor, Source, Selected, Name, Io)
+    ; Option = name(Atom) ->
+        require_creation_atom(Atom, spawn/3),
+        ( Atom == undefined -> throw(error(domain_error(actor_name, Atom), spawn/3)) ; true ),
+        first_creation_option(Name, name(Atom), Selected),
+        Next = options(Link, Monitor, Source, Destination, Selected, Io)
+    ; Option = io_target(Target) ->
+        ( ground(Target) -> true ; throw(error(instantiation_error, spawn/3)) ),
+        first_creation_option(Io, io(Target), Selected),
+        Next = options(Link, Monitor, Source, Destination, Name, Selected)
+    ; Option == '$state_owned' -> Next = options(Link, Monitor, Source, Destination, Name, Io)
+    ; Option = src_uri(Uri) ->
+        require_creation_atom(Uri, spawn/3),
+        Next = options(Link, Monitor, [Option|Source], Destination, Name, Io)
     ; source_option(Option) ->
         Next = options(Link, Monitor, [Option|Source], Destination, Name, Io)
-    ; nonvar(Option), Option = node(Node), Destination == local, atom(Node) ->
-        Next = options(Link, Monitor, Source, remote(Node), Name, Io)
-    ; nonvar(Option), Option = name(Atom), Name == none, atom(Atom), Atom \== undefined ->
-        Next = options(Link, Monitor, Source, Destination, name(Atom), Io)
-    ; nonvar(Option), Option = io_target(Target), Io == none, ground(Target) ->
-        Next = options(Link, Monitor, Source, Destination, Name, io(Target))
-    ;
-        throw(error(domain_error(local_spawn_option, Option), spawn/3))
-    ),
+    ; throw(error(domain_error(spawn_option, Option), spawn/3)) ),
     spawn_options_(Options, Next, Parsed).
 
-% Copy only the selected predicates into the child, as SWI does. Keep
-% the original terms for static predicates and read live dynamic clauses.
+first_creation_option(unset, Value, Value) :- !.
+first_creation_option(Selected, _, Selected).
+
+require_creation_value(Value, Caller) :-
+    ( var(Value) -> throw(error(instantiation_error, Caller)) ; true ).
+
+require_creation_atom(Value, Caller) :-
+    require_creation_value(Value, Caller),
+    ( atom(Value), Value \== [] -> true ; throw(error(type_error(atom, Value), Caller)) ).
+
+validate_creation_boolean(Value, Caller) :-
+    require_creation_atom(Value, Caller),
+    ( ( Value == true ; Value == false ) -> true
+    ; throw(error(domain_error(boolean, Value), Caller)) ).
+
+require_creation_list(Options, Caller) :-
+    ( is_list(Options) -> true
+    ; acyclic_term(Options), open_list_tail(Options) ->
+        throw(error(instantiation_error, Caller))
+    ; throw(error(type_error(list, Options), Caller)) ).
+
+% Resolve source only after validating the entire option list.
 spawn_source([], _, none) :- !.
 spawn_source(Reversed, Module, text(Text)) :-
     reverse(Reversed, Options),
-    source_options_text(Options, Module, Text).
+    maplist(resolve_spawn_source, Options, Sources),
+    source_options_text(Sources, Module, Text).
+
+resolve_spawn_source(src_uri(Uri), src_text(Text)) :- !,
+    ( current_module(isotope_rpc) ->
+        atom_string(Uri, Url),
+        call(egress_request("source", Url, [], Text))@isotope_rpc
+    ; throw(error(existence_error(source_transport, Uri), spawn/3)) ).
+resolve_spawn_source(Option, Option).
 
 source_option(Option) :-
     nonvar(Option),
@@ -1363,10 +1402,7 @@ demonitor(Ref) :-
 
 demonitor(Ref, Options) :-
     ( ground(Ref) -> true ; throw(error(instantiation_error, demonitor/2)) ),
-    ( is_list(Options) -> true
-    ; acyclic_term(Options), open_list_tail(Options) ->
-        throw(error(instantiation_error, demonitor/2))
-    ; throw(error(type_error(list, Options), demonitor/2)) ),
+    require_creation_list(Options, demonitor/2),
     validate_demonitor_options(Options),
     self(Watcher),
     store_get(actor_registry, runtime, runtime(_, _, Lock)),

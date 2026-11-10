@@ -47,11 +47,11 @@ toplevel_spawn_browser(Pid, Options) :-
     spawn_toplevel(Pid, Options, browser, toplevel_actors).
 
 spawn_toplevel(Pid, Options, Kind, Module) :-
-    ( is_list(Options) -> true
-    ; throw(error(type_error(list, Options), toplevel_spawn/2))
-    ),
+    require_creation_list(Options, toplevel_spawn/2),
     self(Self),
-    split_spawn_options(Options, false, Self, Session, Target, Remaining),
+    split_spawn_options(Options, unset, unset, SessionOption, TargetOption, Remaining),
+    ( SessionOption == unset -> Session = false ; Session = SessionOption ),
+    ( TargetOption == unset -> Target = Self ; TargetOption = target(Target) ),
     spawn_limit(time_limit, Remaining, Time, AfterTime),
     spawn_limit(idle_limit, AfterTime, Idle, SpawnOptions),
     ( member(Option, SpawnOptions), nonvar(Option), Option = node(_) ->
@@ -67,25 +67,35 @@ remote_limit_options(Time, Idle, Options) :-
     ( Idle == infinite -> Rest = [] ; Rest = [idle_limit(Idle)] ).
 
 spawn_limit(Name, Options, Limit, Rest) :-
-    ( member(Option, Options), nonvar(Option), functor(Option, Name, 1),
-      select(Option, Options, Rest) ->
-        arg(1, Option, Limit),
-        ( Limit == infinite ; number(Limit), Limit > 0, Limit < 1.0Inf ), !
-    ; Rest = Options, Limit = infinite ), !.
-spawn_limit(Name, _, _, _) :-
-    throw(error(domain_error(toplevel_limit, Name), toplevel_spawn/2)).
+    collect_spawn_limit(Options, Name, unset, Selected, Rest),
+    ( Selected == unset -> Limit = infinite ; Limit = Selected ).
+
+collect_spawn_limit([], _, Selected, Selected, []).
+collect_spawn_limit([Option|Options], Name, Previous, Selected, Rest) :-
+    ( functor(Option, Name, 1) ->
+        arg(1, Option, Value),
+        ( Value == infinite ; number(Value), Value > 0, Value < 1.0Inf ),
+        !,
+        first_creation_option(Previous, Value, Next),
+        collect_spawn_limit(Options, Name, Next, Selected, Rest)
+    ; functor(Option, Name, 1) ->
+        throw(error(domain_error(toplevel_limit, Name), toplevel_spawn/2))
+    ; Rest = [Option|More],
+      collect_spawn_limit(Options, Name, Previous, Selected, More) ).
 
 split_spawn_options([], Session, Target, Session, Target, []).
 split_spawn_options([Option|Options], Session0, Target0, Session, Target, Rest) :-
-    ( nonvar(Option), Option = session(Value) ->
-        boolean_option(Value),
-        split_spawn_options(Options, Value, Target0, Session, Target, Rest)
-    ; nonvar(Option), Option = target(Value) ->
-        split_spawn_options(Options, Session0, Value, Session, Target, Rest)
-    ;
-        Rest = [Option|More],
-        split_spawn_options(Options, Session0, Target0, Session, Target, More)
-    ).
+    require_creation_value(Option, toplevel_spawn/2),
+    ( Option = session(Value) ->
+        validate_creation_boolean(Value, toplevel_spawn/2),
+        first_creation_option(Session0, Value, Selected),
+        split_spawn_options(Options, Selected, Target0, Session, Target, Rest)
+    ; Option = target(Value) ->
+        require_creation_value(Value, toplevel_spawn/2),
+        first_creation_option(Target0, target(Value), Selected),
+        split_spawn_options(Options, Session0, Selected, Session, Target, Rest)
+    ; Rest = [Option|More],
+      split_spawn_options(Options, Session0, Target0, Session, Target, More) ).
 
 toplevel_call(Pid, Goal) :-
     toplevel_call(Pid, Goal, []).
