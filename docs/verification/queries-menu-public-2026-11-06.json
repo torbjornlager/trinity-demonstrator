@@ -1,0 +1,319 @@
+{
+  "date": "2026-11-06",
+  "deployed_consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+  "changes": {
+    "query_menu_label": "Queries",
+    "tutorials_updated": 3,
+    "statechart_instructions_updated": 18,
+    "statechart_program_trees": "unchanged after parsing XML before and after the text edits"
+  },
+  "qualification": {
+    "stale_query_menu_name_audit": "pass",
+    "browser_bridge_smoke": "pass",
+    "layering_lint": "pass",
+    "demonstrator_integration": "5/5 pass",
+    "release_image_content_and_revision": "pass"
+  },
+  "builds": [
+    {
+      "component": "native",
+      "image": "trinity-queries-menu-native:20261106",
+      "exit_code": 0,
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "seconds": 6.31,
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625"
+    },
+    {
+      "component": "hub",
+      "image": "trinity-queries-menu-hub:20261106",
+      "exit_code": 0,
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "seconds": 0.49,
+      "image_id": "sha256:fc662d10109cfd78a947a4e9a66f917c5a5166c41c73fe2a6f35927bd0d131fe"
+    }
+  ],
+  "rollout": [
+    {
+      "name": "deployment-wp_n1-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.49,
+      "rollback_tag": "queries-menu-rollback-20261106:service-0"
+    },
+    {
+      "name": "deployment-wp_n2-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.18,
+      "rollback_tag": "queries-menu-rollback-20261106:service-1"
+    },
+    {
+      "name": "deployment-wp_n3-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.18,
+      "rollback_tag": "queries-menu-rollback-20261106:service-2"
+    },
+    {
+      "name": "deployment-wp_n4-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.22,
+      "rollback_tag": "queries-menu-rollback-20261106:service-3"
+    },
+    {
+      "name": "deployment-wp_admin-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.1,
+      "rollback_tag": "queries-menu-rollback-20261106:service-4"
+    },
+    {
+      "name": "trinity-n6-host-n6_assets-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.43,
+      "rollback_tag": "queries-menu-rollback-20261106:service-9"
+    },
+    {
+      "name": "trinity-n6-local-n6_assets-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.38,
+      "rollback_tag": "queries-menu-rollback-20261106:service-10"
+    },
+    {
+      "name": "trinity-n6-local-n6_hub-1",
+      "image_id": "sha256:319c0ebbc0ac8fd230cc485a6d66310879823f7f5548806a69889c1af6649625",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 1.05,
+      "rollback_tag": "queries-menu-rollback-20261106:service-11"
+    },
+    {
+      "name": "web-prolog-hub-n0-1",
+      "image_id": "sha256:fc662d10109cfd78a947a4e9a66f917c5a5166c41c73fe2a6f35927bd0d131fe",
+      "consumer_revision": "4fc9e6bc388d0fb662463a9ff93889f3f4d0dd5b",
+      "status": "deployed",
+      "configuration_preserved": true,
+      "seconds": 5.36,
+      "rollback_tag": "queries-menu-rollback-20261106:service-6"
+    }
+  ],
+  "public_node_checks": {
+    "counts": {
+      "pass": 47,
+      "fail": 0
+    },
+    "passed": [
+      "N0 readiness and profile",
+      "N0 exact asset swi_wasm_actor_worker.js",
+      "N0 exact asset vendor/swi-wasm-node.js",
+      "N0 exact asset wasm/statechart_wasm.pl",
+      "N0 exact asset demonstrator.html",
+      "N1 readiness and profile",
+      "N1 exact asset swi_wasm_actor_worker.js",
+      "N1 exact asset vendor/swi-wasm-node.js",
+      "N1 exact asset wasm/statechart_wasm.pl",
+      "N1 exact asset demonstrator.html",
+      "N2 readiness and profile",
+      "N2 exact asset swi_wasm_actor_worker.js",
+      "N2 exact asset vendor/swi-wasm-node.js",
+      "N2 exact asset wasm/statechart_wasm.pl",
+      "N2 exact asset demonstrator.html",
+      "N3 readiness and profile",
+      "N3 exact asset swi_wasm_actor_worker.js",
+      "N3 exact asset vendor/swi-wasm-node.js",
+      "N3 exact asset wasm/statechart_wasm.pl",
+      "N3 exact asset demonstrator.html",
+      "N4 readiness and profile",
+      "N4 exact asset swi_wasm_actor_worker.js",
+      "N4 exact asset vendor/swi-wasm-node.js",
+      "N4 exact asset wasm/statechart_wasm.pl",
+      "N4 exact asset demonstrator.html",
+      "N5 readiness and profile",
+      "N5 exact asset swi_wasm_actor_worker.js",
+      "N5 exact asset vendor/swi-wasm-node.js",
+      "N5 exact asset wasm/statechart_wasm.pl",
+      "N5 exact asset demonstrator.html",
+      "N6 readiness and profile",
+      "N6 exact asset swi_wasm_actor_worker.js",
+      "N6 exact asset vendor/swi-wasm-node.js",
+      "N6 exact asset wasm/statechart_wasm.pl",
+      "N6 exact asset demonstrator.html",
+      "N1 native query",
+      "N2 native query",
+      "N3 native query",
+      "N4 native query",
+      "N5 native query",
+      "N6 native query",
+      "N3 to N4 RPC",
+      "N4 to N3 RPC",
+      "N5 to N4 RPC",
+      "N6 to N1 RPC",
+      "N5 shared database and live service metadata",
+      "Discovery Hub harvested N5 shared predicates and Linda"
+    ]
+  },
+  "published_tutorial_and_example_checks": {
+    "counts": {
+      "pass_count": 147,
+      "fail_count": 0
+    },
+    "verified_hosts": [
+      "N0",
+      "N1",
+      "N2",
+      "N3",
+      "N4",
+      "N5",
+      "N6"
+    ],
+    "files": [
+      {
+        "file": "examples/statecharts/01 pause-and-resume.xml",
+        "path": "/examples/statecharts/01 pause-and-resume.xml",
+        "sha256": "564290077924232236b8ddf020e7f6ebfbc96ed125500e910ebe3727ec8f7916"
+      },
+      {
+        "file": "examples/statecharts/02 spaghetti.xml",
+        "path": "/examples/statecharts/02 spaghetti.xml",
+        "sha256": "5173b78447639cf356141842521c47c5c962d86fecc2a8d0425344bb3c4e908f"
+      },
+      {
+        "file": "examples/statecharts/03 emotions.xml",
+        "path": "/examples/statecharts/03 emotions.xml",
+        "sha256": "f9e59591fafddc9a7fb94dc1cbf3ab9c4e7c85f24cede807cb805fc7d59e0871"
+      },
+      {
+        "file": "examples/statecharts/04 clock.xml",
+        "path": "/examples/statecharts/04 clock.xml",
+        "sha256": "1f41327d7e5b85d4fc275141cb424cdfc3dd0d93a44e72f1cd9cc555f6e82cc8"
+      },
+      {
+        "file": "examples/statecharts/05 pingpong.xml",
+        "path": "/examples/statecharts/05 pingpong.xml",
+        "sha256": "dad74e3efcf52aeafa2c944e070bf7d5c699b88639f2159976266e2b3960e553"
+      },
+      {
+        "file": "examples/statecharts/06 parallel.xml",
+        "path": "/examples/statecharts/06 parallel.xml",
+        "sha256": "f4313445e9f3dc88fd7ce2706f6f60c946470a6d635034d9a54d967dd94e9d2a"
+      },
+      {
+        "file": "examples/statecharts/07 deferred-events.xml",
+        "path": "/examples/statecharts/07 deferred-events.xml",
+        "sha256": "48531fafe029cfb238898e424e79504f24ff370447166330f58f08aba0357b89"
+      },
+      {
+        "file": "examples/statecharts/08 closure.xml",
+        "path": "/examples/statecharts/08 closure.xml",
+        "sha256": "32ce631f7851bf3069425903ce0eec19a0a9cb54041f075479ead86acdfcdbcd"
+      },
+      {
+        "file": "examples/statecharts/09 gcd.xml",
+        "path": "/examples/statecharts/09 gcd.xml",
+        "sha256": "e7e7646448416811bf6a7a59185bbf73a9d84243dba5e8fb12c6c0044c1d9495"
+      },
+      {
+        "file": "examples/statecharts/10 shared-database.xml",
+        "path": "/examples/statecharts/10 shared-database.xml",
+        "sha256": "453c90f2b2a7dd5fc464d8db2bccc32d1565ae6d8e9606a0484da2d121eeddb2"
+      },
+      {
+        "file": "examples/statecharts/11 boxshop-1.xml",
+        "path": "/examples/statecharts/11 boxshop-1.xml",
+        "sha256": "f3eb7289e74313f42230b123195d2d14b76e37f80bc73b1b2f706ac4f425d80c"
+      },
+      {
+        "file": "examples/statecharts/13 spawn-actor.xml",
+        "path": "/examples/statecharts/13 spawn-actor.xml",
+        "sha256": "9a6374d8374f5e75a58dee452ea507a136a2bf3ee5c78263d0fee9d6e664a0a8"
+      },
+      {
+        "file": "examples/statecharts/14 spawn-toplevel.xml",
+        "path": "/examples/statecharts/14 spawn-toplevel.xml",
+        "sha256": "51b207c04ffd44cbe4c11ef8442368867d0ecc6a7c727c870dfe645173d5d8d9"
+      },
+      {
+        "file": "examples/statecharts/15 spawn-server.xml",
+        "path": "/examples/statecharts/15 spawn-server.xml",
+        "sha256": "903c0b14e508d5e429271a3fd8e3ccf578ccf3654729c4d2d500c91b35ec823b"
+      },
+      {
+        "file": "examples/statecharts/16 spawn-supervisor.xml",
+        "path": "/examples/statecharts/16 spawn-supervisor.xml",
+        "sha256": "8576f08c35b0af0fa6758ec004bcfb7a809b48cee14053edec442c9f1f8fdfa9"
+      },
+      {
+        "file": "examples/statecharts/17 spawn-statechart.xml",
+        "path": "/examples/statecharts/17 spawn-statechart.xml",
+        "sha256": "58ff711e3d427617d1f89885b2aece4e7f1faec38bffeeb62b54f01bde506aef"
+      },
+      {
+        "file": "examples/statecharts/18 service-request.xml",
+        "path": "/examples/statecharts/18 service-request.xml",
+        "sha256": "9cfd5e80581871c9bfd8ce2ef6b0b2a5161d69e3c3c058ff7661767b29e6b532"
+      },
+      {
+        "file": "examples/statecharts/19 model-statechart.xml",
+        "path": "/examples/statecharts/19 model-statechart.xml",
+        "sha256": "049288c44bf66e1b8f00c14305d0dedbbe4e71082cb6b8d0c8505109c18241ad"
+      },
+      {
+        "file": "web/actor-profile-tutorial.html",
+        "path": "/actor-profile-tutorial",
+        "sha256": "5ab290025863b44c30e382baaf64a072cb46ae2f49ad09aca28d0ab0f1a139c3"
+      },
+      {
+        "file": "web/swi-wasm-tutorial.html",
+        "path": "/swi-wasm-tutorial",
+        "sha256": "7885a425e672a1f960f7875cedaf732399ec1059df7b1856b47e33556e655911"
+      },
+      {
+        "file": "web/tutorial.html",
+        "path": "/tutorial",
+        "sha256": "0522b937bdbafa7c2c5b0a1b9779346d7a75922bd2f4d3e8005442924e90a79b"
+      }
+    ]
+  },
+  "published_query_menus": [
+    {
+      "status": "pass",
+      "node": "https://n3.elfenbenstornet.se",
+      "label": "Queries",
+      "queries": 2
+    },
+    {
+      "status": "pass",
+      "node": "https://n5.elfenbenstornet.se",
+      "label": "Queries",
+      "queries": 2
+    },
+    {
+      "status": "pass",
+      "node": "https://n6.elfenbenstornet.se",
+      "label": "Queries",
+      "queries": 2
+    }
+  ],
+  "configuration_preserved": "16/16 services",
+  "runtime_services_unchanged": 7,
+  "asset_providers_updated": 9,
+  "rollback_images_retained": true
+}

@@ -2,7 +2,7 @@
 SERVICE-REQUEST AGENT: Chapter 8, self-contained editor example
 
 START HERE
-  1. Run the chart using the first query in the terminal's Examples menu.
+  1. Run the chart using the first query in the terminal's Queries menu.
   2. Run start(Key, laptop), then wait for summary(1, Fields).
   3. Confirm exactly [cost(700), service(laptop)] at revision 1.
      Expect terminal(1, succeeded(ticket_42)). Start a fresh chart for each run.
@@ -28,7 +28,7 @@ TRY NEXT
 EDITING EXERCISE
   1. Finish or halt the current chart. In model_fixture(laptop, ...), change
      cost(700) to cost(1200). Leave the permit rule's limit of 1000 unchanged.
-  2. Run a fresh chart from this editor using the first Examples-menu query,
+  2. Run a fresh chart from this editor using the first Queries-menu query,
      then run the start(Key, laptop) query. The tutorial's Start buttons load
      the served file and will not use these editor changes.
   3. Wait for summary(1, [cost(1200), service(laptop)]). The menu's usual laptop

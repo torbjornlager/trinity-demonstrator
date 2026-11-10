@@ -11,7 +11,7 @@
     the whole machine to its final state. Watch the trace to see the
     remembered substate come back on resume.
 
-    Run the chart and send it events from the Examples menu.
+    Run the chart and send it events from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->

@@ -11,7 +11,7 @@
     configuration moves through the tree; event h reaches the final
     state f.
 
-    Run the chart and send it events from the Examples menu.
+    Run the chart and send it events from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->
