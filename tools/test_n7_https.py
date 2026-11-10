@@ -418,6 +418,26 @@ try:
                f"(member({child},Actors) -> throw(child_still_running) ; true)")
     print('Nested toplevel abort, reuse, stop, halt, and spawn monitor passed')
 
+    shell_call("toplevel_spawn(Top,[session(true)]),"
+               "toplevel_call_synch(Top,member(X,[a,b,c]),First,[template(X),limit(2)]),"
+               "First==success(Top,[a,b],true),var(X),"
+               "toplevel_next_synch(Top,Last),Last==success(Top,[c],false),"
+               "toplevel_halt(Top)")
+    shell_call("toplevel_spawn(Top,[session(true)]),"
+               "toplevel_call(Top,fail),"
+               "toplevel_call_synch(Top,(receive({release->true}),throw(stale)),Late,"
+               "[timeout(0),on_timeout(Waited=yes)]),var(Late),Waited==yes,send(Top,release),"
+               "toplevel_call_synch(Top,member(X,[a,b]),First,"
+               "[template(X),limit(1),timeout(2),on_timeout(throw(missing_fresh))]),"
+               "First==success(Top,[a],true),"
+               "receive({failure(Top)->true},[timeout(0),on_timeout(throw(lost_async))]),"
+               "toplevel_next(Top),"
+               "receive({success(Top,[b],false)->true},[timeout(2),on_timeout(throw(missing_async_next))]),"
+               "catch(toplevel_call_synch(Top,exit(child_exit),_,"
+               "[timeout(2),on_timeout(throw(missing_down))]),toplevel_down(child_exit),Down=yes),"
+               "Down==yes")
+    print('Nested synchronous pages, stale reply rejection, async compatibility, and child exit passed')
+
     if chart_uris:
         atom = suite['prolog_quote_atom']
         start = '<statechart version="0.2" initial="s">'

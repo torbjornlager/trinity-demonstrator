@@ -7,6 +7,7 @@
 :- export toplevel_spawn/1, toplevel_spawn/2.
 :- export toplevel_call/2, toplevel_call/3.
 :- export toplevel_next/1, toplevel_next/2.
+:- export toplevel_call_synch/4, toplevel_next_synch/2.
 :- export toplevel_stop/1, toplevel_stop/2, toplevel_abort/1.
 :- export toplevel_halt/1, toplevel_halt/2.
 :- lib(timeout).
@@ -30,6 +31,7 @@ browser_format(Control, Args) :-
 
 :- tool(toplevel_spawn/1, toplevel_spawn_/2).
 :- tool(toplevel_spawn/2, toplevel_spawn_/3).
+:- tool(toplevel_call_synch/4, toplevel_call_synch_/5).
 
 toplevel_spawn_(Pid, Module) :-
     toplevel_spawn_(Pid, [], Module).
@@ -85,6 +87,85 @@ toplevel_next(Pid) :-
 toplevel_next(Pid, Options) :-
     next_options(Options, all, main, _, _),
     send(Pid, '$next'(Options)).
+
+toplevel_call_synch_(Pid, Goal, Answer, Options, Module) :-
+    self(Self),
+    ( is_list(Options) -> split_sync_options(Options, Self, Query, Wait)
+    ; throw(error(type_error(list, Options), toplevel_call_synch/4))
+    ),
+    option_value(on_timeout, Wait, true, Callback),
+    fresh_reference(Request),
+    synchronous_request(Pid, '$call'(Goal, ['$request_ref'(Request),target(Self)|Query]),
+                        Request, Answer, Wait, Callback, Module).
+
+toplevel_next_synch(Pid, Answer) :-
+    self(Self),
+    fresh_reference(Request),
+    synchronous_request(Pid, '$next'(['$request_ref'(Request),target(Self)]),
+                        Request, Answer, [], true, toplevel_actors).
+
+split_sync_options([], _, [], []).
+split_sync_options([Option|Options], Self, Query, Wait) :-
+    ( nonvar(Option), Option = target(Target) ->
+        ( var(Target) -> throw(error(instantiation_error, toplevel_call_synch/4))
+        ; Target == Self -> true
+        ; throw(error(domain_error(synchronous_toplevel_target, Target), toplevel_call_synch/4))
+        ),
+        Query = Qs, Wait = Ws
+    ; nonvar(Option), Option = timeout(Seconds), number(Seconds) ->
+        Query = Qs, Wait = [Option|Ws]
+    ; nonvar(Option), Option = on_timeout(Callback), nonvar(Callback), callable(Callback) ->
+        Query = Qs, Wait = [Option|Ws]
+    ; nonvar(Option), valid_option(Option, call) ->
+        Query = [Option|Qs], Wait = Ws
+    ;
+        throw(error(domain_error(toplevel_call_synch_option, Option), toplevel_call_synch/4))
+    ),
+    split_sync_options(Options, Self, Qs, Ws).
+
+synchronous_request(Pid, Command, Request, Answer, Options, Callback, Module) :-
+    setup_call_cleanup(
+        monitor(Pid, Monitor),
+        ( send(Pid, Command),
+          sync_deadline(Options, Deadline),
+          once(synchronous_receive(Pid, Monitor, Request, Answer, Deadline, Callback, Module))
+        ),
+        demonitor(Monitor, [flush])
+    ).
+
+sync_deadline(Options, Deadline) :-
+    ( memberchk(timeout(Seconds), Options) ->
+        ( Seconds > 0 -> elapsed(Now), End is Now + Seconds, Deadline = until(End)
+        ; Deadline = poll )
+    ; Deadline = infinite ).
+
+% Only discard obsolete private replies from this toplevel. Keep ordinary
+% answers and other messages in the caller's mailbox.
+synchronous_receive(Pid, Monitor, Request, Answer, Deadline, Callback, Module) :-
+    Clauses = {
+        '$toplevel_reply'(Ref, Reply) if answer_pid(Reply, Pid) ->
+            ( Ref == Request -> Answer = Reply
+            ; synchronous_receive(Pid, Monitor, Request, Answer, Deadline, Callback, Module) )
+    ;
+        down(_, Monitor, Reason) -> throw(toplevel_down(Reason))
+    },
+    ( Deadline == infinite -> receive_ptcp(Clauses)
+    ; Deadline == poll ->
+        receive(Clauses, [timeout(0), on_timeout(sync_timeout(Callback, Module))])
+    ; Deadline = until(End),
+      elapsed(Now), Remaining is End - Now,
+      ( Remaining > 0 ->
+          receive(Clauses, [timeout(Remaining), on_timeout(sync_timeout(Callback, Module))])
+      ; sync_timeout(Callback, Module) )
+    ).
+
+sync_timeout(Callback, Module) :-
+    prepare_actor_goal(Callback, Prepared),
+    call(Prepared)@Module.
+
+answer_pid(success(Pid, _, _), Expected) :- Pid == Expected.
+answer_pid(failure(Pid), Expected) :- Pid == Expected.
+answer_pid(error(Pid, _), Expected) :- Pid == Expected.
 
 toplevel_stop(Pid) :-
     send(Pid, '$stop').
@@ -204,7 +285,8 @@ stale_command('$input'(_, _)).
 stale_command('$input'(_, _, _)).
 stale_command('$browser_ack').
 
-run_call(Pid, Module, DefaultTarget, Goal0, Options, Control) :-
+run_call(Pid, Module, DefaultTarget, Goal0, RequestOptions, Control) :-
+    request_options(RequestOptions, Request, Options),
     plain_goal(Goal0, Goal),
     call_options(Options, Goal, Template0, Offset, Limit, Once, TargetOption),
     plain_goal(Template0, Template),
@@ -214,7 +296,7 @@ run_call(Pid, Module, DefaultTarget, Goal0, Options, Control) :-
     option_value(io_target, Options, DefaultIo, IoTarget),
     set_io_target(IoTarget),
     new_solution_buffer(Buffer),
-    shelf_create(page(Target, Limit, Offset, Buffer), Page),
+    shelf_create(page(Target, Limit, Offset, Buffer, Request), Page),
     setup_call_cleanup(
         set_timed_mailbox(Control, Mailbox),
         catch(run_answers(Pid, Module, Goal, Template, Once, Page, Control),
@@ -289,17 +371,22 @@ send_final_page(Pid, Page) :-
     shelf_get(Page, 4, Buffer),
     solution_count(Buffer, Count),
     ( Count == 0 ->
-        shelf_get(Page, 1, Target),
-        send(Target, failure(Pid))
+        send_answer(Page, failure(Pid))
     ;
         send_page(Pid, Page, false)
     ).
 
 send_page(Pid, Page, More) :-
-    shelf_get(Page, 1, Target),
     shelf_get(Page, 4, Buffer),
     buffered_solutions(Buffer, Answers),
-    send(Target, success(Pid, Answers, More)).
+    send_answer(Page, success(Pid, Answers, More)).
+
+send_answer(Page, Answer) :-
+    shelf_get(Page, 1, Target),
+    shelf_get(Page, 5, Request),
+    ( Request == none -> Message = Answer
+    ; Message = '$toplevel_reply'(Request, Answer) ),
+    send(Target, Message).
 
 await_next(Page, Control, Action) :-
     receive_idle_ptcp({
@@ -313,13 +400,15 @@ await_next(Page, Control, Action) :-
             Action = stop
     }, Control).
 
-prepare_next(Options, Page, Control) :-
+prepare_next(RequestOptions, Page, Control) :-
+    request_options(RequestOptions, Request, Options),
     shelf_get(Page, 1, OldTarget),
     shelf_get(Page, 2, OldLimit),
     next_options(Options, OldLimit, OldTarget, Limit, Target),
     shelf_set(Control, 3, Target),
     shelf_set(Page, 1, Target),
     shelf_set(Page, 2, Limit),
+    shelf_set(Page, 5, Request),
     shelf_get(Page, 4, Buffer),
     clear_solution_buffer(Buffer).
 
@@ -339,8 +428,11 @@ query_error(Pid, Page, Once, Error, Control) :-
     ).
 
 send_error(Pid, Page, Error) :-
-    shelf_get(Page, 1, Target),
-    send(Target, error(Pid, Error)).
+    send_answer(Page, error(Pid, Error)).
+
+request_options([Option|Options], Request, Options) :-
+    nonvar(Option), Option = '$request_ref'(Request), integer(Request), !.
+request_options(Options, none, Options).
 
 plain_goal(Goal0, Goal) :-
     ( nonvar(Goal0), Goal0 = Module:Plain, atom(Module) -> Goal = Plain
