@@ -1057,7 +1057,7 @@ stateless_primitive(Indicator) :-
                           var/1, nonvar/1, ground/1, atom/1, integer/1, number/1,
                           member/2, memberchk/2, append/3, length/2, select/3,
                           nth0/3, nth0/4, nth1/3, nth1/4, between/3, succ/2,
-                          runtime_property/1]).
+                          runtime_property/1, node_setting/2]).
 
 stateless_meta((',')/2, [1,2]).
 stateless_meta((';')/2, [1,2]).

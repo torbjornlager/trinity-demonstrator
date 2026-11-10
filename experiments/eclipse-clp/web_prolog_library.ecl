@@ -1,10 +1,14 @@
 :- module(web_prolog_library).
+:- lib(json).
+:- lib(prolog_extras).
 
 :- export memberchk/2, nth0/3, nth0/4, nth1/3, nth1/4, between/3, succ/2.
 :- export maplist/2, maplist/3, maplist/4, maplist/5, maplist/6, maplist/7, maplist/8.
 :- export foldl/4, foldl/5, foldl/6, call_nth/2, countall/2.
 :- export runtime_property/1, get_time/1.
+:- export node_setting/2.
 :- export ('=@=')/2.
+:- local store(node_settings).
 
 :- tool(maplist/2, maplist_/3).
 :- tool(maplist/3, maplist_/4).
@@ -18,6 +22,29 @@
 :- tool(foldl/6, foldl_/7).
 :- tool(call_nth/2, call_nth_/3).
 :- tool(countall/2, countall_/3).
+
+% The adapter supplies only public settings when it starts this engine.
+load_node_settings :-
+    ( getenv('TRINITY_N7_PUBLIC_SETTINGS', Text) ->
+        setup_call_cleanup(open(string(Text), read, Stream),
+            json_read(Stream, {Fields}, [names_as_atoms]), close(Stream)),
+        findall(Key:Value, (member(Key:Raw, Fields), setting_value(Raw, Value)), Settings),
+        store_set(node_settings, public, Settings)
+    ; true ).
+
+node_setting(Key, Value) :-
+    store_get(node_settings, public, Settings),
+    ( nonvar(Key) -> memberchk(Key:Value, Settings)
+    ; member(Key:Value, Settings) ).
+
+setting_value(Text, Value) :- string(Text), !, atom_string(Value, Text).
+setting_value([], []) :- !.
+setting_value([Raw|Rest], [Value|Values]) :- !,
+    setting_value(Raw, Value),
+    setting_value(Rest, Values).
+setting_value(Value, Value).
+
+:- load_node_settings.
 
 % Capabilities of the native host, shared across Web Prolog profiles.
 runtime_property(persistent(true)).

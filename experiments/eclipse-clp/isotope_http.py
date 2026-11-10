@@ -46,6 +46,10 @@ ROUTES = {
 
 
 PILOT_REPLY_LIMIT = 512 * 1024
+PILOT_CALL_LIMIT = 2
+PILOT_SESSION_LIMIT = 4
+PILOT_WS_ACTOR_LIMIT = 4
+PREVIEW_RATE_WINDOW = 60
 
 
 class PromptReferenceError(ValueError):
@@ -402,11 +406,11 @@ class Bridge:
             result = Future()
             if command in ("spawn", "stateless", "ws_actor_spawn"):
                 queued = sum(item["command"] == command for item, _ in self.pending.values())
-                if command == "ws_actor_spawn" and len(self.ws_actors) + queued >= 4:
+                if command == "ws_actor_spawn" and len(self.ws_actors) + queued >= PILOT_WS_ACTOR_LIMIT:
                     raise CapacityError("N7 has reached its four-actor WebSocket limit")
-                if deadline is not None and command == "spawn" and len(self.sessions) + queued >= 4:
+                if deadline is not None and command == "spawn" and len(self.sessions) + queued >= PILOT_SESSION_LIMIT:
                     raise CapacityError("N7 has reached its four-session limit")
-                if deadline is not None and command == "stateless" and queued >= 2:
+                if deadline is not None and command == "stateless" and queued >= PILOT_CALL_LIMIT:
                     raise CapacityError("N7 has reached its two-call stateless limit")
             self.write_request(request, deadline)
             self.pending[request_id] = (request, result)
@@ -832,7 +836,7 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(200, content_type, body)
 
     def serve_node_info(self):
-        host, origin, _, _ = self.server.private_settings
+        host, _, _, _ = self.server.private_settings
         if self.headers.get_all("Host") != [host]:
             self.send_error(404)
             return
@@ -844,19 +848,20 @@ class Handler(BaseHTTPRequestHandler):
         if not self.server.runtime_version or not healthy:
             self.send_error(503)
             return
+        settings = self.server.public_node_settings
         info = {
-            "self_url": origin + self.server.public_prefix,
+            "self_url": settings["url"],
             "implementation": "ECLiPSe CLP",
             "version": self.server.runtime_version,
-            "profile": getattr(self.server, "advertised_profile", "isotope"),
-            "auth": "open" if self.server.anonymous_stateless else "private",
+            "profile": settings["profile"],
+            "auth": settings["auth"],
             "services": [],
             "provides": [],
         }
         if self.server.shell_assets is not None:
             info["http_session_options"] = ["src_text", "prompt_correlation"]
         if self.server.stateless_whitelist:
-            info["sandbox"] = "whitelist"
+            info["sandbox"] = settings["sandbox"]
             info["execution_policy"] = "stateless_preview"
             info["request_isolation"] = "container"
         self.reply(200, "application/json; charset=utf-8", json.dumps(info).encode())
@@ -984,7 +989,7 @@ class PilotServer(ThreadingHTTPServer):
 def bridge_archive():
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
-        for name in ("actors.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
+        for name in ("actors.ecl", "web_prolog_library.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
                      "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl",
                      "server_behaviours.ecl", "demo_services.ecl", "sxml_document.ecl",
                      "statechart_actor.ecl", "n5_shared_db.ecl",
@@ -997,7 +1002,11 @@ def bridge_archive():
     return buffer.getvalue()
 
 
-def development_engine(parser, runtime_dir):
+def public_settings_env(settings):
+    return "TRINITY_N7_PUBLIC_SETTINGS=" + json.dumps(settings, separators=(",", ":"))
+
+
+def development_engine(parser, runtime_dir, settings):
     runtime = runtime_dir.resolve()
     runtime_lib = "/eclipse/lib/aarch64_linux"
     if not (runtime / "lib/aarch64_linux/eclipse.exe").is_file():
@@ -1010,6 +1019,7 @@ def development_engine(parser, runtime_dir):
         "--mount", f"type=bind,source={runtime},target=/eclipse,readonly",
         "-e", "ECLIPSEDIR=/eclipse", "-e", f"LD_LIBRARY_PATH={runtime_lib}",
         "-e", f"BRIDGE_ARCHIVE_SIZE={len(archive)}",
+        "-e", public_settings_env(settings),
         "debian:bookworm-slim", "sh", "-ec",
         # Read exactly the archive prefix and leave stdin open for JSON.
         'mkdir /tmp/src; '
@@ -1024,19 +1034,20 @@ def development_engine(parser, runtime_dir):
     return command, archive
 
 
-def pilot_engine(image, name, action="run"):
+def pilot_engine(image, name, settings, action="run"):
     return ["docker", action, "--rm", "-i", "--pull=never", "--platform", "linux/arm64",
             "--name", name, "--network", "none", "--read-only",
             "--tmpfs", "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777",
             "--user", "65532:65532", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
             "--cpus", "0.75", "--memory", "384m", "--memory-swap", "384m", "--pids-limit", "64",
-            "--ulimit", "core=0:0", "--log-driver", "none", image]
+            "--ulimit", "core=0:0", "--log-driver", "none", "-e", public_settings_env(settings), image]
 
 
 class IsolatedStatelessEngine:
-    def __init__(self, image, calls_per_minute):
+    def __init__(self, image, settings):
         self.image = image
-        self.calls_per_minute = calls_per_minute
+        self.settings = settings
+        self.calls_per_minute = settings["max_call_requests_per_window"]
         self.admission = Lock()
         self.active_clients = set()
         self.recent_calls = OrderedDict()
@@ -1048,10 +1059,10 @@ class IsolatedStatelessEngine:
                 raise EngineUnavailable("ECLiPSe worker cleanup could not be confirmed")
             if client_ip in self.active_clients:
                 raise StatelessAdmissionError("client_capacity")
-            if len(self.active_clients) >= 2:
+            if len(self.active_clients) >= PILOT_CALL_LIMIT:
                 raise StatelessAdmissionError("capacity")
             now = monotonic()
-            cutoff = now - 60
+            cutoff = now - PREVIEW_RATE_WINDOW
             # Keep a bounded table ordered by each address's latest admission.
             while self.recent_calls:
                 oldest = next(iter(self.recent_calls.values()))
@@ -1089,7 +1100,7 @@ class IsolatedStatelessEngine:
             # Create first so a delayed attach cannot start a replacement
             # container after cleanup has removed this one.
             try:
-                subprocess.run(pilot_engine(self.image, name, "create"), check=True, timeout=6,
+                subprocess.run(pilot_engine(self.image, name, self.settings, "create"), check=True, timeout=6,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except subprocess.TimeoutExpired:
                 self.cleanup_failed.set()
@@ -1201,7 +1212,7 @@ def main():
         if private is None or not args.pilot_image:
             parser.error("--actor-ws requires a private packaged pilot")
         try:
-            from n7_actor_ws import serve as actor_ws
+            from n7_actor_ws import MAX_OWNER_MESSAGE, serve as actor_ws
         except ImportError as error:
             parser.error(f"--actor-ws requires the N7 WebSocket dependencies: {error}")
     shell_assets = args.shell_assets.resolve() if args.shell_assets is not None else None
@@ -1225,7 +1236,6 @@ def main():
             parser.error("--pilot-image requires private proxy settings")
         if not args.stateless_whitelist:
             name = "trinity-n7-" + uuid4().hex
-            command, archive = pilot_engine(args.pilot_image, name), None
 
             def stop_backend():
                 remove_engine(name)
@@ -1236,21 +1246,38 @@ def main():
             raise KeyboardInterrupt
 
         signal.signal(signal.SIGTERM, shutdown)
-    else:
-        command, archive = development_engine(parser, args.runtime_dir)
 
     with server_type(("127.0.0.1", args.port), Handler) as server:
         server.private_settings = private
         server.actor_ws = actor_ws
-        server.advertised_profile = ("isobase" if args.stateless_whitelist
-                                     else "actor" if args.advertise_actor else "isotope")
         server.stateless_whitelist = args.stateless_whitelist
         server.anonymous_stateless = args.anonymous_stateless
-        server.public_prefix = args.stateless_public_prefix
         server.shell_assets = shell_assets
+        origin = private[1] if private is not None else f"http://127.0.0.1:{server.server_port}"
+        # Explicitly project public settings. Never pass the owner or proxy token
+        # to the engine, and omit limits the adapter does not implement.
+        settings = {
+            "url": origin + args.stateless_public_prefix,
+            "profile": "isobase" if args.stateless_whitelist else "actor" if args.advertise_actor else "isotope",
+            "sandbox": "whitelist" if args.stateless_whitelist else "off",
+            "auth": "open" if private is None or args.anonymous_stateless else "private",
+        }
+        if args.pilot_image:
+            settings["max_inflight_calls"] = PILOT_CALL_LIMIT
+        if args.stateless_whitelist:
+            settings.update(rate_window_seconds=PREVIEW_RATE_WINDOW,
+                            max_call_requests_per_window=args.stateless_calls_per_minute)
+        else:
+            settings["load_uri_allowed_origins"] = sorted(f"{scheme}://{host}" for scheme, host in allowed_peers)
+            if args.pilot_image:
+                settings["max_sessions_per_principal"] = PILOT_SESSION_LIMIT
+            if args.advertise_actor:
+                settings.update(max_ws_actors_per_principal=PILOT_WS_ACTOR_LIMIT,
+                                max_ws_frame_bytes=MAX_OWNER_MESSAGE)
+        server.public_node_settings = settings
         if args.stateless_whitelist:
             server.daemon_threads = False  # Let admitted workers clean up on adapter shutdown.
-            server.isolated_engine = IsolatedStatelessEngine(args.pilot_image, args.stateless_calls_per_minute)
+            server.isolated_engine = IsolatedStatelessEngine(args.pilot_image, settings)
             try:
                 server.runtime_version = server.isolated_engine.exchange()
                 print(f"Private proxy origin {private[1]} (isolated stateless workers)", flush=True)
@@ -1260,6 +1287,10 @@ def main():
             except (OSError, RuntimeError) as error:
                 raise SystemExit(f"Could not start the ECLiPSe worker: {error}") from None
             return
+        if args.pilot_image:
+            command, archive = pilot_engine(args.pilot_image, name, settings), None
+        else:
+            command, archive = development_engine(parser, args.runtime_dir, settings)
         with subprocess.Popen(
             command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             text=True, encoding="utf-8",
