@@ -270,14 +270,18 @@ class PeerActor:
             if isinstance(target, str) and target in reply_targets and isinstance(message, str):
                 self.emit("message", target=target.split("@", 1)[0], data=message)
             return None
+        # The peer's inherited terminal endpoint can carry output from
+        # descendants as well as the child. This socket belongs to one
+        # spawning session, so stdout always goes to that session.
+        if reply["type"] == "output" and isinstance(reply.get("stdout"), str):
+            self.emit("stdout", data=reply["stdout"])
+            return None
         if reply.get("pid") != child:
             return None
         if reply["type"] == "down":
             reason = reply.get("reason")
             return reason if isinstance(reason, str) else "connection_closed"
-        if isinstance(reply.get("stdout"), str):
-            self.emit("stdout", data=reply["stdout"])
-        elif isinstance(reply.get("data"), str):
+        if isinstance(reply.get("data"), str):
             self.emit("output", data=reply["data"])
         return None
 
