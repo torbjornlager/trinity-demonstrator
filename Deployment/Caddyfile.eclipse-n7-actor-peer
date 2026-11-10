@@ -3,7 +3,7 @@
 @n7_actor_peer {
 	method GET
 	path /ws
-	header Upgrade websocket
+	header_regexp n7_peer_upgrade Upgrade "(?i)^websocket$"
 	header_regexp n7_peer_bearer Authorization "^Bearer [0-9a-fA-F]{64}$"
 	not header Origin *
 }
