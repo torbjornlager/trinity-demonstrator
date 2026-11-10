@@ -76,13 +76,19 @@ interact(Pid, Name) :-
             format('A2: Yes, ~w is a good pet.~n', [Name]) ;
         error(Pid, Error) ->
             throw(Error) ;
+        prompt(Pid, prompt_ref(Ref, Question)) ->
+            answer_question(Pid, Ref, Question),
+            interact(Pid, Name) ;
         prompt(Pid, Question) ->
-            format('A2: ~w~n', [Question]),
-            random_member(Answer, [yes, no]),
-            respond(Pid, Answer),
-            format('A1: ~w~n', [Answer]),
+            answer_question(Pid, legacy, Question),
             interact(Pid, Name)
     }).
+
+answer_question(Pid, Ref, Question) :-
+    format('A2: ~w~n', [Question]),
+    random_member(Answer, [yes, no]),
+    (Ref == legacy -> respond(Pid, Answer) ; respond(Pid, Ref, Answer)),
+    format('A1: ~w~n', [Answer]).
 
 /** <examples>
 

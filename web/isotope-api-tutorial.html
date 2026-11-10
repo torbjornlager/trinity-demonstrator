@@ -122,6 +122,7 @@ pid=PID_FROM_SPAWN&amp;format=json</code></pre>
     <pre id="isotope-prompt"><code>?- read(Term), writeln(Term).</code></pre>
     <div class="actions"><button type="button" data-ask="#isotope-prompt">Run prompt lab</button></div>
     <p>When the terminal changes to the <code>|:</code> prompt, enter a complete Prolog term ending with a full stop. ISOTOPE exposes the standard <code>read/1</code> interaction; the lower-level actor <code>input/2-3</code> primitive belongs to ACTOR. Watch the Logger sequence:</p>
+    <p>The prompt carries a fresh <code>prompt_ref</code>. The shell echoes that field with the reply so an earlier reply cannot answer the current prompt.</p>
     <div class="flow">toplevel_call → output → toplevel_poll → prompt<br>toplevel_respond → responded → toplevel_poll → output → toplevel_poll → success</div>
     <p>The exact number of polls depends on the events produced. That variability is why clients should route by event <code>type</code>, not assume a fixed response count.</p>
   </section>
