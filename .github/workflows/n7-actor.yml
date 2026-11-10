@@ -1,0 +1,42 @@
+name: N7 ACTOR
+
+on:
+  push:
+    branches: [codex/n7-shell-preview]
+  pull_request:
+    branches: [codex/n7-shell-preview]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actor:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-swi
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.23.4'
+      - name: Install the pinned N7 ACTOR Python dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/n7-actor"
+          "$RUNNER_TEMP/n7-actor/bin/python" -m pip install \
+            -r experiments/eclipse-clp/requirements-actor-ws.txt
+      - name: Run ACTOR core and two-connection pubsub over HTTPS
+        shell: bash
+        run: |
+          umask 077
+          log=$(mktemp "$RUNNER_TEMP/n7-actor.XXXXXX")
+          trap 'rm -f "$log"' EXIT
+          if ! N7_ACTOR_PYTHON="$RUNNER_TEMP/n7-actor/bin/python" ./tools/bootstrap_n7.sh >"$log" 2>&1; then
+            echo "::error::The N7 bootstrap or local checks failed. Reproduce with the ACTOR bootstrap in Deployment/README.eclipse-n7.md."
+            exit 1
+          fi
+          grep -Fxq '7 passed, 0 failed, 0 unsupported' "$log"
+          grep -Fxq 'WebSocket pubsub broadcast, subscription ownership, unsubscribe, and disconnect passed' "$log"
+          echo 'All seven ACTOR core cases and the two-connection pubsub regression passed over HTTPS.'

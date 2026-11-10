@@ -2,7 +2,7 @@
 """Test the N7 HTTPS route with OAuth2 Proxy and a local GitHub API fixture."""
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import ExitStack
+from contextlib import ExitStack, suppress
 from http.cookiejar import CookieJar
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -10,8 +10,10 @@ import os
 from pathlib import Path
 import re
 from secrets import token_hex, token_urlsafe
+from select import select
 import signal
 import socket
+from socketserver import BaseRequestHandler, ThreadingTCPServer
 import ssl
 import subprocess
 import sys
@@ -1028,6 +1030,56 @@ def free_port():
         return listener.getsockname()[1]
 
 
+class FixtureRelay(ThreadingTCPServer):
+    daemon_threads = True
+
+    def __init__(self, gateway, target_port):
+        self.target_port = target_port
+        super().__init__((gateway, 0), FixtureRelayHandler)
+
+
+class FixtureRelayHandler(BaseRequestHandler):
+    def handle(self):
+        with socket.create_connection(("127.0.0.1", self.server.target_port)) as target:
+            peers = {self.request: target, target: self.request}
+            readable = list(peers)
+            while readable:
+                ready, _, _ = select(readable, [], [])
+                for source in ready:
+                    try:
+                        data = source.recv(65536)
+                        if data:
+                            peers[source].sendall(data)
+                            continue
+                    except ConnectionError:
+                        return
+                    with suppress(OSError):
+                        peers[source].shutdown(socket.SHUT_WR)
+                    readable.remove(source)
+
+
+def fixture_upstreams(stack, network, *ports):
+    if sys.platform != "linux":
+        return [f"host.docker.internal:{port}" for port in ports]
+
+    # Native Docker containers cannot reach services on the host's loopback.
+    # Relay only from the gateway of this disposable fixture network.
+    subprocess.run(["docker", "network", "create", network], check=True, stdout=subprocess.DEVNULL)
+    stack.callback(subprocess.run, ["docker", "network", "rm", network], check=True,
+                   stdout=subprocess.DEVNULL)
+    gateway = subprocess.check_output(
+        ["docker", "network", "inspect", "--format", "{{(index .IPAM.Config 0).Gateway}}", network],
+        text=True,
+    ).strip()
+    upstreams = []
+    for port in ports:
+        relay = stack.enter_context(FixtureRelay(gateway, port))
+        Thread(target=relay.serve_forever, daemon=True).start()
+        stack.callback(relay.shutdown)
+        upstreams.append(f"{gateway}:{relay.server_address[1]}")
+    return upstreams
+
+
 def wait_for(check):
     deadline = monotonic() + 20
     while monotonic() < deadline:
@@ -1222,16 +1274,19 @@ def main():
 
         stack.callback(stop_adapter)
         wait_for(lambda: "Private proxy origin" in Path(log.name).read_text())
+        project = f"n7-test-{token_hex(4)}"
+        network = project + "_default"
+        provider_upstream, adapter_upstream = fixture_upstreams(stack, network, provider_port, adapter_port)
         override = scratch / "fixture.yaml"
         fixture = f"""services:
   oauth2_n7:
     environment:
       OAUTH2_PROXY_LOGIN_URL: http://127.0.0.1:{provider_port}/authorize
-      OAUTH2_PROXY_REDEEM_URL: http://host.docker.internal:{provider_port}/token
-      OAUTH2_PROXY_VALIDATE_URL: http://host.docker.internal:{provider_port}/
+      OAUTH2_PROXY_REDEEM_URL: http://{provider_upstream}/token
+      OAUTH2_PROXY_VALIDATE_URL: http://{provider_upstream}/
 """
         env = {**os.environ, "N7_ORIGIN": origin, "N7_HTTPS_PORT": str(https_port),
-               "N7_HTTP_UPSTREAM": f"host.docker.internal:{adapter_port}", "N7_TLS_DIRECTIVE": "tls internal",
+               "N7_HTTP_UPSTREAM": adapter_upstream, "N7_TLS_DIRECTIVE": "tls internal",
                "OAUTH2_PROXY_GITHUB_USERS": OWNER, "WP_N5_OWNER": EMAIL, "N7_PROXY_TOKEN": token,
                "N7_OAUTH2_CLIENT_ID": "n7-local-client", "N7_OAUTH2_CLIENT_SECRET": token_hex(16),
                "N7_OAUTH2_COOKIE_SECRET": token_urlsafe(32)}
@@ -1245,13 +1300,18 @@ def main():
             fixture += f"""    environment:
       N7_STAGE_ORIGIN: {origin}
       N7_STAGE_TLS_DIRECTIVE: tls internal
-      N7_STAGE_HTTP_UPSTREAM: host.docker.internal:{adapter_port}
+      N7_STAGE_HTTP_UPSTREAM: {adapter_upstream}
       N7_STAGE_PROXY_TOKEN: {token}
 """
             if prefix:
                 fixture += "      N7_PREVIEW_IMPORT: /etc/caddy/n7-preview.Caddyfile\n"
+        if sys.platform == "linux":
+            fixture += f"""networks:
+  default:
+    external: true
+    name: {network}
+"""
         override.write_text(fixture)
-        project = f"n7-test-{token_hex(4)}"
         compose = ["docker", "compose", "-p", project, "--env-file", "/dev/null",
                    "-f", str(ROOT / "Deployment/compose.eclipse-n7-https.yaml"), "-f", str(override)]
         stack.callback(subprocess.run, compose + ["down", "-v", "--rmi", "local"], env=env, stdout=subprocess.DEVNULL)
@@ -1283,7 +1343,7 @@ def main():
                             raise AssertionError(f"Direct adapter request returned {response.status}")
                     except HTTPError as error:
                         expect(error.code, 403)
-                check_stateless_admission(origin, ca, project + "_default", anonymous=anonymous, prefix=prefix)
+                check_stateless_admission(origin, ca, network, anonymous=anonymous, prefix=prefix)
                 return
             check_https(origin, ca, shell=args.shell, actor_core=ws_runner, pubsub_only=args.pubsub is not None,
                         profile="actor" if args.advertise_actor else "isotope",
