@@ -7,11 +7,15 @@
 
 :- export supervisor_spawn/2, supervisor_spawn/3, supervisor_halt/1.
 :- export server_spawn/3, server_spawn/4, server_halt/2.
-:- export server_request/3, server_request/4, server_promise/3, server_yield/2.
+:- export server_request/3, server_request/4, server_promise/3, server_promise/4.
+:- export server_yield/2, server_yield/3, server_yield/4.
 :- export server_upgrade/2, server_upgrade/3, server_run/3.
 :- export supervisor_which_children/2, supervisor_count_children/2.
 :- export supervisor_spawn_child/3, supervisor_terminate_child/3.
 :- export supervisor_respawn_child/3, supervisor_delete_child/3.
+:- tool(server_request/4, server_request_/5).
+:- tool(server_yield/3, server_yield_/4).
+:- tool(server_yield/4, server_yield_/5).
 :- tool(server_spawn/3, server_spawn_/4).
 :- tool(server_spawn/4, server_spawn_/5).
 :- tool(server_upgrade/2, server_upgrade_/3).
@@ -91,20 +95,42 @@ server_request(To, Request, Response) :-
     self(From),
     server_exchange(To, Ref, '$server_call'(From, Ref, Request), Response).
 
-server_request(To, Request, Response, Options) :-
+server_request_(To, Request, Response, Options, Module) :-
     fresh_reference(Ref),
     self(From),
-    server_exchange(To, Ref, '$server_call'(From, Ref, Request), Response, Options).
+    server_exchange(To, Ref, '$server_call'(From, Ref, Request), Response, Options, Module).
 
 server_promise(To, Request, Ref) :-
     fresh_reference(Ref),
     self(From),
     send(To, '$server_call'(From, Ref, Request)).
 
+server_promise(To, Request, Ref, Monitor) :-
+    fresh_reference(Ref),
+    self(From),
+    start_server_exchange(To, '$server_call'(From, Ref, Request), Monitor).
+
 server_yield(Ref, Response) :-
     ( ground(Ref) -> true ; throw(error(instantiation_error, server_yield/2)) ),
     receive({Ref-Reply -> Response = Reply},
             [timeout(2), on_timeout(throw(server_reply_timeout(Ref)))]).
+
+server_yield_(Ref, Response, Options, Module) :-
+    ( ground(Ref) -> true ; throw(error(instantiation_error, server_yield/3)) ),
+    receive({Ref-Reply -> Response = Reply}, Options)@Module.
+
+server_yield_(Ref, Monitor, Response, Options, Module) :-
+    setup_call_cleanup(
+        true,
+        wait_server_reply(Ref, Monitor, Response, Options, Module),
+        demonitor(Monitor, [flush])
+    ).
+
+wait_server_reply(Ref, Monitor, Response, Options, Module) :-
+    receive({
+        Ref-Reply -> Response = Reply
+    ; down(_, Monitor, Reason) -> throw(server_down(Reason))
+    }, Options)@Module.
 
 server_halt(To, Reply) :-
     fresh_reference(Ref),
@@ -129,16 +155,21 @@ server_exchange(To, Ref, Message, Response) :-
                     [timeout(2), on_timeout(throw(server_reply_timeout(Ref)))]).
 
 server_exchange(To, Ref, Message, Response, Options) :-
+    server_exchange(To, Ref, Message, Response, Options, server_behaviours).
+
+server_exchange(To, Ref, Message, Response, Options, Module) :-
+    server_target(To, Pid),
+    setup_call_cleanup(
+        monitor(Pid, Monitor),
+        ( send(Pid, Message),
+          wait_server_reply(Ref, Monitor, Response, Options, Module) ),
+        demonitor(Monitor, [flush])
+    ).
+
+start_server_exchange(To, Message, Monitor) :-
     server_target(To, Pid),
     monitor(Pid, Monitor),
-    ( catch(
-          ( send(Pid, Message),
-            receive({
-                Ref-Reply -> Response = Reply
-            ; down(Pid, Monitor, Reason) -> throw(server_down(Reason))
-            }, Options) ),
-          Error, (demonitor(Monitor, [flush]), throw(Error))) ->
-        demonitor(Monitor, [flush])
+    ( catch(send(Pid, Message), Error, (demonitor(Monitor, [flush]), throw(Error))) -> true
     ; demonitor(Monitor, [flush]), fail ).
 
 server_target(To, Pid) :-

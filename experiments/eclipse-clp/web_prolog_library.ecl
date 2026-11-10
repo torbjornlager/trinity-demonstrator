@@ -3,7 +3,7 @@
 :- export memberchk/2, nth0/3, nth0/4, nth1/3, nth1/4, between/3, succ/2.
 :- export maplist/2, maplist/3, maplist/4, maplist/5, maplist/6, maplist/7, maplist/8.
 :- export foldl/4, foldl/5, foldl/6, call_nth/2, countall/2.
-:- export runtime_property/1.
+:- export runtime_property/1, get_time/1.
 :- export ('=@=')/2.
 
 :- tool(maplist/2, maplist_/3).
@@ -25,6 +25,8 @@ runtime_property(inbound_addressable(true)).
 runtime_property(dom(false)).
 runtime_property(actor_isolation(independent)).
 runtime_property(hard_termination(true)).
+
+get_time(Seconds) :- statistics(hr_time, Seconds).
 
 % SWI's variant comparison uses the same variable-sharing test as variant/2.
 '=@='(Left, Right) :- variant(Left, Right).

@@ -4,6 +4,7 @@
 :- lib(prolog_extras).
 :- ensure_loaded(library(swi)).
 :- ensure_loaded(web_prolog_library).
+:- import get_time/1 from web_prolog_library.
 
 :- export spawn/1, actors/1.
 :- export parallel/1, first_solution/2, first_solution/3.
@@ -464,7 +465,10 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text, Io) :-
                       (:- import(server_halt/2 from server_behaviours)),
                       (:- import(server_request/4 from server_behaviours)),
                       (:- import(server_promise/3 from server_behaviours)),
+                      (:- import(server_promise/4 from server_behaviours)),
                       (:- import(server_yield/2 from server_behaviours)),
+                      (:- import(server_yield/3 from server_behaviours)),
+                      (:- import(server_yield/4 from server_behaviours)),
                       (:- import(server_upgrade/3 from server_behaviours)),
                       (:- import(server_upgrade/2 from server_behaviours)),
                       (:- import(toplevel_spawn/1 from toplevel_actors)),
@@ -1328,6 +1332,7 @@ stop_linked_children([Child|Children], Reports) :-
 % demonitor releases it, any down for this ref has already been enqueued.
 monitor(Target, Ref) :-
     ( nonvar(Target) -> true ; throw(error(instantiation_error, monitor/2)) ),
+    validate_monitor_target(Target),
     self(Watcher),
     store_get(actor_registry, runtime, runtime(_, _, Lock)),
     fresh_reference(Ref),
@@ -1335,6 +1340,13 @@ monitor(Target, Ref) :-
         ( ( registered_actor(Target, Found) -> Pid = Found ; Pid = Target ),
           install_monitor(Watcher, Pid, Ref)
         )).
+
+validate_monitor_target(Id@Node) :-
+    integer(Id), !,
+    ( var(Node) -> throw(error(instantiation_error, monitor/2))
+    ; atom(Node) -> true
+    ; throw(error(type_error(atom, Node), monitor/2)) ).
+validate_monitor_target(_).
 
 install_monitor(Watcher, Pid, Ref) :-
     ( ground(Pid),
@@ -1351,12 +1363,18 @@ demonitor(Ref) :-
 
 demonitor(Ref, Options) :-
     ( ground(Ref) -> true ; throw(error(instantiation_error, demonitor/2)) ),
-    ( is_list(Options) -> true ; throw(error(type_error(list, Options), demonitor/2)) ),
+    ( is_list(Options) -> true
+    ; acyclic_term(Options), open_list_tail(Options) ->
+        throw(error(instantiation_error, demonitor/2))
+    ; throw(error(type_error(list, Options), demonitor/2)) ),
     validate_demonitor_options(Options),
     self(Watcher),
     store_get(actor_registry, runtime, runtime(_, _, Lock)),
     with_mutex(Lock, remove_monitor(Watcher, Ref)),
     ( memberchk(flush, Options) -> flush_monitor_down(Ref) ; true ).
+
+open_list_tail(List) :- var(List), !.
+open_list_tail([_|Rest]) :- open_list_tail(Rest).
 
 validate_demonitor_options([]).
 validate_demonitor_options([Option|Options]) :-
@@ -1496,6 +1514,12 @@ wait_spec(Options, Wait, OnTimeout) :-
             Deadline is Now + Seconds,
             Wait = until(Deadline)
         )
+    ; reverse(Options, Reversed), memberchk(deadline(Absolute), Reversed) ->
+        % Convert once so unrelated arrivals cannot reset the deadline.
+        get_time(Now),
+        elapsed(Start),
+        Deadline is Start + (Absolute - Now),
+        Wait = until(Deadline)
     ;
         Wait = block
     ).
