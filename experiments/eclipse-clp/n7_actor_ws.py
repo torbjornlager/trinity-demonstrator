@@ -2,8 +2,8 @@
 
 from contextlib import suppress
 import json
-from queue import Full, Queue
-from socket import create_connection
+from queue import Empty, Full, Queue
+from socket import create_connection, timeout as SocketTimeout
 from ssl import create_default_context
 from threading import Event, Lock, Thread
 from time import monotonic
@@ -14,15 +14,44 @@ from wsproto.events import AcceptConnection, BytesMessage, CloseConnection, Ping
 from wsproto.utilities import LocalProtocolError, RemoteProtocolError
 
 
-PID_BASE = 1_000_000_000
-MAX_MESSAGE = 16384
+MAX_PEER_MESSAGE = 16 * 1024
+# The owner shell sends editor snapshots in JSON. SXML's own limit still
+# applies separately to each document after the request has been decoded.
+MAX_OWNER_MESSAGE = 256 * 1024
 SESSION_COMMANDS = {"call", "next", "stop", "abort", "halt", "respond"}
 
 
 def published_counter(host):
     """Ask the published N3 counter from a short-lived N3 toplevel."""
+    goal = (
+        "self(Self), counter@'https://n3.elfenbenstornet.se' ! count(Self), "
+        "receive({count(Count) -> true}, [timeout(1), on_timeout(fail)])"
+    )
+    return str(int(peer_toplevel_once(host, goal, 2)["Count"]))
+
+
+def model_chat(host, params):
+    messages = params.get("messages")
+    if set(params) != {"messages"} or not isinstance(messages, list) or not 1 <= len(messages) <= 5:
+        raise ValueError("invalid_model_messages")
+    terms = []
+    size = 0
+    for index, text in enumerate(messages):
+        if not isinstance(text, str) or not text:
+            raise ValueError("invalid_model_message")
+        size += len(text)
+        role = "assistant" if index % 2 else "user"
+        terms.append(f"{role}({json.dumps(text, ensure_ascii=False)})")
+    if size > 2000 or len(terms) % 2 == 0:
+        raise ValueError("invalid_model_conversation")
+    goal = "model_chat([" + ",".join(terms) + "],Reply)"
+    return peer_toplevel_once(host, goal, 38)["Reply"] + ".\n"
+
+
+def peer_toplevel_once(host, goal, seconds):
+    """Run a fixed demo service goal on a connection-scoped peer toplevel."""
     wire = WSConnection(ConnectionType.CLIENT)
-    deadline = monotonic() + 2
+    deadline = monotonic() + seconds
     with create_connection((host, 443), timeout=1) as raw:
         with create_default_context().wrap_socket(raw, server_hostname=host) as connection:
             def send(event):
@@ -41,17 +70,17 @@ def published_counter(host):
                             send(event.response())
                         else:
                             yield event
-                raise ValueError("counter_peer_closed")
+                raise ValueError("demo_peer_closed")
 
             def receive():
                 chunks = []
                 size = 0
                 for event in incoming:
                     if not isinstance(event, TextMessage):
-                        raise ValueError("invalid_counter_peer_message")
+                        raise ValueError("invalid_demo_peer_message")
                     size += len(event.data.encode("utf-8"))
-                    if size > MAX_MESSAGE:
-                        raise ValueError("counter_peer_message_too_large")
+                    if size > MAX_PEER_MESSAGE:
+                        raise ValueError("demo_peer_message_too_large")
                     chunks.append(event.data)
                     if event.message_finished:
                         return json.loads("".join(chunks))
@@ -60,27 +89,144 @@ def published_counter(host):
             try:
                 send(Request(host=host, target="/ws"))
                 if not isinstance(next(incoming), AcceptConnection):
-                    raise ValueError("counter_peer_upgrade_failed")
+                    raise ValueError("demo_peer_upgrade_failed")
                 send(TextMessage(data=json.dumps({"command": "toplevel_spawn", "options": "[session(true)]"})))
                 spawned = receive()
                 if spawned["type"] != "spawned" or type(spawned.get("pid")) is not int:
-                    raise ValueError("counter_peer_spawn_failed")
+                    raise ValueError("demo_peer_spawn_failed")
                 pid = spawned["pid"]
-                goal = (
-                    "self(Self), counter@'https://n3.elfenbenstornet.se' ! count(Self), "
-                    "receive({count(Count) -> true}, [timeout(1), on_timeout(fail)])"
-                )
                 send(TextMessage(data=json.dumps({
                     "command": "toplevel_call", "pid": pid, "goal": goal, "options": "[limit(1)]"
                 })))
                 answer = receive()
                 if answer["type"] != "success" or len(answer["data"]) != 1:
-                    raise ValueError("counter_service_unavailable")
-                count = int(answer["data"][0]["Count"])
+                    raise ValueError("demo_service_unavailable")
+                bindings = answer["data"][0]
+                if not isinstance(bindings, dict):
+                    raise ValueError("invalid_peer_bindings")
                 send(CloseConnection(code=1000))
-                return str(count)
+                return bindings
             except (LocalProtocolError, RemoteProtocolError) as error:
-                raise ValueError("invalid_counter_peer_protocol") from error
+                raise ValueError("invalid_demo_peer_protocol") from error
+
+
+class PeerActor:
+    """One peer-owned bare actor and its connection, including startup."""
+
+    def __init__(self, endpoint, request, emit):
+        self.endpoint, self.request, self.emit = endpoint, request, emit
+        self.commands = Queue(maxsize=32)
+        self.cancelled = Event()
+
+    def command(self, request):
+        try:
+            self.commands.put_nowait(request)
+        except Full:
+            self.cancelled.set()
+
+    def run(self):
+        endpoint = self.endpoint
+        with create_connection((endpoint.hostname, endpoint.port or
+                                (443 if endpoint.scheme == "https" else 80)), timeout=1) as raw:
+            if endpoint.scheme == "https":
+                with create_default_context().wrap_socket(raw, server_hostname=endpoint.hostname) as stream:
+                    return self.run_socket(stream)
+            return self.run_socket(raw)
+
+    def run_socket(self, stream):
+        wire = WSConnection(ConnectionType.CLIENT)
+        endpoint = self.endpoint
+        deadline = monotonic() + 7
+        stream.settimeout(0.1)
+
+        def send(event):
+            stream.sendall(wire.send(event))
+
+        def send_json(command):
+            send(TextMessage(data=json.dumps(command)))
+
+        if self.cancelled.is_set():
+            return "connection_closed"
+        send(Request(host=endpoint.netloc, target="/ws"))
+        child = None
+        stop_deadline = None
+        chunks, size = [], 0
+        early = []
+        while not self.cancelled.is_set():
+            if child is None and monotonic() >= deadline:
+                return "spawn_timeout"
+            if stop_deadline is not None and monotonic() >= stop_deadline:
+                # Closing the connection also retires its actor on the peer.
+                return "connection_closed"
+            if child is not None:
+                for _ in range(32):
+                    try:
+                        command = self.commands.get_nowait()
+                    except Empty:
+                        break
+                    field = "message" if command["command"] == "send" else "reason"
+                    send_json({"command": command["command"], "pid": child, field: command[field]})
+                    if field == "reason" and stop_deadline is None:
+                        stop_deadline = monotonic() + 2
+            try:
+                data = stream.recv(4096)
+            except SocketTimeout:
+                continue
+            if not data:
+                break
+            wire.receive_data(data)
+            for event in wire.events():
+                if isinstance(event, AcceptConnection):
+                    send_json({"command": "spawn", "goal": self.request["goal"],
+                               "options": self.request["options"]})
+                elif isinstance(event, Ping):
+                    send(event.response())
+                elif isinstance(event, CloseConnection):
+                    return "connection_closed"
+                elif isinstance(event, TextMessage):
+                    size += len(event.data.encode("utf-8"))
+                    if size > MAX_PEER_MESSAGE:
+                        return "invalid_peer_message"
+                    chunks.append(event.data)
+                    if not event.message_finished:
+                        continue
+                    reply = json.loads("".join(chunks))
+                    chunks, size = [], 0
+                    if not isinstance(reply, dict):
+                        return "invalid_peer_message"
+                    kind = reply.get("type")
+                    if kind == "error":
+                        return "peer_rejected"
+                    if kind == "spawned" and child is None:
+                        child = reply["pid"]
+                        if type(child) is not int:
+                            return "invalid_peer_pid"
+                        self.emit("spawned", child=child)
+                        for pending in early:
+                            reason = self.relay(child, pending)
+                            if reason is not None:
+                                return reason
+                        early.clear()
+                    elif kind in ("output", "down"):
+                        if child is None:
+                            if len(early) == 32:
+                                return "startup_output_limit"
+                            early.append(reply)
+                        else:
+                            reason = self.relay(child, reply)
+                            if reason is not None:
+                                return reason
+        return "connection_closed"
+
+    def relay(self, child, reply):
+        if reply.get("pid") != child:
+            return None
+        if reply["type"] == "down":
+            reason = reply.get("reason")
+            return reason if isinstance(reason, str) else "connection_closed"
+        if isinstance(reply.get("data"), str):
+            self.emit("output", data=reply["data"])
+        return None
 
 
 def serve(handler):
@@ -125,7 +271,7 @@ def serve(handler):
                     return
                 if isinstance(event, TextMessage):
                     size += len(event.data.encode("utf-8"))
-                    if size > MAX_MESSAGE:
+                    if size > MAX_OWNER_MESSAGE:
                         connection.send(CloseConnection(code=1009, reason="Message too large"))
                         return
                     chunks.append(event.data)
@@ -161,7 +307,7 @@ class ActorConnection:
                 if event is None:
                     return
                 message = {"type": event.get("kind", "output"),
-                           "pid": PID_BASE + event.get("actor_id", event["pid"]),
+                           "pid": event.get("actor_id", event["pid"]),
                            "data": event["data"]}
                 if "stdout" in event:
                     message["stdout"] = event["stdout"]
@@ -220,10 +366,9 @@ class ActorConnection:
         action = command.removeprefix("toplevel_")
         if action == command or action not in SESSION_COMMANDS:
             raise ValueError("Unsupported ACTOR preview command")
-        wire_pid = request["pid"]
-        if type(wire_pid) is not int or wire_pid - PID_BASE not in self.sessions:
+        pid = request["pid"]
+        if type(pid) is not int or pid not in self.sessions:
             raise LookupError("Unknown toplevel session for this connection")
-        pid = wire_pid - PID_BASE
         fields = {"pid": pid}
         if action == "call":
             goal = request["goal"]
@@ -233,7 +378,7 @@ class ActorConnection:
         elif action == "respond":
             ref = self.prompts.get(pid)
             if ref is None or request.get("prompt_ref") != ref:
-                error = {"type": "error", "code": "invalid_prompt_ref", "pid": wire_pid,
+                error = {"type": "error", "code": "invalid_prompt_ref", "pid": pid,
                          "data": "Expected the reference from the current prompt"}
                 if "request_id" in request:
                     error["request_id"] = request["request_id"]
@@ -267,12 +412,10 @@ class ActorConnection:
         while event["type"] == "output" and not self.io_ack:
             pid = event["pid"]
             needs_ack = event.pop("browser_ack", False)
-            self.emit(dict(event, pid=PID_BASE + pid))
+            self.emit(event)
             event = self.resume_output(pid, needs_ack)
         event = dict(event)
         pid = event.get("pid")
-        if pid is not None:
-            event["pid"] = PID_BASE + pid
         if event["type"] == "prompt":
             self.prompts[pid] = event["prompt_ref"]
         if event["type"] == "output":

@@ -23,9 +23,8 @@ import subprocess
 import tarfile
 from threading import BoundedSemaphore, Condition, Event, Lock, Thread
 from time import monotonic, sleep
-from urllib.parse import parse_qs, unquote, urlencode, urlsplit
+from urllib.parse import parse_qs, unquote, urlencode, urljoin, urlsplit
 from uuid import uuid4
-import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
 DEMO_ROUTE = "/examples/APIs/http_example-1.html"
@@ -104,6 +103,11 @@ def fetch_peer(allowed_peers, request):
     parsed, origin = peer_url(request["url"])
     if origin not in allowed_peers:
         raise ValueError("peer_not_allowed")
+    if request["operation"] == "model_chat":
+        if request["url"] != "https://n3.elfenbenstornet.se":
+            raise ValueError("invalid_model_peer")
+        from n7_actor_ws import model_chat
+        return model_chat(parsed.hostname, request["params"])
     if request["operation"] == "published_counter":
         if request["url"] != "https://n3.elfenbenstornet.se" or request["params"] != {}:
             raise ValueError("invalid_counter_peer")
@@ -152,43 +156,54 @@ def fetch_peer(allowed_peers, request):
         connection.close()
 
 
-def bundled_chart_source(shell_assets):
-    if shell_assets is None:
-        raise ValueError("shell_assets_required")
-    chart_path = shell_assets / "examples/statecharts/20 jev-deployment-assistant.xml"
-    root = ET.parse(chart_path).getroot()
-    if (root.tag != "statechart" or root.get("version") != "0.2"
-            or set(root.attrib) != {"version", "initial"}):
-        raise ValueError("unsupported_chart")
-    datamodel = root.find("datamodel")
-    states = root.findall("state")
-    state_ids = {state.get("id") for state in states}
-    initial = root.get("initial")
-    if (datamodel is None or datamodel.attrib or len(datamodel)
-            or len(root.findall("datamodel")) != 1
-            or len(state_ids) != len(states) or initial not in state_ids
-            or any(not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z_0-9]*", name)
-                   for name in state_ids)
-            or any(element.tag not in {"datamodel", "state"} for element in root)):
-        raise ValueError("unsupported_chart")
-    clauses = [datamodel.text or "", f"n7_chart_initial({initial})."]
-    for state in states:
-        name = state.get("id")
-        if set(state.attrib) != {"id"}:
-            raise ValueError("unsupported_chart_state")
-        for transition in state:
-            target = transition.get("to", name)
-            event = transition.get("on")
-            guard = transition.get("if", "true")
-            action = (transition.text or "").strip() or "true"
-            if (transition.tag != "go" or target not in state_ids or not event or len(transition)
-                    or set(transition.attrib) - {"on", "to", "if"}):
-                raise ValueError("unsupported_chart_transition")
-            clauses.append(
-                f"n7_chart_step({name}, N7Event, {target}) :- "
-                f"N7Event = ({event}), once(({guard})), !, ({action})."
-            )
-    return "\n".join(clauses)
+def chart_document(allowed_peers, shell_assets, private_origin, request):
+    uri = request["url"]
+    params = request["params"]
+    kind = params.get("kind", "sxml")
+    if set(params) - {"kind", "base"} or kind not in {"sxml", "prolog"}:
+        raise ValueError("invalid_chart_source")
+    if not uri or len(uri) > 2048 or uri.startswith("//"):
+        raise ValueError("invalid_chart_uri")
+    if params.get("base"):
+        uri = urljoin(params["base"], uri)
+    parsed = urlsplit(uri)
+    local = not parsed.scheme and not parsed.netloc
+    if not local and private_origin:
+        _, node_origin = peer_url(private_origin)
+        parsed, source_origin = peer_url(uri)
+        local = source_origin == node_origin
+    if local:
+        if shell_assets is None or parsed.query or parsed.fragment:
+            raise ValueError("invalid_chart_uri")
+        path = parsed.path
+        if path.startswith(SHELL_PREFIX):
+            path = path[len(SHELL_PREFIX):]
+        else:
+            path = path.removeprefix("/")
+        prefix = "examples/statecharts/" if kind == "sxml" else "examples/"
+        if not path.startswith(prefix):
+            raise ValueError("invalid_chart_uri")
+        name = unquote(path[len(prefix):], errors="strict")
+        suffix = ".xml" if kind == "sxml" else ".pl"
+        if (not name.endswith(suffix) or "\\" in name
+                or any(part in {"", ".", ".."} for part in name.split("/"))
+                or (kind == "sxml" and "/" in name)
+                or any(ord(c) < 32 for c in name)):
+            raise ValueError("invalid_chart_uri")
+        root = (shell_assets / prefix).resolve()
+        source = (root / name).resolve()
+        if not source.is_relative_to(root):
+            raise ValueError("invalid_chart_uri")
+        with source.open("rb") as file:
+            data = file.read(128 * 1024 + 1)
+        if len(data) > 128 * 1024:
+            raise ValueError("chart_document_too_large")
+        text = data.decode("utf-8")
+        base = (private_origin or "") + SHELL_PREFIX + path
+    else:
+        text = fetch_peer(allowed_peers, {**request, "operation": "source", "url": uri})
+        base = uri
+    return json.dumps({"base": base, "text": text}, ensure_ascii=False)
 
 
 def json_byte_escape(match):
@@ -244,11 +259,12 @@ def normalize_answer(reply):
 
 
 class Bridge:
-    def __init__(self, process, on_failure=None, allowed_peers=(), shell_assets=None):
+    def __init__(self, process, on_failure=None, allowed_peers=(), shell_assets=None, private_origin=None):
         self.process = process
         self.on_failure = on_failure
         self.allowed_peers = allowed_peers
         self.shell_assets = shell_assets
+        self.private_origin = private_origin
         self.egress_slots = BoundedSemaphore(4)
         if on_failure is not None:
             os.set_blocking(process.stdin.fileno(), False)
@@ -258,6 +274,7 @@ class Bridge:
         self.request_ids = count(1)
         self.pending = {}
         self.browser_output = {}
+        self.peer_actors = {}
         self.busy = {}
         self.poll_deadlines = {}
         self.read_error = None
@@ -341,6 +358,8 @@ class Bridge:
             if self.read_error is not None:
                 return
             self.read_error = RuntimeError(message)
+            for actor in self.peer_actors.values():
+                actor.cancelled.set()
             for _, result in self.pending.values():
                 result.set_exception(self.read_error)
             self.pending.clear()
@@ -359,6 +378,9 @@ class Bridge:
                     else:
                         self.finish_egress(reply, "error", "peer_capacity")
                     continue
+                if reply.get("type", "").startswith("actor_peer_"):
+                    self.handle_peer_actor(reply)
+                    continue
                 if reply.get("type") == "browser_child_output":
                     with self.state_changed:
                         deliver = self.browser_output.get(reply["pid"])
@@ -375,15 +397,70 @@ class Bridge:
         except (OSError, RuntimeError, KeyError, ValueError) as error:
             self.fail(f"ECLiPSe transport failed: {error}")
 
+    def handle_peer_actor(self, request):
+        from n7_actor_ws import PeerActor
+        proxy = request["proxy"]
+        kind = request["type"]
+        if kind != "actor_peer_start":
+            with self.state_changed:
+                actor = self.peer_actors.get(proxy)
+                if actor is not None:
+                    if kind == "actor_peer_close":
+                        actor.cancelled.set()
+                    elif kind == "actor_peer_command":
+                        actor.command(request)
+            return
+
+        try:
+            endpoint, origin = peer_url(request["url"])
+            if origin not in self.allowed_peers or endpoint.path not in ("", "/") or endpoint.query:
+                raise ValueError("peer_not_allowed")
+        except ValueError:
+            self.peer_actor_event(proxy, "closed", reason="peer_not_allowed")
+            return
+        with self.state_changed:
+            if self.read_error is not None:
+                return
+            if len(self.peer_actors) < 4:
+                def emit(event, **fields):
+                    self.peer_actor_event(proxy, event, **fields)
+                actor = PeerActor(endpoint, request, emit)
+                self.peer_actors[proxy] = actor
+                Thread(target=self.run_peer_actor, args=(proxy, actor), daemon=True).start()
+                return
+        self.peer_actor_event(proxy, "closed", reason="peer_capacity")
+
+    def run_peer_actor(self, proxy, actor):
+        from wsproto.utilities import LocalProtocolError, RemoteProtocolError
+        reason = "connection_closed"
+        try:
+            reason = actor.run()
+        except (OSError, ValueError, KeyError, TypeError, LocalProtocolError, RemoteProtocolError):
+            pass
+        finally:
+            with self.state_changed:
+                self.peer_actors.pop(proxy, None)
+            self.peer_actor_event(proxy, "closed", reason=reason)
+
+    def peer_actor_event(self, proxy, event, **fields):
+        try:
+            with self.state_changed:
+                if self.read_error is None:
+                    self.write_request({"command": "actor_peer_event", "request_id": proxy,
+                                        "pid": proxy, "event": event, **fields},
+                                       monotonic() + 1 if self.on_failure is not None else None)
+        except OSError:
+            self.fail("Could not deliver the ECLiPSe actor peer event")
+
     def run_egress(self, request):
         try:
             try:
-                if request["operation"] == "demo_chart":
-                    body = bundled_chart_source(self.shell_assets)
+                if request["operation"] == "chart_source":
+                    body = chart_document(self.allowed_peers, self.shell_assets, self.private_origin, request)
                 else:
                     body = fetch_peer(self.allowed_peers, request)
                 status = "ok"
-            except (ValueError, KeyError, TypeError, OSError, HTTPException, ET.ParseError):
+            except (ValueError, KeyError, TypeError, OSError, HTTPException):
                 status, body = "error", "peer_request_failed"
             self.finish_egress(request, status, body)
         finally:
@@ -797,7 +874,8 @@ def bridge_archive():
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.USTAR_FORMAT) as archive:
         for name in ("actors.ecl", "solution_buffer.ecl", "toplevel_actors.ecl",
                      "isotope_bridge.ecl", "isotope_rpc.ecl", "stateless_rpc.ecl",
-                     "server_behaviours.ecl", "demo_services.ecl", "n5_shared_db.ecl",
+                     "server_behaviours.ecl", "demo_services.ecl", "sxml_document.ecl",
+                     "statechart_actor.ecl", "n5_shared_db.ecl",
                      "n5_actor_compat.sed"):
             archive.add(HERE / name, arcname=name)
         for name in ("shared_db_common.pl", "shared_db_actor_common.pl",
@@ -1077,7 +1155,8 @@ def main():
             # A failed pilot must release its listening port so its supervisor
             # can bring up a fresh backend instead of serving a dead bridge.
             on_failure = server.shutdown if stop_backend is not None else None
-            server.bridge = Bridge(process, on_failure, allowed_peers, shell_assets)
+            server.bridge = Bridge(process, on_failure, allowed_peers, shell_assets,
+                                   private[1] if private is not None else None)
             try:
                 if archive is not None:
                     process.stdin.buffer.write(archive)

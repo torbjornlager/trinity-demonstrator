@@ -97,6 +97,9 @@ def build(output,prefix='/',node=None,allow_dirty=False,credentials='same-origin
     state=check(Path(os.environ.get('WP_NATIVE_STATE',str(DEFAULT))))
     output=Path(output).resolve();output.mkdir(parents=True,exist_ok=False)
     config=dict(mode='static',assetBase=prefix,nodeUrl=node,credentials=credentials,loginPath=login_path,logoutPath=logout_path)
+    if prefix == '/n7-shell/' and node and logout_path is None:
+        sign_in = '/oauth2/sign_in?rd=' + quote(prefix, safe='')
+        config['logoutPath'] = '/oauth2/sign_out?rd=' + quote(sign_in, safe='')
     for name in PAGES:
         text=page((ROOT/'web'/name).read_text(),prefix,config)
         (output/name).write_text(text)

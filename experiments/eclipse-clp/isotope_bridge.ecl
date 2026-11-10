@@ -7,11 +7,13 @@
 :- ensure_loaded(n5_shared_db).
 :- import init_linda/0 from demo_services.
 :- import exit/1, exit/2 from actors.
+:- import goal_template_texts/4 from stateless_rpc.
 :- lib(json).
 :- lib(prolog_extras).
 :- export run/0.
 :- local store(http_sessions).
 :- local store(probe_children).
+:- local store(peer_actors).
 :- local op(200, xfx, @).
 
 % The root routes requests and is the only writer to the JSON pipe.
@@ -79,13 +81,30 @@ serve(Replies) :-
                              operation:Operation, url:Url, params:Params]}),
             serve(Replies)
     ;
-        browser_child_output(actor(Id), Text) ->
+        remote_spawn(Parent, Proxy, Node, Goal, Source) ->
+            start_peer_actor(Replies, Parent, Proxy, Node, Goal, Source),
+            serve(Replies)
+    ;
+        remote_send(Pid, Message) ->
+            peer_actor_command(Replies, Pid, "send", message, Message),
+            serve(Replies)
+    ;
+        remote_exit(Pid, Reason) ->
+            peer_actor_command(Replies, Pid, "exit", reason, Reason),
+            serve(Replies)
+    ;
+        down(_, Ref, _) if store_get(peer_actors, monitor(Ref), _) ->
+            store_get(peer_actors, monitor(Ref), Proxy),
+            reply(Replies, {[type:actor_peer_close, proxy:Proxy]}),
+            serve(Replies)
+    ;
+        browser_child_output(Id, Text) ->
             ( store_get(http_sessions, Id, _) ->
                 reply(Replies, {[type:browser_child_output, pid:Id, data:Text, stdout:Text]})
             ; true ),
             serve(Replies)
     ;
-        browser_child_trace(actor(Id), actor(Chart), Text) ->
+        browser_child_trace(Id, Chart, Text) ->
             ( store_get(http_sessions, Id, _) ->
                 reply(Replies, {[type:browser_child_output, pid:Id, actor_id:Chart,
                                  kind:statechart_trace, data:Text]})
@@ -94,6 +113,52 @@ serve(Replies) :-
     ;
         http_closed -> true
     }).
+
+% Monitor the proxy before opening a wire connection. This covers state
+% owners that disappear before the peer publishes a PID.
+start_peer_actor(Replies, Parent, Proxy, Node, Goal, Source) :-
+    monitor(Proxy, Ref),
+    store_set(peer_actors, monitor(Ref), Proxy),
+    store_set(peer_actors, Proxy, peer(Parent, Node, Ref, pending)),
+    goal_template_texts(Goal, Goal, GoalText, _),
+    ( Source = text(Text) -> atom_string(Atom, Text), Options = [src_text(Atom)]
+    ; Options = [] ),
+    goal_template_texts(Options, Options, OptionsText, _),
+    atom_string(Node, Url),
+    reply(Replies, {[type:actor_peer_start, proxy:Proxy, url:Url,
+                     goal:GoalText, options:OptionsText]}).
+
+peer_actor_command(Replies, Pid, Command, Field, Value) :-
+    ( store_get(peer_actors, pid(Pid), Proxy) ->
+        goal_template_texts(Value, Value, Text, _),
+        reply(Replies, {[type:actor_peer_command, proxy:Proxy,
+                         command:Command, Field:Text]})
+    ; true ).
+
+peer_actor_event(Proxy, Fields) :-
+    ( store_get(peer_actors, Proxy, peer(Parent, Node, Ref, Status)) ->
+        memberchk(event:Event, Fields),
+        ( Event == "spawned", Status == pending, memberchk(child:Id, Fields),
+          Pid = Id@Node, acknowledge_remote_spawn(Proxy, Pid) ->
+            store_set(peer_actors, pid(Pid), Proxy),
+            store_set(peer_actors, Proxy, peer(Parent, Node, Ref, active(Pid)))
+        ; Event == "output", Status = active(Pid), memberchk(data:Text, Fields) ->
+            ( catch(parse_goal(Text, isotope_bridge, Term, _), _, fail) -> Value = Term
+            ; Value = Text ),
+            send(Parent, output(Pid, Value))
+        ; Event == "closed", memberchk(reason:Text, Fields) ->
+            store_delete(peer_actors, Proxy),
+            store_delete(peer_actors, monitor(Ref)),
+            demonitor(Ref, [flush]),
+            ( Status = active(Pid) ->
+                store_delete(peer_actors, pid(Pid)),
+                ( catch(parse_goal(Text, isotope_bridge, Why, _), _, fail), ground(Why) ->
+                    Reason = Why
+                ; Reason = connection_closed ),
+                remote_actor_down(Proxy, Pid, Reason)
+            ; send(Proxy, remote_spawn_reply(error(Text))) )
+        ; true )
+    ; true ).
 
 route_request(Request, "spawn", _, Fields) :- !,
     self(Router),
@@ -115,10 +180,12 @@ route_request(Request, "actor_probe", _, Fields) :- !,
     self(Router),
     store_get(http_sessions, probe_echo, Echo),
     send(Echo, probe_request(response(Router, Request), Fields)).
+route_request(_, "actor_peer_event", Proxy, Fields) :- !,
+    peer_actor_event(Proxy, Fields).
 route_request(Key, "egress_result", Id, Fields) :- !,
     memberchk(status:Status, Fields),
     memberchk(body:Body, Fields),
-    send(actor(Id), http_egress_result(Key, Status, Body)).
+    send(Id, http_egress_result(Key, Status, Body)).
 route_request(Request, Command, Id, Fields) :-
     ( store_get(http_sessions, Id, Relay) ->
         send(Relay, http_request(Request, Command, Id, Fields))
@@ -143,13 +210,13 @@ probe_echo(Last) :-
             reply_to(Context, Event),
             probe_echo(Next)
     ;
-        down(actor(Id), Ref, Reason) if \+ store_get(probe_children, retained_down(Ref), _) ->
+        down(Id, Ref, Reason) if (integer(Id), \+ store_get(probe_children, retained_down(Ref), _)) ->
             ( store_get(probe_children, Id, child(_, Output, Outbox)) ->
                 store_set(probe_children, Id, child(down(Reason), Output, Outbox))
             ; true ),
             probe_echo(Last)
     ;
-        output(actor(Id), Term) ->
+        output(Id, Term) if integer(Id) ->
             ( store_get(probe_children, Id, child(Status, _, Outbox)) ->
                 probe_term_text(Term, Text),
                 recordz(Outbox, {[type:output, pid:Id, data:Text]}),
@@ -157,15 +224,15 @@ probe_echo(Last) :-
             ; true ),
             probe_echo(Last)
     ;
-        prompt(actor(Id), Prompt) ->
+        prompt(Id, Prompt) if integer(Id) ->
             record_probe_prompt(Id, plain, Prompt),
             probe_echo(Last)
     ;
-        '$input_prompt'(actor(Id), Mode, Prompt) ->
+        '$input_prompt'(Id, Mode, Prompt) if integer(Id) ->
             record_probe_prompt(Id, Mode, Prompt),
             probe_echo(Last)
     ;
-        remote_send_from(actor(Id), Target, Message) ->
+        remote_send_from(Id, Target, Message) if integer(Id) ->
             ( store_get(probe_children, Id, child(_, _, Outbox)),
               probe_send(Target, Message, Event) ->
                 recordz(Outbox, Event)
@@ -223,18 +290,17 @@ probe_action("reverse_start", Fields, Last, Last, Event) :-
     memberchk(node:NodeText, Fields),
     atom_string(Node, NodeText),
     self(Owner),
-    spawn(reverse_parent(Owner, Node, Goal, ReplyTarget, [link(Link), monitor(Monitor)|Options]), Parent),
-    Parent = actor(Id),
-    monitor(Parent, ParentRef),
+    spawn(reverse_parent(Owner, Node, Goal, ReplyTarget, [link(Link), monitor(Monitor)|Options]), Id),
+    monitor(Id, ParentRef),
     catch(register_reverse_spawn(Id, reverse(Id), Node, ParentRef, Event), Error,
-          ( demonitor(ParentRef, [flush]), exit(Parent, gateway_closed), throw(Error) )).
+          ( demonitor(ParentRef, [flush]), exit(Id, gateway_closed), throw(Error) )).
 probe_action("reverse_start_next", Fields, Last, Last, Event) :-
     memberchk(parent:Id, Fields),
     store_get(probe_children, reverse(Id), reverse(Node, ParentRef, _, _, watching(_, _, parent))),
     probe_spawn_goal(Fields, Goal),
     ( memberchk(link:false, Fields) -> Link = false ; Link = true ),
     self(Owner),
-    send(actor(Id), reverse_parent_start_next(Owner, Node, Goal, Link)),
+    send(Id, reverse_parent_start_next(Owner, Node, Goal, Link)),
     register_reverse_spawn(Id, reverse_next(Id), Node, ParentRef, Event).
 probe_action("reverse_watcher_address", _, Last, Last, {[type:watcher, address:Text]}) :-
     reverse_reply_address(watcher, _, _, Address),
@@ -244,16 +310,14 @@ probe_action("reverse_open_retiring_watcher", Fields, Last, Last, {[type:watcher
     self(Owner),
     spawn(retiring_prompt_watcher(Owner), Watcher, [monitor(true)]),
     store_set(probe_children, retiring_watcher(Id), Watcher),
-    Watcher = actor(WatcherId),
-    reverse_reply_address(parent, WatcherId, _, Address),
+    reverse_reply_address(parent, Watcher, _, Address),
     probe_term_text(Address, Text).
 probe_action("reverse_retire_prompt_watcher", Fields, Last, Last, {[type:watcher_down, reason:"true"]}) :-
     memberchk(parent:Id, Fields),
     memberchk(target:TargetText, Fields),
     memberchk(message:MessageText, Fields),
     store_get(probe_children, retiring_watcher(Id), Watcher),
-    Watcher = actor(WatcherId),
-    reverse_reply_address(parent, WatcherId, _, Address),
+    reverse_reply_address(parent, Watcher, _, Address),
     parse_goal(TargetText, isotope_bridge, Target, _),
     Target == Address,
     parse_goal(MessageText, isotope_bridge, Message, _),
@@ -278,7 +342,7 @@ probe_action("reverse_ack", Fields, Last, Last, {[type:monitoring, child:Returne
     acknowledge_remote_spawn(Proxy, Pid),
     monitor(Pid, Ref),
     store_set(probe_children, Key, reverse(Node, ParentRef, Proxy, ProxyRef, watching(Child, Ref, parent))),
-    receive({ reverse_parent_spawned(actor(Id), Returned@Node) -> true },
+    receive({ reverse_parent_spawned(Id, Returned@Node) -> true },
             [timeout(2), on_timeout(throw(reverse_spawn_reply_timeout(Id)))]),
     ( Returned == Child -> true ; throw(reverse_spawn_pid_mismatch(Child, Returned)) ).
 probe_action("reverse_prepare_demonitor", Fields, Last, Last, {[type:demonitor_prepared]}) :-
@@ -286,20 +350,20 @@ probe_action("reverse_prepare_demonitor", Fields, Last, Last, {[type:demonitor_p
     memberchk(phase:Phase, Fields),
     store_get(probe_children, reverse(Id), reverse(_, _, _, _, watching(_, _, parent))),
     self(Owner),
-    send(actor(Id), reverse_parent_prepare_demonitor(Owner, Phase)),
-    receive({ reverse_parent_demonitor_prepared(actor(Id)) -> true },
+    send(Id, reverse_parent_prepare_demonitor(Owner, Phase)),
+    receive({ reverse_parent_demonitor_prepared(Id) -> true },
             [timeout(2), on_timeout(throw(reverse_demonitor_timeout(Id)))]).
 probe_action("reverse_detach_parent", Fields, Last, Last, {[type:released, parent_reason:"true"]}) :-
     memberchk(parent:Id, Fields),
     prepare_reverse_watcher(reverse(Id), ParentRef),
-    send(actor(Id), reverse_parent_release),
-    reverse_expect_down(actor(Id), ParentRef, true).
+    send(Id, reverse_parent_release),
+    reverse_expect_down(Id, ParentRef, true).
 probe_action("reverse_detach_parent_pair", Fields, Last, Last, {[type:released, parent_reason:"true"]}) :-
     memberchk(parent:Id, Fields),
     prepare_reverse_watcher(reverse(Id), ParentRef),
     prepare_reverse_watcher(reverse_next(Id), ParentRef),
-    send(actor(Id), reverse_parent_release),
-    reverse_expect_down(actor(Id), ParentRef, true).
+    send(Id, reverse_parent_release),
+    reverse_expect_down(Id, ParentRef, true).
 probe_action("reverse_message", Fields, Last, Last, {[type:send, child:Child, message:Wire]}) :-
     memberchk(parent:Id, Fields),
     memberchk(message:Text, Fields),
@@ -310,7 +374,7 @@ probe_action("reverse_message", Fields, Last, Last, {[type:send, child:Child, me
         Outbound = request(Address, Message)
     ; Outbound = Message
     ),
-    ( Sender == parent -> send(actor(Id), reverse_parent_send(Outbound))
+    ( Sender == parent -> send(Id, reverse_parent_send(Outbound))
     ; send(Child@Node, Outbound)
     ),
     receive({ remote_send(Child@Node, Outgoing) -> probe_term_text(Outgoing, Wire) },
@@ -341,14 +405,14 @@ probe_action("reverse_reply", Fields, Last, Last, {[type:delivered, message:Wire
 probe_action("reverse_prompt", Fields, Last, Last, {[type:send, child:Child, message:Wire]}) :-
     reverse_prompt_fields(Fields, Id, Pid, Payload, parent),
     Pid = Child@_,
-    send(actor(Id), prompt(Pid, Payload)),
+    send(Id, prompt(Pid, Payload)),
     answer_reverse_prompt(Fields, Id, Pid, Payload, parent, Wire).
 probe_action("reverse_race_prompt", Fields, Last, Last, {[type:send_pair, child:Child, messages:[First,Second]]}) :-
     reverse_prompt_fields(Fields, Id, Pid, Payload, parent),
     Pid = Child@_,
     Payload = prompt_ref(Ref, _),
-    send(actor(Id), prompt(Pid, Payload)),
-    send(actor(Id), reverse_parent_answer_prompt(Pid, Payload, answer(21))),
+    send(Id, prompt(Pid, Payload)),
+    send(Id, reverse_parent_answer_prompt(Pid, Payload, answer(21))),
     spawn(respond(Pid, Ref, answer(42)), _),
     receive({ remote_send(Pid, Reply1) -> probe_term_text(Reply1, First) },
             [timeout(2), on_timeout(throw(reverse_prompt_timeout(Id)))]),
@@ -357,7 +421,7 @@ probe_action("reverse_race_prompt", Fields, Last, Last, {[type:send_pair, child:
 probe_action("reverse_queue_prompt", Fields, Last, Last, {[type:queued, child:Child]}) :-
     reverse_prompt_fields(Fields, Id, Pid, Payload, parent),
     Pid = Child@_,
-    send(actor(Id), prompt(Pid, Payload)).
+    send(Id, prompt(Pid, Payload)).
 probe_action("reverse_answer_prompt", Fields, Last, Last, {[type:send, child:Child, message:Wire]}) :-
     reverse_prompt_fields(Fields, Id, Pid, Payload, Sender),
     Pid = Child@_,
@@ -368,7 +432,7 @@ probe_action("reverse_exit", Fields, Last, Last, {[type:exit, child:Child, reaso
     store_get(probe_children, reverse(Id), reverse(Node, _, _, _, watching(Child, _, Sender))),
     parse_goal(Text, isotope_bridge, Reason, _),
     nonvar(Reason),
-    ( Sender == parent -> send(actor(Id), reverse_parent_exit(Reason))
+    ( Sender == parent -> send(Id, reverse_parent_exit(Reason))
     ; exit(Child@Node, Reason)
     ),
     receive({ remote_exit(Child@Node, Outgoing) -> probe_term_text(Outgoing, Wire) },
@@ -376,8 +440,8 @@ probe_action("reverse_exit", Fields, Last, Last, {[type:exit, child:Child, reaso
 probe_action("reverse_release", Fields, Last, Last, Event) :-
     memberchk(parent:Id, Fields),
     store_get(probe_children, reverse(Id), reverse(_, ParentRef, Proxy, ProxyRef, watching(Child, _, parent))),
-    send(actor(Id), reverse_parent_release),
-    reverse_expect_down(actor(Id), ParentRef, true),
+    send(Id, reverse_parent_release),
+    reverse_expect_down(Id, ParentRef, true),
     reverse_expect_down(Proxy, ProxyRef, kill),
     Event = {[type:exit, child:Child, reason:"kill", parent_reason:"true"]}.
 probe_action("reverse_release_pair", Fields, Last, Last, Event) :-
@@ -386,8 +450,8 @@ probe_action("reverse_release_pair", Fields, Last, Last, Event) :-
               reverse(_, ParentRef, FirstProxy, FirstRef, watching(First, _, parent))),
     store_get(probe_children, reverse_next(Id),
               reverse(_, ParentRef, SecondProxy, SecondRef, watching(Second, _, parent))),
-    send(actor(Id), reverse_parent_release),
-    reverse_expect_down(actor(Id), ParentRef, true),
+    send(Id, reverse_parent_release),
+    reverse_expect_down(Id, ParentRef, true),
     reverse_expect_down(FirstProxy, FirstRef, kill),
     reverse_expect_down(SecondProxy, SecondRef, kill),
     Event = {[type:exit_pair, first:First, second:Second, reason:"kill", parent_reason:"true"]}.
@@ -412,17 +476,17 @@ probe_action("reverse_finish", Fields, Last, Last, {[type:released, parent_reaso
     store_get(probe_children, reverse(Id), reverse(_, ParentRef, _, _, down)),
     ( memberchk(monitor_reason:Text, Fields) ->
         parse_goal(Text, isotope_bridge, Reason, _),
-        send(actor(Id), reverse_parent_release_after_down(Reason))
-    ; send(actor(Id), reverse_parent_release)
+        send(Id, reverse_parent_release_after_down(Reason))
+    ; send(Id, reverse_parent_release)
     ),
-    reverse_expect_down(actor(Id), ParentRef, true).
+    reverse_expect_down(Id, ParentRef, true).
 probe_action("reverse_reject", Fields, Last, Last, {[type:rejected]}) :-
     memberchk(parent:Id, Fields),
     memberchk(reason:Reason, Fields),
     store_get(probe_children, reverse(Id), reverse(_, _, Proxy, _, pending)),
     send(Proxy, remote_spawn_reply(error(Reason))),
     receive({
-        reverse_parent_spawn_error(actor(Id), error(remote_spawn_failed(Reason), _)) -> true
+        reverse_parent_spawn_error(Id, error(remote_spawn_failed(Reason), _)) -> true
     }, [timeout(2), on_timeout(throw(reverse_spawn_rejection_timeout(Id)))]).
 probe_action("reverse_cancel", Fields, Last, Last, {[type:cancelled]}) :-
     memberchk(parent:Id, Fields),
@@ -442,7 +506,7 @@ probe_action("reverse_cancel", Fields, Last, Last, {[type:cancelled]}) :-
             demonitor(Ref, [flush]),
             remote_actor_down(Proxy, Child@Node, connection_closed)
         ; true ),
-        exit(actor(Id), gateway_closed)
+        exit(Id, gateway_closed)
     ; true ).
 
 probe_action("spawn", Fields, Last, Last, {[type:spawned, pid:Id]}) :-
@@ -455,17 +519,17 @@ probe_action("spawn", Fields, Last, Last, {[type:spawned, pid:Id]}) :-
     ; Start = Goal
     ),
     spawn(receive({ probe_run -> (set_prompt_relay(Transport), Start) }),
-          actor(Id), [monitor(true)|Options]),
+          Id, [monitor(true)|Options]),
     record_create(Outbox),
     store_set(probe_children, Id, child(running, null, Outbox)),
-    send(actor(Id), probe_run).
+    send(Id, probe_run).
 probe_action("send", Fields, Last, Last, {[type:received]}) :-
     memberchk(child:Id, Fields),
     memberchk(message:Text, Fields),
     store_get(probe_children, Id, child(Status, _, _)),
     ( Status == running ->
         parse_goal(Text, isotope_bridge, Message, _),
-        send(actor(Id), Message)
+        send(Id, Message)
     ; true
     ).
 probe_action("exit", Fields, Last, Last, {[type:exiting]}) :-
@@ -474,7 +538,7 @@ probe_action("exit", Fields, Last, Last, {[type:exiting]}) :-
     parse_goal(Text, isotope_bridge, Reason, _),
     ground(Reason),
     store_get(probe_children, Id, _),
-    exit(actor(Id), Reason).
+    exit(Id, Reason).
 probe_action("status", Fields, Last, Last, {Event}) :-
     memberchk(child:Id, Fields),
     store_get(probe_children, Id, child(Status, Output, _)),
@@ -507,9 +571,8 @@ probe_action("forget", Fields, Last, Last, {[type:forgotten]}) :-
 % Reclaim a connection-owned child before clearing its gateway state.
 disconnect_probe_actor(_, down(Reason), Reason).
 disconnect_probe_actor(Id, running, Reason) :-
-    Pid = actor(Id),
-    exit(Pid, gateway_closed),
-    receive({ down(Pid, Pid, Reason) -> true },
+    exit(Id, gateway_closed),
+    receive({ down(Id, Id, Reason) -> true },
             [timeout(2), on_timeout(throw(disconnect_child_timeout(Id)))]).
 
 reverse_spawn_key(Fields, Id, Key) :-
@@ -528,7 +591,7 @@ prepare_reverse_watcher(Key, ParentRef) :-
               reverse(Node, ParentRef, Proxy, ProxyRef, watching(Child, Ref, watcher))).
 
 register_reverse_spawn(Id, Key, Node, ParentRef, Event) :-
-    receive({ remote_spawn(actor(Id), Proxy, Node, RemoteGoal, Source) -> true },
+    receive({ remote_spawn(Id, Proxy, Node, RemoteGoal, Source) -> true },
             [timeout(2), on_timeout(throw(reverse_spawn_timeout))]),
     probe_term_text(RemoteGoal, Text),
     monitor(Proxy, ProxyRef),
@@ -555,7 +618,7 @@ reverse_prompt_fields(Fields, Id, Child@Node, Payload, Sender) :-
 answer_reverse_prompt(Fields, Id, Pid, Payload, Sender, Wire) :-
     memberchk(reply:ReplyText, Fields),
     parse_goal(ReplyText, isotope_bridge, Reply, _),
-    ( Sender == parent -> send(actor(Id), reverse_parent_answer_prompt(Pid, Payload, Reply))
+    ( Sender == parent -> send(Id, reverse_parent_answer_prompt(Pid, Payload, Reply))
     ; respond_to_reverse_prompt(Pid, Payload, Reply)
     ),
     receive({ remote_send(Pid, Outgoing) -> probe_term_text(Outgoing, Wire) },
@@ -608,8 +671,7 @@ eclipse_probe_wait :-
 reverse_parent(Owner, Node, Goal, ReplyTarget, Options) :-
     self(Parent),
     ( ReplyTarget = bind(Address) ->
-        Parent = actor(Id),
-        reverse_reply_address(parent, Id, Parent, Address)
+        reverse_reply_address(parent, Parent, Parent, Address)
     ; true
     ),
     set_linked_spawn_transport(Node, Owner),
@@ -682,11 +744,8 @@ reverse_expect_no_spawn_down(Child) :-
 
 % SWI imports this address as a virtual recipient scoped to the gateway's
 % WebSocket. Its numeric component identifies the actual ECLiPSe watcher.
-reverse_reply_address(Sender, ParentId, Watcher, WireId@localhost) :-
-    ( Sender == parent -> Watcher = actor(ParentId) ; self(Watcher) ),
-    Watcher = actor(Id),
-    WireId is 1000000000 + Id,
-    WireId =< 9999999999.
+reverse_reply_address(Sender, ParentId, Watcher, Watcher@localhost) :-
+    ( Sender == parent -> Watcher = ParentId ; self(Watcher) ).
 
 await_reverse_reply(Expected, Reply) :-
     receive({ Message if variant(Message, Expected) -> Reply = Message },
@@ -874,7 +933,7 @@ stateless_denied(Action, Target) :-
     throw(error(permission_error(Action, sandboxed, Target), stateless_whitelist)).
 
 stateless_primitive(Indicator) :-
-    memberchk(Indicator, [true/0, fail/0, (=)/2, (==)/2, (\==)/2,
+    memberchk(Indicator, [true/0, fail/0, sleep/1, (=)/2, (==)/2, (\==)/2,
                           var/1, nonvar/1, ground/1, atom/1, integer/1, number/1,
                           member/2, memberchk/2, append/3, length/2, select/3,
                           nth0/3, nth0/4, nth1/3, nth1/4, between/3, succ/2]).
@@ -951,15 +1010,15 @@ dispatch("spawn", Fields, _, {[type:spawned, pid:Id]}) :-
     ( memberchk(browser_options:Text, Fields) ->
         parse_goal(Text, isotope_bridge, Options, _),
         browser_spawn_source(Options, Fields, Source),
-        toplevel_spawn_browser(actor(Id), [session(true)|Source])
+        toplevel_spawn_browser(Id, [session(true)|Source])
     ; probe_source_options(Fields, Source),
-      toplevel_spawn(actor(Id), [session(true)|Source])
+      toplevel_spawn(Id, [session(true)|Source])
     ).
 dispatch("call", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
     memberchk(goal:Text, Fields),
     memberchk(limit:Limit, Fields),
-    actor_module(actor(Id), Module),
+    actor_module(Id, Module),
     parse_goal(Text, Module, RawGoal, Bindings),
     ( memberchk(browser_options:OptionsText, Fields) ->
         memberchk(browser_origin:OriginText, Fields),
@@ -974,37 +1033,35 @@ dispatch("call", Fields, Context, Event) :-
         append(Options, [limit(Limit)], PageOptions)
     ; interactive_goal(RawGoal, Goal), PageOptions = [limit(Limit)]
     ),
-    Pid = actor(Id),
     self(Relay),
-    toplevel_call(Pid, (send(Relay, http_started(Pid)), Goal),
+    toplevel_call(Id, (send(Relay, http_started(Id)), Goal),
                   [template(Bindings)|PageOptions]),
     % A pending Abort must interrupt this call, even if it arrived before
     % the actor had picked the call out of its mailbox.
-    receive({ http_started(Pid) -> await_event(Id, Context, Event) },
+    receive({ http_started(Id) -> await_event(Id, Context, Event) },
             [timeout(3), on_timeout(retire(Id, "Query did not start", Event))]).
 dispatch("next", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
-    toplevel_next(actor(Id)),
+    toplevel_next(Id),
     await_event(Id, Context, Event).
 dispatch("poll", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
     await_event(Id, Context, Event).
 dispatch("browser_ack", Fields, _, {[type:acknowledged, pid:Id]}) :-
     memberchk(pid:Id, Fields),
-    send(actor(Id), '$browser_ack').
+    send(Id, '$browser_ack').
 dispatch("respond", Fields, _, {[type:responded, pid:Id]}) :-
     memberchk(pid:Id, Fields),
     memberchk(prompt_ref:Ref, Fields),
     memberchk(input:Text, Fields),
-    actor_module(actor(Id), Module),
+    actor_module(Id, Module),
     parse_goal(Text, Module, Value, _),
-    respond(actor(Id), ref(Ref), Value).
+    respond(Id, Ref, Value).
 dispatch("stop", Fields, _, Event) :-
     memberchk(pid:Id, Fields),
-    Pid = actor(Id),
     self(Relay),
-    toplevel_stop(Pid, Relay),
-    receive({ stop(Pid) -> Event = {[type:stop, pid:Id]} },
+    toplevel_stop(Id, Relay),
+    receive({ stop(Id) -> Event = {[type:stop, pid:Id]} },
             [timeout(3), on_timeout(retire(Id, "Stop acknowledgement timed out", Event))]).
 dispatch("abort", Fields, _, Event) :-
     memberchk(pid:Id, Fields),
@@ -1012,17 +1069,15 @@ dispatch("abort", Fields, _, Event) :-
 
 dispatch("halt", Fields, _, {[type:halted, pid:Id, reply:"true"]}) :-
     memberchk(pid:Id, Fields),
-    Pid = actor(Id),
-    monitor(Pid, Ref),
-    exit(Pid, http_session_closed),
-    receive({ down(Pid, Ref, _) -> true },
+    monitor(Id, Ref),
+    exit(Id, http_session_closed),
+    receive({ down(Id, Ref, _) -> true },
             [timeout(2), on_timeout(throw(halt_timeout(Id)))]).
 
 abort_session(Id, Event) :-
-    Pid = actor(Id),
-    toplevel_abort(Pid),
-    receive({ abort(Pid) ->
-                discard_deferred(query_event(Pid)),
+    toplevel_abort(Id),
+    receive({ abort(Id) ->
+                discard_deferred(query_event(Id)),
                 Event = {[type:abort, pid:Id]}
             },
             [timeout(3), on_timeout(retire(Id, "Abort acknowledgement timed out", Event))]).
@@ -1093,9 +1148,8 @@ relay_browser_origin(Origin) :-
     ).
 
 import_browser_term(Term, _, Term) :- var(Term), !.
-import_browser_term(Wire@Node, Origin, actor(Id)) :-
-    Node == Origin, integer(Wire), Wire >= 1000000000, Wire =< 9999999999, !,
-    Id is Wire - 1000000000.
+import_browser_term(Id@Node, Origin, Id) :-
+    Node == Origin, integer(Id), Id >= 1000000000, Id =< 9999999999, !.
 import_browser_term(Term, Origin, Imported) :-
     compound(Term), !,
     Term =.. [Name|Args],
@@ -1115,7 +1169,6 @@ await_event(Id, Context, Event) :-
     engine_self(Engine),
     get_engine_property(Engine, store, Store),
     ( store_get(Store, browser_event_timeout, Wait) -> true ; Wait = 3 ),
-    Pid = actor(Id),
     receive({
         http_request(AbortRequest, "abort", Id, Fields) ->
             Context = response(Router, _),
@@ -1138,32 +1191,32 @@ await_event(Id, Context, Event) :-
             reply_to(HaltContext, Halt),
             Event = already_sent
     ;
-        success(Pid, Answers, More) ->
+        success(Id, Answers, More) ->
             maplist(answer_row, Answers, Data),
             Event = {[type:success, pid:Id, data:Data, more:More]}
     ;
-        failure(Pid) ->
+        failure(Id) ->
             Event = {[type:failure, pid:Id]}
     ;
-        error(Pid, Error) ->
+        error(Id, Error) ->
             term_string(Error, Text),
             Event = {[type:error, pid:Id, data:Text]}
     ;
-        browser_output(Pid, Text) ->
+        browser_output(Id, Text) ->
             Event = {[type:output, pid:Id, data:Text, stdout:Text, browser_ack:true]}
     ;
-        output(Pid, Value) ->
+        output(Id, Value) ->
             event_text(Value, Text),
             Event = {[type:output, pid:Id, data:Text]}
     ;
-        prompt(Pid, prompt_ref(ref(Ref), Prompt)) ->
+        prompt(Id, prompt_ref(Ref, Prompt)) ->
             ( relay_browser_origin(_), \+ text_string(Prompt, _) ->
                 browser_term_text(Prompt, Text)
             ; probe_prompt_text(Prompt, Text)
             ),
             Event = {[type:prompt, pid:Id, data:Text, prompt_ref:Ref]}
     ;
-        prompt(Pid, _) ->
+        prompt(Id, _) ->
             retire(Id, "HTTP prompts require correlation", Event)
     }, [timeout(Wait), on_timeout(retire(Id, "Query event timed out", Event))]).
 
@@ -1179,16 +1232,9 @@ answer_row([Binding|Bindings], {Fields}) :-
 
 binding_field(Name=Value, Name:Text) :-
     ( relay_browser_origin(Origin) ->
-        browser_binding_text(Value, Origin, Text)
+        ( acyclic_term(Value) -> qualify_browser_pids(Value, Origin, Display) ; Display = Value ),
+        browser_term_text(Display, Text)
     ; term_string(Value, Text)
-    ).
-
-browser_binding_text(Value, Origin, Text) :-
-    ( nonvar(Value), Value = actor(Id), integer(Id) ->
-        Wire is 1000000000 + Id,
-        probe_term_text(Origin, Node),
-        sprintf(Text, "%d@%s", [Wire, Node])
-    ; browser_term_text(Value, Text)
     ).
 
 browser_term_text(Term, Text) :-
@@ -1198,5 +1244,16 @@ browser_term_text(Term, Text) :-
           get_stream_info(Stream, name, Text) ),
         close(Stream)).
 
+qualify_browser_pids(Term, _, Term) :- var(Term), !.
+qualify_browser_pids(Id, Origin, Id@Origin) :- issued_actor_pid(Id), !.
+qualify_browser_pids(Id@Node, _, Id@Node) :- integer(Id), atom(Node), !.
+qualify_browser_pids(Term, Origin, Display) :-
+    compound(Term), !,
+    Term =.. [Name|Args],
+    ( foreach(Arg, Args), foreach(Value, Values), param(Origin) do
+        qualify_browser_pids(Arg, Origin, Value) ),
+    Display =.. [Name|Values].
+qualify_browser_pids(Term, _, Term).
+
 retire(Id, Text, {[type:error, pid:Id, retired:true, data:Text]}) :-
-    exit(actor(Id), http_session_closed).
+    exit(Id, http_session_closed).

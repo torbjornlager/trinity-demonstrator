@@ -2803,6 +2803,10 @@
           </section>
           <section class="wb-header-section wb-header-section-tools">
             <div class="wb-header-actions">
+              <a v-if="n7ShellLogoutUrl"
+                 class="wb-button subtle"
+                 :href="n7ShellLogoutUrl"
+                 @click="disconnectRemoteNode">Sign out of N7</a>
               <a v-if="nodeIsAdmin"
                  class="wb-icon-button"
                  :href="adminPageUrl"
@@ -5591,6 +5595,7 @@
 	            protocolLogHighlightFromId: null,
 	            deadPids: {},
 	            nodeSelfUrl: "",
+	            nodeImplementation: "",
 	            nodeAnnouncedProfile: "actor",
 	            nodeHttpSessionOptions: [],
 	            principalAnnouncedId: "anonymous",
@@ -5725,10 +5730,13 @@
             return portalHrefForNodeUrl(this.currentPortalNodeUrl);
           },
           showRemoteSessionControls: function() {
-            return TrinityHost.isStatic && !!TrinityHost.nodeBase && !this.isBrowserSwiWasmMode && !!(TrinityHost.loginUrl || TrinityHost.logoutUrl);
+            return TrinityHost.isStatic && !!TrinityHost.nodeBase && !this.isBrowserSwiWasmMode && !!(TrinityHost.loginUrl || (TrinityHost.logoutUrl && !this.n7ShellLogoutUrl));
           },
           nodeLoginUrl: function() { return TrinityHost.loginUrl; },
-          nodeLogoutUrl: function() { return TrinityHost.logoutUrl; },
+          nodeLogoutUrl: function() { return this.n7ShellLogoutUrl ? null : TrinityHost.logoutUrl; },
+          n7ShellLogoutUrl: function() {
+            return new URL(TrinityHost.assetBase).pathname === "/n7-shell/" ? TrinityHost.logoutUrl : null;
+          },
           adminPageUrl: function() {
             return TrinityHost.nodeBase ? TrinityHost.endpoint("/admin") : "";
           },
@@ -5815,13 +5823,16 @@
             return PORTAL_BOOK_MANUSCRIPT_URL;
           },
           portalRuntimeName: function() {
-            if (this.isBrowserSwiWasmMode || this.portalSwiplVersion) {
+            if (this.isBrowserSwiWasmMode) return "SWI-Prolog";
+            if (this.nodeImplementation === "ECLiPSe CLP") return "ECLiPSe CLP";
+            if (this.portalSwiplVersion) {
               return "SWI-Prolog";
             }
             if (this.portalGprologVersion) return "GNU Prolog";
             return this.portalTreallaVersion ? "Trealla Prolog" : "Prolog";
           },
           portalRuntimeUrl: function() {
+            if (this.portalRuntimeName === "ECLiPSe CLP") return "https://eclipseclp.org/";
             if (this.portalRuntimeName === "GNU Prolog") return "https://www.gprolog.org/";
             return this.portalRuntimeName === "Trealla Prolog"
               ? "https://github.com/trealla-prolog/trealla-prolog"
@@ -6613,6 +6624,8 @@
               }
               return response.json();
 	            }).then(function(json) {
+	              self.nodeImplementation = json && typeof json.implementation === "string"
+	                ? json.implementation : "";
 	              if (json && typeof json.self_url === "string") {
 	                self.nodeSelfUrl = json.self_url;
 	                window.webPrologNodeSelfUrl = json.self_url;
@@ -8427,10 +8440,12 @@
               this.reportEditorPlaceholderError(term, "The active SXML editor is empty.");
               return null;
             }
-            rewritten = rewriteEditorLoadTextAware(
-              value,
-              "src_text(" + this.prologQuotedText(xml) + ")"
-            );
+            // N7 reads double-quoted text as a character list. Its reader
+            // does not accept the doubled apostrophes used by the SWI helper.
+            var quotedXml = new URL(TrinityHost.assetBase).pathname === "/n7-shell/"
+              ? JSON.stringify(xml)
+              : this.prologQuotedText(xml);
+            rewritten = rewriteEditorLoadTextAware(value, "src_text(" + quotedXml + ")");
             label = this.currentEditorSourceDirty()
               ? "<scratch-buffer>"
               : this.currentEditorSourceLabel();

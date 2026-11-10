@@ -7,6 +7,7 @@
 
 :- export spawn/1, actors/1.
 :- export parallel/1, first_solution/2, first_solution/3.
+:- export portable_goal/2, prepare_actor_goal/2.
 :- export browser_goal/2, browser_format/2, browser_chart_trace/1, source_body/2.
 :- export flush/0, browser_time/1, browser_sleep/1, browser_random_between/3.
 :- export browser_call_cleanup/2, browser_random_member/2.
@@ -19,7 +20,7 @@
 :- export exit/1, exit/2.
 :- export output/1, output/2, input/2, input/3, respond/2, respond/3.
 :- export retarget_prompt/3.
-:- export set_io_target/1, clear_io_target/0.
+:- export set_io_target/1, clear_io_target/0, configured_io_target/1.
 :- export set_browser_prompt_correlation/0.
 :- export set_linked_spawn_transport/2.
 :- export set_peer_send_transport/2.
@@ -28,6 +29,7 @@
 :- export op(1000, xfy, if).
 :- export start_actor_runtime/0, attach_mailbox/1.
 :- export actor_module/2, discard_deferred/1, post_actor_event/2.
+:- export issued_actor_pid/1.
 :- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
 :- export unicode_literal/2, text_string/2.
 :- export make_ref/1.
@@ -35,11 +37,14 @@
 :- tool(discard_deferred/1, discard_deferred_/2).
 
 :- local store(actor_registry).
+:- local store(issued_actor_ids).
 :- local record(actor_monitors).
 :- local record(actor_names).
 :- local record(delayed_sends).
 :- tool(spawn/1, spawn_/2).
 :- tool(source_body/2, source_body_/3).
+:- tool(portable_call/1, portable_call_/2).
+:- export portable_call/1.
 :- tool(browser_time/1, browser_time_/2).
 :- tool(browser_call_cleanup/2, browser_call_cleanup_/3).
 :- tool(spawn/2, spawn_/3).
@@ -54,14 +59,14 @@
 % Start once from the root engine, before spawning actors.
 start_actor_runtime :-
     record_create(Reports),
-    shelf_create(counter(0), Counter),
+    bag_create(IdLock),
     bag_create(Lock),
     engine_self(Main),
     record_create(Inbox),
     attach_mailbox(Inbox),
     set_self(main),
     store_set(actor_registry, main, actor(Main, Inbox, detached)),
-    store_set(actor_registry, runtime, runtime(Reports, Counter, Lock)),
+    store_set(actor_registry, runtime, runtime(Reports, IdLock, Lock)),
     engine_create(Reaper, [thread, detached(true)]),
     engine_resume_thread(Reaper, reap_actors(Reports, Lock)).
 
@@ -72,29 +77,33 @@ spawn_(Goal, Pid, Module) :-
 
 spawn_(Goal, Pid, Options, Module) :-
     self(Parent),
-    spawn_options(Options, Parent, Link, Monitor, SourceOption, Destination),
+    spawn_options(Options, Parent, Link, Startup, SourceOption, Destination),
     spawn_source(SourceOption, Module, Source),
     ( Destination == local ->
-        spawn_local(Goal, Pid, Parent, Link, Monitor, Source, Module)
+        spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module)
     ; Destination = remote(Node),
-      spawn_remote(Goal, Pid, Parent, Link, Monitor, Source, Node)
+      Startup = startup(Monitor, Name, Io),
+      ( Name == none, Io == none ->
+          spawn_remote(Goal, Pid, Parent, Link, Monitor, Source, Node)
+      ; throw(error(domain_error(remote_spawn_options, Options), spawn/3)) )
     ).
 
-spawn_local(Goal, Pid, Parent, Link, Monitor, Source, Module) :-
-    store_get(actor_registry, runtime, runtime(Reports, Counter, Lock)),
-    shelf_inc_and_get(Counter, 1, Id),
-    Pid = actor(Id),
+spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module) :-
+    Startup = startup(_, _, Io),
+    store_get(actor_registry, runtime, runtime(Reports, _, Lock)),
+    fresh_actor_id(pid, Pid),
     record_create(Inbox),
     engine_create(Engine, [thread, report_to(Reports)]),
     ( Source == none ->
-        with_mutex(Lock, start_actor(Pid, Engine, Inbox, Link, Monitor, none,
-                                    run_actor(Pid, Parent, Inbox, Goal, Module)))
+        catch(with_mutex(Lock, start_actor(Pid, Engine, Inbox, Link, Startup, none,
+                                          run_actor(Pid, Parent, Inbox, Goal, Module, Io))),
+              Error, (engine_post(Engine, exit(0))@eclipse_language, throw(Error)))
     ;
         Source = text(Text),
-        concat_atom(['$web_prolog_actor_', Id], Private),
+        concat_atom(['$web_prolog_actor_', Pid], Private),
         create_module(Private),
         catch(
-            prepare_and_start(Pid, Parent, Engine, Inbox, Link, Monitor, Private, Goal, Text, Lock),
+            prepare_and_start(Pid, Parent, Engine, Inbox, Link, Startup, Private, Goal, Text, Lock),
             Error,
             ( engine_post(Engine, exit(0))@eclipse_language,
               discard_source(Private),
@@ -104,27 +113,37 @@ spawn_local(Goal, Pid, Parent, Link, Monitor, Source, Module) :-
         )
     ).
 
-spawn_options(Options, Parent, Link, Monitor, Source, Destination) :-
+spawn_options(Options, Parent, Link, startup(Monitor, Name, Io), Source, Destination) :-
     ( is_list(Options) -> true
     ; throw(error(type_error(list, Options), spawn/3))
     ),
-    spawn_options_(Options, options(unset, unset, [], local),
-                   options(LinkOption, MonitorOption, Source, Destination)),
-    ( LinkOption == false -> Link = detached ; Link = linked(Parent) ),
+    ( member(Marker, Options), Marker == '$state_owned',
+      select('$state_owned', Options, UnownedOptions) ->
+        Link = owned(Parent)
+    ; UnownedOptions = Options ),
+    spawn_options_(UnownedOptions, options(unset, unset, [], local, none, none),
+                   options(LinkOption, MonitorOption, Source, Destination, Name, Io)),
+    ( nonvar(Link) -> true
+    ; LinkOption == false -> Link = detached
+    ; Link = linked(Parent) ),
     ( MonitorOption == true -> Monitor = watch(Parent) ; Monitor = none ).
 
 spawn_options_([], Options, Options).
-spawn_options_([Option|Options], options(Link, Monitor, Source, Destination), Parsed) :-
+spawn_options_([Option|Options], options(Link, Monitor, Source, Destination, Name, Io), Parsed) :-
     ( nonvar(Option), Option = link(Value), Link == unset,
       ( Value == true ; Value == false ) ->
-        Next = options(Value, Monitor, Source, Destination)
+        Next = options(Value, Monitor, Source, Destination, Name, Io)
     ; nonvar(Option), Option = monitor(Value), Monitor == unset,
       ( Value == true ; Value == false ) ->
-        Next = options(Link, Value, Source, Destination)
+        Next = options(Link, Value, Source, Destination, Name, Io)
     ; source_option(Option) ->
-        Next = options(Link, Monitor, [Option|Source], Destination)
+        Next = options(Link, Monitor, [Option|Source], Destination, Name, Io)
     ; nonvar(Option), Option = node(Node), Destination == local, atom(Node) ->
-        Next = options(Link, Monitor, Source, remote(Node))
+        Next = options(Link, Monitor, Source, remote(Node), Name, Io)
+    ; nonvar(Option), Option = name(Atom), Name == none, atom(Atom), Atom \== undefined ->
+        Next = options(Link, Monitor, Source, Destination, name(Atom), Io)
+    ; nonvar(Option), Option = io_target(Target), Io == none, ground(Target) ->
+        Next = options(Link, Monitor, Source, Destination, Name, io(Target))
     ;
         throw(error(domain_error(local_spawn_option, Option), spawn/3))
     ),
@@ -193,7 +212,7 @@ actors(Pids) :-
     ( browser_session(_) -> Browser = true ; Browser = false ),
     stored_keys_and_values(actor_registry, Entries),
     findall(Pid,
-        ( member(Pid-actor(Engine, _, _), Entries), Pid = actor(_),
+        ( member(Pid-actor(Engine, _, _), Entries), integer(Pid),
           get_engine_property(Engine, status, Status), \+ finished_status(Status),
           ( Browser == false
           ; get_engine_property(Engine, store, Store), store_get(Store, browser_session, _) ) ),
@@ -210,11 +229,13 @@ spawn_remote(Goal, Pid, Parent, Link, Monitor, Source, Node) :-
     Pid = '@'(Id, Node),
     mailbox_store(Store),
     ( store_get(Store, spawn_transport(Node), Transport) -> true
+    ; Link = owned(_), browser_session(_) -> Transport = main
     ; throw(error(existence_error(spawn_transport, Node), spawn/3))
     ),
     ( Monitor = watch(Parent) -> ProxyMonitor = remote_watch(Parent) ; ProxyMonitor = none ),
+    ( Link = owned(_) -> StartupLink = Link ; StartupLink = linked(Parent) ),
     spawn_local(remote_spawn_proxy(Transport, Parent, Node, Goal, Source, Link),
-                Proxy, Parent, linked(Parent), ProxyMonitor, none, actors),
+                Proxy, Parent, StartupLink, startup(ProxyMonitor, none, none), none, actors),
     catch(
         ( receive({ remote_spawn_reply(Proxy, Reply) -> true },
                   [timeout(8), on_timeout(throw(error(remote_spawn_timeout(Node), spawn/3)))]),
@@ -239,6 +260,7 @@ remote_spawn_proxy(Transport, Parent, Node, Goal, Source, Link) :-
     ).
 
 activate_remote_link(_, linked(_)).
+activate_remote_link(_, owned(_)).
 activate_remote_link(Proxy, detached) :-
     store_get(actor_registry, runtime, runtime(_, _, Lock)),
     with_mutex(Lock,
@@ -338,31 +360,41 @@ utf8_continuation([Byte|Bytes], [Byte|Tail], Rest, Count) :-
 % Like SWI's child-side preparation handshake, readiness precedes
 % publication and application execution. The preparatory resume is
 % synchronous, so the reaper sees only the subsequent asynchronous run.
-prepare_and_start(Pid, Parent, Engine, Inbox, Link, Monitor, Private, Goal, Text, Lock) :-
-    engine_resume(Engine, prepare_actor(Pid, Parent, Inbox, Goal, Private, Text), Status),
+prepare_and_start(Pid, Parent, Engine, Inbox, Link, Startup, Private, Goal, Text, Lock) :-
+    Startup = startup(_, _, Io),
+    engine_resume(Engine, prepare_actor(Pid, Parent, Inbox, Goal, Private, Text, Io), Status),
     ( Status == yielded(ready) ->
-        with_mutex(Lock, start_actor(Pid, Engine, Inbox, Link, Monitor, Private, run))
+        with_mutex(Lock, start_actor(Pid, Engine, Inbox, Link, Startup, Private, run))
     ; Status = exception(Error) ->
         throw(Error)
     ;
         throw(error(source_preparation_failed(Status), spawn/3))
     ).
 
-start_actor(Pid, Engine, Inbox, Link, Monitor, Private, Start) :-
+start_actor(Pid, Engine, Inbox, Link, startup(Monitor, Registration, _), Private, Start) :-
     store_set(actor_registry, Pid, actor(Engine, Inbox, Link)),
     ( Private == none -> true
     ; store_set(actor_registry, actor_module(Pid), Private)
     ),
     install_start_monitor(Monitor, Pid),
     catch(
-        engine_resume_thread(Engine, Start),
+        ( install_start_name(Registration, Pid),
+          engine_resume_thread(Engine, Start) ),
         Error,
         ( store_delete(actor_registry, Pid),
+          remove_actor_name(_, Pid),
           remove_start_monitor(Monitor, Pid),
           ( Private == none -> true ; store_delete(actor_registry, actor_module(Pid)) ),
           throw(Error)
         )
     ).
+
+install_start_name(none, _).
+install_start_name(name(Name), _) :-
+    ( Name == main ; registered_actor(Name, _) ), !,
+    throw(name_is_in_use(Name)).
+install_start_name(name(Name), Pid) :-
+    recordz(actor_names, registered(Name, Pid)).
 
 install_start_monitor(none, _).
 install_start_monitor(watch(Watcher), Pid) :- install_monitor(Watcher, Pid, Pid).
@@ -379,9 +411,10 @@ clear_pending_spawn_monitor(Pid) :-
     ; true
     ).
 
-prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
+prepare_actor(Pid, Parent, Inbox, Goal, Private, Text, Io) :-
     set_actor_context(Pid, Parent, Inbox),
-    ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
+    configure_actor_io(Io),
+    ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser, _) ->
         mailbox_store(Store), store_set(Store, browser_session, Pid)
     ; true
     ),
@@ -398,7 +431,7 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
                   (:- import(subtract/3 from lists)),
                   (:- import(forall/2 from swi))])@Private,
     ( current_module(isotope_rpc), nonvar(Goal), Goal = Module:Entry,
-      Module == toplevel_actors, nonvar(Entry), functor(Entry, ptcp, 3) ->
+      Module == toplevel_actors, nonvar(Entry), functor(Entry, ptcp, 4) ->
         compile_term([(:- import(rpc/2 from isotope_rpc)),
                       (:- import(rpc/3 from isotope_rpc)),
                       (:- import(promise/3 from isotope_rpc)),
@@ -410,7 +443,8 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
     ( current_module(n5_shared_db) ->
         compile_term([(:- import(n5_shared_db))])@Private
     ; true ),
-    ( nonvar(Goal), Goal = toplevel_actors:ptcp(_, _, browser) ->
+    ( nonvar(Goal), ( Goal = toplevel_actors:ptcp(_, _, browser, _)
+                   ; Goal = statechart_actor:run_chart(_, _) ) ->
         compile_term([(:- import(setup_call_cleanup/3 from prolog_extras)),
                       (:- import(supervisor_spawn/2 from server_behaviours)),
                       (:- import(supervisor_spawn/3 from server_behaviours)),
@@ -451,6 +485,10 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text) :-
                       (:- import(linda_inp/1 from demo_services)),
                       (:- import(linda_rdp/1 from demo_services))])@Private
     ; true ),
+    ( nonvar(Goal), Goal = statechart_actor:run_chart(_, _) ->
+        compile_term([(:- import(raise/1 from statechart_actor)),
+                      (:- import(in/1 from statechart_actor))])@Private
+    ; true ),
     load_actor_source(Text, Private),
     yield(ready, run),
     run_actor_goal(Goal, Private).
@@ -460,10 +498,11 @@ load_actor_source(Text, Module) :-
         ( read_source(Stream, Module, Clauses) -> true
         ; throw(error(syntax_error(src_text), spawn/3)) ),
         close(Stream)),
-    ( browser_session(_) ->
-        maplist(browser_source_clause, Clauses, Compiled)
-    ; Compiled = Clauses
+    ( ( browser_session(_) ; configured_io_target(_) ) ->
+        maplist(browser_source_clause, Clauses, BrowserClauses)
+    ; BrowserClauses = Clauses
     ),
+    maplist(portable_source_clause, BrowserClauses, Compiled),
     declare_shared_shadows(Clauses, Module),
     compile_term(Compiled)@Module,
     ( store_get(actor_registry, source(Module), Previous) -> true ; Previous = [] ),
@@ -530,13 +569,18 @@ local_clause_head(Head) :-
         true
     ).
 
-run_actor(Pid, Parent, Inbox, Goal, Module) :-
+run_actor(Pid, Parent, Inbox, Goal, Module, Io) :-
     set_actor_context(Pid, Parent, Inbox),
+    configure_actor_io(Io),
     run_actor_goal(Goal, Module).
 
 run_actor_goal(Goal, Module) :-
-    ( browser_session(_) -> browser_goal(Goal, Call) ; Call = Goal ),
-    once(call(Call)@Module).
+    prepare_actor_goal(Goal, Prepared),
+    once(call(Prepared)@Module).
+
+prepare_actor_goal(Goal, Prepared) :-
+    ( ( browser_session(_) ; configured_io_target(_) ) -> browser_goal(Goal, Call) ; Call = Goal ),
+    portable_goal(Call, Prepared).
 
 parallel_(Goals, Module) :-
     worker_goals(Goals, parallel/1),
@@ -709,6 +753,38 @@ browser_session(Session) :-
     mailbox_store(Store),
     store_get(Store, browser_session, Session).
 
+portable_source_clause((Head :- Body), (Head :- Prepared)) :- !,
+    portable_goal(Body, Prepared).
+portable_source_clause(Clause, Clause).
+
+% Keep transparent control structures in the caller so cuts keep their scope.
+portable_goal(Goal, Goal) :- var(Goal), !.
+portable_goal((A,B), (X,Y)) :- !, portable_goal(A, X), portable_goal(B, Y).
+portable_goal((A;B), (X;Y)) :- !, portable_goal(A, X), portable_goal(B, Y).
+portable_goal((A->B), (X->Y)) :- !, portable_goal(A, X), portable_goal(B, Y).
+portable_goal(catch(A,E,B), catch(X,E,Y)) :- !,
+    portable_goal(A, X), portable_goal(B, Y).
+portable_goal(once(A), once(X)) :- !, portable_goal(A, X).
+portable_goal(findall(T,A,L), findall(T,X,L)) :- !, portable_goal(A, X).
+portable_goal(\+ A, \+ actors:portable_call(A)) :- !.
+portable_goal(call(A), actors:portable_call(A)) :- !.
+portable_goal(sleep(Time), actors:browser_sleep(Time)) :- !.
+portable_goal(Goal, Goal).
+
+portable_call_(Goal, Module) :-
+    ( var(Goal) -> throw(error(instantiation_error, call/1))
+    ; callable_body(Goal) -> true
+    ; throw(error(type_error(callable,Goal), call/1))
+    ),
+    portable_goal(Goal, Prepared),
+    call(Prepared)@Module.
+
+callable_body(Goal) :- var(Goal), !.
+callable_body((A,B)) :- !, callable_body(A), callable_body(B).
+callable_body((A;B)) :- !, callable_body(A), callable_body(B).
+callable_body((A->B)) :- !, callable_body(A), callable_body(B).
+callable_body(Goal) :- ( atom(Goal) ; compound(Goal) ).
+
 browser_source_clause((Head :- Body), (Head :- Translated)) :- !,
     browser_goal(Body, Translated).
 browser_source_clause(Clause, Clause).
@@ -754,14 +830,19 @@ browser_receive_clauses(Clauses, Clauses).
 browser_format(Control, Args) :-
     ( text_string(Control, Format) -> true ; Format = Control ),
     self(Pid),
-    ( browser_session(Session), Pid \== Session ->
-        open(string(""), write, Stream),
-        setup_call_cleanup(true,
-            ( format(Stream, Format, Args), get_stream_info(Stream, name, Text) ),
-            close(Stream)),
+    ( configured_io_target(_), current_io_target(Target) ->
+        formatted_text(Format, Args, Text),
+        send(Target, terminal_io_output(Pid, Text))
+    ; browser_session(Session), Pid \== Session ->
+        formatted_text(Format, Args, Text),
         send(main, browser_child_output(Session, Text))
     ; toplevel_actors:browser_format(Format, Args)
     ).
+
+formatted_text(Format, Args, Text) :-
+    setup_call_cleanup(open(string(""), write, Stream),
+        ( format(Stream, Format, Args), get_stream_info(Stream, name, Text) ),
+        close(Stream)).
 
 browser_chart_trace(Event) :-
     ( browser_session(Session), self(Actor) ->
@@ -788,10 +869,21 @@ report_elapsed(Start) :-
     send(main, browser_child_output(Session, Text)).
 
 browser_sleep(Time) :-
-    ( number(Time) -> sleep(Time)
+    ( number(Time) ->
+        ( timed_mailbox, Time > 0, Time < 1.0Inf ->
+            elapsed(Now), Deadline is Now + Time,
+            sleep_until(Deadline)
+        ; sleep(Time) )
     ; var(Time) -> throw(error(instantiation_error, sleep/1))
     ; throw(error(type_error(number, Time), sleep/1))
     ).
+
+sleep_until(Deadline) :-
+    elapsed(Now),
+    ( Now >= Deadline -> true
+    ; Interval is min(0.05, Deadline - Now),
+      sleep(Interval),
+      sleep_until(Deadline) ).
 
 browser_random_between(Low, High, Random) :-
     integer(Low), integer(High), Low =< High,
@@ -1030,7 +1122,17 @@ actor_parent(Parent) :-
 
 current_io_target(Target) :-
     mailbox_store(Store),
-    store_get(Store, web_prolog_io_target, Target).
+    ( store_get(Store, web_prolog_io_target, Current) -> Target = Current
+    ; configured_io_target(Target) ).
+
+configure_actor_io(none).
+configure_actor_io(io(Target)) :-
+    mailbox_store(Store),
+    store_set(Store, spawn_io_target, Target).
+
+configured_io_target(Target) :-
+    mailbox_store(Store),
+    store_get(Store, spawn_io_target, Target).
 
 set_io_target(Target) :-
     mailbox_store(Store),
@@ -1047,9 +1149,39 @@ clear_io_target :-
 make_ref(Ref) :-
     fresh_reference(Ref).
 
-fresh_reference(ref(Id)) :-
-    store_get(actor_registry, runtime, runtime(_, Counter, _)),
-    shelf_inc_and_get(Counter, 1, Id).
+fresh_reference(Ref) :-
+    fresh_actor_id(reference, Ref).
+
+issued_actor_pid(Pid) :-
+    integer(Pid),
+    store_get(issued_actor_ids, Pid, pid).
+
+% PIDs and references share one namespace, as on the SWI node. Keep issued
+% IDs reserved for the lifetime of the runtime so late messages cannot
+% address a replacement actor or match a later reference.
+fresh_actor_id(Kind, Id) :-
+    store_get(actor_registry, runtime, runtime(_, Lock, _)),
+    with_mutex(Lock, issue_actor_id(Kind, Fresh)),
+    Id = Fresh.
+
+issue_actor_id(Kind, Id) :-
+    setup_call_cleanup(
+        open("/dev/urandom", read, Stream, [type(binary)]),
+        ( repeat,
+          read_string(Stream, 5, Text),
+          ( string_length(Text, 5) -> true ; throw(error(resource_error(actor_entropy), fresh_actor_id/2)) ),
+          string_list(Text, Bytes),
+          ( foreach(Byte, Bytes), fromto(0, Acc, Next, Raw) do
+              Next is Acc * 256 + Byte
+          ),
+          % Drop the short tail of the 40-bit range to avoid modulo bias.
+          Raw < 1098000000000,
+          Candidate is 1000000000 + Raw mod 9000000000,
+          \+ store_get(issued_actor_ids, Candidate, _), !,
+          store_set(issued_actor_ids, Candidate, Kind),
+          Id = Candidate
+        ),
+        close(Stream)).
 
 % The first request to commit under the lifecycle lock owns the reason.
 % A reaper request is queued before releasing the lock, so delivery does
@@ -1142,6 +1274,10 @@ retire_actor(Engine, Status, Reports) :-
         ),
         findall(Child, member(Child-actor(_, _, linked(Pid)), Entries), Children),
         stop_linked_children(Children, Reports),
+        ( member(Child-actor(_, _, owned(Pid)), Entries),
+          commit_exit(Child, stop, Reports),
+          fail
+        ; true ),
         notify_monitors(Pid, Reason)
     ;
         true
@@ -1331,6 +1467,7 @@ match_message(Pattern, Message) :-
 guard_exception(abort) :- !, throw(abort).
 guard_exception('$abort_goal') :- !, throw('$abort_goal').
 guard_exception('$ptcp_time_limit') :- !, throw('$ptcp_time_limit').
+guard_exception(timeout_ball_thrown) :- timed_mailbox, !, throw(timeout_ball_thrown).
 guard_exception(unwind(Reason)) :- !, throw(unwind(Reason)).
 guard_exception(_) :- fail.
 
@@ -1349,14 +1486,28 @@ wait_spec(Options, Wait, OnTimeout) :-
     ).
 
 wait_message(Inbox, block, Message) :-
-    record_wait_remove(Inbox, Message, block).
+    ( timed_mailbox -> wait_timed_message(Inbox, Message)
+    ; record_wait_remove(Inbox, Message, block) ).
 wait_message(Inbox, poll, Message) :-
     record_wait_remove(Inbox, Message, 0).
 wait_message(Inbox, until(Deadline), Message) :-
     elapsed(Now),
     Remaining is Deadline - Now,
     Remaining > 0,
-    record_wait_remove(Inbox, Message, Remaining).
+    ( timed_mailbox, Remaining > 0.05 ->
+        ( record_wait_remove(Inbox, Message, 0.05) -> true
+        ; wait_message(Inbox, until(Deadline), Message) )
+    ; record_wait_remove(Inbox, Message, Remaining) ).
+
+% A native blocking queue read defers ECLiPSe timeout events. Finite
+% toplevel calls use short reads so their goal can be interrupted.
+timed_mailbox :-
+    mailbox_store(Store),
+    store_get(Store, timed_mailbox, true).
+
+wait_timed_message(Inbox, Message) :-
+    ( record_wait_remove(Inbox, Message, 0.05) -> true
+    ; wait_timed_message(Inbox, Message) ).
 
 elapsed(Seconds) :-
     statistics(times, [_, _, Seconds]).

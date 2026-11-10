@@ -1,14 +1,16 @@
 :- module(demo_services).
 :- use_module(actors).
 :- import exit/2 from actors.
-:- import egress_request/4, query_page/8 from isotope_rpc.
+:- import egress_request/4, egress_request/5, query_page/8 from isotope_rpc.
 :- lib(prolog_extras).
-:- import select/3 from lists.
+:- use_module(sxml_document).
+:- use_module(statechart_actor).
+:- reexport statechart_validate/2, statechart_validate_text/2 from sxml_document.
+:- reexport statechart_spawn/2, statechart_halt/2, statechart_halt/3 from statechart_actor.
 
 :- export init_linda/0.
 :- export model_chat/2, jev_deployment_observation/2.
 :- export published_counter/1.
-:- export statechart_spawn/2, statechart_halt/3, run_chart/1.
 :- export linda_out/1, linda_in/1, linda_rd/1, linda_inp/1, linda_rdp/1.
 :- local store(linda_service).
 
@@ -19,12 +21,27 @@ published_counter(Count) :-
 % The host adapter still checks the fixed SWI service peer against its
 % allowlist. Keep inference and observation in the owner-installed service.
 model_chat(Messages, Result) :-
-    ( catch(query_page("https://n3.elfenbenstornet.se",
-                       model_chat(Messages, Reply), Reply, "", 0, 1, true, Answer),
-            error(rpc_error(_), _), fail),
-      Answer = success([ModelReply], _) ->
-        model_reply(ModelReply, Result)
-    ; Result = error(unavailable) ).
+    ( is_list(Messages), model_messages(Messages, user, Texts), Texts \== [] ->
+        ( catch(fetch_model_reply(Texts, Reply), error(rpc_error(_), _), fail) ->
+            model_reply(Reply, Result)
+        ; Result = error(unavailable) )
+    ; Result = error(invalid_messages) ).
+
+model_messages([], assistant, []).
+model_messages([Message|Messages], Role, [Text|Texts]) :-
+    nonvar(Message),
+    Message =.. [Role, Value],
+    text_string(Value, Text),
+    ( Role == user -> Next = assistant ; Next = user ),
+    model_messages(Messages, Next, Texts).
+
+fetch_model_reply(Texts, Reply) :-
+    egress_request("model_chat", "https://n3.elfenbenstornet.se", [messages:Texts], 40, Body),
+    setup_call_cleanup(open(string(Body), read, Stream),
+        ( read(Stream, Reply), read(Stream, end_of_file), at_eof(Stream) ),
+        close(Stream)),
+    nonvar(Reply),
+    ( Reply = answer(_) ; Reply = error(_) ).
 
 model_reply(answer(Text), answer(String)) :- text_string(Text, String), !.
 model_reply(Reply, Reply).
@@ -50,42 +67,6 @@ jev_deployment_observation(Text, Result) :-
       Answer = success([Result], _) ->
         true
     ; Result = unavailable(configuration) ).
-
-% Support the bundled flat Jev chart. The host compiles its SXML document,
-% and its datamodel and transition actions run in a private ECLiPSe actor.
-statechart_spawn(Pid, Options) :-
-    ( is_list(Options),
-      select(src_uri(Uri), Options, Rest),
-      ( Rest == [] -> Trace = true
-      ; Rest = [trace(Trace)], (Trace == true ; Trace == false) ),
-      Uri == '/examples/statecharts/20%20jev-deployment-assistant.xml' ->
-        egress_request("demo_chart", "", [], Source),
-        spawn(demo_services:run_chart(Trace), Pid, [src_text(Source)])
-    ; throw(error(domain_error(bundled_statechart_options, Options), statechart_spawn/2)) ).
-
-run_chart(Trace) :-
-    self(Self),
-    actor_module(Self, Module),
-    call(n7_chart_initial(Initial))@Module,
-    chart_loop(Initial, Trace, Module).
-
-chart_loop(State, Trace, Module) :-
-    receive({
-        Event ->
-            ( call(n7_chart_step(State, Event, Next))@Module ->
-                ( Trace == true, State \== Next ->
-                    browser_chart_trace(transition(State, [Next], [State], [Next]))
-                ; true )
-            ; Next = State ),
-            chart_loop(Next, Trace, Module)
-    }).
-
-statechart_halt(Pid, Reply, Timeout) :-
-    setup_call_cleanup(monitor(Pid, Ref),
-        ( exit(Pid, shutdown),
-          receive({down(Pid, Ref, _) -> Reply = true},
-                  [timeout(Timeout), on_timeout(Reply = timeout)]) ),
-        demonitor(Ref, [flush])).
 
 % Reuse the SWI tuple-space protocol and matching rules on a node-owned
 % actor. Its lifetime is independent of any browser session.

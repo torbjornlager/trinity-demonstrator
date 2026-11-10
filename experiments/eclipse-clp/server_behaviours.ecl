@@ -40,16 +40,10 @@ select_named_option([Option|Rest], Name, [Option|Options]) :-
     select_named_option(Rest, Name, Options).
 
 start_named_server(Registration, Callback, State, Pid, Options, Module) :-
+    ( Registration == none -> NamedOptions = Options
+    ; NamedOptions = [Registration|Options] ),
     spawn(server_behaviours:server_run(Callback, State, Module), Pid,
-          [src_text("")|Options])@Module,
-    ( Registration = name(Name) ->
-        catch(register(Name, Pid), Error,
-              ( monitor(Pid, Barrier),
-                exit(Pid, kill),
-                receive({down(Pid, Barrier, _) -> true}),
-                demonitor(Pid, [flush]),
-                throw(Error) ))
-    ; true ).
+          [src_text("")|NamedOptions])@Module.
 
 callable_callback(Callback) :-
     nonvar(Callback),
@@ -163,19 +157,19 @@ supervisor_spawn_(Specs, Sup, Module) :-
     supervisor_spawn_(Specs, Sup, [], Module).
 
 supervisor_spawn_(Specs, Sup, Options, Module) :-
-    supervisor_config(Options, Config, SourceOptions, Link, Monitor),
+    supervisor_config(Options, Config, SourceOptions, Startup, Monitor),
     normalise_children(Specs, Children),
     source_options_text(SourceOptions, Module, Source),
-    launch_supervisor(Children, Config, Source, Link, Sup),
+    launch_supervisor(Children, Config, Source, Startup, Sup),
     ( Monitor == true -> true ; demonitor(Sup, [flush]) ).
 
-supervisor_config(Options, config(Strategy, Intensity, Period), Sources, Link, Monitor) :-
+supervisor_config(Options, config(Strategy, Intensity, Period), Sources, Startup, Monitor) :-
     ( is_list(Options), checklist(supervisor_option, Options) -> true
     ; throw(error(domain_error(supervisor_options, Options), supervisor_spawn/3)) ),
     behaviour_option(strategy, Options, one_for_one, Strategy),
     behaviour_option(intensity, Options, 1, Intensity),
     behaviour_option(period, Options, 5, Period),
-    behaviour_option(link, Options, true, Link),
+    findall(Option, (member(Option, Options), supervisor_start_option(Option)), Startup),
     behaviour_option(monitor, Options, false, Monitor),
     findall(Option, (member(Option, Options), source_option(Option)), Sources).
 
@@ -184,10 +178,15 @@ supervisor_option(Option) :-
     ( Option = strategy(S), nonvar(S), memberchk(S, [one_for_one, one_for_all, rest_for_one])
     ; Option = intensity(N), integer(N), N >= 0
     ; Option = period(T), number(T), T > 0
-    ; Option = link(B), boolean(B)
+    ; supervisor_start_option(Option)
     ; Option = monitor(B), boolean(B)
     ; source_option(Option)
     ).
+
+supervisor_start_option(link(B)) :- boolean(B).
+supervisor_start_option(name(Name)) :- atom(Name), Name \== undefined.
+supervisor_start_option('$state_owned').
+supervisor_start_option(io_target(Target)) :- ground(Target).
 
 boolean(B) :- B == true ; B == false.
 
@@ -228,11 +227,11 @@ child_option(Option) :-
     ; Option = shutdown(S), ( S == infinity ; S == brutal_kill ; number(S), S >= 0 )
     ).
 
-launch_supervisor(Children, Config, Source, Link, Sup) :-
+launch_supervisor(Children, Config, Source, Startup, Sup) :-
     self(Parent),
     fresh_reference(Ref),
     spawn(supervisor_init(Parent, Ref, Children, Config, Source), Sup,
-          [link(Link), monitor(true)]),
+          [monitor(true)|Startup]),
     catch(receive({
               Ref-ready -> true
           ; down(Sup, Sup, Reason) -> throw(error(supervisor_start_failed(Sup, Reason), supervisor_spawn/3))
@@ -262,7 +261,7 @@ start_child(spec(Name, Start, _, _, _), Source, Pid) :-
     ; Start = start_sub_supervisor(Specs, Options) ->
         normalise_children(Specs, Children),
         supervisor_config(Options, Config, _, _, _),
-        launch_supervisor(Children, Config, Source, true, Pid)
+        launch_supervisor(Children, Config, Source, [], Pid)
     ; spawn(Start, Pid, [src_text(Source), monitor(true)]) ).
 
 server_child_option(Option) :-

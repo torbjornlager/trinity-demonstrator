@@ -15,7 +15,8 @@ COPY --chmod=644 experiments/eclipse-clp/actors.ecl experiments/eclipse-clp/solu
      experiments/eclipse-clp/toplevel_actors.ecl experiments/eclipse-clp/isotope_bridge.ecl \
      experiments/eclipse-clp/isotope_rpc.ecl experiments/eclipse-clp/stateless_rpc.ecl \
      experiments/eclipse-clp/server_behaviours.ecl experiments/eclipse-clp/demo_services.ecl \
-     experiments/eclipse-clp/n5_shared_db.ecl ./
+     experiments/eclipse-clp/n5_shared_db.ecl experiments/eclipse-clp/sxml_document.ecl \
+     experiments/eclipse-clp/statechart_actor.ecl ./
 COPY --chmod=644 Deployment/shared_db_common.pl Deployment/shared_db_actor_common.pl \
      Deployment/shared_db_n4.pl Deployment/shared_db_linda.pl ./
 COPY --chmod=644 experiments/eclipse-clp/n5_actor_compat.sed ./

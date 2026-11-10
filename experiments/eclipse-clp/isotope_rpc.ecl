@@ -11,7 +11,7 @@
 :- tool(promise/3, promise_/4).
 :- tool(promise/4, promise_/5).
 :- tool(yield/3, yield_/4).
-:- export call_page/7, clear_promises/0, init_egress/0, egress_request/4, query_page/8.
+:- export call_page/7, clear_promises/0, init_egress/0, egress_request/4, egress_request/5, query_page/8.
 :- export await_call_page/2.
 :- local store(egress).
 
@@ -49,9 +49,8 @@ promise_(Node0, Goal, Reference, Options, Module) :-
     ( Count < 4 -> true ; throw(error(resource_error(promises), promise/4)) ),
     record_create(Result),
     spawn(promise_worker(Node, Goal, Template, Source, Offset, Limit, Once, Result),
-          Worker),
-    Worker = actor(Reference),
-    store_set(Store, isotope_promises, [promise(Reference, Worker, Result)|Pending]).
+          Reference),
+    store_set(Store, isotope_promises, [promise(Reference, Result)|Pending]).
 
 promise_worker(Node, Goal, Template, Source, Offset, Limit, Once, Result) :-
     catch(query_page(Node, Goal, Template, Source, Offset, Limit, Once, Answer),
@@ -65,7 +64,7 @@ yield_(Reference, Answer, Options, Module) :-
     ( is_list(Options), checklist(yield_option, Options) -> true
     ; throw(error(domain_error(yield_options, Options), yield/3)) ),
     promise_store(Store, Pending),
-    ( integer(Reference), select(promise(Reference, _, Result), Pending, Rest) -> true
+    ( integer(Reference), select(promise(Reference, Result), Pending, Rest) -> true
     ; throw(error(existence_error(promise, Reference), yield/3)) ),
     option_value(timeout, Options, 2.5, Seconds),
     elapsed(Now),
@@ -99,7 +98,7 @@ clear_promises :-
     promise_store(Store, Pending),
     ( Pending == [] -> true
     ; store_delete(Store, isotope_promises),
-      ( foreach(promise(_, Worker, _), Pending) do exit(Worker, query_finished) )
+      ( foreach(promise(Worker, _), Pending) do exit(Worker, query_finished) )
     ).
 
 request_options(Node0, Options, Module, Promise, Node, Source, Offset, Limit, Once) :-
@@ -182,7 +181,10 @@ await_call_page(Pid, Answer) :-
     }, [timeout(3), on_timeout(Answer = error(time_limit_exceeded))]).
 
 egress_request(Operation, Url, Params, Body) :-
-    self(actor(Id)),
+    egress_request(Operation, Url, Params, 2.5, Body).
+
+egress_request(Operation, Url, Params, Timeout, Body) :-
+    self(Id),
     store_get(egress, counter, Counter),
     shelf_inc_and_get(Counter, 1, Key),
     ( Params == [] -> JSON = {} ; JSON = {Params} ),
@@ -192,4 +194,4 @@ egress_request(Operation, Url, Params, Body) :-
     ;
         http_egress_result(Key, "error", Reason) ->
             throw(error(rpc_error(Reason), rpc/3))
-    }, [timeout(2.5), on_timeout(throw(error(rpc_error(http_timeout), rpc/3)))]).
+    }, [timeout(Timeout), on_timeout(throw(error(rpc_error(http_timeout), rpc/3)))]).

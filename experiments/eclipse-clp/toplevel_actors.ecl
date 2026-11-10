@@ -9,7 +9,8 @@
 :- export toplevel_next/1, toplevel_next/2.
 :- export toplevel_stop/1, toplevel_stop/2, toplevel_abort/1.
 :- export toplevel_halt/1, toplevel_halt/2.
-:- export ptcp/3.  % Runtime entry point, called from the private actor module.
+:- lib(timeout).
+:- export ptcp/4.  % Runtime entry point, called from the private actor module.
 :- export toplevel_spawn_browser/2.
 :- export browser_format/2.
 
@@ -44,8 +45,20 @@ spawn_toplevel(Pid, Options, Kind, Module) :-
     ; throw(error(type_error(list, Options), toplevel_spawn/2))
     ),
     self(Self),
-    split_spawn_options(Options, false, Self, Session, Target, SpawnOptions),
-    spawn(toplevel_actors:ptcp(Target, Session, Kind), Pid, [src_text("")|SpawnOptions])@Module.
+    split_spawn_options(Options, false, Self, Session, Target, Remaining),
+    spawn_limit(time_limit, Remaining, Time, AfterTime),
+    spawn_limit(idle_limit, AfterTime, Idle, SpawnOptions),
+    spawn(toplevel_actors:ptcp(Target, Session, Kind, limits(Time, Idle)),
+          Pid, [src_text("")|SpawnOptions])@Module.
+
+spawn_limit(Name, Options, Limit, Rest) :-
+    ( member(Option, Options), nonvar(Option), functor(Option, Name, 1),
+      select(Option, Options, Rest) ->
+        arg(1, Option, Limit),
+        ( Limit == infinite ; number(Limit), Limit > 0, Limit < 1.0Inf ), !
+    ; Rest = Options, Limit = infinite ), !.
+spawn_limit(Name, _, _, _) :-
+    throw(error(domain_error(toplevel_limit, Name), toplevel_spawn/2)).
 
 split_spawn_options([], Session, Target, Session, Target, []).
 split_spawn_options([Option|Options], Session0, Target0, Session, Target, Rest) :-
@@ -96,15 +109,15 @@ toplevel_halt(Pid, true) :-
         demonitor(Ref, [flush])
     ).
 
-ptcp(DefaultTarget, Session, Kind) :-
+ptcp(DefaultTarget, Session, Kind, Limits) :-
     self(Pid),
     actor_module(Pid, Module),
     ( Kind == browser -> set_browser_prompt_correlation ; true ),
-    shelf_create(control(recovering, 0, DefaultTarget), Control),
+    shelf_create(control(recovering, 0, DefaultTarget, Limits), Control),
     engine_self(Engine),
     get_engine_property(Engine, store, Store),
     store_set(Store, web_prolog_ptcp, Control),
-    ptcp_running(Pid, Module, DefaultTarget, Session, Control).
+    catch(ptcp_running(Pid, Module, DefaultTarget, Session, Control), '$ptcp_idle_limit', true).
 
 % As in SWI, reinstall the catch before acknowledging an abort and
 % restarting. Events received during recovery add another acknowledgement.
@@ -156,11 +169,11 @@ send_abort_acks(Count, Target, Pid) :-
     send_abort_acks(Left, Target, Pid).
 
 state_1(Pid, Module, DefaultTarget, Session, Control) :-
-    receive_ptcp({
+    receive_idle_ptcp({
         '$call'(Goal, Options) ->
             discard_deferred(stale_command),
             run_call(Pid, Module, DefaultTarget, Goal, Options, Control)
-    }),
+    }, Control),
     ( Session == true -> state_1(Pid, Module, DefaultTarget, Session, Control)
     ; true
     ).
@@ -169,6 +182,20 @@ state_1(Pid, Module, DefaultTarget, Session, Control) :-
 % mailbox waits so a suspended or idle toplevel regularly services events.
 receive_ptcp(Clauses) :-
     receive(Clauses, [timeout(0.05), on_timeout(receive_ptcp(Clauses))]).
+
+receive_idle_ptcp(Clauses, Control) :-
+    shelf_get(Control, 4, limits(_, Idle)),
+    ( Idle == infinite -> receive_ptcp(Clauses)
+    ; elapsed(Now), Deadline is Now + Idle,
+      receive_until(Clauses, Deadline)
+    ).
+
+receive_until(Clauses, Deadline) :-
+    elapsed(Now),
+    ( Now >= Deadline -> throw('$ptcp_idle_limit')
+    ; Wait is min(0.05, Deadline - Now),
+      receive(Clauses, [timeout(Wait), on_timeout(receive_until(Clauses, Deadline))])
+    ).
 
 stale_command('$next'(_)).
 stale_command('$stop').
@@ -183,27 +210,40 @@ run_call(Pid, Module, DefaultTarget, Goal0, Options, Control) :-
     plain_goal(Template0, Template),
     ( TargetOption = target(Target) -> true ; Target = DefaultTarget ),
     shelf_set(Control, 3, Target),
-    option_value(io_target, Options, Target, IoTarget),
+    ( configured_io_target(DefaultIo) -> true ; DefaultIo = Target ),
+    option_value(io_target, Options, DefaultIo, IoTarget),
     set_io_target(IoTarget),
     new_solution_buffer(Buffer),
     shelf_create(page(Target, Limit, Offset, Buffer), Page),
     setup_call_cleanup(
-        true,
+        set_timed_mailbox(Control, Mailbox),
         catch(run_answers(Pid, Module, Goal, Template, Once, Page, Control),
               Error, query_error(Pid, Page, Once, Error, Control)),
-        ( current_module(isotope_rpc) -> call(clear_promises)@isotope_rpc ; true )
+        ( clear_timed_mailbox(Mailbox),
+          ( current_module(isotope_rpc) -> call(clear_promises)@isotope_rpc ; true ) )
     ),
     clear_io_target.
+
+set_timed_mailbox(Control, Mailbox) :-
+    shelf_get(Control, 4, limits(Time, _)),
+    ( Time == infinite -> Mailbox = none
+    ; engine_self(Engine), get_engine_property(Engine, store, Mailbox),
+      store_set(Mailbox, timed_mailbox, true) ).
+
+clear_timed_mailbox(none) :- !.
+clear_timed_mailbox(Store) :-
+    store_delete(Store, timed_mailbox).
 
 % Like SWI's state 2/3, wait for next on the same Prolog stack. ECLiPSe's
 % own cleanup implementation uses get_cut/1 to detect residual alternatives.
 % The buffer retains the partial page, and a shelf retains next options.
 run_answers(Pid, Module, Goal, Template, Once, Page, Control) :-
-    ( sepia_kernel:get_cut(Before),
-      call(Goal)@Module,
-      sepia_kernel:get_cut(After),
+    ( configured_io_target(_) -> prepare_actor_goal(Goal, Prepared)
+    ; portable_goal(Goal, Prepared) ),
+    shelf_get(Control, 4, limits(Time, _)),
+    ( call_with_budget(Prepared, Module, Time, Deterministic),
       add_solution(Page, Template, Full),
-      ( Before == After ->
+      ( Deterministic == true ->
           send_final_page(Pid, Page)
       ; Full == true ->
           ( Once == true ->
@@ -220,6 +260,18 @@ run_answers(Pid, Module, Goal, Template, Once, Page, Control) :-
         send_final_page(Pid, Page)
     ),
     !.
+
+call_with_budget(Goal, Module, infinite, Deterministic) :- !,
+    call_with_choicepoint(Goal, Module, Deterministic).
+call_with_budget(Goal, Module, Time, Deterministic) :-
+    timeout(call_with_choicepoint(Goal, Module, Deterministic), Time,
+            throw(error(resource_error(time), toplevel_call/3))).
+
+call_with_choicepoint(Goal, Module, Deterministic) :-
+    sepia_kernel:get_cut(Before),
+    call(Goal)@Module,
+    sepia_kernel:get_cut(After),
+    ( Before == After -> Deterministic = true ; Deterministic = false ).
 
 add_solution(Page, Template, Full) :-
     shelf_get(Page, 3, Offset),
@@ -250,7 +302,7 @@ send_page(Pid, Page, More) :-
     send(Target, success(Pid, Answers, More)).
 
 await_next(Page, Control, Action) :-
-    receive_ptcp({
+    receive_idle_ptcp({
         '$next'(Options) -> prepare_next(Options, Page, Control), Action = next
     ;
         '$stop' -> Action = stop
@@ -259,7 +311,7 @@ await_next(Page, Control, Action) :-
             self(Pid),
             send(Target, stop(Pid)),
             Action = stop
-    }).
+    }, Control).
 
 prepare_next(Options, Page, Control) :-
     shelf_get(Page, 1, OldTarget),
@@ -272,6 +324,7 @@ prepare_next(Options, Page, Control) :-
     clear_solution_buffer(Buffer).
 
 query_error(_, _, _, '$abort_goal', _) :- !, throw('$abort_goal').
+query_error(_, _, _, '$ptcp_idle_limit', _) :- !, throw('$ptcp_idle_limit').
 query_error(Pid, Page, Once, Error, Control) :-
     shelf_get(Page, 4, Buffer),
     solution_count(Buffer, Count),

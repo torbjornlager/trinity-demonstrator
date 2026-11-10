@@ -161,7 +161,52 @@ adapter makes bounded GET requests, refuses redirects, and sends no owner
 credentials. An allowlisted origin can serve stateless `/call` requests and
 source files.
 
-The live N7 adapter currently allowlists only `https://n3.elfenbenstornet.se`.
+The live N7 owner adapter allowlists N1 for RPC, N2 for source loading,
+N3 for RPC and the published service, and N4 for the asynchronous RPC
+examples.
+
+### SXML statecharts
+
+The owner ACTOR shell can validate a chart with
+`statechart_validate_text(Text, Diagnostics)` or
+`statechart_validate(URI, Diagnostics)`. An empty diagnostic list means the
+document passed the XML and SXML 0.2 structural checks. Validation does not
+run the chart's embedded Prolog. URI validation can read packaged statechart
+examples or fetch from an origin configured with `--allow-peer`.
+
+`statechart_spawn/2` validates the document before creating an actor.
+Charts support hierarchy, parallel regions, shallow and deep history,
+state-scoped `after` timers, and deferred events. A timer is cancelled
+when its state exits. Deferred events are re-offered in arrival order
+after the configuration changes and internal processing settles.
+
+In the owner shell’s Examples drawer, try 01 (pause and resume), 06
+(parallel completion), 07 (deferred events), or 12 (the timed box shop).
+The same interpreter runs GCD and Jev. `statechart_halt/2–3` runs exit
+actions. The timed form escalates to a kill if the actor is busy.
+
+Examples 13–17 invoke local actors, toplevels, servers, supervisors, and
+nested charts. Children start once their invoking state settles and stop
+when it exits, including children created with `link(false)`. Charts loaded
+by URI can resolve relative child sources.
+
+In the owner shell, an ordinary `<spawn type="actor">` can set
+`node('https://peer.example')` in its options. Add the exact peer origin to
+`--allow-peer`. The peer must offer bare actor spawn on its ACTOR WebSocket.
+On SWI-Prolog peers, use `terminal_output(Term)` to return a value to the
+chart as `output(Child, Term)`. Each invoked actor has its own connection.
+N7 closes that connection if the invoking chart exits during startup.
+Toplevels, servers, supervisors, and nested charts still run locally. For toplevel children,
+`time_limit` counts query execution across pages and `idle_limit` covers
+waits for a call or the next page.
+
+Example 18 runs locally. The model and Jev examples (19 and 20) require
+`--allow-peer https://n3.elfenbenstornet.se`. N7 calls the protected model
+capability over N3’s ACTOR WebSocket and uses HTTP RPC for Jev.
+
+Run the local owner HTTPS regression with `tools/test_n7_https.py --shell
+--actor-core /path/to/trinity-conformance/runner/run.py --advertise-actor
+--sxml-documents`, using the image built from this checkout.
 
 ### Stateless whitelist preview
 
@@ -332,6 +377,9 @@ Start the matching preview engine and adapter with
 `--shell-assets /path/to/n7-shell`. Use the preview Caddy route so an anonymous
 shell visit signs in and returns to the shell. The browser keeps the HTTP
 session, editor source and prompt replies on the owner-only N7 origin.
+**Sign out of N7** in the shell header disconnects the shell, clears its N7
+session, and returns to the sign-in page. Signing in again opens the full
+ACTOR shell. GitHub stays signed in.
 
 Run `python3 tools/test_n7_https.py --image trinity-eclipse-n7:shell-preview --shell`
 to exercise the preview with disposable TLS and GitHub fixtures. The preview
