@@ -20,6 +20,7 @@
 
 <statechart version="0.2" initial="s">
     <datamodel>
+        :- dynamic p/2.
         p(a,b). 
         p(b,c). 
         p(c,d).
