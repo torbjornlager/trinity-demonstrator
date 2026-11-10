@@ -13,7 +13,7 @@
     local and shared knowledge combine, and how a local definition takes
     precedence over a shared one.
 
-    Run the chart from the Examples menu.
+    Run the chart from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->

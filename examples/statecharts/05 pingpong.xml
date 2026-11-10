@@ -9,7 +9,7 @@
     raises `ping` again. The volley is driven entirely by internal events
     crossing between the two regions, with no external input.
 
-    Run the chart from the Examples menu.
+    Run the chart from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->

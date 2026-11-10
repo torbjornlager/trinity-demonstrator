@@ -10,7 +10,7 @@
     sleep, and the fact that an internally raised event is delivered to
     every parallel region, not only the one that raised it.
 
-    Run the chart from the Examples menu.
+    Run the chart from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->

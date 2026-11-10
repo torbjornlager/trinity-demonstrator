@@ -11,7 +11,7 @@
     finishes. It is the statechart-level view of getting answers one at a
     time from a running goal.
 
-    Run the chart from the Examples menu.
+    Run the chart from the Queries menu.
     Keep the Logger open and SXML trace selected.
 
 -->
