@@ -150,7 +150,9 @@ class PeerActor:
 
         if self.cancelled.is_set():
             return "connection_closed"
-        send(Request(host=endpoint.netloc, target="/ws"))
+        sync_protocols = ("web-prolog-sync-spawn-v1", "web-prolog-sync-v1") if toplevel else ()
+        send(Request(host=endpoint.netloc, target="/ws", subprotocols=sync_protocols))
+        sync_supported = False
         child = None
         stop_deadline = None
         chunks, size = [], 0
@@ -168,6 +170,13 @@ class PeerActor:
                         command = self.commands.get_nowait()
                     except Empty:
                         break
+                    if "sync_ref" in command:
+                        target = command["reply_target"]
+                        if not sync_supported:
+                            self.emit("sync_unsupported", target=target.split("@", 1)[0],
+                                      ref=command["sync_ref"])
+                            continue
+                        reply_targets.add(target)
                     outgoing = {key: command[key] for key in
                                 ("command", "goal", "options", "limit", "message", "reason")
                                 if key in command}
@@ -189,9 +198,11 @@ class PeerActor:
             wire.receive_data(data)
             for event in wire.events():
                 if isinstance(event, AcceptConnection):
+                    sync_supported = event.subprotocol in sync_protocols
                     spawn = {"command": spawn_command, "options": self.request["options"]}
                     if toplevel:
-                        send_json({"command": "transport_hello", "version": 1, "answer_terms": True})
+                        send_json({"command": "transport_hello", "version": 1, "answer_terms": True,
+                                   "browser_pids": True})
                     else:
                         spawn["goal"] = self.request["goal"]
                     send_json(spawn)
@@ -220,7 +231,7 @@ class PeerActor:
                     if kind == "actor_message" and child is not None:
                         target, message = reply.get("target"), reply.get("message")
                         if isinstance(target, str) and target in reply_targets and isinstance(message, str):
-                            self.emit("message", target=target, data=message)
+                            self.emit("message", target=target.split("@", 1)[0], data=message)
                     if kind == "spawned" and child is None:
                         child = reply["pid"]
                         if type(child) is not int:

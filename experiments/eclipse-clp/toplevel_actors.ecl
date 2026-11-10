@@ -167,9 +167,6 @@ split_sync_options([Option|Options], Kind, Self, Query, Wait) :-
     split_sync_options(Options, Kind, Self, Qs, Ws).
 
 synchronous_request(Pid, Command, Request, Answer, Options, Callback, Module) :-
-    ( nonvar(Pid), Pid = '@'(_, _) ->
-        throw(error(permission_error(call, synchronous_remote_toplevel, Pid), toplevel_actors))
-    ; true ),
     setup_call_cleanup(
         monitor(Pid, Monitor),
         ( send(Pid, Command),
@@ -190,7 +187,7 @@ sync_deadline(Options, Deadline) :-
 synchronous_receive(Pid, Monitor, Request, Answer, Deadline, Callback, Module) :-
     Clauses = {
         '$toplevel_reply'(Ref, Reply) if answer_pid(Reply, Pid) ->
-            ( Ref == Request -> Answer = Reply
+            ( Ref == Request -> synchronous_result(Reply, Answer)
             ; synchronous_receive(Pid, Monitor, Request, Answer, Deadline, Callback, Module) )
     ;
         down(_, Monitor, Reason) -> throw(toplevel_down(Reason))
@@ -212,6 +209,11 @@ sync_timeout(Callback, Module) :-
 answer_pid(success(Pid, _, _), Expected) :- Pid == Expected.
 answer_pid(failure(Pid), Expected) :- Pid == Expected.
 answer_pid(error(Pid, _), Expected) :- Pid == Expected.
+answer_pid('$sync_unsupported'(Pid), Expected) :- Pid == Expected.
+
+synchronous_result('$sync_unsupported'(_@Node), _) :- !,
+    throw(error(permission_error(use, toplevel_correlation, Node), toplevel_actors)).
+synchronous_result(Reply, Reply).
 
 toplevel_stop(Pid) :-
     send(Pid, '$stop').

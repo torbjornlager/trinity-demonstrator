@@ -159,7 +159,9 @@ peer_actor_command(Replies, Pid, Command, Field, Value) :-
 peer_actor_send(Replies, Sender, Pid, Message) :-
     ( store_get(peer_actors, pid(Pid), Proxy) ->
         store_get(peer_actors, Proxy, peer(Parent, _, _, active(Pid), Kind)),
-        ( Kind == "toplevel_spawn", nonvar(Message), peer_toplevel_command(Message, Fields) ->
+        ( Kind == "toplevel_spawn", nonvar(Message),
+          peer_sync_command(Sender, Message, Fields) -> true
+        ; Kind == "toplevel_spawn", nonvar(Message), peer_toplevel_command(Message, Fields) ->
             true
         ; goal_template_texts(Message, Message, Text, _),
           ( actor_browser_session(Parent, Session), actor_browser_session(Sender, Session),
@@ -170,6 +172,17 @@ peer_actor_send(Replies, Sender, Pid, Message) :-
           Fields = [command:"send", message:Text|Return] ),
         reply(Replies, {[type:actor_peer_command, proxy:Proxy|Fields]})
     ; true ).
+
+% SWI imports this virtual target on the same socket. Keep the reference and
+% serialize the goal and its template together, just as for a local call.
+peer_sync_command(Sender, Command, [command:"send", message:Text, reply_target:Target, sync_ref:Ref]) :-
+    ( Command = '$call'(Goal, Options) -> Wire = '$call'(Goal, WireOptions)
+    ; Command = '$next'(Options), Wire = '$next'(WireOptions) ),
+    select('$request_ref'(Ref), Options, AfterRef), integer(Ref),
+    select(target(Caller), AfterRef, Query), Caller == Sender,
+    WireOptions = ['$request_ref'(Ref), target(Sender@localhost)|Query],
+    goal_template_texts(Wire, Wire, Text, _),
+    sprintf(Target, "%d@localhost", [Sender]).
 
 peer_toplevel_command('$call'(Goal, Options), [command:"toplevel_call", goal:Text, options:Wire]) :-
     goal_template_texts(Goal, [format(prolog)|Options], Text, Wire).
@@ -196,12 +209,22 @@ peer_actor_event(Proxy, Fields) :-
             ( actor_browser_session(Parent, Session) ->
                 send(main, browser_child_output(Session, Text))
             ; true )
-        ; Event == "message", Status = active(_), memberchk(target:Target, Fields),
+        ; Event == "message", Status = active(Pid), memberchk(target:Target, Fields),
           number_string(Recipient, Target), integer(Recipient),
           actor_browser_session(Parent, Session), actor_browser_session(Recipient, Session),
           memberchk(data:Text, Fields),
           catch(parse_goal(Text, isotope_bridge, Message, _), _, fail) ->
-            send(Recipient, Message)
+            ( Kind == "toplevel_spawn", nonvar(Message), Message = '$toplevel_reply'(Ref, Reply) ->
+                ( ground(Ref), peer_wire_answer(Pid, Reply, Answer) ->
+                    send(Recipient, '$toplevel_reply'(Ref, Answer))
+                ; true )
+            ; Kind == "toplevel_spawn", peer_wire_answer(Pid, Message, Answer) ->
+                send(Recipient, Answer)
+            ; send(Recipient, Message) )
+        ; Event == "sync_unsupported", Kind == "toplevel_spawn", Status = active(Pid),
+          memberchk(target:Target, Fields), number_string(Recipient, Target),
+          memberchk(ref:Ref, Fields) ->
+            send(Recipient, '$toplevel_reply'(Ref, '$sync_unsupported'(Pid)))
         ; Event == "closed", memberchk(reason:Text, Fields) ->
             store_delete(peer_actors, Proxy),
             store_delete(peer_actors, monitor(Ref)),
@@ -215,6 +238,14 @@ peer_actor_event(Proxy, Fields) :-
             ; send(Proxy, remote_spawn_reply(error(Text))) )
         ; true )
     ; true ).
+
+peer_wire_answer(Pid, Reply, Answer) :-
+    nonvar(Reply),
+    ( Reply = success(Wire, Rows, More), Answer = success(Pid, Rows, More)
+    ; Reply = failure(Wire), Answer = failure(Pid)
+    ; Reply = error(Wire, Error), Answer = error(Pid, Error) ),
+    Pid = Id@_,
+    ( Wire == Id ; nonvar(Wire), Wire = WireId@_, WireId == Id ), !.
 
 peer_toplevel_answer(Pid, Fields, Answer) :-
     memberchk(kind:Kind, Fields),
