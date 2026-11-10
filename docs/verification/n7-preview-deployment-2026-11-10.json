@@ -1,0 +1,26 @@
+{
+  "node": "N7",
+  "deployment_verified_at": "2026-11-10T19:35:15Z",
+  "deployed_branch": "codex/n7-shell-preview",
+  "deployed_commit": "7037f41a2e4cd892ab0eb95f6a0e9db6b83dd9fa",
+  "engine_image_id": "sha256:682c0a0599a91c0dc640d37e57c38c44c0f87f7096f5c849276217916dae8dbe",
+  "manual": {
+    "url": "https://n7.elfenbenstornet.se/manual",
+    "packaged_manual_sha256": "9919e0d2fa344dfa20980158c918a917ee0bb9c0f971c61fdcbef429564eb54b",
+    "authenticated_owner_adapter_status": 200,
+    "owner_adapter_body_matches_packaged_manual_byte_for_byte": true,
+    "authenticated_https_browser_rendered": true,
+    "unauthenticated_https_status": 401
+  },
+  "prompt_replies": {
+    "url": "https://n7.elfenbenstornet.se/n7-shell/",
+    "verified_in_authenticated_browser": true,
+    "query": "input(first,A),input(second,B).",
+    "replies": ["one.", "two."],
+    "bindings": {
+      "A": "one",
+      "B": "two"
+    },
+    "stale_prompt_reference_error_from_separate_websocket_probe": "invalid_prompt_ref"
+  }
+}
