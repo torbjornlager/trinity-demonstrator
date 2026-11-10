@@ -60,10 +60,12 @@ def suite(command, root, name, url, profile, label, report):
         *command, f"{root}/runner/baseline.py", "--manifest", f"{root}/cases/{name}.json",
         "--url", url, "--profile", profile, "--candidate", label, "--report", str(report),
     ], text=True, capture_output=True, timeout=90)
-    if result.returncode:
+    lines = result.stdout.splitlines()
+    counts = json.loads(lines[-1]) if lines and lines[-1].startswith("{") else {}
+    if result.returncode or not counts.get("pass") or counts.get("unsupported"):
         # Keep actual responses and fixture logs out of hosted CI output.
-        failed = [line.split()[1] for line in result.stdout.splitlines() if line.startswith("FAIL ")]
-        raise RuntimeError(f"{label} {name} failed: {', '.join(failed) or 'runner error'}")
+        failed = [line.split()[1] for line in lines if line.startswith(("FAIL ", "UNSUPPORTED "))]
+        raise RuntimeError(f"{label} {name} failed: {', '.join(failed) or 'incomplete suite'}")
     print(f"{label} {name} passed", flush=True)
 
 

@@ -41,6 +41,21 @@ jobs:
           grep -Fxq 'WebSocket pubsub broadcast, subscription ownership, unsubscribe, and disconnect passed' "$log"
           grep -Fxq 'N7 shared error contract passed 10 HTTP and 1 ACTOR cases over HTTPS' "$log"
           echo 'N7 ACTOR core, pubsub and shared error cases passed over HTTPS.'
+      - name: Verify prose and exception-term display
+        shell: bash
+        run: |
+          umask 077
+          log=$(mktemp "$RUNNER_TEMP/n7-error-display.XXXXXX")
+          trap 'rm -f "$log"' EXIT
+          export WP_NATIVE_STATE="$GITHUB_WORKSPACE/.trinity/native-swi.json"
+          settings=$(python3 tools/setup_swi.py --shell --validate)
+          eval "$settings"
+          export TRINITY_PINNED_SWI_ROOT WP_WASM_SOURCE_DIR SWI_WASM_PACKAGE_ROOT
+          if ! node tests/wasm/swi_wasm_rpc_bridge_smoke.js >"$log" 2>&1; then
+            echo '::error::The demonstrator display smoke failed. Reproduce with the pinned WASM tier.'
+            exit 1
+          fi
+          echo 'The demonstrator error display smoke passed.'
 
   native-errors:
     runs-on: ubuntu-latest
