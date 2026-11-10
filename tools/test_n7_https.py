@@ -125,7 +125,7 @@ RUNTIME_PROPERTIES_GOAL = (
 
 def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
                 profile="isotope", ws_absent=False, workshop=None, workshop_absent=False,
-                unicode_literals=False, sxml_peer=None, pubsub_only=False):
+                unicode_literals=False, sxml_peer=None, pubsub_only=False, actor_report=None):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -184,7 +184,7 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
         http(owner, origin + "/n7-shell/n7-actor-workshop.html", status=404)
     if actor_core is not None:
         check_actor_ws(origin, ca, actor_core, anonymous, wrong, wrong_email, owner, spoof,
-                       workshop=workshop, sxml_peer=sxml_peer, pubsub_only=pubsub_only)
+                       workshop=workshop, sxml_peer=sxml_peer, pubsub_only=pubsub_only, report=actor_report)
     if ws_absent:
         http(anonymous, origin + "/ws", headers=websocket_headers(origin), status=401)
         http(owner, origin + "/ws", headers=websocket_headers(origin), status=404)
@@ -285,7 +285,7 @@ def websocket_headers(origin):
 
 
 def check_actor_ws(origin, ca, runner, anonymous, wrong, wrong_email, owner, spoof, *,
-                   workshop=None, sxml_peer=None, pubsub_only=False):
+                   workshop=None, sxml_peer=None, pubsub_only=False, report=None):
     upgrade = websocket_headers(origin)
     endpoint = origin + "/ws"
     http(anonymous, endpoint, headers={**upgrade, **spoof}, status=401)
@@ -938,7 +938,7 @@ print('N7 ACTOR workshop counters, prompts, and monitors passed')
                              "--ws-url", endpoint.replace("https:", "wss:", 1),
                              "--advertised-profile", "actor", "--origin", origin,
                              "--header", "Cookie: " + cookie, "--candidate", "n7-owner-preview",
-                             "--report", str(ca.parent / "actor-core.json")])
+                             "--report", str(report or ca.parent / "actor-core.json")])
     expect(result.returncode, 0)
 
 
@@ -1149,6 +1149,7 @@ def main():
     ws_group = parser.add_mutually_exclusive_group()
     ws_group.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
     ws_group.add_argument("--pubsub", type=Path, metavar="RUNNER", help="run the pubsub regression using RUNNER's WebSocket client")
+    parser.add_argument("--actor-report", type=Path, metavar="FILE", help="save the ACTOR core report to FILE")
     parser.add_argument("--advertise-actor", action="store_true", help="exercise ACTOR discovery metadata")
     parser.add_argument("--sxml-documents", action="store_true", help="validate packaged SXML through the owner shell")
     parser.add_argument("--stateless-admission", action="store_true",
@@ -1158,6 +1159,8 @@ def main():
     parser.add_argument("--anonymous-preview", action="store_true",
                         help="test the anonymous /preview routes on the owner HTTPS site")
     args = parser.parse_args()
+    if args.actor_report is not None and args.actor_core is None:
+        parser.error("--actor-report requires --actor-core")
     if args.sxml_documents and (not args.shell or args.actor_core is None):
         parser.error("--sxml-documents requires --shell and --actor-core")
     if args.sxml_documents:
@@ -1284,7 +1287,7 @@ def main():
                 return
             check_https(origin, ca, shell=args.shell, actor_core=ws_runner, pubsub_only=args.pubsub is not None,
                         profile="actor" if args.advertise_actor else "isotope",
-                        unicode_literals=True, sxml_peer=chart_peer)
+                        unicode_literals=True, sxml_peer=chart_peer, actor_report=args.actor_report)
             check_stateless_cache(origin, ca)
             if args.shell:
                 check_shared_database(origin, ca, assets)

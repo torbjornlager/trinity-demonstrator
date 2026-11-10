@@ -407,8 +407,11 @@ Use the same setting with `./tools/bootstrap_n7.sh` to fetch or update the
 pinned runner before checking.
 
 The fixture signs in with a synthetic GitHub owner and tests WebSocket
-admission, ACTOR core, and the existing HTTP routes. Its ACTOR report is
-stored in the fixture's private temporary directory and removed on exit.
+admission, ACTOR core, and the existing HTTP routes. With
+`N7_ACTOR_PYTHON` set, the standard checks save and validate
+`actor-https.json` alongside the packaged ISOTOPE reports in the private
+conformance directory. The standalone HTTPS fixture keeps its ACTOR report
+in a temporary directory unless you supply `--actor-report FILE`.
 
 To run the two-connection pubsub regression with the bootstrap-pinned
 WebSocket client, select `--pubsub`. This runs the owner HTTPS fixture and

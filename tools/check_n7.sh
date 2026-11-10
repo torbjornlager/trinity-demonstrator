@@ -53,13 +53,29 @@ printf '\nBuilding local N7 image: %s\n' "$image"
 docker buildx build --load --platform linux/arm64 --build-context "eclipse_dist=$dist" \
     -f Deployment/Dockerfile.eclipse-n7 -t "$image" .
 
+reports=$(mktemp -d "$local_dir/conformance.XXXXXX")
+if [ -n "${N7_ACTOR_PYTHON:-}" ]; then
+    set -- "$@" --actor-report "$reports/actor-https.json"
+fi
+
 printf '\nChecking local HTTPS for the compact pilot and full shell\n'
 "$https_python" tools/test_n7_https.py "$@"
 
-reports=$(mktemp -d "$local_dir/conformance.XXXXXX")
 printf '\nRunning local N7 conformance. Reports: %s\n' "$reports"
 python3 "$runner" --demonstrator "$root" --swi-load "$swi_load" \
     --image "$image" --allow-fixture-peers --output "$reports"
+if [ -n "${N7_ACTOR_PYTHON:-}" ]; then
+    python3 - "$reports/provenance.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+provenance = json.loads(path.read_text())
+provenance["runs"].append({"label": "actor-https", "report": "actor-https.json"})
+path.write_text(json.dumps(provenance, indent=2) + "\n")
+PY
+fi
 python3 "$conformance/runner/validate_reports.py" "$reports"
 
 printf '\nChecking the demonstrator node catalog\n'
