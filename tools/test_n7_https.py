@@ -359,6 +359,38 @@ try:
         assert len(event['data']) == 1, (goal, event)
         return event['data'][0]
 
+    raw = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                             extra_headers=(option('--header'),))
+    try:
+        raw.send_json(dict(command='spawn', request_id='raw-lab', goal='echo_actor',
+                           options='[src_text("echo_actor :- output(ready), '
+                                   'receive({msg(M) -> output(M)}), '
+                                   'receive({msg(N) -> output(N)}), receive({stop -> true}).")]'))
+        actor = raw.recv_json()
+        assert (actor['type'], actor['request_id']) == ('spawned', 'raw-lab'), actor
+        actor_pid = actor['pid']
+        assert raw.recv_json() == {'type': 'output', 'pid': actor_pid, 'data': 'ready'}
+        for command, fields in [('send', {'message': 'msg(foreign)'}), ('exit', {'reason': 'foreign'})]:
+            ws.send_json(dict(command=command, pid=actor_pid, **fields))
+            denied = ws.recv_json()
+            assert (denied['type'], denied['pid'], denied['data']) == (
+                'error', actor_pid, 'Unknown actor for this connection'), denied
+        for value in ('first', 'second'):
+            raw.send_json(dict(command='send', pid=actor_pid, message=f'msg({value})'))
+            assert raw.recv_json() == {'type': 'output', 'pid': actor_pid, 'data': value}
+        raw.send_json(dict(command='exit', pid=actor_pid, reason='done'))
+        down = raw.recv_json()
+        assert (down['type'], down['pid'], down['reason']) == ('down', actor_pid, 'done'), down
+        raw.send_json(dict(command='spawn', goal='(self(Self),register(raw_disconnect_fixture,Self),'
+                           'output(ready),receive({stop -> true}))', options='[]'))
+        disconnect_actor = raw.recv_json()
+        assert disconnect_actor['type'] == 'spawned', disconnect_actor
+        assert raw.recv_json() == {'type': 'output', 'pid': disconnect_actor['pid'], 'data': 'ready'}
+    finally:
+        raw.close()
+    shell_call('between(1,100,_),sleep(0.01),whereis(raw_disconnect_fixture,undefined),!')
+    print('Raw WebSocket actors push output and down, enforce ownership, and retire on disconnect')
+
     ws.send_json(dict(command='toplevel_call', pid=pid,
                       goal='writeln(abort_receive_ready),receive({recovery_never_sent->true})'))
     ready = ws.recv_json()

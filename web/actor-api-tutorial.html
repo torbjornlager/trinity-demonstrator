@@ -25,7 +25,7 @@
 
   <div class="lab">
     <h3>Before you begin</h3>
-    <p>For real WebSocket traffic, select <strong>N3</strong> or <strong>N4</strong>. In SWI-WASM Worker mode the same command vocabulary crosses a Worker boundary as JavaScript objects instead.</p>
+    <p>For real WebSocket traffic, select <strong>N3</strong>, <strong>N4</strong>, or the <strong>N7 owner shell</strong>. In SWI-WASM Worker mode the same command vocabulary crosses a Worker boundary as JavaScript objects instead.</p>
     <div class="actions"><button type="button" data-prepare-logger>Open Logger</button></div>
     <span class="status" data-protocol-status aria-live="polite">Open this tutorial inside the portal to connect it to the Logger.</span>
     <p>New Logger entries appear at the top. Read the highlighted group from bottom to top; blue-edged rows are client requests and green-edged rows are events received from the runtime.</p>
@@ -244,7 +244,7 @@ socket.addEventListener("message", ({ data }) =&gt; {
     function closeActorLab(){if(actorLabSocket){try{actorLabSocket.close()}catch(_error){}}actorLabSocket=null}
     function runActorLab(){
       var api=bridge(),context=api&&typeof api.protocolContext==="function"?api.protocolContext():null;
-      if(!context||context.transport!=="actor"||context.label!=="STATEFUL WEBSOCKET"){actorLabStatus("Select N3 or N4 first. The raw lab needs STATEFUL WEBSOCKET; Worker mode uses the terminal labs above.",true);return}
+      if(!context||context.transport!=="actor"||context.label!=="STATEFUL WEBSOCKET"){actorLabStatus("Select N3, N4, or the N7 owner shell. The raw lab uses a WebSocket. In Worker mode, use the terminal labs above.",true);return}
       closeActorLab();begin(api);actorLabStatus("Opening a separate tutorial WebSocket…",false);
       var scheme=location.protocol==="https:"?"wss:":"ws:";
       var socket=new WebSocket(scheme+"//"+location.host+"/ws"),actorPid=null,outputs=0;

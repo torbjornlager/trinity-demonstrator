@@ -329,6 +329,7 @@ class ActorConnection:
         self.bridge, self.origin, self.send = bridge, origin, send
         self.io_ack = False
         self.sessions = set()
+        self.actors = set()
         self.prompts = {}
         self.output = {}
         self.query_waiters = BoundedSemaphore(4)
@@ -337,6 +338,20 @@ class ActorConnection:
         Thread(target=self.send_child_output, daemon=True).start()
 
     def enqueue_child_output(self, event):
+        message = {"type": event.get("kind", "output"),
+                   "pid": event.get("actor_id", event["pid"]),
+                   "data": event["data"]}
+        if "stdout" in event:
+            message["stdout"] = event["stdout"]
+        self.enqueue_event(message)
+
+    def enqueue_actor_event(self, event):
+        if event["type"] == "down":
+            with self.bridge.state_changed:
+                self.actors.discard(event["pid"])
+        self.enqueue_event(event)
+
+    def enqueue_event(self, event):
         # Keep slow browsers off the bridge reader thread.
         with suppress(Full):
             self.child_output.put_nowait(event)
@@ -347,12 +362,7 @@ class ActorConnection:
                 event = self.child_output.get()
                 if event is None:
                     return
-                message = {"type": event.get("kind", "output"),
-                           "pid": event.get("actor_id", event["pid"]),
-                           "data": event["data"]}
-                if "stdout" in event:
-                    message["stdout"] = event["stdout"]
-                self.emit(message)
+                self.emit(event)
         except (OSError, LocalProtocolError):
             pass
 
@@ -405,6 +415,9 @@ class ActorConnection:
             self.io_ack = request.get("io_ack") is True
             self.emit({"type": "transport_welcome", "version": 1,
                        "protocol": "web_prolog_browser_actor", "browser_pids": True, "io_ack": True})
+            return
+        if command in ("spawn", "send", "exit"):
+            self.actor_command(command, request)
             return
         if command == "toplevel_spawn":
             fields = {"options": "[session(true)]", "prompt_correlation": True,
@@ -477,6 +490,36 @@ class ActorConnection:
             raise ValueError("Expected a Prolog option list")
         return options
 
+    def actor_command(self, command, request):
+        if command == "spawn":
+            goal = request["goal"]
+            if not isinstance(goal, str) or not goal.strip():
+                raise ValueError("Expected a Prolog goal")
+            reply = self.bridge.request("ws_actor_spawn", {"goal": goal, "options": self.options(request)})
+            if "request_id" in request:
+                reply["request_id"] = request["request_id"]
+            if reply["type"] == "spawned":
+                pid = reply["pid"]
+                with self.bridge.state_changed:
+                    self.actors.add(pid)
+                    self.bridge.ws_actors[pid] = self.enqueue_actor_event
+                self.emit(reply)
+                self.bridge.request("ws_actor_start", {"actor": pid})
+            else:
+                self.emit(reply)
+            return
+        pid = request["pid"]
+        with self.bridge.state_changed:
+            if type(pid) is not int or pid not in self.actors:
+                raise LookupError("Unknown actor for this connection")
+        field = "message" if command == "send" else "reason"
+        value = request[field] if command == "send" else request.get(field, "kill")
+        if not isinstance(value, str):
+            raise ValueError(f"Expected a Prolog {field} term")
+        reply = self.bridge.request("ws_actor_" + command, {"actor": pid, field: value})
+        if reply["type"] == "error":
+            self.emit_error(request, reply["data"])
+
     def relay(self, event):
         while event["type"] == "output" and not self.io_ack:
             pid = event["pid"]
@@ -502,12 +545,16 @@ class ActorConnection:
         return self.bridge.request("poll", {"pid": pid}, timeout=18, submitted=submitted)
 
     def close(self):
+        self.closed.set()
         with self.bridge.state_changed:
+            actors = tuple(self.actors)
             for pid in self.sessions:
                 self.bridge.browser_output.pop(pid, None)
-        self.closed.set()
         with suppress(Full):
             self.child_output.put_nowait(None)
         for pid in self.sessions:
             with suppress(LookupError, OSError, RuntimeError, ValueError):
                 self.bridge.request("halt", {"pid": pid})
+        for pid in actors:
+            with suppress(LookupError, OSError, RuntimeError, ValueError):
+                self.bridge.request("ws_actor_exit", {"actor": pid, "reason": "connection_closed"})

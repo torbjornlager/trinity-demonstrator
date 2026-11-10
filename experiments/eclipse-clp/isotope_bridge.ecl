@@ -14,6 +14,7 @@
 :- local store(http_sessions).
 :- local store(probe_children).
 :- local store(peer_actors).
+:- local store(ws_actors).
 :- local op(200, xfx, @).
 
 % The root routes requests and is the only writer to the JSON pipe.
@@ -65,6 +66,16 @@ serve(Replies) :-
         http_opened(Request, Id, Relay) ->
             store_set(http_sessions, Id, Relay),
             write_response(Replies, Request, {[type:spawned, pid:Id]}),
+            serve(Replies)
+    ;
+        ws_actor_opened(Request, Id, Relay) ->
+            store_set(ws_actors, Id, Relay),
+            write_response(Replies, Request, {[type:spawned, pid:Id]}),
+            serve(Replies)
+    ;
+        ws_actor_event(Id, Event) ->
+            ( Event = {[type:down|_]} -> store_delete(ws_actors, Id) ; true ),
+            reply(Replies, {[type:ws_actor_event, pid:Id, event:Event]}),
             serve(Replies)
     ;
         http_reply(Request, Event) ->
@@ -217,6 +228,15 @@ peer_toplevel_answer(Pid, Fields, Answer) :-
 route_request(Request, "spawn", _, Fields) :- !,
     self(Router),
     spawn(open_session(Router, Request, Fields), _).
+route_request(Request, "ws_actor_spawn", _, Fields) :- !,
+    self(Router),
+    spawn(open_ws_actor(Router, Request, Fields), _).
+route_request(Request, Command, _, Fields) :-
+    memberchk(Command, ["ws_actor_start", "ws_actor_send", "ws_actor_exit"]), !,
+    ( memberchk(actor:Id, Fields), store_get(ws_actors, Id, Relay) ->
+        send(Relay, http_request(Request, Command, Id, Fields))
+    ; self(Router),
+      reply_to(response(Router, Request), {[type:error, data:"Unknown actor"]}) ).
 route_request(Request, "stateless", _, Fields) :- !,
     self(Router),
     Context = response(Router, Request),
@@ -1020,6 +1040,38 @@ open_session(Router, Request, Fields) :-
         reply_to(Context, Event)
     ).
 
+open_ws_actor(Router, Request, Fields) :-
+    Context = response(Router, Request),
+    request_event("ws_actor_spawn", Fields, Context, Event),
+    ( Event = {[type:spawned, pid:Id]} ->
+        self(Relay),
+        send(Router, ws_actor_opened(Request, Id, Relay)),
+        serve_ws_actor(Router, Id)
+    ; reply_to(Context, Event) ).
+
+serve_ws_actor(Router, Id) :-
+    receive({
+        http_request(Request, Command, Id, Fields) ->
+            Context = response(Router, Request),
+            request_event(Command, Fields, Context, Event),
+            reply_to(Context, Event),
+            serve_ws_actor(Router, Id)
+    ;
+        output(Id, Value) ->
+            event_text(Value, Text),
+            send(Router, ws_actor_event(Id, {[type:output, pid:Id, data:Text]})),
+            serve_ws_actor(Router, Id)
+    ;
+        terminal_io_output(Id, Value) ->
+            event_text(Value, Text),
+            send(Router, ws_actor_event(Id, {[type:output, pid:Id, data:Text, stdout:Text]})),
+            serve_ws_actor(Router, Id)
+    ;
+        down(Id, Id, Reason) ->
+            probe_term_text(Reason, Text),
+            send(Router, ws_actor_event(Id, {[type:down, pid:Id, ref:Id, reason:Text]}))
+    }).
+
 serve_session(Router) :-
     receive({
         http_request(Request, Command, _, Fields) ->
@@ -1060,6 +1112,32 @@ reply(Stream, Event) :-
     json_write(Stream, Event, [indent(0)]),
     nl(Stream),
     flush(Stream).
+
+dispatch("ws_actor_spawn", Fields, _, {[type:spawned, pid:Id]}) :-
+    memberchk(goal:GoalText, Fields),
+    parse_goal(GoalText, isotope_bridge, Goal, _),
+    memberchk(options:OptionsText, Fields),
+    parse_goal(OptionsText, isotope_bridge, Options, _),
+    ( Options == [] ; Options = [Option], nonvar(Option),
+      ( Option = src_text(_) ; Option = src_list(_) ) ),
+    browser_spawn_source(Options, Fields, Source),
+    self(Relay),
+    % Wait until the socket has announced the PID before running the goal.
+    spawn((receive({ '$ws_actor_start' -> true }), Goal), Id,
+          [monitor(true), io_target(Relay), src_text("")|Source]).
+dispatch("ws_actor_start", Fields, _, {[type:accepted]}) :-
+    memberchk(actor:Id, Fields),
+    send(Id, '$ws_actor_start').
+dispatch("ws_actor_send", Fields, _, {[type:accepted]}) :-
+    memberchk(actor:Id, Fields),
+    memberchk(message:Text, Fields),
+    parse_goal(Text, isotope_bridge, Message, _),
+    send(Id, Message).
+dispatch("ws_actor_exit", Fields, _, {[type:accepted]}) :-
+    memberchk(actor:Id, Fields),
+    memberchk(reason:Text, Fields),
+    parse_goal(Text, isotope_bridge, Reason, _),
+    exit(Id, Reason).
 
 dispatch("spawn", Fields, _, {[type:spawned, pid:Id]}) :-
     ( memberchk(browser_options:Text, Fields) ->

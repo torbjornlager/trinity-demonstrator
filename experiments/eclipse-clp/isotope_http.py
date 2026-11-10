@@ -274,6 +274,7 @@ class Bridge:
         self.request_ids = count(1)
         self.pending = {}
         self.browser_output = {}
+        self.ws_actors = {}
         self.peer_actors = {}
         self.busy = {}
         self.poll_deadlines = {}
@@ -321,11 +322,13 @@ class Bridge:
             request_id = next(self.request_ids)
             request["request_id"] = request_id
             result = Future()
-            if deadline is not None and command in ("spawn", "stateless"):
+            if command in ("spawn", "stateless", "ws_actor_spawn"):
                 queued = sum(item["command"] == command for item, _ in self.pending.values())
-                if command == "spawn" and len(self.sessions) + queued >= 4:
+                if command == "ws_actor_spawn" and len(self.ws_actors) + queued >= 4:
+                    raise CapacityError("N7 has reached its four-actor WebSocket limit")
+                if deadline is not None and command == "spawn" and len(self.sessions) + queued >= 4:
                     raise CapacityError("N7 has reached its four-session limit")
-                if command == "stateless" and queued >= 2:
+                if deadline is not None and command == "stateless" and queued >= 2:
                     raise CapacityError("N7 has reached its two-call stateless limit")
             self.write_request(request, deadline)
             self.pending[request_id] = (request, result)
@@ -388,6 +391,16 @@ class Bridge:
                         deliver = self.browser_output.get(reply["pid"])
                     if deliver is not None:
                         deliver(reply)
+                    continue
+                if reply.get("type") == "ws_actor_event":
+                    event, pid = reply["event"], reply["pid"]
+                    with self.state_changed:
+                        if event["type"] == "down":
+                            deliver = self.ws_actors.pop(pid, None)
+                        else:
+                            deliver = self.ws_actors.get(pid)
+                    if deliver is not None:
+                        deliver(event)
                     continue
                 with self.state_changed:
                     request_id = reply.pop("request_id")
@@ -501,7 +514,9 @@ class Bridge:
 
     def complete(self, request, reply):
         command = request["command"]
-        if command == "actor_probe":
+        if command == "ws_actor_spawn" and reply["type"] == "spawned":
+            self.ws_actors[reply["pid"]] = None
+        if command == "actor_probe" or command.startswith("ws_actor_"):
             return
         pid = request.get("pid")
         if pid is not None:
@@ -544,6 +559,8 @@ class Bridge:
         if command == "actor_probe":
             if "pid" in fields:
                 raise ValueError("Actor probe addresses its resident echo service")
+            return dict(fields, command=command)
+        if command.startswith("ws_actor_"):
             return dict(fields, command=command)
         if command == "spawn":
             options = dict(fields)
