@@ -136,16 +136,40 @@ start_peer_actor(Replies, Parent, Proxy, Node, Goal, Source) :-
     monitor(Proxy, Ref),
     store_set(peer_actors, monitor(Ref), Proxy),
     ( nonvar(Goal), Goal = '$peer_toplevel'(SpawnOptions) ->
-        Kind = "toplevel_spawn", GoalText = ""
+        Kind = "toplevel_spawn", GoalText = "", Targets = []
     ; Kind = "spawn", SpawnOptions = [],
-      goal_template_texts(Goal, Goal, GoalText, _) ),
+      ( acyclic_term(Goal), actor_browser_session(Parent, Session) ->
+          peer_spawn_addresses(Goal, Session, WireGoal, Targets, [])
+      ; WireGoal = Goal, Targets = [] ),
+      goal_template_texts(WireGoal, WireGoal, GoalText, _) ),
     store_set(peer_actors, Proxy, peer(Parent, Node, Ref, pending, Kind)),
     ( Source = text(Text) -> atom_string(Atom, Text), Options = [src_text(Atom)|SpawnOptions]
     ; Options = SpawnOptions ),
     goal_template_texts(Options, Options, OptionsText, _),
     atom_string(Node, Url),
     reply(Replies, {[type:actor_peer_start, proxy:Proxy, url:Url,
-                     command:Kind, goal:GoalText, options:OptionsText]}).
+                     command:Kind, goal:GoalText, options:OptionsText, reply_targets:Targets]}).
+
+% Local actor handles travel as virtual addresses on this peer connection.
+% Keep the route scoped to live actors in the spawning browser session.
+peer_spawn_addresses(Term, Session, Wire, Targets, Tail) :-
+    ( peer_local_pid(Term, Id), actor_browser_session(Id, Session) ->
+        Wire = Id@localhost,
+        sprintf(Target, "%d@localhost", [Id]),
+        Targets = [Target|Tail]
+    ; compound(Term), functor(Term, Name, _), Name \== '@' ->
+        Term =.. [Name|Args],
+        ( foreach(Arg, Args), foreach(Value, Values), fromto(Targets, In, Out, Tail),
+          param(Session) do
+            peer_spawn_addresses(Arg, Session, Value, In, Out)
+        ),
+        Wire =.. [Name|Values]
+    ; Wire = Term, Targets = Tail ).
+
+peer_local_pid(Id, Id) :- integer(Id), !.
+peer_local_pid(Address, Id) :-
+    nonvar(Address), Address = Pid@Node, integer(Pid), atom(Node), Node \== [],
+    actor_address(Address, spawn/3, Id), integer(Id).
 
 peer_actor_command(Replies, Pid, Command, Field, Value) :-
     ( store_get(peer_actors, pid(Pid), Proxy) ->

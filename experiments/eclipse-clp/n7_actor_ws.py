@@ -158,7 +158,7 @@ class PeerActor:
         stop_deadline = None
         chunks, size = [], 0
         early = []
-        reply_targets = set()
+        reply_targets = set(self.request.get("reply_targets", ()))
         while not self.cancelled.is_set():
             if child is None and monotonic() >= deadline:
                 return "spawn_timeout"
@@ -201,10 +201,10 @@ class PeerActor:
                 if isinstance(event, AcceptConnection):
                     sync_supported = event.subprotocol in sync_protocols
                     spawn = {"command": spawn_command, "options": self.request["options"]}
-                    if toplevel:
-                        send_json({"command": "transport_hello", "version": 1, "answer_terms": True,
+                    if toplevel or reply_targets:
+                        send_json({"command": "transport_hello", "version": 1, "answer_terms": toplevel,
                                    "browser_pids": True})
-                    else:
+                    if not toplevel:
                         spawn["goal"] = self.request["goal"]
                     send_json(spawn)
                 elif isinstance(event, Ping):
@@ -229,27 +229,23 @@ class PeerActor:
                         continue
                     if kind == "error":
                         return "peer_rejected"
-                    if kind == "actor_message" and child is not None:
-                        target, message = reply.get("target"), reply.get("message")
-                        if isinstance(target, str) and target in reply_targets and isinstance(message, str):
-                            self.emit("message", target=target.split("@", 1)[0], data=message)
                     if kind == "spawned" and child is None:
                         child = reply["pid"]
                         if type(child) is not int:
                             return "invalid_peer_pid"
                         self.emit("spawned", child=child)
                         for pending in early:
-                            reason = self.relay(child, pending)
+                            reason = self.relay(child, pending, reply_targets)
                             if reason is not None:
                                 return reason
                         early.clear()
-                    elif kind in ("output", "down"):
+                    elif kind in ("output", "down", "actor_message"):
                         if child is None:
                             if len(early) == 32:
                                 return "startup_output_limit"
                             early.append(reply)
                         else:
-                            reason = self.relay(child, reply)
+                            reason = self.relay(child, reply, reply_targets)
                             if reason is not None:
                                 return reason
         return "connection_closed"
@@ -268,7 +264,12 @@ class PeerActor:
         else:
             self.emit("answer", kind=kind)
 
-    def relay(self, child, reply):
+    def relay(self, child, reply, reply_targets):
+        if reply["type"] == "actor_message":
+            target, message = reply.get("target"), reply.get("message")
+            if isinstance(target, str) and target in reply_targets and isinstance(message, str):
+                self.emit("message", target=target.split("@", 1)[0], data=message)
+            return None
         if reply.get("pid") != child:
             return None
         if reply["type"] == "down":
@@ -377,12 +378,19 @@ class ActorConnection:
                 event = self.child_output.get()
                 if event is None:
                     return
-                self.emit(event)
+                self.send(TextMessage(data=json.dumps(event)))
         except (OSError, LocalProtocolError):
-            pass
+            self.closed.set()
 
     def emit(self, event):
-        self.send(TextMessage(data=json.dumps(event)))
+        # Bridge output already queued for this connection must precede
+        # the answer it produced. Keep replies on the same writer.
+        while not self.closed.is_set():
+            try:
+                self.child_output.put(event, timeout=0.1)
+                return
+            except Full:
+                continue
 
     def dispatch(self, text):
         request = None
