@@ -16,7 +16,9 @@ function method(name, nextName) {
 }
 const host = {
   queueTerminalOutput: method('queueTerminalOutput', 'flushTerminalOutput'),
-  flushTerminalOutput: method('flushTerminalOutput', 'discardTerminalOutput'),
+  flushTerminalOutput: method('flushTerminalOutput', 'echoTerminalStream'),
+  echoTerminalStream: method('echoTerminalStream', 'endTerminalStream'),
+  endTerminalStream: method('endTerminalStream', 'finishTerminalOutput'),
   discardTerminalOutput: method('discardTerminalOutput', 'echoSwiWasmOutput')
 };
 const echoes = [];

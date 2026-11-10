@@ -243,6 +243,7 @@ module.exports.cases=function({CLIENT,NATIVE_ROOT,PID,QPID,ROOT,WASM_DIR,abort,a
         if(!["success","failure","error","timeout","abort","output","prompt"].includes(message.type))return false;
         results.push(message);return true;
       };
+      host.endTerminalStream=workbenchMethod("endTerminalStream","finishTerminalOutput");
       host.discardTerminalOutput=workbenchMethod("discardTerminalOutput","echoSwiWasmOutput");
       host.abortSwiWasm2Query=workbenchMethod("abortSwiWasm2Query","abortBoundActor");
       const shellGoal="swi_wasm_actor_bridge:ptcp("+PID+",terminal,true)";
