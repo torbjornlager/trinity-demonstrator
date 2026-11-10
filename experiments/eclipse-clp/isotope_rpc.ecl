@@ -95,13 +95,12 @@ clear_promises :-
       ( foreach(promise(Worker, _), Pending) do exit(Worker, query_finished) )
     ).
 
-request_options(Node0, Options, Module, Kind, Node, Source, Offset, Limit, Once, Transport) :-
-    ( atom(Node0) -> atom_string(Node0, Node)
-    ; string(Node0) -> Node = Node0
-    ; throw(error(type_error(atom_or_string, Node0), rpc/3))
-    ),
+request_options(Uri, Options, Module, Kind, Node, Source, Offset, Limit, Once, Transport) :-
     ( Kind == rpc -> Context = rpc/3 ; Context = promise/4 ),
     validate_options(Options, Kind, Context),
+    require_creation_atom(Uri, Context),
+    normalize_node_uri(Uri, Canonical),
+    ( local_node_uri(Canonical) -> Node = "localhost" ; atom_string(Canonical, Node) ),
     option_value(offset, Options, 0, Offset),
     option_value(limit, Options, 100, Limit),
     option_value(once, Options, false, Once),
@@ -110,9 +109,9 @@ request_options(Node0, Options, Module, Kind, Node, Source, Offset, Limit, Once,
     findall(Field, (member(Option, Options), http_field(Option, Field)), Fields),
     Transport = transport(Execution, HTTP, Fields),
     source_options_text(Options, Module, Text),
-    ( memberchk(src_uri(Uri0), Options) ->
-        ( atom(Uri0) -> atom_string(Uri0, Uri) ; Uri = Uri0 ),
-        egress_request("source", Uri, [], Loaded),
+    ( memberchk(src_uri(SourceUri), Options) ->
+        atom_string(SourceUri, Url),
+        egress_request("source", Url, [], Loaded),
         concat_string([Text, "\n", Loaded], Source)
     ; Source = Text
     ).
@@ -145,11 +144,13 @@ validate_option(Option, Kind) :-
 
 query_option(http_timeout(Value), _) :- numeric_timeout(Value).
 query_option(limit(N), _) :- integer(N), N >= 1, N =< 100.
-query_option(once(B), _) :- ( B == true ; B == false ).
+query_option(once(B), _) :-
+    required_atom(B),
+    ( ( B == true ; B == false ) -> true ; throw(domain_error(boolean, B)) ).
 query_option(offset(N), promise) :- integer(N), N >= 0.
 query_option(template(_), promise).
 query_option(Option, _) :- source_option(Option).
-query_option(src_uri(Uri), _) :- ( atom(Uri) ; string(Uri) ).
+query_option(src_uri(Uri), _) :- required_atom(Uri).
 query_option(request_header(Header), _) :-
     required_value(Header),
     ( Header = (Name=Value) -> header_name(Name), header_value(Value, _)
@@ -163,6 +164,10 @@ query_option(user_agent(Value), _) :- header_value(Value, _).
 
 required_value(Value) :-
     ( var(Value) -> throw(instantiation_error) ; true ).
+
+required_atom(Value) :-
+    required_value(Value),
+    ( atom(Value), Value \== [] -> true ; throw(type_error(atom, Value)) ).
 
 numeric_timeout(Value) :-
     required_value(Value),

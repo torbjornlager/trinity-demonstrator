@@ -4,7 +4,7 @@
 :- lib(prolog_extras).
 :- ensure_loaded(library(swi)).
 :- ensure_loaded(web_prolog_library).
-:- import get_time/1 from web_prolog_library.
+:- import get_time/1, node_setting/2 from web_prolog_library.
 
 :- export spawn/1, actors/1.
 :- export parallel/1, first_solution/2, first_solution/3.
@@ -34,6 +34,7 @@
 :- export issued_actor_pid/1.
 :- export require_creation_list/2, require_creation_value/2, require_creation_atom/2.
 :- export validate_creation_boolean/2, first_creation_option/3.
+:- export normalize_node_uri/2, local_node_uri/1, node_destination/3, actor_address/3.
 :- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
 :- export unicode_literal/2, text_string/2.
 :- export make_ref/1.
@@ -84,7 +85,7 @@ spawn_(Goal, Pid, Options, Module) :-
     spawn_options(Options, Parent, Link, Startup, SourceOption, Destination),
     spawn_source(SourceOption, Module, Source),
     ( Destination == local ->
-        spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module)
+        spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module, public)
     ; Destination = remote(Node),
       Startup = startup(Monitor, Name, Io),
       ( Name == none, Io == none ->
@@ -92,12 +93,15 @@ spawn_(Goal, Pid, Options, Module) :-
       ; throw(error(domain_error(remote_spawn_options, Options), spawn/3)) )
     ).
 
-spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module) :-
+spawn_local(Goal, Pid, Parent, Link, Startup, Source, Module, Visibility) :-
     Startup = startup(_, _, Io),
     store_get(actor_registry, runtime, runtime(Reports, _, Lock)),
     fresh_actor_id(pid, Pid),
     record_create(Inbox),
     engine_create(Engine, [thread, report_to(Reports)]),
+    get_engine_property(Engine, store, Store),
+    inherit_browser_session(Parent, Store),
+    ( Visibility == internal -> store_set(Store, internal_actor, true) ; true ),
     ( Source == none ->
         catch(with_mutex(Lock, start_actor(Pid, Engine, Inbox, Link, Startup, none,
                                           run_actor(Pid, Parent, Inbox, Goal, Module, Io))),
@@ -141,8 +145,8 @@ spawn_options_([Option|Options], options(Link, Monitor, Source, Destination, Nam
         first_creation_option(Monitor, Value, Selected),
         Next = options(Link, Selected, Source, Destination, Name, Io)
     ; Option = node(Node) ->
-        require_creation_atom(Node, spawn/3),
-        first_creation_option(Destination, remote(Node), Selected),
+        node_destination(Node, spawn/3, Route),
+        first_creation_option(Destination, Route, Selected),
         Next = options(Link, Monitor, Source, Selected, Name, Io)
     ; Option = name(Atom) ->
         require_creation_atom(Atom, spawn/3),
@@ -171,6 +175,39 @@ require_creation_value(Value, Caller) :-
 require_creation_atom(Value, Caller) :-
     require_creation_value(Value, Caller),
     ( atom(Value), Value \== [] -> true ; throw(error(type_error(atom, Value), Caller)) ).
+
+% Only the configured node URL and the explicit localhost alias are local.
+% Normalize node identity without changing the path of a source URI.
+normalize_node_uri(Uri, Node) :-
+    atom_string(Uri, Text),
+    string_list(Text, Codes),
+    ( append(Prefix, [47], Codes) ->
+        string_list(Trimmed, Prefix),
+        atom_string(Node, Trimmed)
+    ; Node = Uri ).
+
+local_node_uri(Node) :-
+    ( atom_string(Node, Text), string_lower(Text, "localhost") -> true
+    ; node_setting(url, Uri), normalize_node_uri(Uri, Self), Node == Self ).
+
+node_destination(Uri, Caller, Destination) :-
+    require_creation_atom(Uri, Caller),
+    normalize_node_uri(Uri, Node),
+    ( local_node_uri(Node),
+      \+ (mailbox_store(Store), store_get(Store, spawn_transport(Node), _)) ->
+        Destination = local
+    ; Destination = remote(Node) ).
+
+actor_address(Target, Caller, Address) :-
+    ( nonvar(Target), Target = Id@Uri, integer(Id) ->
+        require_creation_atom(Uri, Caller),
+        normalize_node_uri(Uri, Node),
+        ( local_node_uri(Node),
+          \+ (mailbox_store(Store), store_get(Store, send_transport(Node), _)),
+          \+ store_get(actor_registry, remote(Id@Node), _) ->
+            Address = Id
+        ; Address = Id@Node )
+    ; Address = Target ).
 
 validate_creation_boolean(Value, Caller) :-
     require_creation_atom(Value, Caller),
@@ -238,10 +275,18 @@ source_body_(Head, Body, Module) :-
     ( get_flag(Name/Arity, stability, dynamic)@Module ->
         clause(Head, Body)@Module
     ; store_get(actor_registry, source(Module), Clauses),
-      member(Clause, Clauses),
-      ( Clause = (ClauseHead :- Body) -> Head = ClauseHead
-      ; functor(Clause, Name, Arity), Clause = Head, Body = true )
+      findall(Head-Body,
+          ( member(Clause, Clauses), source_head_body(Clause, Head, Body) ),
+          Matches),
+      matching_source_clause(Matches, Head-Body)
     ).
+
+source_head_body((Head :- Body), Match, Body) :- !, Match = Head.
+source_head_body(Head, Head, true).
+
+matching_source_clause([First|Rest], Match) :-
+    ( Rest == [] -> Match = First
+    ; ( Match = First ; matching_source_clause(Rest, Match) ) ).
 
 write_source([], _).
 write_source([Clause|Rest], Stream) :-
@@ -255,12 +300,14 @@ actors(Pids) :-
     findall(Pid,
         ( member(Pid-actor(Engine, _, _), Entries), integer(Pid),
           get_engine_property(Engine, status, Status), \+ finished_status(Status),
-          ( Browser == false
-          ; get_engine_property(Engine, store, Store), store_get(Store, browser_session, _) ) ),
+          get_engine_property(Engine, store, Store),
+          \+ store_get(Store, internal_actor, _),
+          ( Browser == false -> true ; store_get(Store, browser_session, _) ) ),
         Pids).
 
 % The embedding transport owns the wire connection.
-set_linked_spawn_transport(Node, Transport) :-
+set_linked_spawn_transport(Uri, Transport) :-
+    normalize_node_uri(Uri, Node),
     mailbox_store(Store),
     store_set(Store, spawn_transport(Node), Transport).
 
@@ -276,7 +323,7 @@ spawn_remote(Goal, Pid, Parent, Link, Monitor, Source, Node) :-
     ( Monitor = watch(Parent) -> ProxyMonitor = remote_watch(Parent) ; ProxyMonitor = none ),
     ( Link = owned(_) -> StartupLink = Link ; StartupLink = linked(Parent) ),
     spawn_local(remote_spawn_proxy(Transport, Parent, Node, Goal, Source, Link),
-                Proxy, Parent, StartupLink, startup(ProxyMonitor, none, none), none, actors),
+                Proxy, Parent, StartupLink, startup(ProxyMonitor, none, none), none, actors, internal),
     catch(
         ( receive({ remote_spawn_reply(Proxy, Reply) -> true },
                   [timeout(8), on_timeout(throw(error(remote_spawn_timeout(Node), spawn/3)))]),
@@ -791,11 +838,13 @@ set_actor_context(Pid, Parent, Inbox) :-
     set_self(Pid),
     mailbox_store(Store),
     store_set(Store, web_prolog_parent, Parent),
+    attach_mailbox(Inbox).
+
+% Publish inherited visibility before the new PID can be observed by its parent.
+inherit_browser_session(Parent, Store) :-
     ( actor_browser_session(Parent, Session) ->
         store_set(Store, browser_session, Session)
-    ; true
-    ),
-    attach_mailbox(Inbox).
+    ; true ).
 
 actor_browser_session(Pid, Session) :-
     store_get(actor_registry, Pid, actor(Engine, _, _)),
@@ -1035,7 +1084,8 @@ remove_actor_name(Name, Pid) :-
 send(Name, Message) :-
     registered_actor(Name, Pid), !,
     send(Pid, Message).
-send(Pid, Message) :-
+send(Target, Message) :-
+    actor_address(Target, send/2, Pid),
     ( ground(Pid), store_get(actor_registry, Pid, actor(_, Inbox, _)) ->
         record_wait_append(Inbox, Message, block, 9999999)
     ; ground(Pid), store_get(actor_registry, remote(Pid), remote(_, Transport)) ->
@@ -1056,12 +1106,13 @@ send(Pid, Message) :-
 
 % A timer is linked to its scheduling actor. Publish its cancellation
 % record before letting the timer start, including when the delay is zero.
-send(Pid, Message, Options) :-
+send(Target, Message, Options) :-
     ( is_list(Options) -> true ; throw(error(type_error(list, Options), send/3)) ),
     ( memberchk(delay(Delay), Options) -> true ; Delay = 0 ),
     ( number(Delay), Delay >= 0 -> true
     ; throw(error(domain_error(nonnegative_delay, Delay), send/3))
     ),
+    actor_address(Target, send/3, Pid),
     self(Owner),
     spawn_(delayed_delivery(Pid, Message, Delay), Timer, actors),
     store_get(actor_registry, runtime, runtime(_, _, Lock)),
@@ -1091,7 +1142,8 @@ cancel_timers(Owner, Id) :-
     ; true
     ).
 
-set_peer_send_transport(Node, Transport) :-
+set_peer_send_transport(Uri, Transport) :-
+    normalize_node_uri(Uri, Node),
     mailbox_store(Store),
     store_set(Store, send_transport(Node), Transport).
 
@@ -1254,7 +1306,8 @@ exit(Reason) :-
         eclipse_language:exit(0)
     ).
 
-exit(Pid, Reason) :-
+exit(Target, Reason) :-
+    actor_address(Target, exit/2, Pid),
     ( ground(Pid) -> true ; throw(error(instantiation_error, exit/2)) ),
     ( var(Reason) -> throw(error(instantiation_error, exit/2)) ; true ),
     ( Pid \== main, self(Pid) -> exit(Reason)
@@ -1369,9 +1422,9 @@ stop_linked_children([Child|Children], Reports) :-
 
 % Installation, delivery and removal share the pid lifecycle mutex. Once
 % demonitor releases it, any down for this ref has already been enqueued.
-monitor(Target, Ref) :-
-    ( nonvar(Target) -> true ; throw(error(instantiation_error, monitor/2)) ),
-    validate_monitor_target(Target),
+monitor(Address, Ref) :-
+    require_creation_value(Address, monitor/2),
+    actor_address(Address, monitor/2, Target),
     self(Watcher),
     store_get(actor_registry, runtime, runtime(_, _, Lock)),
     fresh_reference(Ref),
@@ -1379,13 +1432,6 @@ monitor(Target, Ref) :-
         ( ( registered_actor(Target, Found) -> Pid = Found ; Pid = Target ),
           install_monitor(Watcher, Pid, Ref)
         )).
-
-validate_monitor_target(Id@Node) :-
-    integer(Id), !,
-    ( var(Node) -> throw(error(instantiation_error, monitor/2))
-    ; atom(Node) -> true
-    ; throw(error(type_error(atom, Node), monitor/2)) ).
-validate_monitor_target(_).
 
 install_monitor(Watcher, Pid, Ref) :-
     ( ground(Pid),
