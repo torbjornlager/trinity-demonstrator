@@ -1,0 +1,3 @@
+FROM caddy:2.8.4-alpine@sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
+ARG N7_CADDYFILE=Caddyfile.eclipse-n7
+COPY Deployment/${N7_CADDYFILE} /etc/caddy/Caddyfile
