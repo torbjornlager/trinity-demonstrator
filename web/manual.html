@@ -184,9 +184,9 @@
 
 <!--
     Language reference synced from the book's Appendix B.
-    Manuscript revision: 3aacb76a6d5910bea34654ae68c1d815e72a8f58
+    Manuscript revision: ad6ddbbc6c3ec68ba939bbc06f68dde5373c0174
     Appendix B source SHA-256:
-    7e1365d479fbdb29b9dc7c83036ff5915de23c57cbfc719fc658dbaaf283d39b
+    c7690cc285f63131701c69d367a2a71217d9f5370d0b608a4622deabf5bc7c7c
 -->
 
 <h1 id="sec:manual">Web Prolog manual</h1>
@@ -251,7 +251,8 @@
     </div>
 <pre><code>self(-Pid) is det.</code></pre>
 <p>Binds <code>Pid</code> to the process identifier of the calling process.<br />
-<strong>Note:</strong> A pid is an actor address whose canonical global form is <code>Id@Node</code>, where <code>Id</code> is assigned by <code>Node</code>. This ordinary Prolog compound is part of the language contract: programs may copy, store, construct, decompose, compare, and serialise it. A shell may omit <code>@Node</code> when displaying a pid on the shell’s own node, but this is only a local abbreviation. Constructing a pid does not create an actor, confirm that it is live, or grant access to it; an operation reaches an actor only when the pair designates that actor and the node authorises the operation. Arithmetic on a numeric <code>Id</code> has no defined actor-level meaning. The atom <code>localhost</code> is a local node designator. Passing such a pid across a node boundary requires preserving its originating routing context; it must not be reinterpreted as an address on the receiving node. Actor identifiers carry no host-engine or placement semantics.</p>
+<strong>Note:</strong> A pid is an actor address whose canonical global form is <code>Id@Node</code>, where <code>Id</code> is assigned by <code>Node</code>. This ordinary Prolog compound is part of the language contract: programs may copy, store, construct, decompose, compare, and serialise it. A shell may omit <code>@Node</code> when displaying a pid on the shell’s own node, but this is only a local abbreviation. Constructing a pid does not create an actor, confirm that it is live, or grant access to it; an operation reaches an actor only when the pair designates that actor and the node authorises the operation. Arithmetic on a numeric <code>Id</code> has no defined actor-level meaning. Web Prolog runtimes reserve <code>localhost</code> as the local-node designator. Passing such a pid across a node boundary requires preserving its originating routing context; it must not be reinterpreted as an address on the receiving node. Actor identifiers carry no host-engine or placement semantics.</p>
+<p>In the browser, the main actor has pid <code>main@localhost</code>. Other local browser actors have pids of the form <code>Id@localhost</code>.</p>
 </article>
 
 <article class="predicate-entry" id="spawn/1-3">
@@ -1040,7 +1041,7 @@ Selects the starting offset of the single solution slice collected by the promis
     </div>
 <pre><code>yield(+Ref, -Answer) is det.
 yield(+Ref, -Answer, +Options) is det.</code></pre>
-<p>Waits for the answer term from a previous call to <code>promise/3-4</code>. The reference is local to its creating node and client context. The contract is one collection of one answer term; backtracking does not enumerate further results. Timeout handling must return a defined answer term or throw an exception. Remote answers are <code>success(Data,More)</code>, <code>failure</code>, or <code>error(Error)</code>. A local wait timeout returns <code>timeout</code> by default; a timeout callback may supply its own defined result. This wait outcome is distinct from remote logical failure or an error answer. <code>yield/2</code> is equivalent to <code>yield/3</code> with an empty option list. Valid options are:</p>
+<p>Waits for the answer term from a previous call to <code>promise/3-4</code>. The reference is local to its creating node and client context. The contract is one collection of one answer term; backtracking does not enumerate further results. Timeout handling must return a defined answer term or throw an exception. Remote answers are <code>success(Data,More)</code>, <code>failure</code>, or <code>error(Error)</code>. If <code>on_timeout/1</code> is omitted, the timeout path succeeds with <code>Answer = timeout</code>. A timeout callback may supply its own defined result. This wait outcome is distinct from remote logical failure or an error answer. <code>yield/2</code> is equivalent to <code>yield/3</code> with an empty option list. Valid options are:</p>
 <ul>
     <li><p><code>timeout(+Number)</code><br />
 Waits at most <code>Number</code> seconds for the promised answer. Default is no timeout.</p></li>
@@ -1079,7 +1080,7 @@ Calls <code>Goal</code> once in the caller’s context if the wait expires. It i
 <p>An unbound argument enumerates the properties; unsupported properties and non-matching values fail. Implementation identity and host-engine details belong in diagnostic tools and deployment guides.</p>
 </article>
 <h2 id="sec:manual-errors">Common error contract</h2>
-<p>Predicate entries above state specialised errors where they matter. Across the API, the common Prolog error vocabulary has the following roles:</p>
+<p>Predicate entries above state specialised errors where they matter. Standard Prolog exceptions have the form <code>error(Formal,Context)</code>. The formal term identifies the condition. The context is implementation-defined. Portable handlers match the formal term and leave the context open, for example <code>error(type_error(integer,Culprit),_)</code>. An explicit <code>throw(Term)</code> can raise an application exception with any portable term shape, including an <code>error/2</code> term with its own context. The common formal terms have the following roles:</p>
 <table>
     <thead>
         <tr><th>Form</th><th>Meaning</th></tr>
@@ -1090,11 +1091,12 @@ Calls <code>Goal</code> once in the caller’s context if the wait expires. It i
         <tr><td><code>domain_error/2</code></td><td>The type is acceptable but the value is outside the operation’s domain.</td></tr>
         <tr><td><code>existence_error/2</code></td><td>A required process, procedure, source, or other object does not exist.</td></tr>
         <tr><td><code>permission_error/3</code></td><td>The operation is defined but not authorised in this execution context.</td></tr>
+        <tr><td><code>evaluation_error/1</code></td><td>An arithmetic operation raised an exception, for example division by zero.</td></tr>
         <tr><td><code>resource_error/1</code></td><td>The runtime cannot supply a required bounded resource.</td></tr>
-        <tr><td><code>error(resource_error(time),_)</code></td><td>A configured execution limit expired.</td></tr>
+        <tr><td><code>resource_error(time)</code></td><td>A configured execution limit expired.</td></tr>
     </tbody>
 </table>
-<p>A direct predicate call throws the error term. PTCP reports a submitted-goal error as <code>error(Pid,E)</code>; stateless calls use <code>error(E)</code>; HTTP and WebSocket bindings place its public representation in a <code>type:"error"</code> envelope. An uncaught actor exception is observed by a monitor as <code>down(Pid,Ref,exception(E))</code>. Boundary sanitisation may remove host-private context but must preserve the portable formal error in Prolog-format responses and node-to-node term fields. Browser-facing JSON responses carry display diagnostics instead; these are not a stable error-classification interface. Appendix D of the book specifies these representations and the available machine-readable error codes.</p>
+<p>A direct predicate call throws the exception term. PTCP reports a submitted-goal error as <code>error(Pid,E)</code>; stateless calls use <code>error(E)</code>; HTTP and WebSocket bindings place its public representation in a <code>type:"error"</code> envelope. An uncaught actor exception is observed by a monitor as <code>down(Pid,Ref,exception(E))</code>. Boundary sanitisation may remove host-private context but must preserve the portable formal error in Prolog-format responses and node-to-node term fields. JSON diagnostic text may differ across nodes. The demonstrator displays concise prose by default. Enable <em>Show exception terms</em> under <em>Settings</em> → <em>Terminal</em> to display the Prolog exception with its context omitted, when the response supplies one. For programmatic classification use the Prolog term or a documented protocol code. Appendix D of the book specifies these representations and the available machine-readable error codes.</p>
 <p>If admission rejects a submitted goal before execution starts, the submission interface reports the error. A <code>catch/3</code> inside the goal can handle exceptions raised during its execution.</p>
 <h2 id="sec:iso-predicates">ISO predicates and related constructs</h2>
 <p>Web Prolog supports the following ISO predicates and related constructs, including the extensions listed here. Directives and DCG rules are source-level items, and <code>read/1</code> and the write predicates are provided through the session I/O layer rather than ambient ISO stream I/O.</p>
@@ -1314,7 +1316,7 @@ true.</code></pre>
 <article class="predicate-entry" id="sleep/1">
     <div class="predicate-head">
         <div class="predicate-label"><strong>Predicate:</strong> <span class="predicate-indicator">sleep/1</span></div>
-        <div class="predicate-family">isotope</div>
+        <div class="predicate-family">isobase</div>
     </div>
 <pre><code>sleep(+Seconds) is det.</code></pre>
 <p>Suspends execution for a non-negative number of seconds, which may be fractional. It does not consume mailbox messages and may be interrupted by control signals or an execution limit. An actor can also express the delay using a timed <a href="#receive/1-2"><code>receive/2</code></a>.</p>
