@@ -1,0 +1,19 @@
+# Opt in only when the N7 adapter has a configured --actor-peer.
+# The adapter checks the bearer and restricts peer WebSocket commands.
+@n7_actor_peer {
+	method GET
+	path /ws
+	header Upgrade websocket
+	header_regexp n7_peer_bearer Authorization "^Bearer [0-9a-fA-F]{64}$"
+	not header Origin *
+}
+handle @n7_actor_peer {
+	reverse_proxy {$N7_HTTP_UPSTREAM:host.docker.internal:18087} {
+		header_up -Cookie
+		header_up -X-Auth-Request-User
+		header_up -X-Auth-Request-Email
+		header_up -X-Web-Prolog-User
+		header_up -X-Web-Prolog-Proxy-Token
+		header_up -X-Web-Prolog-Client-IP
+	}
+}

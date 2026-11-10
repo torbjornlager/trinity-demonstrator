@@ -7,6 +7,7 @@
 	}
 
 	import {$N7_PREVIEW_IMPORT:/etc/caddy/n7-preview.d/*}
+	import {$N7_ACTOR_PEER_IMPORT:/etc/caddy/n7-actor-peer.d/*}
 
 	@discovery_metadata {
 		method GET

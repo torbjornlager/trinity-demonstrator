@@ -14,6 +14,7 @@ services:
       N7_OWNER_EMAIL: ${WP_N5_OWNER:?Use the N5 owner email}
       N7_PROXY_TOKEN: ${N7_PROXY_TOKEN:?Set the N7 proxy token}
       N7_HTTP_UPSTREAM: ${N7_HTTP_UPSTREAM:-host.docker.internal:18087}
+      N7_ACTOR_PEER_IMPORT: ${N7_ACTOR_PEER_IMPORT:-/etc/caddy/n7-actor-peer.d/*}
     volumes:
       - n7_tls:/data
     depends_on: [oauth2_n7]
