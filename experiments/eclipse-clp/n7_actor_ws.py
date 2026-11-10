@@ -165,7 +165,10 @@ class PeerActor:
                     except Empty:
                         break
                     field = "message" if command["command"] == "send" else "reason"
-                    send_json({"command": command["command"], "pid": child, field: command[field]})
+                    outgoing = {"command": command["command"], "pid": child, field: command[field]}
+                    if "browser_from" in command:
+                        outgoing["browser_from"] = command["browser_from"]
+                    send_json(outgoing)
                     if field == "reason" and stop_deadline is None:
                         stop_deadline = monotonic() + 2
             try:
@@ -197,6 +200,10 @@ class PeerActor:
                     kind = reply.get("type")
                     if kind == "error":
                         return "peer_rejected"
+                    if kind == "actor_message" and child is not None:
+                        target, message = reply.get("target"), reply.get("message")
+                        if isinstance(target, str) and isinstance(message, str):
+                            self.emit("message", target=target, data=message)
                     if kind == "spawned" and child is None:
                         child = reply["pid"]
                         if type(child) is not int:

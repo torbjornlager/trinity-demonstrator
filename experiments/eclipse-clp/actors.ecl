@@ -229,7 +229,7 @@ spawn_remote(Goal, Pid, Parent, Link, Monitor, Source, Node) :-
     Pid = '@'(Id, Node),
     mailbox_store(Store),
     ( store_get(Store, spawn_transport(Node), Transport) -> true
-    ; Link = owned(_), browser_session(_) -> Transport = main
+    ; browser_session(_) -> Transport = main
     ; throw(error(existence_error(spawn_transport, Node), spawn/3))
     ),
     ( Monitor = watch(Parent) -> ProxyMonitor = remote_watch(Parent) ; ProxyMonitor = none ),
@@ -294,6 +294,7 @@ remote_actor_down(Proxy, Pid, Reason) :-
     with_mutex(Lock,
         ( store_get(actor_registry, remote(Pid), remote(Proxy, _)) ->
             store_delete(actor_registry, remote(Pid)),
+            remove_actor_name(_, Pid),
             notify_monitors(Pid, Reason),
             send(Proxy, remote_down(Reason))
         ; true
@@ -953,6 +954,8 @@ register_actor(Name, Pid) :-
       get_engine_property(Engine, status, Status),
       \+ finished_status(Status) ->
         recordz(actor_names, registered(Name, Pid))
+    ; store_get(actor_registry, remote(Pid), _) ->
+        recordz(actor_names, registered(Name, Pid))
     ;
         throw(error(existence_error(process, Pid),
                     context(actors:register/2, 'local actor no longer exists')))
@@ -988,7 +991,10 @@ send(Pid, Message) :-
     ( ground(Pid), store_get(actor_registry, Pid, actor(_, Inbox, _)) ->
         record_wait_append(Inbox, Message, block, 9999999)
     ; ground(Pid), store_get(actor_registry, remote(Pid), remote(_, Transport)) ->
-        send(Transport, remote_send(Pid, Message))
+        ( Transport == main ->
+            self(Sender),
+            send(Transport, remote_send_from(Sender, Pid, Message))
+        ; send(Transport, remote_send(Pid, Message)) )
     ; ground(Pid), Pid = '@'(_, Node),
       mailbox_store(Store), store_get(Store, send_transport(Node), Transport) ->
         self(Sender),
