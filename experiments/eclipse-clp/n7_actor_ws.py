@@ -152,6 +152,7 @@ class PeerActor:
         stop_deadline = None
         chunks, size = [], 0
         early = []
+        reply_targets = set()
         while not self.cancelled.is_set():
             if child is None and monotonic() >= deadline:
                 return "spawn_timeout"
@@ -168,6 +169,7 @@ class PeerActor:
                     outgoing = {"command": command["command"], "pid": child, field: command[field]}
                     if "browser_from" in command:
                         outgoing["browser_from"] = command["browser_from"]
+                        reply_targets.add(command["browser_from"])
                     send_json(outgoing)
                     if field == "reason" and stop_deadline is None:
                         stop_deadline = monotonic() + 2
@@ -202,7 +204,7 @@ class PeerActor:
                         return "peer_rejected"
                     if kind == "actor_message" and child is not None:
                         target, message = reply.get("target"), reply.get("message")
-                        if isinstance(target, str) and isinstance(message, str):
+                        if isinstance(target, str) and target in reply_targets and isinstance(message, str):
                             self.emit("message", target=target, data=message)
                     if kind == "spawned" and child is None:
                         child = reply["pid"]
@@ -231,7 +233,9 @@ class PeerActor:
         if reply["type"] == "down":
             reason = reply.get("reason")
             return reason if isinstance(reason, str) else "connection_closed"
-        if isinstance(reply.get("data"), str):
+        if isinstance(reply.get("stdout"), str):
+            self.emit("stdout", data=reply["stdout"])
+        elif isinstance(reply.get("data"), str):
             self.emit("output", data=reply["data"])
         return None
 

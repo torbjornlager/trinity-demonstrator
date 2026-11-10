@@ -29,6 +29,7 @@
 :- export op(1000, xfy, if).
 :- export start_actor_runtime/0, attach_mailbox/1.
 :- export actor_module/2, discard_deferred/1, post_actor_event/2.
+:- export actor_browser_session/2.
 :- export issued_actor_pid/1.
 :- export source_option/1, source_options_text/3, load_actor_source/2, fresh_reference/1, elapsed/1.
 :- export unicode_literal/2, text_string/2.
@@ -746,13 +747,16 @@ set_actor_context(Pid, Parent, Inbox) :-
     set_self(Pid),
     mailbox_store(Store),
     store_set(Store, web_prolog_parent, Parent),
-    ( store_get(actor_registry, Parent, actor(Engine, _, _)),
-      get_engine_property(Engine, store, ParentStore),
-      store_get(ParentStore, browser_session, Session) ->
+    ( actor_browser_session(Parent, Session) ->
         store_set(Store, browser_session, Session)
     ; true
     ),
     attach_mailbox(Inbox).
+
+actor_browser_session(Pid, Session) :-
+    store_get(actor_registry, Pid, actor(Engine, _, _)),
+    get_engine_property(Engine, store, Store),
+    store_get(Store, browser_session, Session).
 
 browser_session(Session) :-
     mailbox_store(Store),

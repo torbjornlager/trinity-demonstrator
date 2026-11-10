@@ -135,12 +135,13 @@ peer_actor_command(Replies, Pid, Command, Field, Value) :-
                          command:Command, Field:Text]})
     ; true ).
 
-% Ask the peer to route replies to the spawning actor over this connection.
-% Only the parent's own first argument can name that return route.
+% A local sender in the spawning browser session can supply its own
+% PID as the first argument to receive replies over the peer connection.
 peer_actor_send(Replies, Sender, Pid, Message) :-
     ( store_get(peer_actors, pid(Pid), Proxy) ->
         goal_template_texts(Message, Message, Text, _),
-        ( store_get(peer_actors, Proxy, peer(Sender, _, _, active(Pid))),
+        ( store_get(peer_actors, Proxy, peer(Parent, _, _, active(Pid))),
+          actor_browser_session(Parent, Session), actor_browser_session(Sender, Session),
           compound(Message), arg(1, Message, From), From == Sender ->
             sprintf(FromText, "%d", [Sender]),
             Return = [browser_from:FromText]
@@ -159,10 +160,16 @@ peer_actor_event(Proxy, Fields) :-
             ( catch(parse_goal(Text, isotope_bridge, Term, _), _, fail) -> Value = Term
             ; Value = Text ),
             send(Parent, output(Pid, Value))
+        ; Event == "stdout", Status = active(_), memberchk(data:Text, Fields) ->
+            ( actor_browser_session(Parent, Session) ->
+                send(main, browser_child_output(Session, Text))
+            ; true )
         ; Event == "message", Status = active(_), memberchk(target:Target, Fields),
-          sprintf(ParentText, "%d", [Parent]), Target == ParentText, memberchk(data:Text, Fields),
+          number_string(Recipient, Target), integer(Recipient),
+          actor_browser_session(Parent, Session), actor_browser_session(Recipient, Session),
+          memberchk(data:Text, Fields),
           catch(parse_goal(Text, isotope_bridge, Message, _), _, fail) ->
-            send(Parent, Message)
+            send(Recipient, Message)
         ; Event == "closed", memberchk(reason:Text, Fields) ->
             store_delete(peer_actors, Proxy),
             store_delete(peer_actors, monitor(Ref)),
