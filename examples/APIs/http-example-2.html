@@ -69,15 +69,15 @@
         var clearButton = document.getElementById("clear-button");
         var results = document.getElementById("results");
         var logNode = document.getElementById("log");
-        var program = [
-          "echo :-",
+        var echoGoal = [
+          "repeat,",
           "    writeln('Enter a Prolog term (stop to finish).'),",
           "    read(Something),",
           "    (   Something == stop",
-          "    ->  writeln(done)",
+          "    ->  !, writeln(done)",
           "    ;   writeln(Something),",
-          "        echo",
-          "    )."
+          "        fail",
+          "    )"
         ].join("\n");
 
         function clearLog() {
@@ -154,12 +154,6 @@
           });
         }
 
-        function prologQuotedText(text) {
-          return "'" + String(text)
-            .replace(/\\/g, "\\\\")
-            .replace(/'/g, "''") + "'";
-        }
-
         async function cleanupSession(pid) {
           if (!pid) {
             return;
@@ -210,14 +204,14 @@
                 "Content-Type": "application/json"
               },
               body: JSON.stringify({
-                options: "[session(true),src_text(" + prologQuotedText(program) + ")]"
+                options: "[session(true)]"
               })
             });
             pid = spawned.pid;
 
             var event = await postForm("/toplevel_call", {
               pid: pid,
-              goal: "echo",
+              goal: echoGoal,
               template: "true",
               format: "json"
             });
