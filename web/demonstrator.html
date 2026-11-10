@@ -5032,10 +5032,26 @@
 
       function describeJsonError(json, exceptionTerm) {
         if (json && typeof json === "object" && json.type === "error") {
-          if (exceptionTerm && Object.prototype.hasOwnProperty.call(json, "details")) {
-            return String(json.details || json.data || "unknown error");
+          var data = String(json.data || "unknown error");
+          var detail = json.details || json.term;
+          if (exceptionTerm) {
+            return String(detail || data);
           }
-          return String(json.data || "unknown error");
+          if (json.code) {
+            return data;
+          }
+          var candidate = String(detail || data).trim();
+          var rendered = humanizePrologErrorTerm(candidate);
+          if (rendered !== candidate &&
+              /^(?:error\(|exception\(|[a-z_]+_error(?:\(|$)|server_down\(|statechart_startup_error\()/.test(candidate)) {
+            return rendered;
+          }
+          if (/^Unknown message:\s*/.test(data) ||
+              (rendered === candidate && /^[a-z][A-Za-z0-9_]*\(/.test(candidate) &&
+               candidate.endsWith(")"))) {
+            return "Unhandled exception: " + candidate.replace(/^Unknown message:\s*/, "");
+          }
+          return data;
         }
         return JSON.stringify(json, null, 2);
       }
@@ -5078,6 +5094,16 @@
           return value.replace(/_/g, " ");
         }
         return value;
+      }
+
+      function displayPredicateIndicator(text) {
+        var value = String(text || "").trim();
+        var args = unwrapPrologCompound(value, "/") || unwrapPrologCompound(value, "'/'");
+        if (args && args.length === 2 && /^\d+$/.test(args[1])) {
+          value = args[0] + "/" + args[1];
+        }
+        var indicator = value.match(/^(?:\(([^()]+)\)|([^\s]+?))\s*\/\s*(\d+)$/);
+        return indicator ? (indicator[1] || indicator[2]) + "/" + indicator[3] : value;
       }
 
       function prologTermKindDescription(text) {
@@ -5153,7 +5179,10 @@
         args = unwrapPrologCompound(value, "existence_error");
         if (args && args.length >= 2) {
           if (args[0] === "procedure") {
-            return "Unknown procedure: " + stripPrivateActorModuleIndicator(args[1]);
+            return "Unknown procedure: " + displayPredicateIndicator(stripPrivateActorModuleIndicator(args[1]));
+          }
+          if (args[0] === "actor_name") {
+            return "The name '" + args[1].replace(/^'(.*)'$/, "$1") + "' is not associated with a pid.";
           }
           return "Existence error: " + humanizeErrorToken(args[0]) + " " + args[1];
         }
@@ -5166,9 +5195,10 @@
         }
         args = unwrapPrologCompound(value, "type_error");
         if (args && args.length >= 2) {
+          var culprit = displayPredicateIndicator(args[1]);
           return "Type error: " +
-            humanizeErrorToken(args[0]) + " expected, found " + args[1] +
-            " (" + prologTermKindDescription(args[1]) + ")";
+            humanizeErrorToken(args[0]) + " expected, found " + culprit +
+            " (" + prologTermKindDescription(culprit) + ")";
         }
         args = unwrapPrologCompound(value, "domain_error");
         if (args && args.length >= 2) {

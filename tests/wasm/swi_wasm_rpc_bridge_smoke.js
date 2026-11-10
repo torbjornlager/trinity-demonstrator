@@ -173,6 +173,65 @@ const errorDisplayHelpers = Function("SwiWasmNode",
     source.indexOf("function summarizeStructuredError")
   ) + "\nreturn { exceptionDisplayTerm, sanitizeDownReasonTerm, humanizePrologErrorTerm, prologTermKindDescription };"
 )(runtime);
+const renderWireError = Function("SwiWasmNode",
+  source.slice(source.indexOf("function describeJsonError("), source.indexOf("function isDollarVarStartChar")) +
+  "\nconst " + source.slice(source.indexOf("formatErrorDisplay: function(message)"), source.indexOf("protocolLogFieldOrder: function"))
+    .trim().replace(/^formatErrorDisplay:/, "formatErrorDisplay =").replace(/,$/, ";") +
+  "\nreturn (frame, errorMessageDetail = 'short') => formatErrorDisplay.call(" +
+  "{errorMessageDetail, formatDisplayText: String}, describeJsonError(frame, errorMessageDetail === 'exception'));"
+)(runtime);
+for (const [expected, frames] of [
+  ["Arguments are not sufficiently instantiated", [
+    {data: "(is)/2: Arguments are not sufficiently instantiated", details: "error(instantiation_error,_)"},
+    {data: "error(instantiation_error, (is) / 2)"},
+    {data: "error(instantiation_error,/(is,2))"}
+  ]],
+  ["Type error: evaluable expected, found a/0 (a compound term)", [
+    {data: "Native diagnostic", details: "error(type_error(evaluable,a/0),_)"},
+    {data: "error(type_error(evaluable, a / 0), (+) / 2)"},
+    {data: "error(type_error(evaluable,/(a,0)),/(is,2))"}
+  ]],
+  ["Type error: integer expected, found a (an atom)", [
+    {data: "between/3: Type error: `integer' expected, found `a'", details: "error(type_error(integer,a),_)"},
+    {data: "error(type_error(integer,a),between/3)"},
+    {data: "error(type_error(integer, a), between / 3)"}
+  ]],
+  ["Evaluation error: zero divisor", [
+    {data: "Arithmetic: evaluation error: zero_divisor", details: "error(evaluation_error(zero_divisor),_)"},
+    {data: "error(evaluation_error(zero_divisor),(/)/2)"}
+  ]],
+  ["Unknown procedure: =/2", [
+    {data: "Unknown procedure: =/2", details: "error(existence_error(procedure,(=)/2),_)"},
+    {data: "error(existence_error(procedure,/(=,2)),context)"}
+  ]],
+  ["The name 'echo_actor' is not associated with a pid.", [
+    {data: "error(existence_error(actor_name, echo_actor), send / 2)"},
+    {data: "Native diagnostic", details: "error(existence_error(actor_name,echo_actor),_)"}
+  ]],
+  ["Unhandled exception: example_exception(a)", [
+    {data: "Unknown message: example_exception(a)", details: "example_exception(a)"},
+    {data: "example_exception(a)"}
+  ]],
+  ["Invalid or missing prompt reference", [
+    {code: "invalid_prompt_ref", data: "Invalid or missing prompt reference"}
+  ]]
+]) {
+  for (const frame of frames) {
+    ok(renderWireError({type: "error", ...frame}) === expected,
+       "equivalent wire errors share shell prose: " + expected);
+  }
+}
+for (const frame of [
+  {data: "Native diagnostic", details: "error(type_error(integer,a),_)"},
+  {data: "error(type_error(integer,a),between/3)"},
+  {data: "Native diagnostic", term: "error(type_error(integer,a),example_context)"}
+]) {
+  ok(renderWireError({type: "error", ...frame}, "short") === "Type error: integer expected, found a (an atom)" &&
+     renderWireError({type: "error", ...frame}, "exception") === "error(type_error(integer,a),_)",
+     "the terminal setting switches the same error between prose and a context-elided term");
+}
+ok(renderWireError({type: "error", data: "Invalid or missing prompt reference"}, "exception") ===
+   "Invalid or missing prompt reference", "exception mode can still display a prose-only diagnostic");
 const exceptionDisplayTerm = errorDisplayHelpers.exceptionDisplayTerm;
 const humanizePrologErrorTerm = errorDisplayHelpers.humanizePrologErrorTerm;
 for (const text of ['server_down(false)', 'Unknown message: server_down(false)',
@@ -626,7 +685,7 @@ ok(includes('<div class="settings-option-label">Show exception terms</div>') &&
    !includes('errorMessageDetailOptions') &&
    includes('window.localStorage.getItem("wb.errorMessageDetail")') &&
    includes('window.localStorage.setItem("wb.errorMessageDetail", this.errorMessageDetail)') &&
-   includes('Object.prototype.hasOwnProperty.call(json, "details")') &&
+   includes('var detail = json.details || json.term;') &&
    includes('this.errorMessageDetail === "exception"') &&
    includes('function exceptionDisplayTerm(text)') &&
    includes('/swi_wasm_actor_worker.js?v=20261018-answer-terms-v27'),
