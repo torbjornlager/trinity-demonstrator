@@ -4,6 +4,7 @@
 :- lib(prolog_extras).
 :- ensure_loaded(library(swi)).
 :- ensure_loaded(web_prolog_library).
+:- ensure_loaded(portable_arithmetic).
 :- import get_time/1, node_setting/2 from web_prolog_library.
 
 :- export spawn/1, actors/1.
@@ -63,6 +64,7 @@
 
 % Start once from the root engine, before spawning actors.
 start_actor_runtime :-
+    set_event_handler(21, undefined_arithmetic_expression/3),
     record_create(Reports),
     bag_create(IdLock),
     bag_create(Lock),
@@ -74,6 +76,14 @@ start_actor_runtime :-
     store_set(actor_registry, runtime, runtime(Reports, IdLock, Lock)),
     engine_create(Reaper, [thread, detached(true)]),
     engine_resume_thread(Reaper, reap_actors(Reports, Lock)).
+
+% ECLiPSe's evaluator reports the actual failing subexpression in event 21.
+% Preserve the default handler for runtime modules using the native policy.
+undefined_arithmetic_expression(Event, Goal, Module) :-
+    ( get_flag(unknown, error)@Module, Goal = (_ is Expression) ->
+        functor(Expression, Name, Arity),
+        throw(error(type_error(evaluable, Name/Arity), (is)/2))
+    ; error(default(Event), Goal)@Module ).
 
 spawn_(Goal, Module) :- spawn_(Goal, _, Module).
 
@@ -507,12 +517,20 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text, Io) :-
         mailbox_store(Store), store_set(Store, browser_session, Pid)
     ; true
     ),
+    set_flag(unknown, error)@Private,
     compile_term([(:- local op(200, xfx, '@')),
                   (:- local op(700, xfx, '=@=')),
                   (:- import(actors)), (:- import(exit/1 from actors)),
                   (:- import(parallel/1 from actors)),
                   (:- local macro(type(string), unicode_literal/2, [])),
                   (:- import(web_prolog_library)),
+                  (:- import((is)/2 from portable_arithmetic)),
+                  (:- import((<)/2 from portable_arithmetic)),
+                  (:- import((>)/2 from portable_arithmetic)),
+                  (:- import((=<)/2 from portable_arithmetic)),
+                  (:- import((>=)/2 from portable_arithmetic)),
+                  (:- import((=:=)/2 from portable_arithmetic)),
+                  (:- import((=\=)/2 from portable_arithmetic)),
                   (:- import(memberchk/2 from web_prolog_library)),
                   (:- import(succ/2 from web_prolog_library)),
                   (:- import(maplist/2 from web_prolog_library)),

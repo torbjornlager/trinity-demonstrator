@@ -1036,6 +1036,29 @@ def check_stateless_cache(origin, ca):
     print("N7 stateless pages resumed without rerunning the query prefix in JSON and Prolog")
 
 
+def check_formal_errors(origin, ca):
+    tls = ssl.create_default_context(cafile=str(ca))
+    owner = build_opener(HTTPSHandler(context=tls), HTTPCookieProcessor(CookieJar()))
+    http(owner, origin + "/demonstrator")
+    source = """bad_div(X) :- X is 5/(2-2).
+bad_functor(X) :- X is unknown_arithmetic(2)+1.
+bad_call :- absent_private_predicate(x)."""
+    cases = [
+        ("bad_div(X)", "evaluation_error(zero_divisor)"),
+        ("bad_functor(X)", "type_error(evaluable,unknown_arithmetic/1)"),
+        ("bad_call", "existence_error(procedure,absent_private_predicate/1)"),
+        ("Expr = 7 / -0.0, X is Expr", "evaluation_error(zero_divisor)"),
+        ("2 < 1 + 7/0", "evaluation_error(zero_divisor)"),
+        ("X is unknown_arithmetic / 0", "type_error(evaluable,unknown_arithmetic/0)"),
+    ]
+    for goal, formal in cases:
+        fields = {"goal": f"catch((({goal}),fail),error({formal},_),true)",
+                  "src_text": source, "template": "verified", "format": "prolog"}
+        _, body = http(owner, origin + "/call?" + urlencode(fields), headers={"Origin": origin})
+        expect(re.sub(rb"\s+", b"", body), b"success([verified],false).")
+    print("N7 formal errors are catchable in loaded source and runtime arithmetic")
+
+
 def check_shared_database(origin, ca, assets):
     tls = ssl.create_default_context(cafile=str(ca))
     source = origin + "/n7-shell/shared-db.pl"
@@ -1389,6 +1412,7 @@ def main():
                         profile="actor" if args.advertise_actor else "isotope",
                         unicode_literals=True, sxml_peer=chart_peer, actor_report=args.actor_report)
             check_stateless_cache(origin, ca)
+            check_formal_errors(origin, ca)
             if args.shell:
                 check_shared_database(origin, ca, assets)
         except Exception:
