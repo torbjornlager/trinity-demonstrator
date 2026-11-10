@@ -421,6 +421,7 @@ prepare_actor(Pid, Parent, Inbox, Goal, Private, Text, Io) :-
     ; true
     ),
     compile_term([(:- local op(200, xfx, '@')),
+                  (:- local op(700, xfx, '=@=')),
                   (:- import(actors)), (:- import(exit/1 from actors)),
                   (:- import(parallel/1 from actors)),
                   (:- local macro(type(string), unicode_literal/2, [])),

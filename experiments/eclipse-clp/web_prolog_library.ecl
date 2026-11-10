@@ -4,6 +4,7 @@
 :- export maplist/2, maplist/3, maplist/4, maplist/5, maplist/6, maplist/7, maplist/8.
 :- export foldl/4, foldl/5, foldl/6, call_nth/2, countall/2.
 :- export runtime_property/1.
+:- export ('=@=')/2.
 
 :- tool(maplist/2, maplist_/3).
 :- tool(maplist/3, maplist_/4).
@@ -24,6 +25,9 @@ runtime_property(inbound_addressable(true)).
 runtime_property(dom(false)).
 runtime_property(actor_isolation(independent)).
 runtime_property(hard_termination(true)).
+
+% SWI's variant comparison uses the same variable-sharing test as variant/2.
+'=@='(Left, Right) :- variant(Left, Right).
 
 % A first match commits before inspecting the rest of the list.
 memberchk(Element, List) :-
