@@ -252,7 +252,7 @@ def read_bridge_reply(stream, limit=-1):
 
 def normalize_answer(reply):
     event = reply.get("event", reply) if reply["type"] == "stateless" else reply
-    if event["type"] == "success":
+    if event["type"] == "success" and "wire_target" not in event:
         for row in event["data"]:
             for name, value in row.items():
                 row[name] = unicode_binding_text(value)
@@ -317,7 +317,8 @@ class Bridge:
                 # Waiting releases the bridge lock.
                 if not self.state_changed.wait(self.remaining(deadline)):
                     raise TimeoutError()
-            if active and not (command in ("abort", "halt") and active <= {"call", "next", "poll"}):
+            if active and not (command in ("abort", "halt")
+                               and active <= {"call", "next", "poll", "ws_toplevel_query"}):
                 raise ValueError("Another request is pending for this session")
             request_id = next(self.request_ids)
             request["request_id"] = request_id
@@ -542,7 +543,7 @@ class Bridge:
                 reply["prompt_ref"] = str(reply["prompt_ref"])
         elif kind in ("output", "responded"):
             self.sessions[request["pid"]] = ("poll", None)
-        elif command in ("call", "next", "poll"):
+        elif command in ("call", "next", "poll") or (command == "ws_toplevel_query" and "pid" in reply):
             state = "next" if kind == "success" and reply["more"] else "idle"
             self.sessions[request["pid"]] = (state, None)
         elif kind in ("stop", "abort"):
@@ -611,6 +612,8 @@ class Bridge:
             if "browser_options" in fields:
                 request.update(browser_options=fields["browser_options"],
                                browser_origin=fields["browser_origin"])
+        elif command == "ws_toplevel_query":
+            request.update(message=fields["message"], browser_origin=fields["browser_origin"], wire_state=state)
         elif command == "abort" and fields.get("browser_abort") is True:
             request["browser_abort"] = True
         elif command == "respond":

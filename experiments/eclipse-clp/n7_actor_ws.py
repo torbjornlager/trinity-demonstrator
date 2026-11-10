@@ -20,6 +20,7 @@ MAX_PEER_MESSAGE = 16 * 1024
 MAX_OWNER_MESSAGE = 256 * 1024
 SESSION_COMMANDS = {"call", "next", "stop", "abort", "halt", "respond"}
 QUERY_COMMANDS = ("toplevel_call", "toplevel_next", "toplevel_respond", "browser_io_reply")
+SYNC_SUBPROTOCOLS = ("web-prolog-sync-spawn-v1", "web-prolog-sync-v1")
 
 
 def published_counter(host):
@@ -150,7 +151,7 @@ class PeerActor:
 
         if self.cancelled.is_set():
             return "connection_closed"
-        sync_protocols = ("web-prolog-sync-spawn-v1", "web-prolog-sync-v1") if toplevel else ()
+        sync_protocols = SYNC_SUBPROTOCOLS if toplevel else ()
         send(Request(host=endpoint.netloc, target="/ws", subprotocols=sync_protocols))
         sync_supported = False
         child = None
@@ -290,7 +291,8 @@ def serve(handler):
         wire.initiate_upgrade_connection(
             [(key.encode("ascii"), value.encode("latin-1"))
              for key, value in handler.headers.raw_items()], handler.path)
-        if not any(isinstance(event, Request) for event in wire.events()):
+        upgrade = next((event for event in wire.events() if isinstance(event, Request)), None)
+        if upgrade is None:
             raise ValueError("Missing WebSocket upgrade")
     except (ValueError, LocalProtocolError, RemoteProtocolError):
         handler.send_error(400, "Invalid WebSocket upgrade")
@@ -305,7 +307,9 @@ def serve(handler):
     connection = ActorConnection(handler.server.bridge, handler.server.private_settings[1], send)
     handler.connection.settimeout(60)
     try:
-        connection.send(AcceptConnection(extra_headers=[(b"cache-control", b"no-store")]))
+        subprotocol = next((offer for offer in upgrade.subprotocols if offer in SYNC_SUBPROTOCOLS), None)
+        connection.send(AcceptConnection(subprotocol=subprotocol,
+                                         extra_headers=[(b"cache-control", b"no-store")]))
         chunks, size = [], 0
         while data := handler.rfile.read1(4096):
             with wire_lock:
@@ -386,7 +390,7 @@ class ActorConnection:
             request = json.loads(text)
             if not isinstance(request, dict):
                 raise ValueError("Expected a JSON command object")
-            if request.get("command") in QUERY_COMMANDS:
+            if request.get("command") in QUERY_COMMANDS or self.session_send(request):
                 if not self.query_waiters.acquire(blocking=False):
                     raise ValueError("Too many pending toplevel queries")
                 submitted = Event()
@@ -416,6 +420,10 @@ class ActorConnection:
             reply.update({key: request[key] for key in ("pid", "request_id") if key in request})
         self.emit(reply)
 
+    def session_send(self, request):
+        pid = request.get("pid")
+        return request.get("command") == "send" and type(pid) is int and pid in self.sessions
+
     def command(self, request, *, submitted=None):
         command = request["command"]
         if not isinstance(command, str):
@@ -426,6 +434,17 @@ class ActorConnection:
             self.io_ack = request.get("io_ack") is True
             self.emit({"type": "transport_welcome", "version": 1,
                        "protocol": "web_prolog_browser_actor", "browser_pids": True, "io_ack": True})
+            return
+        if self.session_send(request):
+            message = request["message"]
+            if not isinstance(message, str):
+                raise ValueError("Expected a Prolog message term")
+            reply = self.bridge.request("ws_toplevel_query",
+                                        {"pid": request["pid"], "message": message, "browser_origin": self.origin},
+                                        timeout=18, submitted=submitted)
+            if "pid" not in reply and "request_id" in request:
+                reply["request_id"] = request["request_id"]
+            self.relay(reply)
             return
         if command in ("spawn", "send", "exit"):
             self.actor_command(command, request)
@@ -546,6 +565,11 @@ class ActorConnection:
         if event.get("ws_silent"):
             return
         event = dict(event)
+        target = event.pop("wire_target", None)
+        message = event.pop("wire_message", None)
+        if target:
+            self.emit({"type": "actor_message", "target": target, "message": message})
+            return
         pid = event.get("pid")
         if event["type"] == "prompt":
             self.prompts[pid] = event["prompt_ref"]

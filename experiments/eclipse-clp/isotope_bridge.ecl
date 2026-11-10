@@ -1235,17 +1235,43 @@ dispatch("call", Fields, Context, Event) :-
         append(Options, [limit(Limit)], PageOptions)
     ; interactive_goal(RawGoal, Goal), PageOptions = [limit(Limit)]
     ),
-    self(Relay),
-    toplevel_call(Id, (send(Relay, http_started(Id)), Goal),
-                  [template(Bindings)|PageOptions]),
-    % A pending Abort must interrupt this call, even if it arrived before
-    % the actor had picked the call out of its mailbox.
-    receive({ http_started(Id) -> await_event(Id, Context, Event) },
-            [timeout(3), on_timeout(retire(Id, "Query did not start", Event))]).
+    session_reply_mode(browser),
+    start_session_call(Id, Goal, [template(Bindings)|PageOptions], Context, Event).
 dispatch("next", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
+    ( session_reply_mode_current(wire(_, _)) -> session_reply_mode(wire(none, ""))
+    ; true ),
     toplevel_next(Id),
     await_event(Id, Context, Event).
+dispatch("ws_toplevel_query", Fields, Context, Event) :-
+    memberchk(pid:Id, Fields),
+    memberchk(message:Text, Fields),
+    memberchk(wire_state:State, Fields),
+    memberchk(browser_origin:OriginText, Fields),
+    atom_string(Origin, OriginText),
+    actor_module(Id, Module),
+    parse_goal(Text, Module, Command, _),
+    nonvar(Command),
+    ( Command = '$call'(RawGoal, Options), State == "idle" ->
+        wire_query_options(Options, call, "", Query, Mode),
+        import_browser_term(RawGoal-Query, Origin, Imported-ImportedOptions),
+        interactive_goal(Imported, Interactive),
+        browser_goal(Interactive, Goal),
+        % Preserve the supplied goal as the default template before rewriting.
+        ( memberchk(template(_), ImportedOptions) -> PageOptions = ImportedOptions
+        ; PageOptions = [template(Imported)|ImportedOptions] ),
+        relay_browser_origin(Origin),
+        session_reply_mode(Mode),
+        start_session_call(Id, Goal, PageOptions, Context, Event)
+    ; Command = '$next'(Options), State == "next" ->
+        ( session_reply_mode_current(wire(_, PreviousTarget)) -> true ; PreviousTarget = "" ),
+        wire_query_options(Options, next, PreviousTarget, Query, Mode),
+        relay_browser_origin(Origin),
+        session_reply_mode(Mode),
+        toplevel_next(Id, Query),
+        await_event(Id, Context, Event)
+    ; throw(error(domain_error(toplevel_wire_command, Command), toplevel_call/3))
+    ).
 dispatch("poll", Fields, Context, Event) :-
     memberchk(pid:Id, Fields),
     await_event(Id, Context, Event).
@@ -1283,6 +1309,52 @@ abort_session(Id, Event) :-
                 Event = {[type:abort, pid:Id]}
             },
             [timeout(3), on_timeout(retire(Id, "Abort acknowledgement timed out", Event))]).
+
+start_session_call(Id, Goal, Options, Context, Event) :-
+    self(Relay),
+    toplevel_call(Id, (send(Relay, http_started(Id)), Goal), Options),
+    % A pending Abort must interrupt this call, even if it arrived before
+    % the actor had picked the call out of its mailbox.
+    receive({ http_started(Id) -> await_event(Id, Context, Event) },
+            [timeout(3), on_timeout(retire(Id, "Query did not start", Event))]).
+
+session_reply_mode(Mode) :-
+    engine_self(Engine),
+    get_engine_property(Engine, store, Store),
+    store_set(Store, ws_reply_mode, Mode).
+
+session_reply_mode_current(Mode) :-
+    engine_self(Engine),
+    get_engine_property(Engine, store, Store),
+    store_get(Store, ws_reply_mode, Mode).
+
+wire_query_options(Options, Kind, DefaultTarget, Query, wire(Ref, Target)) :-
+    ( is_list(Options),
+      wire_query_options(Options, Kind, Query, none, Ref, none, Selected) ->
+        ( Selected == none -> Target = DefaultTarget ; Target = Selected )
+    ; throw(error(domain_error(toplevel_wire_options, Options), toplevel_call/3)) ).
+
+wire_query_options([], _, [], Ref, Ref, Target, Target).
+wire_query_options([Option|Options], Kind, Query, Ref0, Ref, Target0, Target) :-
+    nonvar(Option),
+    ( Option = '$request_ref'(Request), Ref0 == none, ground(Request), Request \== none ->
+        Ref1 = Request, Target1 = Target0, Query = Rest
+    ; Option = target(Address), Target0 == none, wire_query_target(Address, WireTarget) ->
+        Ref1 = Ref0, Target1 = WireTarget, Query = Rest
+    ; Option == format(prolog) ->
+        Ref1 = Ref0, Target1 = Target0, Query = Rest
+    ; ( Kind == call, ( Option = template(_) ; browser_call_option(Option) )
+      ; Kind == next, Option = limit(N), integer(N), N >= 1, N =< 100 ) ->
+        Ref1 = Ref0, Target1 = Target0, Query = [Option|Rest]
+    ),
+    wire_query_options(Options, Kind, Rest, Ref1, Ref, Target1, Target).
+
+% Only this connection's browser return addresses are accepted here.
+wire_query_target(Address, Text) :-
+    nonvar(Address), Address = Id@Node, Node == localhost,
+    ( Id == main -> Text = "main@localhost"
+    ; integer(Id), Id >= 1000000000, Id =< 9999999999,
+      sprintf(Text, "%d@localhost", [Id]) ).
 
 parse_goal(Text, Module, Goal, Bindings) :-
     concat_string([Text, "\n.\n"], Source),
@@ -1396,15 +1468,13 @@ await_event(Id, Context, Event) :-
             Event = already_sent
     ;
         success(Id, Answers, More) ->
-            maplist(answer_row, Answers, Data),
-            Event = {[type:success, pid:Id, data:Data, more:More]}
+            session_answer(success(Id, Answers, More), Event)
     ;
         failure(Id) ->
-            Event = {[type:failure, pid:Id]}
+            session_answer(failure(Id), Event)
     ;
         error(Id, Error) ->
-            term_string(Error, Text),
-            Event = {[type:error, pid:Id, data:Text]}
+            session_answer(error(Id, Error), Event)
     ;
         browser_output(Id, Text) ->
             Event = {[type:output, pid:Id, data:Text, stdout:Text, browser_ack:true]}
@@ -1423,6 +1493,35 @@ await_event(Id, Context, Event) :-
         prompt(Id, _) ->
             retire(Id, "HTTP prompts require correlation", Event)
     }, [timeout(Wait), on_timeout(retire(Id, "Query event timed out", Event))]).
+
+session_answer(Answer, {Fields}) :-
+    ( session_reply_mode_current(wire(Ref, Target)) ->
+        wire_answer(Answer, Qualified, Payload),
+        ( Ref == none -> Tagged = Qualified, Correlation = []
+        ; Tagged = '$toplevel_reply'(Ref, Qualified),
+          probe_term_text(Ref, RefText), Correlation = [toplevel_correlation:RefText] ),
+        ( Target == "" -> Routed = []
+        ; probe_term_text(Tagged, Message), Routed = [wire_message:Message] ),
+        append([wire_target:Target|Payload], Correlation, TaggedFields),
+        append(TaggedFields, Routed, Fields)
+    ; browser_answer(Answer, Fields) ).
+
+browser_answer(success(Id, Answers, More), [type:success, pid:Id, data:Data, more:More]) :-
+    maplist(answer_row, Answers, Data).
+browser_answer(failure(Id), [type:failure, pid:Id]).
+browser_answer(error(Id, Error), [type:error, pid:Id, data:Text]) :-
+    term_string(Error, Text).
+
+wire_answer(success(Id, Answers, More), success(Id@Origin, Answers, More),
+            [type:success, pid:Id, data:Data, more:More, term:Term]) :-
+    relay_browser_origin(Origin),
+    maplist(probe_term_text, Answers, Data),
+    probe_term_text(Answers, Term).
+wire_answer(failure(Id), failure(Id@Origin), [type:failure, pid:Id]) :-
+    relay_browser_origin(Origin).
+wire_answer(error(Id, Error), error(Id@Origin, Error), [type:error, pid:Id, data:Term, term:Term]) :-
+    relay_browser_origin(Origin),
+    probe_term_text(Error, Term).
 
 event_text(Value, Text) :-
     ( string(Value) -> Text = Value

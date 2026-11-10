@@ -339,6 +339,46 @@ if not pubsub_only and suite['main']():
 def option(name):
     return sys.argv[sys.argv.index(name) + 1]
 
+if not pubsub_only:
+    combined = 'web-prolog-sync-spawn-v1'
+    legacy = 'web-prolog-sync-v1'
+    for offer, selected in [(combined, combined), (legacy, legacy),
+                            ('unknown,' + legacy + ',' + combined, legacy), ('unknown', None)]:
+        wire = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                                 extra_headers=(option('--header'), 'Sec-WebSocket-Protocol: ' + offer))
+        try:
+            assert wire.response_headers.get('sec-websocket-protocol') == selected
+            wire.send_json(dict(command='toplevel_call', pid=99999999999, goal='true'))
+            wire.send_json(dict(command='toplevel_spawn', options='[session(true)]', request_id='wire-good'))
+            wire.send_json(dict(command='toplevel_spawn', options="[src_text('broken(')]", request_id='wire-bad'))
+            error, spawned, rejected = (wire.recv_json() for _ in range(3))
+            assert error['type'] == 'error' and 'request_id' not in error, error
+            assert (spawned['type'], spawned['request_id']) == ('spawned', 'wire-good'), spawned
+            assert (rejected['type'], rejected['request_id']) == ('error', 'wire-bad'), rejected
+            pid = spawned['pid']
+            if selected is not None:
+                wire.send_json(dict(command='send', pid=pid,
+                                    message="'$call'(member(X,[a,b,c]),[template(X),limit(1),'$request_ref'(ref(1))])"))
+                page = wire.recv_json()
+                assert (page['type'], page['pid'], page['toplevel_correlation'], page['term'], page['more']) == (
+                    'success', pid, 'ref(1)', '[a]', True), page
+                wire.send_json(dict(command='send', pid=pid,
+                                    message="'$next'([target(1234567890@localhost),'$request_ref'(ref(2))])"))
+                page = wire.recv_json()
+                assert (page['type'], page['target']) == ('actor_message', '1234567890@localhost'), page
+                term = page['message'].replace(' ', '')
+                assert term.startswith("'$toplevel_reply'(ref(2),success(") and term.endswith(",[b],true))"), page
+                wire.send_json(dict(command='send', pid=pid, message="'$next'([])"))
+                page = wire.recv_json()
+                assert (page['type'], page['target']) == ('actor_message', '1234567890@localhost'), page
+                term = page['message'].replace(' ', '')
+                assert term.startswith('success(') and term.endswith(',[c],false)'), page
+            wire.send_json(dict(command='toplevel_halt', pid=pid))
+            assert wire.recv_json()['type'] == 'halted'
+        finally:
+            wire.close()
+    print('WebSocket subprotocol selection, spawn reply IDs, and correlated pages passed')
+
 ws = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
                         extra_headers=(option('--header'),))
 try:
