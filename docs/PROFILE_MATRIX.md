@@ -56,7 +56,7 @@ Adds to `isobase`:
 - `toplevel_spawn/1-2`, `toplevel_call/2-3`, `toplevel_next/1-2`,
   `toplevel_stop/1`, `toplevel_abort/1`
 - shell/session I/O helpers such as `output/1-2`, `terminal_output/1-2`,
-  `input/2-3`, `respond/2`, `flush`
+  `input/2-3`, `respond/3`, `flush`
 - `read/1-2`, `read_term/2-3`, `with_io_target/2`
 
 ### `actor`

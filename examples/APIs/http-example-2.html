@@ -230,11 +230,11 @@
                 response = "stop.";
               }
 
-              event = await postForm("/toplevel_respond", {
-                pid: pid,
-                input: response,
-                format: "json"
-              });
+              var reply = {pid: pid, input: response, format: "json"};
+              if (event.prompt_ref != null) {
+                reply.prompt_ref = event.prompt_ref;
+              }
+              event = await postForm("/toplevel_respond", reply);
 
               event = await advanceToInteractiveOrFinal(pid, event);
             }

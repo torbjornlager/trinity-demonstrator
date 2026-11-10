@@ -15,7 +15,11 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 LABEL = "se.elfenbenstornet.trinity-n7-adapter"
 ORIGIN = "https://n7.elfenbenstornet.se"
+N1 = "https://n1.elfenbenstornet.se"
+N2 = "https://n2.elfenbenstornet.se"
 N3 = "https://n3.elfenbenstornet.se"
+N4 = "https://n4.elfenbenstornet.se"
+PEER_ALLOWLISTS = ([N3], [N1, N3], [N1, N2, N3], [N1, N2, N3, N4])
 ASSETS = (
     "n7-catalog-v1/shared/web/demonstrator.html",
     "n7-catalog-v1/shared/web/vendor/trinity-host.js",
@@ -31,6 +35,11 @@ SOURCES = (
     "experiments/eclipse-clp/n7_pilot.html",
     "tools/n7_recovery.py",
 )
+WS_SOURCES = (
+    "experiments/eclipse-clp/n7_actor_ws.py",
+    "experiments/eclipse-clp/requirements-actor-ws.txt",
+)
+WS_REQUIREMENTS = WS_SOURCES[1]
 
 
 def docker(*args):
@@ -101,16 +110,27 @@ def verify_site(edge, oauth, args, template, main, base):
 def capture(output, edge, oauth, base_path, launch_agent, image):
     args = plistlib.loads(launch_agent.read_bytes())["ProgramArguments"]
     image = image or args[args.index("--pilot-image") + 1]
+    peers = sorted(value for flag, value in zip(args, args[1:]) if flag == "--allow-peer")
     if (args[args.index("--private-origin") + 1] != ORIGIN
             or args[args.index("--pilot-image") + 1] != image
-            or args.count("--allow-peer") != 1
-            or args[args.index("--allow-peer") + 1] != N3
+            or peers not in PEER_ALLOWLISTS
+            or args[-1] == "--allow-peer"
             or any(x.startswith("--allow-peer=") for x in args)):
-        raise ValueError("Expected the live N7 image, origin and N3-only allowlist")
+        raise ValueError("Expected the live N7 image, origin and approved peer allowlist")
     adapter = Path(args[1]).resolve()
-    for source in (adapter, adapter.with_name("n7_pilot.html"),
-                   adapter.parents[2] / "examples/APIs/http_example-1.html"):
-        relative = source.relative_to(adapter.parents[2])
+    actor_ws = "--actor-ws" in args
+    profile = "actor" if "--advertise-actor" in args else "isotope"
+    if profile == "actor" and not actor_ws:
+        raise ValueError("ACTOR advertisement requires the WebSocket adapter")
+    deployed_root = adapter.parents[2]
+    deployed_sources = ["experiments/eclipse-clp/isotope_http.py", "experiments/eclipse-clp/n7_pilot.html"]
+    demo = "examples/APIs/http_example-1.html"
+    if (deployed_root / demo).exists():
+        deployed_sources.append(demo)
+    if actor_ws:
+        deployed_sources.extend(WS_SOURCES)
+    for relative in deployed_sources:
+        source = deployed_root / relative
         if digest(source) != digest(ROOT / relative):
             raise ValueError(f"Deployed adapter file differs from source: {relative}")
     shell = Path(args[args.index("--shell-assets") + 1]).resolve() if "--shell-assets" in args else None
@@ -135,10 +155,15 @@ def capture(output, edge, oauth, base_path, launch_agent, image):
         (output / "Caddyfile").write_bytes(deployed)
         (output / "Caddyfile.rollback").write_bytes(base)
         (output / "n7.Caddyfile").write_text(template)
-        for relative in SOURCES:
+        for relative in SOURCES + (WS_SOURCES if actor_ws else ()):
             target = output / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        if actor_ws:
+            check_ws_python(args[0], output)
+            subprocess.run([args[0], "-m", "pip", "download", "--disable-pip-version-check",
+                            "--only-binary=:all:", "--no-deps", "--dest", str(output / "wheels"),
+                            "-r", str(output / WS_REQUIREMENTS)], check=True)
         for relative in ASSETS:
             target = output / "assets" / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -153,7 +178,8 @@ def capture(output, edge, oauth, base_path, launch_agent, image):
         files = inventory(output)
         manifest = {"image": release_tag, "image_id": release_id, "edge_image": edge_image,
                     "edge_image_id": edge_image_id, "rollback_matches_edge_image": base == baked_base,
-                    "origin": ORIGIN, "allowed_peers": [N3], "files": files}
+                    "origin": ORIGIN, "allowed_peers": peers, "profile": profile,
+                    "actor_ws": actor_ws, "files": files}
         if shell_record is not None:
             manifest["shell"] = shell_record
         (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
@@ -166,10 +192,17 @@ def capture(output, edge, oauth, base_path, launch_agent, image):
 def verify(bundle):
     manifest = json.loads((bundle / "manifest.json").read_text())
     actual = inventory(bundle)
-    if actual != manifest["files"] or manifest["origin"] != ORIGIN or manifest["allowed_peers"] != [N3]:
+    if (actual != manifest["files"] or manifest["origin"] != ORIGIN
+            or manifest["allowed_peers"] not in PEER_ALLOWLISTS):
         raise ValueError("Recovery bundle failed integrity verification")
     if "shell" in manifest and shell_identity(bundle / "shell") != manifest["shell"]:
         raise ValueError("Recovery shell identity differs from the manifest")
+    profile, actor_ws = manifest.get("profile", "isotope"), manifest.get("actor_ws", False)
+    if (type(actor_ws) is not bool or profile not in ("isotope", "actor")
+            or (profile == "actor" and not actor_ws)
+            or (actor_ws and (not set(WS_SOURCES) <= actual.keys() or not any(
+                name.startswith("wheels/") and name.endswith(".whl") for name in actual)))):
+        raise ValueError("Recovery bundle has invalid WebSocket settings")
     return manifest
 
 
@@ -181,8 +214,23 @@ def load_image(bundle, manifest):
     return manifest["image"]
 
 
-def adapter_command(bundle, manifest, port, owner, token_file, *, origin=None, peers=None, shell_assets=None):
-    argv = [sys.executable, str(bundle / "experiments/eclipse-clp/isotope_http.py"),
+def check_ws_python(python, bundle):
+    requirements = (bundle / WS_REQUIREMENTS).read_text().splitlines()
+    subprocess.run([str(python), "-c", """
+from importlib.metadata import version
+import sys
+import wsproto
+for pin in sys.argv[1:]:
+    name, expected = pin.split('==')
+    if version(name) != expected:
+        sys.exit(f'{name} must be installed at version {expected}')
+""", *requirements], check=True)
+
+
+def adapter_command(bundle, manifest, port, owner, token_file, *, origin=None, peers=None,
+                    shell_assets=None, python=None):
+    python = python or sys.executable
+    argv = [str(python), str(bundle / "experiments/eclipse-clp/isotope_http.py"),
             "--pilot-image", manifest["image"], "--port", str(port),
             "--private-origin", origin or manifest["origin"], "--owner", owner,
             "--proxy-token-file", str(token_file)]
@@ -190,12 +238,18 @@ def adapter_command(bundle, manifest, port, owner, token_file, *, origin=None, p
         argv.extend(["--allow-peer", peer])
     if "shell" in manifest:
         argv.extend(["--shell-assets", str(shell_assets or bundle / "shell")])
+    if manifest.get("actor_ws"):
+        check_ws_python(python, bundle)
+        argv.append("--actor-ws")
+    if manifest.get("profile") == "actor":
+        argv.append("--advertise-actor")
     return argv
 
 
 def launch_plist(bundle, manifest, args):
     config = {
-        "Label": LABEL, "ProgramArguments": adapter_command(bundle, manifest, args.port, args.owner, args.token_file),
+        "Label": LABEL, "ProgramArguments": adapter_command(
+            bundle, manifest, args.port, args.owner, args.token_file, python=args.python),
         "WorkingDirectory": str(bundle), "RunAtLoad": True, "KeepAlive": True, "ThrottleInterval": 5,
         "EnvironmentVariables": {"PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"},
         "StandardOutPath": str(args.log), "StandardErrorPath": str(args.log),
@@ -224,6 +278,8 @@ def main():
             command.add_argument("--token-file", type=lambda v: Path(v).resolve(), required=True)
             command.add_argument("--log", type=lambda v: Path(v).resolve(), required=True)
             command.add_argument("--port", type=int, default=18087)
+            command.add_argument("--python", type=lambda v: Path(v).absolute(),
+                                 help="adapter interpreter, including a venv with the bundled WebSocket wheels")
     args = parser.parse_args()
     if args.action == "capture":
         capture(args.output, args.edge, args.oauth, args.rollback_caddyfile, args.launch_agent, args.image)

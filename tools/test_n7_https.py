@@ -128,7 +128,8 @@ RUNTIME_PROPERTIES_GOAL = (
 
 def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
                 profile="isotope", ws_absent=False, workshop=None, workshop_absent=False,
-                unicode_literals=False, sxml_peer=None, pubsub_only=False, actor_report=None):
+                unicode_literals=False, sxml_peer=None, pubsub_only=False, actor_report=None,
+                recovery=False):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -187,7 +188,8 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
         http(owner, origin + "/n7-shell/n7-actor-workshop.html", status=404)
     if actor_core is not None:
         check_actor_ws(origin, ca, actor_core, anonymous, wrong, wrong_email, owner, spoof,
-                       workshop=workshop, sxml_peer=sxml_peer, pubsub_only=pubsub_only, report=actor_report)
+                       workshop=workshop, sxml_peer=sxml_peer, pubsub_only=pubsub_only,
+                       report=actor_report, recovery=recovery)
     if ws_absent:
         http(anonymous, origin + "/ws", headers=websocket_headers(origin), status=401)
         http(owner, origin + "/ws", headers=websocket_headers(origin), status=404)
@@ -206,29 +208,31 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
     response_headers, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
     expect(response_headers.get_content_type(), "application/json")
     expect(json.loads(data), {"type": "success", "data": [{"X": "owner"}], "more": False})
-    library_query = urlencode({
-        "goal": "nth1(2,L,b,[a,c]),L==[a,b,c],countall(between(1,4,_),4),"
-                "call_nth(between(1,4,Selected),3),"
-                "maplist(add,[1,2],[3,4],Sums),Sums==[4,6],"
-                "foldl(add,Sums,0,Total)",
-        "src_text": "add(A,B,C) :- C is A+B.",
-        "format": "json",
-    })
-    _, data = http(owner, origin + "/call?" + library_query, headers={"Origin": origin})
-    library_result = json.loads(data)
-    expect((library_result["type"], library_result["more"]), ("success", False))
-    expect({key: library_result["data"][0][key] for key in ("Selected", "Total")},
-           {"Selected": "3", "Total": "10"})
+    if not recovery:
+        library_query = urlencode({
+            "goal": "nth1(2,L,b,[a,c]),L==[a,b,c],countall(between(1,4,_),4),"
+                    "call_nth(between(1,4,Selected),3),"
+                    "maplist(add,[1,2],[3,4],Sums),Sums==[4,6],"
+                    "foldl(add,Sums,0,Total)",
+            "src_text": "add(A,B,C) :- C is A+B.",
+            "format": "json",
+        })
+        _, data = http(owner, origin + "/call?" + library_query, headers={"Origin": origin})
+        library_result = json.loads(data)
+        expect((library_result["type"], library_result["more"]), ("success", False))
+        expect({key: library_result["data"][0][key] for key in ("Selected", "Total")},
+               {"Selected": "3", "Total": "10"})
     if unicode_literals:
         query = urlencode({"goal": """fixture_chars(X), X == "aé€😀", X == [a,'é','€','😀'], "" == []""",
                            "format": "json", "src_text": 'fixture_chars("aé€😀").'})
         _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
         expect(json.loads(data)["data"], [{"X": "[a, 'é', '€', '😀']"}])
-    query = urlencode({"goal": "fixture_runtime",
-                       "src_text": "fixture_runtime :- " + RUNTIME_PROPERTIES_GOAL + ".",
-                       "format": "json"})
-    _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
-    expect(json.loads(data)["type"], "success")
+    if not recovery:
+        query = urlencode({"goal": "fixture_runtime",
+                           "src_text": "fixture_runtime :- " + RUNTIME_PROPERTIES_GOAL + ".",
+                           "format": "json"})
+        _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
+        expect(json.loads(data)["type"], "success")
     headers = {"Origin": origin, "Content-Type": "application/json"}
     spawn = {"options": "[session(true)]", "prompt_correlation": True}
     if shell:
@@ -237,7 +241,9 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
     spawned = json.loads(data)
     expect(spawned["type"], "spawned")
     pid = spawned["pid"]
-    expect(type(pid) is int and 1_000_000_000 <= pid <= 9_999_999_999, True)
+    expect(type(pid) is int, True)
+    if not recovery:
+        expect(1_000_000_000 <= pid <= 9_999_999_999, True)
 
     def post(command, **params):
         _, data = http(owner, origin + "/toplevel_" + command,
@@ -257,7 +263,10 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
             expect(post("stop")["type"], "stop")
         prompt = post("call", goal="read(X)")
         expect(prompt["type"], "prompt")
-        expect(re.fullmatch(r"[1-9][0-9]{9}", prompt["prompt_ref"]) is not None, True)
+        ref = prompt["prompt_ref"]
+        expect(isinstance(ref, str) and bool(ref), True)
+        if not recovery:
+            expect(re.fullmatch(r"[1-9][0-9]{9}", ref) is not None, True)
         expect(post("respond", input="owner_reply.", prompt_ref=prompt["prompt_ref"])["type"], "responded")
         expect(post("poll")["data"], [{"X": "owner_reply"}])
         if unicode_literals:
@@ -271,8 +280,9 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
     if shell:
         sign_in_path = "/oauth2/sign_in?" + urlencode({"rd": "/n7-shell/"})
         logout_path = "/oauth2/sign_out?" + urlencode({"rd": sign_in_path})
-        _, page = http(owner, origin + "/n7-shell/")
-        expect(logout_path.encode() in page and b"Sign out of N7" in page, True)
+        if not recovery:
+            _, page = http(owner, origin + "/n7-shell/")
+            expect(logout_path.encode() in page and b"Sign out of N7" in page, True)
         http(owner, origin + "/oauth2/auth", status=202)
         _, sign_in_page = http(owner, origin + logout_path)
         expect(b'name="rd" value="/n7-shell/"' in sign_in_page, True)
@@ -288,7 +298,7 @@ def websocket_headers(origin):
 
 
 def check_actor_ws(origin, ca, runner, anonymous, wrong, wrong_email, owner, spoof, *,
-                   workshop=None, sxml_peer=None, pubsub_only=False, report=None):
+                   workshop=None, sxml_peer=None, pubsub_only=False, report=None, recovery=False):
     upgrade = websocket_headers(origin)
     endpoint = origin + "/ws"
     http(anonymous, endpoint, headers={**upgrade, **spoof}, status=401)
@@ -340,6 +350,39 @@ if not pubsub_only and suite['main']():
 def option(name):
     return sys.argv[sys.argv.index(name) + 1]
 
+"""
+    # Recovery checks the archived runtime, which can predate current wire extensions.
+    recovery_prompt_check = """
+ws = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                        extra_headers=(option('--header'),))
+try:
+    ws.send_json(dict(command='toplevel_spawn', options='[session(true)]'))
+    spawned = ws.recv_json()
+    assert spawned['type'] == 'spawned', spawned
+    pid = spawned['pid']
+    ws.send_json(dict(command='toplevel_call', pid=pid, goal='input(first,A),input(second,B)'))
+    first = ws.recv_json()
+    assert (first['type'], first['data']) == ('prompt', 'first'), first
+    first_ref = first['prompt_ref']
+    ws.send_json(dict(command='toplevel_respond', pid=pid, prompt_ref=first_ref, input='one.'))
+    assert ws.recv_json()['type'] == 'responded'
+    second = ws.recv_json()
+    assert (second['type'], second['data']) == ('prompt', 'second'), second
+    second_ref = second['prompt_ref']
+    assert isinstance(first_ref, str) and isinstance(second_ref, str) and first_ref != second_ref
+    ws.send_json(dict(command='toplevel_respond', pid=pid, prompt_ref=first_ref, input='stale.'))
+    rejected = ws.recv_json()
+    assert rejected['type'] == 'error', rejected
+    ws.send_json(dict(command='toplevel_respond', pid=pid, prompt_ref=second_ref, input='two.'))
+    assert ws.recv_json()['type'] == 'responded'
+    assert ws.recv_json()['data'] == [{'A': 'one', 'B': 'two'}]
+    ws.send_json(dict(command='toplevel_halt', pid=pid))
+    assert ws.recv_json()['type'] == 'halted'
+finally:
+    ws.close()
+print('Restored ACTOR shell rejected a stale WebSocket prompt reference')
+"""
+    current_runtime_checks = """
 if not pubsub_only:
     combined = 'web-prolog-sync-spawn-v1'
     legacy = 'web-prolog-sync-v1'
@@ -918,6 +961,8 @@ finally:
     ws.close()
 print('Shell WebSocket session and output passed without capability negotiation')
 
+"""
+    workshop_checks = """
 if not workshop_path.is_file():
     sys.exit(0)
 workshop = workshop_path.read_text()
@@ -971,6 +1016,7 @@ finally:
     ws.close()
 print('N7 ACTOR workshop counters, prompts, and monitors passed')
 """
+    trust_fixture_ca += (recovery_prompt_check if recovery else current_runtime_checks) + workshop_checks
     chart_uris = ["/examples/statecharts/" + quote(path.name)
                   for path in sorted((ROOT / "examples/statecharts").glob("*.xml"))] if sxml_peer else []
     result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca),

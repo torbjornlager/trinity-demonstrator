@@ -2327,7 +2327,8 @@ ping_pong :-
 </p>
 
 <pre id="toplevel-call-input">?- toplevel_call($Pid, input('Input', X)),
-   receive({Answer -&gt; true}).
+   receive({prompt(_, prompt_ref(Ref, 'Input')) -&gt; true ;
+            prompt(_, 'Input') -&gt; Ref = legacy}).
 </pre>
 
 <p class="ask-buttons">
@@ -2336,10 +2337,11 @@ ping_pong :-
 </p>
 
 <p>
-    The shell should now receive a prompt term. Reply like this:
+    The shell receives the reference for this prompt. Pass it back with the reply.
+    The example also works with older runtimes that send only the question.
 </p>
 
-<pre id="toplevel-respond">?- respond($Pid, hello),
+<pre id="toplevel-respond">?- ($Ref == legacy -&gt; respond($Pid, hello) ; respond($Pid, $Ref, hello)),
    receive({Answer -&gt; true}).
 </pre>
 
@@ -2360,8 +2362,8 @@ an agent by replacing terminal input with a question to another process:</p>
 <pre>prove(A) :- askable(A, Q), input(Q, T), T == yes.</pre>
 
 <p>The expert runs in a toplevel actor. The shell plays the user: it receives
-<code>prompt(Pid, Question)</code>, chooses <code>yes</code> or <code>no</code>
-randomly, and answers with <code>respond/2</code>. Proof search determines which
+<code>prompt(Pid, prompt_ref(Ref, Question))</code>, chooses <code>yes</code> or <code>no</code>
+randomly, and answers with <code>respond(Pid, Ref, Answer)</code>. Proof search determines which
 question comes next. This follows the simulation in chapter 8 of the book.</p>
 
 <p>Select <strong>SWI-WASM</strong> and leave <strong>Settings &rarr; SWI-WASM
@@ -2454,13 +2456,19 @@ interact(Pid, Name) :-
             format(&#x27;A2: Yes, ~w is a good pet.~n&#x27;, [Name]) ;
         error(Pid, Error) -&gt;
             throw(Error) ;
+        prompt(Pid, prompt_ref(Ref, Question)) -&gt;
+            answer_question(Pid, Ref, Question),
+            interact(Pid, Name) ;
         prompt(Pid, Question) -&gt;
-            format(&#x27;A2: ~w~n&#x27;, [Question]),
-            random_member(Answer, [yes, no]),
-            respond(Pid, Answer),
-            format(&#x27;A1: ~w~n&#x27;, [Answer]),
+            answer_question(Pid, legacy, Question),
             interact(Pid, Name)
     }).
+
+answer_question(Pid, Ref, Question) :-
+    format(&#x27;A2: ~w~n&#x27;, [Question]),
+    random_member(Answer, [yes, no]),
+    (Ref == legacy -&gt; respond(Pid, Answer) ; respond(Pid, Ref, Answer)),
+    format(&#x27;A1: ~w~n&#x27;, [Answer]).
 </pre>
 </details>
 <p class="ask-buttons">

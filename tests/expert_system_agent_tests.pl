@@ -83,6 +83,9 @@ expert_conversation(Facts, Answers, Outcome, Questions) :-
 
 answer_expert(Pid, Answers, Outcome, Questions) :-
     receive({
+        prompt(Pid, prompt_ref(Ref, Question)) ->
+            Answers = [Answer|Rest], Questions = [Question|Tail],
+            respond(Pid, Ref, Answer), answer_expert(Pid, Rest, Outcome, Tail) ;
         prompt(Pid, Question) ->
             Answers = [Answer|Rest], Questions = [Question|Tail],
             respond(Pid, Answer), answer_expert(Pid, Rest, Outcome, Tail) ;

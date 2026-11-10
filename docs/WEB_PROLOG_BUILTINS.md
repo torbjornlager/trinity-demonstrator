@@ -612,7 +612,7 @@ source order, and remote source delivery are unchanged.
 
 ### Actor I/O
 
-`output/1`, `output/2`, `input/2`, `input/3`, `respond/2`.
+`output/1`, `output/2`, `input/2`, `input/3`, `respond/3`.
 
 ### Toplevel Sessions
 
