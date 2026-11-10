@@ -309,9 +309,11 @@ Capture the running release from the repository root.
 
 ```sh
 export N7_RECOVERY_DIR=/absolute/path/to/new-n7-recovery
-N7_COMPACT_BUNDLE=/absolute/path/to/previous-compact-bundle
+N7_PRE_WORKSHOP_BUNDLE=/absolute/path/to/previous-actor-bundle
 python3 tools/n7_recovery.py capture --output "$N7_RECOVERY_DIR"
-python3 tools/test_n7_recovery.py "$N7_RECOVERY_DIR" --compact-rollback "$N7_COMPACT_BUNDLE"
+python3 tools/test_n7_recovery.py "$N7_RECOVERY_DIR" --require-workshop \
+  --actor-core .trinity/deps/trinity-conformance/runner/run.py \
+  --actor-rollback "$N7_PRE_WORKSHOP_BUNDLE"
 ```
 
 The private bundle contains the running engine image under a separate recovery
@@ -320,8 +322,15 @@ exact catalog and Discovery Hub assets served by the edge. When the full shell
 is enabled, it includes that static package and its source revision and
 verifies every asset against the package manifest. Capture checks that the live
 route matches the template and that the edge changes are N7 additions.
-The optional `--compact-rollback` argument takes the previous compact-only
-bundle. The rehearsal uses disposable peers and GitHub OAuth fixtures.
+WebSocket bundles record the advertised profile and include the pinned
+Python wheels for offline installation. The workshop is part of the full
+shell package. The rehearsal requires its bundled page, checks that anonymous
+and wrong-account requests cannot read it, and runs its examples over the
+owner-authenticated WebSocket. It then restores the pre-workshop ACTOR shell
+and checks that the workshop is gone while the shell and WebSocket remain
+owner-only. Finally, it removes N7 from the disposable edge. Use
+`--isotope-rollback` or `--compact-rollback` to rehearse rollback to an older
+HTTP-only bundle.
 
 Keep the existing N5 and N7 environment files, N7 proxy token file, and the
 separate N7 settings file with the OAuth cookie secret alongside the backup.
@@ -330,10 +339,16 @@ The installation reads those credentials separately.
 To recover the adapter, use the helper inside the bundle with its absolute
 path. Write the LaunchAgent outside the bundle, using the verified owner
 email and the same token file that supplies `N7_PROXY_TOKEN` to the edge.
+For a WebSocket bundle, create a virtual environment outside the bundle.
 
 ```sh
 python3 "$N7_RECOVERY_DIR/tools/n7_recovery.py" load "$N7_RECOVERY_DIR"
+python3 -m venv "$N7_ADAPTER_VENV"
+"$N7_ADAPTER_VENV/bin/python" -m pip install --no-index --no-deps \
+  --find-links "$N7_RECOVERY_DIR/wheels" \
+  -r "$N7_RECOVERY_DIR/experiments/eclipse-clp/requirements-actor-ws.txt"
 python3 "$N7_RECOVERY_DIR/tools/n7_recovery.py" launch-plist "$N7_RECOVERY_DIR" \
+  --python "$N7_ADAPTER_VENV/bin/python" \
   --owner "$WP_N5_OWNER" --token-file "$N7_PROXY_TOKEN_FILE" \
   --log "$N7_ADAPTER_LOG" --output "$N7_STAGED_PLIST"
 ```
@@ -343,6 +358,7 @@ and bootstrap it in the user's GUI domain. For a replacement, back up the
 current plist and boot out that job first. The generated plist uses the
 recorded engine image and the single N3 origin. Full-shell bundles also set
 `--shell-assets` to the verified package inside the bundle.
+For an older HTTP-only bundle, skip the virtual environment and omit `--python`.
 
 For edge recovery, start only `oauth2_n7` from the bundled
 `Deployment/compose.eclipse-n7-https.yaml` in project `trinity-n7-https`,
