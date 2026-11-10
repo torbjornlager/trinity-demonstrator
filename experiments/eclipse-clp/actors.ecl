@@ -755,7 +755,7 @@ start_workers([job(Goal, Template)|Jobs], Module, Caller, Ref, Scope,
               [Pid-waiting(Template)|Pending]) :-
     % Publish each worker and record ownership together, before an Abort can
     % unwind the caller. The shelf also survives failure and exceptions.
-    worker_atomic(start_worker(Goal, Module, Caller, Ref, Scope, Pid, Template)),
+    with_deferred_events(start_worker(Goal, Module, Caller, Ref, Scope, Pid, Template)),
     start_workers(Jobs, Module, Caller, Ref, Scope, Pending).
 
 start_worker(Goal, Module, Caller, Ref, Scope, Pid, Template) :-
@@ -809,7 +809,7 @@ release_worker(Pid, Scope) :-
     once(select(Pid, Owned, Rest)),
     shelf_set(Scope, 1, Rest).
 
-worker_atomic(Goal) :-
+with_deferred_events(Goal) :-
     ( events_defer ->
         catch(( call(Goal) -> Success = true ; Success = false ), Error,
               ( events_nodefer, throw(Error) )),
@@ -819,7 +819,7 @@ worker_atomic(Goal) :-
     ).
 
 close_workers(Ref, Scope) :-
-    worker_atomic(reap_workers(Ref, Scope)).
+    with_deferred_events(reap_workers(Ref, Scope)).
 
 reap_workers(Ref, Scope) :-
     shelf_get(Scope, 1, Owned),
@@ -1551,8 +1551,7 @@ receive_({Clauses}, Options, Module) :-
 % Like SWI, record the incoming message before evaluating guards. Once
 % selected, erase it before calling the body, even if the body later fails.
 receive_scan(Inbox, Deferred, Clauses, Module, Wait, OnTimeout) :-
-    ( wait_message(Inbox, Wait, Message) ->
-        recordz(Deferred, Message, Ref),
+    ( wait_message(Inbox, Deferred, Wait, Message, Ref) ->
         ( select_body(Clauses, Message, Module, Body) ->
             erase(Ref),
             call(Body)@Module
@@ -1587,6 +1586,8 @@ guard_exception(unwind(Reason)) :- !, throw(unwind(Reason)).
 guard_exception(_) :- fail.
 
 wait_spec(Options, Wait, OnTimeout) :-
+    require_creation_list(Options, receive/2),
+    ( foreach(Option, Options) do validate_receive_deadline(Option) ),
     ( memberchk(on_timeout(Goal), Options) -> OnTimeout = Goal ; OnTimeout = true ),
     ( memberchk(timeout(Seconds), Options) ->
         ( Seconds =:= 0 ->
@@ -1606,29 +1607,36 @@ wait_spec(Options, Wait, OnTimeout) :-
         Wait = block
     ).
 
-wait_message(Inbox, block, Message) :-
-    ( timed_mailbox -> wait_timed_message(Inbox, Message)
-    ; record_wait_remove(Inbox, Message, block) ).
-wait_message(Inbox, poll, Message) :-
-    record_wait_remove(Inbox, Message, 0).
-wait_message(Inbox, until(Deadline), Message) :-
+validate_receive_deadline(Option) :-
+    ( nonvar(Option), Option = deadline(Deadline) ->
+        require_creation_value(Deadline, receive/2),
+        ( number(Deadline) -> true ; throw(error(type_error(number, Deadline), receive/2)) )
+    ; true ).
+
+% Defer events only across one bounded dequeue and its deferred copy.
+% Re-enable them between slices so an idle receive can still be interrupted.
+wait_message(Inbox, Deferred, block, Message, Ref) :-
+    ( save_waiting_message(Inbox, Deferred, 0.05, Message, Ref) -> true
+    ; wait_message(Inbox, Deferred, block, Message, Ref) ).
+wait_message(Inbox, Deferred, poll, Message, Ref) :-
+    save_waiting_message(Inbox, Deferred, 0, Message, Ref).
+wait_message(Inbox, Deferred, until(Deadline), Message, Ref) :-
     elapsed(Now),
     Remaining is Deadline - Now,
     Remaining > 0,
-    ( timed_mailbox, Remaining > 0.05 ->
-        ( record_wait_remove(Inbox, Message, 0.05) -> true
-        ; wait_message(Inbox, until(Deadline), Message) )
-    ; record_wait_remove(Inbox, Message, Remaining) ).
+    Slice is min(Remaining, 0.05),
+    ( save_waiting_message(Inbox, Deferred, Slice, Message, Ref) -> true
+    ; wait_message(Inbox, Deferred, until(Deadline), Message, Ref) ).
 
-% A native blocking queue read defers ECLiPSe engine events. Toplevel
-% calls use short reads so Abort and execution limits can interrupt them.
+save_waiting_message(Inbox, Deferred, Seconds, Message, Ref) :-
+    with_deferred_events((
+        record_wait_remove(Inbox, Message, Seconds),
+        recordz(Deferred, Message, Ref)
+    )).
+
 timed_mailbox :-
     mailbox_store(Store),
     store_get(Store, timed_mailbox, true).
-
-wait_timed_message(Inbox, Message) :-
-    ( record_wait_remove(Inbox, Message, 0.05) -> true
-    ; wait_timed_message(Inbox, Message) ).
 
 elapsed(Seconds) :-
     statistics(times, [_, _, Seconds]).
