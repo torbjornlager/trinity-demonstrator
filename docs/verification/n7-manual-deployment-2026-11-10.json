@@ -1,0 +1,27 @@
+{
+  "node": "N7",
+  "deployment_verified_at": "2026-11-10T17:50:52+00:00",
+  "http_recheck_at": "2026-11-10T17:52:12+00:00",
+  "deployed_commit": "40b451e395d344d908b85301fc536f78904e4518",
+  "adapter_path": "experiments/eclipse-clp/isotope_http.py",
+  "adapter_sha256": "ecd444275c83f7aeed9acd7ac8c19d2f6d9fd3f39f3d729cc0ff5e294756b246",
+  "engine_image_id": "sha256:887b296264822a471e8fe140036966668b1888ae3a54961cc99e058625d51ded",
+  "manual": {
+    "n7_url": "https://n7.elfenbenstornet.se/manual",
+    "n3_url": "https://n3.elfenbenstornet.se/manual",
+    "sha256": "18bced6b9f9728edbda139e33ad1bf9250f8eba8f10d249854aa58e906ba219d",
+    "n3_public_status": 200,
+    "n7_owner_adapter_status": 200,
+    "owner_adapter_body_matches_n3_byte_for_byte": true,
+    "authenticated_https_browser_comparison": {
+      "checked_during_deployment": true,
+      "method": "Compared the full #manual content in the signed-in browser at the N7 and N3 URLs.",
+      "matches_n3": true
+    },
+    "n7_unauthenticated_https_status": 401
+  },
+  "deployment_health_probe": {
+    "path": "/call?goal=true&format=json",
+    "authenticated_result": "success"
+  }
+}
