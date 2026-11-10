@@ -1,0 +1,35 @@
+{
+  "node": "N3",
+  "web_deployment": {
+    "source_branch": "main",
+    "source_commit": "a99361cce4591fe0602cb65032927940a435618b",
+    "verified_at": "2026-11-10T21:10:22Z",
+    "method": "Applied the Queries menu and HTTP prompt example changes to the N3 web assets. Reloaded the proxy with the existing N3 runtime and prompt-capable demonstrator.",
+    "n3_runtime_commit": "56bdaf6abb9a2beda5736dec56a5207f90be5ac0",
+    "live_route_hashes_verified": 41,
+    "queries_menu": {
+      "url": "https://n3.elfenbenstornet.se/demonstrator",
+      "result": "Loaded the count-server example and opened the Queries menu with its saved queries."
+    },
+    "http_prompt_example": {
+      "url": "https://n3.elfenbenstornet.se/examples/APIs/http-example-2.html",
+      "matches_source_byte_for_byte": true,
+      "result": "Each of two replies carried its current prompt reference. The example echoed the test term and completed successfully after stop."
+    }
+  },
+  "peer_credential_rotation": {
+    "direction": "N7 to N3",
+    "verified_at": "2026-11-10T21:12:02Z",
+    "method": "Reloaded N3's peer authorization rule and restarted the N7 adapter to load the replacement credential.",
+    "old_credential_peer_access": "denied",
+    "replacement_credential_peer_access": "authorized",
+    "authorization_probe": "Checked access to the peer-only WebSocket I/O command.",
+    "live_actor_round_trip": {
+      "case": "NU-008",
+      "result": "passed",
+      "observation": "An N7 actor spawned a peer on N3. The nested call returned to N7, the terminal received the expected output, and the query succeeded."
+    },
+    "n3_web_assets_and_runtime_rechecked": true,
+    "n7_unauthenticated_manual_status": 401
+  }
+}
