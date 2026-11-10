@@ -1,0 +1,91 @@
+{$N7_ORIGIN} {
+	{$N7_TLS_DIRECTIVE}
+	header {
+		Cache-Control "no-store"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+
+	@discovery_metadata {
+		method GET
+		path /node_info
+	}
+	handle @discovery_metadata {
+		header Access-Control-Allow-Origin https://n0.elfenbenstornet.se
+		reverse_proxy {$N7_HTTP_UPSTREAM:host.docker.internal:18087} {
+			header_up -Cookie
+			header_up -Authorization
+			header_up -X-Web-Prolog-User
+			header_up -X-Web-Prolog-Proxy-Token
+			header_up -X-Web-Prolog-Client-IP
+		}
+	}
+
+	handle /oauth2/* {
+		reverse_proxy {$N7_OAUTH_UPSTREAM:oauth2_n7:4180} {
+			header_up -X-Auth-Request-User
+			header_up -X-Auth-Request-Email
+			header_up -X-Web-Prolog-User
+			header_up -X-Web-Prolog-Proxy-Token
+			header_up -X-Web-Prolog-Client-IP
+		}
+	}
+
+	handle {
+		route {
+			request_header -X-Auth-Request-User
+			request_header -X-Auth-Request-Email
+			request_header -X-Web-Prolog-User
+			request_header -X-Web-Prolog-Proxy-Token
+			request_header -X-Web-Prolog-Client-IP
+			forward_auth {$N7_OAUTH_UPSTREAM:oauth2_n7:4180} {
+				uri /oauth2/auth
+				copy_headers X-Auth-Request-User X-Auth-Request-Email
+				@anonymous status 401
+				handle_response @anonymous {
+					@shell {
+						method GET
+						path /n7-shell/ /n7-shell/index.html
+					}
+					redir @shell /oauth2/start?rd=/n7-shell/ 302
+					@page {
+						method GET
+						path / /demonstrator /examples/APIs/http_example-1.html
+					}
+					redir @page /oauth2/start?rd=/demonstrator 302
+					respond "Sign in to N7" 401
+				}
+			}
+			@wrongLogin not header X-Auth-Request-User {$N7_GITHUB_LOGIN}
+			respond @wrongLogin "N7 is owner-only" 403
+			@wrongEmail not header X-Auth-Request-Email {$N7_OWNER_EMAIL}
+			respond @wrongEmail "N7 is owner-only" 403
+			reverse_proxy {$N7_HTTP_UPSTREAM:host.docker.internal:18087} {
+				header_up X-Web-Prolog-User {http.request.header.X-Auth-Request-Email}
+				header_up X-Web-Prolog-Proxy-Token {$N7_PROXY_TOKEN}
+				header_up X-Web-Prolog-Client-IP {remote_host}
+				header_up -Cookie
+				header_up -Authorization
+			}
+		}
+	}
+}
+
+# Container-only metadata route for the Hub's registry probe.
+http://:8087 {
+	@node_info {
+		method GET
+		path /node_info
+	}
+	handle @node_info {
+		reverse_proxy {$N7_HTTP_UPSTREAM:host.docker.internal:18087} {
+			header_up Host {$N7_DISCOVERY_HOST:n7.elfenbenstornet.se}
+			header_up -Cookie
+			header_up -Authorization
+			header_up -X-Web-Prolog-User
+			header_up -X-Web-Prolog-Proxy-Token
+			header_up -X-Web-Prolog-Client-IP
+		}
+	}
+	respond "Not found" 404
+}
