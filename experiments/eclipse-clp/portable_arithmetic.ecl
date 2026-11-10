@@ -39,6 +39,7 @@ arithmetic_value(Expression, Value, Module) :-
     ; compound(Expression), sepia_kernel:arith_builtin(Expression) ->
         Expression =.. [Name|Arguments],
         arithmetic_arguments(Arguments, Values, Module),
+        check_integer_divisor(Name, Values),
         Evaluated =.. [Name|Values],
         eclipse_language:(Value is Evaluated)@Module
     ; eclipse_language:(Value is Expression)@Module ).
@@ -47,3 +48,10 @@ arithmetic_arguments([], [], _).
 arithmetic_arguments([Expression|Expressions], [Value|Values], Module) :-
     arithmetic_value(Expression, Value, Module),
     arithmetic_arguments(Expressions, Values, Module).
+
+check_integer_divisor(Operator, [Dividend, 0]) :-
+    integer(Dividend),
+    ( Operator == (//) ; Operator == div ; Operator == mod ),
+    !,
+    throw(error(evaluation_error(zero_divisor), Operator/2)).
+check_integer_divisor(_, _).
