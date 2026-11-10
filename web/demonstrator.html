@@ -5135,7 +5135,8 @@
         if (/^(?:_|[a-z][A-Za-z0-9_]*)\s*\{/.test(value)) {
           return "a dict";
         }
-        if (/^(?:[a-z][A-Za-z0-9_]*|'(?:[^'\\]|\\.)*')\s*\(/.test(value)) {
+        if (/\/\d+$/.test(value) ||
+            /^(?:[a-z][A-Za-z0-9_]*|'(?:[^'\\]|\\.)*')\s*\(/.test(value)) {
           return "a compound term";
         }
         return "a term";
