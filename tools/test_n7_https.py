@@ -116,6 +116,13 @@ def http(opener, url, *, body=None, headers=None, status=200):
         return response.headers, response.read()
 
 
+RUNTIME_PROPERTIES_GOAL = (
+    "findall(P,runtime_property(P),"
+    "[persistent(true),inbound_addressable(true),dom(false),"
+    "actor_isolation(independent),hard_termination(true)])"
+)
+
+
 def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
                 profile="isotope", ws_absent=False, workshop=None, workshop_absent=False,
                 unicode_literals=False, sxml_peer=None):
@@ -214,6 +221,11 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
                            "format": "json", "src_text": 'fixture_chars("aé€😀").'})
         _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
         expect(json.loads(data)["data"], [{"X": "[a, 'é', '€', '😀']"}])
+    query = urlencode({"goal": "fixture_runtime",
+                       "src_text": "fixture_runtime :- " + RUNTIME_PROPERTIES_GOAL + ".",
+                       "format": "json"})
+    _, data = http(owner, origin + "/call?" + query, headers={"Origin": origin})
+    expect(json.loads(data)["type"], "success")
     headers = {"Origin": origin, "Content-Type": "application/json"}
     spawn = {"options": "[session(true)]", "prompt_correlation": True}
     if shell:
@@ -313,6 +325,7 @@ ssl.create_default_context = functools.partial(ssl.create_default_context, cafil
 workshop_path = Path(sys.argv.pop(0))
 chart_uris, chart_peer = json.loads(sys.argv.pop(0))
 service_request_path = Path(sys.argv.pop(0))
+runtime_properties_goal = sys.argv.pop(0)
 runner = sys.argv[0]
 sys.path.insert(0, runner.rsplit('/', 1)[0])
 suite = runpy.run_path(runner)
@@ -345,6 +358,14 @@ try:
         assert event['type'] == 'success' and event['more'] is False, (goal[:200], event)
         assert len(event['data']) == 1, (goal, event)
         return event['data'][0]
+
+    shell_call(runtime_properties_goal + ","
+               "findall(I,runtime_property(actor_isolation(I)),[independent]),"
+               "\\+runtime_property(persistent(false)),\\+runtime_property(implementation(_)),"
+               "\\+runtime_property(unknown(_)),\\+runtime_property(42)")
+    shell_call("self(Self),spawn(report(Self),P,[src_text("
+               "'report(To) :- runtime_property(hard_termination(true)), send(To,runtime_ok).')]),"
+               "receive({runtime_ok->true},[timeout(2),on_timeout(throw(no_child_runtime_property))])")
 
     bindings = shell_call("self(Self),findall(R,(between(1,8,_),make_ref(R),integer(R)),Refs),"
                           "Pair=[Self|Refs],"
@@ -760,7 +781,8 @@ print('N7 ACTOR workshop counters, prompts, and monitors passed')
                   for path in sorted((ROOT / "examples/statecharts").glob("*.xml"))] if sxml_peer else []
     result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca),
                              str(workshop_path), json.dumps([chart_uris, sxml_peer]),
-                             str(ROOT / "examples/statecharts/18 service-request.xml"), str(runner.resolve()),
+                             str(ROOT / "examples/statecharts/18 service-request.xml"), RUNTIME_PROPERTIES_GOAL,
+                             str(runner.resolve()),
                              "--ws-url", endpoint.replace("https:", "wss:", 1),
                              "--advertised-profile", "actor", "--origin", origin,
                              "--header", "Cookie: " + cookie, "--candidate", "n7-owner-preview",
@@ -880,6 +902,9 @@ def check_stateless_admission(origin, ca, network, *, anonymous=False, prefix=""
             http(client, endpoint + route, body=b"{}", status=404)
         http(client, endpoint + "/call?goal=true&format=json", headers={"Sec-Fetch-Site": "cross-site"}, status=403)
         query = urlencode({"goal": "sleep(0.01)", "format": "json"})
+        _, answer = http(client, endpoint + "/call?" + query)
+        expect(json.loads(answer)["type"], "success")
+        query = urlencode({"goal": RUNTIME_PROPERTIES_GOAL, "format": "json"})
         _, answer = http(client, endpoint + "/call?" + query)
         expect(json.loads(answer)["type"], "success")
         query = urlencode({"goal": "open('/etc/os-release',read,S)", "format": "json"})

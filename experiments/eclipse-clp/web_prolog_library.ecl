@@ -3,6 +3,7 @@
 :- export memberchk/2, nth0/3, nth0/4, nth1/3, nth1/4, between/3, succ/2.
 :- export maplist/2, maplist/3, maplist/4, maplist/5, maplist/6, maplist/7, maplist/8.
 :- export foldl/4, foldl/5, foldl/6, call_nth/2, countall/2.
+:- export runtime_property/1.
 
 :- tool(maplist/2, maplist_/3).
 :- tool(maplist/3, maplist_/4).
@@ -16,6 +17,13 @@
 :- tool(foldl/6, foldl_/7).
 :- tool(call_nth/2, call_nth_/3).
 :- tool(countall/2, countall_/3).
+
+% Capabilities of the native host, shared across Web Prolog profiles.
+runtime_property(persistent(true)).
+runtime_property(inbound_addressable(true)).
+runtime_property(dom(false)).
+runtime_property(actor_isolation(independent)).
+runtime_property(hard_termination(true)).
 
 % A first match commits before inspecting the rest of the list.
 memberchk(Element, List) :-
