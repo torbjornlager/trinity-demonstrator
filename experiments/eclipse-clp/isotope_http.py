@@ -826,6 +826,8 @@ class Handler(BaseHTTPRequestHandler):
             self.serve_stateless(path.query)
         elif self.server.stateless_whitelist:
             self.send_error(404)
+        elif path.path == "/manual" and self.server.shell_assets is not None:
+            self.serve_shell_asset(SHELL_PREFIX + "manual.html")
         elif path.path in ("/", "/demonstrator") and self.server.private_settings is not None:
             self.reply(200, "text/html; charset=utf-8", (HERE / "n7_pilot.html").read_bytes())
         elif path.path == SHELL_PREFIX + "session.json" and self.server.shell_assets is not None:
