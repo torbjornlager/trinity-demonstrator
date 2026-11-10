@@ -509,14 +509,20 @@ class ActorConnection:
                 self.emit(reply)
             return
         pid = request["pid"]
-        with self.bridge.state_changed:
-            if type(pid) is not int or pid not in self.actors:
-                raise LookupError("Unknown actor for this connection")
         field = "message" if command == "send" else "reason"
         value = request[field] if command == "send" else request.get(field, "kill")
         if not isinstance(value, str):
             raise ValueError(f"Expected a Prolog {field} term")
-        reply = self.bridge.request("ws_actor_" + command, {"actor": pid, field: value})
+        with self.bridge.state_changed:
+            if command == "send" and pid == "pubsub_service":
+                fields = {"owned": list(self.actors), "message": value}
+                operation = "ws_actor_pubsub"
+            elif type(pid) is int and pid in self.actors:
+                fields = {"actor": pid, field: value}
+                operation = "ws_actor_" + command
+            else:
+                raise LookupError("Unknown actor for this connection")
+        reply = self.bridge.request(operation, fields)
         if reply["type"] == "error":
             self.emit_error(request, reply["data"])
 

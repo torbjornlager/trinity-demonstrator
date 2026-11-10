@@ -34,6 +34,7 @@ run :-
     spawn(probe_echo(none), Echo),
     store_set(http_sessions, probe_echo, Echo),
     store_set(http_sessions, stateless_cache, []),
+    store_set(ws_actors, subscribers, []),
     get_flag(version_as_list, VersionParts),
     sprintf(Version, "%d.%d.%d", VersionParts),
     reply(Replies, {[type:ready, version:Version, stateless_whitelist:true]}),
@@ -74,7 +75,10 @@ serve(Replies) :-
             serve(Replies)
     ;
         ws_actor_event(Id, Event) ->
-            ( Event = {[type:down|_]} -> store_delete(ws_actors, Id) ; true ),
+            ( Event = {[type:down|_]} ->
+                store_delete(ws_actors, Id),
+                ws_unsubscribe(Id)
+            ; true ),
             reply(Replies, {[type:ws_actor_event, pid:Id, event:Event]}),
             serve(Replies)
     ;
@@ -231,6 +235,11 @@ route_request(Request, "spawn", _, Fields) :- !,
 route_request(Request, "ws_actor_spawn", _, Fields) :- !,
     self(Router),
     spawn(open_ws_actor(Router, Request, Fields), _).
+route_request(Request, "ws_actor_pubsub", _, Fields) :- !,
+    self(Router),
+    Context = response(Router, Request),
+    request_event("ws_actor_pubsub", Fields, Context, Event),
+    reply_to(Context, Event).
 route_request(Request, Command, _, Fields) :-
     memberchk(Command, ["ws_actor_start", "ws_actor_send", "ws_actor_exit"]), !,
     ( memberchk(actor:Id, Fields), store_get(ws_actors, Id, Relay) ->
@@ -1049,6 +1058,29 @@ open_ws_actor(Router, Request, Fields) :-
         serve_ws_actor(Router, Id)
     ; reply_to(Context, Event) ).
 
+% The router serializes publications and subscription changes. The adapter
+% supplies the calling socket's actor IDs separately from the message term.
+ws_pubsub(subscribe(Id), Owned) :-
+    ws_check_subscriber(Id, Owned),
+    store_get(ws_actors, subscribers, Subscribers),
+    ( memberchk(Id, Subscribers) -> true
+    ; store_set(ws_actors, subscribers, [Id|Subscribers]) ).
+ws_pubsub(unsubscribe(Id), Owned) :-
+    ws_check_subscriber(Id, Owned),
+    ws_unsubscribe(Id).
+ws_pubsub(publish(Value), _) :-
+    store_get(ws_actors, subscribers, Subscribers),
+    ( foreach(Id, Subscribers), param(Value) do send(Id, msg(Value)) ).
+
+ws_check_subscriber(Id, Owned) :-
+    ( integer(Id), memberchk(Id, Owned), store_get(ws_actors, Id, _) -> true
+    ; throw(error(permission_error(subscribe, ws_actor, Id), pubsub_service)) ).
+
+ws_unsubscribe(Id) :-
+    store_get(ws_actors, subscribers, Subscribers),
+    ( select(Id, Subscribers, Rest) -> store_set(ws_actors, subscribers, Rest)
+    ; true ).
+
 serve_ws_actor(Router, Id) :-
     receive({
         http_request(Request, Command, Id, Fields) ->
@@ -1138,6 +1170,12 @@ dispatch("ws_actor_exit", Fields, _, {[type:accepted]}) :-
     memberchk(reason:Text, Fields),
     parse_goal(Text, isotope_bridge, Reason, _),
     exit(Id, Reason).
+dispatch("ws_actor_pubsub", Fields, _, {[type:accepted]}) :-
+    memberchk(message:Text, Fields),
+    memberchk(owned:Owned, Fields),
+    parse_goal(Text, isotope_bridge, Message, _),
+    nonvar(Message),
+    ws_pubsub(Message, Owned).
 
 dispatch("spawn", Fields, _, {[type:spawned, pid:Id]}) :-
     ( memberchk(browser_options:Text, Fields) ->

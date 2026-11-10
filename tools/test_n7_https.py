@@ -391,6 +391,44 @@ try:
     shell_call('between(1,100,_),sleep(0.01),whereis(raw_disconnect_fixture,undefined),!')
     print('Raw WebSocket actors push output and down, enforce ownership, and retire on disconnect')
 
+    subscriber_options = '[src_text("listen :- receive({msg(Value) -> output(Value),listen}).")]'
+    subscriber = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                                    extra_headers=(option('--header'),))
+    try:
+        for channel in (ws, subscriber):
+            channel.send_json(dict(command='spawn', goal='listen', options=subscriber_options))
+        local = ws.recv_json()
+        other = subscriber.recv_json()
+        assert local['type'] == other['type'] == 'spawned', (local, other)
+
+        def pubsub(channel, message):
+            channel.send_json(dict(command='send', pid='pubsub_service', message=message))
+
+        pubsub(ws, f"subscribe({other['pid']})")
+        denied = ws.recv_json()
+        assert denied['type'] == 'error' and 'permission_error' in denied['data'], denied
+        pubsub(ws, f"subscribe({local['pid']})")
+        pubsub(ws, f"subscribe({local['pid']})")
+        pubsub(subscriber, f"subscribe({other['pid']})")
+        # An ordinary echo on the second socket confirms its subscribe was processed.
+        subscriber.send_json(dict(command='send', pid=other['pid'], message='msg(ready)'))
+        assert subscriber.recv_json()['data'] == 'ready'
+        pubsub(ws, 'publish(shared(hello))')
+        for channel, actor in ((ws, local), (subscriber, other)):
+            event = channel.recv_json()
+            assert (event['type'], event['pid'], event['data']) == (
+                'output', actor['pid'], 'shared(hello)'), event
+        pubsub(ws, f"unsubscribe({local['pid']})")
+        pubsub(ws, 'publish(after_unsubscribe)')
+        ws.send_json(dict(command='send', pid=local['pid'], message='msg(local_marker)'))
+        assert ws.recv_json()['data'] == 'local_marker'
+        assert subscriber.recv_json()['data'] == 'after_unsubscribe'
+        ws.send_json(dict(command='exit', pid=local['pid'], reason='done'))
+        assert ws.recv_json()['type'] == 'down'
+    finally:
+        subscriber.close()
+    print('WebSocket pubsub broadcasts across sockets and enforces subscription ownership')
+
     ws.send_json(dict(command='toplevel_call', pid=pid,
                       goal='writeln(abort_receive_ready),receive({recovery_never_sent->true})'))
     ready = ws.recv_json()
