@@ -44,7 +44,7 @@ if [ -n "${N7_ACTOR_PYTHON:-}" ]; then
         printf 'Set N7_ACTOR_PYTHON to a Python executable with the N7 ACTOR dependencies installed.\n' >&2
         exit 1
     fi
-    set -- "$@" --advertise-actor --actor-core "$conformance/runner/run.py"
+    set -- "$@" --advertise-actor --actor-core "$conformance/runner/run.py" --error-conformance "$conformance"
 fi
 
 python3 tools/setup_swi.py --validate

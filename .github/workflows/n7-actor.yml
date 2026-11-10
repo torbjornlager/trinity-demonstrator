@@ -27,7 +27,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/n7-actor"
           "$RUNNER_TEMP/n7-actor/bin/python" -m pip install \
             -r experiments/eclipse-clp/requirements-actor-ws.txt
-      - name: Run ACTOR core and two-connection pubsub over HTTPS
+      - name: Run ACTOR core, pubsub and error conformance over HTTPS
         shell: bash
         run: |
           umask 077
@@ -39,4 +39,55 @@ jobs:
           fi
           grep -Fxq '7 passed, 0 failed, 0 unsupported' "$log"
           grep -Fxq 'WebSocket pubsub broadcast, subscription ownership, unsubscribe, and disconnect passed' "$log"
-          echo 'All seven ACTOR core cases and the two-connection pubsub regression passed over HTTPS.'
+          grep -Fxq 'N7 shared error contract passed 10 HTTP and 1 ACTOR cases over HTTPS' "$log"
+          echo 'N7 ACTOR core, pubsub and shared error cases passed over HTTPS.'
+
+  native-errors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-swi
+      - name: Read dependency revisions
+        id: pins
+        shell: bash
+        run: |
+          python3 tools/ci_pinned_swi.py --github-outputs "$GITHUB_OUTPUT"
+          awk -F= '$1 == "conformance_revision" {print "conformance=" $2}' tools/bootstrap_n7.sh >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.pins.outputs.repository }}
+          ref: ${{ steps.pins.outputs.revision }}
+          path: .trinity/error-swi
+          token: ${{ secrets.SWI_NODE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: torbjornlager/trinity-conformance
+          ref: ${{ steps.pins.outputs.conformance }}
+          path: .trinity/error-conformance
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: torbjornlager/trealla-port
+          ref: 91aa277ba7a36ed4714e852b376740d96a36d7cb
+          path: .trinity/error-trealla
+          persist-credentials: false
+      - name: Build the disposable Trealla and GNU Prolog nodes
+        shell: bash
+        env:
+          GNU_READ_TOKEN: ${{ secrets.GPROLOG_PORT_READ_TOKEN || github.token }}
+        run: |
+          docker build -f .trinity/error-trealla/Deployment/Dockerfile \
+            -t trinity-ci:error-trealla .trinity/error-trealla
+          docker build --secret id=github_token,env=GNU_READ_TOKEN \
+            -f Deployment/Dockerfile.gprolog -t trinity-ci:error-gnu .
+      - name: Verify formal errors and RELATION and ISOBASE admission
+        run: >-
+          python3 tools/ci_error_contract.py
+          --swi .trinity/error-swi
+          --conformance .trinity/error-conformance
+          --trealla-image trinity-ci:error-trealla
+          --gnu-image trinity-ci:error-gnu

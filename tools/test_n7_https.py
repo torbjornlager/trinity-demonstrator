@@ -20,6 +20,7 @@ import sys
 from tempfile import TemporaryDirectory
 from threading import Thread
 from time import monotonic, sleep
+from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlencode, urlsplit
 from urllib.request import HTTPCookieProcessor, HTTPRedirectHandler, HTTPSHandler, Request, build_opener, urlopen
@@ -1059,6 +1060,45 @@ bad_call :- absent_private_predicate(x)."""
     print("N7 formal errors are catchable in loaded source and runtime arithmetic")
 
 
+def check_shared_error_contract(origin, ca, conformance):
+    tls = ssl.create_default_context(cafile=str(ca))
+    jar = CookieJar()
+    owner = build_opener(HTTPSHandler(context=tls), HTTPCookieProcessor(jar))
+    http(owner, origin + "/demonstrator")
+    request = Request(origin + "/ws")
+    jar.add_cookie_header(request)
+    cookie = request.get_header("Cookie")
+    if not cookie:
+        raise AssertionError("Expected a fixture owner session cookie")
+
+    sys.path.insert(0, str(conformance / "runner"))
+    import baseline
+
+    def owner_open(request, timeout):
+        request.add_header("Origin", origin)
+        return owner.open(request, timeout=timeout)
+
+    class OwnerWebSocket(baseline.actor.WebSocket):
+        def __init__(self, url, timeout, token, _origin, insecure_tls, headers):
+            super().__init__(url, timeout, token, origin, insecure_tls,
+                             (*headers, "Cookie: " + cookie))
+
+    def cases(name):
+        return json.loads((conformance / "cases" / (name + ".json")).read_text())["cases"]
+
+    http_cases = cases("error-contract-0.1")
+    with patch.object(baseline, "urlopen", owner_open):
+        for case in http_cases:
+            baseline.http_case(case, origin, 5, None, False)
+
+    ws_cases = cases("actor-error-contract-0.1")
+    with patch.object(baseline.actor, "WebSocket", OwnerWebSocket), \
+         patch.object(ssl, "create_default_context", return_value=tls):
+        for case in ws_cases:
+            baseline.query_case(case, origin.replace("https:", "wss:", 1) + "/ws", 5, None)
+    print(f"N7 shared error contract passed {len(http_cases)} HTTP and {len(ws_cases)} ACTOR cases over HTTPS")
+
+
 def check_shared_database(origin, ca, assets):
     tls = ssl.create_default_context(cafile=str(ca))
     source = origin + "/n7-shell/shared-db.pl"
@@ -1265,6 +1305,7 @@ def main():
     ws_group.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
     ws_group.add_argument("--pubsub", type=Path, metavar="RUNNER", help="run the pubsub regression using RUNNER's WebSocket client")
     parser.add_argument("--actor-report", type=Path, metavar="FILE", help="save the ACTOR core report to FILE")
+    parser.add_argument("--error-conformance", type=Path, metavar="DIR", help="run shared error cases from a conformance checkout")
     parser.add_argument("--advertise-actor", action="store_true", help="exercise ACTOR discovery metadata")
     parser.add_argument("--sxml-documents", action="store_true", help="validate packaged SXML through the owner shell")
     parser.add_argument("--stateless-admission", action="store_true",
@@ -1276,6 +1317,8 @@ def main():
     args = parser.parse_args()
     if args.actor_report is not None and args.actor_core is None:
         parser.error("--actor-report requires --actor-core")
+    if args.error_conformance is not None and not args.advertise_actor:
+        parser.error("--error-conformance requires --advertise-actor")
     if args.sxml_documents and (not args.shell or args.actor_core is None):
         parser.error("--sxml-documents requires --shell and --actor-core")
     if args.sxml_documents:
@@ -1413,6 +1456,8 @@ def main():
                         unicode_literals=True, sxml_peer=chart_peer, actor_report=args.actor_report)
             check_stateless_cache(origin, ca)
             check_formal_errors(origin, ca)
+            if args.error_conformance is not None:
+                check_shared_error_contract(origin, ca, args.error_conformance.resolve())
             if args.shell:
                 check_shared_database(origin, ca, assets)
         except Exception:

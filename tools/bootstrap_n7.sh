@@ -8,8 +8,9 @@ deps=.trinity/deps
 native="$deps/swi-prolog-node"
 browser="$deps/swi-wasm-node"
 conformance="$deps/trinity-conformance"
-conformance_revision=0ecb9ef4f60da483007f943ff220f3258cdd47a6
-previous_conformance_revision=15cfacebd4625d891f0ecea9c551edcc70678bd9
+conformance_revision=475b7991a52814ed6653f3546c487eea450e79c2
+previous_conformance_revision=0ecb9ef4f60da483007f943ff220f3258cdd47a6
+legacy_conformance_revision=15cfacebd4625d891f0ecea9c551edcc70678bd9
 conformance_repo=https://github.com/torbjornlager/trinity-conformance.git
 dist=.trinity/n7-local/eclipse-dist
 archive="$dist/eclipse_basic.tgz"
@@ -43,7 +44,8 @@ if [ ! -e "$conformance" ]; then
 fi
 checked_revision=$(git -C "$conformance" rev-parse HEAD)
 tracked_changes=$(git -C "$conformance" status --porcelain --untracked-files=no)
-if [ "$checked_revision" = "$previous_conformance_revision" ] && [ -z "$tracked_changes" ] &&
+if { [ "$checked_revision" = "$previous_conformance_revision" ] ||
+     [ "$checked_revision" = "$legacy_conformance_revision" ]; } && [ -z "$tracked_changes" ] &&
     ! git -C "$conformance" symbolic-ref --quiet HEAD >/dev/null; then
     git -C "$conformance" fetch --depth=1 --no-tags "$conformance_repo" "$conformance_revision"
     git -C "$conformance" checkout --quiet --detach "$conformance_revision"
