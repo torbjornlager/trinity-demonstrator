@@ -394,15 +394,17 @@ Add `--advertise-actor` to announce ACTOR in `/node_info` and let the owner
 shell select `/ws`. With only `--actor-ws`, discovery advertises ISOTOPE.
 
 After bootstrapping the checkout, install the optional transport dependencies
-in a local virtual environment and run ACTOR core through the HTTPS fixture:
+in a local virtual environment. Set `N7_ACTOR_PYTHON` to add ACTOR core and
+the pubsub regression to the standard N7 checks:
 
 ```sh
 python3 -m venv .trinity/n7-actor-venv
 .trinity/n7-actor-venv/bin/python -m pip install -r experiments/eclipse-clp/requirements-actor-ws.txt
-.trinity/n7-actor-venv/bin/python tools/test_n7_https.py --shell \
-  --image trinity-eclipse-n7:eclipse-node-dev \
-  --actor-core .trinity/deps/trinity-conformance/runner/run.py
+N7_ACTOR_PYTHON=.trinity/n7-actor-venv/bin/python ./tools/check_n7.sh
 ```
+
+Use the same setting with `./tools/bootstrap_n7.sh` to fetch or update the
+pinned runner before checking.
 
 The fixture signs in with a synthetic GitHub owner and tests WebSocket
 admission, ACTOR core, and the existing HTTP routes. Its ACTOR report is

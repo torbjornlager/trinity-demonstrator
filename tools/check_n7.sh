@@ -36,6 +36,17 @@ if ! command -v swipl >/dev/null 2>&1; then
     printf 'Put swipl on PATH for the local conformance peer.\n' >&2
     exit 1
 fi
+
+https_python=${N7_ACTOR_PYTHON:-python3}
+set -- --image "$image" --shell
+if [ -n "${N7_ACTOR_PYTHON:-}" ]; then
+    if ! "$https_python" -c 'import wsproto' >/dev/null 2>&1; then
+        printf 'Set N7_ACTOR_PYTHON to a Python executable with the N7 ACTOR dependencies installed.\n' >&2
+        exit 1
+    fi
+    set -- "$@" --advertise-actor --actor-core "$conformance/runner/run.py"
+fi
+
 python3 tools/setup_swi.py --validate
 
 printf '\nBuilding local N7 image: %s\n' "$image"
@@ -43,7 +54,7 @@ docker buildx build --load --platform linux/arm64 --build-context "eclipse_dist=
     -f Deployment/Dockerfile.eclipse-n7 -t "$image" .
 
 printf '\nChecking local HTTPS for the compact pilot and full shell\n'
-python3 tools/test_n7_https.py --image "$image" --shell
+"$https_python" tools/test_n7_https.py "$@"
 
 reports=$(mktemp -d "$local_dir/conformance.XXXXXX")
 printf '\nRunning local N7 conformance. Reports: %s\n' "$reports"
