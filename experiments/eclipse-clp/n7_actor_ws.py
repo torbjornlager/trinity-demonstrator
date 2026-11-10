@@ -5,7 +5,7 @@ import json
 from queue import Empty, Full, Queue
 from socket import create_connection, timeout as SocketTimeout
 from ssl import create_default_context
-from threading import Event, Lock, Thread
+from threading import BoundedSemaphore, Event, Lock, Thread
 from time import monotonic
 from uuid import uuid4
 
@@ -19,6 +19,7 @@ MAX_PEER_MESSAGE = 16 * 1024
 # applies separately to each document after the request has been decoded.
 MAX_OWNER_MESSAGE = 256 * 1024
 SESSION_COMMANDS = {"call", "next", "stop", "abort", "halt", "respond"}
+QUERY_COMMANDS = ("toplevel_call", "toplevel_next", "toplevel_respond", "browser_io_reply")
 
 
 def published_counter(host):
@@ -330,6 +331,7 @@ class ActorConnection:
         self.sessions = set()
         self.prompts = {}
         self.output = {}
+        self.query_waiters = BoundedSemaphore(4)
         self.child_output = Queue(maxsize=64)
         self.closed = Event()
         Thread(target=self.send_child_output, daemon=True).start()
@@ -363,14 +365,37 @@ class ActorConnection:
             request = json.loads(text)
             if not isinstance(request, dict):
                 raise ValueError("Expected a JSON command object")
-            self.command(request)
+            if request.get("command") in QUERY_COMMANDS:
+                if not self.query_waiters.acquire(blocking=False):
+                    raise ValueError("Too many pending toplevel queries")
+                submitted = Event()
+                Thread(target=self.run_query, args=(request, submitted), daemon=True).start()
+                # Keep the wire order through submission, while the socket
+                # reader stays available for Abort during the query.
+                submitted.wait()
+            else:
+                self.command(request)
         except (KeyError, LookupError, TypeError, ValueError, RuntimeError) as error:
-            reply = {"type": "error", "data": str(error)}
-            if isinstance(request, dict):
-                reply.update({key: request[key] for key in ("pid", "request_id") if key in request})
-            self.emit(reply)
+            self.emit_error(request, error)
 
-    def command(self, request):
+    def run_query(self, request, submitted):
+        try:
+            with suppress(OSError, LocalProtocolError):
+                try:
+                    self.command(request, submitted=submitted)
+                except (KeyError, LookupError, TypeError, ValueError, RuntimeError) as error:
+                    self.emit_error(request, error)
+        finally:
+            self.query_waiters.release()
+            submitted.set()
+
+    def emit_error(self, request, error):
+        reply = {"type": "error", "data": str(error)}
+        if isinstance(request, dict):
+            reply.update({key: request[key] for key in ("pid", "request_id") if key in request})
+        self.emit(reply)
+
+    def command(self, request, *, submitted=None):
         command = request["command"]
         if not isinstance(command, str):
             raise ValueError("Expected a command name")
@@ -400,7 +425,7 @@ class ActorConnection:
             if request.get("status") != "ok":
                 self.relay(self.bridge.request("abort", {"pid": pid}))
             else:
-                self.relay(self.resume_output(pid, needs_ack))
+                self.relay(self.resume_output(pid, needs_ack, submitted=submitted))
             return
         action = command.removeprefix("toplevel_")
         if action == command or action not in SESSION_COMMANDS:
@@ -414,6 +439,8 @@ class ActorConnection:
             if not isinstance(goal, str):
                 raise ValueError("Expected a Prolog goal")
             fields.update(goal=goal, browser_options=self.options(request), browser_origin=self.origin)
+        elif action == "abort":
+            fields["browser_abort"] = True
         elif action == "respond":
             ref = self.prompts.get(pid)
             if ref is None or request.get("prompt_ref") != ref:
@@ -427,7 +454,10 @@ class ActorConnection:
             if not isinstance(value, str):
                 raise ValueError("Expected a Prolog input term")
             fields.update(input=value, prompt_ref=ref)
-        reply = self.bridge.request(action, fields, timeout=18 if action in ("call", "next") else 6)
+        reply = self.bridge.request(action, fields, timeout=18 if action in ("call", "next") else 6,
+                                    submitted=None if action == "respond" else submitted)
+        if reply.get("ws_silent"):
+            return
         if reply["type"] in ("abort", "halted", "responded"):
             self.prompts.pop(pid, None)
         if reply["type"] in ("abort", "halted"):
@@ -438,7 +468,7 @@ class ActorConnection:
                 self.bridge.browser_output.pop(pid, None)
         self.relay(reply)
         if reply["type"] == "responded":
-            self.relay(self.bridge.request("poll", {"pid": pid}, timeout=18))
+            self.relay(self.bridge.request("poll", {"pid": pid}, timeout=18, submitted=submitted))
 
     @staticmethod
     def options(request):
@@ -453,6 +483,8 @@ class ActorConnection:
             needs_ack = event.pop("browser_ack", False)
             self.emit(event)
             event = self.resume_output(pid, needs_ack)
+        if event.get("ws_silent"):
+            return
         event = dict(event)
         pid = event.get("pid")
         if event["type"] == "prompt":
@@ -464,10 +496,10 @@ class ActorConnection:
             event = {"type": "io_request", "request_id": ref, "event": event}
         self.emit(event)
 
-    def resume_output(self, pid, needs_ack):
+    def resume_output(self, pid, needs_ack, *, submitted=None):
         if needs_ack:
             self.bridge.request("browser_ack", {"pid": pid})
-        return self.bridge.request("poll", {"pid": pid}, timeout=18)
+        return self.bridge.request("poll", {"pid": pid}, timeout=18, submitted=submitted)
 
     def close(self):
         with self.bridge.state_changed:

@@ -282,10 +282,10 @@ class Bridge:
     def read_reply(self):
         return read_bridge_reply(self.process.stdout, PILOT_REPLY_LIMIT if self.on_failure is not None else -1)
 
-    def request(self, command, fields, *, expired_at=None, timeout=6):
+    def request(self, command, fields, *, expired_at=None, timeout=6, submitted=None):
         deadline = monotonic() + timeout if self.on_failure is not None else None
         try:
-            return self.dispatch(command, fields, deadline, expired_at)
+            return self.dispatch(command, fields, deadline, expired_at, submitted)
         except (TimeoutError, FutureTimeout):
             self.fail("ECLiPSe backend exceeded the request deadline")
             raise self.read_error from None
@@ -293,7 +293,7 @@ class Bridge:
             self.fail("ECLiPSe backend closed its request pipe")
             raise self.read_error from None
 
-    def dispatch(self, command, fields, deadline, expired_at):
+    def dispatch(self, command, fields, deadline, expired_at, submitted):
         with self.state_changed:
             if expired_at is not None:
                 pid = fields["pid"]
@@ -331,6 +331,8 @@ class Bridge:
             self.pending[request_id] = (request, result)
             if pid is not None:
                 self.busy.setdefault(pid, set()).add(command)
+            if submitted is not None:
+                submitted.set()
         return result.result(timeout=self.remaining(deadline))
 
     @staticmethod
@@ -592,6 +594,8 @@ class Bridge:
             if "browser_options" in fields:
                 request.update(browser_options=fields["browser_options"],
                                browser_origin=fields["browser_origin"])
+        elif command == "abort" and fields.get("browser_abort") is True:
+            request["browser_abort"] = True
         elif command == "respond":
             value = fields["input"].strip()
             if value.endswith("."):

@@ -345,7 +345,7 @@ run_call(Pid, Module, DefaultTarget, Goal0, RequestOptions, Control) :-
     new_solution_buffer(Buffer),
     shelf_create(page(Target, Limit, Offset, Buffer, Request), Page),
     setup_call_cleanup(
-        set_timed_mailbox(Control, Mailbox),
+        set_timed_mailbox(Mailbox),
         catch(run_answers(Pid, Module, Goal, Template, Once, Page, Control),
               Error, query_error(Pid, Page, Once, Error, Control)),
         ( clear_timed_mailbox(Mailbox),
@@ -353,13 +353,13 @@ run_call(Pid, Module, DefaultTarget, Goal0, RequestOptions, Control) :-
     ),
     clear_io_target.
 
-set_timed_mailbox(Control, Mailbox) :-
-    shelf_get(Control, 4, limits(Time, _)),
-    ( Time == infinite -> Mailbox = none
-    ; engine_self(Engine), get_engine_property(Engine, store, Mailbox),
-      store_set(Mailbox, timed_mailbox, true) ).
+% Abort posts an engine event even when the query has no time limit.
+% A bounded native mailbox wait lets the engine service that event.
+set_timed_mailbox(Mailbox) :-
+    engine_self(Engine),
+    get_engine_property(Engine, store, Mailbox),
+    store_set(Mailbox, timed_mailbox, true).
 
-clear_timed_mailbox(none) :- !.
 clear_timed_mailbox(Store) :-
     store_delete(Store, timed_mailbox).
 

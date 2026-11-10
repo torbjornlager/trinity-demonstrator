@@ -1229,7 +1229,9 @@ await_event(Id, Context, Event) :-
             Context = response(Router, _),
             AbortContext = response(Router, AbortRequest),
             request_event("abort", Fields, AbortContext, Abort),
-            reply_to(Context, Abort),
+            ( memberchk(browser_abort:true, Fields), Abort = {AbortFields} ->
+                reply_to(Context, {[ws_silent:true|AbortFields]})
+            ; reply_to(Context, Abort) ),
             reply_to(AbortContext, Abort),
             Event = already_sent
     ;

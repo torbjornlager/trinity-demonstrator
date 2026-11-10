@@ -318,7 +318,7 @@ def check_actor_ws(origin, ca, runner, anonymous, wrong, wrong_email, owner, spo
             raise
     # Some macOS Python builds ignore SSL_CERT_FILE when loading default roots.
     trust_fixture_ca = """
-import functools, html, json, re, runpy, ssl, sys
+import functools, html, json, re, runpy, ssl, sys, time
 from pathlib import Path
 sys.argv.pop(0)
 ssl.create_default_context = functools.partial(ssl.create_default_context, cafile=sys.argv.pop(0))
@@ -358,6 +358,17 @@ try:
         assert event['type'] == 'success' and event['more'] is False, (goal[:200], event)
         assert len(event['data']) == 1, (goal, event)
         return event['data'][0]
+
+    ws.send_json(dict(command='toplevel_call', pid=pid,
+                      goal='writeln(abort_receive_ready),receive({recovery_never_sent->true})'))
+    ready = ws.recv_json()
+    assert (ready['type'], ready['data']) == ('output', 'abort_receive_ready\\n'), ready
+    time.sleep(0.1)
+    ws.send_json(dict(command='toplevel_abort', pid=pid))
+    aborted = ws.recv_json()
+    assert (aborted['type'], aborted['pid']) == ('abort', pid), aborted
+    assert shell_call('AfterAbort=ready') == {'AfterAbort': 'ready'}
+    print('Owner shell abort interrupts a blocked receive and preserves the session')
 
     shell_call(runtime_properties_goal + ","
                "findall(I,runtime_property(actor_isolation(I)),[independent]),"

@@ -1513,8 +1513,8 @@ wait_message(Inbox, until(Deadline), Message) :-
         ; wait_message(Inbox, until(Deadline), Message) )
     ; record_wait_remove(Inbox, Message, Remaining) ).
 
-% A native blocking queue read defers ECLiPSe timeout events. Finite
-% toplevel calls use short reads so their goal can be interrupted.
+% A native blocking queue read defers ECLiPSe engine events. Toplevel
+% calls use short reads so Abort and execution limits can interrupt them.
 timed_mailbox :-
     mailbox_store(Store),
     store_get(Store, timed_mailbox, true).
