@@ -1,8 +1,9 @@
 """Connection-scoped ACTOR toplevel preview for the owner-only N7 adapter."""
 
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 import json
 from queue import Empty, Full, Queue
+import re
 from socket import create_connection, timeout as SocketTimeout
 from ssl import create_default_context
 from threading import BoundedSemaphore, Event, Lock, Thread
@@ -112,6 +113,50 @@ def peer_toplevel_once(host, goal, seconds):
                 raise ValueError("invalid_demo_peer_protocol") from error
 
 
+@contextmanager
+def peer_stream(endpoint):
+    with create_connection((endpoint.hostname, endpoint.port or
+                            (443 if endpoint.scheme == "https" else 80)), timeout=1) as raw:
+        if endpoint.scheme == "https":
+            with create_default_context().wrap_socket(raw, server_hostname=endpoint.hostname) as stream:
+                yield stream
+        else:
+            yield raw
+
+
+def forward_terminal(endpoint, credential, token, pid, output):
+    """Wait for the terminal enqueue acknowledgement before sending down."""
+    wire = WSConnection(ConnectionType.CLIENT)
+    request_id = uuid4().hex
+    message = f"terminal_io_output({pid},{json.dumps(output, ensure_ascii=False)})"
+    command = dict(command="io_request", request_id=request_id, token=token, message=message)
+    deadline = monotonic() + 3
+    chunks, size = [], 0
+    with peer_stream(endpoint) as stream:
+        stream.sendall(wire.send(Request(host=endpoint.netloc, target="/ws",
+                                        extra_headers=[(b"authorization", b"Bearer " + credential)])))
+        while monotonic() < deadline:
+            stream.settimeout(max(0.001, deadline - monotonic()))
+            data = stream.recv(4096)
+            if not data:
+                break
+            wire.receive_data(data)
+            for event in wire.events():
+                if isinstance(event, AcceptConnection):
+                    stream.sendall(wire.send(TextMessage(data=json.dumps(command))))
+                elif isinstance(event, Ping):
+                    stream.sendall(wire.send(event.response()))
+                elif isinstance(event, TextMessage):
+                    size += len(event.data.encode("utf-8"))
+                    if size > MAX_PEER_MESSAGE:
+                        return False
+                    chunks.append(event.data)
+                    if event.message_finished:
+                        reply = json.loads("".join(chunks))
+                        return reply == dict(type="io_reply", request_id=request_id, status="ok")
+    return False
+
+
 class PeerActor:
     """One peer-owned actor or toplevel and its connection."""
 
@@ -127,13 +172,8 @@ class PeerActor:
             self.cancelled.set()
 
     def run(self):
-        endpoint = self.endpoint
-        with create_connection((endpoint.hostname, endpoint.port or
-                                (443 if endpoint.scheme == "https" else 80)), timeout=1) as raw:
-            if endpoint.scheme == "https":
-                with create_default_context().wrap_socket(raw, server_hostname=endpoint.hostname) as stream:
-                    return self.run_socket(stream)
-            return self.run_socket(raw)
+        with peer_stream(self.endpoint) as stream:
+            return self.run_socket(stream)
 
     def run_socket(self, stream):
         wire = WSConnection(ConnectionType.CLIENT)
@@ -286,7 +326,7 @@ class PeerActor:
         return None
 
 
-def serve(handler):
+def serve(handler, *, peer=None):
     if (handler.headers.get_all("Content-Length", []) not in ([], ["0"])
             or "Transfer-Encoding" in handler.headers):
         handler.send_error(400)
@@ -309,7 +349,7 @@ def serve(handler):
         with wire_lock:
             handler.connection.sendall(wire.send(event))
 
-    connection = ActorConnection(handler.server.bridge, handler.server.private_settings[1], send)
+    connection = ActorConnection(handler.server.bridge, handler.server.private_settings[1], send, peer=peer)
     handler.connection.settimeout(60)
     try:
         subprotocol = next((offer for offer in upgrade.subprotocols if offer in SYNC_SUBPROTOCOLS), None)
@@ -345,8 +385,11 @@ def serve(handler):
 
 
 class ActorConnection:
-    def __init__(self, bridge, origin, send):
+    def __init__(self, bridge, origin, send, *, peer=None):
         self.bridge, self.origin, self.send = bridge, origin, send
+        self.peer = peer
+        self.peer_terminals = {}
+        self.failed_terminals = set()
         self.io_ack = False
         self.sessions = set()
         self.actors = set()
@@ -369,12 +412,16 @@ class ActorConnection:
         if event["type"] == "down":
             with self.bridge.state_changed:
                 self.actors.discard(event["pid"])
-        self.enqueue_event(event)
+        if not self.enqueue_event(event) and self.peer is not None and "stdout" in event:
+            self.failed_terminals.add(event["pid"])
 
     def enqueue_event(self, event):
         # Keep slow browsers off the bridge reader thread.
-        with suppress(Full):
+        try:
             self.child_output.put_nowait(event)
+        except Full:
+            return False
+        return True
 
     def send_child_output(self):
         try:
@@ -382,9 +429,33 @@ class ActorConnection:
                 event = self.child_output.get()
                 if event is None:
                     return
+                if self.peer is not None and self.relay_peer_terminal(event):
+                    continue
                 self.send(TextMessage(data=json.dumps(event)))
         except (OSError, LocalProtocolError):
             self.closed.set()
+
+    def relay_peer_terminal(self, event):
+        pid = event.get("pid")
+        if event["type"] not in ("output", "down") or pid not in self.peer_terminals:
+            return False
+        if event["type"] == "down":
+            self.peer_terminals.pop(pid)
+            if pid in self.failed_terminals:
+                self.failed_terminals.discard(pid)
+                event["reason"] = "terminal_endpoint_unavailable"
+            return False
+        if "stdout" not in event:
+            return False
+        if pid not in self.failed_terminals:
+            endpoint, credential = self.peer
+            try:
+                if forward_terminal(endpoint, credential, self.peer_terminals[pid], pid, event["stdout"]):
+                    return True
+            except (OSError, LocalProtocolError, RemoteProtocolError, ValueError):
+                pass
+            self.failed_terminals.add(pid)
+        return True
 
     def emit(self, event):
         # Bridge output already queued for this connection must precede
@@ -440,6 +511,8 @@ class ActorConnection:
         command = request["command"]
         if not isinstance(command, str):
             raise ValueError("Expected a command name")
+        if self.peer is not None and command not in ("spawn", "send", "exit"):
+            raise ValueError("Unsupported peer actor command")
         if command == "transport_hello":
             if request.get("version", 1) != 1:
                 raise ValueError("Unsupported ACTOR transport version")
@@ -534,6 +607,19 @@ class ActorConnection:
 
     def actor_command(self, command, request):
         if command == "spawn":
+            terminal = None
+            if self.peer is not None:
+                endpoint, _ = self.peer
+                target = request.get("io_target")
+                match = (re.fullmatch(
+                    r"@\('\$io_endpoint'\((?P<quote>'?)(?P<token>[0-9a-f]{64})(?P=quote)\),'(?P<origin>[^']+)'\)",
+                    target) if isinstance(target, str) else None)
+                origin = f"{endpoint.scheme}://{endpoint.netloc}"
+                if not match or match["origin"] not in (origin, origin + "/"):
+                    raise ValueError("Invalid inherited peer terminal")
+                terminal = match["token"]
+            elif "io_target" in request:
+                raise ValueError("Inherited terminals require a configured peer")
             goal = request["goal"]
             if not isinstance(goal, str) or not goal.strip():
                 raise ValueError("Expected a Prolog goal")
@@ -542,6 +628,8 @@ class ActorConnection:
                 reply["request_id"] = request["request_id"]
             if reply["type"] == "spawned":
                 pid = reply["pid"]
+                if terminal is not None:
+                    self.peer_terminals[pid] = terminal
                 with self.bridge.state_changed:
                     self.actors.add(pid)
                     self.bridge.ws_actors[pid] = self.enqueue_actor_event
@@ -556,7 +644,7 @@ class ActorConnection:
         if not isinstance(value, str):
             raise ValueError(f"Expected a Prolog {field} term")
         with self.bridge.state_changed:
-            if command == "send" and pid == "pubsub_service":
+            if self.peer is None and command == "send" and pid == "pubsub_service":
                 fields = {"owned": list(self.actors), "message": value}
                 operation = "ws_actor_pubsub"
             elif type(pid) is int and pid in self.actors:

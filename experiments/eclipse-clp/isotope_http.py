@@ -785,6 +785,19 @@ class Handler(BaseHTTPRequestHandler):
                     return False
         return True
 
+    def actor_peer(self):
+        if (self.headers.get_all("Host") != [self.server.private_settings[0]]
+                or "Origin" in self.headers or "Sec-Fetch-Site" in self.headers):
+            return None
+        credentials = self.headers.get_all("Authorization", [])
+        if len(credentials) != 1:
+            return None
+        supplied = credentials[0].encode("latin-1")
+        for endpoint, inbound, outbound in self.server.actor_peers:
+            if compare_digest(supplied, b"Bearer " + inbound):
+                return endpoint, outbound
+        return None
+
     def end_headers(self):
         if self.server.private_settings is not None:
             self.send_header("Cache-Control", "no-store")
@@ -796,6 +809,11 @@ class Handler(BaseHTTPRequestHandler):
             self.serve_node_info()
             return
         websocket = path.path == "/ws" and getattr(self.server, "actor_ws", None)
+        peer = self.actor_peer() if websocket else None
+        if peer is not None:
+            self.close_connection = True
+            websocket(self, peer=peer)
+            return
         if not self.admit_request(executes=path.path == "/call" or bool(websocket)):
             return
         if websocket:
@@ -1186,6 +1204,9 @@ def main():
     parser.add_argument("--shell-assets", type=Path,
                         help="serve a prepared same-origin static demonstrator at /n7-shell/")
     parser.add_argument("--actor-ws", action="store_true", help="enable the private ACTOR WebSocket preview")
+    parser.add_argument("--actor-peer", action="append", nargs=3, default=[],
+                        metavar=("ORIGIN", "INBOUND_TOKEN_FILE", "OUTBOUND_TOKEN_FILE"),
+                        help="enable bare actor callbacks from a trusted peer with separate bearer tokens")
     parser.add_argument("--advertise-actor", action="store_true", help="advertise the enabled WebSocket transport as ACTOR")
     parser.add_argument("--stateless-whitelist", action="store_true",
                         help="enable the private stateless execution policy preview")
@@ -1227,6 +1248,27 @@ def main():
         except ValueError:
             parser.error("--allow-peer expects an HTTP(S) origin")
         allowed_peers.add(origin)
+    actor_peers = []
+    inbound_tokens = set()
+    actor_origins = set()
+    for value, inbound_path, outbound_path in args.actor_peer:
+        try:
+            endpoint, origin = peer_url(value)
+            if (not args.actor_ws or origin not in allowed_peers or origin in actor_origins
+                    or endpoint.path not in ("", "/") or endpoint.query
+                    or (endpoint.scheme != "https" and endpoint.hostname not in ("localhost", "127.0.0.1", "::1"))):
+                raise ValueError()
+            inbound = Path(inbound_path).read_bytes().strip()
+            outbound = Path(outbound_path).read_bytes().strip()
+            if (not re.fullmatch(rb"[0-9a-fA-F]{64}", inbound)
+                    or not re.fullmatch(rb"[A-Za-z0-9._~+/=-]{32,256}", outbound)
+                    or inbound == outbound or inbound == private[3] or inbound in inbound_tokens):
+                raise ValueError()
+        except (OSError, ValueError):
+            parser.error("--actor-peer requires a unique allowed origin and valid, separate token files")
+        actor_peers.append((endpoint, inbound, outbound))
+        inbound_tokens.add(inbound)
+        actor_origins.add(origin)
     if bool(args.runtime_dir) == bool(args.pilot_image):
         parser.error("supply either runtime_dir or --pilot-image")
     stop_backend = None
@@ -1250,6 +1292,7 @@ def main():
     with server_type(("127.0.0.1", args.port), Handler) as server:
         server.private_settings = private
         server.actor_ws = actor_ws
+        server.actor_peers = actor_peers
         server.stateless_whitelist = args.stateless_whitelist
         server.anonymous_stateless = args.anonymous_stateless
         server.shell_assets = shell_assets
