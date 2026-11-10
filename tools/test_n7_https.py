@@ -125,7 +125,7 @@ RUNTIME_PROPERTIES_GOAL = (
 
 def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
                 profile="isotope", ws_absent=False, workshop=None, workshop_absent=False,
-                unicode_literals=False, sxml_peer=None):
+                unicode_literals=False, sxml_peer=None, pubsub_only=False):
     ssl_context = ssl.create_default_context(cafile=str(ca))
 
     def client(redirect=False):
@@ -184,7 +184,7 @@ def check_https(origin, ca, shell=False, *, shell_absent=False, actor_core=None,
         http(owner, origin + "/n7-shell/n7-actor-workshop.html", status=404)
     if actor_core is not None:
         check_actor_ws(origin, ca, actor_core, anonymous, wrong, wrong_email, owner, spoof,
-                       workshop=workshop, sxml_peer=sxml_peer)
+                       workshop=workshop, sxml_peer=sxml_peer, pubsub_only=pubsub_only)
     if ws_absent:
         http(anonymous, origin + "/ws", headers=websocket_headers(origin), status=401)
         http(owner, origin + "/ws", headers=websocket_headers(origin), status=404)
@@ -285,7 +285,7 @@ def websocket_headers(origin):
 
 
 def check_actor_ws(origin, ca, runner, anonymous, wrong, wrong_email, owner, spoof, *,
-                   workshop=None, sxml_peer=None):
+                   workshop=None, sxml_peer=None, pubsub_only=False):
     upgrade = websocket_headers(origin)
     endpoint = origin + "/ws"
     http(anonymous, endpoint, headers={**upgrade, **spoof}, status=401)
@@ -326,10 +326,11 @@ workshop_path = Path(sys.argv.pop(0))
 chart_uris, chart_peer = json.loads(sys.argv.pop(0))
 service_request_path = Path(sys.argv.pop(0))
 runtime_properties_goal = sys.argv.pop(0)
+pubsub_only = sys.argv.pop(0) == 'pubsub'
 runner = sys.argv[0]
 sys.path.insert(0, runner.rsplit('/', 1)[0])
 suite = runpy.run_path(runner)
-if suite['main']():
+if not pubsub_only and suite['main']():
     sys.exit(1)
 
 # The packaged shell opens a session without sending transport_hello.
@@ -358,38 +359,6 @@ try:
         assert event['type'] == 'success' and event['more'] is False, (goal[:200], event)
         assert len(event['data']) == 1, (goal, event)
         return event['data'][0]
-
-    raw = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
-                             extra_headers=(option('--header'),))
-    try:
-        raw.send_json(dict(command='spawn', request_id='raw-lab', goal='echo_actor',
-                           options='[src_text("echo_actor :- output(ready), '
-                                   'receive({msg(M) -> output(M)}), '
-                                   'receive({msg(N) -> output(N)}), receive({stop -> true}).")]'))
-        actor = raw.recv_json()
-        assert (actor['type'], actor['request_id']) == ('spawned', 'raw-lab'), actor
-        actor_pid = actor['pid']
-        assert raw.recv_json() == {'type': 'output', 'pid': actor_pid, 'data': 'ready'}
-        for command, fields in [('send', {'message': 'msg(foreign)'}), ('exit', {'reason': 'foreign'})]:
-            ws.send_json(dict(command=command, pid=actor_pid, **fields))
-            denied = ws.recv_json()
-            assert (denied['type'], denied['pid'], denied['data']) == (
-                'error', actor_pid, 'Unknown actor for this connection'), denied
-        for value in ('first', 'second'):
-            raw.send_json(dict(command='send', pid=actor_pid, message=f'msg({value})'))
-            assert raw.recv_json() == {'type': 'output', 'pid': actor_pid, 'data': value}
-        raw.send_json(dict(command='exit', pid=actor_pid, reason='done'))
-        down = raw.recv_json()
-        assert (down['type'], down['pid'], down['reason']) == ('down', actor_pid, 'done'), down
-        raw.send_json(dict(command='spawn', goal='(self(Self),register(raw_disconnect_fixture,Self),'
-                           'output(ready),receive({stop -> true}))', options='[]'))
-        disconnect_actor = raw.recv_json()
-        assert disconnect_actor['type'] == 'spawned', disconnect_actor
-        assert raw.recv_json() == {'type': 'output', 'pid': disconnect_actor['pid'], 'data': 'ready'}
-    finally:
-        raw.close()
-    shell_call('between(1,100,_),sleep(0.01),whereis(raw_disconnect_fixture,undefined),!')
-    print('Raw WebSocket actors push output and down, enforce ownership, and retire on disconnect')
 
     subscriber_options = '[src_text("listen :- receive({msg(Value) -> output(Value),listen}).")]'
     subscriber = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
@@ -451,6 +420,40 @@ try:
     down = ws.recv_json()
     assert (down['type'], down['pid'], down['reason']) == ('down', local_pid, 'done'), down
     print('WebSocket pubsub broadcast, subscription ownership, unsubscribe, and disconnect passed')
+    if pubsub_only:
+        sys.exit(0)
+
+    raw = suite['WebSocket'](option('--ws-url'), 5, origin=option('--origin'),
+                             extra_headers=(option('--header'),))
+    try:
+        raw.send_json(dict(command='spawn', request_id='raw-lab', goal='echo_actor',
+                           options='[src_text("echo_actor :- output(ready), '
+                                   'receive({msg(M) -> output(M)}), '
+                                   'receive({msg(N) -> output(N)}), receive({stop -> true}).")]'))
+        actor = raw.recv_json()
+        assert (actor['type'], actor['request_id']) == ('spawned', 'raw-lab'), actor
+        actor_pid = actor['pid']
+        assert raw.recv_json() == {'type': 'output', 'pid': actor_pid, 'data': 'ready'}
+        for command, fields in [('send', {'message': 'msg(foreign)'}), ('exit', {'reason': 'foreign'})]:
+            ws.send_json(dict(command=command, pid=actor_pid, **fields))
+            denied = ws.recv_json()
+            assert (denied['type'], denied['pid'], denied['data']) == (
+                'error', actor_pid, 'Unknown actor for this connection'), denied
+        for value in ('first', 'second'):
+            raw.send_json(dict(command='send', pid=actor_pid, message=f'msg({value})'))
+            assert raw.recv_json() == {'type': 'output', 'pid': actor_pid, 'data': value}
+        raw.send_json(dict(command='exit', pid=actor_pid, reason='done'))
+        down = raw.recv_json()
+        assert (down['type'], down['pid'], down['reason']) == ('down', actor_pid, 'done'), down
+        raw.send_json(dict(command='spawn', goal='(self(Self),register(raw_disconnect_fixture,Self),'
+                           'output(ready),receive({stop -> true}))', options='[]'))
+        disconnect_actor = raw.recv_json()
+        assert disconnect_actor['type'] == 'spawned', disconnect_actor
+        assert raw.recv_json() == {'type': 'output', 'pid': disconnect_actor['pid'], 'data': 'ready'}
+    finally:
+        raw.close()
+    shell_call('between(1,100,_),sleep(0.01),whereis(raw_disconnect_fixture,undefined),!')
+    print('Raw WebSocket actors push output and down, enforce ownership, and retire on disconnect')
 
     ws.send_json(dict(command='toplevel_call', pid=pid,
                       goal='writeln(abort_receive_ready),receive({recovery_never_sent->true})'))
@@ -930,6 +933,7 @@ print('N7 ACTOR workshop counters, prompts, and monitors passed')
     result = subprocess.run([sys.executable, "-c", trust_fixture_ca, str(ca),
                              str(workshop_path), json.dumps([chart_uris, sxml_peer]),
                              str(ROOT / "examples/statecharts/18 service-request.xml"), RUNTIME_PROPERTIES_GOAL,
+                             "pubsub" if pubsub_only else "actor-core",
                              str(runner.resolve()),
                              "--ws-url", endpoint.replace("https:", "wss:", 1),
                              "--advertised-profile", "actor", "--origin", origin,
@@ -1142,7 +1146,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="trinity-eclipse-n7:local")
     parser.add_argument("--shell", action="store_true", help="also exercise the packaged full demonstrator")
-    parser.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
+    ws_group = parser.add_mutually_exclusive_group()
+    ws_group.add_argument("--actor-core", type=Path, metavar="RUNNER", help="run ACTOR core through owner HTTPS")
+    ws_group.add_argument("--pubsub", type=Path, metavar="RUNNER", help="run the pubsub regression using RUNNER's WebSocket client")
     parser.add_argument("--advertise-actor", action="store_true", help="exercise ACTOR discovery metadata")
     parser.add_argument("--sxml-documents", action="store_true", help="validate packaged SXML through the owner shell")
     parser.add_argument("--stateless-admission", action="store_true",
@@ -1156,12 +1162,13 @@ def main():
         parser.error("--sxml-documents requires --shell and --actor-core")
     if args.sxml_documents:
         check_sxml_reader(args.image)
-    if args.advertise_actor and args.actor_core is None:
-        parser.error("--advertise-actor requires --actor-core")
+    ws_runner = args.actor_core or args.pubsub
+    if args.advertise_actor and ws_runner is None:
+        parser.error("--advertise-actor requires --actor-core or --pubsub")
     anonymous = args.anonymous_staging or args.anonymous_preview
     stateless = args.stateless_admission or anonymous
     prefix = "/preview" if args.anonymous_preview else ""
-    if stateless and (args.shell or args.actor_core is not None):
+    if stateless and (args.shell or ws_runner is not None):
         parser.error("The stateless fixtures run separately from the shell and ACTOR fixtures")
     if sum((args.stateless_admission, args.anonymous_staging, args.anonymous_preview)) > 1:
         parser.error("Choose one stateless fixture")
@@ -1185,7 +1192,7 @@ def main():
                             "--prefix", "/n7-shell/", "--node-url", origin, "--allow-dirty",
                             "--output", str(assets)], check=True)
             shell_args = ["--shell-assets", str(assets)]
-        if args.actor_core is not None:
+        if ws_runner is not None:
             shell_args.append("--actor-ws")
         chart_peer = f"http://127.0.0.1:{provider_port}" if args.sxml_documents else None
         if chart_peer:
@@ -1275,7 +1282,7 @@ def main():
                         expect(error.code, 403)
                 check_stateless_admission(origin, ca, project + "_default", anonymous=anonymous, prefix=prefix)
                 return
-            check_https(origin, ca, shell=args.shell, actor_core=args.actor_core,
+            check_https(origin, ca, shell=args.shell, actor_core=ws_runner, pubsub_only=args.pubsub is not None,
                         profile="actor" if args.advertise_actor else "isotope",
                         unicode_literals=True, sxml_peer=chart_peer)
             check_stateless_cache(origin, ca)

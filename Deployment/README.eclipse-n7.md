@@ -408,6 +408,16 @@ The fixture signs in with a synthetic GitHub owner and tests WebSocket
 admission, ACTOR core, and the existing HTTP routes. Its ACTOR report is
 stored in the fixture's private temporary directory and removed on exit.
 
+To run the two-connection pubsub regression with the bootstrap-pinned
+WebSocket client, select `--pubsub`. This runs the owner HTTPS fixture and
+checks broadcast, unsubscribe, and disconnect without running ACTOR core.
+
+```sh
+.trinity/n7-actor-venv/bin/python tools/test_n7_https.py --advertise-actor \
+  --image trinity-eclipse-n7:eclipse-node-dev \
+  --pubsub .trinity/deps/trinity-conformance/runner/run.py
+```
+
 ## Local verification
 
 The packaged image passed PT-004 through PT-020 using simulated owner
