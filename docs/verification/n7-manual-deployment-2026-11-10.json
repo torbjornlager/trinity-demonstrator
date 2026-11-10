@@ -20,6 +20,18 @@
     },
     "n7_unauthenticated_https_status": 401
   },
+  "live_manual_recheck": {
+    "recorded_at": "2026-11-10T18:25:30+00:00",
+    "main_commit": "da1b232662c682175397bb5230914b29e084236b",
+    "main_manual_path": "web/manual.html",
+    "main_manual_sha256": "18bced6b9f9728edbda139e33ad1bf9250f8eba8f10d249854aa58e906ba219d",
+    "n3_public_status": 200,
+    "n3_body_matches_main_byte_for_byte": true,
+    "n7_authenticated_full_html_dom_matches_n3": true,
+    "n7_authenticated_matches_main": true,
+    "n7_comparison_method": "Compared the full HTML DOM of both live pages in the same browser after signing in to N7. The N3 response body was independently compared byte for byte with the manual on main.",
+    "n7_unauthenticated_https_status": 401
+  },
   "deployment_health_probe": {
     "path": "/call?goal=true&format=json",
     "authenticated_result": "success"
