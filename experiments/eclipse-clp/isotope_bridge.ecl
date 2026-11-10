@@ -907,12 +907,16 @@ probe_send(Address@Node, Message, {[type:send, pid:Pid, node:NodeText, message:T
 
 % The root owns the cache. Each entry keeps its original relay and child
 % together so subsequent pages and any query I/O reach the same mailbox.
-stateless_key(Fields, query(Format, Goal, Template, Source, Once)) :-
+stateless_key(Fields, query(Format, Goal, Template, Source, Once, Timeout)) :-
     memberchk(format:Format, Fields),
     memberchk(goal:Goal, Fields),
     ( Format == "json" -> Template = bindings ; memberchk(template:Template, Fields) ),
     memberchk(src_text:Source, Fields),
-    memberchk(once:Once, Fields).
+    memberchk(once:Once, Fields),
+    stateless_timeout(Fields, Timeout).
+
+stateless_timeout(Fields, Timeout) :-
+    ( memberchk(timeout:Requested, Fields) -> Timeout = Requested ; Timeout = none ).
 
 take_stateless_page(Key, Offset, Relay) :-
     store_get(http_sessions, stateless_cache, Entries),
@@ -966,8 +970,10 @@ stateless_query(Context, Command, Fields) :-
         ( Offset =< 1000 -> true
         ; throw(error(domain_error(stateless_preview_offset, Offset), stateless_whitelist)) )
     ; true ),
+    stateless_timeout(Fields, Timeout),
+    stateless_spawn_options(Source, Timeout, Options),
     setup_call_cleanup(
-        toplevel_spawn(Pid, [src_text(Source)]),
+        toplevel_spawn(Pid, Options),
         serve_stateless_page(Context, Command, Fields, Pid, initial),
         exit(Pid, query_finished)
     ).

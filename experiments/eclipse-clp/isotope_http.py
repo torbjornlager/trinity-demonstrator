@@ -2,6 +2,7 @@
 """Serve the ECLiPSe HTTP bridge locally or behind a trusted owner proxy."""
 
 import argparse
+from base64 import b64encode
 from collections import OrderedDict, deque
 from concurrent.futures import Future, TimeoutError as FutureTimeout
 from contextlib import suppress
@@ -12,16 +13,17 @@ import io
 from ipaddress import IPv6Address, ip_address
 from itertools import count
 import json
-from math import ceil
+from math import ceil, isfinite
 from mimetypes import guess_type
 import os
 from pathlib import Path
 import re
 from select import select
 import signal
+from socket import SHUT_RDWR
 import subprocess
 import tarfile
-from threading import BoundedSemaphore, Condition, Event, Lock, Thread
+from threading import BoundedSemaphore, Condition, Event, Lock, Thread, Timer
 from time import monotonic, sleep
 from urllib.parse import parse_qs, unquote, urlencode, urljoin, urlsplit
 from uuid import uuid4
@@ -99,6 +101,50 @@ def peer_url(url):
     return parsed, (parsed.scheme, parsed.netloc.lower())
 
 
+RESERVED_PEER_HEADERS = frozenset({
+    "x-forwarded-for", "x-real-ip", "x-web-prolog-user", "x-web-prolog-principal",
+    "x-authenticated-user", "x-web-prolog-capabilities", "x-web-prolog-caps",
+    "x-web-prolog-internal-proxy", "x-web-prolog-query-budget", "x-web-prolog-proxy-token",
+    "x-web-prolog-client-ip", "x-auth-request-user", "x-auth-request-email", "host",
+    "connection", "content-length", "transfer-encoding", "upgrade", "proxy-authorization",
+    "proxy-connection", "te", "trailer", "keep-alive",
+})
+
+
+def peer_headers(fields):
+    if not isinstance(fields, list):
+        raise ValueError("invalid_peer_headers")
+    headers = {"Connection": "close"}
+    for field in fields:
+        if (not isinstance(field, list) or len(field) not in (2, 4)
+                or not all(isinstance(part, str) for part in field)):
+            raise ValueError("invalid_peer_header")
+        name, *values = field
+        name = name.lower()
+        if (not re.fullmatch(r"[a-z0-9!#$%&'*+.^_`|~-]+", name)
+                or name.replace("_", "-") in RESERVED_PEER_HEADERS
+                or any(re.search(r"[\x00-\x08\x0a-\x1f\x7f]", value) for value in values)):
+            raise ValueError("invalid_peer_header")
+        if len(values) == 1:
+            value = values[0].encode("utf-8")
+        elif name == "authorization" and values[0] == "basic":
+            value = b"Basic " + b64encode(":".join(values[1:]).encode("utf-8"))
+        else:
+            raise ValueError("invalid_peer_header")
+        headers.setdefault(name, value)
+    return headers
+
+
+def valid_peer_timeout(seconds):
+    return (type(seconds) is int and seconds >= 0
+            or type(seconds) is float and isfinite(seconds) and seconds >= 0)
+
+
+def interrupt_peer_socket(sock):
+    with suppress(OSError):
+        sock.shutdown(SHUT_RDWR)
+
+
 def fetch_peer(allowed_peers, request):
     parsed, origin = peer_url(request["url"])
     if origin not in allowed_peers:
@@ -113,20 +159,30 @@ def fetch_peer(allowed_peers, request):
             raise ValueError("invalid_counter_peer")
         from n7_actor_ws import published_counter
         return published_counter(parsed.hostname)
+    headers = {"Connection": "close"}
+    http_timeout = None
     if request["operation"] == "call":
         params = request["params"]
-        if (parsed.path not in ("", "/") or parsed.query
-                or set(params) != {"goal", "template", "src_text", "offset", "limit", "once"}
+        required = {"goal", "template", "src_text", "offset", "limit", "once"}
+        if (not isinstance(params, dict) or parsed.query or not required <= params.keys()
+                or params.keys() - required - {"timeout", "http_timeout", "headers"}
                 or not all(isinstance(params[key], str) for key in ("goal", "template", "src_text"))
                 or type(params["offset"]) is not int or params["offset"] < 0
                 or type(params["limit"]) is not int or not 1 <= params["limit"] <= 100
-                or not isinstance(params["once"], bool)):
+                or not isinstance(params["once"], bool)
+                or not all(valid_peer_timeout(params[key]) for key in ("timeout", "http_timeout")
+                           if key in params)):
             raise ValueError("invalid_peer_request")
-        query = dict(params, goal=f"({params['goal']})", template=f"({params['template']})",
+        http_timeout = params.get("http_timeout")
+        headers = peer_headers(params.get("headers", []))
+        query = {key: value for key, value in params.items() if key in required}
+        query.update(goal=f"({params['goal']})", template=f"({params['template']})",
                      format="prolog", once=str(params["once"]).lower())
+        if "timeout" in params:
+            query["timeout"] = params["timeout"]
         if not query["src_text"]:
             del query["src_text"]
-        target = "/call?" + urlencode(query)
+        target = parsed.path.rstrip("/") + "/call?" + urlencode(query)
     elif request["operation"] == "source":
         target = parsed.path or "/"
         if parsed.query:
@@ -135,24 +191,45 @@ def fetch_peer(allowed_peers, request):
         raise ValueError("invalid_peer_operation")
     if len(target) > 16384:
         raise ValueError("peer_request_too_large")
+    if http_timeout == 0:
+        raise TimeoutError()
+    budget = 2 if http_timeout is None else min(2, http_timeout)
+    idle_timeout = 1 if http_timeout is None else budget
+    deadline = monotonic() + budget
     connection_type = HTTPSConnection if parsed.scheme == "https" else HTTPConnection
-    deadline = monotonic() + 2
-    connection = connection_type(parsed.hostname, parsed.port, timeout=1)
+    connection = connection_type(parsed.hostname, parsed.port, timeout=idle_timeout)
+    timer = None
     try:
-        connection.request("GET", target, headers={"Connection": "close"})
+        connection.connect()
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise TimeoutError()
+        # A socket read timeout alone lets a peer drip bytes indefinitely.
+        # Keep the socket handle even if getresponse() detaches it.
+        timer = Timer(remaining, interrupt_peer_socket, (connection.sock,))
+        timer.daemon = True
+        timer.start()
+        connection.request("GET", target, headers=headers)
         with connection.getresponse() as response:
             if response.status != 200:
                 raise ValueError(f"peer_http_{response.status}")
             data = bytearray()
-            while monotonic() < deadline:
+            while True:
                 chunk = response.read1(8192)
+                if monotonic() >= deadline:
+                    raise TimeoutError()
                 if not chunk:
                     return data.decode("utf-8")
                 data.extend(chunk)
                 if len(data) > 128 * 1024:
                     raise ValueError("peer_response_too_large")
-            raise TimeoutError()
+    except (OSError, HTTPException):
+        if monotonic() >= deadline:
+            raise TimeoutError() from None
+        raise
     finally:
+        if timer is not None:
+            timer.cancel()
         connection.close()
 
 
@@ -476,6 +553,11 @@ class Bridge:
                 else:
                     body = fetch_peer(self.allowed_peers, request)
                 status = "ok"
+            except TimeoutError:
+                status, body = "error", (
+                    "http_timeout" if request["operation"] == "call" and "http_timeout" in request["params"]
+                    else "peer_request_failed"
+                )
             except (ValueError, KeyError, TypeError, OSError, HTTPException):
                 status, body = "error", "peer_request_failed"
             self.finish_egress(request, status, body)
@@ -630,7 +712,7 @@ def stateless_request(fields):
     output_format = fields.get("format")
     if output_format not in ("prolog", "json"):
         raise ValueError("Expected format=prolog or format=json")
-    if fields.keys() - {"format", "goal", "template", "offset", "limit", "once", "src_text"}:
+    if fields.keys() - {"format", "goal", "template", "offset", "limit", "once", "src_text", "timeout"}:
         raise ValueError("Unsupported stateless query parameter")
     goal = fields["goal"]
     template = fields.get("template", goal)
@@ -641,9 +723,15 @@ def stateless_request(fields):
         raise ValueError("Expected a goal, a template, a non-negative offset and a limit from 1 to 100")
     if once not in ("true", "false"):
         raise ValueError("Expected once=true or once=false")
-    return dict(command="stateless", goal=goal, template=template, format=output_format,
-                src_text=fields.get("src_text", ""),
-                offset=offset, limit=limit, once=once == "true")
+    request = dict(command="stateless", goal=goal, template=template, format=output_format,
+                   src_text=fields.get("src_text", ""),
+                   offset=offset, limit=limit, once=once == "true")
+    if "timeout" in fields:
+        timeout = float(fields["timeout"])
+        if not isfinite(timeout):
+            raise ValueError("Expected a finite execution timeout")
+        request["timeout"] = max(0, timeout)
+    return request
 
 
 def proxy_client_ip(headers):
