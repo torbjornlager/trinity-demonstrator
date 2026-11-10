@@ -8,7 +8,9 @@ deps=.trinity/deps
 native="$deps/swi-prolog-node"
 browser="$deps/swi-wasm-node"
 conformance="$deps/trinity-conformance"
-conformance_revision=15cfacebd4625d891f0ecea9c551edcc70678bd9
+conformance_revision=0ecb9ef4f60da483007f943ff220f3258cdd47a6
+previous_conformance_revision=15cfacebd4625d891f0ecea9c551edcc70678bd9
+conformance_repo=https://github.com/torbjornlager/trinity-conformance.git
 dist=.trinity/n7-local/eclipse-dist
 archive="$dist/eclipse_basic.tgz"
 archive_sha256=7599e154cca23b5601ed133df2f0481c43baf115b8cd6d7757795729d815e0d5
@@ -35,12 +37,18 @@ if [ ! -e "$conformance" ]; then
     checkout="$scratch/trinity-conformance"
     git init --quiet "$checkout"
     git -C "$checkout" fetch --depth=1 --no-tags \
-        https://github.com/torbjornlager/trinity-conformance.git "$conformance_revision"
+        "$conformance_repo" "$conformance_revision"
     git -C "$checkout" checkout --quiet --detach "$conformance_revision"
     mv "$checkout" "$conformance"
 fi
 checked_revision=$(git -C "$conformance" rev-parse HEAD)
 tracked_changes=$(git -C "$conformance" status --porcelain --untracked-files=no)
+if [ "$checked_revision" = "$previous_conformance_revision" ] && [ -z "$tracked_changes" ] &&
+    ! git -C "$conformance" symbolic-ref --quiet HEAD >/dev/null; then
+    git -C "$conformance" fetch --depth=1 --no-tags "$conformance_repo" "$conformance_revision"
+    git -C "$conformance" checkout --quiet --detach "$conformance_revision"
+    checked_revision=$(git -C "$conformance" rev-parse HEAD)
+fi
 if [ "$checked_revision" != "$conformance_revision" ] || [ -n "$tracked_changes" ]; then
     printf 'Expected a clean conformance checkout at %s in %s.\n' "$conformance_revision" "$conformance" >&2
     exit 1
