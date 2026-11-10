@@ -27,6 +27,7 @@ run :-
     init_linda,
     get_stream(output, Replies),
     set_stream(output, error),
+    set_stream(warning_output, error),
     self(Main),
     spawn(read_requests(Main), _),
     spawn(probe_echo(none), Echo),
@@ -119,14 +120,17 @@ serve(Replies) :-
 start_peer_actor(Replies, Parent, Proxy, Node, Goal, Source) :-
     monitor(Proxy, Ref),
     store_set(peer_actors, monitor(Ref), Proxy),
-    store_set(peer_actors, Proxy, peer(Parent, Node, Ref, pending)),
-    goal_template_texts(Goal, Goal, GoalText, _),
-    ( Source = text(Text) -> atom_string(Atom, Text), Options = [src_text(Atom)]
-    ; Options = [] ),
+    ( nonvar(Goal), Goal = '$peer_toplevel'(SpawnOptions) ->
+        Kind = "toplevel_spawn", GoalText = ""
+    ; Kind = "spawn", SpawnOptions = [],
+      goal_template_texts(Goal, Goal, GoalText, _) ),
+    store_set(peer_actors, Proxy, peer(Parent, Node, Ref, pending, Kind)),
+    ( Source = text(Text) -> atom_string(Atom, Text), Options = [src_text(Atom)|SpawnOptions]
+    ; Options = SpawnOptions ),
     goal_template_texts(Options, Options, OptionsText, _),
     atom_string(Node, Url),
     reply(Replies, {[type:actor_peer_start, proxy:Proxy, url:Url,
-                     goal:GoalText, options:OptionsText]}).
+                     command:Kind, goal:GoalText, options:OptionsText]}).
 
 peer_actor_command(Replies, Pid, Command, Field, Value) :-
     ( store_get(peer_actors, pid(Pid), Proxy) ->
@@ -139,23 +143,36 @@ peer_actor_command(Replies, Pid, Command, Field, Value) :-
 % PID as the first argument to receive replies over the peer connection.
 peer_actor_send(Replies, Sender, Pid, Message) :-
     ( store_get(peer_actors, pid(Pid), Proxy) ->
-        goal_template_texts(Message, Message, Text, _),
-        ( store_get(peer_actors, Proxy, peer(Parent, _, _, active(Pid))),
-          actor_browser_session(Parent, Session), actor_browser_session(Sender, Session),
-          compound(Message), arg(1, Message, From), From == Sender ->
-            sprintf(FromText, "%d", [Sender]),
-            Return = [browser_from:FromText]
-        ; Return = [] ),
-        reply(Replies, {[type:actor_peer_command, proxy:Proxy, command:"send", message:Text|Return]})
+        store_get(peer_actors, Proxy, peer(Parent, _, _, active(Pid), Kind)),
+        ( Kind == "toplevel_spawn", nonvar(Message), peer_toplevel_command(Message, Fields) ->
+            true
+        ; goal_template_texts(Message, Message, Text, _),
+          ( actor_browser_session(Parent, Session), actor_browser_session(Sender, Session),
+            compound(Message), arg(1, Message, From), From == Sender ->
+              sprintf(FromText, "%d", [Sender]),
+              Return = [browser_from:FromText]
+          ; Return = [] ),
+          Fields = [command:"send", message:Text|Return] ),
+        reply(Replies, {[type:actor_peer_command, proxy:Proxy|Fields]})
     ; true ).
 
+peer_toplevel_command('$call'(Goal, Options), [command:"toplevel_call", goal:Text, options:Wire]) :-
+    goal_template_texts(Goal, [format(prolog)|Options], Text, Wire).
+peer_toplevel_command('$next'(Options), [command:"toplevel_next"|Fields]) :-
+    ( memberchk(limit(Limit), Options) -> Fields = [limit:Limit] ; Fields = [] ).
+peer_toplevel_command('$stop', [command:"toplevel_stop"]).
+peer_toplevel_command('$abort', [command:"toplevel_abort"]).
+
 peer_actor_event(Proxy, Fields) :-
-    ( store_get(peer_actors, Proxy, peer(Parent, Node, Ref, Status)) ->
+    ( store_get(peer_actors, Proxy, peer(Parent, Node, Ref, Status, Kind)) ->
         memberchk(event:Event, Fields),
         ( Event == "spawned", Status == pending, memberchk(child:Id, Fields),
           Pid = Id@Node, acknowledge_remote_spawn(Proxy, Pid) ->
             store_set(peer_actors, pid(Pid), Proxy),
-            store_set(peer_actors, Proxy, peer(Parent, Node, Ref, active(Pid)))
+            store_set(peer_actors, Proxy, peer(Parent, Node, Ref, active(Pid), Kind))
+        ; Event == "answer", Kind == "toplevel_spawn", Status = active(Pid) ->
+            peer_toplevel_answer(Pid, Fields, Answer),
+            send(Parent, Answer)
         ; Event == "output", Status = active(Pid), memberchk(data:Text, Fields) ->
             ( catch(parse_goal(Text, isotope_bridge, Term, _), _, fail) -> Value = Term
             ; Value = Text ),
@@ -183,6 +200,19 @@ peer_actor_event(Proxy, Fields) :-
             ; send(Proxy, remote_spawn_reply(error(Text))) )
         ; true )
     ; true ).
+
+peer_toplevel_answer(Pid, Fields, Answer) :-
+    memberchk(kind:Kind, Fields),
+    ( Kind == "success", memberchk(more:More, Fields), memberchk(data:Text, Fields),
+      catch(parse_goal(Text, isotope_bridge, Rows, _), _, fail), is_list(Rows) ->
+        Answer = success(Pid, Rows, More)
+    ; Kind == "failure" -> Answer = failure(Pid)
+    ; Kind == "stop" -> Answer = stop(Pid)
+    ; Kind == "abort" -> Answer = abort(Pid)
+    ; Kind == "error", memberchk(data:Text, Fields) ->
+        ( catch(parse_goal(Text, isotope_bridge, Error, _), _, fail) -> true ; Error = Text ),
+        Answer = error(Pid, Error)
+    ; Answer = error(Pid, invalid_remote_toplevel_answer) ).
 
 route_request(Request, "spawn", _, Fields) :- !,
     self(Router),

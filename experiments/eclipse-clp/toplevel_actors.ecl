@@ -54,8 +54,17 @@ spawn_toplevel(Pid, Options, Kind, Module) :-
     split_spawn_options(Options, false, Self, Session, Target, Remaining),
     spawn_limit(time_limit, Remaining, Time, AfterTime),
     spawn_limit(idle_limit, AfterTime, Idle, SpawnOptions),
-    spawn(toplevel_actors:ptcp(Target, Session, Kind, limits(Time, Idle)),
-          Pid, [src_text("")|SpawnOptions])@Module.
+    ( member(Option, SpawnOptions), nonvar(Option), Option = node(_) ->
+        ( Target == Self -> true
+        ; throw(error(domain_error(remote_toplevel_target, Target), toplevel_spawn/2)) ),
+        remote_limit_options(Time, Idle, Limits),
+        spawn('$peer_toplevel'([session(Session)|Limits]), Pid, SpawnOptions)@Module
+    ; spawn(toplevel_actors:ptcp(Target, Session, Kind, limits(Time, Idle)),
+            Pid, [src_text("")|SpawnOptions])@Module ).
+
+remote_limit_options(Time, Idle, Options) :-
+    ( Time == infinite -> Options = Rest ; Options = [time_limit(Time)|Rest] ),
+    ( Idle == infinite -> Rest = [] ; Rest = [idle_limit(Idle)] ).
 
 spawn_limit(Name, Options, Limit, Rest) :-
     ( member(Option, Options), nonvar(Option), functor(Option, Name, 1),
@@ -83,6 +92,7 @@ toplevel_call(Pid, Goal) :-
 
 toplevel_call(Pid, Goal, Options) :-
     call_options(Options, Goal, _, _, _, _, _),
+    check_remote_options(Pid, Options, toplevel_call/3),
     send(Pid, '$call'(Goal, Options)).
 
 toplevel_next(Pid) :-
@@ -90,7 +100,13 @@ toplevel_next(Pid) :-
 
 toplevel_next(Pid, Options) :-
     next_options(Options, all, main, _, _),
+    check_remote_options(Pid, Options, toplevel_next/2),
     send(Pid, '$next'(Options)).
+
+check_remote_options(Pid, Options, Caller) :-
+    ( nonvar(Pid), Pid = '@'(_, _), (memberchk(target(_), Options) ; memberchk(io_target(_), Options)) ->
+        throw(error(domain_error(remote_toplevel_options, Options), Caller))
+    ; true ).
 
 toplevel_call_synch_(Pid, Goal, Answer, Module) :-
     toplevel_call_synch_(Pid, Goal, Answer, [], Module).
@@ -151,6 +167,9 @@ split_sync_options([Option|Options], Kind, Self, Query, Wait) :-
     split_sync_options(Options, Kind, Self, Qs, Ws).
 
 synchronous_request(Pid, Command, Request, Answer, Options, Callback, Module) :-
+    ( nonvar(Pid), Pid = '@'(_, _) ->
+        throw(error(permission_error(call, synchronous_remote_toplevel, Pid), toplevel_actors))
+    ; true ),
     setup_call_cleanup(
         monitor(Pid, Monitor),
         ( send(Pid, Command),
@@ -202,7 +221,8 @@ toplevel_stop(Pid, Target) :-
     send(Pid, '$stop'(Target)).
 
 toplevel_abort(Pid) :-
-    post_actor_event(Pid, interrupt_ptcp).
+    ( nonvar(Pid), Pid = '@'(_, _) -> send(Pid, '$abort')
+    ; post_actor_event(Pid, interrupt_ptcp) ).
 
 toplevel_halt(Pid) :-
     exit(Pid, true).

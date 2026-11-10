@@ -111,7 +111,7 @@ def peer_toplevel_once(host, goal, seconds):
 
 
 class PeerActor:
-    """One peer-owned bare actor and its connection, including startup."""
+    """One peer-owned actor or toplevel and its connection."""
 
     def __init__(self, endpoint, request, emit):
         self.endpoint, self.request, self.emit = endpoint, request, emit
@@ -136,6 +136,8 @@ class PeerActor:
     def run_socket(self, stream):
         wire = WSConnection(ConnectionType.CLIENT)
         endpoint = self.endpoint
+        spawn_command = self.request["command"]
+        toplevel = spawn_command == "toplevel_spawn"
         deadline = monotonic() + 7
         stream.settimeout(0.1)
 
@@ -165,13 +167,17 @@ class PeerActor:
                         command = self.commands.get_nowait()
                     except Empty:
                         break
-                    field = "message" if command["command"] == "send" else "reason"
-                    outgoing = {"command": command["command"], "pid": child, field: command[field]}
+                    outgoing = {key: command[key] for key in
+                                ("command", "goal", "options", "limit", "message", "reason")
+                                if key in command}
+                    outgoing["pid"] = child
                     if "browser_from" in command:
                         outgoing["browser_from"] = command["browser_from"]
                         reply_targets.add(command["browser_from"])
+                    if toplevel and outgoing.get("reason") == "true":
+                        outgoing = {"command": "toplevel_halt", "pid": child}
                     send_json(outgoing)
-                    if field == "reason" and stop_deadline is None:
+                    if command["command"] == "exit" and stop_deadline is None:
                         stop_deadline = monotonic() + 2
             try:
                 data = stream.recv(4096)
@@ -182,8 +188,12 @@ class PeerActor:
             wire.receive_data(data)
             for event in wire.events():
                 if isinstance(event, AcceptConnection):
-                    send_json({"command": "spawn", "goal": self.request["goal"],
-                               "options": self.request["options"]})
+                    spawn = {"command": spawn_command, "options": self.request["options"]}
+                    if toplevel:
+                        send_json({"command": "transport_hello", "version": 1, "answer_terms": True})
+                    else:
+                        spawn["goal"] = self.request["goal"]
+                    send_json(spawn)
                 elif isinstance(event, Ping):
                     send(event.response())
                 elif isinstance(event, CloseConnection):
@@ -200,6 +210,10 @@ class PeerActor:
                     if not isinstance(reply, dict):
                         return "invalid_peer_message"
                     kind = reply.get("type")
+                    if toplevel and child is not None and kind in ("success", "failure", "error", "stop", "abort"):
+                        if reply.get("pid") == child or (kind == "error" and "pid" not in reply):
+                            self.relay_answer(reply)
+                        continue
                     if kind == "error":
                         return "peer_rejected"
                     if kind == "actor_message" and child is not None:
@@ -226,6 +240,20 @@ class PeerActor:
                             if reason is not None:
                                 return reason
         return "connection_closed"
+
+    def relay_answer(self, reply):
+        kind = reply["type"]
+        if kind == "success":
+            data, more = reply.get("term"), reply.get("more")
+            if isinstance(data, str) and type(more) is bool:
+                self.emit("answer", kind=kind, data=data, more=more)
+            else:
+                self.emit("answer", kind="error", data="invalid_remote_toplevel_answer")
+        elif kind == "error":
+            data = reply.get("term", reply.get("data"))
+            self.emit("answer", kind=kind, data=data if isinstance(data, str) else "peer_rejected")
+        else:
+            self.emit("answer", kind=kind)
 
     def relay(self, child, reply):
         if reply.get("pid") != child:
