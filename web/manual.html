@@ -467,7 +467,7 @@ Send the message to <code>Pid</code>. Default is the parent process.</p></li>
     </div>
 <pre><code>input(+Prompt, -Data) is det.
 input(+Prompt, -Data, +Options) is det.</code></pre>
-<p>Sends <code>prompt(Pid,prompt_ref(Ref,Prompt))</code> to the target process and waits for a reply carrying the fresh reference <code>Ref</code>. <code>Prompt</code> may be any Prolog term. <code>Pid</code> is the pid of the current process. <code>Data</code> is bound to the reply supplied through <code>respond/3</code>. Valid option:</p>
+<p>Sends <code>prompt(Pid, Ref, Prompt)</code> to the target process and waits for a reply carrying the fresh reference <code>Ref</code>. <code>Prompt</code> may be any Prolog term. <code>Pid</code> is the pid of the current process. <code>Data</code> is bound to the reply supplied through <code>respond/3</code>. Valid option:</p>
 <ul>
     <li><p><code>target(+Pid)</code><br />
 Send the <code>prompt</code> message to <code>Pid</code>. Default is the current I/O target when one has been installed, or otherwise the parent process.</p></li>

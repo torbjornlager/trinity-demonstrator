@@ -83,9 +83,9 @@ expert_conversation(Facts, Answers, Outcome, Questions) :-
 
 answer_expert(Pid, Answers, Outcome, Questions) :-
     receive({
-        prompt(Pid, Question) ->
+        prompt(Pid, Ref, Question) ->
             Answers = [Answer|Rest], Questions = [Question|Tail],
-            respond(Pid, Answer), answer_expert(Pid, Rest, Outcome, Tail) ;
+            respond(Pid, Ref, Answer), answer_expert(Pid, Rest, Outcome, Tail) ;
         success(Pid, _, false) -> Outcome = proved, Questions = [] ;
         failure(Pid) -> Outcome = not_proved, Questions = [] ;
         error(Pid, Error) -> throw(Error)
