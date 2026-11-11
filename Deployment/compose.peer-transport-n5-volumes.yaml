@@ -1,0 +1,11 @@
+# Alternative for Docker hosts without bind mounts. Apply after public N5.
+services:
+  wp_n5:
+    environment:
+      WP_PEER_TRANSPORT_TOKENS_FILE: /run/peer-transport/peers.pl
+    volumes:
+      - n5_peer_tokens:/run/peer-transport:ro
+volumes:
+  n5_peer_tokens:
+    external: true
+    name: ${WP_N5_PEER_TOKENS_VOLUME:?Set WP_N5_PEER_TOKENS_VOLUME}

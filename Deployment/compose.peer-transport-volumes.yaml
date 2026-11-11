@@ -1,0 +1,20 @@
+# Alternative to compose.peer-transport.yaml for Docker hosts without bind mounts.
+# Populate each external volume with an owner-only peers.pl before starting nodes.
+services:
+  wp_n3:
+    environment:
+      WP_PEER_TRANSPORT_TOKENS_FILE: /run/peer-transport/peers.pl
+    volumes:
+      - n3_peer_tokens:/run/peer-transport:ro
+  wp_n4:
+    environment:
+      WP_PEER_TRANSPORT_TOKENS_FILE: /run/peer-transport/peers.pl
+    volumes:
+      - n4_peer_tokens:/run/peer-transport:ro
+volumes:
+  n3_peer_tokens:
+    external: true
+    name: ${WP_N3_PEER_TOKENS_VOLUME:?Set WP_N3_PEER_TOKENS_VOLUME}
+  n4_peer_tokens:
+    external: true
+    name: ${WP_N4_PEER_TOKENS_VOLUME:?Set WP_N4_PEER_TOKENS_VOLUME}

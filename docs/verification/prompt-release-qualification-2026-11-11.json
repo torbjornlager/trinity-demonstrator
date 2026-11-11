@@ -90,6 +90,15 @@
       "candidate_revision": "432db0e55e54c8d1483144bd2b7bccb47a718980",
       "all_packaged_web_file_hashes_identical": true,
       "real_chrome_validation_reused_from": "/Users/lager/trinity-backup/runtime-pin-qualification-2026-11-11.o76e8k22/real-browser-final/results.json"
+    },
+    "container_staging": {
+      "checks": 21,
+      "all_passed": true,
+      "nodes": [
+        "N3",
+        "N5"
+      ],
+      "evidence": "staging-qualified-checks.json"
     }
   },
   "diagnostics": [
@@ -97,13 +106,16 @@
     "The older preview baseline and the initial extracted Trealla candidate both reproduced a Reply/Abort/Halt hang on macOS and Linux. The lock trace identified browser-capability and HTTP-route locks.",
     "After the lock fixes, 200 macOS rounds passed. A Linux run during parallel qualification exceeded the unchanged 2.5-second probe deadline after 188 successful rounds, without the earlier node-wide hang. An isolated timing-instrumented Linux run then passed all 200 rounds without any timeout or request error."
   ],
-  "deployment_status": "not deployed; source PRs and final consumer pin publication precede container staging",
+  "deployment_status": "Not deployed. Runtime containers passed staging; publication and configuration-policy checks precede production rollout.",
   "evidence_directory": "/Users/lager/trinity-backup/runtime-deployment-67764bc-2026-11-11.yo_5zkah",
   "consumer_inputs_sha256": {
     "README.md": "66d2e89e96870081c74f5c5a7029f77b1b91a6fa9eca5044d3d616128a2afc7a",
     "dependencies/swi-prolog-node.json": "a946f43d63b670d0b3f5eb18e077a792620cc48f3b4186b8107454df0de49092",
     "dependencies/trealla-port.json": "2b53eaa03615cbffc716e3bcb9e46c11882b249496e545e7f74e5d9c81f5b11a",
-    "dependencies/swi-wasm-node.json": "9717116560a07afa2d4230f1bdf045d76611cb5284d3e142159fd6921d96b605"
+    "dependencies/swi-wasm-node.json": "9717116560a07afa2d4230f1bdf045d76611cb5284d3e142159fd6921d96b605",
+    "Deployment/compose.trealla-n5.yaml": "9c78124849935a048c282e45aaab055104d072289e29420e8261553ee69af24d",
+    "Deployment/compose.peer-transport-volumes.yaml": "7833d9aee4441abe6a71d3f08644b67d81c22b496f4c01946962e7b9e0231b60",
+    "Deployment/compose.peer-transport-n5-volumes.yaml": "9792fe1f78f96b813d30bb6e1670ccf3968828ff6896db6bb0ba6aea6b4cba44"
   },
   "evidence_sha256": {
     "prompt-consumer-qualified/results.json": "13b2896a5dd87772c21a09566c5c35006430b3f58f0539154193957dcb4f7374",
@@ -113,5 +125,11 @@
     "prompt-interop-qualified.log": "016d6900b2e07e0d65d04ebfefd347b64854fedbc88eef6cddb17801f79369f4",
     "counterfactual-results.json": "ae978f56c254619a0e805a396ca047c053135900a21138b8d9ffd1c7e88745e5",
     "linux-stress-qualified-summary.json": "ab910db36b3962a52df7fc995b1fd6177ea558d85f52fd451cbb217d0731a85a"
+  },
+  "deployment_configuration": {
+    "n5_http_sessions": true,
+    "n5_load_uri_origins": "Retains the live N2\u2013N5 allowlist, including N3.",
+    "peer_transport": "Optional external-volume overlays recovered unchanged from the protected preview branch; named credential volumes remain read-only.",
+    "operator_values": "No credentials or operator environment values are committed."
   }
 }
