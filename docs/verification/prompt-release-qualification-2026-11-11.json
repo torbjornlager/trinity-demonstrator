@@ -1,0 +1,117 @@
+{
+  "verified_at": "2026-11-11T15:15:39.056043+00:00",
+  "scope": "Local qualification of prompt prerequisites needed to preserve live N3/N5 behavior during the coordinated runtime upgrade; no production change yet.",
+  "consumer_base": "67764bc896588c50cd373555cf95826c695e8f6e",
+  "dependencies": {
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "41e5d2577456be18e44be4ab1ecca89f6dd60568",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "5b42f54570e15008fca0c598ba205a74edbb944d",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "432db0e55e54c8d1483144bd2b7bccb47a718980",
+      "version": "0.1.0",
+      "manifest_sha256": "5fad5faf1a49a22e8a6ff924b7b609771d1d972f8bc559b8f4b4d279858bb0d3"
+    }
+  },
+  "fixes": [
+    "Appendix B correlated prompt envelope and respond/3, one-use wire replies and HTTP session ownership.",
+    "Source-less HTTP calls execute through the existing private-module runtime dispatcher, preserving assertions across calls and Abort without leaking between sessions.",
+    "Private HTTP requests avoid browser alias routing; live local actor PIDs bypass legacy browser-capability lookup, removing the observed lock inversion during Reply/Abort/Halt races."
+  ],
+  "validation": {
+    "pinned_consumer": {
+      "selections": 34,
+      "all_passed": true,
+      "native_root_revision": "41e5d2577456be18e44be4ab1ecca89f6dd60568",
+      "browser_revision": "432db0e55e54c8d1483144bd2b7bccb47a718980",
+      "trealla_manifest_updated_after_run": "Final Trealla pin validated separately with exact source/engine checks and pin regressions."
+    },
+    "actor_release": {
+      "swi": {
+        "profile": "actor-release-0.2",
+        "passed": true,
+        "cases": 45
+      },
+      "trealla": {
+        "profile": "actor-release-0.2",
+        "passed": true,
+        "cases": 45
+      }
+    },
+    "trealla_unit": "passed",
+    "native_interoperability": "passed",
+    "shared_http_visitor_results": 38,
+    "shared_websocket_newline_results": 12,
+    "profile_boundary_results": 10,
+    "macos_stress": {
+      "rounds": 200,
+      "permutations": 1200,
+      "private_session_checks": 200,
+      "passed": true
+    },
+    "linux_stress": {
+      "requests": 9000,
+      "max_seconds": 0.22667983401333913,
+      "p95_seconds": 0.20564124998054467,
+      "p99_seconds": 0.21186383301392198,
+      "race_rounds": 200,
+      "permutations": 1200,
+      "test_deadline_seconds": 2.5,
+      "deadline_unchanged": true
+    },
+    "linux_full_protocol_suite": "all shared HTTP, WebSocket, newline, ownership and profile-boundary checks passed",
+    "deterministic_lock_regressions": [
+      {
+        "case": "http_session_route_tests:route_dispatch",
+        "old_runtime_exit_code": 1,
+        "expected_failure_observed": true
+      },
+      {
+        "case": "http_session_route_tests:local_actor_routing",
+        "old_runtime_exit_code": 1,
+        "expected_failure_observed": true
+      }
+    ],
+    "browser_web_bytes": {
+      "baseline_revision": "3401712bcde06582d6bc12274bb34f4bc6b60467",
+      "candidate_revision": "432db0e55e54c8d1483144bd2b7bccb47a718980",
+      "all_packaged_web_file_hashes_identical": true,
+      "real_chrome_validation_reused_from": "/Users/lager/trinity-backup/runtime-pin-qualification-2026-11-11.o76e8k22/real-browser-final/results.json"
+    }
+  },
+  "diagnostics": [
+    "The initial 67764bc container candidates lacked the prompt prerequisites already present on the live nodes; no rollout was attempted.",
+    "The older preview baseline and the initial extracted Trealla candidate both reproduced a Reply/Abort/Halt hang on macOS and Linux. The lock trace identified browser-capability and HTTP-route locks.",
+    "After the lock fixes, 200 macOS rounds passed. A Linux run during parallel qualification exceeded the unchanged 2.5-second probe deadline after 188 successful rounds, without the earlier node-wide hang. An isolated timing-instrumented Linux run then passed all 200 rounds without any timeout or request error."
+  ],
+  "deployment_status": "not deployed; source PRs and final consumer pin publication precede container staging",
+  "evidence_directory": "/Users/lager/trinity-backup/runtime-deployment-67764bc-2026-11-11.yo_5zkah",
+  "consumer_inputs_sha256": {
+    "README.md": "66d2e89e96870081c74f5c5a7029f77b1b91a6fa9eca5044d3d616128a2afc7a",
+    "dependencies/swi-prolog-node.json": "a946f43d63b670d0b3f5eb18e077a792620cc48f3b4186b8107454df0de49092",
+    "dependencies/trealla-port.json": "2b53eaa03615cbffc716e3bcb9e46c11882b249496e545e7f74e5d9c81f5b11a",
+    "dependencies/swi-wasm-node.json": "9717116560a07afa2d4230f1bdf045d76611cb5284d3e142159fd6921d96b605"
+  },
+  "evidence_sha256": {
+    "prompt-consumer-qualified/results.json": "13b2896a5dd87772c21a09566c5c35006430b3f58f0539154193957dcb4f7374",
+    "prompt-recovery/http-results.json": "e2f389cc6b1c30f93fc9da42af631c24c655f0964d476ad8780bd55d585b63d9",
+    "prompt-recovery/boundary-results.json": "4501582c32715c22b5c300bdf4c811068e506423e56e6186013bf8e16148a7d9",
+    "trealla-prompt-unit-qualified.log": "6b5510e169abf857c7777e9835d320ec6c9ebdb96b4dbad75064fc94a12c37a7",
+    "prompt-interop-qualified.log": "016d6900b2e07e0d65d04ebfefd347b64854fedbc88eef6cddb17801f79369f4",
+    "counterfactual-results.json": "ae978f56c254619a0e805a396ca047c053135900a21138b8d9ffd1c7e88745e5",
+    "linux-stress-qualified-summary.json": "ab910db36b3962a52df7fc995b1fd6177ea558d85f52fd451cbb217d0731a85a"
+  }
+}
