@@ -53,3 +53,10 @@ seed_node(n6, 'https://n6.elfenbenstornet.se',
     "Common family predicates, human/1, and deployment_node/1.",
     "Owner-only HTTPS preview.").
 seed_probe_url(n6, 'http://caddy:8086').
+
+% Permanent owner-only ECLiPSe ACTOR node; probing metadata grants no execution.
+seed_node(n7, 'https://n7.elfenbenstornet.se',
+    "Permanent owner-only ACTOR node running ECLiPSe CLP.",
+    "",
+    "Owner GitHub sign-in is required to open the demonstrator or run queries.").
+seed_probe_url(n7, 'http://caddy:8087').

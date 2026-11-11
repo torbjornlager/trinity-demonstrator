@@ -32,7 +32,7 @@
     return url.href;
   }
   var remoteNodes = (config.remoteNodes || []).map(function(node) {
-    if (['swi', 'trealla', 'gprolog'].indexOf(node.runtime) < 0)
+    if (['swi', 'trealla', 'gprolog', 'eclipse'].indexOf(node.runtime) < 0)
       throw new Error('Remote nodes require an explicit supported runtime');
     return Object.freeze({url:base(node.url), runtime:node.runtime});
   });

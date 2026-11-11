@@ -2743,7 +2743,7 @@
                  :class="{active: node.active}"
                  target="_blank"
                  rel="noopener noreferrer"
-                 :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+                 :aria-label="'Open ' + node.label + (node.ownerOnly ? ' owner-only demonstrator' : ' demonstrator')">{{ node.label }}</a>
             </div>
             <p v-if="!isBrowserSwiWasmMode && !headerNonSwiNodeSelected" class="wb-header-section-note">
               <a :href="currentPortalNodeAddress"
@@ -2771,7 +2771,7 @@
                    :class="{active: node.active}"
                    target="_blank"
                    rel="noopener noreferrer"
-                   :aria-label="'Open ' + node.label + ' demonstrator'">{{ node.label }}</a>
+                   :aria-label="'Open ' + node.label + (node.ownerOnly ? ' owner-only demonstrator' : ' demonstrator')">{{ node.label }}</a>
                 <p v-if="node.active" class="wb-header-section-note">
                   <a :href="currentPortalNodeAddress"
                      target="_blank"
@@ -4065,7 +4065,7 @@
     
     
 
-    <script src="/vendor/trinity-host.js"></script>
+    <script src="/vendor/trinity-host.js?v=n7-permanent-20261111-v1"></script>
     <script src="/vendor/jquery.min.js"
             crossorigin="anonymous"></script>
     <script src="/vendor/vue.global.prod.js"></script>
@@ -4793,13 +4793,20 @@
             return;
           }
           seen[parsed.href] = true;
-          nodes.push({
+          var node = {
             id: parsed.href,
             url: parsed.href,
             href: portalHrefForNodeUrl(parsed.href),
             runtime: runtime,
             label: nodeLabelForUrl(parsed.href)
-          });
+          };
+          if (parsed.origin === "https://n7.elfenbenstornet.se") {
+            node.href = parsed.origin + "/";
+            node.runtime = "eclipse";
+            node.runtimeName = "ECLiPSe CLP";
+            node.ownerOnly = true;
+          }
+          nodes.push(node);
         }
 
         if (!normalized) {
@@ -4808,6 +4815,7 @@
 
         if (TrinityHost.remoteNodes && TrinityHost.remoteNodes.length) {
           TrinityHost.remoteNodes.forEach(function(node) { push(node.url, node.runtime); });
+          if (normalized.hostname.endsWith(".elfenbenstornet.se")) push("https://n7.elfenbenstornet.se", "eclipse");
           return nodes;
         }
 
@@ -4816,6 +4824,7 @@
           (domainMatch[1].toLowerCase() === "admin" ? ["admin", "n1", "n2", "n3", "n4", "n5", "n6"] : ["n1", "n2", "n3", "n4", "n5", "n6"]).forEach(function(host) {
             push(normalized.protocol + "//" + host + "." + domainMatch[2]);
           });
+          if (domainMatch[2].toLowerCase() === "elfenbenstornet.se") push("https://n7.elfenbenstornet.se", "eclipse");
           return nodes;
         }
 
@@ -5725,12 +5734,13 @@
             var nodesByLabel = {};
             var currentLabel = this.isBrowserSwiWasmMode ? "" : nodeLabelForUrl(this.currentPortalNodeUrl);
             this.portalNodes.forEach(function(node) {
-              if (/^N[1-6]$/.test(node.label)) {
+              if (/^N[1-7]$/.test(node.label)) {
                 nodesByLabel[node.label] = node;
               }
             });
             var ids = ["n1", "n2", "n3", "n4", "n5"];
             if (nodesByLabel.N6) ids.push("n6");
+            if (nodesByLabel.N7) ids.push("n7");
             return ids.map(function(id) {
               var label = id.toUpperCase();
               return {
@@ -5741,6 +5751,8 @@
                 label: label,
                 runtime: nodesByLabel[label] && nodesByLabel[label].runtime
                   || (id === "n6" ? "gprolog" : id === "n5" ? "trealla" : "swi"),
+                runtimeName: nodesByLabel[label] && nodesByLabel[label].runtimeName,
+                ownerOnly: nodesByLabel[label] && nodesByLabel[label].ownerOnly,
                 active: currentLabel === label
               };
             });
@@ -5761,6 +5773,7 @@
             return PORTAL_BOOK_MANUSCRIPT_URL;
           },
           portalRuntimeName: function() {
+            if (!this.isBrowserSwiWasmMode && nodeLabelForUrl(this.currentPortalNodeUrl) === "N7") return "ECLiPSe CLP";
             if (this.isBrowserSwiWasmMode || this.portalSwiplVersion) {
               return "SWI-Prolog";
             }
