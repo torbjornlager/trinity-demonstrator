@@ -1,0 +1,312 @@
+{
+  "verified_at": "2026-11-11T13:08:51.507803+00:00",
+  "scope": "Local qualification of coordinated native and browser dependency pins; no live deployment performed.",
+  "consumer_base": "a8b9d91670cf019f1c6c02939e4a8d1c81371389",
+  "consumer_inputs_sha256": {
+    "README.md": "66d2e89e96870081c74f5c5a7029f77b1b91a6fa9eca5044d3d616128a2afc7a",
+    "dependencies/swi-prolog-node.json": "f3be4dad41503a510f3a59b7f86fe4e3c596cebcb5753a0479a4f084e78e3dea",
+    "dependencies/trealla-port.json": "cb11b100805da2e4e9dd2e59f55b59ec2d55255f363399c45d0f21b1874dd719",
+    "dependencies/swi-wasm-node.json": "9204a6b8b860e21a3dfcefe2bb21861a07d2d1a2ea24f9fca39e75be8bdb3099",
+    "tests/wasm/swi_wasm_host_cases.cjs": "1748d38da42bfd205aa8c571627cb3a3679a6f67a52a70cf19cfd6f60f204a7b",
+    "tests/wasm/swi_wasm_rpc_bridge_smoke.js": "1b7b7b0baf178caafe9cae088638ccddf24020de41cdebb7278794873fb5e275"
+  },
+  "dependencies": {
+    "swi-wasm-node": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "3401712bcde06582d6bc12274bb34f4bc6b60467",
+      "version": "0.1.0",
+      "manifest_sha256": "12391ba0553c49465fb0ae4e24686eee27659f8d7b3996382d653cdc33deb4dc"
+    },
+    "trealla-port": {
+      "repository": "https://github.com/torbjornlager/trealla-port.git",
+      "revision": "990752fc4401303468c5d29fd60e2edfdf06dd6c",
+      "mode": "required for optional Trealla N5 builds",
+      "engine": {
+        "repository": "https://github.com/trealla-prolog/trealla.git",
+        "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+        "version": "3.14.20"
+      }
+    },
+    "swi-prolog-node": {
+      "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+      "revision": "38dc4c19f06f0d708257349b549277acdb6b7277",
+      "pack": "web_prolog",
+      "mode": "required for startup, tests and container builds"
+    }
+  },
+  "engines": {
+    "swi": "10.1.19",
+    "trealla": "3.14.20",
+    "node": "22.23.4"
+  },
+  "schema": {
+    "bytes_unchanged": true,
+    "native_browser_equivalence": "passed",
+    "provenance_matches_native_pin": true
+  },
+  "retained_pin_fixes": {
+    "old_swi_pin": "2d674a311292501132d8f4b2a439881df54f2aa9",
+    "all_four_unique_old_pin_commits_patch_equivalent_on_main": true,
+    "method": "git cherry main OLD_PIN; all four entries marked minus"
+  },
+  "checks": {
+    "actor_release": {
+      "swi": {
+        "profile": "actor-release-0.2",
+        "passed": true,
+        "cases": 45,
+        "packs": [
+          "actor-core-0.1",
+          "selective-receive-0.1",
+          "links-monitors-0.1",
+          "copying-isolation-0.1",
+          "source-copying-0.1",
+          "toplevel-waits-0.1",
+          "ownership-lifecycle-0.1",
+          "committed-exit-0.1"
+        ]
+      },
+      "trealla": {
+        "profile": "actor-release-0.2",
+        "passed": true,
+        "cases": 45,
+        "packs": [
+          "actor-core-0.1",
+          "selective-receive-0.1",
+          "links-monitors-0.1",
+          "copying-isolation-0.1",
+          "source-copying-0.1",
+          "toplevel-waits-0.1",
+          "ownership-lifecycle-0.1",
+          "committed-exit-0.1"
+        ]
+      }
+    },
+    "pinned_consumer": {
+      "selections": 34,
+      "all_passed": true,
+      "results": [
+        {
+          "label": "origin-audit",
+          "exit_code": 0
+        },
+        {
+          "label": "LINT",
+          "exit_code": 0
+        },
+        {
+          "label": "TEXT",
+          "exit_code": 0
+        },
+        {
+          "label": "T0",
+          "exit_code": 0
+        },
+        {
+          "label": "T1_NATIVE",
+          "exit_code": 0
+        },
+        {
+          "label": "T2",
+          "exit_code": 0
+        },
+        {
+          "label": "T3_NATIVE",
+          "exit_code": 0
+        },
+        {
+          "label": "T4_NATIVE",
+          "exit_code": 0
+        },
+        {
+          "label": "T5",
+          "exit_code": 0
+        },
+        {
+          "label": "T1_INTEGRATION",
+          "exit_code": 0
+        },
+        {
+          "label": "T3_INTEGRATION",
+          "exit_code": 0
+        },
+        {
+          "label": "T4_INTEGRATION",
+          "exit_code": 0
+        },
+        {
+          "label": "demonstrator-DEMONSTRATOR",
+          "exit_code": 0
+        },
+        {
+          "label": "demonstrator-SERVICE_TEXT",
+          "exit_code": 0
+        },
+        {
+          "label": "demonstrator-LINDA",
+          "exit_code": 0
+        },
+        {
+          "label": "demonstrator-MODEL",
+          "exit_code": 0
+        },
+        {
+          "label": "demonstrator-MODEL_SXML",
+          "exit_code": 0
+        },
+        {
+          "label": "demonstrator-JEV",
+          "exit_code": 0
+        },
+        {
+          "label": "default-startup-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "pin-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "browser-pin-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "trealla-pin-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "static-distribution-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "https-sso-probe-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "host-url-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "cross-origin-native-integration",
+          "exit_code": 0
+        },
+        {
+          "label": "portal-runtime-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "discovery-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "ci-runner-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "packaging-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "watchdog-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "fetch-regressions",
+          "exit_code": 0
+        },
+        {
+          "label": "browser-equivalence",
+          "exit_code": 0
+        },
+        {
+          "label": "WASM",
+          "exit_code": 0
+        }
+      ]
+    },
+    "packaged_browser": {
+      "passed": true,
+      "selections": [
+        "statechart-unit",
+        "schema-equivalence",
+        "worker-mailbox",
+        "standalone",
+        "semantic-contracts"
+      ]
+    },
+    "real_chrome": {
+      "passed": true,
+      "selections": [
+        "library",
+        "sessions",
+        "statecharts",
+        "receive",
+        "receive-controls",
+        "node-settings",
+        "context-closure"
+      ]
+    },
+    "trealla_unit": "passed",
+    "native_interop": "passed",
+    "exact_trealla_source_engine_and_binary_validation": "passed"
+  },
+  "browser_missing_start_fix": {
+    "runtime_revision": "3401712bcde06582d6bc12274bb34f4bc6b60467",
+    "before": "missing_start_option(Id)",
+    "after": "existence_error(option,start(Id))",
+    "coverage": "Initial, dynamic, nested and receiver-side child validation in Worker and main modes; shared STDERR-MISSING-START case on native SWI, Trealla and both browser modes."
+  },
+  "qualification_setup_corrections": [
+    "Updated consumer smoke signatures for the current header, promise and statechart APIs, yieldable initialization and runtime capability facts; late-monitor regression now expects no_process, as the qualified native/browser contract requires.",
+    "Updated stale demonstrator exception-display assertions from type_error(boolean,maybe) to domain_error(boolean,maybe), added non-atom type_error(atom,42), and aligned the missing-start expectation.",
+    "Initial pinned-runner JavaScript failures selected an older system Node; reran only those five selections with Node 22.23.4 explicitly on PATH.",
+    "Initial temporary interop source exports lacked the expected sibling swi-prolog-node path; added an export-only alias and reran the full interop matrix. Runtime source was unchanged."
+  ],
+  "preservation": {
+    "main_checkouts_unchanged": true,
+    "saved_stash_lists_unchanged": true,
+    "n7_preview_branches_unchanged": true,
+    "separate_managed_worktrees": true
+  },
+  "shared_standard_errors": {
+    "native_selection": "Complete seven-case standard-naming-errors-0.1 pack on both native runtimes in blacklist mode",
+    "browser_selection": [
+      "STDERR-APPLICATION-BARE",
+      "STDERR-APPLICATION-WRAPPED",
+      "STDERR-MISSING-START"
+    ],
+    "browser_modes": [
+      "worker",
+      "main"
+    ],
+    "native_case_count": 14,
+    "browser_case_count": 6,
+    "shared_manifest_sha256": "e3ab851c48cf32272b36c493827aad2131a254c2feb4b4a284e19ea24c3881f2",
+    "passed": true
+  },
+  "deployment_status": "Local checks qualified; publication, container builds and live staging remain subsequent release steps.",
+  "limitations": [
+    "This record qualifies the listed suites; the wider lifecycle/transport error-contract audit remains separate."
+  ],
+  "evidence": {
+    "directory": "/Users/lager/trinity-backup/runtime-pin-qualification-2026-11-11.o76e8k22",
+    "sha256": {
+      "browser-package-final/manifest.json": "12391ba0553c49465fb0ae4e24686eee27659f8d7b3996382d653cdc33deb4dc",
+      "pinned-ci/results.json": "2a7ef0a49522f21cbdb31b35e4343501b50eed7a287fe07d7400c0829b4017da",
+      "pinned-ci-node22/results.json": "fa237d238d79b73884cdb4c565b838e507d75d41c591763dc5f558d88ee3b138",
+      "pinned-ci-final/results.json": "a397f1cf97b854cb185150e1ed050ca7abaa02dd0a66526b6165273bcdf60562",
+      "pinned-ci-wasm-qualified/results.json": "348a8d403da2ecef5960ba6bdee764f63e50788414a0e144bd28e6eb87817a87",
+      "smoke-final.log": "f1fdb8f176ec62ed7c164df72ee570a92707d1b55761f40fdaacc3c0edcdbbe7",
+      "browser-standard-errors-worker.json": "7b60915b45195785ec107f8cae974f69503d8f4b981c8baebccfd37946585f0a",
+      "browser-standard-errors-main.json": "ae3c588cb98eb6a298cf6d8e0bd0bd01308fce2d7616ef8c2cac28f5517c8816",
+      "shared-standard-errors.log": "5f7e15633f74bd87b05945651fee9d209bd8d70b262f83d5b21a1f44251ddfef",
+      "browser-tests-final/results.json": "1ead003574d41dd8447256563086d36e674dfd4947a09ceb9b82e0f4a318df9b",
+      "real-browser-final/results.json": "04c3d9e4b8074eb4950dcfbebaea0cb6bc31881ccaaf17a2be6f577b586f860b",
+      "actor-release/swi/release-summary.json": "d4d76533f3eef5471823f8ee81335fddfd5777fe6cc296603a9041033f53da02",
+      "actor-release/trealla/release-summary.json": "08f3503a103a186e4e83d225ed1d8103f524f059126384408a31c357aeb3f6ba",
+      "trealla-tests.log": "74f1ec96c59c014456dcc790e6fed44fc3cf3cb68e2b9fa475d022697600141f",
+      "interop-corrected-layout.log": "9145bb788921b19dd48011ff0aca012a9ab74414099213eb99ffaea9611f5b91",
+      "preservation.json": "db937690f9088e7252fe90c08fb204cb231c94fc28124d7e1830994c423c4ddf"
+    }
+  }
+}

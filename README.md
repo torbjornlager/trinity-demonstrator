@@ -289,7 +289,8 @@ regressions alongside the core, receive, isolation and wait packs. Use two
 independent execution-only principals; a node-owner browser session is not an
 unauthorized-exit fixture. Passing actor-core alone is insufficient for this gate.
 
-The native SWI dependency now pins `91d5c5257e4ef4e06e56764e6023fe58eddd93c7`,
-which preserves independent monitor notifications during owning-socket teardown.
-This replaces the older pin that lacked that repair. Updating the pin prepares
-future builds; it does not change an already running container.
+The exact native SWI, Trealla and browser revisions are recorded in the
+[`dependencies/`](dependencies/) manifests. Qualify pin updates with the ACTOR
+release gate on both native runtimes, the pinned consumer integration suite and
+the packaged browser tests. Updating pins prepares future builds; it does not
+change an already running container.
