@@ -281,12 +281,12 @@ const protocolLogRenderer = {
 };
 const javaScriptObjectRenderer = protocolLogRenderer;
 
-ok(includes("window.swiRpcGetAsync = function(url, httpTimeout)"),
+ok(includes("window.swiRpcGetAsync = function(url, httpTimeout, headerText)"),
    "paged RPC has an asynchronous fetch helper");
 ok(includes("signal: controller.signal") &&
    includes("window.swiAbortRpc = function()"),
    "paged RPC fetch is abortable");
-ok(includes('"    Promise := swiRpcGetAsync(#FinalURL, #HTTPTimeout),"') &&
+ok(includes('"    Promise := swiRpcGetAsync(#FinalURL, #HTTPTimeout, #HeaderText),"') &&
    includes('"    await(Promise, Resp),"'),
    "web_rpc_page awaits each remote page");
 ok(!includes('"    Resp := swiRpcGet(#FinalURL),"'),
@@ -314,7 +314,7 @@ ok(workerSource.includes('function actorLoadUri(uriText)') &&
    !workerSource.includes('rpc_load_uri(Options, LoadURI)') &&
    !workerSource.includes('loadUri: String(loadUri || "")') &&
    includes('case "src_uri":') &&
-   includes('result = this.loadSwiWasmUriSource(message.uri || "");') &&
+   includes('result = this.loadSwiWasmUriSource(message.documentBase ? new URL(this.swiWasmRemoteNodeUrl(message.uri),message.documentBase).href : message.uri || "");') &&
    includes('resolveBrowserRpcBaseUri(message.node || "")'),
    "worker RPC fetches src_uri source without using it to choose the call target");
 ok(workerSource.includes("function actorEnsureFinalFullStop(text)") &&
@@ -1022,9 +1022,9 @@ ok(includes("finalizeSwiWasmWorkerActor: function") &&
   );
   ok(installed === true &&
      delivered.length === 1 &&
-     delivered[0].reason === "false" &&
+     delivered[0].reason === "no_process" &&
      controller.swiWasmActorMonitors.length === 0,
-     "a monitor installed after a SWI-WASM worker exits receives its recorded failure reason");
+     "a monitor installed after a SWI-WASM worker exits reports no_process");
   const missingInstalled = installMonitor.call(
     controller, "main", "missing", "missing-ref"
   );
@@ -1076,7 +1076,7 @@ ok(includes("function settleReject(error)") &&
    includes("remote actor connection timed out:") &&
    includes("remote actor connection closed before ready:"),
    "remote connection settles once: rejects on close-before-open and on timeout, so the connect promise never parks");
-ok(workerSource.includes('action === "input" ? null'),
+ok(workerSource.includes('action === "input" || action === "promise_wait" ? null'),
    "worker input is exempt from the coordinator request timeout");
 ok(includes('root.crypto.getRandomValues(values);') &&
    includes('var values = new Uint8Array(5);') &&
@@ -1369,25 +1369,25 @@ ok(workerSource.includes('rpc(Node, Goal) :- rpc(Node, Goal, []).') &&
    workerSource.includes('"    Offset = 0,"') &&
    includes('"    Offset = 0,"') &&
    workerSource.includes('rpc_transport_options(Options, RemoteTimeout, Once, HTTPTimeout)') &&
-   workerSource.includes('member(src_predicates(Indicators), Options)') &&
+   workerSource.includes('canonical_source_option(Option, src_predicates(Indicators))') &&
    includes('case "rpc":') &&
-   includes('requestSwiWasmWorkerRpc: function(message, ownerPid)') &&
+   includes('requestSwiWasmWorkerRpc: function(message, ownerPid, contextResource)') &&
    includes('url.searchParams.set("once", "true")') &&
-   includes('setTimeout(function() { controller.abort(); }, httpTimeout * 1000)'),
+   includes('setTimeout(function() { timedOut = true; controller.abort(); }, httpTimeout * 1000)'),
    "both SWI-WASM rpc/3 models keep initial transport offset internal");
 ok(workerSource.includes('promise(Node, Goal, Ref) :-') &&
-   workerSource.includes('RefText := actorPromiseStart(') &&
+   workerSource.includes('RefPromise := actorPromiseStart(') &&
    workerSource.includes('option(offset(Offset), Options, 0)') &&
    includes('(member(offset(Offset), Opts) -> true ; Offset = 0)') &&
    workerSource.includes('Promise := actorPromiseWait(') &&
    workerSource.includes('settleWait(entry, null)') &&
    workerSource.includes('option(on_timeout(OnTimeout), Options, true)'),
    "both browser models provide non-consuming yield timeouts with the common default");
-ok(workerSource.includes('runtime_property(implementation(swi_wasm_worker)).') &&
+ok(workerSource.includes('node_setting(profile, actor).') &&
    workerSource.includes('runtime_property(inbound_addressable(false)).') &&
-   includes('runtime_property(implementation(swi_wasm_main)).') &&
+   includes('node_setting(sandbox, off).') &&
    includes('runtime_property(dom(true)).'),
-   "browser runtimes expose their host capabilities through runtime_property/1");
+   "browser runtimes expose language settings and host capabilities");
 ok(workerSource.includes('self(main@localhost).') === false &&
    includes('self(main@localhost).') &&
    includes('if (text === "main") return "main@localhost";') &&
@@ -1456,13 +1456,13 @@ ok(workerSource.includes('statechart_spawn(Pid, Options) :-') &&
    includes('case "statechart_spawn":') &&
    includes('"statechart_actor"'),
    "SWI-WASM-2 runs statecharts in dedicated worker actors");
-ok(workerSource.includes('"statechart_actor_start :-",') &&
-   workerSource.includes('"statechart_actor_loop :- statechart_actor_wait.",') &&
-   workerSource.includes('var startResult = Prolog.query("user:statechart_actor_start").once()') &&
-   workerSource.includes('if (!startResult || startResult.error)') &&
-   workerSource.indexOf('var startResult = Prolog.query("user:statechart_actor_start").once()') <
-     workerSource.indexOf('post(workerRole === "shell_toplevel" ? "spawned" : "ready", {})'),
-   "a SWI-WASM statechart validates and starts before its worker announces readiness");
+// The packaged real-engine statechart examples also check child-before-parent
+// readiness. Startup must remain yieldable for nested initial invocations.
+ok(workerSource.includes('return Prolog.forEach(') &&
+   workerSource.includes('"once(user:statechart_actor_start)"') &&
+   workerSource.includes('if (!answers) throw new Error("statechart startup failed")') &&
+   workerSource.includes('return (workerRole === "statechart_actor" ? installStatechartRuntime(message) : Promise.resolve()).then('),
+   "a SWI-WASM statechart awaits yieldable initialization before readiness");
 ok(workerSource.includes('post("terminal_output", {') &&
    workerSource.includes('term: String(termText || "true")') &&
    includes('/swi_wasm_actor_worker.js?v=20261018-answer-terms-v27') &&
@@ -1471,7 +1471,7 @@ ok(workerSource.includes('post("terminal_output", {') &&
    includes('"terminal_output(" + qualifySwiWasmLocalPid(pid) + "," +') &&
    includes('this.sendSwiWasmActorMessage('),
    "SWI-WASM statechart terminal output is delivered to the spawning actor mailbox");
-ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+ok(workerSource.includes('actorStatechartSpawn(#DocumentKind, #XML, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText, #Base)') &&
    workerSource.includes('statechart_spawn_ok(') &&
    workerSource.includes('statechart_spawn_error(') &&
    workerSource.includes('statechart_spawn_worker_result(ResultText, Pid)') &&
@@ -1480,15 +1480,15 @@ ok(workerSource.includes('actorStatechartSpawn(#SourceKind, #Source, #SupportSou
    workerSource.includes('( member(Term, Terms), clause_source_text(Term, ClauseText) )') &&
    workerSource.includes('retractall(swi_wasm_actor_bridge:io_target(_))') &&
    workerSource.includes('assertz(swi_wasm_actor_bridge:io_target(Target))') &&
-   workerSource.includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
+   workerSource.includes('statechart_remote_goal(text, Source, Trace, Options, Goal)') &&
    includes('window.swiWasmStatechartSpawnWorker') &&
-   includes('validate_statechart_text_source(SourceKind, Source)') &&
+   includes('validate_statechart_text_source(text, XML)') &&
    includes('sxml_schema:sxml_validate_text(XML, Diagnostics)') &&
    includes('statechart_spawn_worker_result(ResultText, Pid)') &&
    includes('statechart_wasm:statechart_running') &&
-   includes('swiWasmStatechartSpawnWorker(#SourceKind, #Source, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText)') &&
+   includes('swiWasmStatechartSpawnWorker(#DocumentKind, #XML, #SupportSource, #NameText, #LinkText, #IoTargetText, #TraceText, #Base)') &&
    includes('statechart_wasm:statechart_start(text(XML), SupportSource)') &&
-   includes('statechart_remote_goal(SourceKind, Source, Trace, Options, Goal)') &&
+   includes('statechart_remote_goal(text, Source, Trace, Options, Goal)') &&
    includes('var inheritedIoTarget = String(ioTargetText || "")') &&
    includes('parentEntry && parentEntry.role === "statechart_actor"') &&
    includes('ioTarget: inheritedIoTarget') &&
