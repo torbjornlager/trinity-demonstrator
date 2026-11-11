@@ -255,7 +255,7 @@ const wsSend = embeddedWorkbenchMethod(
   "wsSend", "closeWs"
 );
 const conciseSwiWasmOutput = embeddedWorkbenchMethod(
-  "conciseSwiWasmOutput", "echoSwiWasmOutput"
+  "conciseSwiWasmOutput", "queueTerminalOutput"
 );
 const replaceIsotopeSession = embeddedWorkbenchMethod(
   "replaceIsotopeSession", "abortIsotopeComputation"
