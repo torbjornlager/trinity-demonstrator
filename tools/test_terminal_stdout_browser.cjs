@@ -3,7 +3,7 @@
 // renderer and actual wire protocol without changing production assets.
 const fs=require('fs'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const NativeWebSocket=require('ws');
+const NativeWebSocket=globalThis.WebSocket;
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
  const rows=[];
@@ -22,11 +22,11 @@ const NativeWebSocket=require('ws');
      return route.continue();
     });
     await context.routeWebSocket(origin.replace('https:','wss:')+'/ws',route=>{
-     const upstream=new NativeWebSocket(backend.replace('http:','ws:')+'/ws',{origin});const queued=[];
+     const upstream=new NativeWebSocket(backend.replace('http:','ws:')+'/ws');const queued=[];
      route.onMessage(message=>upstream.readyState===NativeWebSocket.OPEN?upstream.send(message):queued.push(message));
-     upstream.on('open',()=>{for(const message of queued)upstream.send(message);});
-     upstream.on('message',(message,binary)=>route.send(binary?message:message.toString()));
-     upstream.on('error',()=>route.close());upstream.on('close',()=>route.close());route.onClose(()=>upstream.close());
+     upstream.addEventListener('open',()=>{for(const message of queued)upstream.send(message);});
+     upstream.addEventListener('message',event=>route.send(event.data));
+     upstream.addEventListener('error',()=>route.close());upstream.addEventListener('close',()=>route.close());route.onClose(()=>upstream.close());
     });
    }
    try{
@@ -38,13 +38,15 @@ const NativeWebSocket=require('ws');
      ['write(a),write(b).','ab'],
      ['write(a),sleep(0.2),write(b).','ab'],
      ['writeln(a),writeln(b).','a\nb'],
+     ['self(Me),Me ! a,Me ! b,flush.','Shell got a\nShell got b'],
      ['write(a),nl,nl,writeln(b),write(c).','a\n\nb\nc'],
      ["format('a~nb~n~n'),write(c).",'a\nb\n\nc'],
      ['write(after_previous_query).','after_previous_query']]){
       await page.evaluate(goal=>{vm.terminal.clear();vm.terminal.exec(goal);},goal);
       await page.waitForTimeout(350);await page.waitForFunction(()=>!vm.terminalBusy);
       const output=await page.evaluate(()=>vm.terminal.get_output());
-      assert.ok(output.includes('\n'+expected+'\ntrue.'),JSON.stringify({node,goal,output,expected}));
+      const answer=goal.startsWith('self(Me)')?'Me =':'true.';
+      assert.ok(output.includes('\n'+expected+'\n'+answer),JSON.stringify({node,goal,output,expected}));
       rows.push({node,goal,expected,passed:true});console.log(node,goal,'passed');
     }
    }finally{await context.close();}
