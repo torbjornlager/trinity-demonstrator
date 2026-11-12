@@ -270,7 +270,7 @@
       var dot = '<span class="status-dot' + (r.status === "up" ? " status-dot-animated" : "") + ' bg-' + st.color + '"></span>';
       var openable = r.status === "up" || r.status === "unreachable";
       var dis = openable ? "" : " disabled";
-      var shellUrl = r.url ? r.url.replace(/\/$/, "") + (r.id === "n7" ? "/" : "/demonstrator") : "";
+      var shellUrl = r.url ? r.url.replace(/\/$/, "") + "/demonstrator" : "";
       var link = r.url
         ? '<div class="btn-list ms-auto">' +
             (r.id === "n7" ? "" : '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" class="btn btn-sm' + dis + '" title="Shared data and programs">Data</a>') +
