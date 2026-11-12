@@ -52,9 +52,12 @@
     <p>
       This page uses the current <code>spawn</code> and <code>send</code>
       commands. It spawns a browser-owned actor that turns
-      <code>msg(Term)</code> into <code>output(Term)</code>, subscribes that
+      <code>msg(Term)</code> into terminal output with <code>writeln(Term)</code>, subscribes that
       actor to the node-resident <code>pubsub_service</code>, and then lets you
-      publish Prolog terms into the service.
+      publish Prolog terms into the service. The actor obtains its own qualified
+      pid with <code>self/1</code>; the browser sends commands only to the
+      actor it owns. A node must advertise <code>pubsub_service</code> in
+      <code>/node_info</code> to run this example.
     </p>
 
     <p>
@@ -86,14 +89,17 @@
         var subscriberPid = null;
         var subscribed = false;
         var subscriberProgram = [
-          "subscriber :-",
+          "subscriber(Node) :-",
+          "    self(Me),",
+          "    pubsub_service@Node ! subscribe(Me),",
+          "    writeln(subscribed),",
+          "    subscriber_loop(Node, Me).",
+          "subscriber_loop(Node, Me) :-",
           "    receive({",
-          "        msg(Msg) ->",
-          "            output(Msg),",
-          "            subscriber",
-          "        ;",
-          "        stop ->",
-          "            true",
+          "        msg(Msg) -> writeln(Msg), subscriber_loop(Node, Me)",
+          "    ;   publish(Msg) -> pubsub_service@Node ! publish(Msg),",
+          "                      subscriber_loop(Node, Me)",
+          "    ;   stop -> pubsub_service@Node ! unsubscribe(Me)",
           "    })."
         ].join("\n");
 
@@ -132,6 +138,10 @@
             .replace(/\n/g, "\\n") + "\"";
         }
 
+        function prologAtom(text) {
+          return "'" + String(text).replace(/\\/g, "\\\\").replace(/'/g, "''") + "'";
+        }
+
         function sendJSON(payload) {
           if (!socket || socket.readyState !== WebSocket.OPEN) {
             logLine("socket is not open", "error");
@@ -159,23 +169,14 @@
           }
           sendJSON({
             command: "send",
-            pid: "pubsub_service",
+            pid: subscriberPid,
             message: "publish(" + term + ")"
           });
         }
 
         function resetConnection() {
           if (subscriberPid && socket && socket.readyState === WebSocket.OPEN) {
-            sendJSON({
-              command: "send",
-              pid: "pubsub_service",
-              message: "unsubscribe(" + subscriberPid + ")"
-            });
-            sendJSON({
-              command: "exit",
-              pid: subscriberPid,
-              reason: "done"
-            });
+            sendJSON({command: "send", pid: subscriberPid, message: "stop"});
           }
           if (socket) {
             try {
@@ -189,11 +190,24 @@
           setConnectedUI(false);
         }
 
-        function connect() {
+        async function connect() {
           var currentSocket;
 
           resetConnection();
           clearLog();
+
+          try {
+            var response = await fetch(new URL("/node_info", window.location.origin));
+            if (!response.ok) throw new Error("node_info: HTTP " + response.status);
+            var info = await response.json();
+            if (!Array.isArray(info.services) || info.services.indexOf("pubsub_service") < 0) {
+              addResult("This node does not advertise pubsub_service. Use an ACTOR node that publishes it, such as N3 or N4.");
+              return;
+            }
+          } catch (error) {
+            logLine("Cannot check service availability: " + error.message, "error");
+            return;
+          }
 
           currentSocket = new WebSocket(wsURL());
           socket = currentSocket;
@@ -205,7 +219,7 @@
             setConnectedUI(true);
             sendJSON({
               command: "spawn",
-              goal: "subscriber",
+              goal: "subscriber(" + prologAtom(window.location.origin) + ")",
               options: "[src_text(" + prologString(subscriberProgram) + ")]"
             });
           };
@@ -219,17 +233,16 @@
 
             if (event.type === "spawned" && !subscriberPid) {
               subscriberPid = event.pid;
-              sendJSON({
-                command: "send",
-                pid: "pubsub_service",
-                message: "subscribe(" + subscriberPid + ")"
-              });
-              subscribed = true;
-              publishCurrentTerm();
+              if (subscribed) publishCurrentTerm();
               return;
             }
 
             if (event.type === "output") {
+              if (!subscribed && event.data === "subscribed") {
+                subscribed = true;
+                if (subscriberPid) publishCurrentTerm();
+                return;
+              }
               addResult(event.data);
               return;
             }

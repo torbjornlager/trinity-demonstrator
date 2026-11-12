@@ -1550,11 +1550,11 @@ ping_pong :-
 </p>
 
 <p>
-    The same mechanism works for larger result sets, including an infinite
-    generator:
+    The same mechanism works for larger result sets. This finite generator
+    works on every supported engine:
 </p>
 
-<pre id="toplevel-call-slice">?- toplevel_call($Pid, between(1,infinite,I), [
+<pre id="toplevel-call-slice">?- toplevel_call($Pid, between(1,120,I), [
        offset(100),
        template(I),
        limit(3)

@@ -62,6 +62,16 @@ collect_trace(Event) :-
     nb_setval(trace_collected, [Event|L]).
 
 
+% Desktop harness supplies only the timer scheduling operations; tests inject
+% their private timer envelopes explicitly rather than waiting on wall time.
+setup_timer_host :-
+    assertz(statechart_wasm:':='(true, wasmStatechartSchedule(_,_,_))),
+    assertz(statechart_wasm:':='(true, wasmStatechartCancel(_))),
+    assertz(statechart_wasm:':='(true, wasmStatechartCancelAll())).
+cleanup_timer_host :-
+    statechart_stop,
+    abolish(statechart_wasm:':='/2).
+
 :- begin_tests(statechart_wasm_examples).
 
 test(deferred_commands_are_replayed, [cleanup(statechart_stop)]) :-
@@ -148,27 +158,27 @@ test(gcd_integers_runs_to_completion, [cleanup(statechart_stop)]) :-
     findall(X, statechart_wasm:int(X), Xs),
     sort(Xs, [5]).
 
-% 04 clock.xml — time-driven, infinite raise/sleep loop.  Under the
-% actor runtime each tick is paced by sleep(1) on its own thread; in
-% the WASM port sleep/1 is a no-op so the chart degenerates into an
-% unbounded internal-event loop.  The microstep budget must halt it.
-test(clock_loop_is_halted_by_budget,
-     [setup(statechart_wasm_exec:set_microstep_budget(50)),
-      cleanup((statechart_wasm_exec:set_microstep_budget(default),
-               statechart_stop))]) :-
+% Time-driven examples must return from startup, remain live, and accept
+% halt. Desktop timers are injected explicitly; browser coverage awaits them.
+test(clock_startup_returns, [setup(setup_timer_host), cleanup(cleanup_timer_host)]) :-
     start_example('04 clock.xml'),
-    % start_parsed already drained run_to_quiescence; the chart is
-    % no longer running because the budget tripped.
-    \+ statechart_running.
+    statechart_running,
+    statechart_wasm:after_timer(Clock,Key,Ref),
+    statechart_send('$statechart_after'(Clock,Key,Ref)),
+    statechart_running, statechart_in(tock),
+    statechart_wasm:after_timer(Next,NextKey,NextRef),
+    statechart_send('$statechart_after'(Next,NextKey,NextRef)),
+    statechart_running, statechart_in(tick).
 
-% 05 pingpong.xml — same hazard as clock: parallel regions trade
-% raise(ping)/raise(pong) through sleep(1).  Budget must halt it.
-test(pingpong_loop_is_halted_by_budget,
-     [setup(statechart_wasm_exec:set_microstep_budget(50)),
-      cleanup((statechart_wasm_exec:set_microstep_budget(default),
-               statechart_stop))]) :-
+test(pingpong_startup_returns, [setup(setup_timer_host), cleanup(cleanup_timer_host)]) :-
     start_example('05 pingpong.xml'),
-    \+ statechart_running.
+    statechart_running, statechart_in(serving),
+    statechart_wasm:after_timer(Source,Key,Ref),
+    statechart_send('$statechart_after'(Source,Key,Ref)),
+    statechart_in(returning),
+    statechart_wasm:after_timer(Other,OtherKey,OtherRef),
+    statechart_send('$statechart_after'(Other,OtherKey,OtherRef)),
+    statechart_in(serving), statechart_running.
 
 % Trace hook sees the budget_exhausted event when the cap trips.
 test(budget_exhausted_emits_trace_event,
@@ -178,7 +188,7 @@ test(budget_exhausted_emits_trace_event,
                statechart_stop))]) :-
     nb_setval(trace_collected, []),
     set_trace_hook(test_statechart_wasm:collect_trace),
-    start_example('04 clock.xml'),
+    statechart_start(text('<statechart version="0.2" initial="s"><state id="s"><onentry>raise(tick)</onentry><go on="tick">raise(tick)</go></state></statechart>')),
     nb_getval(trace_collected, RevEvents),
     reverse(RevEvents, Events),
     assertion(memberchk(budget_exhausted, Events)).

@@ -57,6 +57,10 @@
       <button id="clear-button" type="button">Clear log</button>
     </p>
 
+    <p>Some nodes, including the current ECLiPSe N7 gateway, provide sessions
+      only over WebSocket. On those nodes use
+      <a href="ws-example-1.html">the WebSocket session example</a>.</p>
+
     <h2>Output</h2>
     <ul id="results"></ul>
 
@@ -239,7 +243,11 @@
               addResult(event.type + (event.data ? ": " + event.data : ""));
             }
           } catch (error) {
-            logLine("error: " + error.message, "error");
+            if (pid === null && error.status === 404) {
+              addResult("HTTP sessions are unavailable on this node. Use the WebSocket session example linked above.");
+            } else {
+              logLine("error: " + error.message, "error");
+            }
           } finally {
             await cleanupSession(pid);
             runButton.disabled = false;

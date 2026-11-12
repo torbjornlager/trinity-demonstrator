@@ -2,12 +2,11 @@
 
     Ping-pong between two parallel regions.
 
-    The statechart cousin of the ping-pong actor example. Two orthogonal
-    regions, Pinger and Ponger, rally by raising internal events at each
-    other: Pinger serves by raising `ping` on entry; each `ping` prints,
-    waits a second, and raises `pong`; each `pong` prints, waits, and
-    raises `ping` again. The volley is driven entirely by internal events
-    crossing between the two regions, with no external input.
+    Two orthogonal regions, Pinger and Ponger, rally by raising internal
+    events. Pinger waits one second, prints Ping and raises ping; Ponger
+    then waits one second, prints Pong and raises pong. The timers yield
+    between volleys, so startup returns and halt remains available in a
+    browser worker as well as on a native node. No outside input is needed.
 
     Run the chart from the Queries menu.
     Keep the Logger open and SXML trace selected.
@@ -16,22 +15,25 @@
 
 <statechart version="0.2" initial="Start">
     <parallel id="Start">
-        <state id="Pinger">
-            <onentry>
-                raise(ping)
-            </onentry>
-            <go on="ping">
-                writeln('Ping'),
-                sleep(1),
-                raise(pong)
-            </go>
+        <state id="Pinger" initial="serving">
+            <state id="serving">
+                <go after="1" to="waiting_for_pong">
+                    writeln('Ping'), raise(ping)
+                </go>
+            </state>
+            <state id="waiting_for_pong">
+                <go on="pong" to="serving"/>
+            </state>
         </state>
-        <state id="Ponger">
-            <go on="pong">
-                writeln('Pong'),
-                sleep(1),
-                raise(ping)
-            </go>
+        <state id="Ponger" initial="waiting_for_ping">
+            <state id="waiting_for_ping">
+                <go on="ping" to="returning"/>
+            </state>
+            <state id="returning">
+                <go after="1" to="waiting_for_ping">
+                    writeln('Pong'), raise(pong)
+                </go>
+            </state>
         </state>
     </parallel>
 </statechart>
