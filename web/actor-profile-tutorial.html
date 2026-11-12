@@ -1632,7 +1632,7 @@ ping_pong :-
 </p>
 
 <pre id="toplevel-call-input">?- toplevel_call($Pid, input('Input', X)),
-   receive({prompt(_, Ref, Prompt) -&gt; true}).
+   receive({prompt($Pid, Ref, Prompt) -&gt; true}).
 </pre>
 
 <p class="ask-buttons">

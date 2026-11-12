@@ -1,0 +1,23 @@
+--- a/runner/run.py
++++ b/runner/run.py
+@@ -474,15 +474,15 @@
+         spawned = harness.recv("success")
+         child = row_value(spawned, "Pid")
+         harness.call(
+-            f"toplevel_call({child},input('Input',X)),receive({{Answer->true}})",
++            f"toplevel_call({child},input('Input',X)),receive({{prompt({child},Ref,Prompt)->true}})",
+             "[limit(1)]",
+         )
+         prompt_answer = harness.recv("success")
+-        prompt_text = row_value(prompt_answer, "Answer")
+-        require(prompt_text.startswith("prompt("),
+-                f"nested input bypassed its protocol caller: {prompt_text!r}")
++        ref = row_value(prompt_answer, "Ref")
++        require(row_value(prompt_answer, "Prompt") == "'Input'",
++                f"nested input bypassed its protocol caller: {prompt_answer!r}")
+         harness.call(
+-            f"respond({child},hello),receive({{Answer->true}})", "[limit(1)]"
++            f"respond({child},{ref},hello),receive({{Answer->true}})", "[limit(1)]"
+         )
+         completed = harness.recv("success")
+         answer = row_value(completed, "Answer")

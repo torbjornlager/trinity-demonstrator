@@ -1,0 +1,651 @@
+{
+  "date": "2026-11-12",
+  "scope": "Editable source repair and isolated verification; no deployment or pin changes",
+  "diagnosis": {
+    "manual_contract": "prompt(Pid,Ref,Prompt), respond(Pid,Ref,Input)",
+    "live_N3_runtime": "55af1efe68a3018c18f9fadc1764327f9ee4f946",
+    "live_N3_event": "prompt(Pid,prompt_ref(Ref,Prompt))",
+    "served_assets": "N3/N4/N5 still serve the old respond/2 expert example",
+    "shared_source_already_corrected": "cb1ebe978331005fbff06807a749a47244ecb96c",
+    "eclipse_gap": "Local actors used unreferenced input by default",
+    "wasm_gap": "Worker and compatibility implementation still exported respond/2 and unreferenced prompts"
+  },
+  "runtime_inputs": {
+    "swi_revision": "89a280935583b545c381515d951de6737ad68465",
+    "trealla_revision": "2aa587a00c30867784d31d166610168fdd7166e1",
+    "trealla_engine": "3.14.20",
+    "eclipse_candidate_image": "sha256:0f6bbfd79491341a4d7de5de6f99f87b2a9bb5b0018588932f33df69e755cb67",
+    "wasm_development_manifest": {
+      "dirty": true,
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "a691743489b51abe6b7b7e80ae2dee92c3ff1584"
+    },
+    "wasm_development_manifest_sha256": "5f1568fcbf49a421ce6844a2392548570c652347962e59568b38a6d12ffcd431",
+    "unchanged_browser_pin": {
+      "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
+      "revision": "fe50936e95f3be9aa14508aa99363644eedf3a70",
+      "version": "0.1.0",
+      "manifest_sha256": "5f9b4ce9a0918fccfbd4b1e9159d732d02455c1602e9a82da7e7b7ba0f81521e"
+    }
+  },
+  "focused": {
+    "count": 24,
+    "passed": 24,
+    "results": [
+      {
+        "engine": "SWI",
+        "case": "tutorial",
+        "passed": true,
+        "event": {
+          "data": [
+            {
+              "Answer": "success(4114771338@'http://swi:3053',[input('Input',hello)],false)",
+              "Pid": "4114771338@'http://swi:3053'",
+              "Prompt": "'Input'",
+              "Ref": "6939166026",
+              "X": "X"
+            }
+          ],
+          "more": false,
+          "pid": 5539519305,
+          "type": "success"
+        },
+        "stdout": "",
+        "goal": "toplevel_spawn(Pid,[session(true)]),toplevel_call(Pid, input('Input', X)),\n   receive({prompt(Pid, Ref, Prompt) -> true}),Prompt=='Input',respond(Pid, Ref, hello),\n   receive({Answer -> true}),Answer=success(Pid,[input('Input',hello)],false),toplevel_halt(Pid)"
+      },
+      {
+        "engine": "SWI",
+        "case": "correlation",
+        "passed": true,
+        "event": {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 5539519305,
+          "type": "success"
+        },
+        "stdout": "",
+        "goal": "prompt_correlation_check"
+      },
+      {
+        "engine": "SWI",
+        "case": "expert-conversation",
+        "passed": true,
+        "event": {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 5539519305,
+          "type": "success"
+        },
+        "stdout": "",
+        "goal": "expert_example_check"
+      },
+      {
+        "engine": "SWI",
+        "case": "expert-agent",
+        "passed": true,
+        "event": {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 5539519305,
+          "type": "success"
+        },
+        "stdout": "A1: Is pingu a good pet?\nA2: Does it have feathers?\nA1: yes\nA2: Does it tweet?\nA1: yes\nA2: Is it small?\nA1: yes\nA2: Yes, pingu is a good pet.\nA1: Is tweety a good pet?\nA2: Does it have feathers?\nA1: yes\nA2: Does it tweet?\nA1: yes\nA2: Is it small?\nA1: no\nA2: Is it cuddly?\nA1: no\nA2: No, tweety is not a good pet.\n",
+        "goal": "simulation([]),simulation([src_list([yellow(tweety)])])"
+      },
+      {
+        "engine": "SWI",
+        "case": "timeout-retry",
+        "passed": true,
+        "event": {
+          "data": [
+            {
+              "Answer": "timeout",
+              "Later": "success([a],false)",
+              "Ref": "9359044085"
+            }
+          ],
+          "more": false,
+          "pid": 5539519305,
+          "type": "success"
+        },
+        "stdout": "timeout_observed\n",
+        "goal": "asynch_test_2(Answer,Ref),Answer==timeout,writeln(timeout_observed),yield(Ref,Later),Later==success([a],false)"
+      },
+      {
+        "engine": "SWI",
+        "case": "callback-error",
+        "passed": true,
+        "event": {
+          "data": [
+            {
+              "E": "error(timeout_callback_failed(6820281793),context(rpc:yield/3,'on_timeout goal failed'))",
+              "Later": "success([true],false)",
+              "Ref": "6820281793"
+            }
+          ],
+          "more": false,
+          "pid": 5539519305,
+          "type": "success"
+        },
+        "stdout": "timeout_observed\n",
+        "goal": "promise('http://gate:8080',true,Ref),catch(yield(Ref,_,[timeout(0),on_timeout(fail)]),E,true),nonvar(E),E=error(timeout_callback_failed(Ref),_),writeln(timeout_observed),yield(Ref,Later),Later=success(_,false)"
+      },
+      {
+        "engine": "Trealla",
+        "case": "tutorial",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 1780556625,
+          "data": [
+            {
+              "Pid": "1497635267@'http://trealla:3060'",
+              "X": "X",
+              "Ref": "1000000010",
+              "Prompt": "'Input'",
+              "Answer": "success(1497635267@'http://trealla:3060',[input('Input',hello)],false)"
+            }
+          ],
+          "more": false
+        },
+        "stdout": "",
+        "goal": "toplevel_spawn(Pid,[session(true)]),toplevel_call(Pid, input('Input', X)),\n   receive({prompt(Pid, Ref, Prompt) -> true}),Prompt=='Input',respond(Pid, Ref, hello),\n   receive({Answer -> true}),Answer=success(Pid,[input('Input',hello)],false),toplevel_halt(Pid)"
+      },
+      {
+        "engine": "Trealla",
+        "case": "correlation",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 1780556625,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "stdout": "",
+        "goal": "prompt_correlation_check"
+      },
+      {
+        "engine": "Trealla",
+        "case": "expert-conversation",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 1780556625,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "stdout": "",
+        "goal": "expert_example_check"
+      },
+      {
+        "engine": "Trealla",
+        "case": "expert-agent",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 1780556625,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "stdout": "A1: Is pingu a good pet?\nA2: Does it have feathers?\nA1: no\nA2: Is it cuddly?\nA1: yes\nA2: Is it yellow?\nA1: no\nA2: No, pingu is not a good pet.\nA1: Is pingu a good pet?\nA2: Does it have feathers?\nA1: yes\nA2: Does it tweet?\nA1: no\nA2: Is it cuddly?\nA1: no\nA2: No, pingu is not a good pet.\n",
+        "goal": "simulation([]),simulation([src_list([yellow(tweety)])])"
+      },
+      {
+        "engine": "Trealla",
+        "case": "timeout-retry",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 1780556625,
+          "data": [
+            {
+              "Answer": "timeout",
+              "Ref": "1000000066",
+              "Later": "success([a],false)"
+            }
+          ],
+          "more": false
+        },
+        "stdout": "timeout_observed\n",
+        "goal": "asynch_test_2(Answer,Ref),Answer==timeout,writeln(timeout_observed),yield(Ref,Later),Later==success([a],false)"
+      },
+      {
+        "engine": "Trealla",
+        "case": "callback-error",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 1780556625,
+          "data": [
+            {
+              "Ref": "1000000068",
+              "E": "error(timeout_callback_failed(1000000068),context(rpc:yield/3,'on_timeout goal failed'))",
+              "Later": "success([true],false)"
+            }
+          ],
+          "more": false
+        },
+        "stdout": "timeout_observed\n",
+        "goal": "promise('http://gate:8080',true,Ref),catch(yield(Ref,_,[timeout(0),on_timeout(fail)]),E,true),nonvar(E),E=error(timeout_callback_failed(Ref),_),writeln(timeout_observed),yield(Ref,Later),Later=success(_,false)"
+      },
+      {
+        "engine": "ECLiPSe",
+        "case": "tutorial",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 9282944191,
+          "data": [
+            {
+              "Pid": "2727334978@'https://127.0.0.1:60294'",
+              "X": "X",
+              "Ref": "1494367553",
+              "Prompt": "'Input'",
+              "Answer": "success(2727334978@'https://127.0.0.1:60294',[input('Input',hello)],false)"
+            }
+          ],
+          "more": false
+        },
+        "stdout": "",
+        "goal": "toplevel_spawn(Pid,[session(true)]),toplevel_call(Pid, input('Input', X)),\n   receive({prompt(Pid, Ref, Prompt) -> true}),Prompt=='Input',respond(Pid, Ref, hello),\n   receive({Answer -> true}),Answer=success(Pid,[input('Input',hello)],false),toplevel_halt(Pid)"
+      },
+      {
+        "engine": "ECLiPSe",
+        "case": "correlation",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 9282944191,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "stdout": "",
+        "goal": "prompt_correlation_check"
+      },
+      {
+        "engine": "ECLiPSe",
+        "case": "expert-conversation",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 9282944191,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "stdout": "",
+        "goal": "expert_example_check"
+      },
+      {
+        "engine": "ECLiPSe",
+        "case": "expert-agent",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 9282944191,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "stdout": "A1: Is pingu a good pet?\nA2: Does it have feathers?\nA1: no\nA2: Is it cuddly?\nA1: yes\nA2: Is it yellow?\nA1: yes\nA2: Yes, pingu is a good pet.\nA1: Is tweety a good pet?\nA2: Does it have feathers?\nA1: no\nA2: Is it cuddly?\nA1: no\nA2: No, tweety is not a good pet.\n",
+        "goal": "simulation([]),simulation([src_list([yellow(tweety)])])"
+      },
+      {
+        "engine": "ECLiPSe",
+        "case": "timeout-retry",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 9282944191,
+          "data": [
+            {
+              "Answer": "timeout",
+              "Ref": "5472708164@'https://127.0.0.1:60294'",
+              "Later": "success([a],false)"
+            }
+          ],
+          "more": false
+        },
+        "stdout": "timeout_observed\n",
+        "goal": "asynch_test_2(Answer,Ref),Answer==timeout,writeln(timeout_observed),yield(Ref,Later),Later==success([a],false)"
+      },
+      {
+        "engine": "ECLiPSe",
+        "case": "callback-error",
+        "passed": true,
+        "event": {
+          "type": "success",
+          "pid": 9282944191,
+          "data": [
+            {
+              "Ref": "2903527595@'https://127.0.0.1:60294'",
+              "E": "error(timeout_callback_failed(2903527595@'https://127.0.0.1:60294'),yield/3)",
+              "Later": "success([true],false)"
+            }
+          ],
+          "more": false
+        },
+        "stdout": "timeout_observed\n",
+        "goal": "promise('http://127.0.0.1:60292',true,Ref),catch(yield(Ref,_,[timeout(0),on_timeout(fail)]),E,true),nonvar(E),E=error(timeout_callback_failed(Ref),_),writeln(timeout_observed),yield(Ref,Later),Later=success(_,false)"
+      },
+      {
+        "engine": "SWI-WASM",
+        "case": "tutorial",
+        "goal": "toplevel_spawn(Pid,[session(true)]),toplevel_call(Pid, input('Input', X)),\n   receive({prompt(Pid, Ref, Prompt) -> true}),Prompt=='Input',respond(Pid, Ref, hello),\n   receive({Answer -> true}),Answer=success(Pid,[input('Input',hello)],false),toplevel_halt(Pid)",
+        "result": {
+          "type": "success",
+          "pid": 6315250540,
+          "data": [
+            {
+              "Pid": "6772772809@localhost",
+              "Answer": "success(6772772809@localhost,[input('Input',hello)],false)",
+              "Ref": "3694996577",
+              "Prompt": "'Input'"
+            }
+          ],
+          "more": false
+        },
+        "passed": true
+      },
+      {
+        "engine": "SWI-WASM",
+        "case": "correlation",
+        "goal": "prompt_correlation_check",
+        "result": {
+          "type": "success",
+          "pid": 6315250540,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "passed": true
+      },
+      {
+        "engine": "SWI-WASM",
+        "case": "expert-conversation",
+        "goal": "expert_example_check",
+        "result": {
+          "type": "success",
+          "pid": 6315250540,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "passed": true
+      },
+      {
+        "engine": "SWI-WASM",
+        "case": "expert-agent",
+        "goal": "simulation([]),simulation([src_list([yellow(tweety)])])",
+        "result": {
+          "type": "success",
+          "pid": 6315250540,
+          "data": [
+            {}
+          ],
+          "more": false
+        },
+        "passed": true
+      },
+      {
+        "engine": "SWI-WASM",
+        "case": "timeout-retry",
+        "goal": "asynch_test_2(Answer,Ref),Answer==timeout,writeln(timeout_observed),yield(Ref,Later),Later==success([a],false)",
+        "result": {
+          "type": "success",
+          "pid": 6315250540,
+          "data": [
+            {
+              "Answer": "timeout",
+              "Ref": "3046355196",
+              "Later": "success([a],false)"
+            }
+          ],
+          "more": false
+        },
+        "passed": true
+      },
+      {
+        "engine": "SWI-WASM",
+        "case": "callback-error",
+        "goal": "promise('http://127.0.0.1:60292',true,Ref),catch(yield(Ref,_,[timeout(0),on_timeout(fail)]),E,true),nonvar(E),E=error(timeout_callback_failed(Ref),_),writeln(timeout_observed),yield(Ref,Later),Later=success(_,false)",
+        "result": {
+          "type": "success",
+          "pid": 6315250540,
+          "data": [
+            {
+              "Ref": "3508869483",
+              "E": "error(timeout_callback_failed(3508869483),context(yield/3,'on_timeout goal failed'))",
+              "Later": "success([true],false)"
+            }
+          ],
+          "more": false
+        },
+        "passed": true
+      }
+    ]
+  },
+  "additional_checks": {
+    "eclipse_language_cases": 247,
+    "unchanged_actor_core": {
+      "advertised_profile": "actor",
+      "candidate": "n7-owner-preview",
+      "counts": {
+        "fail": 1,
+        "pass": 6,
+        "unsupported": 0
+      },
+      "duration_ms": 5137,
+      "results": [
+        {
+          "duration_ms": 11,
+          "id": "AC-001",
+          "status": "pass",
+          "title": "Transport negotiation accepts protocol version 1 and browser capabilities"
+        },
+        {
+          "duration_ms": 21,
+          "id": "AC-002",
+          "status": "pass",
+          "title": "Session self/1 is deterministic and denotes the spawned shell"
+        },
+        {
+          "duration_ms": 18,
+          "id": "AC-003",
+          "status": "pass",
+          "title": "Paged toplevel enumeration preserves bindings and final-page state"
+        },
+        {
+          "duration_ms": 26,
+          "id": "AC-004",
+          "status": "pass",
+          "title": "Guarded receive selects the non-positive clause and emits one line"
+        },
+        {
+          "duration_ms": 17,
+          "id": "AC-005",
+          "status": "pass",
+          "title": "Selective receive retains an earlier unmatched message"
+        },
+        {
+          "duration_ms": 23,
+          "id": "AC-006",
+          "status": "pass",
+          "title": "Direct browser input suspends until toplevel_respond"
+        },
+        {
+          "classification": "unclassified",
+          "detail": "timeout: The read operation timed out",
+          "duration_ms": 5019,
+          "id": "AC-007",
+          "status": "fail",
+          "title": "Nested toplevel input is delivered to its protocol caller"
+        }
+      ],
+      "schema_version": 1,
+      "started_at": "2026-11-12T07:30:56.607977+00:00",
+      "suite": "actor-core-0.1",
+      "ws_url": "wss://localhost:59713/ws"
+    },
+    "manual_adapted_actor_core": {
+      "advertised_profile": "actor",
+      "candidate": "n7-owner-preview",
+      "counts": {
+        "fail": 0,
+        "pass": 7,
+        "unsupported": 0
+      },
+      "duration_ms": 158,
+      "results": [
+        {
+          "duration_ms": 29,
+          "id": "AC-001",
+          "status": "pass",
+          "title": "Transport negotiation accepts protocol version 1 and browser capabilities"
+        },
+        {
+          "duration_ms": 27,
+          "id": "AC-002",
+          "status": "pass",
+          "title": "Session self/1 is deterministic and denotes the spawned shell"
+        },
+        {
+          "duration_ms": 29,
+          "id": "AC-003",
+          "status": "pass",
+          "title": "Paged toplevel enumeration preserves bindings and final-page state"
+        },
+        {
+          "duration_ms": 19,
+          "id": "AC-004",
+          "status": "pass",
+          "title": "Guarded receive selects the non-positive clause and emits one line"
+        },
+        {
+          "duration_ms": 17,
+          "id": "AC-005",
+          "status": "pass",
+          "title": "Selective receive retains an earlier unmatched message"
+        },
+        {
+          "duration_ms": 18,
+          "id": "AC-006",
+          "status": "pass",
+          "title": "Direct browser input suspends until toplevel_respond"
+        },
+        {
+          "duration_ms": 18,
+          "id": "AC-007",
+          "status": "pass",
+          "title": "Nested toplevel input is delivered to its protocol caller"
+        }
+      ],
+      "schema_version": 1,
+      "started_at": "2026-11-12T07:31:49.239751+00:00",
+      "suite": "actor-core-0.1",
+      "ws_url": "wss://localhost:59837/ws"
+    },
+    "manual_adaptation_patch": "actor-core-manual-contract.patch",
+    "https_suite": "Passed using manual-adapted runner; negotiated and no-hello prompt paths, stale rejection, owner admission, nested sessions and output",
+    "wasm_standalone": "Passed including new correlated actor checks and standard read/1",
+    "wasm_semantic_contracts": {
+      "scenarios": 109,
+      "initial_failures": [
+        "portable_text_worker mock returned true for new make_ref request; test reference extraction assumed atomic pid"
+      ],
+      "targeted_rerun": "portable_text_worker passed after the fixture minted references and handled compound pid wire",
+      "remaining_scenarios": "passed; no source runtime changes after full run"
+    }
+  },
+  "source_sha256": {
+    "/Users/lager/trinity-demonstrator/examples/actors/19 promise-and-yield.pl": "0b6b0f86972b763d42795d184e8966bc349c5e031746a42fe55f3fda2991d8c4",
+    "/Users/lager/trinity-demonstrator/examples/actors/20 expert-system-agent.pl": "b6108c644a7b67bd48f1959ecaaf764d93a977b7f115a37802d65abb62231e6f",
+    "/Users/lager/trinity-demonstrator/web/actor-profile-tutorial.html": "8d8e4afd82818484e0eb42d0bf1dddfbd136a43ffb75b26eb381d7014f93e581",
+    "/Users/lager/trinity-demonstrator/web/tutorial.html": "b913c7e6affa657be3f44f1823a543f74df7afd9462fbfd67326b5ad4a9bd7b0",
+    "/Users/lager/trinity-demonstrator/tests/fixtures/prompt-correlation.pl": "049001f4bbf1f718222d6eab6f15a8c9a8a00536587fbff67512d3686721774f",
+    "/Users/lager/trinity-demonstrator/tools/test_actor_examples.py": "58f1297a10bc45bb8e5a25bc7da51cba46866f0207db1c318a5eac96528cf28d",
+    "/Users/lager/trinity-demonstrator/tests/wasm/prompt_examples.cjs": "f58eecaf24377066bfc94aa95823df5be79f4b153676dffdaa9728cab3548106",
+    "/Users/lager/eclipse-node/experiments/eclipse-clp/actors.ecl": "e7bf71ebc69311fb39b90299a596643f218f91c1ad3c36f6318c2bea48232db3",
+    "/Users/lager/swi-wasm-node/web/swi_wasm_actor_worker.js": "bdf3af8b768fc0ddc0698c55f71fe0c332ec18aba699901f4ebbc1111ddab265",
+    "/Users/lager/swi-wasm-node/web/vendor/swi-wasm-node.js": "67ede43b071b540bc5700ea4f913edcd92a34b61c94dbeb3a0a7f36445d936bc",
+    "/Users/lager/swi-wasm-node/tests/fixtures/prompt-correlation.pl": "82458264c8bdeab1d56715907553b88e3f684dd43e28a5f1c3a48b443b011d45",
+    "/Users/lager/swi-wasm-node/tests/wasm/swi_wasm_standalone.js": "4cdc8b5bd015ee76e212190843a26edf7c84deed29d5074a70527d65b3cf87ea",
+    "/Users/lager/swi-wasm-node/tests/wasm/swi_wasm_contracts.js": "368e2a01e389e1836e2cfe7b408fb1ca7fa8e7e197f2fe02d7987a27badb958c"
+  },
+  "preservation": {
+    "eclipse": {
+      "head_unchanged": true,
+      "refs_unchanged": true,
+      "stashes_unchanged": true
+    },
+    "web": {
+      "head_unchanged": true,
+      "refs_unchanged": true,
+      "stashes_unchanged": true
+    },
+    "swi": {
+      "head_unchanged": true,
+      "refs_unchanged": true,
+      "stashes_unchanged": true
+    },
+    "trealla": {
+      "head_unchanged": true,
+      "refs_unchanged": true,
+      "stashes_unchanged": true
+    },
+    "wasm": {
+      "head_unchanged": true,
+      "refs_unchanged": true,
+      "stashes_unchanged": true
+    },
+    "unrelated_eclipse_files_unchanged": true,
+    "live_containers_unchanged": true,
+    "sealed_releases": {
+      "n7-permanent-20261111-7472e17ef3a6": {
+        "verified": true,
+        "manifest_sha256": "5216b59ff4b8f158221c1f402f2eff54e7437567068f5a5a344d17cb59e845d7",
+        "image_id": "sha256:e609d3a852e9cc3564e3bb59bf4c02d83a40e06522b98bedb3740d49188b3e1a"
+      },
+      "n7-live-7037f41-20261111": {
+        "verified": true,
+        "manifest_sha256": "175d47f02fb07f32bd8f7b327ef598f19bb8ac4d944828227a30fb8347cd6c72",
+        "image_id": "sha256:682c0a0599a91c0dc640d37e57c38c44c0f87f7096f5c849276217916dae8dbe"
+      },
+      "n7-language-prompt-20261111-842fce61e59e": {
+        "verified": true,
+        "manifest_sha256": "b238e51eb3c68c7093d5e7a5dc62662630c729fe40328200f786295d5e29a27b",
+        "image_id": "sha256:e609d3a852e9cc3564e3bb59bf4c02d83a40e06522b98bedb3740d49188b3e1a"
+      },
+      "n7-3054a57-20261111": {
+        "verified": true,
+        "manifest_sha256": "7727855ed2c64e0526873fa2522b180a8cd3c73ab2c8409800a02efdc417d371",
+        "image_id": "sha256:cea1fa889d09ec78d159ed4a97555395fb261a50187e731319d9c8b81cb4ba33"
+      }
+    }
+  },
+  "artifacts": "/Users/lager/eclipse-node/.trinity/tutorial-repair-20261112-z0qfl5_l",
+  "limitations": [
+    "The unchanged 8f72a69 runner is not green: AC-007 still uses obsolete respond/2. A copied manual-adapted test passes.",
+    "ECLiPSe and SWI-WASM source corrections remain undeployed and uncommitted; shared runtime dependency pins and live nodes do not yet contain these changes.",
+    "Promises are consumed within one query to preserve ECLiPSe query-scoped cleanup.",
+    "Final comment wording edits do not change executed clauses; the exact tested WASM package is retained under artifacts."
+  ]
+}

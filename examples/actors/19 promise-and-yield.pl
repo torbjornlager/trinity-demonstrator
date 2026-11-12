@@ -11,8 +11,9 @@
 %   so the two remote computations overlap and the pair finishes in about
 %   the time of one rather than their sum (each is padded with an
 %   artificial delay to make this visible). yield/2-3 accepts the same
-%   waiting controls as receive -- asynch_test_2 gives up with a timeout
-%   if the answer is slow -- and promise/3-4 accepts the same code-shipping
+%   waiting controls as receive -- asynch_test_2 returns an explicit timeout
+%   result if the answer is slow -- and promise/3-4 accepts the same
+%   code-shipping
 %   options as rpc, plus template/1 to say which term to bring back and
 %   offset/1 and limit/1 to slice the remote solution stream
 %   (asynch_test_4).
@@ -30,11 +31,10 @@ asynch_test_1(Answer) :-
     yield(Ref, Answer).
 
 
-asynch_test_2(Answer) :-
-	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref),
+asynch_test_2(Answer, Ref) :-
+	promise('https://n3.elfenbenstornet.se', (X=a,sleep(0.5)), Ref, [template(X)]),
     yield(Ref, Answer, [
-        timeout(0.1),
-        on_timeout(fail)
+        timeout(0.1)
     ]).
     
     
@@ -67,14 +67,17 @@ asynch_test_4(Answer1, Answer2) :-
 
 /** <examples>
 
-% Start one remote call, then collect its result (Answer = a).
+% Start one remote call, then collect its result (Answer = success([a], false)).
 
 ?- asynch_test_1(Answer).
 
-% Give up early: yield with a short timeout returns before the slower
-% remote result is ready, so this one fails.
+% Return early with Answer = timeout. This does not cancel the promise;
+% keep Ref so that a later yield can collect success([a], false).
+% Collect it in the same query: promise lifetime across queries is runtime-specific.
+% A timeout is a result, not ordinary failure. An on_timeout(fail) callback
+% instead raises error(timeout_callback_failed(Ref), _).
 
-?- asynch_test_2(Answer).
+?- asynch_test_2(Answer, Ref), yield(Ref, Later).
 
 % Two nodes at once: both promises are in flight before either yield, so
 % the two calls overlap instead of running one after the other.
