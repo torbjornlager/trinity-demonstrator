@@ -4813,7 +4813,7 @@
           if (parsed.origin === "https://n7.elfenbenstornet.se") {
             node.href = parsed.origin + "/demonstrator";
             node.runtime = "eclipse";
-            node.runtimeName = "ECLiPSe CLP";
+            node.runtimeName = "ECLiPSe Prolog";
             node.ownerOnly = true;
           }
           nodes.push(node);
@@ -5783,7 +5783,7 @@
             return PORTAL_BOOK_MANUSCRIPT_URL;
           },
           portalRuntimeName: function() {
-            if (!this.isBrowserSwiWasmMode && nodeLabelForUrl(this.currentPortalNodeUrl) === "N7") return "ECLiPSe CLP";
+            if (!this.isBrowserSwiWasmMode && nodeLabelForUrl(this.currentPortalNodeUrl) === "N7") return "ECLiPSe Prolog";
             if (this.isBrowserSwiWasmMode || this.portalSwiplVersion) {
               return "SWI-Prolog";
             }
@@ -5791,6 +5791,7 @@
             return this.portalTreallaVersion ? "Trealla Prolog" : "Prolog";
           },
           portalRuntimeUrl: function() {
+            if (this.portalRuntimeName === "ECLiPSe Prolog") return "https://eclipseclp.org/";
             if (this.portalRuntimeName === "GNU Prolog") return "https://www.gprolog.org/";
             return this.portalRuntimeName === "Trealla Prolog"
               ? "https://github.com/trealla-prolog/trealla-prolog"
