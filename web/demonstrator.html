@@ -362,9 +362,19 @@
       }
 
       .wb-header-node-slot {
+        position: relative;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+        flex: 0 0 auto;
+      }
+
+      /* The selected node's Shared DB label must not widen its button slot. */
+      .wb-header-node-slot .wb-header-section-note {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        white-space: nowrap;
       }
 
       .wb-header-card.active {
@@ -7834,8 +7844,9 @@
           },
           formatOutputDisplay: function(data, kind) {
             var text = this.formatDisplayText(renderOutputData(data));
-            if (kind === "timing") {
-              return this.formatTimingDisplay(text);
+            var concise = this.conciseSwiWasmOutput(text);
+            if (kind === "timing" || /^%\s+\d+(?:\.\d+)? seconds elapsed\s*$/.test(concise)) {
+              return this.formatTimingDisplay(concise);
             }
             return text;
           },
@@ -7847,9 +7858,13 @@
                 return !/^Warning:\s+\/(?:worker_)?user_code\.pl:\d+:\s*$/.test(line);
               })
               .map(function(line) {
+                var wall = /^%\s+(\S+) seconds wall, \S+ seconds CPU, [0-9][0-9,]* inferences\s*$/.exec(line);
+                if (wall) return "% " + Number(wall[1]).toFixed(3) + " seconds elapsed";
+                var elapsed = /^%\s+[0-9][0-9,]* inferences in (\S+) seconds\s*$/.exec(line);
+                if (elapsed) return "% " + Number(elapsed[1]).toFixed(3) + " seconds elapsed";
                 var timing = /^%\s+([0-9][0-9,]*)\s+inferences,\s+\S+\s+CPU\s+in\s+(\S+)\s+seconds(?:\s+\([^)]*\))?\s*$/.exec(line);
                 if (timing) {
-                  return "% " + timing[1] + " inferences in " + timing[2] + " seconds";
+                  return "% " + Number(timing[2]).toFixed(3) + " seconds elapsed";
                 }
                 var match = /^Warning:\s+Local definition of user:([^\s]+)\s+overrides weak import from swi_wasm_actor_bridge\s*$/.exec(line);
                 return match
@@ -7866,7 +7881,7 @@
               return false;
             }
             var displayText = text.split("\n").map(function(line) {
-              return /^% [0-9][0-9,]* inferences in \S+ seconds$/.test(line)
+              return /^% \d+(?:\.\d+)? seconds elapsed$/.test(line)
                 ? this.formatTimingDisplay(line)
                 : line;
             }.bind(this)).join("\n");

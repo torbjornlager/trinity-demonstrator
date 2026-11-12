@@ -366,11 +366,14 @@ ok(conciseSwiWasmOutput("Warning: /worker_user_code.pl:1:") === "" &&
    "SWI-WASM override notices are concise and blue in both themes");
 ok(conciseSwiWasmOutput(
      "% 805 inferences, 3.335 CPU in 3.335 seconds (100% CPU, 241 Lips)"
-   ) === "% 805 inferences in 3.335 seconds" &&
+   ) === "% 3.335 seconds elapsed" &&
+   conciseSwiWasmOutput("% 18 inferences in 1.000 seconds") === "% 1.000 seconds elapsed" &&
+   conciseSwiWasmOutput("% 1.000 seconds wall, 0.001 seconds CPU, 20 inferences") === "% 1.000 seconds elapsed" &&
+   conciseSwiWasmOutput("% 1.000 seconds elapsed") === "% 1.000 seconds elapsed" &&
    includes("this.formatTimingDisplay(line)") &&
    includes('return theme === "dark" ? "#7ae2a1" : "#15803d";') &&
    includes('return "[[;" + webPrologTerminalTimingColor() + ";]" + escaped + "]";'),
-   "SWI-WASM time/1 output keeps inference and elapsed time only and uses theme-aware green");
+   "SWI-WASM time/1 reports elapsed seconds and uses theme-aware green");
 ok(includes('return "Welcome to [[b;;]Web Prolog], running\\n" +') &&
    includes('node = this.isBrowserSwiWasmMode') &&
    includes('? "SWI-WASM"') &&
@@ -1333,7 +1336,7 @@ ok(workerSource.includes('Module.FS.writeFile("/worker_read_shim.pl"') &&
    workerSource.includes('read(Term) :- swi_wasm_actor_bridge:input(\\"|:\\", Term).') &&
    workerSource.includes('read_term(Term, _) :- swi_wasm_actor_bridge:input(\\"|:\\", Term).') &&
    workerSource.includes("string_chars(PromptTerm,Prompt)") &&
-   workerSource.includes("prompt(Self, PromptTerm)"),
+   workerSource.includes("prompt(Self, Ref, PromptTerm)"),
    "the user-module worker shell routes read/1 and read_term/2 through its explicit prompt protocol");
 ok(includes('source: String(extraSourceText || "")') &&
    !includes('extraSourceText || this.currentLoadText()'),
