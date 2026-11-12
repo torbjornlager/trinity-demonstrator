@@ -76,7 +76,10 @@ start_n3 :-
                            update_current_node_runtime(_{
                                ws_endpoint_overrides:[
                                    'https://n3.elfenbenstornet.se'-'ws://wp_n3:3053/ws',
-                                   'https://n4.elfenbenstornet.se'-'ws://wp_n4:3055/ws'
+                                   'https://n4.elfenbenstornet.se'-'ws://wp_n4:3055/ws',
+                                   % Inherited terminal I/O returns to its home
+                                   % node over the private peer transport.
+                                   'https://n5.elfenbenstornet.se'-'ws://wp_n5:3060/ws'
                                ],
                                %  Give each browser tab a distinct anon
                                %  principal id so per-principal limits
