@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
-  "revision": "89a280935583b545c381515d951de6737ad68465",
+  "revision": "eddfb7bb1eca787a4f97e787f0b6aa9fec99f64c",
   "pack": "web_prolog",
   "mode": "required for startup, tests and container builds"
 }
