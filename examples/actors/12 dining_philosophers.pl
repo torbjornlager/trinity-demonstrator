@@ -27,8 +27,9 @@
 
 
 sleep :-
-    Time is random_float/10,
-    sleep(Time).
+    random_between(0, 100, Milliseconds),
+    Seconds is Milliseconds / 1000,
+    sleep(Seconds).
 
 doForks(ForkList) :-
     receive({
@@ -94,14 +95,12 @@ doWaiter(WaitList, ClientCount, EatingCount, Busy) :-
             doWaiter(WaitList, ClientCount, EatingCount1, R1) ;
         {leaving} ->
             ClientCount1 is ClientCount - 1,
-            flag(left_received, N, N+1),
             doWaiter(WaitList, ClientCount1, EatingCount, Busy)
     }).
 
 philosopher(Name, _Forks, 0) :-
     format("~s is leaving.~n", [Name]),
-    waiter ! {leaving},
-    flag(left, N, N+1).
+    waiter ! {leaving}.
 philosopher(Name, Forks, Cycle) :-
     self(Self),
     format("~s is thinking (cycle ~w).~n", [Name, Cycle]),

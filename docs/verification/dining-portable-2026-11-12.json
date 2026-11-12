@@ -1,0 +1,99 @@
+{
+  "date": "2026-11-12",
+  "result": "pass",
+  "scope": "Shared example source only; no commit, push, pin change or deployment",
+  "source_base": "78444ec12b1996bf6004edc7340ddf27f0128c3b",
+  "example": "examples/actors/12 dining_philosophers.pl",
+  "example_sha256": "8108f0e18f03c95c608742b4bd74690edf1305dfd53768eb4418e03bf1d54f5b",
+  "changes": [
+    "sleep/0 uses random_between(0,100,Milliseconds), divides by 1000, then calls sleep/1",
+    "Removed both unused flag/3 counter updates"
+  ],
+  "verification": {
+    "full_source_unmodified_by_test": true,
+    "cycles_per_philosopher": 20,
+    "meals_per_runtime": 100,
+    "required_each_philosopher": [
+      "thinking cycles 1\u201320",
+      "hungry cycles 1\u201320",
+      "eating cycles 1\u201320",
+      "one departure"
+    ],
+    "required_completion": [
+      "Waiter is leaving.",
+      "Dining room closed."
+    ],
+    "engines": [
+      {
+        "result": "pass",
+        "completed_meals": 100,
+        "philosophers_finished": 5,
+        "cycles_per_philosopher": 20,
+        "output_lines": 308,
+        "engine": "SWI",
+        "image": "sha256:dc64d7cd35d8befad5ad6766b5a32b148b6de82dcb9e97f198e4ba8f04b9cbf8",
+        "seconds": 3.275,
+        "session_reuse": "pass"
+      },
+      {
+        "result": "pass",
+        "completed_meals": 100,
+        "philosophers_finished": 5,
+        "cycles_per_philosopher": 20,
+        "output_lines": 307,
+        "engine": "Trealla",
+        "image": "sha256:198da89d88d3abae45b8c6bcf6c45e0192ac0e6cece90e1099c579eb93afa24a",
+        "seconds": 2.988,
+        "session_reuse": "pass"
+      },
+      {
+        "result": "pass",
+        "completed_meals": 100,
+        "philosophers_finished": 5,
+        "cycles_per_philosopher": 20,
+        "output_lines": 308,
+        "engine": "ECLiPSe",
+        "image": "sha256:eaa1c1302d375acf3beaf313f1725da4f1310c19742aff55960ca7fe402615bc"
+      },
+      {
+        "engine": "SWI-WASM",
+        "mode": "worker",
+        "result": "pass",
+        "completed_meals": 100,
+        "philosophers_finished": 5,
+        "cycles_per_philosopher": 20,
+        "session_reuse": "pass",
+        "seconds": 3.93
+      },
+      {
+        "engine": "SWI-WASM",
+        "mode": "main",
+        "result": "pass",
+        "completed_meals": 100,
+        "philosophers_finished": 5,
+        "cycles_per_philosopher": 20,
+        "session_reuse": "pass",
+        "seconds": 4.293200000047683
+      }
+    ]
+  },
+  "preservation": {
+    "result": "pass",
+    "live_containers_and_n7_process_unchanged": true,
+    "proxy_owner_policy_and_credentials_unchanged": true,
+    "n7_owner_only": true,
+    "existing_release_manifest_hashes_unchanged": 13,
+    "all_repository_refs_preview_branches_stashes_and_saved_snapshots_unchanged": true,
+    "other_canonical_pending_work_unchanged": true
+  },
+  "private_evidence": "/Users/lager/eclipse-node/.trinity/dining-portable-er2v1yg5",
+  "evidence_sha256": {
+    "native-results.json": "4690b209f19e772ef1f90bf4ec60a441e3cb7f05407cf3d990cd5bc2f54b41f5",
+    "eclipse-results.json": "031d9b06a2528f1e5769851610c86c1b0d58898b3c78e6d74bbe0ab077849ceb",
+    "wasm-results.json": "fcd72a8ca2da004b0445b59ba4d689a4659808262b029f48272e322c15a2532b",
+    "native.py": "32a6a019326e70ba4a241e0906159ab98f3c8bb3ab9a4b839204cd943cf04eff",
+    "eclipse.py": "7442a1cc334bf51c90e4ece173ffa56b472b4155a08e0ccb3292d34e5126adae",
+    "wasm.cjs": "0b0ad5a73c774179e006321a365b5b124288faeed5308aae6aa56eed44ebd746",
+    "wasm.py": "ca9a416fcd0b56ef14cdd0a97a50e4c36001e4a4b8c36b2ecd31cc7091604ab7"
+  }
+}
