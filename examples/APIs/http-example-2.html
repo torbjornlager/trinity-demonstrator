@@ -57,8 +57,8 @@
       <button id="clear-button" type="button">Clear log</button>
     </p>
 
-    <p>Some nodes, including the current ECLiPSe N7 gateway, provide sessions
-      only over WebSocket. On those nodes use
+    <p>The current ECLiPSe HTTP adapter supports paging but omits streamed
+      terminal output. For interactive I/O on ECLiPSe use
       <a href="ws-example-1.html">the WebSocket session example</a>.</p>
 
     <h2>Output</h2>
@@ -202,6 +202,11 @@
           clearLog();
 
           try {
+            var info = await fetchJSON(endpoint("/node_info"));
+            if (info.implementation === "ECLiPSe CLP") {
+              addResult("Use the WebSocket session example for interactive I/O on ECLiPSe. HTTP paging is available in the first HTTP example.");
+              return;
+            }
             var spawned = await fetchJSON(endpoint("/toplevel_spawn"), {
               method: "POST",
               headers: {
