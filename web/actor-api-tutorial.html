@@ -136,6 +136,8 @@ const socket = new WebSocket(`${protocol}//${location.host}/ws`);</code></pre>
 // 3. End it explicitly.
 { "command": "exit", "pid": ACTOR_PID, "reason": "done" }</code></pre>
 
+    <p>The echo actor uses <code>writeln/1</code> to write to this connection's installed I/O target. The actor predicate <code>output/1</code> sends a term to its parent actor; it does not select the WebSocket I/O target.</p>
+
     <div class="expected"><h3>Read the interleaving</h3><p>The two <code>send</code> commands do not synchronously return values. Later <code>output</code> events identify the actor by PID. This is message-passing concurrency, not a sequence of function calls disguised as JSON.</p></div>
 
     <table aria-label="Core raw actor commands"><thead><tr><th>Command</th><th>Typical event or effect</th></tr></thead><tbody>
@@ -247,7 +249,7 @@ socket.addEventListener("message", ({ data }) =&gt; {
       closeActorLab();begin(api);actorLabStatus("Opening a separate tutorial WebSocket…",false);
       var scheme=location.protocol==="https:"?"wss:":"ws:";
       var socket=new WebSocket(scheme+"//"+location.host+"/ws"),actorPid=null,outputs=0;
-      var program=["echo_actor :-","    receive({","        msg(Msg) -> output(Msg), echo_actor","      ; stop -> true","    })."].join("\n");
+      var program=["echo_actor :-","    receive({","        msg(Msg) -> writeln(Msg), echo_actor","      ; stop -> true","    })."].join("\n");
       actorLabSocket=socket;
       function send(payload){mirror(api,payload,"request");socket.send(JSON.stringify(payload))}
       socket.onopen=function(){if(actorLabSocket!==socket)return;actorLabStatus("Connected. Spawning echo actor…",false);send({command:"spawn",goal:"echo_actor",options:"[src_text("+prologString(program)+")]"})};

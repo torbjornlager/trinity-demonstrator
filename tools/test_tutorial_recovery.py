@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the actual tutorial source/calls against explicit disposable endpoints."""
+"""Run the actual tutorial source/calls against explicitly selected endpoints."""
 import argparse,html,json,re,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
@@ -14,6 +14,8 @@ def cases():
   out.append(dict(item=page+' fridge',source=pre('epa-fridge-api-source'),queries=[query('epa-fridge-api-spawn'),query('epa-fridge-api-store')+',Response==ok',query('epa-fridge-api-take')+',Response==ok(cheese)',query('epa-fridge-api-stop')],expected_errors=[]))
   out.append(dict(item=page+' ping',source=pre('epa-pingpong-source'),queries=[query('epa-pingpong-run')+',sleep(0.2),flush'],expected_errors=[],stdout=['Ping finished.','Pong finished.']))
   out.append(dict(item=page+' recovery',source=pre('srv-fridge-source'),queries=[query('srv-spawn'),query('srv-store-1'),query('srv-bad-call'),query('srv-after-recovery')+',Response==ok',query('srv-halt')],expected_errors=[2] if page.startswith('actor') else []))
+  if page=='actor-profile-tutorial.html':
+   out.append(dict(item=page+' delayed promise',source='',queries=[query('rpc-promise-timeout')+',Answer==timeout','yield($Ref,Later,[timeout(3)]),Later=success([_],false)',query('rpc-promise-poll')+',Answer=success([_],false)'],expected_errors=[],stdout=['Still waiting...']))
  return out
 
 def main():

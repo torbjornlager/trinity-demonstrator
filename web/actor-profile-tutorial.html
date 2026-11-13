@@ -1996,7 +1996,9 @@ human(Who) :-
     A client can bound the wait and give timeout an explicit result:
 </p>
 
-<pre id="rpc-promise-timeout">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref),
+<pre id="rpc-promise-timeout">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref, [
+       http_timeout(2)
+   ]),
    yield(Ref, Answer, [
        timeout(0.3),
        on_timeout(Answer = timeout)
@@ -2013,6 +2015,9 @@ human(Who) :-
     produces <code>Answer = timeout</code>. Timing out does not cancel or
     consume the promise: another call to <code>yield/2-3</code> with the same
     reference can still collect its answer.
+    The separate <code>http_timeout(2)</code> gives the remote call enough
+    time to finish its one-second delay; <code>timeout(0.3)</code> only bounds
+    this wait for the promise.
 </p>
 
 <h2>Polling for results</h2>
@@ -2022,7 +2027,9 @@ human(Who) :-
     waits briefly on each iteration and does other work between attempts:
 </p>
 
-<pre id="rpc-promise-poll">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref),
+<pre id="rpc-promise-poll">?- promise('https://n1.elfenbenstornet.se', (sleep(1), X=a), Ref, [
+       http_timeout(2)
+   ]),
    repeat,
      yield(Ref, Answer, [
          timeout(0.3),
