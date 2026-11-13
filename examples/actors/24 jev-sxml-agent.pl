@@ -32,11 +32,17 @@ jev_observation(Text, Observation) :-
     catch(jev_deployment_observation(Text, Candidate),
           error(existence_error(procedure, _), _),
           Candidate = unavailable(configuration)),
-    (   Candidate = observation(choice(_, _, _), score(_, _, _, _),
-                                noul(_), provenance(Raw)),
-        is_dict(Raw)
+    (   ground(Candidate),
+        Candidate = observation(choice(Intent, _, Confidence),
+                                score(Value, _, _, Certainty),
+                                noul(Question), provenance(Raw)),
+        memberchk(Intent, [request_deploy, affirm, deny, status, other]),
+        number(Confidence), Confidence >= 0, Confidence =< 1,
+        number(Value), number(Certainty), Certainty >= 0, Certainty =< 1,
+        number(Question), Question >= 0, Question =< 1,
+        nonvar(Raw), Raw = json(Pairs), is_list(Pairs)
     ->  Observation = Candidate
-    ;   Candidate = unavailable(Reason)
+    ;   nonvar(Candidate), Candidate = unavailable(Reason)
     ->  Observation = unavailable(Reason)
     ;   Observation = unavailable(malformed_observation)
     ).
@@ -46,15 +52,18 @@ jev_observation(Text, Observation) :-
 ?- jev_sxml_agent_spawn(Pid).
 
 ?- self(Me), $Pid ! say(Me, first, "yes"),
-   receive({demo_reply(first, Report) -> true},
+   receive({demo_reply(first, Report) -> true ;
+            down($Pid, $Pid, Reason) -> throw(agent_down(Reason))},
            [timeout(20), on_timeout(fail)]).
 
 ?- self(Me), $Pid ! say(Me, deploy, "Please prepare a deployment"),
-   receive({demo_reply(deploy, Report) -> true},
+   receive({demo_reply(deploy, Report) -> true ;
+            down($Pid, $Pid, Reason) -> throw(agent_down(Reason))},
            [timeout(20), on_timeout(fail)]).
 
 ?- self(Me), $Pid ! say(Me, swedish, "ja"),
-   receive({demo_reply(swedish, Report) -> true},
+   receive({demo_reply(swedish, Report) -> true ;
+            down($Pid, $Pid, Reason) -> throw(agent_down(Reason))},
            [timeout(20), on_timeout(fail)]).
 
 ?- $Pid ! stop.

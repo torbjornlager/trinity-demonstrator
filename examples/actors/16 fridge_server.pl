@@ -51,6 +51,20 @@ fridge2(take(Food),  List, ok(Food), Rest) :-
 fridge2(take(_Food), List, not_found, List).
 fridge2(_Other,      List, error(unknown_request), List).
 
+% The crash notification and publication of the replacement are separate
+% events. Bound the wait and require a different, registered actor before
+% letting the next client query run.
+wait_for_fridge_restart(_, 0) :- !,
+    throw(server_restart_timeout(fridge)).
+wait_for_fridge_restart(Previous, Attempts) :-
+    whereis(fridge, Current),
+    (   Current \== undefined, Current \== Previous
+    ->  true
+    ;   sleep(0.01),
+        Remaining is Attempts - 1,
+        wait_for_fridge_restart(Previous, Remaining)
+    ).
+
 
 /** <examples>
 
@@ -99,12 +113,16 @@ fridge2(_Other,      List, error(unknown_request), List).
 %
 %     Unknown message: server_down(false)
 %
-% Behind the scenes, the supervisor immediately respawns the server
+% Behind the scenes, the supervisor respawns the server
 % under the same registered name `fridge`, with state reset to the
 % initial empty list -- durable state would need an external store.
-% The follow-up server_request goes to the freshly spawned server.
+% The catch below waits for its new registered pid before rethrowing the
+% original server_down error. Thus the follow-up request is safe even when
+% these queries are executed immediately one after another.
 
-?- server_request(fridge, sore(milk), Response).
+?- whereis(fridge, Previous),
+   catch(server_request(fridge, sore(milk), Response), server_down(Reason),
+         (wait_for_fridge_restart(Previous, 500), throw(server_down(Reason)))).
 
 ?- server_request(fridge, store(eggs), Response).
 

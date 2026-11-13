@@ -175,6 +175,11 @@
           runButton.disabled = true;
           clearLog();
           try {
+            var info = await fetchJSON(endpoint("/node_info"));
+            if (info.profile === "relation" || info.profile === "isobase") {
+              addResult("This node does not provide sessions. Choose an ISOTOPE or ACTOR node to run this example.");
+              return;
+            }
             var spawned = await fetchJSON(endpoint("/toplevel_spawn"), {
               method: "POST",
               headers: {
@@ -207,8 +212,8 @@
               });
             }
           } catch (error) {
-            if (pid === null && error.status === 404) {
-              addResult("HTTP sessions are unavailable on this node. Use the WebSocket session example linked above.");
+            if (pid === null && (error.status === 404 || error.status === 405)) {
+              addResult("HTTP sessions are unavailable on this node. On an ISOTOPE or ACTOR node, try the WebSocket session example linked above.");
             } else {
               logLine("error: " + error.message, "error");
             }

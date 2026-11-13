@@ -6,6 +6,7 @@
 :- use_module('../examples/jev/jev_actor').
 :- use_module('../examples/jev/jev_sxml_demo').
 :- use_module('../examples/services/jev_service').
+:- use_module('../examples/portable_json_swi').
 :- use_module(library(http/thread_httpd)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_json)).
@@ -157,6 +158,19 @@ test(owner_service_is_fixed_and_rate_bounded) :-
           assertion(\+ get_dict(api_key, Payload, _)) ),
         ( unsetenv('TYPESAFE_API_KEY'),
           unsetenv('TYPESAFE_ENDPOINT') )).
+
+test(portable_service_boundary_preserves_all_metadata) :-
+    Raw=_{'[]':[], text:"[]", truth:true, nested:_{x:"yes"}},
+    Native=observation(choice(affirm,_{affirm:0.9},0.9),
+                       score(1,_{'0':['R',o,u,t,i,n,e]},_{'0':1.0},0.8),
+                       noul(0.1),provenance(Raw)),
+    portable_jev_observation(Native,Portable),
+    Portable=observation(choice(affirm,Ps,0.9),score(1,L,D,0.8),noul(0.1),provenance(P)),
+    maplist(portable_json_object,[Ps,L,D,P]),
+    portable_json_get(P,'[]',[]),portable_json_get(P,text,string([91,93])),
+    portable_json_get(P,truth,@(true)),
+    portable_json_get(L,'0',string([82,111,117,116,105,110,101])),
+    portable_jev_observation(unavailable(configuration),unavailable(configuration)).
 
 test(stage1_observe_think_act_paths) :-
     setup_call_cleanup(

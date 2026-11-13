@@ -1,6 +1,7 @@
 :- module(jev_service, [
     configure_jev_service/0,
-    jev_deployment_observation/2
+    jev_deployment_observation/2,
+    portable_jev_observation/2
 ]).
 
 /** <module> Owner-installed, bounded Jev capability for the tutorial
@@ -13,6 +14,7 @@ at node startup; the underlying transport reads `TYPESAFE_API_KEY` and optional
 
 :- use_module('../jev/deployment_observation').
 :- use_module('../example_text').
+:- use_module('../portable_json_swi', [portable_json_from_dict/2]).
 :- use_module(library(error)).
 :- use_module(library(web_prolog/node_execution_context),
               [current_public_execution_profile/1]).
@@ -73,10 +75,35 @@ admit_locked(started) :-
 perform(rejected(unavailable), _Text, unavailable(configuration)) :- !.
 perform(rejected(Reason), _Text, unavailable(Reason)) :- !.
 perform(started, Text, Result) :-
-    deployment_observation(Text, Result).
+    deployment_observation(Text, Native),
+    portable_jev_observation(Native, Result).
+
+% Native dicts belong to the provider adapter. Public actors on every engine
+% receive the same inspectable JSON terms, including all provenance fields.
+portable_jev_observation(unavailable(Reason), unavailable(Reason)) :- !.
+portable_jev_observation(
+        observation(choice(Intent, Probabilities, Confidence),
+                    score(Value, Legend, Distribution, Certainty),
+                    Noul, provenance(Raw)),
+        observation(choice(Intent, PortableProbabilities, Confidence),
+                    score(Value, PortableLegend, PortableDistribution, Certainty),
+                    Noul, provenance(PortableRaw))) :-
+    portable_json_from_dict(Probabilities, PortableProbabilities),
+    dict_pairs(Legend, Tag, LegendPairs),
+    maplist(native_legend_pair, LegendPairs, NativePairs),
+    dict_pairs(NativeLegend, Tag, NativePairs),
+    portable_json_from_dict(NativeLegend, PortableLegend),
+    portable_json_from_dict(Distribution, PortableDistribution),
+    portable_json_from_dict(Raw, PortableRaw).
 
 release(rejected(_)) :- !.
 release(started) :-
     with_mutex(jev_admission,
         ( retract(service_state(true, Next)),
           assertz(service_state(false, Next)) )).
+
+% Jev's typed legend has already adopted the language's text convention.
+% Restore native JSON strings at this known text field, never by guessing
+% whether an arbitrary JSON array of characters represents text.
+native_legend_pair(Key-Text, Key-Native) :-
+    ( native_text(Text, String) -> Native=String ; Native=Text ).
