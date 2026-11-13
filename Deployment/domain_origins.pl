@@ -1,5 +1,26 @@
-:- module(domain_origins, [demonstrator_domain_origins/1, demonstrator_transport_options/1]).
+:- module(domain_origins, [demonstrator_domain_origins/1, demonstrator_transport_options/1,
+                          demonstrator_n2_rpc_endpoints/1]).
 :- use_module(library(readutil)).
+:- use_module(library(uri)).
+
+% Compose opts into its private service topology; local development retains
+% the public endpoint unless the owner explicitly configures this variable.
+demonstrator_n2_rpc_endpoints(Endpoints) :-
+    (getenv('WP_N2_N4_RPC_ENDPOINT', Endpoint), Endpoint \== '' ->
+        (catch(valid_rpc_origin(Endpoint),_,fail)
+        -> Endpoints=['https://n4.elfenbenstornet.se'-Endpoint]
+        ; throw(error(domain_error(rpc_endpoint_configuration,'WP_N2_N4_RPC_ENDPOINT'),
+                      demonstrator_n2_rpc_endpoints/1)))
+    ;Endpoints=[]).
+
+valid_rpc_origin(Endpoint) :-
+    uri_components(Endpoint,uri_components(Scheme,Authority,Path,Query,Fragment)),
+    memberchk(Scheme,[http,https]),atom(Authority),Authority\=='',
+    memberchk(Path,['','/']),var(Query),var(Fragment),
+    uri_authority_components(Authority,uri_authority(User,Password,Host,Port)),
+    var(User),var(Password),atom(Host),Host\=='',
+    \+ (sub_atom(Host,_,1,_,C),char_type(C,space)),
+    (var(Port);integer(Port),between(1,65535,Port)).
 
 % All deployed nodes in the demonstrator's domain belong to the same federation.
 % Keep public source/spawn and browser-origin admission consistent. This grants

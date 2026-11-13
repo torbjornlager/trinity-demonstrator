@@ -64,6 +64,7 @@ services:
       - /tmp:size=96m
     environment:
       HOME: /tmp
+      WP_N2_N4_RPC_ENDPOINT: ${WP_N2_N4_RPC_ENDPOINT:-http://wp_n4:3055}
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
       WEB_PROLOG_VIEWER_TOKEN: ${WEB_PROLOG_VIEWER_TOKEN:-}

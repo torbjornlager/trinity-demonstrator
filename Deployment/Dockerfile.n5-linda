@@ -3,5 +3,6 @@
 FROM trealla_runtime
 COPY examples/services/linda_space.pl examples/services/linda_bounded_space.pl examples/services/linda_client.pl examples/services/linda_service_trealla.pl /app/owner_services/
 COPY Deployment/start_n5_linda.pl Deployment/entrypoint.n5-linda.sh Deployment/shared_db_linda.pl /app/owner_start/
+COPY Deployment/n5-peer-http-endpoints.example.pl /app/owner_start/n5-peer-http-endpoints.pl
 RUN /opt/trealla/tpl -g "use_module('/app/owner_start/start_n5_linda.pl'),halt"
 ENTRYPOINT ["/bin/sh", "/app/owner_start/entrypoint.n5-linda.sh"]
