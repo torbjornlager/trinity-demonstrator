@@ -41,9 +41,23 @@ Before release, commit and coordinate runtime/shared dependency pins, build a ne
 immutable image and qualify it with the current proxy and rollback procedure.
 The source-overlay fixture is not an immutable release or deployment approval.
 
-Qualification retains one unexplained early candidate welcome timeout after HTTP
-101. Later untraced runs, including 80 queries and 400 TLS handshakes, passed.
-The historical public 502 was premature backend closure; pressure tests show
-reduced memory growth but did not reproduce that closure. The unchanged-live
-rerun still has four remote-query watchdog failures. These limitations must
-remain in release review; passing reruns alone do not establish their cause.
+Follow-up startup tracing found the relay entry arriving as
+`actors:relay_start(...)`. The candidate now explicitly retains `web_prolog`
+execution context and waits for relay initialization. Startup and welcome waits
+observe relay termination and clean up their monitors, so an exited relay cannot
+leave the reader waiting for an impossible ready message.
+
+Use the same isolated fixture arguments with `--relay-fault` for a controlled
+relay failure during `transport_hello`. The old image reaches its ten-second
+client watchdog. The candidate returns the ordinary
+`existence_error(websocket_relay, Pid)` error frame immediately and closes, with
+no retry or increased deadline. The fixture records both expected failure stages;
+it never deploys its injected source. Normal mode retains its N1/promise checks
+and 400 additional TLS handshakes.
+
+The historical public 502 occurred before HTTP 101 and remains a separate,
+unproven incident. The earlier unchanged-live run also retained four remote-query
+watchdog failures. Neither is cleared by the relay-startup fix or the isolated
+candidate checks. The exact cause of the old one-off welcome stall cannot be
+reconstructed from its client-only log, but the two concrete startup defects and
+the dead-relay hang now have regression coverage.
