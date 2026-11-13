@@ -1,4 +1,5 @@
 :- use_module(library(settings)).
+:- use_module(domain_origins, [demonstrator_domain_origins/1]).
 :- ['../load.pl'].
 :- use_module(shared_db_paths, [
     common_shared_db_path/1,
@@ -33,6 +34,7 @@ start_n4 :-
     set_setting(http:public_port, 443),
     set_setting(http:public_scheme, https),
     set_setting(node_http_identity:anonymous_visitors, true),
+    demonstrator_domain_origins(DomainOrigins),
     node(3055, [
         sandbox(blacklist),
         profile(actor),
@@ -47,22 +49,10 @@ start_n4 :-
         max_call_requests_per_window(120),
         max_session_spawns_per_window(30),
         max_ws_commands_per_window(400),
-        ws_allowed_origins([
-            'https://n0.elfenbenstornet.se',
-            'https://n1.elfenbenstornet.se',
-            'https://n2.elfenbenstornet.se',
-            'https://n3.elfenbenstornet.se',
-            'https://n4.elfenbenstornet.se',
-            'https://n5.elfenbenstornet.se'
-        ]),
+        ws_allowed_origins(DomainOrigins),
         tutorial_sections([local_actor, toplevels, distributed_actor,
                            behaviours, statecharts]),
-        load_uri_allowed_origins([
-            'https://n1.elfenbenstornet.se',
-            'https://n2.elfenbenstornet.se',
-            'https://n3.elfenbenstornet.se',
-            'https://n4.elfenbenstornet.se'
-        ]),
+        load_uri_allowed_origins(DomainOrigins),
         load_shared_db_file(CommonSharedDBPath),
         load_shared_db_file(ActorCommonSharedDBPath),
         load_shared_db_file(LindaClientPath),
@@ -72,7 +62,8 @@ start_n4 :-
                            update_current_node_runtime(_{
                                ws_endpoint_overrides:[
                                    'https://n3.elfenbenstornet.se'-'ws://wp_n3:3053/ws',
-                                   'https://n4.elfenbenstornet.se'-'ws://wp_n4:3055/ws'
+                                   'https://n4.elfenbenstornet.se'-'ws://wp_n4:3055/ws',
+                                   'https://n5.elfenbenstornet.se'-'ws://wp_n5:3060/ws'
                                ],
                                %  Per-tab anon principal -- see start_n3.pl
                                %  and node_auth.pl ws_principal/2.

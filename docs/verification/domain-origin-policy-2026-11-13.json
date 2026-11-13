@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-13",
+  "result": "local_configuration_fix_tested_not_deployed",
+  "policy": "All currently deployed elfenbenstornet.se node origins N0\u2013N7 are federation peers; same-domain remote spawning must not be denied because an engine was omitted from a SWI origin list.",
+  "cause": "SWI sandbox derives remote spawn origin permission from load_uri_allowed_origins; the public N1\u2013N4 startup lists omitted N5\u2013N7 and N0.",
+  "changes": [
+    "One central deployed-origin list used by SWI N1\u2013N4 source/spawn and applicable browser-origin configuration",
+    "N5 and N7 no longer fail the SWI origin admission test merely because they are non-SWI implementations"
+  ],
+  "tests": {
+    "sandbox_cases_passed": 11,
+    "packaged_networkless_startups": {
+      "result": "pass",
+      "checks": [
+        {
+          "node": "N1",
+          "startup_exit": 0,
+          "origin_count": 8
+        },
+        {
+          "node": "N2",
+          "startup_exit": 0,
+          "origin_count": 8
+        },
+        {
+          "node": "N3",
+          "startup_exit": 0,
+          "origin_count": 8
+        },
+        {
+          "node": "N4",
+          "startup_exit": 0,
+          "origin_count": 8
+        }
+      ],
+      "live_services_changed": false
+    },
+    "end_to_end_peer_transport": "Not requalified or deployed in this policy-correction turn"
+  },
+  "boundaries": [
+    "Existing authentication and peer credentials still apply",
+    "N7 browser and owner APIs remain owner-only",
+    "Node profiles continue to determine available operations",
+    "Other engines and N7 peer provisioning have not been changed"
+  ],
+  "live_services_changed": false,
+  "evidence_directory": "/Users/lager/eclipse-node/.trinity/domain-policy-0r4my8kk"
+}
