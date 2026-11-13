@@ -1897,6 +1897,7 @@ normal(Messages) :-
 </pre>
 
 <pre id="epa-fridge-spawn">?- spawn(fridge([]), Pid, [
+       src_predicates([fridge/1]),
        monitor(true)
    ]).
 </pre>
@@ -1961,7 +1962,29 @@ normal(Messages) :-
     protocol. The usual fix is to wrap the protocol in ordinary predicates.
 </p>
 
-<pre id="epa-fridge-api-source">store(Pid, Food, Response) :-
+<pre id="epa-fridge-api-source">% Repeated from above:
+
+fridge(FoodList0) :-
+    receive({
+        store(From, Food) -&gt;
+            self(Self),
+            From ! Self-ok,
+            fridge([Food|FoodList0]);
+        take(From, Food) -&gt;
+            self(Self),
+            (   select(Food, FoodList0, FoodList)
+            -&gt;  From ! Self-ok(Food),
+                fridge(FoodList)
+            ;   From ! Self-not_found,
+                fridge(FoodList0)
+            );
+        terminate -&gt;
+            true
+    }).
+
+% And here are the wrappers:
+
+store(Pid, Food, Response) :-
     self(Self),
     Pid ! store(Self, Food),
     receive({
@@ -1981,6 +2004,7 @@ take(Pid, Food, Response) :-
 </p>
 
 <pre id="epa-fridge-api-spawn">?- spawn(fridge([]), Pid, [
+       src_predicates([fridge/1, store/3, take/3]),
        monitor(true)
    ]).
 </pre>
@@ -2061,8 +2085,12 @@ pong :-
     }).
 
 ping_pong :-
-    spawn(pong, Pong_Pid),
-    spawn(ping(3, Pong_Pid)).
+    spawn(pong, Pong_Pid, [
+        src_predicates([pong/0])
+    ]),
+    spawn(ping(3, Pong_Pid), _, [
+        src_predicates([ping/2])
+    ]).
 </pre>
 
 <pre id="epa-pingpong-run">?- ping_pong.
@@ -2616,21 +2644,35 @@ with the supplied answers.</p>
 ping(N, Pong_Pid) :-
     self(Self),
     Pong_Pid ! ping(Self),
-    receive({pong -&gt; format('Ping received pong.~n', [])}),
+    receive({
+        pong -&gt;
+            format('Ping received pong.~n')
+    }),
     N1 is N - 1,
     ping(N1, Pong_Pid).
 
 pong :-
     receive({
-        finished -&gt; format('Pong finished.~n', []) ;
-        ping(Ping_Pid) -&gt; Ping_Pid ! pong, pong
+        finished -&gt;
+            format('Pong finished.~n') ;
+        ping(Ping_Pid) -&gt;
+            format('Pong received ping.~n'),
+            Ping_Pid ! pong,
+            pong
     }).
 
 ping_pong_remote :-
     spawn(pong, Pong_Pid, [
-        node('{{actor_peer_host}}')
+        node('{{actor_peer_host}}'),
+        src_predicates([pong/0]),
+        monitor(true)
     ]),
-    spawn(ping(3, Pong_Pid)).
+    spawn(ping(3, Pong_Pid), Ping_Pid, [
+        src_predicates([ping/2]),
+        monitor(true)
+    ]),
+    receive({down(Pong_Pid, _, true) -> true}),
+    receive({down(Ping_Pid, _, true) -> true}).
 </pre>
 
 <p class="ask-buttons">
@@ -2850,6 +2892,17 @@ can remain available after the submitting program disconnects.</p>
 fridge(take(Food),  List, ok(Food), Rest) :-
     select(Food, List, Rest), !.
 fridge(take(_Food), List, not_found, List).
+
+wait_for_fridge_restart(_, 0) :- !,
+    throw(server_restart_timeout(fridge)).
+wait_for_fridge_restart(Previous, Attempts) :-
+    whereis(fridge, Current),
+    (   Current \== undefined, Current \== Previous
+    ->  true
+    ;   sleep(0.01),
+        Remaining is Attempts - 1,
+        wait_for_fridge_restart(Previous, Remaining)
+    ).
 </pre>
 
 <p class="ask-buttons">
@@ -3001,7 +3054,11 @@ fridge2(_Other,      List, error(unknown_request), List).
     happens when the server actually dies, we kill it from the outside:
 </p>
 
-<pre id="srv-bad-call">?- whereis(fridge, Pid), exit(Pid, kaboom).
+<pre id="srv-bad-call">?- whereis(fridge, Previous),
+   monitor(Previous, Ref),
+   exit(Previous, kaboom),
+   receive({down(Previous, Ref, _) -&gt; true}),
+   wait_for_fridge_restart(Previous, 500).
 </pre>
 
 <p class="ask-buttons">
@@ -3009,7 +3066,7 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 <p>
-    Behind the scenes, the supervisor immediately respawns the server under
+    The bounded wait above waits for the supervisor to register a replacement under
     the same registered name, with its state reset to the initial empty list.
     The next call goes through to the freshly born server:
 </p>

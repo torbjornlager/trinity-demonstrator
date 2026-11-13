@@ -58,3 +58,22 @@ test(malformed_file_error_does_not_disclose_token,
 restore_peer_env(none) :- unsetenv('WP_PEER_TRANSPORT_TOKENS_FILE').
 restore_peer_env(some(Value)) :- setenv('WP_PEER_TRANSPORT_TOKENS_FILE',Value).
 :- end_tests(domain_peer_credentials).
+
+:- begin_tests(domain_inbound_credentials).
+test(owner_inbound_file_grants_transport_not_admin) :-
+    setup_call_cleanup(
+      (tmp_file_stream(text,File,S),
+       write(S,"['https://n7.elfenbenstornet.se'-'synthetic-inbound-credential-000000'].\n"),close(S),
+       setenv('WP_PEER_INBOUND_TOKENS_FILE',File)),
+      (domain_origins:inbound_transport_options(Options),
+       assertion(Options==[bearer_token('https://n7.elfenbenstornet.se','synthetic-inbound-credential-000000',[execute,internal_transport])])),
+      (unsetenv('WP_PEER_INBOUND_TOKENS_FILE'),delete_file(File))).
+test(external_inbound_subject_is_rejected) :-
+    setup_call_cleanup(
+      (tmp_file_stream(text,File,S),
+       write(S,"['https://outside.test'-'synthetic-inbound-credential-000000'].\n"),close(S),
+       setenv('WP_PEER_INBOUND_TOKENS_FILE',File)),
+      (catch(domain_origins:inbound_transport_options(_),E,true),
+       assertion(E==error(domain_error(peer_inbound_configuration,File),demonstrator_transport_options/1))),
+      (unsetenv('WP_PEER_INBOUND_TOKENS_FILE'),delete_file(File))).
+:- end_tests(domain_inbound_credentials).

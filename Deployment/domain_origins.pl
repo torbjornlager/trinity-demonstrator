@@ -4,7 +4,7 @@
 % All deployed nodes in the demonstrator's domain belong to the same federation.
 % Keep public source/spawn and browser-origin admission consistent. This grants
 % origin permission, not a different execution profile or a private-node login.
-% Peer transports must still authenticate; N7's browser stays owner-only.
+% Peer transports must still authenticate; N7's public visitors remain isolated.
 demonstrator_domain_origins(Origins) :-
     findall(Origin,
             ( between(0, 7, N),
@@ -15,6 +15,11 @@ demonstrator_domain_origins(Origins) :-
 % it once at startup so distribution can send the existing peer credentials.
 % Configuration errors name the file, never a token or its parsed contents.
 demonstrator_transport_options(Options) :-
+    outgoing_transport_options(Outgoing),
+    inbound_transport_options(Inbound),
+    append(Outgoing, Inbound, Options).
+
+outgoing_transport_options(Options) :-
     ( getenv('WP_PEER_TRANSPORT_TOKENS_FILE', File), File \== '' ->
         ( catch(read_file_to_terms(File, [Pairs], []), _, fail),
           ground(Pairs), acyclic_term(Pairs), is_list(Pairs),
@@ -29,3 +34,20 @@ demonstrator_transport_options(Options) :-
         ; throw(error(domain_error(peer_transport_configuration, File),
                       demonstrator_transport_options/1)) )
     ; Options = [] ).
+
+% Owner-installed inbound transport credentials are immutable configuration;
+% provisioning them does not rewrite the mutable token store of a live node.
+inbound_transport_options(Options) :-
+    ( getenv('WP_PEER_INBOUND_TOKENS_FILE', File), File \== '' ->
+        ( catch(read_file_to_terms(File, [Pairs], []), _, fail),
+          ground(Pairs), acyclic_term(Pairs), is_list(Pairs),
+          demonstrator_domain_origins(Origins),
+          forall(member(Pair, Pairs),
+                 ( Pair = (Origin-Token), memberchk(Origin, Origins),
+                   atom(Token), atom_length(Token, Length), Length >= 24,
+                   atom_codes(Token, Codes), forall(member(C, Codes),(C > 32,C < 127)) ))
+        -> findall(bearer_token(Origin,Token,[execute,internal_transport]),
+                   member(Origin-Token,Pairs),Options)
+        ; throw(error(domain_error(peer_inbound_configuration, File),
+                      demonstrator_transport_options/1)) )
+    ; Options=[] ).

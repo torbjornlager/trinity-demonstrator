@@ -2419,6 +2419,17 @@ ping_pong_remote :-
 fridge(take(Food),  List, ok(Food), Rest) :-
     select(Food, List, Rest), !.
 fridge(take(_Food), List, not_found, List).
+
+wait_for_fridge_restart(_, 0) :- !,
+    throw(server_restart_timeout(fridge)).
+wait_for_fridge_restart(Previous, Attempts) :-
+    whereis(fridge, Current),
+    (   Current \== undefined, Current \== Previous
+    ->  true
+    ;   sleep(0.01),
+        Remaining is Attempts - 1,
+        wait_for_fridge_restart(Previous, Remaining)
+    ).
 </pre>
 
 <p class="ask-buttons">
@@ -2513,7 +2524,9 @@ fridge(take(_Food), List, not_found, List).
     server crashes:
 </p>
 
-<pre id="srv-bad-call">?- server_request(fridge, sore(milk), Response).
+<pre id="srv-bad-call">?- whereis(fridge, Previous),
+   catch(server_request(fridge, sore(milk), Response), server_down(Reason),
+         (wait_for_fridge_restart(Previous, 500), throw(server_down(Reason)))).
 </pre>
 
 <p class="ask-buttons">
@@ -2524,8 +2537,9 @@ fridge(take(_Food), List, not_found, List).
     The shell reports <code>Unknown message: server_down(false)</code>
     rather than blocking forever, because <code>server_request/3</code>
     installs a monitor under the hood. Behind the scenes, the supervisor
-    has already respawned the server under the same registered name, with
-    its state reset to the initial empty list. The next call goes through
+    respawns the server under the same registered name, with
+    its state reset to the initial empty list. The bounded wait above confirms
+    the replacement is ready before rethrowing the original error. The next call goes through
     to the freshly born server:
 </p>
 

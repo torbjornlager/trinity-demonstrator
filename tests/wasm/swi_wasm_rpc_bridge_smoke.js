@@ -119,7 +119,7 @@ function editorIncludes(text) {
 }
 
 function tutorialIncludes(text) {
-  return swiWasmTutorialSource.includes(text);
+  return actorTutorialSource.includes(text);
 }
 
 function embeddedWorkbenchMethod(name, nextName) {
@@ -490,7 +490,7 @@ ok(!includes("window.prompt(") &&
    includes("requestSwiWasmActorInput") &&
    includes("if (this.swiWasmActorInputActive)"),
    "SWI-WASM read/1 and input/2 use the inline terminal prompt, not a modal");
-ok(includes("swi_wasm_actor_bridge:swi_wasm_drive(user:(") &&
+ok(includes("swi_wasm_actor_bridge:swi_wasm_drive_text(") &&
    includes("swi_wasm_await_more") &&
    includes("deterministic(Det)") &&
    includes("window.swiWasmAwaitMore = function()") &&
@@ -519,10 +519,14 @@ ok(includes('self.swiWasmStatechartOwnsActorTraffic() ? "statechart" : "main"') 
 ok(includes('message.type === "output"') &&
    includes("this.emitSwiWasmOutput( String(message.output)"),
    "a spawned worker's stdout reaches the terminal (worker posts {type:output}; coordinator echoes) -- child stdout is not a gap");
-ok(tutorialIncludes('src_text("echo_actor :-') &&
-   tutorialIncludes("node('{{actor_peer_host}}'),\n       session(true)") &&
-   !tutorialIncludes("node('{{actor_peer_host}}')\n   ])."),
-   "SWI-WASM remote tutorial examples ship remote echo source and keep remote toplevels as sessions");
+ok(swiWasmTutorialSource.includes('The separate SWI-WASM tutorial has been retired.') &&
+   swiWasmTutorialSource.includes('href="actor-profile-tutorial"') &&
+   swiWasmTutorialSource.includes("'actor-profile-tutorial.html'") &&
+   !swiWasmTutorialSource.includes('respond($Pid, hello)'),
+   "the retired SWI-WASM tutorial points old bookmarks to the shared ACTOR tutorial");
+ok(tutorialIncludes('src_text("') &&
+   tutorialIncludes("node('{{actor_peer_host}}'),\n       session(true)"),
+   "the shared ACTOR tutorial ships remote source and keeps remote toplevels as sessions");
 ok(tutorialIncludes('onclick="consult(&quot;#srv-fridge-source&quot;)"'),
    "supervised fridge tutorial source has a Load control");
 ok(!tutorialIncludes('onclick="consult(&quot;#srv-fridge2-source&quot;)"') &&
@@ -1260,11 +1264,11 @@ ok(includes('installSwiWasmSharedDatabase(Prolog, Module)') &&
 ok(tutorialIncludes('id="tutorial-private-and-shared-knowledge"') &&
    tutorialIncludes('price(Item, Price) :-') &&
    tutorialIncludes('list_price(Item, ListPrice)') &&
-   tutorialIncludes('spawn((price(widget, Price), Self ! child_price(Price)), _)') &&
-   tutorialIncludes('consultAppend(&quot;#private-list-price&quot;)') &&
-   tutorialIncludes('Shadowing operates on the complete predicate indicator') &&
+   tutorialIncludes('Self ! discounted_price(Price)') &&
+   tutorialIncludes('Self ! ordinary_price(Price)') &&
    includes('appendSource: function(source, id)'),
-   "the SWI-WASM tutorial demonstrates private pricing over shared knowledge");
+   "the shared ACTOR tutorial demonstrates private pricing over shared knowledge");
+
 ok(actorTutorialSource.includes('id="tutorial-private-and-shared-knowledge"') &&
    actorTutorialSource.includes('id="shadow-private-price"') &&
    actorTutorialSource.includes('src_text("list_price(widget, 80).")') &&
@@ -1312,9 +1316,9 @@ ok(!actorTutorialSource.includes('/statechart-behaviour-tutorial') &&
 ok(tutorialSource.includes('$Pid ! integers([25, 10, 15, 30]).') &&
    tutorialSource.includes('$Pid ! integers([12, 8, 4]).') &&
    !tutorialSource.includes('$Pid ! input([25, 10, 15, 30]).') &&
-   swiWasmTutorialSource.includes('$Pid ! integers([25, 10, 15, 30]).') &&
-   swiWasmTutorialSource.includes('$Pid ! integers([12, 8, 4]).') &&
-   !swiWasmTutorialSource.includes('$Pid ! input([25, 10, 15, 30]).'),
+   actorTutorialSource.includes('$Pid ! integers([25, 10, 15, 30]).') &&
+   actorTutorialSource.includes('$Pid ! integers([12, 8, 4]).') &&
+   !actorTutorialSource.includes('$Pid ! input([25, 10, 15, 30]).'),
    "GCD statechart tutorials send the integers/1 event expected by the chart");
 ok(sharedDbSource.includes('echo_actor :-') &&
    sharedDbSource.includes('receive({') &&

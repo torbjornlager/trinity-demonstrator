@@ -14,3 +14,9 @@ that validated package. Setup is required before serving the checkout.
 consumer-owned. The package also supplies an independent
 [minimal host](vendor/swi-wasm-minimal.html).
 See the [extraction and setup guide](../docs/SWI_WASM_NODE_EXTRACTION.md).
+
+SWI-WASM uses the shared [ACTOR tutorial](actor-profile-tutorial.html), also
+selected by the demonstrator. The separate SWI-WASM tutorial is retired;
+its old URL provides a pointer to the shared tutorial. Its historical content
+is preserved in [docs/archive/swi-wasm-tutorial.html](../docs/archive/swi-wasm-tutorial.html)
+and is not maintained or served as an active walkthrough.
