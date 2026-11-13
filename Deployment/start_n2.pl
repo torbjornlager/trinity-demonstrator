@@ -1,5 +1,5 @@
 :- use_module(library(settings)).
-:- use_module(domain_origins, [demonstrator_domain_origins/1]).
+:- use_module(domain_origins, [demonstrator_domain_origins/1, demonstrator_transport_options/1]).
 :- ['../load.pl'].
 :- use_module(shared_db_paths, [
     common_shared_db_path/1,
@@ -21,6 +21,7 @@ start_n2 :-
     set_setting(http:public_scheme, https),
     set_setting(node_http_identity:anonymous_visitors, true),
     demonstrator_domain_origins(DomainOrigins),
+    demonstrator_transport_options(PeerOptions),
     node(3052, [
         sandbox(blacklist),
         profile(isotope),
@@ -38,7 +39,7 @@ start_n2 :-
         tutorial_sections([all]),
         load_uri_allowed_origins(DomainOrigins),
         load_shared_db_file(CommonSharedDBPath),
-        load_shared_db_file(OverlaySharedDBPath)
+        load_shared_db_file(OverlaySharedDBPath) | PeerOptions
     ]),
     assertz(start_n2_done).
 

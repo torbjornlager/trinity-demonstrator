@@ -30,3 +30,31 @@ test(wrong_port_rejected,
      [throws(error(permission_error(option,sandboxed,_),_))]) :-
     with_domain_policy(sandbox_check_spawn_options(actor,[node('https://n5.elfenbenstornet.se:444')])).
 :- end_tests(domain_origins).
+
+:- begin_tests(domain_peer_credentials).
+test(absent_file_keeps_default,
+     [setup((getenv('WP_PEER_TRANSPORT_TOKENS_FILE',Old)->Saved=some(Old);Saved=none)),
+      cleanup(restore_peer_env(Saved))]) :-
+    unsetenv('WP_PEER_TRANSPORT_TOKENS_FILE'),
+    demonstrator_transport_options([]).
+test(owner_file_becomes_node_option,
+     [setup((getenv('WP_PEER_TRANSPORT_TOKENS_FILE',Old)->Saved=some(Old);Saved=none)),
+      cleanup(restore_peer_env(Saved))]) :-
+    setup_call_cleanup(tmp_file_stream(text,File,Stream),
+      ( write(Stream,"['https://n7.elfenbenstornet.se'-'synthetic-peer-token-0000000000'].\n"),close(Stream),
+        setenv('WP_PEER_TRANSPORT_TOKENS_FILE',File),
+        demonstrator_transport_options([peer_transport_tokens(Pairs)]),
+        assertion(Pairs==['https://n7.elfenbenstornet.se'-'synthetic-peer-token-0000000000']) ),
+      delete_file(File)).
+test(malformed_file_error_does_not_disclose_token,
+     [setup((getenv('WP_PEER_TRANSPORT_TOKENS_FILE',Old)->Saved=some(Old);Saved=none)),
+      cleanup(restore_peer_env(Saved))]) :-
+    setup_call_cleanup(tmp_file_stream(text,File,Stream),
+      ( write(Stream,"['https://example.org'-'synthetic-peer-token-0000000000'].\n"),close(Stream),
+        setenv('WP_PEER_TRANSPORT_TOKENS_FILE',File),
+        catch(demonstrator_transport_options(_),Error,true),
+        assertion(Error==error(domain_error(peer_transport_configuration,File),demonstrator_transport_options/1)) ),
+      delete_file(File)).
+restore_peer_env(none) :- unsetenv('WP_PEER_TRANSPORT_TOKENS_FILE').
+restore_peer_env(some(Value)) :- setenv('WP_PEER_TRANSPORT_TOKENS_FILE',Value).
+:- end_tests(domain_peer_credentials).
