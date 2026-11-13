@@ -5,7 +5,9 @@
   "cause": "SWI sandbox derives remote spawn origin permission from load_uri_allowed_origins; the public N1\u2013N4 startup lists omitted N5\u2013N7 and N0.",
   "changes": [
     "One central deployed-origin list used by SWI N1\u2013N4 source/spawn and applicable browser-origin configuration",
-    "N5 and N7 no longer fail the SWI origin admission test merely because they are non-SWI implementations"
+    "N5 and N7 no longer fail the SWI origin admission test merely because they are non-SWI implementations",
+    "N4 privately routes Trealla actor traffic through the same endpoint as N3",
+    "Trealla preserves write/writeln metadata at remote IO endpoints and serializes the required line ending"
   ],
   "tests": {
     "sandbox_cases_passed": 11,
@@ -35,7 +37,8 @@
       ],
       "live_services_changed": false
     },
-    "end_to_end_peer_transport": "Not requalified or deployed in this policy-correction turn"
+    "end_to_end_peer_transport": "Not requalified or deployed in this policy-correction turn",
+    "trealla_remote_stream_checks_passed": 11
   },
   "boundaries": [
     "Existing authentication and peer credentials still apply",
