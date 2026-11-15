@@ -479,6 +479,8 @@ father_child(mike, tom).
 </button>
 </p>
 
+<!-- Temporarily hidden; remove this wrapper to restore the service-request lessons. -->
+<div hidden data-temporarily-hidden="service-request">
 <h2 id="service-policy">Reasoning about service requests</h2>
 
 <p>Before building a service-request agent, try its policy rules on their own.
@@ -571,6 +573,8 @@ it does not validate arbitrary input or generate requests from variables.
 The full <a href="/actor-profile-tutorial#statechart-service-request">service-request
 agent</a> adds validation, confirmation, review, and dispatch. Here, a result is
 only an assessment; no request is sent.</p>
+
+</div><!-- End temporarily hidden service-request lessons. -->
 
 <h2>Stateless API limitations</h2>
 
@@ -4119,7 +4123,7 @@ fridge2(_Other,      List, error(unknown_request), List).
             if (toc.contains(heading)) {
                 return false;
             }
-            if (heading.closest("section[hidden]")) {
+            if (heading.closest("[hidden]")) {
                 return false;
             }
             if (!firstTitleSeen && heading.tagName === "H1") {

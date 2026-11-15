@@ -3680,6 +3680,8 @@ fridge2(_Other,      List, error(unknown_request), List).
 </p>
 
 
+<!-- Temporarily hidden; remove this wrapper to restore the service-request lessons. -->
+<div hidden data-temporarily-hidden="service-request">
 <h2 id="service-policy">Reasoning about service requests</h2>
 
 <p>Before building a service-request agent, try its policy rules on their own.
@@ -4069,6 +4071,8 @@ only an assessment; no request is sent.</p>
   supplies neither commonsense nor complete policy coverage.
 </p>
 
+</div><!-- End temporarily hidden service-request lessons. -->
+
 <p>
     The examples above are just a starting point. More statecharts are
     available in the <strong>Examples drawer</strong>; click the arrow to open
@@ -4448,7 +4452,7 @@ only an assessment; no request is sent.</p>
         headings = Array.prototype.slice.call(
             tutorial.querySelectorAll("h1, h2, h3")
         ).filter(function(heading) {
-            if (toc.contains(heading)) {
+            if (toc.contains(heading) || heading.closest("[hidden]")) {
                 return false;
             }
             if (!firstTitleSeen && heading.tagName === "H1") {
