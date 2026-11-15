@@ -191,6 +191,13 @@ browser-runtime URLs remain unchanged.
 
 ## Deploying as a production node
 
+> **Not the procedure for the current `elfenbenstornet.se` deployment.** The
+> commands below describe the original Compose layout with an SSO-gated N5.
+> The live system now has public N5 and N7, a host-managed N7 adapter and
+> sealed coordinated releases; running `up -d --build` against it can rebuild
+> unrelated nodes from different pins. Follow [HANDOVER.md](HANDOVER.md)
+> sections 9 and 10 instead.
+
 The node **executes untrusted code from clients** — that is the product —
 so it is **secure by default**: `auth=private`, and it *refuses to start
 world-open* (`auth=open`) unless you set `WP_ACK_PUBLIC=yes`. The
@@ -285,8 +292,9 @@ fixes and explicit pin updates; do not edit the deployment checkouts.
 
 Before releasing a native ACTOR dependency change, run the conformance
 repository's `runner/release.py` (or its disposable
-`adapters/local_actor_release.py` fixture adapter). The versioned
-`actor-release-0.1` gate explicitly includes ownership/lifecycle and source-copying
+`adapters/local_actor_release.py` fixture adapter). The runner's current default is the versioned
+`actor-release-0.2` gate; the earlier 40-case `actor-release-0.1` remains
+selectable with `--profile`. The gate explicitly includes ownership/lifecycle and source-copying
 regressions alongside the core, receive, isolation and wait packs. Use two
 independent execution-only principals; a node-owner browser session is not an
 unauthorized-exit fixture. Passing actor-core alone is insufficient for this gate.

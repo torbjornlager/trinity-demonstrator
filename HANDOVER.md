@@ -72,7 +72,7 @@ provider was invoked by that sweep.
 
 Preservation checks confirmed unchanged persistent service identities/images/
 configuration, N7 LaunchAgent/process, proxy configuration, repository refs,
-stashes, preview/snapshot refs, 27 existing N7 package inventories and 11
+stashes, preview/snapshot refs, 27 existing N7 package inventories and 37
 coordinated release inventories. Public visitor-engine creation and disposal
 are expected execution activity, excluded from persistent-service identity
 comparisons.
@@ -206,13 +206,17 @@ Important ignored caches:
 
 - Shared consumer: `/Users/lager/trinity-demonstrator/.trinity/`, including
   validated native setup and assembled browser packages.
-- Active ECLiPSe worktree: its own `.trinity/n7-extraction/`, with `deps/`,
-  owned Python environment and distribution archive.
+- Active ECLiPSe worktree: `.trinity/n7-extraction/`, with `deps/`, owned
+  Python environment and distribution archive. In that worktree this path is
+  a symlink to `/Users/lager/eclipse-node/.trinity/n7-extraction`; the
+  worktree holds no separate copy.
 - Canonical ECLiPSe directory: `/Users/lager/eclipse-node/.trinity/`, containing
   the current releases, coordinated groups and most investigation evidence.
 
-These are different directories. Do not assume the active worktree's cache and
-canonical checkout's release store are interchangeable.
+The shared consumer cache and the ECLiPSe store are different directories.
+The active worktree's only `.trinity` entry is the `n7-extraction` symlink, so
+removing or moving the canonical `.trinity/n7-extraction` breaks the active
+worktree's setup.
 
 ### 3.3 Files a maintainer is likely to edit
 
@@ -1088,7 +1092,30 @@ operator.
 
 ### 11.1 Confirmed: Trealla ordinary failing source preparation can hang
 
-**Status:** open; independent of the deployed cancellation safeguard.
+**Status:** open in the deployed N5 image. Cause identified; source changes
+are committed but not pinned or deployed (review of 15 November, after this
+handover was prepared). Independent of the deployed cancellation safeguard.
+
+Cause: `isolation:prepare_actor_and_signal/8` reports preparation that
+*throws*, but preparation that *fails* (a failing directive makes
+`'$actor_load'/1` fail) ends the child thread without any `'$actor_started'`
+message, so the parent waits forever in `actors:spawn_local/5`.
+
+Decision (15 November): on every engine a directive in actor source that
+fails, or that the engine does not carry out, makes creation raise
+`error(directive_failed(Directive), _)`; no actor is created. Committed
+source state; no dependency pin was changed, so builds and the running nodes
+are unaffected:
+
+| Engine | Change | Verification |
+|---|---|---|
+| Trealla (`/Users/lager/trealla-port`) | directive clause raises the error; preparation failure guard as backstop; `spawn_prepare_failure_tests.pl` added to the unit runner | Linux ARM64 `NOSSL`/isocline build of engine `841f819…`: new group times out without the change, passes with it; all 105 unit groups pass. Not run: deployed engine, interoperability suite |
+| Native SWI (`/Users/lager/swi-prolog-node`) | `isolation:failing_directives_as_errors/1` wraps both source loaders (`isolation.pl`, `node_sandbox.pl`) | Helper logic checked on SWI 10.1.19 (WASM build) only. Native tiers not run |
+| ECLiPSe (active worktree) | `actors.ecl` `source_clause/1` raises the error for any directive other than `dynamic/1` | Not run |
+| SWI-WASM (`/Users/lager/swi-wasm-node`) | not changed yet; still warns and continues | — |
+
+The manual, `DEVIATIONS.md` and conformance cases do not yet record this
+rule. The archived startup-acknowledgement prototype is not needed.
 
 Reduced reproducer from the investigation:
 

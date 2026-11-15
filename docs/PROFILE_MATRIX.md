@@ -24,8 +24,9 @@ proved through meta-calls or dynamically constructed goals.
 | `isotope` | `/call`, `/toplevel_*` |
 | `actor` | `/call`, `/toplevel_*`, `/ws` |
 
-Current route enforcement lives in
-[node_profile_policy.pl](../prolog/web_prolog/node_profile_policy.pl).
+Current route enforcement lives in `prolog/web_prolog/node_profile_policy.pl`
+of the pinned [`swi-prolog-node`](https://github.com/torbjornlager/swi-prolog-node)
+dependency; the native implementation is no longer part of this repository.
 
 
 ## Language Matrix
@@ -56,7 +57,7 @@ Adds to `isobase`:
 - `toplevel_spawn/1-2`, `toplevel_call/2-3`, `toplevel_next/1-2`,
   `toplevel_stop/1`, `toplevel_abort/1`
 - shell/session I/O helpers such as `output/1-2`, `terminal_output/1-2`,
-  `input/2-3`, `respond/2`, `flush`
+  `input/2-3`, `respond/3`, `flush`
 - `read/1-2`, `read_term/2-3`, `with_io_target/2`
 
 ### `actor`
@@ -109,8 +110,8 @@ Adds session/toplevel source loading:
 
 - `/toplevel_spawn` options may include `src_text/1`, `src_list/1`,
   `src_predicates/1`, `src_uri/1`
-- `toplevel_call/3` and `toplevel_next/2` options may include the same
-  `src_*` options
+- source is installed when the session is spawned; `toplevel_call/3` and
+  `toplevel_next/2` take no `src_*` options (see the shared manual)
 
 ### `actor`
 
