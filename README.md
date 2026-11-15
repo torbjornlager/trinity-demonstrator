@@ -33,6 +33,8 @@ CDN publication and installable/offline behaviour remain later steps.
 
 ## Documentation
 
+For the current multi-engine deployment, repository map, test procedures, rollback instructions and investigation evidence, read the [project and operations handover](HANDOVER.md), dated 15 November 2026. It distinguishes the current public N5/N7 deployment from older deployment examples below.
+
 The [Web Prolog language manual](web/manual.html) is the single shared API
 reference for native SWI, Trealla and SWI-WASM. Runtime differences remain
 explicit there. This README covers demonstrator setup and integration.

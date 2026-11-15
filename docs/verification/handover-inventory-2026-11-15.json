@@ -1,0 +1,200 @@
+{
+  "date": "2026-11-15",
+  "purpose": "Read-only handover inventory; documentation task performed no deployment or test traffic",
+  "private_baseline_directory": "/Users/lager/eclipse-node/.trinity/handover-20261115-pteeakcl",
+  "repositories": {
+    "trinity-demonstrator": {
+      "directory": "/Users/lager/trinity-demonstrator",
+      "head": "82468e1bc7c23c1a4be265d83137af3c15ed9318",
+      "branch": "main",
+      "remote": "https://github.com/torbjornlager/trinity-demonstrator.git"
+    },
+    "swi-prolog-node": {
+      "directory": "/Users/lager/swi-prolog-node",
+      "head": "6fb82d5ca9de864199400ddb5119d43503566e97",
+      "branch": "codex/welcome-release-20261113",
+      "remote": "https://github.com/torbjornlager/swi-prolog-node.git"
+    },
+    "swi-wasm-node": {
+      "directory": "/Users/lager/swi-wasm-node",
+      "head": "539a01c30165359bca3a19a83a09b7a5c8d632aa",
+      "branch": "main",
+      "remote": "https://github.com/torbjornlager/swi-wasm-node.git"
+    },
+    "trealla-port": {
+      "directory": "/Users/lager/trealla-port",
+      "head": "09dd226115b9d6756995401943d9178e75c119db",
+      "branch": "main",
+      "remote": "https://github.com/torbjornlager/trealla-port.git"
+    },
+    "gprolog-port": {
+      "directory": "/Users/lager/gprolog-port",
+      "head": "0fb95dbff83ac23ff0640518680145399587664d",
+      "branch": "main",
+      "remote": "https://github.com/torbjornlager/gprolog-port.git"
+    },
+    "eclipse-node": {
+      "directory": "/Users/lager/eclipse-node",
+      "head": "0961eaffbc956ac6238e45a1f9929f523850b0a0",
+      "branch": "main",
+      "remote": "https://github.com/torbjornlager/eclipse-node.git"
+    },
+    "trinity-conformance": {
+      "directory": "/Users/lager/trinity-conformance",
+      "head": "34557d322518941ba13a3e4486736e3d41d73c81",
+      "branch": "main",
+      "remote": "https://github.com/torbjornlager/trinity-conformance.git"
+    },
+    "eclipse-active": {
+      "directory": "/Users/lager/.codex/worktrees/n7-http-output/eclipse-node",
+      "head": "3a35b178f092c3d25d533bd66e73a29de71e51b5",
+      "branch": "codex/portable-json-deployment-20261113"
+    }
+  },
+  "services": {
+    "deployment-caddy-1": {
+      "image": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd",
+      "container_id": "439348fde7edc006fe9efc1d58a89234005ee6e8bcae3988dbb9f2a247d7691b",
+      "started_at": "2026-11-09T09:58:49.134319175Z",
+      "compose_project": "deployment",
+      "compose_service": "caddy"
+    },
+    "deployment-wp_n1-1": {
+      "image": "sha256:e80b9fdcd51648351a3f353eb46e33f6b6bc3e0270c5419d1f1571006a9c2366",
+      "container_id": "409ae23531d4245ddfdc83359b487ce16840cc77b368be59986fbabe208863a2",
+      "started_at": "2026-11-13T12:38:53.403454426Z",
+      "compose_project": "deployment",
+      "compose_service": "wp_n1"
+    },
+    "deployment-wp_n2-1": {
+      "image": "sha256:6008beb8ad14a65a43d492ed56b2d77ae0e92e99d8c24f482bcdfc087b392dfa",
+      "container_id": "bc29fdf9dd4bdc03a71d4404b6346549f44f5b60dacb3c6b3c7bf65d9831ac2a",
+      "started_at": "2026-11-13T22:20:30.2882738Z",
+      "compose_project": "deployment",
+      "compose_service": "wp_n2"
+    },
+    "deployment-wp_n3-1": {
+      "image": "sha256:e80b9fdcd51648351a3f353eb46e33f6b6bc3e0270c5419d1f1571006a9c2366",
+      "container_id": "e0cf724d29e623fc5bc625a569665178baec7fc37243fa04c08204922841211c",
+      "started_at": "2026-11-13T12:38:55.184337635Z",
+      "compose_project": "deployment",
+      "compose_service": "wp_n3"
+    },
+    "deployment-wp_n4-1": {
+      "image": "sha256:e80b9fdcd51648351a3f353eb46e33f6b6bc3e0270c5419d1f1571006a9c2366",
+      "container_id": "cf59bbc2faf62dfd9a83c9fbbb2f5796f1e2f02cef424a474de557c8f2c48422",
+      "started_at": "2026-11-13T12:38:55.913414094Z",
+      "compose_project": "deployment",
+      "compose_service": "wp_n4"
+    },
+    "deployment-wp_n5-1": {
+      "image": "sha256:a3181f84d8f4637c42f1c410ea8f45afa25ab6232858f42c799c5f5b89362067",
+      "container_id": "e4c88537a694a5fe922f753e33fdd54f119c13d251702a712d439f33fb794a94",
+      "started_at": "2026-11-15T12:34:55.656319294Z",
+      "compose_project": "deployment",
+      "compose_service": "wp_n5"
+    },
+    "deployment-n5_admission-1": {
+      "image": "sha256:186ffbfe66181118565452d3a00e1cca338ad2cb8df5a4aa906a9829cefc798b",
+      "container_id": "bbfbbe7a358cb3215f11976c57d2becf2f5bd2f24de9a4cefb68661ef178c6be",
+      "started_at": "2026-11-09T23:48:03.163454343Z",
+      "compose_project": "deployment",
+      "compose_service": "n5_admission"
+    },
+    "web-prolog-hub-n0-1": {
+      "image": "sha256:d8bd59e97c01a30fd2919a9fb3afdd4f2b073388755127a416ea622d436a63ab",
+      "container_id": "51a9f9dd1ddf3aea19e46f64edfc06c6b22b340f11f4934d9875bf79ef1fb5e9",
+      "started_at": "2026-11-11T19:40:56.514547376Z",
+      "compose_project": "web-prolog-hub",
+      "compose_service": "n0"
+    },
+    "trinity-n6-host-wp_n6-1": {
+      "image": "sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225",
+      "container_id": "e2226f77cebb037dff8b355be402251d59d173acca53df468eee20bf134ad434",
+      "started_at": "2026-11-09T20:19:52.118354214Z",
+      "compose_project": "trinity-n6-host",
+      "compose_service": "wp_n6"
+    },
+    "trinity-n6-host-n6_admission-1": {
+      "image": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c",
+      "container_id": "53ead986fb0b70f14deaaa21ba9b923f3edf8fb0e003591c3ccb8f7607de5e8c",
+      "started_at": "2026-11-09T09:38:01.905865375Z",
+      "compose_project": "trinity-n6-host",
+      "compose_service": "n6_admission"
+    },
+    "trinity-n7-ingress-relay": {
+      "image": "sha256:4b02b7e91a121c94df6a3ed8160a1235b679783f992d7e12b21acfe21c18ed5d",
+      "container_id": "80a74523cf81f70c94cb8175b19ef0044e0aa74696e64bed8501f7dca0a6df4b",
+      "started_at": "2026-11-09T15:36:47.843933797Z",
+      "compose_project": null,
+      "compose_service": null
+    }
+  },
+  "deployed_runtime_source_comparisons": {
+    "N1": {
+      "matched_revision": "8af3669784a83d6d8f6edc50e28ed77c91e5ae64",
+      "files_verified": 77,
+      "container_path": "/opt/swi-prolog-node/prolog",
+      "inventory_sha256": "5dc453d34ee6a76255df8f750d1019b431d7a5a716638c7ec38a22dd0f4b5c97",
+      "method": "Exact file-set and SHA256 comparison with git archive; no container mutation"
+    },
+    "N2": {
+      "matched_revision": "6fb82d5ca9de864199400ddb5119d43503566e97",
+      "files_verified": 77,
+      "container_path": "/opt/swi-prolog-node/prolog",
+      "inventory_sha256": "09c22ef69711cbe2dbe150054b88927c1fc9d1ccb0355515ebdf63c0eac13b0f",
+      "method": "Exact file-set and SHA256 comparison with git archive; no container mutation"
+    },
+    "N3": {
+      "matched_revision": "8af3669784a83d6d8f6edc50e28ed77c91e5ae64",
+      "files_verified": 77,
+      "container_path": "/opt/swi-prolog-node/prolog",
+      "inventory_sha256": "5dc453d34ee6a76255df8f750d1019b431d7a5a716638c7ec38a22dd0f4b5c97",
+      "method": "Exact file-set and SHA256 comparison with git archive; no container mutation"
+    },
+    "N4": {
+      "matched_revision": "8af3669784a83d6d8f6edc50e28ed77c91e5ae64",
+      "files_verified": 77,
+      "container_path": "/opt/swi-prolog-node/prolog",
+      "inventory_sha256": "5dc453d34ee6a76255df8f750d1019b431d7a5a716638c7ec38a22dd0f4b5c97",
+      "method": "Exact file-set and SHA256 comparison with git archive; no container mutation"
+    },
+    "N5": {
+      "matched_revision": "09dd226115b9d6756995401943d9178e75c119db",
+      "top_level_Prolog_files_verified": 144,
+      "inventory_sha256": "fcff4ab32504ba5baad8272dcec8e82a80552766c4545f74f5737c5fbeff0a1d",
+      "scope": "Top-level tracked .pl files only; engine and owner overlay continuity are qualified in native-signal deployment record"
+    }
+  },
+  "N6_image_runtime_pins": {
+    "repository": "https://github.com/torbjornlager/gprolog-port.git",
+    "revision": "94960dde7c97891f78f30aad1f0e59b9f58f7709",
+    "mode": "required for optional private or contained public N6 deployment",
+    "engine": {
+      "repository": "https://github.com/didoudiaz/gprolog.git",
+      "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+      "version": "1.6.0"
+    }
+  },
+  "N6_shared_source_build_pin": {
+    "repository": "https://github.com/torbjornlager/gprolog-port.git",
+    "revision": "1f2077294850da1bca476df7e97b2e52b23bbb59",
+    "mode": "required for optional private or contained public N6 deployment",
+    "engine": {
+      "repository": "https://github.com/didoudiaz/gprolog.git",
+      "revision": "5976ac516c9fbd1d740d41b238597e327302baea",
+      "version": "1.6.0"
+    }
+  },
+  "current_release": {
+    "release": "/Users/lager/eclipse-node/.trinity/coordinated-releases/signal-20261115-4045bf5-r2",
+    "manifest_sha256": "c81a7d3d3f77ea93236b367c19a7d656884a8e401a3c928ae938af3e6fcaa238",
+    "n7": "/Users/lager/eclipse-node/.trinity/releases/n7-signal-20261115-4045bf5-candidate",
+    "rollback_n7": "/Users/lager/eclipse-node/.trinity/releases/n7-signal-20261115-4045bf5-recovery"
+  },
+  "N7_engine_image": "sha256:fc9927b37b50e79c87dc92d0252eff29fcbfeb256b583b601be256f51705a2f4",
+  "N7_public": true,
+  "latest_audit_report": "/Users/lager/eclipse-node/.trinity/deployed-audit-20261115-dd5_70wp/results/report.json",
+  "latest_audit_sha256": "f8f55e72cb43d3ec8fc0ea33dc46dd8030fef5d78d407bd916a7b59b91ef28bf",
+  "selected_release_manifest_sha256": "c81a7d3d3f77ea93236b367c19a7d656884a8e401a3c928ae938af3e6fcaa238"
+}
