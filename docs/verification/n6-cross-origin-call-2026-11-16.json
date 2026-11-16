@@ -1,0 +1,50 @@
+{
+ "record": "n6-cross-origin-call-2026-11-16",
+ "date": "2026-11-16",
+ "result": "verified",
+ "request": "Allow rpc/3 from SWI-WASM pages on other nodes to public N6.",
+ "cause": "Deployment/n6_adapter.py browser_boundary accepted a cross-origin /call only with an X-Web-Prolog-Query-Owner capability; browser rpc/3 sends a plain GET, so N6 answered 403 to every origin except its own (N1-N5 accept any origin).",
+ "change": {
+  "source": "trinity-demonstrator 369324f",
+  "file": "Deployment/n6_adapter.py",
+  "behaviour": "Public anonymous /call accepts any origin; a supplied capability must be well formed; other routes keep the same-origin boundary; owner-only N6 unchanged."
+ },
+ "service": {
+  "project": "trinity-n6-host",
+  "service": "wp_n6",
+  "tag": "trinity-n6-host:latest",
+  "image_id": "sha256:2b8c04920271e103087b6a958b1f94ab7aac96c3527f02ae64e8b9275e01357a",
+  "previous_image_id": "sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225",
+  "delta": "running image with only /app/n6/adapter.py replaced (2feba885... -> 055084ed...); container environment unchanged",
+  "compose": "docker compose -p trinity-n6-host --env-file Deployment/.env.n6 -f Deployment/compose.gprolog-n6-local.yaml -f Deployment/compose.gprolog-n6-host.yaml -f Deployment/compose.gprolog-n6-public.yaml up -d --no-build --pull never --no-deps wp_n6"
+ },
+ "journal": [
+  "preflight",
+  "candidate_built",
+  "candidate_live_and_ready",
+  "cross_origin_call",
+  "same_origin_call",
+  "no_origin_call",
+  "cross_origin_other_routes_still_refused",
+  "n7_to_n6_rpc_still_works",
+  "isobase_http_passed",
+  "admission_and_assets_unchanged",
+  "verified"
+ ],
+ "checks": {
+  "cross_origin_call": "Origin https://n3.elfenbenstornet.se -> success([a,b,c],false)",
+  "other_routes": "Origin n3 on / -> 403",
+  "isobase_http": "10/10",
+  "n7_to_n6": "findall over rpc == [a,b,c]"
+ },
+ "earlier_attempt": {
+  "output": "/Users/lager/trinity-demonstrator/.trinity/review-20261116-release/step31-live-135459",
+  "cause": "BuildKit does not accept a bare image ID in FROM; stopped before any live change."
+ },
+ "rollback": "docker tag sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225 trinity-n6-host:latest (also tagged trinity-n6-host:base-20261116), then the compose up command above from the repository root.",
+ "note": "A later full rebuild of trinity-n6-host from this repository at or after 369324f includes the same adapter.",
+ "evidence": {
+  "/Users/lager/trinity-demonstrator/.trinity/review-20261116-release/step31-live-135544/journal.json": "8684602967f5de94c8e040562195dc1f646d762886cb3b3375fb556f67238d6e",
+  "/Users/lager/trinity-demonstrator/.trinity/review-20261116-release/step31-live-135544/isobase-http.json": "374623fa8ed76063466f7dc239ffcf5ada2f56341b18511e7d18891a6b46cf35"
+ }
+}
