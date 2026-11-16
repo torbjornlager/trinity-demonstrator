@@ -11,6 +11,21 @@ This handover was prepared through read-only inspection and documentation edits.
 It does not authorize, perform or imply another deployment. Commands that change
 services are explicitly separated from inspection and testing commands.
 
+## Scoped update: published counter access — 16 November 2026
+
+N7 now routes published remote service messages, so the ACTOR tutorial's
+`counter@'https://n3.elfenbenstornet.se' ! count(Self)` query works from both
+N7 and N5. N5 was not restarted. The tutorial timeout uses
+`writeln('Service not available.')` on all eight origins.
+
+The selected N7 successor is
+`/Users/lager/eclipse-node/.trinity/releases/n7-named-services-20261116-final`.
+Its predecessor is the public `n7-sandbox-20261116-b29a5ad-candidate` release;
+the earlier release inventories below remain dated historical information.
+Service catalogs are unchanged: this repairs access to N3's resident counter.
+The [deployment record](docs/verification/named-service-counter-deployment-2026-11-16.json)
+contains exact identities, qualification, live checks and scoped rollback.
+
 ## Contents
 
 1. [Current state and first actions](#1-current-state-and-first-actions)

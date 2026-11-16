@@ -1,0 +1,270 @@
+{
+  "behavior": {
+    "cause": "N7 silently dropped named remote actor sends without an existing spawned-actor route.",
+    "fix": "Allowlisted service sockets require no remote actor spawn. Virtual reply handles and socket lifetime belong to the sending session, including HTTP sessions, WebSocket actors and short-lived children.",
+    "timeout_text": "writeln('Service not available.')"
+  },
+  "date": "2026-11-16",
+  "earlier_attempts": [
+    {
+      "cause": "Staged asset hash parser did not preserve filenames containing spaces; the successor parser preserves them.",
+      "output": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/live",
+      "result": "Stopped before live selection"
+    },
+    {
+      "cause": "Frozen public test bundle omitted wire.py; product counter and tutorial acceptance had passed. Successor bundle includes and imports the helper.",
+      "output": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/live-r2",
+      "result": "Automatically rolled back and verified"
+    }
+  ],
+  "evidence": {
+    "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/live-r3/acceptance.json": "a04cf482f0e3bb0ed50be9b42a1608aca147ebb416875029eaefe9567c00edd8",
+    "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/live-r3/journal.json": "0f37570c0229b125abeded5a0339c9555d9a2ae96bc05662e809d830c51f2dfe",
+    "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/live-r3/public.json": "a036c488e37fe50272e7c13186e2e556d1775adb50c083ee5b208007da9afd66",
+    "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/manifest-r2.json": "eedbd04eb2037565bfe1996199772adef565894cb370f7f5cd9ef859ceda7174",
+    "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/manifest-r3.json": "dc609eae70a1ae6795502262ea83d6dc020111c8c1ab910c4bd85cd4fdc65b2f",
+    "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/manifest.json": "dcc8b34744f0d01118292bf5ef189b008dc9b0d71d9c60a8ce4bfd160c21a038"
+  },
+  "live": {
+    "counter_and_tutorial_checks": {
+      "checks": [
+        {
+          "node": "n0",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n1",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n2",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n3",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n4",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n5",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n6",
+          "sha256": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+          "tutorial": "pass"
+        },
+        {
+          "node": "n7",
+          "sha256": "84706820d481f542d2adb771733980a15a40c00e59d9d077d5c0e09e2a9bd7c2",
+          "tutorial": "pass"
+        },
+        {
+          "count": 45,
+          "service": "n3",
+          "session": 0
+        },
+        {
+          "count": 46,
+          "service": "n3",
+          "session": 0
+        },
+        {
+          "count": 14,
+          "service": "n4",
+          "session": 0
+        },
+        {
+          "child_sender": true,
+          "count": 47,
+          "service": "n3",
+          "session": 0
+        },
+        {
+          "count": 48,
+          "service": "n3",
+          "session": 1
+        },
+        {
+          "count": 49,
+          "service": "n3",
+          "session": 1
+        },
+        {
+          "count": 15,
+          "service": "n4",
+          "session": 1
+        },
+        {
+          "child_sender": true,
+          "count": 50,
+          "service": "n3",
+          "session": 1
+        },
+        {
+          "answer": {
+            "data": "count(51)",
+            "pid": 2046110877,
+            "type": "output"
+          },
+          "client": "N7 direct WebSocket actor"
+        },
+        {
+          "answer": {
+            "data": [
+              {
+                "Count": "52",
+                "Self": "2119439850@'https://n5.elfenbenstornet.se'"
+              }
+            ],
+            "more": false,
+            "pid": 2119439850,
+            "type": "success"
+          },
+          "client": "N5 unchanged"
+        },
+        {
+          "answer": {
+            "data": [
+              {
+                "Count": "53",
+                "Self": "2818464773"
+              }
+            ],
+            "more": false,
+            "pid": 2818464773,
+            "type": "success"
+          },
+          "client": "N7 HTTP"
+        }
+      ],
+      "result": "pass"
+    },
+    "journal": [
+      "preflight_passed",
+      "staged_tutorial_assets_verified",
+      "N7_candidate_healthy",
+      "tutorials_selected",
+      "counter_and_tutorial_checks_passed",
+      "public_and_interop_checks_passed",
+      "verified"
+    ],
+    "preservation": "Persistent container IDs/images/configurations/mounts unchanged, including N5. N7 package and LaunchAgent selected intentionally. Existing public ingress, credentials, other runtime services and predecessor release bytes preserved.",
+    "public_checks": 19,
+    "public_report": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/live-r3/public.json"
+  },
+  "operator": {
+    "directory": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116",
+    "manifest": "manifest-r3.json",
+    "manifest_sha256": "dc609eae70a1ae6795502262ea83d6dc020111c8c1ab910c4bd85cd4fdc65b2f",
+    "rollback": "PYTHONDONTWRITEBYTECODE=1 /Users/lager/eclipse-node/.trinity/n7-extraction/venv/bin/python /Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/deploy-r3.py --execute-live --rollback --output /Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/rollback-new",
+    "rollback_scope": "Restores the captured public N7 adapter and original tutorial root selections; review the captured predecessor before any later deployment.",
+    "script": "deploy-r3.py"
+  },
+  "previous_n7": {
+    "image": "sha256:3b973da2226a7fab5c187824ec361de1b45bb4194263302514a7bc37caafb380",
+    "manifest": "cc060af1322bea6ce6be915128eeb67a6fdf9abcd7af91da0a430bd8ea4ba2ad",
+    "release": "/Users/lager/eclipse-node/.trinity/releases/n7-sandbox-20261116-b29a5ad-candidate"
+  },
+  "qualification": {
+    "language_cases": 247,
+    "language_failures": 0,
+    "proxy_configuration": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/edge/qualification.json",
+    "public_https_checks": 16,
+    "public_https_report": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/public-final/report.json",
+    "sealed_http_report": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/http-sealed.json",
+    "sealed_named_service_report": "/Users/lager/trinity-demonstrator/.trinity/counter-n7-20261116/rehearsal-sealed.json",
+    "unit_tests": 52
+  },
+  "record": "named-service-counter-deployment-2026-11-16",
+  "request": "Make the published N3 counter callable from N7, retain N5 access, and remove literal ~n from the tutorial writeln timeout.",
+  "result": "verified",
+  "scope": {
+    "counter_provider": "https://n3.elfenbenstornet.se",
+    "n5_restarted": false,
+    "resident_service_catalogs_changed": false,
+    "runtime_nodes": [
+      "N7"
+    ],
+    "tutorial_origins": [
+      "N0",
+      "N1",
+      "N2",
+      "N3",
+      "N4",
+      "N5",
+      "N6",
+      "N7"
+    ]
+  },
+  "selected_n7": {
+    "directory": "/Users/lager/eclipse-node/.trinity/releases/n7-named-services-20261116-final",
+    "image_id": "sha256:97f6c66e10d8e4c2e93fe20dd7d21ac93b7d17f3bb64c4a30fd0da35692c89c4",
+    "manifest_sha256": "11b38b7f63d49334d7bfd82084714d1c515c13d61fa510650b4a1e9883cea614"
+  },
+  "source": {
+    "eclipse_node": "89532c6",
+    "shared_demonstrator": "74d2305",
+    "tutorial_change": "7f220c7"
+  },
+  "tutorial_roots": [
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n0",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n0",
+      "original_root": "/srv/trinity/sandbox-20261116/n0",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    },
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n1",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n1",
+      "original_root": "/srv/trinity/sandbox-20261116/n1",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    },
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n2",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n2",
+      "original_root": "/srv/trinity/sandbox-20261116/n2",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    },
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n3",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n3",
+      "original_root": "/srv/trinity/sandbox-20261116/n3",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    },
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n4",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n4",
+      "original_root": "/srv/trinity/sandbox-20261116/n4",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    },
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n5",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n5",
+      "original_root": "/srv/trinity/sandbox-20261116/n5",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    },
+    {
+      "candidate_root": "/srv/trinity/counter-n7-20261116/n6",
+      "candidate_tutorial": "d8da313c8534ef1875594feb32bdc93d0f5c536070f4a38e5b740b6b93349266",
+      "node": "n6",
+      "original_root": "/srv/trinity/sandbox-20261116/n6",
+      "original_tutorial": "f67a7a07239ce814fcd448443ffb0374bbc9715c688416841fd830dc688da91b"
+    }
+  ]
+}
