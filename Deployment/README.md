@@ -1,5 +1,7 @@
 # Deployment Bundle
 
+Public N7 now runs in Compose as `wp_n7`. See the [N7 Compose runbook](README.n7-compose.md) for restart, rebuild, configuration and worker isolation. Older host-adapter deployment descriptions are historical.
+
 For a static UI on another origin, see [CDN remote authentication](../docs/CDN_REMOTE_AUTH.md).
 It describes the tested CORS/session policy and the production qualification still
 required; the existing live proxy/node configuration is unchanged.

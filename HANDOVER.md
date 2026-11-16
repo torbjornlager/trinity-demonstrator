@@ -1,5 +1,27 @@
 # Trinity demonstrator: project and operations handover
 
+## Current N7 management: Docker Compose — 16 November 2026
+
+The public N7 adapter now runs as `deployment-wp_n7-1`, service `wp_n7` in the
+`deployment` Compose project. Its main host LaunchAgent and standalone ingress
+relay were removed. Isolated ECLiPSe workers retain the previous engine image,
+non-root user, disabled networking, read-only root, limits and no host mounts.
+
+From `/Users/lager/trinity-demonstrator`, use:
+
+```sh
+docker compose -p deployment -f Deployment/compose.n7.yaml restart wp_n7
+```
+
+The private `Deployment/compose.live.json` captures the actual deployment project,
+including N7, and supports a project-wide `restart`. N0/N6 keep their existing
+separate projects. Caddy's existing configuration/assets now persist in Docker
+volumes, and its direct loopback listener replaces the relay. The shared host
+TLS router was not changed. Earlier LaunchAgent/relay cutover instructions in
+this dated handover are historical; see the
+[migration record](docs/verification/n7-compose-migration-2026-11-16.json) for
+current identities, verification and retained recovery inputs.
+
 **Prepared: 15 November 2026.** This is a point-in-time handover for the existing
 `elfenbenstornet.se` deployment and the development machine owned by Torbjörn
 Lager. Paths below are absolute paths on that Mac. GitHub repositories provide

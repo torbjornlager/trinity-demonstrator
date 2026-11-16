@@ -1,0 +1,98 @@
+{
+  "adapter": {
+    "container": "deployment-wp_n7-1",
+    "health": "healthy",
+    "host_port_published": false,
+    "image_id": "sha256:bdfb7e8a40d9d6760a91e3b69cdb90d8c49611a3496a3545a071c95be3ab9365",
+    "image_tag": "trinity-n7-adapter:current",
+    "project": "deployment",
+    "runtime_delta": "Python adapter adds an explicit private-network --bind option; ECLiPSe engine and Prolog runtime bytes are unchanged.",
+    "service": "wp_n7",
+    "worker_engine_image": "sha256:97f6c66e10d8e4c2e93fe20dd7d21ac93b7d17f3bb64c4a30fd0da35692c89c4"
+  },
+  "commands": {
+    "logs": "docker compose -p deployment -f Deployment/compose.n7.yaml logs -f wp_n7",
+    "restart_deployment_project": "docker compose -p deployment -f Deployment/compose.live.json restart",
+    "restart_n7": "docker compose -p deployment -f Deployment/compose.n7.yaml restart wp_n7"
+  },
+  "configuration": {
+    "adapter_configuration_volume": "deployment_n7_config",
+    "direct_https_route": "Caddy :443 -> wp_n7:18087",
+    "edge_assets_volume": "deployment_edge_assets",
+    "edge_configuration_volume": "deployment_edge_config_compose",
+    "original_public_access_and_peer_credentials_preserved": true,
+    "private_compose_file": "/Users/lager/trinity-demonstrator/Deployment/compose.live.json",
+    "private_compose_sha256": "0dd66e9dfd9ca4deacc92db0e4401bff2c941f8bf0ad0de1fa30f61c400283c7",
+    "public_route": "existing shared host TLS router -> loopback 127.0.0.1:18497 -> Caddy :18444 with trusted PROXY client addresses -> wp_n7:18087",
+    "reserved_adapter_ipv4": "172.18.0.70",
+    "shared_host_tls_router_modified": false,
+    "tracked_service": "Deployment/compose.n7.yaml"
+  },
+  "date": "2026-11-16",
+  "evidence": {
+    "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/direct-ingress-report.json": "9f550bd7a4b9a1b4262ad5826e1bf1a2ea9ea3b63a24340f2965e2c0db23aa5f",
+    "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/fixture-report.json": "b38645e388dacf7f4ebcc2d36be3f8104d0871e59d881ff99f6f2306fad76329",
+    "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/live-v2/acceptance.json": "3949e7a9abe73bd91d6367f1ec04504bd75704e15702213f6dd30a4d0705dd02",
+    "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/live-v2/journal.json": "1077d74293dbc5e0bbb2aa73793cae79f9c5be5fb71cbf785534b5c582c98ef6",
+    "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/live-v2/public.json": "a036c488e37fe50272e7c13186e2e556d1775adb50c083ee5b208007da9afd66",
+    "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/release/container-inputs.json": "cbff56888b5d6546847c709d3a67b9434d2bb181fbda6bc6f99cc070d18e275c"
+  },
+  "first_attempt": {
+    "cause": "During parallel recreation the dynamically addressed adapter competed for the pinned Caddy address; the successor reserves a separate adapter address.",
+    "journal": "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/live/journal.json",
+    "result": "predecessor_restored"
+  },
+  "journal": [
+    "host_adapter_stopped",
+    "old_relay_stopped",
+    "Compose_N7_and_direct_Caddy_ingress_healthy",
+    "production_Compose_restart_passed",
+    "counter_and_tutorial_checks_passed",
+    "public_browser_and_interop_checks_passed",
+    "host_LaunchAgent_and_relay_removed",
+    "verified"
+  ],
+  "preservation": "N1\u2013N6, N0, admin, admission, OAuth and qualification container IDs/images/configuration/mounts preserved. Caddy intentionally recreated with persistent configuration and asset volumes. Existing N7 package/engine, public profile, browser assets, peer tokens and isolated worker policy retained. Unrelated preview service retained.",
+  "qualification": {
+    "acceptance_report": "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/live-v2/acceptance.json",
+    "direct_ingress_report": "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/direct-ingress-report.json",
+    "fixture_report": "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/fixture-report.json",
+    "full_current_proxy_configuration_validated": true,
+    "production_compose_restart_passed": true,
+    "public_checks": 19,
+    "public_report": "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116/live-v2/public.json",
+    "unit_tests": 52
+  },
+  "record": "n7-compose-migration-2026-11-16",
+  "removed": {
+    "host_adapter_port_18087_closed": true,
+    "launchagent_file_removed": true,
+    "main_launchagent": "se.elfenbenstornet.trinity-n7-adapter",
+    "relay_container_removed": true,
+    "standalone_container": "trinity-n7-ingress-relay"
+  },
+  "request": "Manage N7 through Docker Compose, retain confined ECLiPSe workers, remove the main host LaunchAgent and standalone ingress relay.",
+  "result": "verified",
+  "retained_recovery_inputs": {
+    "directory": "/Users/lager/trinity-demonstrator/.trinity/n7-compose-20261116",
+    "edge_model": "recovery.private.json",
+    "edge_original_configuration_volume": "deployment_edge_config",
+    "launchagent_copy": "original.plist",
+    "note": "Earlier host-only cutover operators are historical after this migration; inspect the new Compose selections before using retained recovery inputs."
+  },
+  "source": {
+    "eclipse-node": "68b4066611e1a7f5eacabbc69d7822213e0b9b2e",
+    "trinity-demonstrator": "03d916a20ae00770e6284c9ff0c22741ee6d9535"
+  },
+  "workers": {
+    "cpus": 0.75,
+    "credentials_or_docker_socket": false,
+    "host_bind_mounts": false,
+    "memory_bytes": 402653184,
+    "network": "none",
+    "pids_limit": 64,
+    "read_only_root": true,
+    "ready_observed": 2,
+    "user": "65532:65532"
+  }
+}
