@@ -247,9 +247,13 @@ class Handler(BaseHTTPRequestHandler):
         # login may use this path, and it additionally requires the signed,
         # purpose-separated hidden token AND the matching HttpOnly cookie.
         opaque = opaque_login and origin == 'null' and site == 'same-origin'
+        # Public anonymous /call is open to pages on any origin, as on N1-N5
+        # (browser rpc/3 from another node's page sends no owner capability).
+        # Cross-site requests carry no N6 cookie, so they get a fresh visitor
+        # namespace; a supplied capability must still be well formed.
+        owner = self.headers.get('X-Web-Prolog-Query-Owner')
         public_rpc = (PUBLIC_EXECUTION and urlsplit(self.path).path == '/call'
-            and len(self.headers.get('X-Web-Prolog-Query-Owner', '')) == 64
-            and all(c in '0123456789abcdef' for c in self.headers.get('X-Web-Prolog-Query-Owner', '')))
+            and (owner is None or len(owner) == 64 and all(c in '0123456789abcdef' for c in owner)))
         document_navigation = (navigation and self.command == 'GET'
             and self.headers.get('Sec-Fetch-Mode') == 'navigate'
             and self.headers.get('Sec-Fetch-Dest') == 'document'

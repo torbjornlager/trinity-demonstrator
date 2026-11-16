@@ -101,6 +101,31 @@ class N6BoundaryTests(unittest.TestCase):
         handler.headers['Origin'] = 'https://unrelated.example'
         self.assertFalse(handler.browser_boundary(navigation=True))
 
+    def test_public_call_accepts_browser_requests_from_other_origins(self):
+        from email.message import Message
+        def handler(path, origin, site='cross-site', owner=None):
+            h = object.__new__(adapter.Handler)
+            h.command = 'GET'; h.path = path; h.headers = Message()
+            h.headers['Host'] = 'localhost:3057'
+            if origin: h.headers['Origin'] = origin
+            h.headers['Sec-Fetch-Site'] = site
+            if owner is not None: h.headers['X-Web-Prolog-Query-Owner'] = owner
+            return h
+        previous = adapter.PUBLIC_EXECUTION
+        try:
+            adapter.PUBLIC_EXECUTION = True
+            # A SWI-WASM page on another node calls rpc/3: plain cross-site GET.
+            self.assertTrue(handler('/call?goal=true', 'https://n3.elfenbenstornet.se').browser_boundary())
+            self.assertTrue(handler('/call?goal=true', 'https://n3.elfenbenstornet.se', owner='a' * 64).browser_boundary())
+            self.assertFalse(handler('/call?goal=true', 'https://n3.elfenbenstornet.se', owner='forged').browser_boundary())
+            # Only /call is opened; other routes keep the same-origin boundary.
+            self.assertFalse(handler('/', 'https://n3.elfenbenstornet.se').browser_boundary())
+            self.assertFalse(handler('/demonstrator', 'https://n3.elfenbenstornet.se').browser_boundary())
+            adapter.PUBLIC_EXECUTION = False
+            self.assertFalse(handler('/call?goal=true', 'https://n3.elfenbenstornet.se').browser_boundary())
+        finally:
+            adapter.PUBLIC_EXECUTION = previous
+
     def test_owner_authentication_rejects_wrong_and_malformed_credentials(self):
         salt = bytes(range(16))
         digest = hashlib.pbkdf2_hmac('sha256', b'fixture-password', salt, 200000).hex()
