@@ -1143,7 +1143,7 @@ price(Item, Price) :-
        count(Count) -&gt; true
    }, [
        timeout(5),
-       on_timeout(writeln('Service not available.~n'))
+       on_timeout(writeln('Service not available.'))
    ]).
 </pre>
 
