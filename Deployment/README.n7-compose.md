@@ -37,9 +37,10 @@ asset trees live in persistent Docker volumes, so recreating Caddy retains them.
 
 ## Build or update the adapter
 
-Prepare a context from a verified N7 package. An explicit `--adapter-source`
-can overlay `isotope_http.py` from the owning `eclipse-node` checkout; its hash
-is recorded separately from the package's engine identity.
+Prepare a context from a verified N7 package. Explicit `--adapter-source`
+options can overlay the adapter-only modules `isotope_http.py` and
+`n7_actor_ws.py` from the owning `eclipse-node` checkout (repeat the option for
+both); their hashes are recorded separately from the package's engine identity.
 
 ```sh
 python3 tools/prepare_n7_adapter.py \

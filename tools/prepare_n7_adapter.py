@@ -11,7 +11,20 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def prepare(release, output, adapter_source=None):
+# Adapter-only Python modules that may be overlaid from the owning eclipse-node
+# checkout. Engine bytes always come from the verified package.
+ADAPTER_MODULES = ('isotope_http.py', 'n7_actor_ws.py')
+
+
+def prepare(release, output, adapter_sources=()):
+    if isinstance(adapter_sources, (str, Path)):
+        adapter_sources = (adapter_sources,)
+    names = [Path(source).name for source in adapter_sources]
+    for name in names:
+        if name not in ADAPTER_MODULES:
+            raise ValueError('Not an adapter-only module: ' + name)
+    if len(set(names)) != len(names):
+        raise ValueError('Each adapter module may be overlaid once')
     manifest = json.loads((release / 'manifest.json').read_text())
     # Validate the packaged inputs that enter the image, including wheels.
     selected = ('experiments/eclipse-clp/', 'shell/', 'Deployment/', 'examples/', 'wheels/')
@@ -32,9 +45,9 @@ def prepare(release, output, adapter_source=None):
     for path in output.rglob('*'):
         path.chmod(0o700 if path.is_dir() else 0o600)
     overlay = {}
-    if adapter_source is not None:
-        target = output / 'experiments/eclipse-clp/isotope_http.py'
-        shutil.copyfile(adapter_source, target)
+    for source in adapter_sources:
+        target = output / 'experiments/eclipse-clp' / Path(source).name
+        shutil.copyfile(source, target)
         overlay[str(target.relative_to(output))] = digest(target)
     record = dict(parent_release=str(release), parent_manifest_sha256=digest(release / 'manifest.json'),
                   engine_image=manifest['image_id'], adapter_overlay=overlay,
@@ -47,7 +60,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--adapter-source', type=Path,
-                        help='explicit adapter-only source overlay; engine bytes remain packaged')
+    parser.add_argument('--adapter-source', type=Path, action='append', default=[],
+                        help='adapter-only module to overlay (isotope_http.py or n7_actor_ws.py); '
+                             'repeatable; engine bytes remain packaged')
     args = parser.parse_args()
     prepare(args.release.resolve(), args.output.resolve(), args.adapter_source)
