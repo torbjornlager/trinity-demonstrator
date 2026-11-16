@@ -136,6 +136,7 @@ module.exports.cases=function({CLIENT,NATIVE_ROOT,PID,QPID,ROOT,WASM_DIR,abort,a
     const host={swiWasmProlog:engine.prolog,swiWasmModule:engine,
       loadSwiWasmMainSource:runtime.methods.loadSwiWasmMainSource,
       driveSwiWasmMainQuery:runtime.methods.driveSwiWasmMainQuery,
+      prologQuotedText:runtime.methods.prologQuotedText,
       swiWasmRpcProlog:()=>source,currentLoadText:()=>"",swiWasmGoalNeedsStatechart:()=>false,
       pauseTerm:noop,recordSessionEvent:noop,clipText:x=>x,log:noop,
       startSwiWasmOutputStreaming:noop,stopSwiWasmOutputStreaming:noop,drainSwiWasmStatechartEventQueue:noop,

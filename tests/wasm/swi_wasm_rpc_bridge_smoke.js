@@ -1221,7 +1221,7 @@ ok(workerSource.includes(':- module(swi_wasm_actor_bridge, [') &&
    workerSource.includes('Goal = GoalModule:PlainGoal') &&
    !workerSource.includes('consultSource(behaviourSource, "/worker_behaviour.pl")') &&
    workerSource.includes('consultSource(inheritedSource, "/worker_user_code.pl")') &&
-   workerSource.includes('swi_wasm_actor_bridge:load_private_source(') &&
+   workerSource.includes('swi_wasm_actor_bridge:load_private_source_status(') &&
    includes('currentSwiWasm2LoadText: function()'),
    "SWI-WASM-2 keeps module-private runtime predicates separate from reloadable user source");
 ok(workerSource.includes('"    toplevel_halt/1, toplevel_halt/2,"') &&
