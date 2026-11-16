@@ -39,4 +39,4 @@ context.TrinityHost = createHost({},new URL('https://n5.elfenbenstornet.se/demon
 assert.equal(context.derivePortalNodeUrls('https://n5.elfenbenstornet.se').map(n=>n.label).join(','),'N1,N2,N3,N4,N5,N6,N7');
 console.log('Node catalog: local N6 placement, active state, shared DB, ISOBASE tutorial and public HTTPS N6 catalog passed');
 
-const n7=state.headerRemoteNonSwiNodeButtons.find(n=>n.label==='N7');assert.equal(n7.runtime,'eclipse');assert.equal(n7.ownerOnly,true);assert.equal(n7.href,'https://n7.elfenbenstornet.se/');
+const n7=state.headerRemoteNonSwiNodeButtons.find(n=>n.label==='N7');assert.equal(n7.runtime,'eclipse');assert.equal(n7.ownerOnly,false);assert.equal(n7.href,'https://n7.elfenbenstornet.se/demonstrator');
