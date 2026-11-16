@@ -1,0 +1,21 @@
+# Build n7_release from a verified package with tools/prepare_n7_adapter.py.
+ARG N7_DOCKER_CLI_IMAGE=docker:29-cli@sha256:5a7af0dcb0e46c803efe9b45371dd21cb500e5b4453250394ac6f06d49b6e6f1
+ARG N7_PYTHON_IMAGE=python:3.11-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f2795673bbb9fe43be570439e3b39
+FROM ${N7_DOCKER_CLI_IMAGE} AS docker_cli
+FROM ${N7_PYTHON_IMAGE}
+COPY --from=docker_cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=n7_release /wheels /tmp/wheels
+COPY --from=n7_release /experiments/eclipse-clp /app/experiments/eclipse-clp
+RUN python -m pip install --no-index --no-cache-dir --no-compile --find-links=/tmp/wheels \
+      -r /app/experiments/eclipse-clp/requirements-actor-ws.txt \
+    && rm -rf /tmp/wheels
+COPY --from=n7_release /shell /app/shell
+COPY --from=n7_release /Deployment /app/Deployment
+COPY --from=n7_release /examples /app/examples
+COPY Deployment/n7_container.py /app/Deployment/n7_container.py
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 N7_ASSET_ROOT=/app \
+    DOCKER_HOST=unix:///run/docker.sock HOME=/tmp
+WORKDIR /app
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["python", "/app/Deployment/n7_container.py", "--healthcheck"]
+ENTRYPOINT ["python", "/app/Deployment/n7_container.py"]

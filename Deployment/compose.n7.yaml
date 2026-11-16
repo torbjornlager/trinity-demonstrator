@@ -1,0 +1,48 @@
+# Add to the existing deployment project, or operate wp_n7 by itself with:
+# docker compose -p deployment -f Deployment/compose.n7.yaml restart wp_n7
+services:
+  wp_n7:
+    image: ${N7_ADAPTER_IMAGE:-trinity-n7-adapter:current}
+    build:
+      context: ..
+      dockerfile: Deployment/Dockerfile.n7-adapter
+      additional_contexts:
+        n7_release: ${N7_RELEASE_CONTEXT:-../.trinity/n7-adapter-release}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    environment:
+      DOCKER_HOST: unix:///run/docker.sock
+      N7_CONFIG: /run/n7/adapter.json
+    volumes:
+      - type: bind
+        source: ${N7_DOCKER_SOCKET:-/var/run/docker.sock}
+        target: /run/docker.sock
+      - n7_config:/run/n7:ro
+    expose:
+      - "18087"
+    networks:
+      - n7_execution
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+networks:
+  n7_execution:
+    external: true
+    name: deployment_wp_net
+
+volumes:
+  n7_config:
+    external: true
+    name: ${N7_CONFIG_VOLUME:-deployment_n7_config}

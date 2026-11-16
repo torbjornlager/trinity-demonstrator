@@ -34,3 +34,4 @@ tests/logs/
 # Python tooling caches
 __pycache__/
 *.pyc
+Deployment/compose.live.json
