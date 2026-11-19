@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import shutil
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -23,6 +24,15 @@ class AdmissionConfig(unittest.TestCase):
         for value in ('0','-1','abc','1.5','01','١'):
             with patch.dict(os.environ,{'N6_ADMISSION_ENABLED':'yes','N6_CALLS_PER_MINUTE':value},clear=True):
                 with self.assertRaises(ValueError):N6.public_admission_settings()
+
+    def test_n5_gateway_preserves_retained_http_routes(self):
+        text=(ROOT/'Deployment/nginx.n5-admission.conf').read_text()
+        expression=re.search(r'location ~ (\^.*\$) \{',text).group(1)
+        route=re.compile(expression)
+        for command in ['spawn','call','next','poll','stop','halt','abort','respond']:
+            self.assertIsNotNone(route.fullmatch('/toplevel_'+command))
+        for path in ['/admin/config','/admin/tokens','/tmp/token','/toplevel_arbitrary']:
+            self.assertIsNone(route.fullmatch(path))
 
     def test_swi_operator_override_and_invalid_budget(self):
         executable=os.environ.get('STARTUP_TEST_SWIPL') or shutil.which('swipl')
