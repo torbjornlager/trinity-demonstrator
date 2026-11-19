@@ -73,7 +73,8 @@ asynch_test_4(Answer1, Answer2) :-
 
 % Return early with Answer = timeout. This does not cancel the promise;
 % keep Ref so that a later yield can collect success([a], false).
-% Collect it in the same query: promise lifetime across queries is runtime-specific.
+% Collect it in the same query here. For sharing across queries, use an explicit
+% retained WebSocket or HTTP interactive session; OPEN mode needs no login.
 % A timeout is a result, not ordinary failure. An on_timeout(fail) callback
 % instead raises error(timeout_callback_failed(Ref), _).
 
