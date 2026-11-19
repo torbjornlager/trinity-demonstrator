@@ -300,29 +300,30 @@ Author-directed migration. Pinned by `portable_text_worker` and
 `portable_text_main` in `tests/wasm/swi_wasm_contracts.js`; boundary and UI evidence
 is in `docs/verification/wasm-character-text-2026-10-25/REPORT.md`.
 
-## Candidate HTTP context and OPEN exercise qualification (2026-11-19)
+## HTTP context and OPEN exercise qualification (2026-11-19)
 
-The upstream candidate isolates promises between fresh stateless HTTP
+The pinned runtime isolates promises between fresh stateless HTTP
 computations even when credentials match. Create and collect within one
 computation, or use an explicit retained WebSocket/HTTP session to share across
 queries. Anonymous retained sessions remain available in OPEN mode. Principal
 resource accounting remains separate from client state.
 
-The SWI candidate also permits `link(false)` within an open retained client
+The SWI runtime also permits `link(false)` within an open retained client
 namespace, preserving client ownership, quotas and teardown policy. It declines
 the immediate parent link without granting node-owner detachment authority.
 Stateless HTTP and public contexts without a live retained namespace retain
 their restriction. This makes the drawer's links exercise available anonymously.
 
-These are intentional upstream candidate changes, not changes to the pinned or
-deployed runtime. Native retirement now keeps the creating node's context until
+The production dependency pins now select these qualified upstream changes.
+Live deployment is recorded separately. Native retirement now keeps the creating node's context until
 registry cleanup and monitor delivery finish. Authoritative parent cleanup also
-handles an already-retired remote child without bypassing public exit checks.
+handles an already-retired remote child; explicit public `exit/2` retains its
+admission checks.
 The previously observed OPEN timeouts were consequences of losing retirement
 context in the two-listener fixture; the teaching algorithms remain intact.
 
-Qualification uses private dependency pins with unchanged browser engine/runtime
-code. Normal integration suites and all 136 checks across the 34 visible OPEN
+Initial qualification used private dependency pins with unchanged browser
+engine/runtime code; production pins now select published source revisions. Normal integration suites and all 136 checks across the 34 visible OPEN
 drawer entries pass, including the intentional failure/error examples. The new
 `tools/test_open_exercises.py` uses anonymous, owned loopback fixtures and rejects
 empty/incomplete inventories. Native fixes are `47e640f` and `a2ff186`; Trealla's
