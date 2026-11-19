@@ -1,0 +1,44 @@
+{
+  "host_selection_hashes": {
+    "Deployment/compose.live.json": "800ded7c0209e4f48e96e77f00831a771954e31d0e1f3c0212a1329270c49a2a",
+    ".trinity/live-swi-current.json": "5956deb9d1777f1df266dfb4cb160cfbab33f6ae4ece32db144b75c3911720d3",
+    ".trinity/live-n5-current.json": "4634630cf7027edf5908af93b4bb23b9efd0a899b6c15e515e8a120a51de7582"
+  },
+  "targets": [
+    {
+      "container": "web-prolog-hub-n0-1",
+      "id": "cf05a24ac5f7dbbc3fb0ccd8f173bd67eb7c7487df1cea801f9ef079d2a89658",
+      "image": "sha256:62db75e5bc66c5bd6176a0277c751783e6f876163cffe38abe1050a2b8f942e5"
+    },
+    {
+      "container": "deployment-wp_n1-1",
+      "id": "c72baecc8373949e035dd671fcfb1c79129b88e09cdacd8205946a8edcaf9293",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56"
+    },
+    {
+      "container": "deployment-wp_n2-1",
+      "id": "c2de9d409caab0294a04f863fb2bbf2d7eddd0248fc02f038fffd088d2fa91e1",
+      "image": "sha256:b234642adf4bb86d2cf3455d4324ab62d276d8fcae8364b0b2e1df0031271590"
+    },
+    {
+      "container": "deployment-wp_n3-1",
+      "id": "1269ffe86923af30be7633ac0d3053541638dd97d9c57e8a166793b9680e07d0",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56"
+    },
+    {
+      "container": "deployment-wp_n4-1",
+      "id": "232aff45b602f7a81a2885fdfcdbe9b4f791353d5382ded73f06f9060d229097",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56"
+    },
+    {
+      "container": "deployment-wp_admin-1",
+      "id": "d83e53dc13144b8482205b881339db95bde6f3825a2c269707eaf62cabf3114e",
+      "image": "sha256:61dbf14573a6a7379dc417ab5ef293d0cf746546db35be86277640df42fc9cae"
+    },
+    {
+      "container": "deployment-wp_n5-1",
+      "id": "b1a19cb1d5c8d4b5b7c5a80c1343e3c7a482ed70283b1b987b1be1421e352aa2",
+      "image": "sha256:ac1061058f10faf9d04bea26558119a3d8741e4398332c53cac7f5771b7d7a53"
+    }
+  ]
+}

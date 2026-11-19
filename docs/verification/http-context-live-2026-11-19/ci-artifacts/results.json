@@ -1,0 +1,407 @@
+[
+  {
+    "label": "origin-audit",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/home/runner/work/_temp/swi-release-11.0.0/install/bin/swipl",
+      "-f",
+      "none",
+      "-q",
+      "-s",
+      "/home/runner/work/trinity-demonstrator/trinity-demonstrator/load.pl",
+      "-g",
+      "pinned_swi_bootstrap:check_origins,forall(module_property(M,file(F)),format(\"~q ~q~n\",[M,F]))",
+      "-t",
+      "halt"
+    ],
+    "exit_code": 0,
+    "seconds": 0.364,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "LINT",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "LINT"
+    ],
+    "exit_code": 0,
+    "seconds": 0.365,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "TEXT",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "TEXT"
+    ],
+    "exit_code": 0,
+    "seconds": 0.615,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T0",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T0"
+    ],
+    "exit_code": 0,
+    "seconds": 7.333,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1_NATIVE",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1_NATIVE"
+    ],
+    "exit_code": 0,
+    "seconds": 0.816,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T2",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T2"
+    ],
+    "exit_code": 0,
+    "seconds": 6.579,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3_NATIVE",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3_NATIVE"
+    ],
+    "exit_code": 0,
+    "seconds": 37.034,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4_NATIVE",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_NATIVE"
+    ],
+    "exit_code": 0,
+    "seconds": 188.333,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T5",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T5"
+    ],
+    "exit_code": 0,
+    "seconds": 1.668,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1_INTEGRATION",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T1_INTEGRATION"
+    ],
+    "exit_code": 0,
+    "seconds": 0.465,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3_INTEGRATION",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T3_INTEGRATION"
+    ],
+    "exit_code": 0,
+    "seconds": 4.377,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4_INTEGRATION",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "T4_INTEGRATION"
+    ],
+    "exit_code": 0,
+    "seconds": 2.22,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-DEMONSTRATOR",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "DEMONSTRATOR"
+    ],
+    "exit_code": 0,
+    "seconds": 0.866,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-SERVICE_TEXT",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "SERVICE_TEXT"
+    ],
+    "exit_code": 0,
+    "seconds": 1.217,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-LINDA",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "LINDA"
+    ],
+    "exit_code": 0,
+    "seconds": 1.117,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-MODEL",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "MODEL"
+    ],
+    "exit_code": 0,
+    "seconds": 0.916,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-MODEL_SXML",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "MODEL_SXML"
+    ],
+    "exit_code": 0,
+    "seconds": 0.966,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-JEV",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "JEV"
+    ],
+    "exit_code": 0,
+    "seconds": 2.771,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "default-startup-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_default_swi_startup.py"
+    ],
+    "exit_code": 0,
+    "seconds": 21.413,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "pin-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_pinned_swi_dependency.py"
+    ],
+    "exit_code": 0,
+    "seconds": 1.167,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "browser-pin-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_pinned_browser_dependency.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.214,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "trealla-pin-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_pinned_trealla.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.214,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "static-distribution-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_static_demonstrator.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.515,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "https-sso-probe-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_https_sso_probe.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.114,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "host-url-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "node",
+      "tools/test-trinity-host.cjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.032,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "cross-origin-native-integration",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "node",
+      "tools/test-cdn-remote.cjs"
+    ],
+    "exit_code": 0,
+    "seconds": 4.828,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "portal-runtime-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "node",
+      "tools/test-portal-runtime.cjs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.032,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "discovery-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "DISCOVERY"
+    ],
+    "exit_code": 0,
+    "seconds": 2.771,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "ci-runner-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_ci_pinned_swi.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.164,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "packaging-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_swi_extraction_tools.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.415,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "watchdog-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_ci_timeout.py"
+    ],
+    "exit_code": 0,
+    "seconds": 2.571,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "fetch-regressions",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tests/test_fetch_swi.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.214,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "browser-equivalence",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "/usr/bin/python3",
+      "tools/check_statechart_wasm_equivalence.py",
+      "--native-root",
+      "/home/runner/work/trinity-demonstrator/trinity-demonstrator/.trinity/ci-native",
+      "--wasm-dir",
+      "/home/runner/work/_temp/pinned-swi-results/browser-prolog-b3e4b51364572576"
+    ],
+    "exit_code": 0,
+    "seconds": 0.114,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "WASM",
+    "cwd": "/home/runner/work/trinity-demonstrator/trinity-demonstrator",
+    "command": [
+      "bash",
+      "tools/test.sh",
+      "WASM"
+    ],
+    "exit_code": 0,
+    "seconds": 233.249,
+    "watchdog_seconds": 360
+  }
+]

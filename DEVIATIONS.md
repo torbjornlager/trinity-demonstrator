@@ -315,7 +315,8 @@ Stateless HTTP and public contexts without a live retained namespace retain
 their restriction. This makes the drawer's links exercise available anonymously.
 
 The production dependency pins now select these qualified upstream changes.
-Live deployment is recorded separately. Native retirement now keeps the creating node's context until
+[Live deployment](docs/verification/http-context-live-2026-11-19/REPORT.md)
+records the selected images and smoke results. Native retirement now keeps the creating node's context until
 registry cleanup and monitor delivery finish. Authoritative parent cleanup also
 handles an already-retired remote child; explicit public `exit/2` retains its
 admission checks.

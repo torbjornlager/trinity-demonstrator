@@ -1,0 +1,1090 @@
+{
+  "authentication": "none",
+  "timeout_seconds": 15,
+  "results": [
+    {
+      "node": "n3",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 1,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myparallel([(X=a,sleep(1)),(Y=b,sleep(3)),(Z=c,sleep(2))]))",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "X": "a",
+            "Y": "b",
+            "Z": "c"
+          }
+        ],
+        "more": false,
+        "pid": 7342026928,
+        "type": "success"
+      },
+      "events": [
+        {
+          "pid": 5412951212,
+          "reason": "true",
+          "ref": "5412951212@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 7651208995,
+          "reason": "true",
+          "ref": "7651208995@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 3276203057,
+          "reason": "true",
+          "ref": "3276203057@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 135,712 inferences in 3.020 seconds",
+            "kind": "timing",
+            "pid": 7342026928,
+            "type": "output"
+          },
+          "request_id": "3ee3010f1b6b3c0259b582dbc31d2f2427342540a471d690c9a11a89d79fa6ab",
+          "type": "io_request"
+        },
+        {
+          "data": [
+            {
+              "X": "a",
+              "Y": "b",
+              "Z": "c"
+            }
+          ],
+          "more": false,
+          "pid": 7342026928,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 2,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myparallel([(X=a,sleep(1)),(Y=b,fail),(Z=c,sleep(2))]))",
+      "expected": "failure",
+      "event": {
+        "pid": 7342026928,
+        "type": "failure"
+      },
+      "events": [
+        {
+          "pid": 2149361739,
+          "reason": "kill",
+          "ref": "2149361739@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 134,675 inferences in 0.041 seconds",
+            "kind": "timing",
+            "pid": 7342026928,
+            "type": "output"
+          },
+          "request_id": "115073b6e391231de6d2897b92a9c5948651a95d4e998f79f125e20883054ab8",
+          "type": "io_request"
+        },
+        {
+          "pid": 9353679804,
+          "reason": "kill",
+          "ref": "9353679804@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 7342026928,
+          "type": "failure"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 3,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myparallel([(X=a,sleep(1)),(Y=b,sleep(a)),(Z=c,sleep(2))]))",
+      "expected": "error",
+      "event": {
+        "data": "Type error: float expected, found a (an atom)",
+        "details": "error(type_error(float,a),_)",
+        "pid": 7342026928,
+        "type": "error"
+      },
+      "events": [
+        {
+          "pid": 4865740978,
+          "reason": "exception(error(type_error(float,a),_))",
+          "ref": "4865740978@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 8753038971,
+          "reason": "kill",
+          "ref": "8753038971@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 1975690617,
+          "reason": "kill",
+          "ref": "1975690617@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 134,557 inferences in 0.031 seconds",
+            "kind": "timing",
+            "pid": 7342026928,
+            "type": "output"
+          },
+          "request_id": "85cc7a22598059d21949f4400b742e214f7379cf4f144dc723b15ff8354b1457",
+          "type": "io_request"
+        },
+        {
+          "data": "Type error: float expected, found a (an atom)",
+          "details": "error(type_error(float,a),_)",
+          "pid": 7342026928,
+          "type": "error"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 4,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myfirst_solution(X, [(sleep(2),X=a),(sleep(1),X=b)]))",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "X": "b"
+          }
+        ],
+        "more": false,
+        "pid": 7342026928,
+        "type": "success"
+      },
+      "events": [
+        {
+          "pid": 6492386738,
+          "reason": "true",
+          "ref": "6492386738@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 90,245 inferences in 1.020 seconds",
+            "kind": "timing",
+            "pid": 7342026928,
+            "type": "output"
+          },
+          "request_id": "de52549d9123922677f938e930f6d556b571c12706673eaad01210fea014a7c2",
+          "type": "io_request"
+        },
+        {
+          "pid": 2365688298,
+          "reason": "kill",
+          "ref": "2365688298@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "data": [
+            {
+              "X": "b"
+            }
+          ],
+          "more": false,
+          "pid": 7342026928,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 1,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "supervisor_spawn([\n       child(fridge, [\n           start(server(fridge, [initial_state([])])),\n           restart(permanent)\n       ])\n   ], Sup, [\n       src_predicates([fridge/4])\n   ])",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Sup": "7448732337@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Sup": "7448732337@'https://n3.elfenbenstornet.se'"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 2,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, store(milk), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 3,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, take(milk), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok(milk)"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok(milk)"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 4,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_promise(fridge, store(meat), Ref)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Ref": "3497803128"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Ref": "3497803128"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 5,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_yield(3497803128, Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 6,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "whereis(fridge, Previous),\n   catch(server_request(fridge, sore(milk), Response), server_down(Reason),\n         (wait_for_fridge_restart(Previous, 500), throw(server_down(Reason))))",
+      "expected": "error",
+      "event": {
+        "data": "Unknown message: server_down(false)",
+        "details": "server_down(false)",
+        "pid": 1879624205,
+        "type": "error"
+      },
+      "events": [
+        {
+          "data": "Unknown message: server_down(false)",
+          "details": "server_down(false)",
+          "pid": 1879624205,
+          "type": "error"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 7,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, store(eggs), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 8,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_upgrade(fridge, fridge2, [\n       src_predicates([fridge2/4])\n   ])",
+      "expected": "success",
+      "event": {
+        "data": [
+          {}
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 9,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, sore(milk), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "error(unknown_request)"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "error(unknown_request)"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 10,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, store(butter), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n3",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 11,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "supervisor_halt(7448732337@'https://n3.elfenbenstornet.se')",
+      "expected": "success",
+      "event": {
+        "data": [
+          {}
+        ],
+        "more": false,
+        "pid": 1879624205,
+        "type": "success"
+      },
+      "events": [
+        {
+          "pid": 7683634886,
+          "reason": "true",
+          "ref": "7683634886@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 7448732337,
+          "reason": "true",
+          "ref": "7448732337@'https://n3.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 1879624205,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 1,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myparallel([(X=a,sleep(1)),(Y=b,sleep(3)),(Z=c,sleep(2))]))",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "X": "a",
+            "Y": "b",
+            "Z": "c"
+          }
+        ],
+        "more": false,
+        "pid": 3544682119,
+        "type": "success"
+      },
+      "events": [
+        {
+          "pid": 2338985555,
+          "reason": "true",
+          "ref": "2338985555@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 4437777848,
+          "reason": "true",
+          "ref": "4437777848@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 7704321506,
+          "reason": "true",
+          "ref": "7704321506@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 135,347 inferences in 3.018 seconds",
+            "kind": "timing",
+            "pid": 3544682119,
+            "type": "output"
+          },
+          "request_id": "72ba734001f322a669830555b432c14c188066e10e6391822226f3c3ddfe4176",
+          "type": "io_request"
+        },
+        {
+          "data": [
+            {
+              "X": "a",
+              "Y": "b",
+              "Z": "c"
+            }
+          ],
+          "more": false,
+          "pid": 3544682119,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 2,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myparallel([(X=a,sleep(1)),(Y=b,fail),(Z=c,sleep(2))]))",
+      "expected": "failure",
+      "event": {
+        "pid": 3544682119,
+        "type": "failure"
+      },
+      "events": [
+        {
+          "pid": 8574966116,
+          "reason": "kill",
+          "ref": "8574966116@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 134,102 inferences in 0.036 seconds",
+            "kind": "timing",
+            "pid": 3544682119,
+            "type": "output"
+          },
+          "request_id": "1d86f1a9c1e86e685c9b24226d83cf800c46bf38fb4f0740c0cfe2324e456217",
+          "type": "io_request"
+        },
+        {
+          "pid": 5915876153,
+          "reason": "kill",
+          "ref": "5915876153@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 3544682119,
+          "type": "failure"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 3,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myparallel([(X=a,sleep(1)),(Y=b,sleep(a)),(Z=c,sleep(2))]))",
+      "expected": "error",
+      "event": {
+        "data": "Type error: float expected, found a (an atom)",
+        "details": "error(type_error(float,a),_)",
+        "pid": 3544682119,
+        "type": "error"
+      },
+      "events": [
+        {
+          "pid": 1871489404,
+          "reason": "kill",
+          "ref": "1871489404@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 7340739880,
+          "reason": "kill",
+          "ref": "7340739880@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 134,023 inferences in 0.028 seconds",
+            "kind": "timing",
+            "pid": 3544682119,
+            "type": "output"
+          },
+          "request_id": "66b78a91c50a04aefe8e873a2f06144637dcfe5e6117cec45089154e264292fd",
+          "type": "io_request"
+        },
+        {
+          "data": "Type error: float expected, found a (an atom)",
+          "details": "error(type_error(float,a),_)",
+          "pid": 3544682119,
+          "type": "error"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/13 parallel.pl",
+      "query": 4,
+      "source_sha256": "68b246784c33853bd1ea96cd5b5905aeed67d80046b5cade256914beb760e628",
+      "goal": "time(myfirst_solution(X, [(sleep(2),X=a),(sleep(1),X=b)]))",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "X": "b"
+          }
+        ],
+        "more": false,
+        "pid": 3544682119,
+        "type": "success"
+      },
+      "events": [
+        {
+          "pid": 4515576731,
+          "reason": "true",
+          "ref": "4515576731@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 1284660352,
+          "reason": "kill",
+          "ref": "1284660352@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "event": {
+            "data": "% 89,872 inferences in 1.025 seconds",
+            "kind": "timing",
+            "pid": 3544682119,
+            "type": "output"
+          },
+          "request_id": "890eb250aa3b771aac6592ec6b2435a6db97247ff1e5182b2678f0c705f91da5",
+          "type": "io_request"
+        },
+        {
+          "data": [
+            {
+              "X": "b"
+            }
+          ],
+          "more": false,
+          "pid": 3544682119,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 1,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "supervisor_spawn([\n       child(fridge, [\n           start(server(fridge, [initial_state([])])),\n           restart(permanent)\n       ])\n   ], Sup, [\n       src_predicates([fridge/4])\n   ])",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Sup": "5648331309@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Sup": "5648331309@'https://n4.elfenbenstornet.se'"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 2,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, store(milk), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 3,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, take(milk), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok(milk)"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok(milk)"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 4,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_promise(fridge, store(meat), Ref)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Ref": "9521658058"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Ref": "9521658058"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 5,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_yield(9521658058, Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 6,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "whereis(fridge, Previous),\n   catch(server_request(fridge, sore(milk), Response), server_down(Reason),\n         (wait_for_fridge_restart(Previous, 500), throw(server_down(Reason))))",
+      "expected": "error",
+      "event": {
+        "data": "Unknown message: server_down(false)",
+        "details": "server_down(false)",
+        "pid": 5673175553,
+        "type": "error"
+      },
+      "events": [
+        {
+          "data": "Unknown message: server_down(false)",
+          "details": "server_down(false)",
+          "pid": 5673175553,
+          "type": "error"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 7,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, store(eggs), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 8,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_upgrade(fridge, fridge2, [\n       src_predicates([fridge2/4])\n   ])",
+      "expected": "success",
+      "event": {
+        "data": [
+          {}
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 9,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, sore(milk), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "error(unknown_request)"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "error(unknown_request)"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 10,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "server_request(fridge, store(butter), Response)",
+      "expected": "success",
+      "event": {
+        "data": [
+          {
+            "Response": "ok"
+          }
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "data": [
+            {
+              "Response": "ok"
+            }
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    },
+    {
+      "node": "n4",
+      "path": "/examples/actors/16 fridge_server.pl",
+      "query": 11,
+      "source_sha256": "18df9fa7e69427907b817229d547906f07420cabd696f489802aaa851e0f30f6",
+      "goal": "supervisor_halt(5648331309@'https://n4.elfenbenstornet.se')",
+      "expected": "success",
+      "event": {
+        "data": [
+          {}
+        ],
+        "more": false,
+        "pid": 5673175553,
+        "type": "success"
+      },
+      "events": [
+        {
+          "pid": 1312455534,
+          "reason": "true",
+          "ref": "1312455534@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "pid": 5648331309,
+          "reason": "true",
+          "ref": "5648331309@'https://n4.elfenbenstornet.se'",
+          "type": "down"
+        },
+        {
+          "data": [
+            {}
+          ],
+          "more": false,
+          "pid": 5673175553,
+          "type": "success"
+        }
+      ],
+      "status": "pass"
+    }
+  ]
+}

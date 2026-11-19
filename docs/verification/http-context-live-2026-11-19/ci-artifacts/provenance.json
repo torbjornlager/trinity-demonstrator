@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+  "revision": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+  "native_root": "/home/runner/work/trinity-demonstrator/trinity-demonstrator/.trinity/ci-native",
+  "pack": "web_prolog",
+  "swipl": "/home/runner/work/_temp/swi-release-11.0.0/install/bin/swipl",
+  "swipl_version": "SWI-Prolog version 11.0.0 for x86_64-linux",
+  "demonstrator_revision": "2b58804933a0d198d02173fe5d051a2410d7b3b2"
+}

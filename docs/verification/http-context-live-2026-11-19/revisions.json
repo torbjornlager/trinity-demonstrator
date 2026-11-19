@@ -1,0 +1,15 @@
+{
+  "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+  "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+  "browser": "ce966591ffa3f240f20e375ad868553b7e7149d9",
+  "trealla": "3a5b76117dd05e22cf56aca56d7dd1463c45a9df",
+  "trealla_overlay_files": [
+    "README.md",
+    "actors.pl",
+    "http_session_context_tests.pl",
+    "http_sessions.pl",
+    "rpc.pl",
+    "swi_lineage_compat.pl",
+    "tools/test.sh"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "status": "deployed_and_verified",
+  "completed_utc": "2026-11-19T19:17:03Z",
+  "source": {
+    "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+    "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+    "browser": "ce966591ffa3f240f20e375ad868553b7e7149d9",
+    "trealla": "3a5b76117dd05e22cf56aca56d7dd1463c45a9df",
+    "trealla_overlay_files": [
+      "README.md",
+      "actors.pl",
+      "http_session_context_tests.pl",
+      "http_sessions.pl",
+      "rpc.pl",
+      "swi_lineage_compat.pl",
+      "tools/test.sh"
+    ]
+  },
+  "ci": {
+    "url": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44593417353",
+    "conclusion": "success"
+  },
+  "targets": [
+    {
+      "container": "web-prolog-hub-n0-1",
+      "id": "cf05a24ac5f7dbbc3fb0ccd8f173bd67eb7c7487df1cea801f9ef079d2a89658",
+      "image": "sha256:62db75e5bc66c5bd6176a0277c751783e6f876163cffe38abe1050a2b8f942e5",
+      "running": true
+    },
+    {
+      "container": "deployment-wp_n1-1",
+      "id": "c72baecc8373949e035dd671fcfb1c79129b88e09cdacd8205946a8edcaf9293",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "running": true
+    },
+    {
+      "container": "deployment-wp_n2-1",
+      "id": "c2de9d409caab0294a04f863fb2bbf2d7eddd0248fc02f038fffd088d2fa91e1",
+      "image": "sha256:b234642adf4bb86d2cf3455d4324ab62d276d8fcae8364b0b2e1df0031271590",
+      "running": true
+    },
+    {
+      "container": "deployment-wp_n3-1",
+      "id": "1269ffe86923af30be7633ac0d3053541638dd97d9c57e8a166793b9680e07d0",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "running": true
+    },
+    {
+      "container": "deployment-wp_n4-1",
+      "id": "232aff45b602f7a81a2885fdfcdbe9b4f791353d5382ded73f06f9060d229097",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "running": true
+    },
+    {
+      "container": "deployment-wp_admin-1",
+      "id": "d83e53dc13144b8482205b881339db95bde6f3825a2c269707eaf62cabf3114e",
+      "image": "sha256:61dbf14573a6a7379dc417ab5ef293d0cf746546db35be86277640df42fc9cae",
+      "running": true
+    },
+    {
+      "container": "deployment-wp_n5-1",
+      "id": "b1a19cb1d5c8d4b5b7c5a80c1343e3c7a482ed70283b1b987b1be1421e352aa2",
+      "image": "sha256:ac1061058f10faf9d04bea26558119a3d8741e4398332c53cac7f5771b7d7a53",
+      "running": true
+    }
+  ],
+  "checks": {
+    "pinned_consumer_groups": 34,
+    "pinned_consumer_failed": 0,
+    "browser_package_groups": 5,
+    "browser_package_failed": 0,
+    "open_entries": 34,
+    "open_checks": 136,
+    "open_failed": 0,
+    "exact_image_actor_cases_per_engine": 45,
+    "exact_image_actor_engines": [
+      "SWI",
+      "Trealla"
+    ],
+    "context_http_live": 7,
+    "focused_live_exercise_queries": 30,
+    "live_smoke_groups": 32,
+    "live_versioned_cases_pass": 157,
+    "live_versioned_cases_failed": 0,
+    "engine_trees_unchanged": true,
+    "injected_health_rollback_pass": true,
+    "state_marker_preserved": true,
+    "environment_commands_credentials_mounts_limits_network_aliases_and_static_addresses_preserved": true,
+    "readonly_owner_peer_payloads_unchanged": true,
+    "caddy_and_other_compose_services_unchanged": true
+  },
+  "production_pins_updated": true,
+  "preparation": "/Users/lager/trinity-demonstrator/.trinity/http-context-release-20261119",
+  "rollback_command": "python3 /Users/lager/trinity-demonstrator/.trinity/http-context-release-20261119/rollback.py",
+  "preflight_corrections": [
+    "Exact-image Trealla qualification moved to a host runner because the image contains no Python; copied fixture ownership corrected before qualification.",
+    "SWI retained HTTP sessions are capped at ISOTOPE; actor-name checks use WebSocket instead.",
+    "Initial immutable-image build used an untagged local image ID; named local predecessor tags resolved Docker build references."
+  ],
+  "live_failed_attempts": 0
+}

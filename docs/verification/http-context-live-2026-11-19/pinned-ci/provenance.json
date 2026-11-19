@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/torbjornlager/swi-prolog-node.git",
+  "revision": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+  "native_root": "/Users/lager/swi-prolog-node",
+  "pack": "web_prolog",
+  "swipl": "/usr/local/bin/swipl",
+  "swipl_version": "SWI-Prolog version 11.0.0 for fat-darwin",
+  "demonstrator_revision": "2c4283e5055abd88437573403d7fb4d97d8500ec"
+}

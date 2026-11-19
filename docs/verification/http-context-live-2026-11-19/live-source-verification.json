@@ -1,0 +1,53 @@
+{
+  "status": "pass",
+  "targets": [
+    {
+      "service": "n0",
+      "image": "sha256:62db75e5bc66c5bd6176a0277c751783e6f876163cffe38abe1050a2b8f942e5",
+      "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+      "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux"
+    },
+    {
+      "service": "wp_n1",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+      "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux"
+    },
+    {
+      "service": "wp_n2",
+      "image": "sha256:b234642adf4bb86d2cf3455d4324ab62d276d8fcae8364b0b2e1df0031271590",
+      "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+      "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux"
+    },
+    {
+      "service": "wp_n3",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+      "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux"
+    },
+    {
+      "service": "wp_n4",
+      "image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+      "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux"
+    },
+    {
+      "service": "wp_admin",
+      "image": "sha256:61dbf14573a6a7379dc417ab5ef293d0cf746546db35be86277640df42fc9cae",
+      "shared": "2b58804933a0d198d02173fe5d051a2410d7b3b2",
+      "native": "a2ff1868dab405e29b5f47b9a288839ba7ee7156",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux"
+    },
+    {
+      "service": "wp_n5",
+      "image": "sha256:ac1061058f10faf9d04bea26558119a3d8741e4398332c53cac7f5771b7d7a53",
+      "trealla": "3a5b76117dd05e22cf56aca56d7dd1463c45a9df",
+      "verified_overlay_files": 7
+    }
+  ]
+}

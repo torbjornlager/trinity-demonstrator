@@ -1,0 +1,153 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "trealla-exact-image",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 1353,
+  "endpoint": "ws://127.0.0.1:19755/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 228,
+      "id": "TW-001",
+      "observation": {
+        "data": [
+          {
+            "A": "success(1094066235,[ok],false)",
+            "BaselineResult": "passed",
+            "E": "error(domain_error(synchronous_toplevel_target,other),context(toplevel_actors:toplevel_call_synch/4,'invalid synchronous toplevel option'))",
+            "P": "1094066235",
+            "S": "3032535125@'http://127.0.0.1:19755'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 3032535125,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Caller targeting and independent query variables"
+    },
+    {
+      "duration_ms": 261,
+      "id": "TW-002",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "success(1155071888,[true],false)",
+            "Barrier": "success(1155071888,[true],false)",
+            "BaselineResult": "passed",
+            "C": "success(1155071888,[true],false)",
+            "D": "success(1155071888,[true],false)",
+            "E": "tw_callback",
+            "Me": "Me",
+            "P": "1155071888",
+            "S": "1968664737@'http://127.0.0.1:19755'",
+            "V": "V",
+            "Vs": "[first]"
+          }
+        ],
+        "more": false,
+        "pid": 1968664737,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Timeout outcome and callback bindings failure exceptions and commitment"
+    },
+    {
+      "duration_ms": 251,
+      "id": "TW-003",
+      "observation": {
+        "data": [
+          {
+            "A": "success(2564869869,[fresh],false)",
+            "BaselineResult": "passed",
+            "Early": "Early",
+            "First": "success(2564869869,[a],true)",
+            "Last": "success(2564869869,[c],false)",
+            "Late": "Late",
+            "Me": "Me",
+            "Me2": "Me2",
+            "P": "2564869869",
+            "S": "2119531896@'http://127.0.0.1:19755'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 2119531896,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Late timed-out answer cannot satisfy the next synchronous wait"
+    },
+    {
+      "duration_ms": 245,
+      "id": "TW-004",
+      "observation": {
+        "data": [
+          {
+            "A": "success(2407423585,[c,d],false)",
+            "BaselineResult": "passed",
+            "P": "2407423585",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 2118958628,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Output mismatch consumes selected slice and continuation advances"
+    },
+    {
+      "duration_ms": 138,
+      "id": "TW-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "toplevel_down(tw_death)",
+            "P": "2400190075",
+            "R": "1000000407"
+          }
+        ],
+        "more": false,
+        "pid": 3100929564,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Termination during wait preserves independent and spawn monitors"
+    },
+    {
+      "duration_ms": 229,
+      "id": "TW-006",
+      "observation": {
+        "data": [
+          {
+            "A": "success(2888875829,[sync],false)",
+            "BaselineResult": "passed",
+            "P": "2888875829",
+            "R": "1000000420",
+            "S": "2357732254@'http://127.0.0.1:19755'"
+          }
+        ],
+        "more": false,
+        "pid": 2357732254,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Synchronous wait preserves asynchronous answers and unrelated messages"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T19:03:29.326337+00:00",
+  "suite": "toplevel-waits-0.1"
+}

@@ -1,0 +1,58 @@
+[
+  {
+    "container": "web-prolog-hub-n0-1",
+    "service": "n0",
+    "project": "web-prolog-hub",
+    "kind": "swi",
+    "old_image": "sha256:316c29ed9430e18f1bd54f2fc03e577e93f5c407f4776109f80e08cfc0d246db",
+    "candidate_image": "sha256:62db75e5bc66c5bd6176a0277c751783e6f876163cffe38abe1050a2b8f942e5"
+  },
+  {
+    "container": "deployment-wp_n1-1",
+    "service": "wp_n1",
+    "project": "deployment",
+    "kind": "swi",
+    "old_image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b",
+    "candidate_image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56"
+  },
+  {
+    "container": "deployment-wp_n2-1",
+    "service": "wp_n2",
+    "project": "deployment",
+    "kind": "swi",
+    "old_image": "sha256:46a56b757a4bfecfbcfd16995eed77ca41ff6980defeacf5eeb3b60fd72682b9",
+    "candidate_image": "sha256:b234642adf4bb86d2cf3455d4324ab62d276d8fcae8364b0b2e1df0031271590"
+  },
+  {
+    "container": "deployment-wp_n3-1",
+    "service": "wp_n3",
+    "project": "deployment",
+    "kind": "swi",
+    "old_image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b",
+    "candidate_image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56"
+  },
+  {
+    "container": "deployment-wp_n4-1",
+    "service": "wp_n4",
+    "project": "deployment",
+    "kind": "swi",
+    "old_image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b",
+    "candidate_image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56"
+  },
+  {
+    "container": "deployment-wp_admin-1",
+    "service": "wp_admin",
+    "project": "deployment",
+    "kind": "swi",
+    "old_image": "sha256:2b51247c24433e8c50250d29f7b4a72787f1f49db0d9bc1a2c0680e443ac59c7",
+    "candidate_image": "sha256:61dbf14573a6a7379dc417ab5ef293d0cf746546db35be86277640df42fc9cae"
+  },
+  {
+    "container": "deployment-wp_n5-1",
+    "service": "wp_n5",
+    "project": "deployment",
+    "kind": "trealla",
+    "old_image": "sha256:f6773633b01d2f8f0a337b4de15c09e85aedee4a9c46206692beaa7c3dbaa26e",
+    "candidate_image": "sha256:ac1061058f10faf9d04bea26558119a3d8741e4398332c53cac7f5771b7d7a53"
+  }
+]

@@ -1,5 +1,38 @@
 # Trinity demonstrator: project and operations handover
 
+## HTTP contexts and OPEN release — 19 November 2026
+
+The production pins and live services now select native SWI `a2ff186`, Trealla
+`3a5b761` and browser package `ce96659`; the deployed demonstrator source is
+`2b58804`. N0–N4, admin and N5 were replaced with qualified immutable images.
+SWI remains 11.0.0, Trealla remains 3.14.20 and the browser engine remains
+10.1.19. The browser package changes native schema provenance only.
+
+Fresh HTTP requests isolate promise ownership, including requests with equal
+credentials. Cross-query sharing uses an explicit retained session; OPEN needs
+no login. The native lifecycle repair preserves the creating node's retirement
+context and repairs linked-child teardown. All 136 checks across the 34 visible
+OPEN entries passed with the production pins. Both CI jobs, all 34 local
+consumer groups, all five packaged browser groups, and each exact image's
+45-case ACTOR gate passed. The live smoke run includes HTTP/session isolation,
+30 parallel/fridge queries across N3/N4, naming/lifecycle, Linda, discovery and
+SWI/Trealla/ECLiPSe consumer interoperability.
+
+The [deployment report](docs/verification/http-context-live-2026-11-19/REPORT.md)
+records source/image identities, smoke observations and preservation checks.
+Current frozen models and recovery inputs are under
+`.trinity/http-context-release-20261119/`; the existing SWI/N5 selection pointers
+and canonical `Deployment/compose.live.json` identify those models. Node settings,
+credentials, data volumes and read-only peer/owner payloads were preserved.
+Caddy and the N6/N7 runtimes were not replaced.
+
+For explicitly requested recovery, use
+`python3 .trinity/http-context-release-20261119/rollback.py`. It checks the exact
+selected container identities, host selections and sealed operator inputs before
+restoring the captured predecessors. Its `--check` option is read-only. Keep
+these images, private models and data volumes available. Earlier release entries
+below describe historical predecessors and are not current recovery shortcuts.
+
 ## Live N5 client-context naming — 19 November 2026
 
 N5 now runs `trealla-port` **6041ea3**, with ordinary names scoped to each client

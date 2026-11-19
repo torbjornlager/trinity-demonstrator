@@ -1,0 +1,58 @@
+{
+  "advertised_profile": "actor",
+  "candidate": "trealla-exact-image",
+  "counts": {
+    "fail": 0,
+    "pass": 7,
+    "unsupported": 0
+  },
+  "duration_ms": 781,
+  "results": [
+    {
+      "duration_ms": 22,
+      "id": "AC-001",
+      "status": "pass",
+      "title": "Transport negotiation accepts protocol version 1 and browser capabilities"
+    },
+    {
+      "duration_ms": 115,
+      "id": "AC-002",
+      "status": "pass",
+      "title": "Session self/1 is deterministic and denotes the spawned shell"
+    },
+    {
+      "duration_ms": 124,
+      "id": "AC-003",
+      "status": "pass",
+      "title": "Paged toplevel enumeration preserves bindings and final-page state"
+    },
+    {
+      "duration_ms": 126,
+      "id": "AC-004",
+      "status": "pass",
+      "title": "Guarded receive selects the non-positive clause and emits one line"
+    },
+    {
+      "duration_ms": 117,
+      "id": "AC-005",
+      "status": "pass",
+      "title": "Selective receive retains an earlier unmatched message"
+    },
+    {
+      "duration_ms": 128,
+      "id": "AC-006",
+      "status": "pass",
+      "title": "Direct browser input suspends until toplevel_respond"
+    },
+    {
+      "duration_ms": 150,
+      "id": "AC-007",
+      "status": "pass",
+      "title": "Nested toplevel input is delivered to its protocol caller"
+    }
+  ],
+  "schema_version": 1,
+  "started_at": "2026-11-19T19:03:24.515765+00:00",
+  "suite": "actor-core-0.1",
+  "ws_url": "ws://127.0.0.1:19755/ws"
+}

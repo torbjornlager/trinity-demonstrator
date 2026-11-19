@@ -1,0 +1,151 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "n3",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 9208,
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 1691,
+      "id": "LM-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "5928055997@'https://n3.elfenbenstornet.se'",
+            "F": "1860665559@'https://n3.elfenbenstornet.se'",
+            "K": "8995811681@'https://n3.elfenbenstornet.se'",
+            "P": "8238133146@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 8075728155,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Spawn monitoring preserves immediate success failure exception and explicit exit"
+    },
+    {
+      "duration_ms": 1518,
+      "id": "LM-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "5748278819@'https://n3.elfenbenstornet.se'",
+            "R": "2973685607",
+            "S": "3277763791@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 3277763791,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Explicit and spawn-time monitors are independent and preserve unrelated data"
+    },
+    {
+      "duration_ms": 1450,
+      "id": "LM-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "7606579687@'https://n3.elfenbenstornet.se'",
+            "R": "7295409871"
+          }
+        ],
+        "more": false,
+        "pid": 8778414326,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Monitoring a terminated actor yields no_process with the returned reference"
+    },
+    {
+      "duration_ms": 1538,
+      "id": "LM-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "8190362102@'https://n3.elfenbenstornet.se'",
+            "Child": "Child",
+            "Me": "Me",
+            "Parent": "7146987101@'https://n3.elfenbenstornet.se'",
+            "S": "9305918993@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 9305918993,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Child termination leaves its linked parent alive"
+    },
+    {
+      "duration_ms": 1542,
+      "id": "LM-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "C",
+            "CP": "CP",
+            "CR": "4140163984",
+            "Child": "6776695928@'https://n3.elfenbenstornet.se'",
+            "D": "1795115595.7186055",
+            "G": "G",
+            "GP": "GP",
+            "GR": "8364138891",
+            "Grand": "6189550987@'https://n3.elfenbenstornet.se'",
+            "R": "R",
+            "Root": "6842777321@'https://n3.elfenbenstornet.se'",
+            "S": "2137345238@'https://n3.elfenbenstornet.se'",
+            "T": "1795115593.7186055"
+          }
+        ],
+        "more": false,
+        "pid": 2137345238,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A three-generation cascade delivers exact notifications under one deadline"
+    },
+    {
+      "duration_ms": 1469,
+      "id": "LM-006",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Drop": "8028550415",
+            "Flush": "5115713729",
+            "Keep": "6374437875",
+            "Other": "4684215844",
+            "P": "3102487673@'https://n3.elfenbenstornet.se'",
+            "Q": "6425216575@'https://n3.elfenbenstornet.se'",
+            "S": "1732786385@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1732786385,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Demonitor withdrawal and scoped flush preserve unrelated monitors and messages"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T19:13:06.091335+00:00",
+  "suite": "links-monitors-0.1"
+}

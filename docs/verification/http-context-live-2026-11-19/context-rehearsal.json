@@ -1,0 +1,185 @@
+[
+  {
+    "label": "n2-fresh-http-isolated",
+    "status": "pass",
+    "url": "http://127.0.0.1:19752",
+    "observed": {
+      "created": "success([3256083181],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,3256083181),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n3-fresh-http-isolated",
+    "status": "pass",
+    "url": "http://127.0.0.1:19753",
+    "observed": {
+      "created": "success([6076191982],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,6076191982),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n4-fresh-http-isolated",
+    "status": "pass",
+    "url": "http://127.0.0.1:19754",
+    "observed": {
+      "created": "success([9127279487],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,9127279487),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n5-fresh-http-isolated",
+    "status": "pass",
+    "url": "http://127.0.0.1:19752",
+    "observed": {
+      "created": "success([3441577158],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,3441577158),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n2-anonymous-retained-http",
+    "status": "pass",
+    "url": "http://127.0.0.1:19752",
+    "observed": {
+      "created": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "R": "4683147029"
+          }
+        ],
+        "more": false,
+        "pid": 9230485271,
+        "type": "success"
+      },
+      "foreign_yield": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "Missing": "true"
+          }
+        ],
+        "more": false,
+        "pid": 3046107215,
+        "type": "success"
+      },
+      "foreign_cleanup": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 3046107215,
+        "type": "success"
+      },
+      "owner_collect": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 9230485271,
+        "type": "success"
+      }
+    }
+  },
+  {
+    "label": "n3-anonymous-retained-http",
+    "status": "pass",
+    "url": "http://127.0.0.1:19753",
+    "observed": {
+      "created": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "R": "6521694576"
+          }
+        ],
+        "more": false,
+        "pid": 5697340733,
+        "type": "success"
+      },
+      "foreign_yield": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "Missing": "true"
+          }
+        ],
+        "more": false,
+        "pid": 4566844165,
+        "type": "success"
+      },
+      "foreign_cleanup": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 4566844165,
+        "type": "success"
+      },
+      "owner_collect": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 5697340733,
+        "type": "success"
+      }
+    }
+  },
+  {
+    "label": "n4-anonymous-retained-http",
+    "status": "pass",
+    "url": "http://127.0.0.1:19754",
+    "observed": {
+      "created": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "R": "3591513765"
+          }
+        ],
+        "more": false,
+        "pid": 1546465178,
+        "type": "success"
+      },
+      "foreign_yield": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "Missing": "true"
+          }
+        ],
+        "more": false,
+        "pid": 9196252831,
+        "type": "success"
+      },
+      "foreign_cleanup": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 9196252831,
+        "type": "success"
+      },
+      "owner_collect": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 1546465178,
+        "type": "success"
+      }
+    }
+  }
+]
