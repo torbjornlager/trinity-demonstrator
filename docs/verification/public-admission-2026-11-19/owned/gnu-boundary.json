@@ -1,0 +1,31 @@
+{
+  "status": "pass",
+  "requests_per_minute": 2,
+  "burst": 1,
+  "first_three": [
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.012459
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.004992
+    },
+    {
+      "http_status": 429,
+      "body": "N6 is busy. Please retry shortly.\n",
+      "retry_after": "5",
+      "seconds": 0.000204
+    }
+  ],
+  "recovery": {
+    "http_status": 200,
+    "body": "success([passed],false).\n",
+    "retry_after": null,
+    "seconds": 0.020544
+  }
+}

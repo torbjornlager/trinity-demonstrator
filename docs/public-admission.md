@@ -55,3 +55,18 @@ and `runner/admission.py` for bounded throughput measurements. A successful
 finite probe does not prove concurrency, isolation, retained-session or memory
 reclamation properties. Preserve refusals and record each run's configuration,
 count, pacing and runtime provenance.
+
+## Selected live release
+
+[Deployment and verification](verification/public-admission-2026-11-19/REPORT.md)
+records the selected images, source revisions, sustained probes and guarded
+recovery. Frozen production models retain resolved values. To retune one of
+those models, apply a private Compose environment overlay to the selected
+image/model and recreate only the affected service; changing a development
+`.env` file does not rewrite a frozen selection. For N6, update both ingress
+and presenter values so metadata continues to describe the applied policy.
+
+Native SWI's HTTP-IP call budget includes `/toplevel_call` and
+`/toplevel_next`, in addition to `/call`. New-session capacity does not make
+an unpaced prompt stress pack exempt from that budget. Pace independent
+session creation while preserving the timing of reply/abort/halt races.

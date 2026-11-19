@@ -1,0 +1,173 @@
+{
+  "advertised_profile": "isobase",
+  "baseline": "0.1",
+  "candidate": "n1",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 12,
+    "unsupported": 0
+  },
+  "duration_ms": 891,
+  "endpoint": "https://n1.elfenbenstornet.se",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 73,
+      "id": "IB-001",
+      "observation": [
+        {
+          "body": "success([ok],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Deterministic success"
+    },
+    {
+      "duration_ms": 75,
+      "id": "IB-002",
+      "observation": [
+        {
+          "body": "failure.\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Logical failure"
+    },
+    {
+      "duration_ms": 121,
+      "id": "IB-003",
+      "observation": [
+        {
+          "body": "success([a,b],true).\n",
+          "http_status": 200
+        },
+        {
+          "body": "success([c],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Paged enumeration and final-page state"
+    },
+    {
+      "duration_ms": 67,
+      "id": "IB-004",
+      "observation": [
+        {
+          "body": "success([b],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Offset and once stop at the requested slice"
+    },
+    {
+      "duration_ms": 63,
+      "id": "IB-005",
+      "observation": [
+        {
+          "body": "error(baseline_probe).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Uncaught exception is an error answer"
+    },
+    {
+      "duration_ms": 64,
+      "id": "IB-006",
+      "observation": [
+        {
+          "body": "success([a,b],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Supplied source executes in the request"
+    },
+    {
+      "duration_ms": 61,
+      "id": "IB-007",
+      "observation": [
+        {
+          "body": "success([pair(_14062,_14062)],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Prolog template preserves variable sharing"
+    },
+    {
+      "duration_ms": 60,
+      "id": "IB-008",
+      "observation": [
+        {
+          "body": "success([pair(_14062,_14064)],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Distinct template variables stay distinct"
+    },
+    {
+      "duration_ms": 63,
+      "id": "IB-009",
+      "observation": [
+        {
+          "body": "{\"data\": [ {\"X\":\"ok\"} ],\"more\":false,\"type\":\"success\"}",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "JSON response exposes query bindings"
+    },
+    {
+      "duration_ms": 124,
+      "id": "IB-010",
+      "observation": [
+        {
+          "body": "success([ok],false).\n",
+          "http_status": 200
+        },
+        {
+          "body": "{\n  \"data\":\"Unknown procedure: baseline_private/0\",\n  \"details\":\"error(existence_error(procedure,baseline_private/0),_)\",\n  \"type\":\"error\"\n}",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Request source does not leak into the next request"
+    },
+    {
+      "duration_ms": 56,
+      "id": "IB-011",
+      "observation": [
+        {
+          "body": "error(error(permission_error(load,directive,true),context(:(node,/(stateless_source_declarations_only,1)),'stateless source may only declare predicates'))).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Supplied source may not run a goal directive"
+    },
+    {
+      "duration_ms": 61,
+      "id": "IB-012",
+      "observation": [
+        {
+          "body": "success([a],false).\n",
+          "http_status": 200
+        }
+      ],
+      "status": "pass",
+      "title": "Supplied source may declare a dynamic predicate"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T22:52:14.305803+00:00",
+  "suite": "isobase-http-0.1"
+}

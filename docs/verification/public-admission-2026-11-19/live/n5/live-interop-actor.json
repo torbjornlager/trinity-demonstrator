@@ -1,0 +1,81 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "live-n5",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 3,
+    "unsupported": 0
+  },
+  "duration_ms": 6327,
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "peer": "https://n3.elfenbenstornet.se",
+  "results": [
+    {
+      "duration_ms": 2336,
+      "id": "IX-001",
+      "observation": {
+        "data": [
+          {
+            "A": "success(4482907393@'https://n3.elfenbenstornet.se',[a],true)",
+            "B": "success(4482907393@'https://n3.elfenbenstornet.se',[b],false)",
+            "BaselineResult": "passed",
+            "P": "4482907393@'https://n3.elfenbenstornet.se'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 1300876976,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Remote source, synchronous paging and spawn monitor"
+    },
+    {
+      "duration_ms": 1970,
+      "id": "IX-002",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "A",
+            "BaselineResult": "passed",
+            "P": "2720523201@'https://n3.elfenbenstornet.se'",
+            "V": "V"
+          }
+        ],
+        "more": false,
+        "pid": 1563874193,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Canonical asynchronous answers preserve shared variables and quoted atoms"
+    },
+    {
+      "duration_ms": 2021,
+      "id": "IX-003",
+      "observation": {
+        "data": [
+          {
+            "A": "success(5765795298@'https://n3.elfenbenstornet.se',[true],false)",
+            "BaselineResult": "passed",
+            "Other": "1554035910",
+            "P": "5765795298@'https://n3.elfenbenstornet.se'",
+            "S": "1590378847@'https://n5.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1590378847,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Remote calls preserve an unrelated local monitor and message"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T22:55:37.616735+00:00",
+  "suite": "interop-actor-0.1"
+}

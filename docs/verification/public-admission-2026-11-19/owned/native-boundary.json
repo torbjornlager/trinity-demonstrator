@@ -1,0 +1,75 @@
+[
+  {
+    "engine": "swi",
+    "status": "pass",
+    "admission": {
+      "max_call_requests_per_window": 2,
+      "max_inflight_calls": 3,
+      "max_session_spawns_per_window": 120,
+      "max_sessions_per_principal": 16,
+      "max_ws_actors_per_principal": 16,
+      "max_ws_commands_per_window": 1000,
+      "rate_identity": "principal",
+      "rate_window_seconds": 10,
+      "window_policy": "fixed"
+    },
+    "first_three": [
+      {
+        "http_status": 200,
+        "body": "success([passed],false).\n",
+        "retry_after": null
+      },
+      {
+        "http_status": 200,
+        "body": "success([passed],false).\n",
+        "retry_after": null
+      },
+      {
+        "http_status": 200,
+        "body": "error(error(rate_limit_exceeded(anonymous,call_requests,2,10),context(:(node_rate_limits,/(enforce_call_request_rate_limit,1)),'principal exceeded the /call rate limit'))).\n",
+        "retry_after": null
+      }
+    ],
+    "recovery": {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null
+    }
+  },
+  {
+    "engine": "trealla",
+    "status": "pass",
+    "admission": {
+      "window_policy": "fixed",
+      "rate_identity": "principal",
+      "rate_window_seconds": 10,
+      "max_call_requests_per_window": 2,
+      "max_session_spawns_per_window": 120,
+      "max_ws_commands_per_window": 1000,
+      "max_inflight_calls": 4,
+      "max_ws_actors_per_principal": 16
+    },
+    "first_three": [
+      {
+        "http_status": 200,
+        "body": "success([passed],false).\n",
+        "retry_after": null
+      },
+      {
+        "http_status": 200,
+        "body": "success([passed],false).\n",
+        "retry_after": null
+      },
+      {
+        "http_status": 429,
+        "body": "error(rate_limit_exceeded(anon('127.0.0.1'),call_requests,2,10),context(governance_policy,'principal request rate limit exceeded')).\n",
+        "retry_after": "10"
+      }
+    ],
+    "recovery": {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null
+    }
+  }
+]

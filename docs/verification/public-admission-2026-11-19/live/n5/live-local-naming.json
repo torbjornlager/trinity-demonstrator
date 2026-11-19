@@ -1,0 +1,164 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "live-n5",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 12288,
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 2255,
+      "id": "LN-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Found": "2024174540",
+            "From": "From",
+            "Gone": "undefined",
+            "Name": "ln_case_001",
+            "P": "2024174540",
+            "S": "2929961456@'https://n5.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 2929961456,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Registration lookup and named message routing"
+    },
+    {
+      "duration_ms": 2005,
+      "id": "LN-002",
+      "observation": {
+        "data": [
+          {
+            "Absent": "undefined",
+            "Already": "error(permission_error(register,process,2395951495),context(actors:register/2,'ordinary registration conflict'))",
+            "BaselineResult": "passed",
+            "Found": "2395951495",
+            "From": "From",
+            "Name": "ln_case_002",
+            "Other": "ln_case_002_other",
+            "P": "2395951495",
+            "Q": "2226031651",
+            "S": "3141349604@'https://n5.elfenbenstornet.se'",
+            "Taken": "error(permission_error(register,actor_name,ln_case_002),context(actors:register/2,'ordinary registration conflict'))"
+          }
+        ],
+        "more": false,
+        "pid": 3141349604,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Occupied names and already named pids preserve original registrations"
+    },
+    {
+      "duration_ms": 1983,
+      "id": "LN-003",
+      "observation": {
+        "data": [
+          {
+            "Absent": "undefined",
+            "BaselineResult": "passed",
+            "From": "From",
+            "Name": "ln_case_003",
+            "P": "1342103653",
+            "S": "1732878863@'https://n5.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1732878863,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Unregistration is idempotent and leaves the actor running"
+    },
+    {
+      "duration_ms": 2036,
+      "id": "LN-004",
+      "observation": {
+        "data": [
+          {
+            "Absent": "undefined",
+            "BaselineResult": "passed",
+            "Found": "2806693824",
+            "Gone": "undefined",
+            "Name": "ln_case_004",
+            "P": "2598011963",
+            "Q": "2806693824"
+          }
+        ],
+        "more": false,
+        "pid": 2738191964,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Observed local termination removes registration and permits name reuse"
+    },
+    {
+      "duration_ms": 2010,
+      "id": "LN-005",
+      "observation": {
+        "data": [
+          {
+            "Absent": "undefined",
+            "BaselineResult": "passed",
+            "E": "error(existence_error(process,2761157220),context(actors:register/2,'local actor no longer exists'))",
+            "Found": "2497225011",
+            "Name": "ln_case_005",
+            "P": "2761157220",
+            "Q": "2497225011"
+          }
+        ],
+        "more": false,
+        "pid": 2731839404,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Stale local pid registration is rejected without publishing a name"
+    },
+    {
+      "duration_ms": 1997,
+      "id": "LN-006",
+      "observation": {
+        "data": [
+          {
+            "Absent": "undefined",
+            "BaselineResult": "passed",
+            "Children": "[]",
+            "Failed": "Failed",
+            "Failure": "error(domain_error(source_uri,'file:///definitely-missing-local-naming-conformance.pl'),source_policy:fetch_source_uri/2)",
+            "Found": "2829542036",
+            "From": "From",
+            "Gone": "undefined",
+            "Loser": "Loser",
+            "Name": "ln_case_006",
+            "P": "2829542036",
+            "Published": "1766097277",
+            "S": "2218436701@'https://n5.elfenbenstornet.se'",
+            "Sup": "1766097277",
+            "Taken": "error(permission_error(register,actor_name,ln_case_006),context(actors:register/2,'ordinary registration conflict'))"
+          }
+        ],
+        "more": false,
+        "pid": 2218436701,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Named creation rejects occupancy and releases failed startup reservations"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T22:55:25.194595+00:00",
+  "suite": "local-naming-0.1"
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "control": "configured_per_client_one",
+    "status": "pass"
+  },
+  {
+    "control": "configured_global_two",
+    "status": "pass"
+  },
+  {
+    "control": "post_close_recovery",
+    "status": "pass"
+  }
+]

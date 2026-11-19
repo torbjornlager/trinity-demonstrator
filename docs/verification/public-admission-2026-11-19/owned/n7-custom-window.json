@@ -1,0 +1,37 @@
+{
+  "status": "pass",
+  "admission": {
+    "rate_window_seconds": 10,
+    "max_engine_starts_per_window": 2,
+    "max_public_engines": 4,
+    "max_public_engines_per_client": 2,
+    "window_policy": "rolling",
+    "rate_identity": "client_ip"
+  },
+  "first_three": [
+    {
+      "http_status": 200,
+      "body": "success([passed], false).\n",
+      "retry_after": null,
+      "seconds": 0.068255
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed], false).\n",
+      "retry_after": null,
+      "seconds": 0.10632
+    },
+    {
+      "http_status": 429,
+      "body": "{\"type\": \"error\", \"code\": \"rate_limit\", \"data\": \"Public engine start rate reached\"}",
+      "retry_after": "10",
+      "seconds": 0.001707
+    }
+  ],
+  "recovery": {
+    "http_status": 200,
+    "body": "success([passed], false).\n",
+    "retry_after": null,
+    "seconds": 0.102708
+  }
+}

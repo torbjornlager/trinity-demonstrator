@@ -1029,3 +1029,5 @@ The pinned CI runner includes the TEXT tier to prevent a default-mode regression
 [Operator settings](../docs/public-admission.md) cover SWI, Trealla, GNU and
 ECLiPSe, including the 120-entry public preset and separate concurrency bounds.
 Browser-local execution has no server admission limit to configure.
+
+The [live admission verification](../docs/verification/public-admission-2026-11-19/REPORT.md) records the rollout, finite throughput probes and recovery guard.

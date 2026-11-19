@@ -1,0 +1,153 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "swi",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 942,
+  "endpoint": "ws://127.0.0.1:36789/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 158,
+      "id": "TW-001",
+      "observation": {
+        "data": [
+          {
+            "A": "success(9465146349@'http://127.0.0.1:36789',[ok],false)",
+            "BaselineResult": "passed",
+            "E": "error(domain_error(synchronous_toplevel_target,other),context(toplevel_actors:toplevel_call_synch/4,'invalid synchronous toplevel option'))",
+            "P": "9465146349@'http://127.0.0.1:36789'",
+            "S": "2561228329@'http://127.0.0.1:36789'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 2561228329,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Caller targeting and independent query variables"
+    },
+    {
+      "duration_ms": 171,
+      "id": "TW-002",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "success(3576771943@'http://127.0.0.1:36789',[true],false)",
+            "Barrier": "success(3576771943@'http://127.0.0.1:36789',[true],false)",
+            "BaselineResult": "passed",
+            "C": "success(3576771943@'http://127.0.0.1:36789',[true],false)",
+            "D": "success(3576771943@'http://127.0.0.1:36789',[true],false)",
+            "E": "tw_callback",
+            "Me": "Me",
+            "P": "3576771943@'http://127.0.0.1:36789'",
+            "S": "1791917828@'http://127.0.0.1:36789'",
+            "V": "V",
+            "Vs": "[first]"
+          }
+        ],
+        "more": false,
+        "pid": 1791917828,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Timeout outcome and callback bindings failure exceptions and commitment"
+    },
+    {
+      "duration_ms": 171,
+      "id": "TW-003",
+      "observation": {
+        "data": [
+          {
+            "A": "success(4856557978@'http://127.0.0.1:36789',[fresh],false)",
+            "BaselineResult": "passed",
+            "Early": "Early",
+            "First": "success(4856557978@'http://127.0.0.1:36789',[a],true)",
+            "Last": "success(4856557978@'http://127.0.0.1:36789',[c],false)",
+            "Late": "Late",
+            "Me": "Me",
+            "Me2": "Me2",
+            "P": "4856557978@'http://127.0.0.1:36789'",
+            "S": "9339689470@'http://127.0.0.1:36789'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 9339689470,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Late timed-out answer cannot satisfy the next synchronous wait"
+    },
+    {
+      "duration_ms": 169,
+      "id": "TW-004",
+      "observation": {
+        "data": [
+          {
+            "A": "success(9790283677@'http://127.0.0.1:36789',[c,d],false)",
+            "BaselineResult": "passed",
+            "P": "9790283677@'http://127.0.0.1:36789'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 6755652395,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Output mismatch consumes selected slice and continuation advances"
+    },
+    {
+      "duration_ms": 112,
+      "id": "TW-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "toplevel_down(tw_death)",
+            "P": "1933640546@'http://127.0.0.1:36789'",
+            "R": "6961524136"
+          }
+        ],
+        "more": false,
+        "pid": 2293504473,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Termination during wait preserves independent and spawn monitors"
+    },
+    {
+      "duration_ms": 160,
+      "id": "TW-006",
+      "observation": {
+        "data": [
+          {
+            "A": "success(6417411954@'http://127.0.0.1:36789',[sync],false)",
+            "BaselineResult": "passed",
+            "P": "6417411954@'http://127.0.0.1:36789'",
+            "R": "2712306061",
+            "S": "6805198952@'http://127.0.0.1:36789'"
+          }
+        ],
+        "more": false,
+        "pid": 6805198952,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Synchronous wait preserves asynchronous answers and unrelated messages"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T22:41:18.399369+00:00",
+  "suite": "toplevel-waits-0.1"
+}

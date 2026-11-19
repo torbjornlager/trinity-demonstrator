@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "control": "per_client_two",
+      "status": "pass"
+    },
+    {
+      "control": "global_four",
+      "status": "pass"
+    },
+    {
+      "control": "post_close_recovery",
+      "status": "pass"
+    }
+  ],
+  "transient_preparation_capacity_refusals": 1
+}

@@ -1,0 +1,123 @@
+{
+  "suite": "prompt-http-0.1",
+  "status": "fail",
+  "results": [
+    {
+      "id": "PT-004",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-005",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-006",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-007",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-008",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-009",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-010",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-011",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-012",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-013",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-014",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-015",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-016",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-017",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-018",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-019",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-020",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-021",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    },
+    {
+      "id": "PT-022",
+      "engine": "trealla",
+      "status": "fail",
+      "detail": "spawn: HTTP 404 returned b'<html>\\r\\n<head><title>404 Not Found</title></head>\\r\\n<body>\\r\\n<center><h1>404 Not Found</h1></center>\\r\\n<hr><center>nginx/1.30.6</center>\\r\\n</body>\\r\\n</html>\\r\\n'"
+    }
+  ],
+  "minimum_pause_between_session_spawns_seconds": 4,
+  "race_submissions_unchanged": true,
+  "endpoint": "https://n5.elfenbenstornet.se"
+}

@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "all_predecessor_images_restored": true,
+  "all_protected_configuration_restored": true,
+  "causes": [
+    "stale internal exposed-port declaration",
+    "stale N7 Docker socket bind source"
+  ],
+  "fix": "freeze exposed ports and bind sources from actual original snapshot"
+}

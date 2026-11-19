@@ -1,0 +1,108 @@
+[
+  {
+    "label": "http-visitors",
+    "exit_code": 0
+  },
+  {
+    "label": "n1-isobase-http",
+    "exit_code": 0
+  },
+  {
+    "label": "n2-isobase-http",
+    "exit_code": 0
+  },
+  {
+    "label": "n2-private-n4-rpc",
+    "status": "pass"
+  },
+  {
+    "label": "n0-discovery",
+    "status": "pass",
+    "nodes_up": [
+      "n0",
+      "n1",
+      "n2",
+      "n3",
+      "n4",
+      "n5",
+      "n6",
+      "n7"
+    ]
+  },
+  {
+    "label": "n3-actor-core",
+    "exit_code": 0
+  },
+  {
+    "label": "n3-creation-validation",
+    "exit_code": 0
+  },
+  {
+    "label": "n3-receive-callback-context",
+    "exit_code": 0
+  },
+  {
+    "label": "n3-links-monitors",
+    "exit_code": 0
+  },
+  {
+    "label": "n3-uri-atoms",
+    "exit_code": 0
+  },
+  {
+    "label": "n3-local-naming",
+    "exit_code": 0
+  },
+  {
+    "label": "n3-linda",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-actor-core",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-creation-validation",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-receive-callback-context",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-links-monitors",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-uri-atoms",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-local-naming",
+    "exit_code": 0
+  },
+  {
+    "label": "n4-linda",
+    "exit_code": 0
+  },
+  {
+    "label": "n5-n1-source",
+    "status": "pass"
+  },
+  {
+    "label": "n5-n2-n4-rpc",
+    "status": "pass"
+  },
+  {
+    "label": "n7-n1-source",
+    "status": "pass"
+  },
+  {
+    "label": "n7-n2-n4-rpc",
+    "status": "pass"
+  },
+  {
+    "label": "n3-to-n4-actor-interop",
+    "exit_code": 0
+  }
+]

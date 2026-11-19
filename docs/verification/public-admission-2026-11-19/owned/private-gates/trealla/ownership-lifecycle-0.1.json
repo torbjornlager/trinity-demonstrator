@@ -1,0 +1,40 @@
+{
+  "advertised_profile": "actor",
+  "candidate": "trealla-exact-image",
+  "counts": {
+    "fail": 0,
+    "pass": 4,
+    "unsupported": 0
+  },
+  "duration_ms": 984,
+  "results": [
+    {
+      "duration_ms": 353,
+      "id": "OL-001",
+      "status": "pass",
+      "title": "Submitted exit across client ownership is denied and leaves the target responsive"
+    },
+    {
+      "duration_ms": 146,
+      "id": "OL-002",
+      "status": "pass",
+      "title": "Explicit owner termination delivers the independent observer monitor exactly once"
+    },
+    {
+      "duration_ms": 237,
+      "id": "OL-003",
+      "status": "pass",
+      "title": "Owning socket EOF preserves the independent observer monitor for a computing child"
+    },
+    {
+      "duration_ms": 249,
+      "id": "OL-004",
+      "status": "pass",
+      "title": "Owning socket EOF cascades through computing child and grandchild with independent monitors"
+    }
+  ],
+  "schema_version": 1,
+  "started_at": "2026-11-19T22:41:27.677050+00:00",
+  "suite": "ownership-lifecycle-0.1",
+  "ws_url": "ws://127.0.0.1:19755/ws"
+}

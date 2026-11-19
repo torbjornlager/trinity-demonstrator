@@ -1,0 +1,111 @@
+{
+  "status": "pass",
+  "nodes": [
+    {
+      "node": "n1",
+      "status": "pass",
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 2,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "count": 140,
+      "completed_requests_per_minute": 99.94
+    },
+    {
+      "node": "n2",
+      "status": "pass",
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "max_session_spawns_per_window": 120,
+        "max_sessions_per_principal": 16,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "count": 140,
+      "completed_requests_per_minute": 99.94
+    },
+    {
+      "node": "n3",
+      "status": "pass",
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "max_session_spawns_per_window": 120,
+        "max_sessions_per_principal": 16,
+        "max_ws_actors_per_principal": 16,
+        "max_ws_commands_per_window": 400,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "count": 140,
+      "completed_requests_per_minute": 99.94
+    },
+    {
+      "node": "n4",
+      "status": "pass",
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "max_session_spawns_per_window": 120,
+        "max_sessions_per_principal": 16,
+        "max_ws_actors_per_principal": 16,
+        "max_ws_commands_per_window": 400,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "count": 140,
+      "completed_requests_per_minute": 99.93
+    },
+    {
+      "node": "n5",
+      "status": "pass",
+      "admission": {
+        "window_policy": "fixed",
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "max_call_requests_per_window": 120,
+        "max_session_spawns_per_window": 120,
+        "max_ws_commands_per_window": 1000,
+        "max_inflight_calls": 4,
+        "max_ws_actors_per_principal": 16
+      },
+      "count": 140,
+      "completed_requests_per_minute": 99.83
+    },
+    {
+      "node": "n6",
+      "status": "pass",
+      "admission": {
+        "rate_identity": "client_ip",
+        "window_policy": "leaky_bucket",
+        "rate_window_seconds": 60,
+        "requests_per_minute": 120,
+        "burst": 60
+      },
+      "count": 140,
+      "completed_requests_per_minute": 99.96
+    },
+    {
+      "node": "n7",
+      "status": "pass",
+      "admission": {
+        "rate_window_seconds": 60,
+        "max_engine_starts_per_window": 120,
+        "max_public_engines": 4,
+        "max_public_engines_per_client": 2,
+        "window_policy": "rolling",
+        "rate_identity": "client_ip"
+      },
+      "count": 140,
+      "completed_requests_per_minute": 98.47
+    }
+  ],
+  "total_finite_probe_requests": 980
+}

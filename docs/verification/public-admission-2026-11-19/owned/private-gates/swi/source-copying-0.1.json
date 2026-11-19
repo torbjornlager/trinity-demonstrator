@@ -1,0 +1,136 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "swi",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 541,
+  "endpoint": "ws://127.0.0.1:36789/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 71,
+      "id": "SCOPY-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "8688264562@'http://127.0.0.1:36789'",
+            "R": "R",
+            "S": "6499483599@'http://127.0.0.1:36789'"
+          }
+        ],
+        "more": false,
+        "pid": 6499483599,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Primitive guard remains admitted after private source copying"
+    },
+    {
+      "duration_ms": 62,
+      "id": "SCOPY-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "7635105227@'http://127.0.0.1:36789'",
+            "R": "R",
+            "S": "3795283705@'http://127.0.0.1:36789'"
+          }
+        ],
+        "more": false,
+        "pid": 3795283705,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Named guard helper control preserves inferred bindings"
+    },
+    {
+      "duration_ms": 115,
+      "id": "SCOPY-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "3520351673@'http://127.0.0.1:36789'",
+            "P": "7085664977@'http://127.0.0.1:36789'",
+            "S": "3997954137@'http://127.0.0.1:36789'",
+            "WR": "5742757471"
+          }
+        ],
+        "more": false,
+        "pid": 3997954137,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Copied controller inline worker retains backtracking and stop"
+    },
+    {
+      "duration_ms": 115,
+      "id": "SCOPY-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "2339329665@'http://127.0.0.1:36789'",
+            "P": "8867029678@'http://127.0.0.1:36789'",
+            "S": "3406115981@'http://127.0.0.1:36789'",
+            "WR": "6433546530"
+          }
+        ],
+        "more": false,
+        "pid": 3406115981,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Named worker control retains backtracking and stop"
+    },
+    {
+      "duration_ms": 62,
+      "id": "SCOPY-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "7527240867@'http://127.0.0.1:36789'",
+            "R": "R",
+            "S": "8973262694@'http://127.0.0.1:36789'"
+          }
+        ],
+        "more": false,
+        "pid": 8973262694,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Copied receive options retain their list and timeout callback"
+    },
+    {
+      "duration_ms": 115,
+      "id": "SCOPY-006",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "6340664087@'http://127.0.0.1:36789'",
+            "S": "6648907701@'http://127.0.0.1:36789'"
+          }
+        ],
+        "more": false,
+        "pid": 6648907701,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Second-generation copied guards retain private inference and fallback"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-19T22:41:17.819696+00:00",
+  "suite": "source-copying-0.1"
+}

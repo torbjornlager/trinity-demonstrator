@@ -1,0 +1,19 @@
+{
+  "native": "e25b2302017836ff89294999e8fb16f9667cfda6",
+  "shared": "21284ba38fa0583686f3eb49eaa79f09d2328bad",
+  "trealla": "2d5042bb2750b45c640f5bb757567ff50b6f0cb1",
+  "browser": "0d024e5e61b9b87a6abaab60d2b1a6104f4a9215",
+  "eclipse": "31dcdfcdb77f4ea8d8f62aea0a8bb01f3f765c8f",
+  "conformance": "93869044f1d8e1410b0dede95b58ca3f8fa68862",
+  "trealla_overlay_files": [
+    "Deployment/start_node.pl",
+    "README.md",
+    "actors.pl",
+    "http_session_context_tests.pl",
+    "http_sessions.pl",
+    "node.pl",
+    "rpc.pl",
+    "swi_lineage_compat.pl",
+    "tools/test.sh"
+  ]
+}

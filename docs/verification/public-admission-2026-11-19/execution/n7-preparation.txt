@@ -1,0 +1,8 @@
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.022s
+
+OK
+Prepared N7 image inputs: /var/folders/cv/q5t08z852cx4mrj16hgnp_fh0000gp/T/tmpwcklva2h/out
+Prepared N7 image inputs: /var/folders/cv/q5t08z852cx4mrj16hgnp_fh0000gp/T/tmpwcuxqgb3/out
+Prepared N7 image inputs: /var/folders/cv/q5t08z852cx4mrj16hgnp_fh0000gp/T/tmp259rtia3/out

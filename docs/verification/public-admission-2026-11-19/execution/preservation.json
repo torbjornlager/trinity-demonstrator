@@ -1,0 +1,135 @@
+{
+  "status": "pass",
+  "only_allowlisted_admission_environment_updates": true,
+  "other_config_and_resource_bounds_preserved": true,
+  "read_only_payloads_and_caddy_preserved": true,
+  "public_non_rate_settings_unchanged": true,
+  "unrelated_compose_containers_unchanged": true,
+  "targets": [
+    {
+      "container": "web-prolog-hub-n0-1",
+      "project": "web-prolog-hub",
+      "service": "n0",
+      "old_image": "sha256:62db75e5bc66c5bd6176a0277c751783e6f876163cffe38abe1050a2b8f942e5",
+      "candidate_image": "sha256:2c7d440fd9b955829af081c43c87a87da82fb11851e3aa8ab607881ac3f0b6fa",
+      "environment_updates": {}
+    },
+    {
+      "container": "deployment-wp_n1-1",
+      "project": "deployment",
+      "service": "wp_n1",
+      "old_image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "candidate_image": "sha256:2677b279fef4cd33bacf60fabbac138b957c7617271d9cec3deefe31ff6bd8ab",
+      "environment_updates": {
+        "WP_RATE_WINDOW_SECONDS": "60",
+        "WP_MAX_CALLS_PER_WINDOW": "120",
+        "WP_MAX_SPAWNS_PER_WINDOW": "120"
+      }
+    },
+    {
+      "container": "deployment-wp_n2-1",
+      "project": "deployment",
+      "service": "wp_n2",
+      "old_image": "sha256:b234642adf4bb86d2cf3455d4324ab62d276d8fcae8364b0b2e1df0031271590",
+      "candidate_image": "sha256:95ec45f323f584ed54327fa5dd5131a0b1fa22afe652cf6520e4621f33865c4d",
+      "environment_updates": {
+        "WP_RATE_WINDOW_SECONDS": "60",
+        "WP_MAX_CALLS_PER_WINDOW": "120",
+        "WP_MAX_SPAWNS_PER_WINDOW": "120"
+      }
+    },
+    {
+      "container": "deployment-wp_n3-1",
+      "project": "deployment",
+      "service": "wp_n3",
+      "old_image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "candidate_image": "sha256:2677b279fef4cd33bacf60fabbac138b957c7617271d9cec3deefe31ff6bd8ab",
+      "environment_updates": {
+        "WP_RATE_WINDOW_SECONDS": "60",
+        "WP_MAX_CALLS_PER_WINDOW": "120",
+        "WP_MAX_SPAWNS_PER_WINDOW": "120"
+      }
+    },
+    {
+      "container": "deployment-wp_n4-1",
+      "project": "deployment",
+      "service": "wp_n4",
+      "old_image": "sha256:c2bda0196bfa40b78f238400800bace4851a16ee04595541115f06123f96de56",
+      "candidate_image": "sha256:2677b279fef4cd33bacf60fabbac138b957c7617271d9cec3deefe31ff6bd8ab",
+      "environment_updates": {
+        "WP_RATE_WINDOW_SECONDS": "60",
+        "WP_MAX_CALLS_PER_WINDOW": "120",
+        "WP_MAX_SPAWNS_PER_WINDOW": "120"
+      }
+    },
+    {
+      "container": "deployment-wp_admin-1",
+      "project": "deployment",
+      "service": "wp_admin",
+      "old_image": "sha256:61dbf14573a6a7379dc417ab5ef293d0cf746546db35be86277640df42fc9cae",
+      "candidate_image": "sha256:8a348cb59ae75910aa6a9929152a22fc7e13f6e86cad839920687d44d7d04f3d",
+      "environment_updates": {}
+    },
+    {
+      "container": "deployment-wp_n5-1",
+      "project": "deployment",
+      "service": "wp_n5",
+      "old_image": "sha256:ac1061058f10faf9d04bea26558119a3d8741e4398332c53cac7f5771b7d7a53",
+      "candidate_image": "sha256:5ea88e561567d492de549371750d99decaa798079d774962a50e8039c8271aa1",
+      "environment_updates": {
+        "WP_RATE_WINDOW_SECONDS": "60",
+        "WP_MAX_CALLS_PER_WINDOW": "120",
+        "WP_MAX_SPAWNS_PER_WINDOW": "120"
+      }
+    },
+    {
+      "container": "deployment-n5_admission-1",
+      "project": "deployment",
+      "service": "n5_admission",
+      "old_image": "sha256:186ffbfe66181118565452d3a00e1cca338ad2cb8df5a4aa906a9829cefc798b",
+      "candidate_image": "sha256:b879608e34fe5d9179ac1e70983b4a070b330be355882ac66add779ff49bde70",
+      "environment_updates": {
+        "N5_CONNECTIONS_PER_CLIENT": "16",
+        "N5_CONNECTIONS_TOTAL": "32"
+      }
+    },
+    {
+      "container": "trinity-n6-host-wp_n6-1",
+      "project": "trinity-n6-host",
+      "service": "wp_n6",
+      "old_image": "sha256:2b8c04920271e103087b6a958b1f94ab7aac96c3527f02ae64e8b9275e01357a",
+      "candidate_image": "sha256:5d995bc9abc263787fa81227d9579055aba8fbeae4c52120c831c93b8bc9b9d7",
+      "environment_updates": {
+        "N6_ADMISSION_ENABLED": "yes",
+        "N6_CALLS_PER_MINUTE": "120",
+        "N6_CALL_BURST": "60"
+      }
+    },
+    {
+      "container": "trinity-n6-host-n6_admission-1",
+      "project": "trinity-n6-host",
+      "service": "n6_admission",
+      "old_image": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c",
+      "candidate_image": "sha256:57dce2c99c537afa7abd2296e3b74687313e17d0f626b842c44c30846cefb1d8",
+      "environment_updates": {
+        "N6_CALLS_PER_MINUTE": "120",
+        "N6_CALL_BURST": "60",
+        "N6_CONNECTIONS_PER_CLIENT": "16",
+        "N6_CONNECTIONS_TOTAL": "32"
+      }
+    },
+    {
+      "container": "deployment-wp_n7-1",
+      "project": "deployment",
+      "service": "wp_n7",
+      "old_image": "sha256:f927138dd5ca530d1e66ffee4b23fc35278d1c0125b97e6ceb159e690c56df60",
+      "candidate_image": "sha256:2e20ecea6280b7f36162174fd1a2b5b1a9e38e8cac4915f103c4b0324b90b915",
+      "environment_updates": {
+        "N7_PUBLIC_RATE_WINDOW_SECONDS": "60",
+        "N7_PUBLIC_MAX_ENGINE_STARTS": "120",
+        "N7_PUBLIC_MAX_ENGINES": "4",
+        "N7_PUBLIC_MAX_ENGINES_PER_CLIENT": "2"
+      }
+    }
+  ]
+}

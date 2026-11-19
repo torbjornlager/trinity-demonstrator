@@ -1,0 +1,105 @@
+{
+  "suite": "prompt-http-0.1",
+  "status": "fail",
+  "results": [
+    {
+      "id": "PT-004",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-005",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-006",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-007",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-008",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-009",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-010",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-011",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-012",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-013",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-014",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-015",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-016",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-017",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-018",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-019",
+      "engine": "swi",
+      "status": "fail",
+      "detail": "expected prompt for PID 4353270825: {'data': 'Too many /call requests (limit 120 per 60 seconds)', 'details': 'error(rate_limit_exceeded(\"http-ip:[REDACTED]\",call_requests,120,60),_)', 'pid': 4353270825, 'type': 'error'}"
+    },
+    {
+      "id": "PT-020",
+      "engine": "swi",
+      "status": "fail",
+      "detail": "expected prompt for PID 4605212427: {'data': 'Too many /call requests (limit 120 per 60 seconds)', 'details': 'error(rate_limit_exceeded(\"http-ip:[REDACTED]\",call_requests,120,60),_)', 'pid': 4605212427, 'type': 'error'}"
+    },
+    {
+      "id": "PT-021",
+      "engine": "swi",
+      "status": "fail",
+      "detail": "expected success for PID 3701751962: {'data': 'Too many /call requests (limit 120 per 60 seconds)', 'details': 'error(rate_limit_exceeded(\"http-ip:[REDACTED]\",call_requests,120,60),_)', 'pid': 3701751962, 'type': 'error'}"
+    },
+    {
+      "id": "PT-022",
+      "engine": "swi",
+      "status": "fail",
+      "detail": "expected prompt for PID 3436531663: {'data': 'Too many /call requests (limit 120 per 60 seconds)', 'details': 'error(rate_limit_exceeded(\"http-ip:[REDACTED]\",call_requests,120,60),_)', 'pid': 3436531663, 'type': 'error'}"
+    }
+  ]
+}

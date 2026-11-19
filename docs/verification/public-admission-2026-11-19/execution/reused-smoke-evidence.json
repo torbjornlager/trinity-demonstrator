@@ -1,0 +1,22 @@
+{
+  "status": "pass",
+  "source_attempt": "/Users/lager/trinity-demonstrator/.trinity/admission-120-20261119/release-r4",
+  "unchanged_image_services": [
+    "n0",
+    "wp_n1",
+    "wp_n2",
+    "wp_n3",
+    "wp_n4",
+    "wp_admin",
+    "wp_n5",
+    "n5_admission",
+    "n6_admission",
+    "wp_n7"
+  ],
+  "reused": [
+    "broad SWI/Trealla smoke",
+    "N7 naming and bidirectional interoperation",
+    "76 HTTP prompt cases"
+  ],
+  "reason": "Only N6 presenter copy destination changed; other candidate images byte-identical. Fresh context, critical exercise and all seven sustained checks follow."
+}

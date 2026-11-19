@@ -1,0 +1,68 @@
+{
+  "status": "pass",
+  "images": [
+    {
+      "service": "n0",
+      "candidate_image": "sha256:2c7d440fd9b955829af081c43c87a87da82fb11851e3aa8ab607881ac3f0b6fa",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n1",
+      "candidate_image": "sha256:2677b279fef4cd33bacf60fabbac138b957c7617271d9cec3deefe31ff6bd8ab",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n2",
+      "candidate_image": "sha256:95ec45f323f584ed54327fa5dd5131a0b1fa22afe652cf6520e4621f33865c4d",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_admin",
+      "candidate_image": "sha256:8a348cb59ae75910aa6a9929152a22fc7e13f6e86cad839920687d44d7d04f3d",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n5",
+      "candidate_image": "sha256:5ea88e561567d492de549371750d99decaa798079d774962a50e8039c8271aa1",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "2636d91b4208b76e3b740255dd4139c9e0733ddc9be371ca7295c9d9ff375d79",
+      "source_validation": "pass"
+    },
+    {
+      "service": "n5_admission",
+      "candidate_image": "sha256:b879608e34fe5d9179ac1e70983b4a070b330be355882ac66add779ff49bde70",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "aa3567ae5f992fb993edd89158e1fb1d2d9990e10676c536469221846139e974",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n6",
+      "candidate_image": "sha256:5d995bc9abc263787fa81227d9579055aba8fbeae4c52120c831c93b8bc9b9d7",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "2c40a0d89542bb836e503a029c0721ea70829237cf83f0e576aaee897ac67f76",
+      "source_validation": "pass"
+    },
+    {
+      "service": "n6_admission",
+      "candidate_image": "sha256:57dce2c99c537afa7abd2296e3b74687313e17d0f626b842c44c30846cefb1d8",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "aa3567ae5f992fb993edd89158e1fb1d2d9990e10676c536469221846139e974",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n7",
+      "candidate_image": "sha256:2e20ecea6280b7f36162174fd1a2b5b1a9e38e8cac4915f103c4b0324b90b915",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "3811c241155d04f96ff0bf66adb8934e0880084f5b4a44caa1d1c0c7827c5758",
+      "source_validation": "pass"
+    }
+  ]
+}
