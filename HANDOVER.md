@@ -1,5 +1,17 @@
 # Trinity demonstrator: project and operations handover
 
+## Trealla naming pin — 19 November 2026
+
+The development dependency now selects `trealla-port`
+`6041ea36bfeec553f9888b770cb47e7759c2c9cb`. Ordinary actor names and startup
+reservations are client-context scoped, matching SWI; published services remain
+node-wide. The engine remains Trealla 3.14.20 at its existing exact pin.
+The [shared naming qualification](https://github.com/torbjornlager/trinity-conformance/blob/2bbf2b522d77204453739df02665852a7036d83e/reports/2026-11-19-client-naming/REPORT.md)
+records 8/8 on SWI, patched Trealla and ECLiPSe, plus seven applicable checks in
+each browser mode. All 106 native unit groups and 69 interoperability groups
+passed. This pin commit does not itself select a live image; the live SWI image
+selection and native SWI dependency below remain unchanged.
+
 ## Live SWI deployment — 19 November 2026
 
 N0–N4 and the local admin node now run **SWI-Prolog 11.0.0** with native
