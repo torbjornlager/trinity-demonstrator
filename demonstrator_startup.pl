@@ -39,17 +39,17 @@ configure_native :-
     directory_file_path(Config.native_root,prolog,Lib),
     asserta(user:file_search_path(library,Lib)).
 
-% The receive adapter needs the protected-wait fix shipped in 10.1.19.
-% Reject older releases before loading any actor code (which can hang).
+% SWI-Prolog 11 is the supported native baseline, including the protected-wait
+% fix and security fixes. Reject older engines before loading actor code.
 check_runtime :-
     current_prolog_flag(version, Version),
     current_prolog_flag(threads, Threaded),
     require_runtime(Version, Threaded).
 
 require_runtime(Version, true) :-
-    Version >= 100119,
+    Version >= 110000,
     !.
 require_runtime(Version, Threaded) :-
     throw(error(domain_error(supported_swi_runtime, runtime(Version, Threaded)),
                 context(configure_native/0,
-                        'Threaded SWI-Prolog 10.1.19 or newer is required (protected-wait fix); invoke a supported swipl executable or set SWIPL for tools/test.sh'))).
+                        'Threaded SWI-Prolog 11.0.0 or newer is required (native runtime baseline); invoke a supported swipl executable or set SWIPL for tools/test.sh'))).

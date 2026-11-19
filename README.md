@@ -70,16 +70,14 @@ record.
 
 ## Running
 
-Use a verified threaded SWI build containing the protected-wait fix
-[`09b6299`](https://github.com/SWI-Prolog/swipl-devel/commit/09b6299f696574c9230f23e53b1ab041a942b6f3),
-as required by the receive adapter. The official **10.1.19** release includes
-this fix and passes the native checkpoint recorded below. The official 10.1.18
-package predates it; custom builds that report 10.1.18 need source/provenance
-verification. Demonstrator startup and tests conservatively require a threaded
-**10.1.19 or newer** executable and reject older version numbers before loading
-the runtime. Use `SWIPL=/path/to/swipl` to select it for tests (invoke that
-executable directly for `load.pl` or `Deployment/start_node.pl`). Setup also
-needs Python 3 and Git. Nothing is downloaded or installed by these commands.
+Use threaded **SWI-Prolog 11.0.0 or newer** for native startup and tests.
+The official 11.0.0 stable release includes the receive adapter's protected-wait
+fix and the current security fixes. Startup rejects older or unthreaded engines
+before loading the runtime. Use `SWIPL=/path/to/swipl` to select it for tests
+(invoke that executable directly for `load.pl` or `Deployment/start_node.pl`).
+CI and container builds pin 11.0.0 with verified checksums. The browser WASM
+engine remains separately pinned to 10.1.19. Setup also needs Python 3 and Git.
+Nothing is downloaded or installed by the setup and startup commands below.
 
 Each local test tier has a 360-second process-group watchdog, including the
 whole WASM tier. Override it with `TEST_TIER_TIMEOUT_SECONDS=600` when needed;
@@ -143,7 +141,7 @@ pull requests and manual runs. The main job runs the dependency's native and
 external-asset integration tiers once, this repository's application and consumer tests,
 startup/pin/packaging regressions, a module-origin audit and browser checks. The
 separate WASM job provides independent browser-runtime feedback. Both use the
-checksum-pinned official SWI-Prolog 10.1.19 release and Node.js 22.23.4.
+checksum-pinned official SWI-Prolog 11.0.0 release and Node.js 22.23.4.
 
 Checks run in fresh processes with bounded process-group watchdogs. Logs and results
 are uploaded even after failure. A private native repository requires the existing

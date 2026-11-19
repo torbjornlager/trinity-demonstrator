@@ -46,14 +46,16 @@ class DefaultStartup(unittest.TestCase):
                 self.assertEqual(r.returncode,0,r.stderr);self.assertIn('Configuration OK',r.stdout)
     def test_runtime_version_and_threads_gate(self):
         for version,threads,accepted in [(100103,'true',False),(100118,'true',False),
-                                          (100119,'true',True),(100200,'true',True),
-                                          (100119,'false',False)]:
+                                          (100119,'true',False),(100200,'true',False),
+                                          (100121,'true',False),(110000,'true',True),
+                                          (110001,'true',True),(110100,'true',True),
+                                          (110000,'false',False)]:
             with self.subTest(version=version,threads=threads):
                 goal=(f'catch(demonstrator_startup:require_runtime({version},{threads}),'
                       'E,(print_message(error,E),halt(2)))')
                 r=self.run_swi(ROOT/'demonstrator_startup.pl',goal)
                 self.assertEqual(r.returncode,0 if accepted else 2,r.stderr)
-                if not accepted:self.assertIn('10.1.19',r.stderr)
+                if not accepted:self.assertIn('11.0.0',r.stderr)
     def test_public_url_validation_on_check_and_startup_paths(self):
         self.setup()
         for url in ['node.example.com','//node.example.com','ftp://node.example.com',

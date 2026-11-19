@@ -1,0 +1,209 @@
+[
+  {
+    "label": "origin-audit",
+    "exit_code": 0,
+    "seconds": 0.351,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "LINT",
+    "exit_code": 0,
+    "seconds": 0.4,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "TEXT",
+    "exit_code": 0,
+    "seconds": 0.68,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T0",
+    "exit_code": 0,
+    "seconds": 7.575,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1_NATIVE",
+    "exit_code": 0,
+    "seconds": 0.876,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T2",
+    "exit_code": 0,
+    "seconds": 6.946,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3_NATIVE",
+    "exit_code": 0,
+    "seconds": 37.49,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4_NATIVE",
+    "exit_code": 0,
+    "seconds": 50.653,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T5",
+    "exit_code": 0,
+    "seconds": 1.381,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T1_INTEGRATION",
+    "exit_code": 0,
+    "seconds": 0.512,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T3_INTEGRATION",
+    "exit_code": 0,
+    "seconds": 4.512,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "T4_INTEGRATION",
+    "exit_code": 0,
+    "seconds": 1.819,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-DEMONSTRATOR",
+    "exit_code": 0,
+    "seconds": 0.732,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-SERVICE_TEXT",
+    "exit_code": 0,
+    "seconds": 0.829,
+    "watchdog_seconds": 360,
+    "initial_exit_code": 1,
+    "rerun_command": "SWIPL=/usr/local/bin/swipl bash tools/test.sh SERVICE_TEXT",
+    "note": "Focused rerun passed after correcting obsolete dict assertions to the existing portable JSON contract."
+  },
+  {
+    "label": "demonstrator-LINDA",
+    "exit_code": 0,
+    "seconds": 0.785,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-MODEL",
+    "exit_code": 0,
+    "seconds": 0.716,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-MODEL_SXML",
+    "exit_code": 0,
+    "seconds": 0.785,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "demonstrator-JEV",
+    "exit_code": 0,
+    "seconds": 2.51,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "default-startup-regressions",
+    "exit_code": 0,
+    "seconds": 21.417,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "pin-regressions",
+    "exit_code": 0,
+    "seconds": 3.409,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "browser-pin-regressions",
+    "exit_code": 0,
+    "seconds": 0.561,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "trealla-pin-regressions",
+    "exit_code": 0,
+    "seconds": 0.884,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "static-distribution-regressions",
+    "exit_code": 0,
+    "seconds": 0.876,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "https-sso-probe-regressions",
+    "exit_code": 0,
+    "seconds": 0.237,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "host-url-regressions",
+    "exit_code": 0,
+    "seconds": 0.185,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "cross-origin-native-integration",
+    "exit_code": 0,
+    "seconds": 4.778,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "portal-runtime-regressions",
+    "exit_code": 0,
+    "seconds": 0.078,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "discovery-regressions",
+    "exit_code": 0,
+    "seconds": 1.812,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "ci-runner-regressions",
+    "exit_code": 0,
+    "seconds": 0.233,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "packaging-regressions",
+    "exit_code": 0,
+    "seconds": 0.298,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "watchdog-regressions",
+    "exit_code": 0,
+    "seconds": 2.595,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "fetch-regressions",
+    "exit_code": 0,
+    "seconds": 0.508,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "browser-equivalence",
+    "exit_code": 0,
+    "seconds": 0.075,
+    "watchdog_seconds": 360
+  },
+  {
+    "label": "WASM",
+    "exit_code": 0,
+    "seconds": 184.088,
+    "watchdog_seconds": 360
+  }
+]

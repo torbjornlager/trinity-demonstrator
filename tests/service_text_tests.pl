@@ -1,6 +1,7 @@
 /* Mock-only portable/native application boundary regressions. */
 :- ['../load.pl'].
 :- use_module('../examples/example_text').
+:- use_module('../examples/portable_json_swi', [portable_json_object/1, portable_json_get/3]).
 :- use_module('../examples/services/model_service',[]).
 :- use_module('../examples/services/jev_service',[]).
 :- use_module('../examples/jev/jev',[]).
@@ -169,9 +170,15 @@ test(public_model_chart_uses_selected_text_mode) :-
 jev_text_check(Representation) :-
     input_text(Representation,Input),jev_service:jev_deployment_observation(Input,Result),
     Result=observation(choice(affirm,_,1.0),score(1,Legend,_,0.75),noul(0.2),provenance(Raw)),
-    selected("Low",Low),selected("Hög",High),assertion(Legend.'0'==Low),assertion(Legend.'1'==High),
-    assertion(Raw.extension.empty_text==""),assertion(Raw.extension.empty_array==[]),
-    assertion(Raw.extension.unicode=="😀"),assertion(Raw.extension.flags==[true,false,null]),
+    % The owner service returns portable JSON on both input text paths.
+    assertion(portable_json_object(Legend)),assertion(portable_json_object(Raw)),
+    assertion(portable_json_get(Legend,'0',string([76,111,119]))),
+    assertion(portable_json_get(Legend,'1',string([72,246,103]))),
+    portable_json_get(Raw,extension,Extension),
+    assertion(portable_json_get(Extension,empty_text,string([]))),
+    assertion(portable_json_get(Extension,empty_array,[])),
+    assertion(portable_json_get(Extension,unicode,string([128512]))),
+    assertion(portable_json_get(Extension,flags,[@(true),@(false),@(null)])),
     text_seen(jev,Payload),assertion(Payload.state.message=="hé😀"),
     assertion(string(Payload.state.message)),assertion(string(Payload.questions.intent.instructions)),
     assertion(string(Payload.questions.intent.criteria.affirm)),

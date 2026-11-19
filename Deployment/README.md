@@ -32,7 +32,7 @@ Both SWI Dockerfiles fetch the exact commit from `dependencies/swi-prolog-node.j
 validate it, and assemble the browser payloads before checking node startup.
 Python 3 and Git remain available in the image for startup validation. There is
 no in-tree native implementation or legacy build mode. SWI-Prolog is pinned to
-10.1.19, which includes the required protected-wait fix.
+11.0.0 stable, which includes the protected-wait and current security fixes.
 Setup and startup also require the browser package's schema provenance to match
 the native repository and revision, and its schema bytes to match the native
 schema hash. Update both dependency pins together when moving the native pin.

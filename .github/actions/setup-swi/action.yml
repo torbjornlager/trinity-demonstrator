@@ -1,5 +1,5 @@
 name: Set up verified SWI-Prolog release
-description: Build official SWI-Prolog 10.1.19 in the disposable runner directory
+description: Build official SWI-Prolog 11.0.0 in the disposable runner directory
 runs:
   using: composite
   steps:
@@ -14,13 +14,13 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        version=10.1.19
-        sha256=3b4128b8bdfa2b9778ee9b29163872b1e414ca0f3117a32c286decfe246b7e6a
+        version=11.0.0
+        sha256=64b9e2b8a862ee56dd54cf6820775111afc87310511c8f03f6fd978614e37c33
         work="$RUNNER_TEMP/swi-release-$version"
         prefix="$work/install"
         mkdir -p "$work/source"
         curl --fail --location --retry 3 \
-          "https://www.swi-prolog.org/download/devel/src/swipl-$version.tar.gz" \
+          "https://www.swi-prolog.org/download/stable/src/swipl-$version.tar.gz" \
           --output "$work/source.tar.gz"
         echo "$sha256  $work/source.tar.gz" | sha256sum --check --strict
         tar -xzf "$work/source.tar.gz" -C "$work/source" --strip-components=1
@@ -32,6 +32,6 @@ runs:
         cmake --install "$work/build"
         "$prefix/bin/swipl" --version
         "$prefix/bin/swipl" -f none -q -g \
-          "current_prolog_flag(version_data,swi(10,1,19,_)),use_module(library(pcre)),use_module(library(sgml)),use_module(library(http/http_open)),use_module(library(ssl)),use_module(library(crypto)),halt"
+          "current_prolog_flag(version_data,swi(11,0,0,_)),use_module(library(pcre)),use_module(library(sgml)),use_module(library(http/http_open)),use_module(library(ssl)),use_module(library(crypto)),halt"
         echo "$prefix/bin" >> "$GITHUB_PATH"
         echo "SWIPL=$prefix/bin/swipl" >> "$GITHUB_ENV"

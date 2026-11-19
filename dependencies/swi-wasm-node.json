@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/torbjornlager/swi-wasm-node.git",
-  "revision": "a2f4fbcd81337375b2dbc09014dfe3d31d1c523e",
+  "revision": "0363b38b3d4939a53f62a57b23fbc4e73997e79f",
   "version": "0.1.0",
-  "manifest_sha256": "b53302c6c7494a8a76eea10fdbc80621c29b299b61cbb3ebc8a91153e5460a72"
+  "manifest_sha256": "00fb7161d9a61968da6238ebf6630416ab51ea25eeed93953879c2349ef0435a"
 }

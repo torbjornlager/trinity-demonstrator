@@ -1,5 +1,18 @@
 # Trinity demonstrator: project and operations handover
 
+## Native SWI baseline update — 19 November 2026
+
+The development checkout now selects native `swi-prolog-node` commit
+`26e1ce7d712afafe440e3f87388baec4490232ec` and requires threaded SWI-Prolog
+11.0.0 or newer. CI and the two native SWI Dockerfiles pin 11.0.0 with verified
+source/archive and image-index checksums. The browser package's schema provenance
+is aligned through companion commit `0363b38b3d4939a53f62a57b23fbc4e73997e79f`;
+its schema bytes and WASM engine (10.1.19) are unchanged.
+See the [upgrade verification](docs/verification/swi-11-upgrade-2026-11-19/REPORT.md)
+for the test results. These source updates do not rebuild or restart public
+services. Older engine/version inventories below remain historical deployment
+records; current local native startup requires 11.0.0.
+
 ## Current N7 management: Docker Compose — 16 November 2026
 
 The public N7 adapter now runs as `deployment-wp_n7-1`, service `wp_n7` in the
