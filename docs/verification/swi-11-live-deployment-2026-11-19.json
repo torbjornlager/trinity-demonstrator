@@ -1,0 +1,390 @@
+{
+  "date": "2026-11-19",
+  "status": "verified",
+  "completed_utc": "2026-11-19T12:39:16.542957+00:00",
+  "preparation": "/Users/lager/trinity-demonstrator/.trinity/live-swi11-20261119-release",
+  "ci": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44520621269",
+  "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+  "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+  "browser_revision": "0363b38b3d4939a53f62a57b23fbc4e73997e79f",
+  "method": "Replace the full SWI engine tree from the digest-pinned official ARM64 11.0.0 image and overlay committed native/demonstrator/browser inputs onto each captured predecessor, retaining Debian and owner payloads.",
+  "targets": [
+    {
+      "node": "n0",
+      "container": "web-prolog-hub-n0-1",
+      "container_id": "5466e39608e55407401ceb46c9aa9ecacb842ed98a082da9d7b2542e8b92c32d",
+      "image": "sha256:316c29ed9430e18f1bd54f2fc03e577e93f5c407f4776109f80e08cfc0d246db",
+      "previous_image": "sha256:d8bd59e97c01a30fd2919a9fb3afdd4f2b073388755127a416ea622d436a63ab",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux",
+      "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+      "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+      "running": true
+    },
+    {
+      "node": "n1",
+      "container": "deployment-wp_n1-1",
+      "container_id": "8986ddb91d460d4f243d1cd3e75fa67cd204fdf269a6ecf5f0ff150cea5d0f44",
+      "image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b",
+      "previous_image": "sha256:eef9b4daf80d45b2923da0199b96044c41358b96c11655438ab9387e646a7bf1",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux",
+      "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+      "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+      "running": true
+    },
+    {
+      "node": "n2",
+      "container": "deployment-wp_n2-1",
+      "container_id": "097a0b857692bdd3c9b90df6864ce30c6acabf530612b68c4811214dd08e7435",
+      "image": "sha256:46a56b757a4bfecfbcfd16995eed77ca41ff6980defeacf5eeb3b60fd72682b9",
+      "previous_image": "sha256:abcad06e961109e4a8fe4bc600a0a7862f8894eec84bb211f388f8a11de7904b",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux",
+      "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+      "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+      "running": true
+    },
+    {
+      "node": "n3",
+      "container": "deployment-wp_n3-1",
+      "container_id": "e60bd9d25d783df801ce88b6e181ae797a4f5240112f7e5709dd014a309a8762",
+      "image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b",
+      "previous_image": "sha256:eef9b4daf80d45b2923da0199b96044c41358b96c11655438ab9387e646a7bf1",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux",
+      "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+      "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+      "running": true
+    },
+    {
+      "node": "n4",
+      "container": "deployment-wp_n4-1",
+      "container_id": "a3a0a8e75d0972507e8fbaa8f16b04b1fd08724088bea17c3b143c705aae3350",
+      "image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b",
+      "previous_image": "sha256:eef9b4daf80d45b2923da0199b96044c41358b96c11655438ab9387e646a7bf1",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux",
+      "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+      "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+      "running": true
+    },
+    {
+      "node": "admin",
+      "container": "deployment-wp_admin-1",
+      "container_id": "1be53fe55d3986a49558108209bb35fe7b3164e1c93d92c456c766de96ea3bfa",
+      "image": "sha256:2b51247c24433e8c50250d29f7b4a72787f1f49db0d9bc1a2c0680e443ac59c7",
+      "previous_image": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220",
+      "engine": "SWI-Prolog version 11.0.0 for aarch64-linux",
+      "shared_revision": "dc66d8c21165ee3cd50531a39c885482bbcbd44b",
+      "native_revision": "26e1ce7d712afafe440e3f87388baec4490232ec",
+      "running": true
+    }
+  ],
+  "preserved_components": [
+    {
+      "container": "deployment-wp_n7-1",
+      "container_id": "522879634e4624775f6d5de3087eed9661221e0a762540b89f12e10b8a795f43",
+      "image": "sha256:f927138dd5ca530d1e66ffee4b23fc35278d1c0125b97e6ceb159e690c56df60"
+    },
+    {
+      "container": "deployment-wp_n5-1",
+      "container_id": "0e0b1515d4c641c1c893d64fb689e0db58d2dd814513c88ce30a34917083df35",
+      "image": "sha256:58081de1a717f71b5d326a547ce6f1a179c296c1042eebf9b29c79c00bc710d6"
+    },
+    {
+      "container": "trinity-n6-host-wp_n6-1",
+      "container_id": "733afbcdaacda0c58f2bc578cbd2f8fa5f043e2a62bf778b9a0736d3f48f088c",
+      "image": "sha256:2b8c04920271e103087b6a958b1f94ab7aac96c3527f02ae64e8b9275e01357a"
+    },
+    {
+      "container": "deployment-caddy-1",
+      "container_id": "56591dbdf62bb68039c2260707a2264691be98eee207b8cbdf25e775d8bf681c",
+      "image": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd"
+    },
+    {
+      "container": "trinity-n6-host-n6_assets-1",
+      "container_id": "07be1327c6d203e7c9738bb1df9ae7c4e7b0dfc93fccb3e91e9837caa2ea167c",
+      "image": "sha256:9573abb39aa3e9e8de550316906d5f7d5d611432f9061ecd709482b53480b508"
+    },
+    {
+      "container": "deployment-n5_admission-1",
+      "container_id": "bbfbbe7a358cb3215f11976c57d2becf2f5bd2f24de9a4cefb68661ef178c6be",
+      "image": "sha256:186ffbfe66181118565452d3a00e1cca338ad2cb8df5a4aa906a9829cefc798b"
+    },
+    {
+      "container": "trinity-n6-local-wp_n6-1",
+      "container_id": "f349e68e01268b32cc7a89efb8ba0cb6c8d9fbc6eee82bee030ce1e4c629eda3",
+      "image": "sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225"
+    },
+    {
+      "container": "trinity-n6-local-n6_hub-1",
+      "container_id": "67adf02108db24a145bf0f499847378e28caca5cbe6ba38ebc4d76d28ad2a5d6",
+      "image": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220"
+    },
+    {
+      "container": "trinity-n6-local-n6_assets-1",
+      "container_id": "ca92a3b7685a37770f627f3ab1989d84eb0240d724de9b111bc653bea2f5ba9b",
+      "image": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220"
+    },
+    {
+      "container": "trinity-n7-https-oauth2_n7-1",
+      "container_id": "e50eafe51cdf5d9cc425f08d8274dbdfef8083de6cec8659357be717879a471f",
+      "image": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d"
+    },
+    {
+      "container": "trinity-n6-host-n6_admission-1",
+      "container_id": "53ead986fb0b70f14deaaa21ba9b923f3edf8fb0e003591c3ccb8f7607de5e8c",
+      "image": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c"
+    },
+    {
+      "container": "deployment-oauth2_n5-1",
+      "container_id": "d79cce1e5382d0999927bf5dd3b1979ddaa0d6cfc7bdc153c436b79158ec8e2a",
+      "image": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d"
+    }
+  ],
+  "checks": {
+    "arm64_native_suite": "pass",
+    "rehearsal_profiles": "pass",
+    "rehearsal_n2_n4_rpc": "pass",
+    "injected_failed_health_rollback": "pass",
+    "explicit_rollback": "pass",
+    "fixture_state_retention": "pass",
+    "engine_bytes": {
+      "reference": "swipl:11.0.0@sha256:1296dcde9f7cfe93a21e8ad86c6ee2962b56bc6189622f02e27f2543453fee1c",
+      "files": 1536,
+      "inventory_sha256": "1fa2cae60ba67a14e7786a6ff517af8cfd3ae05f3ce06f30495e2f41710a2593",
+      "results": [
+        {
+          "service": "n0",
+          "matches_official_engine": true
+        },
+        {
+          "service": "wp_n1",
+          "matches_official_engine": true
+        },
+        {
+          "service": "wp_n2",
+          "matches_official_engine": true
+        },
+        {
+          "service": "wp_n3",
+          "matches_official_engine": true
+        },
+        {
+          "service": "wp_n4",
+          "matches_official_engine": true
+        },
+        {
+          "service": "wp_admin",
+          "matches_official_engine": true
+        }
+      ]
+    },
+    "smoke_groups": [
+      {
+        "label": "http-visitors",
+        "exit_code": 0
+      },
+      {
+        "label": "n1-isobase-http",
+        "exit_code": 0
+      },
+      {
+        "label": "n2-isobase-http",
+        "exit_code": 0
+      },
+      {
+        "label": "n2-private-n4-rpc",
+        "status": "pass"
+      },
+      {
+        "label": "n0-discovery",
+        "status": "pass",
+        "nodes_up": [
+          "n0",
+          "n1",
+          "n2",
+          "n3",
+          "n4",
+          "n5",
+          "n6",
+          "n7"
+        ]
+      },
+      {
+        "label": "n3-actor-core",
+        "exit_code": 0
+      },
+      {
+        "label": "n3-creation-validation",
+        "exit_code": 0
+      },
+      {
+        "label": "n3-receive-callback-context",
+        "exit_code": 0
+      },
+      {
+        "label": "n3-links-monitors",
+        "exit_code": 0
+      },
+      {
+        "label": "n3-uri-atoms",
+        "exit_code": 0
+      },
+      {
+        "label": "n3-linda",
+        "exit_code": 0
+      },
+      {
+        "label": "n4-actor-core",
+        "exit_code": 0
+      },
+      {
+        "label": "n4-creation-validation",
+        "exit_code": 0
+      },
+      {
+        "label": "n4-receive-callback-context",
+        "exit_code": 0
+      },
+      {
+        "label": "n4-links-monitors",
+        "exit_code": 0
+      },
+      {
+        "label": "n4-uri-atoms",
+        "exit_code": 0
+      },
+      {
+        "label": "n4-linda",
+        "exit_code": 0
+      },
+      {
+        "label": "n5-n1-source",
+        "status": "pass"
+      },
+      {
+        "label": "n5-n2-n4-rpc",
+        "status": "pass"
+      },
+      {
+        "label": "n7-n1-source",
+        "status": "pass"
+      },
+      {
+        "label": "n7-n2-n4-rpc",
+        "status": "pass"
+      },
+      {
+        "label": "n3-to-n4-actor-interop",
+        "exit_code": 0
+      }
+    ],
+    "conformance_suites": [
+      {
+        "report": "n1-isobase-http.json",
+        "counts": {
+          "pass": 12
+        }
+      },
+      {
+        "report": "n2-isobase-http.json",
+        "counts": {
+          "pass": 12
+        }
+      },
+      {
+        "report": "n3-actor-core.json",
+        "counts": {
+          "pass": 7
+        }
+      },
+      {
+        "report": "n3-creation-validation.json",
+        "counts": {
+          "pass": 6
+        }
+      },
+      {
+        "report": "n3-links-monitors.json",
+        "counts": {
+          "pass": 6
+        }
+      },
+      {
+        "report": "n3-receive-callback-context.json",
+        "counts": {
+          "pass": 12
+        }
+      },
+      {
+        "report": "n3-to-n4-actor-interop.json",
+        "counts": {
+          "pass": 3
+        }
+      },
+      {
+        "report": "n3-uri-atoms.json",
+        "counts": {
+          "pass": 10
+        }
+      },
+      {
+        "report": "n4-actor-core.json",
+        "counts": {
+          "pass": 7
+        }
+      },
+      {
+        "report": "n4-creation-validation.json",
+        "counts": {
+          "pass": 6
+        }
+      },
+      {
+        "report": "n4-links-monitors.json",
+        "counts": {
+          "pass": 6
+        }
+      },
+      {
+        "report": "n4-receive-callback-context.json",
+        "counts": {
+          "pass": 12
+        }
+      },
+      {
+        "report": "n4-uri-atoms.json",
+        "counts": {
+          "pass": 10
+        }
+      }
+    ],
+    "conformance_passed": 109,
+    "conformance_failed": 0,
+    "config_environment_commands_mounts_and_security": "preserved",
+    "readonly_peer_payloads_and_credentials": "unchanged",
+    "caddy_container_and_configuration": "unchanged",
+    "owned_rehearsal_containers_removed": true,
+    "production_and_fixture_volumes_retained": true
+  },
+  "selected_models_pointer": "/Users/lager/trinity-demonstrator/.trinity/live-swi-current.json",
+  "rollback_command": "python3 /Users/lager/trinity-demonstrator/.trinity/live-swi11-20261119-release/rollback.py",
+  "operator_hashes": {
+    "deploy.py": "6908f01e46498eb0fcdaac2f01c6829f712282675a7023bc28e526164011d635",
+    "smoke.py": "5b5d3b9d04e499bc14183acd32d714a9e9f67d75c04a3855d2e0522069958e84",
+    "selection.py": "b843adc6a56e6c1c9394c0769692ee0b4b7ca8d5d1c5cd57fefc1904788c895c",
+    "rollback.py": "f7aacef9dc7a5eb1a7aeb2b0315e7a796df0ef478268250e1d5d4c8333c05947",
+    "seal.json": "7eff89ad268ab333807f656446ee239268465ff63a8bfe30897343c6e07f6a0b"
+  },
+  "recovered_attempts": [
+    {
+      "preparation": "/Users/lager/trinity-demonstrator/.trinity/live-swi11-20261119",
+      "issue": "Stale static admin IP in the legacy stored model conflicted with live N4. Restored the prior admin image using the actual dynamic network configuration; public nodes were not changed in that attempt."
+    },
+    {
+      "preparation": "/Users/lager/trinity-demonstrator/.trinity/live-swi11-20261119-network-fix",
+      "issue": "New smoke script treated N2 JSON bindings as a flat value list. The automatic rollback restored all six predecessors. Corrected the harness and validated all checks before the final cutover."
+    },
+    {
+      "preparation": "/Users/lager/trinity-demonstrator/.trinity/live-swi11-20261119-final",
+      "issue": "Preflight found an unsupported rpc/3 template option in the new harness. Corrected it before the final cutover; production implementation code was unchanged."
+    }
+  ]
+}

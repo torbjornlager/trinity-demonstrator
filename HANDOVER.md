@@ -1,5 +1,32 @@
 # Trinity demonstrator: project and operations handover
 
+## Live SWI deployment — 19 November 2026
+
+N0–N4 and the local admin node now run **SWI-Prolog 11.0.0** with native
+`swi-prolog-node` commit `26e1ce7` and demonstrator commit `dc66d8c`.
+All 22 live smoke groups passed, including 109 conformance cases, HTTP visitor
+ownership, discovery, Linda, N3→N4 actor interoperability, and N5/N7→N1 source
+transfer and →N2→N4 nested RPC. The ARM64 candidate native suite also passed.
+Every live engine tree matched all 1,536 files in the official 11.0.0 image.
+N5, N6, N7, Caddy and authentication containers retained their identities and
+images; existing volumes, credentials and node security settings were preserved.
+
+The [deployment record](docs/verification/swi-11-live-deployment-2026-11-19.json)
+contains exact images, qualification, recovered preparation errors and results.
+Private frozen models, logs and rollback inputs are retained under
+`.trinity/live-swi11-20261119-release/`. The ignored
+`.trinity/live-swi-current.json` names the exact selected per-service models;
+`Deployment/compose.live.json` now also contains the selected SWI service models.
+For a scoped recreate, use the selected frozen model with its recorded project,
+`--no-build --pull never --no-deps` and the specific service. Older deployment
+models and source/version inventories below are historical predecessors.
+
+An explicitly requested recovery of this release uses
+`python3 .trinity/live-swi11-20261119-release/rollback.py`; it restores the six
+captured predecessor images/configurations and the prior host selection files.
+It rejects services that have moved to a different successor image. Inspect the
+current selection before invoking recovery; this is not a general redeploy tool.
+
 ## Native SWI baseline update — 19 November 2026
 
 The development checkout now selects native `swi-prolog-node` commit
