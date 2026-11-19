@@ -1,0 +1,231 @@
+{
+  "status": "deployed_and_verified",
+  "verified_utc": "2026-11-19T14:40:07Z",
+  "source": {
+    "trealla": "6041ea36bfeec553f9888b770cb47e7759c2c9cb",
+    "conformance": "2bbf2b522d77204453739df02665852a7036d83e",
+    "demonstrator": "33ca0d906ffcfe250938b8d55d5cb9d6c8b63fa2",
+    "separate_swi_cleanup": "dc93b059c564235dc22168bf9c593097fdcaccf9",
+    "consumer_swi_pin_unchanged": "26e1ce7d712afafe440e3f87388baec4490232ec"
+  },
+  "engine": {
+    "version": "Trealla 3.14.20",
+    "revision": "841f819c7dbd462d053a8e0cafb51cd168c9cf7c",
+    "tree_identical_to_predecessor": true,
+    "manifest_sha256": "a5a509eeafacc79662603ce3875887c9dae24089f8f07edcea73a54009355794"
+  },
+  "image": {
+    "predecessor": "sha256:58081de1a717f71b5d326a547ce6f1a179c296c1042eebf9b29c79c00bc710d6",
+    "selected": "sha256:f6773633b01d2f8f0a337b4de15c09e85aedee4a9c46206692beaa7c3dbaa26e",
+    "container": "/deployment-wp_n5-1",
+    "container_id": "e198b2b906f9a5a09423b5f5a6504f215031a5167075bceac3d801192d2b8aec",
+    "app_files_compared": 4746,
+    "changed_app_files": [
+      "/app/README.md",
+      "/app/actors.pl",
+      "/app/namespace_tests.pl",
+      "/app/receiver_lineage_tests.pl",
+      "/app/swi_lineage_compat.pl"
+    ],
+    "root_source_files_matching_commit": 147
+  },
+  "ci": {
+    "run": 44543224917,
+    "url": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44543224917",
+    "commit": "33ca0d906ffcfe250938b8d55d5cb9d6c8b63fa2",
+    "jobs": {
+      "test": "success",
+      "wasm": "success"
+    },
+    "upstream": "No workflow/check statuses reported for the three upstream commits; their native/conformance local qualifications are recorded in the linked reports."
+  },
+  "local_integration": {
+    "groups": 34,
+    "all_passed": true,
+    "results_sha256": "ff59dd9eafa07ceb79e66561a3dde09f002680d413a2560067ebffef4f3498cd"
+  },
+  "image_rehearsal": {
+    "naming": 8,
+    "http": 12,
+    "actor_core": 7,
+    "linda_groups": 3,
+    "old_candidate_old_state_marker_preserved": true,
+    "live_writable_volumes_used": false
+  },
+  "live": {
+    "groups": 8,
+    "all_passed": true,
+    "versioned_cases": 36,
+    "observations": [
+      {
+        "file": "live-naming.json",
+        "cases": 8,
+        "passed": 8
+      },
+      {
+        "file": "live-isobase-http.json",
+        "cases": 12,
+        "passed": 12
+      },
+      {
+        "file": "live-local-naming.json",
+        "cases": 6,
+        "passed": 6
+      },
+      {
+        "file": "live-interop-actor.json",
+        "cases": 3,
+        "passed": 3
+      },
+      {
+        "file": "live-actor-core.json",
+        "cases": 7,
+        "passed": 7
+      }
+    ],
+    "linda_groups": 3,
+    "cross_node_controls": [
+      "N5 to N1 source loading",
+      "N5 to N2 to N4 nested RPC"
+    ]
+  },
+  "preservation": {
+    "environment_credentials_commands_user_healthcheck_limits_logging_network_mounts": true,
+    "readonly_peer_files": true,
+    "caddy_bytes": true,
+    "other_services": [
+      {
+        "container": "/web-prolog-hub-n0-1",
+        "id": "5466e39608e55407401ceb46c9aa9ecacb842ed98a082da9d7b2542e8b92c32d",
+        "image": "sha256:316c29ed9430e18f1bd54f2fc03e577e93f5c407f4776109f80e08cfc0d246db"
+      },
+      {
+        "container": "/deployment-wp_n2-1",
+        "id": "097a0b857692bdd3c9b90df6864ce30c6acabf530612b68c4811214dd08e7435",
+        "image": "sha256:46a56b757a4bfecfbcfd16995eed77ca41ff6980defeacf5eeb3b60fd72682b9"
+      },
+      {
+        "container": "/deployment-wp_n1-1",
+        "id": "8986ddb91d460d4f243d1cd3e75fa67cd204fdf269a6ecf5f0ff150cea5d0f44",
+        "image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b"
+      },
+      {
+        "container": "/deployment-wp_n3-1",
+        "id": "e60bd9d25d783df801ce88b6e181ae797a4f5240112f7e5709dd014a309a8762",
+        "image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b"
+      },
+      {
+        "container": "/deployment-wp_n4-1",
+        "id": "a3a0a8e75d0972507e8fbaa8f16b04b1fd08724088bea17c3b143c705aae3350",
+        "image": "sha256:f5fb0db3df65d42417972e02a689d82a632f16f2f2b8289fe54c6cf57820716b"
+      },
+      {
+        "container": "/deployment-wp_admin-1",
+        "id": "1be53fe55d3986a49558108209bb35fe7b3164e1c93d92c456c766de96ea3bfa",
+        "image": "sha256:2b51247c24433e8c50250d29f7b4a72787f1f49db0d9bc1a2c0680e443ac59c7"
+      },
+      {
+        "container": "/deployment-wp_n7-1",
+        "id": "522879634e4624775f6d5de3087eed9661221e0a762540b89f12e10b8a795f43",
+        "image": "sha256:f927138dd5ca530d1e66ffee4b23fc35278d1c0125b97e6ceb159e690c56df60"
+      },
+      {
+        "container": "/trinity-n6-host-wp_n6-1",
+        "id": "733afbcdaacda0c58f2bc578cbd2f8fa5f043e2a62bf778b9a0736d3f48f088c",
+        "image": "sha256:2b8c04920271e103087b6a958b1f94ab7aac96c3527f02ae64e8b9275e01357a"
+      },
+      {
+        "container": "/deployment-caddy-1",
+        "id": "56591dbdf62bb68039c2260707a2264691be98eee207b8cbdf25e775d8bf681c",
+        "image": "sha256:95a6701892f9230e8b2bca6af205735cedbd6d973b7f5fdbf54d4a01ea6d96cd"
+      },
+      {
+        "container": "/trinity-n6-host-n6_assets-1",
+        "id": "07be1327c6d203e7c9738bb1df9ae7c4e7b0dfc93fccb3e91e9837caa2ea167c",
+        "image": "sha256:9573abb39aa3e9e8de550316906d5f7d5d611432f9061ecd709482b53480b508"
+      },
+      {
+        "container": "/deployment-n5_admission-1",
+        "id": "bbfbbe7a358cb3215f11976c57d2becf2f5bd2f24de9a4cefb68661ef178c6be",
+        "image": "sha256:186ffbfe66181118565452d3a00e1cca338ad2cb8df5a4aa906a9829cefc798b"
+      },
+      {
+        "container": "/trinity-n6-local-wp_n6-1",
+        "id": "f349e68e01268b32cc7a89efb8ba0cb6c8d9fbc6eee82bee030ce1e4c629eda3",
+        "image": "sha256:b3a411c2b639a9b4544fbbf7eab18bca4e6ee5b7b0147b02c9c8c0e627464225"
+      },
+      {
+        "container": "/trinity-n6-local-n6_hub-1",
+        "id": "67adf02108db24a145bf0f499847378e28caca5cbe6ba38ebc4d76d28ad2a5d6",
+        "image": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220"
+      },
+      {
+        "container": "/trinity-n6-local-n6_assets-1",
+        "id": "ca92a3b7685a37770f627f3ab1989d84eb0240d724de9b111bc653bea2f5ba9b",
+        "image": "sha256:97601e77db1c9e49bb9d8059ad12c9438a4b7d57c0e7e1806f27ad6b3d25a220"
+      },
+      {
+        "container": "/trinity-n7-https-oauth2_n7-1",
+        "id": "e50eafe51cdf5d9cc425f08d8274dbdfef8083de6cec8659357be717879a471f",
+        "image": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d"
+      },
+      {
+        "container": "/trinity-n6-host-n6_admission-1",
+        "id": "53ead986fb0b70f14deaaa21ba9b923f3edf8fb0e003591c3ccb8f7607de5e8c",
+        "image": "sha256:a0ae508c4cc9242a047d60ab9784094a96021892a5e999442cb6480be45be93c"
+      },
+      {
+        "container": "/deployment-oauth2_n5-1",
+        "id": "d79cce1e5382d0999927bf5dd3b1979ddaa0d6cfc7bdc153c436b79158ec8e2a",
+        "image": "sha256:dcb6ff8dd21bf3058f6a22c6fa385fa5b897a9cd3914c88a2cc2bb0a85f8065d"
+      }
+    ]
+  },
+  "selection": {
+    "canonical": "Deployment/compose.live.json",
+    "pointer": ".trinity/live-n5-current.json",
+    "model": ".trinity/n5-naming-release-20261119-r2/candidate.compose.private.json",
+    "rollback_model": ".trinity/n5-naming-release-20261119-r2/rollback.compose.private.json",
+    "explicit_rollback": ".trinity/n5-naming-release-20261119-r2/rollback.py"
+  },
+  "recovered_attempt": {
+    "directory": ".trinity/n5-naming-release-20261119",
+    "source": "smoke orchestration",
+    "failure": "Legacy actor-core pack sent to generic baseline runner: KeyError scope before its assertions.",
+    "response": "Predecessor automatically restored and protected settings verified.",
+    "correction": "Use runner/run.py for actor-core; prechecked 7/7 on isolated exact image; all live checks rerun under separately sealed r2 inputs."
+  },
+  "preparation": {
+    "canonical_predecessor_image_was_stale": true,
+    "canonical_healthcheck_was_stale": true,
+    "models_based_on_captured_running_settings": true,
+    "initial_rehearsal_started_before_ready": "Connection refusals retained; endpoint readiness then verified before executing assertions.",
+    "local_default_native_setup": "Clean detached checkout at .trinity/naming-release-20261119-native keeps the existing SWI pin usable after publishing the separate cleanup commit."
+  },
+  "journal": [
+    {
+      "stage": "preflight_verified",
+      "utc": "2026-11-19T14:38:51Z"
+    },
+    {
+      "stage": "protected_configuration_preserved",
+      "utc": "2026-11-19T14:38:56Z",
+      "image": "sha256:f6773633b01d2f8f0a337b4de15c09e85aedee4a9c46206692beaa7c3dbaa26e"
+    },
+    {
+      "stage": "candidate_healthy",
+      "utc": "2026-11-19T14:38:56Z"
+    },
+    {
+      "stage": "protected_configuration_preserved",
+      "utc": "2026-11-19T14:40:07Z",
+      "image": "sha256:f6773633b01d2f8f0a337b4de15c09e85aedee4a9c46206692beaa7c3dbaa26e"
+    },
+    {
+      "stage": "verified_and_selected",
+      "utc": "2026-11-19T14:40:07Z",
+      "image": "sha256:f6773633b01d2f8f0a337b4de15c09e85aedee4a9c46206692beaa7c3dbaa26e"
+    }
+  ],
+  "private_artifacts": ".trinity/n5-naming-release-20261119-r2"
+}

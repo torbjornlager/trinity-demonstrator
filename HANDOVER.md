@@ -1,5 +1,36 @@
 # Trinity demonstrator: project and operations handover
 
+## Live N5 client-context naming — 19 November 2026
+
+N5 now runs `trealla-port` **6041ea3**, with ordinary names scoped to each client
+context and explicit published services remaining node-wide. The Trealla engine
+is unchanged at 3.14.20. All eight live naming checks and all eight smoke groups
+passed, including 36 versioned case executions, Linda across independent clients,
+N5→N3 interoperability, N1 source loading and N2→N4 nested RPC. Both GitHub CI
+jobs and all 34 local integration groups passed for consumer commit `33ca0d9`.
+
+The [verification record](docs/verification/n5-client-naming-2026-11-19/verification.json)
+identifies the selected image, source files, recovered smoke-runner error and
+preservation checks. All other persistent services retained their container and
+image identities. N5's credentials, settings, mounts, peer files, network identity
+and limits were preserved; Caddy was unchanged.
+
+The selected N5 model is
+`.trinity/n5-naming-release-20261119-r2/candidate.compose.private.json`, project
+`deployment`, service `wp_n5`. `.trinity/live-n5-current.json` and
+`Deployment/compose.live.json` now describe that selection. The captured running
+predecessor was used for recovery, correcting stale image/healthcheck information
+in the older canonical model. Original models and the first automatically rolled
+back attempt remain private and intact.
+
+For an explicitly requested recovery of this release, run
+`python3 .trinity/n5-naming-release-20261119-r2/rollback.py`. It refuses a different
+successor image and preserves the other services. The clean detached checkout
+`.trinity/naming-release-20261119-native` backs local native startup at the
+unchanged SWI pin `26e1ce7`; keep it until replacing it with another validated
+checkout. The separately published SWI cleanup fix `dc93b05` is not deployed by
+this N5 release.
+
 ## Trealla naming pin — 19 November 2026
 
 The development dependency now selects `trealla-port`

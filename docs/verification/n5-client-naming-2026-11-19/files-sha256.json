@@ -1,0 +1,8 @@
+{
+  "live-actor-core.json": "31306cc44b94b8a6f1cdbd1193c54101ed9aeae6c1799c68c715ebb492392558",
+  "live-interop-actor.json": "0ba02c6192a20bd66d4bc5ad98e96d85d606dd5c07c29bdaa3ff7869b5afebd0",
+  "live-isobase-http.json": "082fd0890c1751b6c7bd0360ed60f1a69d6ead36d498b65aed6574b1f69fd237",
+  "live-local-naming.json": "5e2f552c124e4976118f75a793d9c62e36ba840da0b1410eb4f4e22a1d6f596a",
+  "live-naming.json": "5e4ac7f07d5ef85f1392fcd1aad015108ea3ec830dd8d4f18bf31fb3fb3a8c9e",
+  "verification.json": "0e93eda8fa6a7b41149dbc8c3198471582a75eb4ee0b4bf8fa90a2bbb595643d"
+}
