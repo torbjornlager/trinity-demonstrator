@@ -23,6 +23,19 @@ def main():
         if info.get('profile') != 'actor' or info.get('auth') != 'open':
             raise RuntimeError('N7 public ACTOR listener is not ready')
         return
+    for environment, option in [
+        ('N7_PUBLIC_RATE_WINDOW_SECONDS', '--public-rate-window-seconds'),
+        ('N7_PUBLIC_MAX_ENGINE_STARTS', '--public-max-engine-starts'),
+        ('N7_PUBLIC_MAX_ENGINES', '--public-max-engines'),
+        ('N7_PUBLIC_MAX_ENGINES_PER_CLIENT', '--public-max-engines-per-client')]:
+        if environment in os.environ:
+            value = os.environ[environment]
+            if not value.isascii() or not value.isdigit() or value.startswith('0'):
+                raise ValueError(environment + ' must be a positive decimal integer')
+            if option in args:
+                args[args.index(option) + 1] = value
+            else:
+                args.extend([option, value])
     if '--bind' in args:
         raise ValueError('The container controls its private listener address')
     if os.environ.get('N7_ENGINE_IMAGE'):

@@ -13,7 +13,7 @@ def digest(path):
 
 # Adapter-only Python modules that may be overlaid from the owning eclipse-node
 # checkout. Engine bytes always come from the verified package.
-ADAPTER_MODULES = ('isotope_http.py', 'n7_actor_ws.py')
+ADAPTER_MODULES = ('isotope_http.py', 'n7_actor_ws.py', 'n7_public.py')
 
 
 def prepare(release, output, adapter_sources=()):
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--release', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--adapter-source', type=Path, action='append', default=[],
-                        help='adapter-only module to overlay (isotope_http.py or n7_actor_ws.py); '
+                        help='adapter-only module to overlay (isotope_http.py, n7_actor_ws.py or n7_public.py); '
                              'repeatable; engine bytes remain packaged')
     args = parser.parse_args()
     prepare(args.release.resolve(), args.output.resolve(), args.adapter_source)

@@ -56,6 +56,19 @@ button{font:inherit;background:darkgreen;color:white;border:0;padding:10px 18px;
 autocomplete="current-password" required><button type="submit">Sign in</button></form></main></html>'''
 
 
+def public_admission_settings():
+    if os.environ.get('N6_ADMISSION_ENABLED') != 'yes':
+        return {}
+    def positive(name, default):
+        raw=os.environ.get(name, str(default))
+        if not raw.isascii() or not raw.isdigit() or raw.startswith('0'):
+            raise ValueError(name + ' must be a positive decimal integer')
+        return int(raw)
+    return dict(rate_identity='client_ip', window_policy='leaky_bucket',
+                rate_window_seconds=60,
+                requests_per_minute=positive('N6_CALLS_PER_MINUTE',120),
+                burst=positive('N6_CALL_BURST',60))
+
 def owner_authorized(value, encoded_hash):
     try:
         scheme, encoded = value.split(' ', 1)
@@ -88,6 +101,7 @@ class Server(ThreadingHTTPServer):
         self.controller, self.owner_hash, self.token = controller, owner_hash, token
         self.session_key = secrets.token_bytes(32)
         self.capacity = threading.BoundedSemaphore(16)
+        self.admission = public_admission_settings()
 
     def session(self, purpose='owner', lifetime=28800):
         value = str(int(time.time()) + lifetime) + ':' + secrets.token_hex(16)
@@ -326,7 +340,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, dict(self_url=PUBLIC_URL, profile='isobase', auth='open' if PUBLIC_EXECUTION else 'private',
                                        self_contained=True, provides=PROVIDES, services=[],
                                        principal_id=('anon:visitor:' + hashlib.sha256(self.public_identity.encode()).hexdigest()) if PUBLIC_EXECUTION else ('owner' if authorized else 'anonymous'),
-                                       principal_execution=authorized, tutorial_sections=['all']))
+                                       principal_execution=authorized, tutorial_sections=['all'],
+                                       admission=self.server.admission))
         if path.path == '/version':
             pins = json.loads(Path('/usr/share/doc/gprolog/runtime-pins.json').read_text())
             return self.reply(200, dict(web_prolog='gprolog-port', gprolog=pins['engine']['version']))

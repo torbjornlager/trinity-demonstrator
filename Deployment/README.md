@@ -1023,3 +1023,9 @@ default to every node, including private source, shared databases and
 statecharts; Compose needs no experimental opt-in. Native implementation
 modules and library interfaces retain their explicit SWI string conversions.
 The pinned CI runner includes the TEXT tier to prevent a default-mode regression.
+
+## Public admission controls
+
+[Operator settings](../docs/public-admission.md) cover SWI, Trealla, GNU and
+ECLiPSe, including the 120-entry public preset and separate concurrency bounds.
+Browser-local execution has no server admission limit to configure.

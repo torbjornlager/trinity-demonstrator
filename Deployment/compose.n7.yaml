@@ -17,6 +17,10 @@ services:
     environment:
       DOCKER_HOST: unix:///run/docker.sock
       N7_CONFIG: /run/n7/adapter.json
+      N7_PUBLIC_RATE_WINDOW_SECONDS: ${WP_N7_RATE_WINDOW_SECONDS:-60}
+      N7_PUBLIC_MAX_ENGINE_STARTS: ${WP_N7_MAX_ENGINE_STARTS_PER_WINDOW:-120}
+      N7_PUBLIC_MAX_ENGINES: ${WP_N7_MAX_PUBLIC_ENGINES:-4}
+      N7_PUBLIC_MAX_ENGINES_PER_CLIENT: ${WP_N7_MAX_PUBLIC_ENGINES_PER_CLIENT:-2}
     volumes:
       - type: bind
         source: ${N7_DOCKER_SOCKET:-/var/run/docker.sock}

@@ -32,6 +32,9 @@ services:
     tmpfs:
       - /tmp:size=64m
     environment:
+      WP_RATE_WINDOW_SECONDS: "${WP_N1_RATE_WINDOW_SECONDS:-60}"
+      WP_MAX_CALLS_PER_WINDOW: "${WP_N1_MAX_CALLS_PER_WINDOW:-120}"
+      WP_MAX_SPAWNS_PER_WINDOW: "${WP_N1_MAX_SPAWNS_PER_WINDOW:-120}"
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
@@ -63,6 +66,9 @@ services:
     tmpfs:
       - /tmp:size=96m
     environment:
+      WP_RATE_WINDOW_SECONDS: "${WP_N2_RATE_WINDOW_SECONDS:-60}"
+      WP_MAX_CALLS_PER_WINDOW: "${WP_N2_MAX_CALLS_PER_WINDOW:-120}"
+      WP_MAX_SPAWNS_PER_WINDOW: "${WP_N2_MAX_SPAWNS_PER_WINDOW:-120}"
       HOME: /tmp
       WP_N2_N4_RPC_ENDPOINT: ${WP_N2_N4_RPC_ENDPOINT:-http://wp_n4:3055}
       TZ: Europe/Stockholm
@@ -95,6 +101,9 @@ services:
     tmpfs:
       - /tmp:size=128m
     environment:
+      WP_RATE_WINDOW_SECONDS: "${WP_N3_RATE_WINDOW_SECONDS:-60}"
+      WP_MAX_CALLS_PER_WINDOW: "${WP_N3_MAX_CALLS_PER_WINDOW:-120}"
+      WP_MAX_SPAWNS_PER_WINDOW: "${WP_N3_MAX_SPAWNS_PER_WINDOW:-120}"
       WP_MODEL_SERVICE: ${WP_MODEL_SERVICE:-no}
       WP_JEV_SERVICE: ${WP_JEV_SERVICE:-no}
       TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
@@ -130,6 +139,9 @@ services:
     tmpfs:
       - /tmp:size=128m
     environment:
+      WP_RATE_WINDOW_SECONDS: "${WP_N4_RATE_WINDOW_SECONDS:-60}"
+      WP_MAX_CALLS_PER_WINDOW: "${WP_N4_MAX_CALLS_PER_WINDOW:-120}"
+      WP_MAX_SPAWNS_PER_WINDOW: "${WP_N4_MAX_SPAWNS_PER_WINDOW:-120}"
       HOME: /tmp
       TZ: Europe/Stockholm
       WEB_PROLOG_INTERACTION_LOG: /var/log/webprolog/interactions.jsonl
@@ -198,6 +210,9 @@ services:
     tmpfs:
       - /tmp:size=128m
     environment:
+      WP_RATE_WINDOW_SECONDS: "${WP_N5_RATE_WINDOW_SECONDS:-60}"
+      WP_MAX_CALLS_PER_WINDOW: "${WP_N5_MAX_CALLS_PER_WINDOW:-120}"
+      WP_MAX_SPAWNS_PER_WINDOW: "${WP_N5_MAX_SPAWNS_PER_WINDOW:-120}"
       HOME: /tmp
       TZ: Europe/Stockholm
       WP_PORT: "3060"

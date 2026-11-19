@@ -18,6 +18,9 @@ services:
       additional_contexts:
         trealla_runtime: service:wp_n5_runtime
     environment:
+      WP_RATE_WINDOW_SECONDS: ${WP_N5_RATE_WINDOW_SECONDS:-60}
+      WP_MAX_CALLS_PER_WINDOW: ${WP_N5_MAX_CALLS_PER_WINDOW:-120}
+      WP_MAX_SPAWNS_PER_WINDOW: ${WP_N5_MAX_SPAWNS_PER_WINDOW:-120}
       WP_PORT: "3060"
       WP_PUBLIC_URL: "https://n5.elfenbenstornet.se"
       WP_PROFILE: actor
@@ -72,6 +75,11 @@ services:
     build:
       context: ..
       dockerfile: Deployment/Dockerfile.caddy.trealla-n5
+
+  n5_admission:
+    environment:
+      N5_CONNECTIONS_PER_CLIENT: ${WP_N5_MAX_CONNECTIONS_PER_CLIENT:-16}
+      N5_CONNECTIONS_TOTAL: ${WP_N5_MAX_CONNECTIONS_TOTAL:-32}
 
 volumes:
   trealla_n5_state:

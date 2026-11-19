@@ -36,6 +36,8 @@ def plan(native, wasm, swipl):
     for tier in ['DEMONSTRATOR', 'SERVICE_TEXT', 'LINDA', 'MODEL', 'MODEL_SXML', 'JEV']:
         rows.append(('demonstrator-'+tier, ROOT, ['bash', 'tools/test.sh', tier]))
     rows += [
+        ('public-admission-regressions', ROOT, [sys.executable, 'tests/test_public_admission_config.py']),
+        ('n7-adapter-overlay-regressions', ROOT, [sys.executable, 'tests/test_prepare_n7_adapter.py']),
         ('default-startup-regressions', ROOT, [sys.executable, 'tests/test_default_swi_startup.py']),
         ('pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_swi_dependency.py']),
         ('browser-pin-regressions', ROOT, [sys.executable, 'tests/test_pinned_browser_dependency.py']),

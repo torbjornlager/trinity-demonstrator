@@ -1,3 +1,4 @@
+:- use_module(public_admission, [public_admission_options/1]).
 :- use_module(library(settings)).
 :- use_module(domain_origins, [demonstrator_domain_origins/1, demonstrator_transport_options/1]).
 :- ['../load.pl'].
@@ -32,6 +33,8 @@ start_n1 :-
     set_setting(node_http_identity:anonymous_visitors, true),
     demonstrator_domain_origins(DomainOrigins),
     demonstrator_transport_options(PeerOptions),
+    public_admission_options(AdmissionOptions),
+    append(AdmissionOptions, PeerOptions, NodeOptions),
     node(3051, [
         sandbox(blacklist),
         profile(isobase),
@@ -42,14 +45,11 @@ start_n1 :-
         max_ws_actors_per_principal(2),
         max_term_text_bytes(16384),
         max_load_text_bytes(65536),
-        rate_window_seconds(60),
-        max_call_requests_per_window(60),
-        max_session_spawns_per_window(10),
         max_ws_commands_per_window(60),
         tutorial_sections([all]),
         load_uri_allowed_origins(DomainOrigins),
         load_shared_db_file(CommonSharedDBPath),
-        load_shared_db_file(OverlaySharedDBPath) | PeerOptions
+        load_shared_db_file(OverlaySharedDBPath) | NodeOptions
     ]),
     assertz(start_n1_done).
 

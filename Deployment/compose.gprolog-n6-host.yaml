@@ -7,7 +7,15 @@ services:
       N6_PUBLIC_URL: https://n6.elfenbenstornet.se
       N6_HUB_URL: https://n0.elfenbenstornet.se/discovery-hub
       N6_OWNER_NETWORK_PILOT: "yes"
+      N6_ADMISSION_ENABLED: "yes"
+      N6_CALLS_PER_MINUTE: ${WP_N6_MAX_CALLS_PER_MINUTE:-120}
+      N6_CALL_BURST: ${WP_N6_CALL_BURST:-60}
   n6_admission:
+    environment:
+      N6_CALLS_PER_MINUTE: ${WP_N6_MAX_CALLS_PER_MINUTE:-120}
+      N6_CALL_BURST: ${WP_N6_CALL_BURST:-60}
+      N6_CONNECTIONS_PER_CLIENT: ${WP_N6_MAX_CONNECTIONS_PER_CLIENT:-16}
+      N6_CONNECTIONS_TOTAL: ${WP_N6_MAX_CONNECTIONS_TOTAL:-32}
     build:
       context: ..
       dockerfile: Deployment/Dockerfile.n6-admission

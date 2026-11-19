@@ -28,7 +28,7 @@ class PrepareN7Adapter(unittest.TestCase):
         (self.release / 'manifest.json').write_text(json.dumps(dict(files=hashes, image_id='sha256:engine')))
         self.sources = self.tmp / 'eclipse-node'
         self.sources.mkdir()
-        for name in ('isotope_http.py', 'n7_actor_ws.py', 'actors.ecl'):
+        for name in ('isotope_http.py', 'n7_actor_ws.py', 'n7_public.py', 'actors.ecl'):
             (self.sources / name).write_text('checkout ' + name + '\n')
 
     def test_both_adapter_modules_can_be_overlaid(self):
@@ -41,6 +41,12 @@ class PrepareN7Adapter(unittest.TestCase):
         record = json.loads((out / 'container-inputs.json').read_text())
         self.assertEqual(sorted(record['adapter_overlay']), ['experiments/eclipse-clp/isotope_http.py',
                                                              'experiments/eclipse-clp/n7_actor_ws.py'])
+
+    def test_public_admission_module_can_be_overlaid(self):
+        out = self.tmp / 'out'
+        prepare.prepare(self.release, out, [self.sources / 'n7_public.py'])
+        self.assertEqual((out / 'experiments/eclipse-clp/n7_public.py').read_text(), 'checkout n7_public.py\n')
+        self.assertEqual((out / 'experiments/eclipse-clp/actors.ecl').read_text(), 'engine\n')
 
     def test_single_source_keeps_former_calling_convention(self):
         out = self.tmp / 'out'

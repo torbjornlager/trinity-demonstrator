@@ -1,3 +1,4 @@
+:- use_module(public_admission, [public_admission_options/1]).
 :- use_module(library(settings)).
 :- use_module(domain_origins, [demonstrator_domain_origins/1, demonstrator_transport_options/1]).
 :- ['../load.pl'].
@@ -40,6 +41,8 @@ start_n3 :-
     set_setting(node_http_identity:anonymous_visitors, true),
     demonstrator_domain_origins(DomainOrigins),
     demonstrator_transport_options(PeerOptions),
+    public_admission_options(AdmissionOptions),
+    append(AdmissionOptions, PeerOptions, NodeOptions),
     node(3053, [
         sandbox(blacklist),
         profile(actor),
@@ -50,9 +53,6 @@ start_n3 :-
         max_ws_actors_per_principal(16),
         max_term_text_bytes(32768),
         max_load_text_bytes(131072),
-        rate_window_seconds(60),
-        max_call_requests_per_window(120),
-        max_session_spawns_per_window(30),
         max_ws_commands_per_window(400),
         ws_allowed_origins(DomainOrigins),
         tutorial_sections([local_actor, toplevels, distributed_actor,
@@ -61,7 +61,7 @@ start_n3 :-
         load_shared_db_file(CommonSharedDBPath),
         load_shared_db_file(ActorCommonSharedDBPath),
         load_shared_db_file(LindaClientPath),
-        load_shared_db_file(OverlaySharedDBPath) | PeerOptions
+        load_shared_db_file(OverlaySharedDBPath) | NodeOptions
     ]),
     with_node_port_context(3053,
                            update_current_node_runtime(_{

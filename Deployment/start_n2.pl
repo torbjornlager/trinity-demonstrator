@@ -1,3 +1,4 @@
+:- use_module(public_admission, [public_admission_options/1]).
 :- use_module(library(settings)).
 :- use_module(domain_origins, [demonstrator_domain_origins/1, demonstrator_transport_options/1,
                              demonstrator_n2_rpc_endpoints/1]).
@@ -27,6 +28,8 @@ start_n2 :-
     demonstrator_domain_origins(DomainOrigins),
     demonstrator_transport_options(PeerOptions),
     demonstrator_n2_rpc_endpoints(Endpoints),
+    public_admission_options(AdmissionOptions),
+    append(AdmissionOptions, PeerOptions, NodeOptions),
     node(3052, [
         sandbox(blacklist),
         profile(isotope),
@@ -37,14 +40,11 @@ start_n2 :-
         max_ws_actors_per_principal(4),
         max_term_text_bytes(24576),
         max_load_text_bytes(131072),
-        rate_window_seconds(60),
-        max_call_requests_per_window(120),
-        max_session_spawns_per_window(20),
         max_ws_commands_per_window(200),
         tutorial_sections([all]),
         load_uri_allowed_origins(DomainOrigins),
         load_shared_db_file(CommonSharedDBPath),
-        load_shared_db_file(OverlaySharedDBPath) | PeerOptions
+        load_shared_db_file(OverlaySharedDBPath) | NodeOptions
     ]),
     % The shared human/1 clause still identifies the public N4 peer. Calls
     % within this Compose deployment need not leave its private network and

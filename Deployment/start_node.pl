@@ -280,8 +280,11 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
     ack_public(Auth),
     env_int('WP_TIMEOUT', 10, Timeout),
     env_int('WP_MAX_INFLIGHT', 3, MaxInflight),
-    env_int('WP_RATE_WINDOW', 60, RateWindow),
+    ( getenv('WP_RATE_WINDOW_SECONDS', WindowText), WindowText \== ''
+    -> env_int('WP_RATE_WINDOW_SECONDS', 60, RateWindow)
+    ; env_int('WP_RATE_WINDOW', 60, RateWindow) ),
     env_int('WP_MAX_CALLS_PER_WINDOW', 120, MaxCalls),
+    env_int('WP_MAX_SPAWNS_PER_WINDOW', 120, MaxSpawns),
     env_int('WP_MAX_TERM_BYTES', 32768, MaxTermBytes),
     env_int('WP_MAX_LOAD_TEXT_BYTES', 131072, MaxLoadTextBytes),
     %  Resource ceilings — bounded by default (a turn-key public node
@@ -308,6 +311,7 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
           max_inflight_calls(MaxInflight),
           rate_window_seconds(RateWindow),
           max_call_requests_per_window(MaxCalls),
+          max_session_spawns_per_window(MaxSpawns),
           max_term_text_bytes(MaxTermBytes),
           max_load_text_bytes(MaxLoadTextBytes),
           max_actor_stack_bytes(MaxActorStackBytes),

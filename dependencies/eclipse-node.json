@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/torbjornlager/eclipse-node.git",
+  "revision": "31dcdfcdb77f4ea8d8f62aea0a8bb01f3f765c8f",
+  "mode": "adapter-only overlay; retain the qualified deployed ECLiPSe engine and shell assets",
+  "adapter_files": [
+    "experiments/eclipse-clp/isotope_http.py",
+    "experiments/eclipse-clp/n7_public.py"
+  ]
+}
