@@ -1360,7 +1360,10 @@ node(3060, [peer_transport_tokens([
 ])]).
 ```
 
-The token is sent only to that exact destination URL. The receiver verifies
+The token is sent only to that canonical logical node URL. An empty root
+path is normalized (`https://node/` and `https://node`); schemes, authorities,
+ports and non-root paths stay distinct. Duplicate canonical credential keys
+and conflicting endpoint mappings are refused. The receiver verifies
 it through the existing bearer-token store before accepting lineage or account
 fields. Configure the reverse direction separately when it initiates its own
 connection. Merely supplying `X-Web-Prolog-Capabilities` from a public IP does
