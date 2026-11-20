@@ -131,6 +131,7 @@ fi
 run_tier DEMONSTRATOR "$DEMONSTRATOR_ROOT/tests/demonstrator_integration_tests.pl" demonstrator_integration_tests:run
 
 run_tier DISCOVERY "$DEMONSTRATOR_ROOT/tests/discovery_reliability_tests.pl" discovery_reliability_tests:run
+run_tier DISCOVERY "$DEMONSTRATOR_ROOT/tests/discovery_hub_tests.pl" run
 if selected DISCOVERY; then
     echo "=== Tier DISCOVERY (browser query round trips) ==="
     if ! run_bounded DISCOVERY node tools/test-discovery-query.cjs; then

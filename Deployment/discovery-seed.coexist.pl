@@ -60,3 +60,17 @@ seed_node(n7, 'https://n7.elfenbenstornet.se',
     "",
     "Owner GitHub sign-in is required to open the demonstrator or run queries.").
 seed_probe_url(n7, 'http://caddy:8087').
+
+seed_implementation(n1, 'SWI-Prolog').
+
+seed_implementation(n2, 'SWI-Prolog').
+
+seed_implementation(n3, 'SWI-Prolog').
+
+seed_implementation(n4, 'SWI-Prolog').
+
+seed_implementation(n5, 'Trealla Prolog').
+
+seed_implementation(n6, 'GNU Prolog').
+
+seed_implementation(n7, 'ECLiPSe CLP').

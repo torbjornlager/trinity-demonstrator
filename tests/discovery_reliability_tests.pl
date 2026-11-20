@@ -77,4 +77,21 @@ test(readiness_delay_is_excluded_from_node_info_latency) :-
           assertion(Latency < ElapsedMs - 250) ),
         discovery_reliability_tests:cleanup(Port, Queue)).
 
+% Curated implementation labels survive unavailable peers and seed reloads.
+% Validate the actual production seed, including the hub's automatic self row.
+test(production_seed_names_every_registered_implementation,
+     [cleanup(discovery_hub:clear_seed)]) :-
+    discovery_hub:load_seed_file('Deployment/discovery-seed.coexist.pl'),
+    discovery_hub:ensure_seed('http://localhost'),
+    findall(Id-Name,
+            (discovery_hub:seed_to_node(Node), Id=Node.id, Name=Node.implementation),
+            Pairs),
+    sort(Pairs, Names),
+    assertion(Names == [n0-'SWI-Prolog', n1-'SWI-Prolog', n2-'SWI-Prolog',
+                        n3-'SWI-Prolog', n4-'SWI-Prolog', n5-'Trealla Prolog',
+                        n6-'GNU Prolog', n7-'ECLiPSe CLP']),
+    discovery_hub:set_seed([seed_node(custom, u, "", "", "")]),
+    discovery_hub:seed_to_node(Custom),
+    assertion(Custom.implementation == '').
+
 :- end_tests(discovery_reliability).

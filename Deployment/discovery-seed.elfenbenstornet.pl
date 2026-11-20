@@ -50,3 +50,13 @@ seed_node(n4, 'https://n4.elfenbenstornet.se',
     "Common base + the same actor-common layer as n3, plus an n4 overlay \c
      providing human(plato) / human(aristotle).",
     "").
+
+seed_implementation(n5, 'SWI-Prolog').
+
+seed_implementation(n1, 'SWI-Prolog').
+
+seed_implementation(n2, 'SWI-Prolog').
+
+seed_implementation(n3, 'SWI-Prolog').
+
+seed_implementation(n4, 'SWI-Prolog').

@@ -9,3 +9,15 @@ seed_node(n6, 'http://localhost:3057',
     "Family relations, prices, human/1 and deployment_node(n6).",
     "Owner login required; no actor or session API.").
 seed_probe_url(n6, 'http://wp_n6:3060').
+
+seed_implementation(n1, 'SWI-Prolog').
+
+seed_implementation(n2, 'SWI-Prolog').
+
+seed_implementation(n3, 'SWI-Prolog').
+
+seed_implementation(n4, 'SWI-Prolog').
+
+seed_implementation(n5, 'Trealla Prolog').
+
+seed_implementation(n6, 'GNU Prolog').

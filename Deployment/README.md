@@ -350,7 +350,13 @@ same command as first bring-up; `--build` is what matters:
 docker compose -f compose.hub-attach.yaml up -d --build
 ```
 
-The hub only ever shows what it harvests from each node's `/node_info`. So a
+Implementation labels come from the curated `seed_implementation/2` facts,
+so they remain visible when a peer is down. `node_implementation/2` publishes
+those labels through the RELATION API. Deploy the seed, registry and page
+together; the DISCOVERY checks cover all production implementation labels
+and show a warning if the page cannot fetch them.
+
+The hub harvests capabilities and access profiles from each node's `/node_info`. So a
 change that adds or alters a `/node_info` field (for example a new capability
 flag the hub surfaces) also needs the **peer** nodes rebuilt before they
 report it — until then the hub shows the old or absent value for them, while
