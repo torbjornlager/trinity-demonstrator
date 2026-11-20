@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py", line 40, in <module>
+    changed=True;up('candidate-model.json');ready();node=preserved(release['image'])
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py", line 11, in preserved
+    assert old['Config'].get(key)==node['Config'].get(key), 'Config changed: '+key
+AssertionError: Config changed: Env
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py", line 55, in <module>
+    up('rollback-model.json');ready();preserved(release['predecessor'])
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py", line 11, in preserved
+    assert old['Config'].get(key)==node['Config'].get(key), 'Config changed: '+key
+AssertionError: Config changed: Env

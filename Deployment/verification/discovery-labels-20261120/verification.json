@@ -1,0 +1,64 @@
+{
+  "status": "pass",
+  "deployed_at_utc": "2026-11-20T14:17:56Z",
+  "shared_revision": "825b18152abd4312ae8719fe646db8abbfcfdbbf",
+  "image": "sha256:50021e7b4084b4b19ef2ad52c067edd386b0a4fe3723f16f0dba1bb3a66d2614",
+  "predecessor": "sha256:4446aee05ea9b221da62807661a825c770eb89e5e96878a04c5df961ed376b48",
+  "container_id": "fd2ad4d8c6f049aa77da9a830d509feb8ec389ef80d98faec9789e16b4ec0dba",
+  "labels": {
+    "n1": "SWI-Prolog",
+    "n2": "SWI-Prolog",
+    "n3": "SWI-Prolog",
+    "n4": "SWI-Prolog",
+    "n5": "Trealla Prolog",
+    "n6": "GNU Prolog",
+    "n7": "ECLiPSe CLP",
+    "n0": "SWI-Prolog"
+  },
+  "raw_labels": {
+    "data": [
+      {
+        "Id": "n1",
+        "Implementation": "'SWI-Prolog'"
+      },
+      {
+        "Id": "n2",
+        "Implementation": "'SWI-Prolog'"
+      },
+      {
+        "Id": "n3",
+        "Implementation": "'SWI-Prolog'"
+      },
+      {
+        "Id": "n4",
+        "Implementation": "'SWI-Prolog'"
+      },
+      {
+        "Id": "n5",
+        "Implementation": "'Trealla Prolog'"
+      },
+      {
+        "Id": "n6",
+        "Implementation": "'GNU Prolog'"
+      },
+      {
+        "Id": "n7",
+        "Implementation": "'ECLiPSe CLP'"
+      },
+      {
+        "Id": "n0",
+        "Implementation": "'SWI-Prolog'"
+      }
+    ],
+    "more": false,
+    "type": "success"
+  },
+  "arbitrary_goal_refused": {
+    "data": "Unknown procedure: true/0",
+    "details": "error(existence_error(procedure,true/0),_)",
+    "type": "error"
+  },
+  "hub_configuration_preserved": true,
+  "other_service_ids_and_images_unchanged": true,
+  "live_browser": "live-browser.json"
+}

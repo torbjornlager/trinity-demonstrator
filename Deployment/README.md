@@ -337,6 +337,9 @@ an `n0.elfenbenstornet.se` vhost to the `Caddyfile` — a plain
 `reverse_proxy n0:3060`, mirroring the `n1` block plus `/discovery-hub` and
 `/admin/tabler.min.css` in the path allowlist — so Caddy terminates TLS for it.
 
+[Implementation label restoration and live verification](DISCOVERY-LABELS-2026-11-20.md)
+records the current N0-only deployment and regression checks.
+
 ### Redeploying n0 after code changes
 
 `n0` bakes `web/`, `prolog/`, and `examples/` into its image at build time

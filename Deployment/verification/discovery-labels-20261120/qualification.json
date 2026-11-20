@@ -1,0 +1,35 @@
+{
+  "status": "qualified_and_deployed",
+  "shared_revision": "825b18152abd4312ae8719fe646db8abbfcfdbbf",
+  "prolog_checks": 45,
+  "browser_cards": 8,
+  "local_DISCOVERY_log": "final-local-discovery-tests.log",
+  "image_test_log": "rebuilt-image-tests.log",
+  "image_browser": "rebuilt-owned-browser.json",
+  "isolated_fixture_failure": {
+    "runtime_exit": 139,
+    "fixture_change": "Multi-node integration hub was temporarily changed from ACTOR to RELATION",
+    "observations": 2,
+    "retained_logs": [
+      "image-discovery-tests-crash.log",
+      "candidate-standalone-tests.log"
+    ],
+    "disposition": "Original ACTOR fixture restored; assertions retained. Actual RELATION hub qualified independently in Chromium. Native crash cause remains undetermined."
+  },
+  "sha256": {
+    "final-local-discovery-tests.log": "2cbf019d6136248a6eb0f858ddb915d6d2216a3fc23c2c2b99992788c1213c6a",
+    "final-image-tests.log": "85d7505f558b81666e51b4504c32ae386730c629e543d3517a7927c6f2fe5c2d",
+    "owned-browser.json": "023111ed8a09df793fe4d642cb9493fea5e6e16d95a12c18dde640f634dddc0f",
+    "owned-browser.png": "ce00abba6a07e638be0e53b8b5f291d2b158500b4dfcb788127dacba35e55143",
+    "image-discovery-tests-crash.log": "c4d94fd50e9b18e0a7b5eef17eb82eb0d49e6cd9c5b3f56d1c26a79134f12c06",
+    "candidate-standalone-tests.log": "c4bb879a987bab8b02031fc27f43c4989912ecab9daa69f43b6ef62e3afa8430",
+    "rebuilt-image-tests.log": "67437fc258f7fb947cc8128c7eba105b9cee6f312f740905f3c6190170b26e58",
+    "rebuilt-owned-browser.json": "a4f56bb9e66f35895a66f051019b3a3fcc61d349baaae4ec7356dddcdc356efd",
+    "rebuilt-owned-browser.png": "72344f7760709c89711a90328d24a708c0760c5c5bfe1438f437d6dcadfbb6f3",
+    "live-browser.json": "a386b1a2409f4ec6c24fc47fb7743910c7545381784a8ad971065f8959f99cc2",
+    "live-browser.png": "2b791992119dad127b642f7b64416d39784ff72886fee687d89b911debbd587a"
+  },
+  "image": "sha256:50021e7b4084b4b19ef2ad52c067edd386b0a4fe3723f16f0dba1bb3a66d2614",
+  "browser_engine": "Google Chrome",
+  "rebuilt_after_unused_image_removed": true
+}

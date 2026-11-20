@@ -1,0 +1,6 @@
+{
+  "shared_revision": "825b18152abd4312ae8719fe646db8abbfcfdbbf",
+  "predecessor": "sha256:4446aee05ea9b221da62807661a825c770eb89e5e96878a04c5df961ed376b48",
+  "image": "sha256:50021e7b4084b4b19ef2ad52c067edd386b0a4fe3723f16f0dba1bb3a66d2614",
+  "scope": "N0 hub only; unchanged native/browser selections and service configuration"
+}

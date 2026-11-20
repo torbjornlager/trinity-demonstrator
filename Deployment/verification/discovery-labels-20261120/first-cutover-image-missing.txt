@@ -1,0 +1,35 @@
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'in_progress', '')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'in_progress', ''), ('wasm', 'completed', 'success')]
+[('test', 'completed', 'success'), ('wasm', 'completed', 'success')]
+Traceback (most recent call last):
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py", line 39, in <module>
+    changed=True;up('candidate-model.json');ready();node=preserved(release['image'])
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py", line 7, in up
+    with (P/'cutover.private.log').open('a') as log:subprocess.run(['docker','compose','-p','web-prolog-hub','-f',str(P/model),'up','-d','--no-build','--pull','never','--no-deps','n0'],stdout=log,stderr=subprocess.STDOUT,check=True)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 528, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['docker', 'compose', '-p', 'web-prolog-hub', '-f', '/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/candidate-model.json', 'up', '-d', '--no-build', '--pull', 'never', '--no-deps', 'n0']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy_when_green.py", line 10, in <module>
+    subprocess.run(['python3',str(P/'deploy.py')],check=True)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 528, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['python3', '/Users/lager/trinity-demonstrator/.trinity/discovery-labels-20261120/deploy.py']' returned non-zero exit status 1.
