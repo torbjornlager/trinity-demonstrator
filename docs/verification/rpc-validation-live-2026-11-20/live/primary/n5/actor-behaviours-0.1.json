@@ -1,0 +1,84 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "actor-behaviours-0.1",
+  "scope": "required",
+  "candidate": "n5",
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "manifest_sha256": "68814e242f241bf638e1a21d9d3100c3abed22af111996205d6a35cbce880c8d",
+  "counts": {
+    "pass": 10,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "BH-001",
+      "title": "Generic server requests thread callback state",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2147
+    },
+    {
+      "id": "BH-002",
+      "title": "Generic server promises correlate asynchronous replies",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2105
+    },
+    {
+      "id": "BH-003",
+      "title": "Generic server upgrade replaces the callback and preserves state",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2120
+    },
+    {
+      "id": "BH-004",
+      "title": "Supervisor starts and counts distinct worker children",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2372
+    },
+    {
+      "id": "BH-005",
+      "title": "Supervisor supports dynamic start, terminate, restart, and delete",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2075
+    },
+    {
+      "id": "BH-006",
+      "title": "One-for-one restart replaces only the failed child",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2282
+    },
+    {
+      "id": "BH-007",
+      "title": "One-for-all restart replaces every child",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2146
+    },
+    {
+      "id": "BH-008",
+      "title": "Temporary and transient children are not restarted after terminal exits",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 1929
+    },
+    {
+      "id": "BH-009",
+      "title": "Nested supervisor failure restarts its subtree without restarting siblings",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2253
+    },
+    {
+      "id": "BH-010",
+      "title": "Supervisor manages a generic server child with graceful shutdown",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 1710
+    }
+  ]
+}

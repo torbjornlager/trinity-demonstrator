@@ -1,5 +1,7 @@
 # Trinity demonstrator
 
+Latest deployment: [RPC timeout validation, 20 November 2026](docs/verification/rpc-validation-live-2026-11-20/REPORT.md). SWI and Trealla repairs are live; engine versions and public access are unchanged.
+
 The Web Prolog demonstrator provides the portal, tutorials, shared language
 manual, examples and deployment/integration tooling. Its
 native SWI node is supplied by the separate

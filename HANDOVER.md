@@ -1,6 +1,39 @@
 # Trinity demonstrator: project and operations handover
 
-## Live actor retirement repair — 20 November 2026
+## Live RPC timeout validation — 20 November 2026
+
+N0–N4 and admin select native SWI `0bf7286`, demonstrator runtime source
+`ed70764` and browser provenance `ca8e689`. N5 selects Trealla `e99126b`.
+SWI-Prolog remains 11.0.0; Trealla remains 3.14.20. Engine files, public OPEN
+access, budgets, concurrency bounds, mounts and network settings are unchanged.
+N6, N7, ingress and Caddy retain their prior service/image selections.
+
+Both GitHub CI jobs and all 36 local integration groups pass. Fresh live
+checks pass 100/100 unchanged RPC timeout assertions across N1–N5,
+354/354 primary ACTOR cases across N3/N4/N5, 30/30 anonymous exercise checks,
+76/76 HTTP prompt cases and 700/700 sustained finite HTTP probes. Both exact
+runtime images pass the 45-case ACTOR gate and all 20 timeout goals. All 147
+tracked root Prolog files on N5 match its committed source. The browser's
+12 executable/schema/engine-metadata files match their predecessors.
+
+The [deployment report](docs/verification/rpc-validation-live-2026-11-20/REPORT.md)
+retains source/image identities, fixture setup errors and passing qualification.
+The conformance inventory closes 30 repeated timeout failure observations;
+211 failed observations remain unresolved, rather than 211 proven defects.
+URI routing/source transfer is the next queue. Historical sweeps are unchanged.
+
+Canonical selection and both SWI/N5 pointers now identify this release.
+Recovery inputs remain private under `.trinity/rpc-validation-release-20261120/release/`:
+
+`python3 .trinity/rpc-validation-release-20261120/release/rollback.py --check`
+
+Omit `--check` to recover this exact release only. The guard refuses newer
+container or host selections. The old retirement guard below is historical
+and intentionally refuses the current successors. No production rollback
+was needed; an isolated injected-failure rehearsal preserved its state marker.
+
+
+## Previous actor retirement repair — 20 November 2026
 
 N0–N4 and the private admin now select native SWI `0c11f2c`, demonstrator
 `8318918` and browser package `b2fd3fe`. SWI remains 11.0.0. Engine bytes and

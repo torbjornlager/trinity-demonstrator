@@ -1,0 +1,85 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "committed-exit-0.1",
+  "scope": "required",
+  "candidate": "n5",
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "manifest_sha256": "58a79ea73bcaf0f3e0335a10207b60fb9afa1d805809d7b59d44700d9467dc99",
+  "counts": {
+    "pass": 4,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "EXIT-001",
+      "title": "Catching an explicit exit cannot resume a blocking receive",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1139483265,
+        "data": [
+          {
+            "P": "1297563780",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 1898
+    },
+    {
+      "id": "EXIT-002",
+      "title": "Catching an explicit exit cannot run a poll timeout callback",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1203344669,
+        "data": [
+          {
+            "S": "1203344669@'https://n5.elfenbenstornet.se'",
+            "P": "2201326238",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2105
+    },
+    {
+      "id": "EXIT-003",
+      "title": "Catching a termination signal cannot resume another receive",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1732284330,
+        "data": [
+          {
+            "S": "1732284330@'https://n5.elfenbenstornet.se'",
+            "P": "2923952515",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2293
+    },
+    {
+      "id": "EXIT-004",
+      "title": "An ordinary caught exception still permits receiving",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 2541133580,
+        "data": [
+          {
+            "S": "2541133580@'https://n5.elfenbenstornet.se'",
+            "P": "1747340497",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 1907
+    }
+  ]
+}

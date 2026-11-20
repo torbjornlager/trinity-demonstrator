@@ -1,0 +1,19 @@
+{
+  "engine_unchanged": true,
+  "files": {
+    "dependencies/swi-wasm.json": "df9ec1131e8e776600ad2f3979391922dc791b2e28aa21d00bc4526abff903eb",
+    "third_party/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592",
+    "web/swi_wasm_actor_worker.js": "4e11737a98ba03bba3917b4ac57f3951d6b543fb3c4ef692944e8b5794387d92",
+    "web/swipl-bundle.js": "89de2f2158cadfdd118b09190de215bbe61d16a0e4632542d8b95c7d0194ee0b",
+    "web/vendor/swi-wasm-minimal.html": "0691e29a3a6e17284ec13e6fb4058e8e2d184a557251904c50e12a07ad1c2162",
+    "web/vendor/swi-wasm-node.js": "da3380252608853f6dff987315ceb763e9ad4a544659fc689abaa2c94ea1d8a7",
+    "web/wasm/shared_db.pl": "806b92e31dd7b12b9f764e72af2b3812cdd0f8292bad385f0ca1d91fc98c439f",
+    "web/wasm/statechart_wasm.pl": "fd4cad98f2941c2ec11c9f21e277be58cd829d87197ae3992869e8ac79be4ac4",
+    "web/wasm/statechart_wasm_exec.pl": "0ea5653d596acd99e5dc5afa54db7d4d21af733954a488d0ff354c242fb29bed",
+    "web/wasm/statechart_wasm_model.pl": "c85d4d3a0e666a2177a12ae56181343cf89d0fde8e4b06edfed20fda01d26712",
+    "web/wasm/statechart_wasm_runtime.pl": "8ed9f5940037dad66e12d5e8d3dcfe020651601e7250e79e3d4e1910a6761da7",
+    "web/wasm/sxml_schema.pl": "968c0cc1dd4358e59d0d7ae6bc660299ef234e8b97616aeead154bdd697ff592"
+  },
+  "old_revision": "b2fd3fe8eba9663c46c08fcd4b7a5ade6b60ed3f",
+  "new_revision": "ca8e689e975326639a3cf61dd73a755723034bb7"
+}

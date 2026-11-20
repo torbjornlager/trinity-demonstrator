@@ -1,0 +1,146 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "toplevel-waits-0.1",
+  "scope": "required",
+  "candidate": "n5",
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "manifest_sha256": "e6dbd0fb270fd307d45afa665a060f435eb742bd3abe3e99141937bf57cc11f1",
+  "counts": {
+    "pass": 6,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "TW-001",
+      "title": "Caller targeting and independent query variables",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 2401465728,
+        "data": [
+          {
+            "S": "2401465728@'https://n5.elfenbenstornet.se'",
+            "P": "2429800488",
+            "E": "error(domain_error(synchronous_toplevel_target,other),context(toplevel_actors:toplevel_call_synch/4,'invalid synchronous toplevel option'))",
+            "X": "X",
+            "A": "success(2429800488,[ok],false)",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2249
+    },
+    {
+      "id": "TW-002",
+      "title": "Timeout outcome and callback bindings failure exceptions and commitment",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1366682189,
+        "data": [
+          {
+            "S": "1366682189@'https://n5.elfenbenstornet.se'",
+            "P": "2890944476",
+            "Me": "Me",
+            "A": "A",
+            "Barrier": "success(2890944476,[true],false)",
+            "V": "V",
+            "Vs": "[first]",
+            "B": "success(2890944476,[true],false)",
+            "C": "success(2890944476,[true],false)",
+            "E": "tw_callback",
+            "D": "success(2890944476,[true],false)",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2092
+    },
+    {
+      "id": "TW-003",
+      "title": "Late timed-out answer cannot satisfy the next synchronous wait",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1117180741,
+        "data": [
+          {
+            "S": "1117180741@'https://n5.elfenbenstornet.se'",
+            "P": "2246058387",
+            "Me": "Me",
+            "Early": "Early",
+            "A": "success(2246058387,[fresh],false)",
+            "X": "X",
+            "Me2": "Me2",
+            "First": "success(2246058387,[a],true)",
+            "Late": "Late",
+            "Last": "success(2246058387,[c],false)",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2095
+    },
+    {
+      "id": "TW-004",
+      "title": "Output mismatch consumes selected slice and continuation advances",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1659503578,
+        "data": [
+          {
+            "P": "2776342741",
+            "X": "X",
+            "A": "success(2776342741,[c,d],false)",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2087
+    },
+    {
+      "id": "TW-005",
+      "title": "Termination during wait preserves independent and spawn monitors",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1243205680,
+        "data": [
+          {
+            "P": "1709853027",
+            "R": "1000001417",
+            "E": "toplevel_down(tw_death)",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2004
+    },
+    {
+      "id": "TW-006",
+      "title": "Synchronous wait preserves asynchronous answers and unrelated messages",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1208538381,
+        "data": [
+          {
+            "S": "1208538381@'https://n5.elfenbenstornet.se'",
+            "P": "2046011005",
+            "R": "1000001431",
+            "A": "success(2046011005,[sync],false)",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2300
+    }
+  ]
+}

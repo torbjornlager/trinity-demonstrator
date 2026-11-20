@@ -1,0 +1,92 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "swi",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 4,
+    "unsupported": 0
+  },
+  "duration_ms": 465,
+  "endpoint": "ws://127.0.0.1:60459/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 71,
+      "id": "EXIT-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "3758322647@'http://127.0.0.1:60459'"
+          }
+        ],
+        "more": false,
+        "pid": 2420017974,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Catching an explicit exit cannot resume a blocking receive"
+    },
+    {
+      "duration_ms": 117,
+      "id": "EXIT-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "3743583240@'http://127.0.0.1:60459'",
+            "S": "1899303661@'http://127.0.0.1:60459'"
+          }
+        ],
+        "more": false,
+        "pid": 1899303661,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Catching an explicit exit cannot run a poll timeout callback"
+    },
+    {
+      "duration_ms": 165,
+      "id": "EXIT-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "1250233151@'http://127.0.0.1:60459'",
+            "S": "2875334411@'http://127.0.0.1:60459'"
+          }
+        ],
+        "more": false,
+        "pid": 2875334411,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Catching a termination signal cannot resume another receive"
+    },
+    {
+      "duration_ms": 112,
+      "id": "EXIT-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "6710515445@'http://127.0.0.1:60459'",
+            "S": "1737064940@'http://127.0.0.1:60459'"
+          }
+        ],
+        "more": false,
+        "pid": 1737064940,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "An ordinary caught exception still permits receiving"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-20T09:05:55.476213+00:00",
+  "suite": "committed-exit-0.1"
+}

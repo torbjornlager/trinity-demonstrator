@@ -1,0 +1,269 @@
+{
+  "status": "fail",
+  "results": [
+    {
+      "candidate": "swi",
+      "candidate_image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e",
+      "suite": "rpc-timeout-0.1",
+      "manifest_sha256": "fab39e3043c75076cb35b09daac48b860a4fce2cd0c1d42de6cf9f7b0da28694",
+      "counts": {
+        "pass": 20,
+        "fail": 0
+      },
+      "results": [
+        {
+          "id": "RPC-TIME-001",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-002",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-003",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-004",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-005",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-006",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-007",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-008",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-009",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-010",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-011",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-012",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-013",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-014",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-015",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-016",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-017",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-018",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-019",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-020",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        }
+      ]
+    },
+    {
+      "candidate": "trealla",
+      "candidate_image": "sha256:57ee398768b13c3626aec5c4106f85bc9d7c337a4edd1e836057a35bf3b145e8",
+      "suite": "rpc-timeout-0.1",
+      "manifest_sha256": "fab39e3043c75076cb35b09daac48b860a4fce2cd0c1d42de6cf9f7b0da28694",
+      "counts": {
+        "pass": 0,
+        "fail": 20
+      },
+      "results": [
+        {
+          "id": "RPC-TIME-001",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-002",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-003",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-004",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-005",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-006",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-007",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-008",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-009",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-010",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-011",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-012",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-013",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-014",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-015",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-016",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-017",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-018",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        },
+        {
+          "id": "RPC-TIME-019",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,rpc/3),rpc/3).\n"
+        },
+        {
+          "id": "RPC-TIME-020",
+          "status": "fail",
+          "exit_code": 2,
+          "output": "   error(existence_error(procedure,promise/4),promise/4).\n"
+        }
+      ]
+    }
+  ]
+}

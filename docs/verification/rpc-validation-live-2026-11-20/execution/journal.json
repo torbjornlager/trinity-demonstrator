@@ -1,0 +1,62 @@
+[
+  {
+    "stage": "preflight_verified",
+    "utc": "2026-11-20T09:16:52Z"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:16:54Z",
+    "service": "wp_admin",
+    "image": "sha256:2539644305b45e9407f72e7842839bee7254dde5b103c117acd28f035ccc07f9"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:16:56Z",
+    "service": "wp_n4",
+    "image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:16:57Z",
+    "service": "wp_n3",
+    "image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:16:59Z",
+    "service": "wp_n1",
+    "image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:17:01Z",
+    "service": "wp_n2",
+    "image": "sha256:544b627ae1c26d3a16b1f4c934c3d30d83ca8accd6f622826090b383fc4cee21"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:17:06Z",
+    "service": "wp_n5",
+    "image": "sha256:57ee398768b13c3626aec5c4106f85bc9d7c337a4edd1e836057a35bf3b145e8"
+  },
+  {
+    "stage": "updated_and_healthy",
+    "utc": "2026-11-20T09:17:10Z",
+    "service": "n0",
+    "image": "sha256:8a4d3d60d3ec4945b9b09442288ea7f96bd1f9ef7d7147f4425f9bcc1949e1f8"
+  },
+  {
+    "stage": "protected_configuration_preserved",
+    "utc": "2026-11-20T09:17:11Z",
+    "phase": "candidate"
+  },
+  {
+    "stage": "protected_configuration_preserved",
+    "utc": "2026-11-20T09:37:12Z",
+    "phase": "candidate"
+  },
+  {
+    "stage": "verified_and_selected",
+    "utc": "2026-11-20T09:37:12Z"
+  }
+]

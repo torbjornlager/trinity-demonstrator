@@ -1,0 +1,15 @@
+{
+  "shared": "ed707647072afd35c152530e8573800d77051f85",
+  "native": "0bf728698652d4a797fa3ecc0bbc27de05d7afd9",
+  "browser": "ca8e689e975326639a3cf61dd73a755723034bb7",
+  "trealla": "e99126b5f64b233354781d85506405a5c70fa12e",
+  "conformance": "946417362936082b6c5d63d209815b5f66777297",
+  "trealla_overlay_files": [
+    "README.md",
+    "http_cache_eviction_tests.pl",
+    "rpc.pl",
+    "rpc_option_tests.pl",
+    "tests.pl",
+    "tools/test.sh"
+  ]
+}

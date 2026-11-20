@@ -1,0 +1,12 @@
+{
+  "verified_reports": [
+    "2026-11-20-live-conformance",
+    "2026-11-20-regression-triage",
+    "2026-11-20-retirement-live",
+    "2026-11-20-backlog-baseline",
+    "2026-11-20-cleanup-qualification"
+  ],
+  "verified_artifacts": 975,
+  "older_archive_audit": "Broader optional audit encountered a missing local 16 November log referenced by its manifest; no older archive was modified. Publication verifies the five relevant 20 November baselines.",
+  "publication_script_sha256": "85ac9042e955eaa3338fb1d601616eefddd1e8f3cfeb4b898f79fa6245a3d634"
+}

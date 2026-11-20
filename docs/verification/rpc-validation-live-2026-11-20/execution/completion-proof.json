@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "completed_utc": "2026-11-20T09:38:33.748247+00:00",
+  "services": 7,
+  "exact_swi_git_revisions_and_trealla_overlay_verified": true,
+  "protected_configuration_preserved": true,
+  "unrelated_compose_services_unchanged": true,
+  "qualified_engine_bytes_preserved": true,
+  "guarded_recovery_bound_to_selected_ids": true
+}

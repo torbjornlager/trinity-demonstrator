@@ -1,0 +1,70 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "actor-supervisors-0.1",
+  "scope": "required",
+  "candidate": "n3",
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "manifest_sha256": "e518fd72f8a5c6333b2f99a58206f2e725551f9c2fe3f4d120fdfd9c04862d9a",
+  "counts": {
+    "pass": 8,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "SC-001",
+      "title": "Initial startup failure releases previously created child names and preserves the conflicting actor",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2216
+    },
+    {
+      "id": "SC-002",
+      "title": "Failed dynamic addition preserves siblings and permits retry",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2039
+    },
+    {
+      "id": "SC-003",
+      "title": "Failed explicit respawn retains the inactive specification and permits retry",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2130
+    },
+    {
+      "id": "SC-007",
+      "title": "Zero restart budget performs policy cleanup under one-for-one",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2080
+    },
+    {
+      "id": "SC-008",
+      "title": "Zero restart budget performs policy cleanup under one-for-all",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2112
+    },
+    {
+      "id": "SC-009",
+      "title": "Zero restart budget performs policy cleanup under rest-for-one",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2118
+    },
+    {
+      "id": "SC-010",
+      "title": "Two permitted restarts precede intensity exhaustion",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2074
+    },
+    {
+      "id": "SC-011",
+      "title": "Exhaustion honours numeric and brutal-kill shutdown policies",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2303
+    }
+  ]
+}

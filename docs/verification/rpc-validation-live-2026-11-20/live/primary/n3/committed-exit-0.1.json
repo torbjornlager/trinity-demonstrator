@@ -1,0 +1,85 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "committed-exit-0.1",
+  "scope": "required",
+  "candidate": "n3",
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "manifest_sha256": "58a79ea73bcaf0f3e0335a10207b60fb9afa1d805809d7b59d44700d9467dc99",
+  "counts": {
+    "pass": 4,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "EXIT-001",
+      "title": "Catching an explicit exit cannot resume a blocking receive",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "5891737324@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 7704549062,
+        "type": "success"
+      },
+      "duration_ms": 1985
+    },
+    {
+      "id": "EXIT-002",
+      "title": "Catching an explicit exit cannot run a poll timeout callback",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "7518499892@'https://n3.elfenbenstornet.se'",
+            "S": "1164056898@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1164056898,
+        "type": "success"
+      },
+      "duration_ms": 2103
+    },
+    {
+      "id": "EXIT-003",
+      "title": "Catching a termination signal cannot resume another receive",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "7439961697@'https://n3.elfenbenstornet.se'",
+            "S": "7979408910@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 7979408910,
+        "type": "success"
+      },
+      "duration_ms": 2194
+    },
+    {
+      "id": "EXIT-004",
+      "title": "An ordinary caught exception still permits receiving",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "9294967667@'https://n3.elfenbenstornet.se'",
+            "S": "6876546278@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 6876546278,
+        "type": "success"
+      },
+      "duration_ms": 2058
+    }
+  ]
+}

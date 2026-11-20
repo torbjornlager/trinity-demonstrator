@@ -1,0 +1,12 @@
+{
+  "status": "pass",
+  "committed_revision": "e99126b5f64b233354781d85506405a5c70fa12e",
+  "all_previously_qualified_source_files_match": true,
+  "qualified_source_manifest_sha256": "c36fca012fcababb83b2de98d63609cb2fcb5950d2388616a33620ee57bcb7bd",
+  "qualification_report": "reports/2026-11-20-cleanup-qualification/REPORT.md",
+  "unit_groups_per_platform": 111,
+  "platforms": [
+    "macOS",
+    "Linux"
+  ]
+}

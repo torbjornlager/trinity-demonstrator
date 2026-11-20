@@ -1,0 +1,185 @@
+[
+  {
+    "label": "n2-fresh-http-isolated",
+    "status": "pass",
+    "url": "https://n2.elfenbenstornet.se",
+    "observed": {
+      "created": "success([7712555535],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,7712555535),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n3-fresh-http-isolated",
+    "status": "pass",
+    "url": "https://n3.elfenbenstornet.se",
+    "observed": {
+      "created": "success([8835621322],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,8835621322),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n4-fresh-http-isolated",
+    "status": "pass",
+    "url": "https://n4.elfenbenstornet.se",
+    "observed": {
+      "created": "success([2738919199],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,2738919199),context(:(rpc,/(yield,3)),'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n5-fresh-http-isolated",
+    "status": "pass",
+    "url": "https://n5.elfenbenstornet.se",
+    "observed": {
+      "created": "success([1000000228],false).\n",
+      "foreign_request": "success([error(error(existence_error(promise,1000000228),context(rpc:yield/3,'unknown, consumed, or expired promise')))],false).\n"
+    }
+  },
+  {
+    "label": "n2-anonymous-retained-http",
+    "status": "pass",
+    "url": "https://n2.elfenbenstornet.se",
+    "observed": {
+      "created": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "R": "8756280848"
+          }
+        ],
+        "more": false,
+        "pid": 6327691649,
+        "type": "success"
+      },
+      "foreign_yield": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "Missing": "true"
+          }
+        ],
+        "more": false,
+        "pid": 6427525356,
+        "type": "success"
+      },
+      "foreign_cleanup": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 6427525356,
+        "type": "success"
+      },
+      "owner_collect": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 6327691649,
+        "type": "success"
+      }
+    }
+  },
+  {
+    "label": "n3-anonymous-retained-http",
+    "status": "pass",
+    "url": "https://n3.elfenbenstornet.se",
+    "observed": {
+      "created": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "R": "3468730572"
+          }
+        ],
+        "more": false,
+        "pid": 3071207519,
+        "type": "success"
+      },
+      "foreign_yield": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "Missing": "true"
+          }
+        ],
+        "more": false,
+        "pid": 3554812669,
+        "type": "success"
+      },
+      "foreign_cleanup": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 3554812669,
+        "type": "success"
+      },
+      "owner_collect": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 3071207519,
+        "type": "success"
+      }
+    }
+  },
+  {
+    "label": "n4-anonymous-retained-http",
+    "status": "pass",
+    "url": "https://n4.elfenbenstornet.se",
+    "observed": {
+      "created": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "R": "1417872721"
+          }
+        ],
+        "more": false,
+        "pid": 2912818994,
+        "type": "success"
+      },
+      "foreign_yield": {
+        "data": [
+          {
+            "AuditCheck": "passed",
+            "Missing": "true"
+          }
+        ],
+        "more": false,
+        "pid": 1944559040,
+        "type": "success"
+      },
+      "foreign_cleanup": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 1944559040,
+        "type": "success"
+      },
+      "owner_collect": {
+        "data": [
+          {
+            "AuditCheck": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 2912818994,
+        "type": "success"
+      }
+    }
+  }
+]

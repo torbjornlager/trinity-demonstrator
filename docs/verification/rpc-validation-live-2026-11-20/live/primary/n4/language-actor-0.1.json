@@ -1,0 +1,146 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "language-actor-0.1",
+  "scope": "required",
+  "candidate": "n4",
+  "endpoint": "wss://n4.elfenbenstornet.se/ws",
+  "manifest_sha256": "6204ea84a13e834aa2329fd97cb61c2508c989f1b1447cf86d22dda1ddb4bb91",
+  "counts": {
+    "pass": 7,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "LC-001",
+      "title": "Identity and references are opaque and stable",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "6109837072",
+            "Again": "8919677698@'https://n4.elfenbenstornet.se'",
+            "B": "5727563056",
+            "BaselineResult": "passed",
+            "Self": "8919677698@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 8919677698,
+        "type": "success"
+      },
+      "duration_ms": 1978
+    },
+    {
+      "id": "LC-002",
+      "title": "Selective receive retains earlier unmatched data",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "S": "6875482208@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 6875482208,
+        "type": "success"
+      },
+      "duration_ms": 2085
+    },
+    {
+      "id": "LC-003",
+      "title": "Failed guards preserve messages",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "S": "2296366555@'https://n4.elfenbenstornet.se'",
+            "X": "X",
+            "Y": "1"
+          }
+        ],
+        "more": false,
+        "pid": 2296366555,
+        "type": "success"
+      },
+      "duration_ms": 2108
+    },
+    {
+      "id": "LC-004",
+      "title": "Parallel bindings failure and exception",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "baseline_error",
+            "X": "one",
+            "Y": "two"
+          }
+        ],
+        "more": false,
+        "pid": 3628071749,
+        "type": "success"
+      },
+      "duration_ms": 2135
+    },
+    {
+      "id": "LC-005",
+      "title": "First solution returns one winner and applies continue policy",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "X": "ok",
+            "Y": "ready"
+          }
+        ],
+        "more": false,
+        "pid": 5889258951,
+        "type": "success"
+      },
+      "duration_ms": 2116
+    },
+    {
+      "id": "LC-006",
+      "title": "Synchronous toplevel paging returns answer terms",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "success(9516441637@'https://n4.elfenbenstornet.se',[a,b],true)",
+            "B": "success(9516441637@'https://n4.elfenbenstornet.se',[c],false)",
+            "BaselineResult": "passed",
+            "P": "9516441637@'https://n4.elfenbenstornet.se'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 7419944816,
+        "type": "success"
+      },
+      "duration_ms": 2146
+    },
+    {
+      "id": "LC-007",
+      "title": "Synchronous failure and exception remain answer terms",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "failure(2840924028@'https://n4.elfenbenstornet.se')",
+            "B": "error(2840924028@'https://n4.elfenbenstornet.se',baseline_error)",
+            "BaselineResult": "passed",
+            "P": "2840924028@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 3784388500,
+        "type": "success"
+      },
+      "duration_ms": 2129
+    }
+  ]
+}

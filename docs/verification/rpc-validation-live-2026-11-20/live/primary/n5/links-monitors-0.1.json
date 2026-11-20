@@ -1,0 +1,144 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "links-monitors-0.1",
+  "scope": "required",
+  "candidate": "n5",
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "manifest_sha256": "1a8358359b714e53b1be77122875666e89ebdf827562309e150cb9e7b364ebf1",
+  "counts": {
+    "pass": 6,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "LM-001",
+      "title": "Spawn monitoring preserves immediate success failure exception and explicit exit",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 2276505543,
+        "data": [
+          {
+            "P": "3074326212",
+            "F": "1000374766",
+            "E": "1984100852",
+            "K": "2751599433",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2164
+    },
+    {
+      "id": "LM-002",
+      "title": "Explicit and spawn-time monitors are independent and preserve unrelated data",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 2409672452,
+        "data": [
+          {
+            "S": "2409672452@'https://n5.elfenbenstornet.se'",
+            "P": "1019588717",
+            "R": "1000001111",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2046
+    },
+    {
+      "id": "LM-003",
+      "title": "Monitoring a terminated actor yields no_process with the returned reference",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1231931072,
+        "data": [
+          {
+            "P": "1189842367",
+            "R": "1000001124",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2118
+    },
+    {
+      "id": "LM-004",
+      "title": "Child termination leaves its linked parent alive",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1083843989,
+        "data": [
+          {
+            "S": "1083843989@'https://n5.elfenbenstornet.se'",
+            "Me": "Me",
+            "Child": "Child",
+            "Parent": "1092761877",
+            "C": "3026079513",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2111
+    },
+    {
+      "id": "LM-005",
+      "title": "A three-generation cascade delivers exact notifications under one deadline",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 1282310459,
+        "data": [
+          {
+            "S": "1282310459@'https://n5.elfenbenstornet.se'",
+            "R": "R",
+            "C": "C",
+            "G": "G",
+            "GP": "GP",
+            "CP": "CP",
+            "Root": "2944244527",
+            "Child": "1141017791",
+            "Grand": "1272793739",
+            "CR": "1000001154",
+            "GR": "1000001155",
+            "T": "1795166607.789773",
+            "D": "1795166609.789773",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 2233
+    },
+    {
+      "id": "LM-006",
+      "title": "Demonitor withdrawal and scoped flush preserve unrelated monitors and messages",
+      "status": "pass",
+      "observation": {
+        "type": "success",
+        "pid": 2532826035,
+        "data": [
+          {
+            "S": "2532826035@'https://n5.elfenbenstornet.se'",
+            "P": "1206426019",
+            "Drop": "1000001168",
+            "Keep": "1000001169",
+            "Q": "1293296916",
+            "Flush": "1000001172",
+            "Other": "1000001173",
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false
+      },
+      "duration_ms": 1995
+    }
+  ]
+}

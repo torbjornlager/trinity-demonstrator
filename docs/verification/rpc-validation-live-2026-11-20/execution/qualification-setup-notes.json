@@ -1,0 +1,7 @@
+{
+  "network_none_trealla_controller_attempt": "not executed: python3 absent from production image; no runtime gate assertions ran",
+  "replacement": "existing loopback-published disposable fixture; host Python controller; execution-only fixture credentials",
+  "rpc_loader_initial_attempt": "rpc/3 was not imported into user; existence errors retained separately; committed rpc_option_tests.pl imports API for passing rerun",
+  "runner_initial_attempt": "120/123 pass using unintended legacy default Node; three adapter tests require Object.fromEntries",
+  "runner_node22": "123/123 pass with qualified Node 22.23.4; no source/assertion changes"
+}

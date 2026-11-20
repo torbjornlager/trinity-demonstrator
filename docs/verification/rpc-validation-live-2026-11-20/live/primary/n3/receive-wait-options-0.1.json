@@ -1,0 +1,64 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "receive-wait-options-0.1",
+  "scope": "supporting",
+  "candidate": "n3",
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "manifest_sha256": "ceba59c1bb76281dcbf1dd9e489c0b311ad3cd62fbf921e9327feb679afcd2bb",
+  "counts": {
+    "pass": 3,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "RW-001",
+      "title": "Float zero polls past an unmatched queued message",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "S": "3934380760@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 3934380760,
+        "type": "success"
+      },
+      "duration_ms": 2119
+    },
+    {
+      "id": "RW-002",
+      "title": "A nonnumeric deadline raises a catchable type error",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 7696059179,
+        "type": "success"
+      },
+      "duration_ms": 2114
+    },
+    {
+      "id": "RW-003",
+      "title": "Timeout precedence does not suppress a malformed deadline error",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "S": "1053829013@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1053829013,
+        "type": "success"
+      },
+      "duration_ms": 2068
+    }
+  ]
+}

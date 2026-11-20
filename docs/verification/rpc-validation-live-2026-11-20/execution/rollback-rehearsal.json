@@ -1,0 +1,19 @@
+{
+  "status": "pass",
+  "injected_health_failure": true,
+  "uses_release_up_and_rollback_functions": true,
+  "predecessor_restored": true,
+  "state_marker_preserved": true,
+  "production_volumes_used": false,
+  "journal": [
+    {
+      "stage": "predecessor_restored",
+      "service": "fixture"
+    },
+    {
+      "stage": "rolled_back",
+      "failures": []
+    }
+  ],
+  "operator_sha256": "47f11f4766eea57b808e8a03f12c54660d693bac3a8d13772cb093ab38dc75e2"
+}

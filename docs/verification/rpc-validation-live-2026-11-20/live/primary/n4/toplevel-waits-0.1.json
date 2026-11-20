@@ -1,0 +1,146 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "toplevel-waits-0.1",
+  "scope": "required",
+  "candidate": "n4",
+  "endpoint": "wss://n4.elfenbenstornet.se/ws",
+  "manifest_sha256": "e6dbd0fb270fd307d45afa665a060f435eb742bd3abe3e99141937bf57cc11f1",
+  "counts": {
+    "pass": 6,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "TW-001",
+      "title": "Caller targeting and independent query variables",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "success(4927848793@'https://n4.elfenbenstornet.se',[ok],false)",
+            "BaselineResult": "passed",
+            "E": "error(domain_error(synchronous_toplevel_target,other),context(toplevel_actors:toplevel_call_synch/4,'invalid synchronous toplevel option'))",
+            "P": "4927848793@'https://n4.elfenbenstornet.se'",
+            "S": "1725366598@'https://n4.elfenbenstornet.se'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 1725366598,
+        "type": "success"
+      },
+      "duration_ms": 2167
+    },
+    {
+      "id": "TW-002",
+      "title": "Timeout outcome and callback bindings failure exceptions and commitment",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "success(5518052376@'https://n4.elfenbenstornet.se',[true],false)",
+            "Barrier": "success(5518052376@'https://n4.elfenbenstornet.se',[true],false)",
+            "BaselineResult": "passed",
+            "C": "success(5518052376@'https://n4.elfenbenstornet.se',[true],false)",
+            "D": "success(5518052376@'https://n4.elfenbenstornet.se',[true],false)",
+            "E": "tw_callback",
+            "Me": "Me",
+            "P": "5518052376@'https://n4.elfenbenstornet.se'",
+            "S": "2550780717@'https://n4.elfenbenstornet.se'",
+            "V": "V",
+            "Vs": "[first]"
+          }
+        ],
+        "more": false,
+        "pid": 2550780717,
+        "type": "success"
+      },
+      "duration_ms": 2098
+    },
+    {
+      "id": "TW-003",
+      "title": "Late timed-out answer cannot satisfy the next synchronous wait",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "success(1927024757@'https://n4.elfenbenstornet.se',[fresh],false)",
+            "BaselineResult": "passed",
+            "Early": "Early",
+            "First": "success(1927024757@'https://n4.elfenbenstornet.se',[a],true)",
+            "Last": "success(1927024757@'https://n4.elfenbenstornet.se',[c],false)",
+            "Late": "Late",
+            "Me": "Me",
+            "Me2": "Me2",
+            "P": "1927024757@'https://n4.elfenbenstornet.se'",
+            "S": "6989159598@'https://n4.elfenbenstornet.se'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 6989159598,
+        "type": "success"
+      },
+      "duration_ms": 2112
+    },
+    {
+      "id": "TW-004",
+      "title": "Output mismatch consumes selected slice and continuation advances",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "success(5676517822@'https://n4.elfenbenstornet.se',[c,d],false)",
+            "BaselineResult": "passed",
+            "P": "5676517822@'https://n4.elfenbenstornet.se'",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 5625014411,
+        "type": "success"
+      },
+      "duration_ms": 2089
+    },
+    {
+      "id": "TW-005",
+      "title": "Termination during wait preserves independent and spawn monitors",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "toplevel_down(tw_death)",
+            "P": "6839797295@'https://n4.elfenbenstornet.se'",
+            "R": "9422183561"
+          }
+        ],
+        "more": false,
+        "pid": 9881777746,
+        "type": "success"
+      },
+      "duration_ms": 2076
+    },
+    {
+      "id": "TW-006",
+      "title": "Synchronous wait preserves asynchronous answers and unrelated messages",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "A": "success(7896648953@'https://n4.elfenbenstornet.se',[sync],false)",
+            "BaselineResult": "passed",
+            "P": "7896648953@'https://n4.elfenbenstornet.se'",
+            "R": "8288688290",
+            "S": "9940980695@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 9940980695,
+        "type": "success"
+      },
+      "duration_ms": 2129
+    }
+  ]
+}

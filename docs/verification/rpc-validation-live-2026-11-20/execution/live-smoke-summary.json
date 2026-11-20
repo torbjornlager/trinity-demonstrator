@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "all_evidence_fresh": true,
+  "rpc_timeout_passes": 100,
+  "public_primary_passes": 354,
+  "http_prompt_passes": 76,
+  "sustained_finite_passes": 700,
+  "open_exercise_checks": 30,
+  "scope": "Focused RPC validation release; not a full conformance sweep"
+}
