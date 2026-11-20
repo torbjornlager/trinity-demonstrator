@@ -1,0 +1,33 @@
+{
+  "suite": "node-uri-io-0.2",
+  "fixture": "exact SWI/Trealla production candidate images on a disposable private Docker network; host controller via loopback-only published ports",
+  "images": {
+    "swi": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+    "trealla": "sha256:14130f034f6fd2ecee8ee5c51495fc0f80f3299630772faac40c865dd771459e"
+  },
+  "logical_node_urls": {
+    "swi": "http://canonical-swi:3053",
+    "trealla": "http://canonical-trealla:3053"
+  },
+  "adapter_sha256": "80c37b27e0ac6aef7eb81b94cd3cb4fbbe47234a42754feda48e88e5c06a70c4",
+  "manifest_sha256": "57011a783232d3dce5037a1dad292f5b4e62917c0da5dbc3729e3a2ac633f6dc",
+  "source_sha256": "915145fb17665e283aeea5d73d89b2dc0922f3972c9ec52ffb07a1f84537f918",
+  "results": [
+    {
+      "candidate": "swi",
+      "id": "EXACT-IMAGE-PEER-RECLAMATION",
+      "status": "pass",
+      "exit_code": 0
+    },
+    {
+      "candidate": "trealla",
+      "id": "EXACT-IMAGE-PEER-RECLAMATION",
+      "status": "pass",
+      "exit_code": 0
+    }
+  ],
+  "counts": {
+    "pass": 2,
+    "fail": 0
+  }
+}

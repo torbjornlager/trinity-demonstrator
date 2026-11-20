@@ -1,0 +1,25 @@
+{
+  "shared": "fd7e9f815a4c37737eddb7696cfcf76af7b87a1b",
+  "native": "254ae3add4ee1d00342bdfaeaf85b87b0e10e5d0",
+  "browser": "b5ec41d3f68c49a1a6fac03f82f4481e88035cff",
+  "trealla": "d451596b63fbca5259c9782ee4761cad8d801dcb",
+  "conformance": "b47121a7520e922e951aa20957730ab0ff9f3b13",
+  "trealla_overlay_files": [
+    "README.md",
+    "actor_authority.pl",
+    "actor_authority_tests.pl",
+    "actors.pl",
+    "clause_io_reflection_tests.pl",
+    "distribution.pl",
+    "peer_topology.pl",
+    "peer_topology_tests.pl",
+    "remote_alias_tests.pl",
+    "sandbox_policy.pl",
+    "scoped_peer_connections_tests.pl",
+    "source_policy.pl",
+    "tools/test.sh",
+    "toplevel_actors.pl",
+    "uri_option_tests.pl",
+    "web_prolog.pl"
+  ]
+}

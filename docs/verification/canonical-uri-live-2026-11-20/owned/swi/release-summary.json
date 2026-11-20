@@ -1,0 +1,63 @@
+{
+  "profile": "actor-release-0.2",
+  "candidate": "swi",
+  "packs": [
+    {
+      "suite": "actor-core-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 7,
+      "report": "actor-core-0.1.json"
+    },
+    {
+      "suite": "selective-receive-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 6,
+      "report": "selective-receive-0.1.json"
+    },
+    {
+      "suite": "links-monitors-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 6,
+      "report": "links-monitors-0.1.json"
+    },
+    {
+      "suite": "copying-isolation-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 6,
+      "report": "copying-isolation-0.1.json"
+    },
+    {
+      "suite": "source-copying-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 6,
+      "report": "source-copying-0.1.json"
+    },
+    {
+      "suite": "toplevel-waits-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 6,
+      "report": "toplevel-waits-0.1.json"
+    },
+    {
+      "suite": "ownership-lifecycle-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 4,
+      "report": "ownership-lifecycle-0.1.json"
+    },
+    {
+      "suite": "committed-exit-0.1",
+      "passed": true,
+      "returncode": 0,
+      "expected_cases": 4,
+      "report": "committed-exit-0.1.json"
+    }
+  ],
+  "passed": true
+}

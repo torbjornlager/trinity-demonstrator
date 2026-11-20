@@ -1,0 +1,144 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "links-monitors-0.1",
+  "scope": "required",
+  "candidate": "n4",
+  "endpoint": "wss://n4.elfenbenstornet.se/ws",
+  "manifest_sha256": "1a8358359b714e53b1be77122875666e89ebdf827562309e150cb9e7b364ebf1",
+  "counts": {
+    "pass": 6,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "LM-001",
+      "title": "Spawn monitoring preserves immediate success failure exception and explicit exit",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "6702637058@'https://n4.elfenbenstornet.se'",
+            "F": "7466240542@'https://n4.elfenbenstornet.se'",
+            "K": "3152742738@'https://n4.elfenbenstornet.se'",
+            "P": "7410791790@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 2788952287,
+        "type": "success"
+      },
+      "duration_ms": 2134
+    },
+    {
+      "id": "LM-002",
+      "title": "Explicit and spawn-time monitors are independent and preserve unrelated data",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "6778132065@'https://n4.elfenbenstornet.se'",
+            "R": "5376077379",
+            "S": "9198742879@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 9198742879,
+        "type": "success"
+      },
+      "duration_ms": 2129
+    },
+    {
+      "id": "LM-003",
+      "title": "Monitoring a terminated actor yields no_process with the returned reference",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "4197693413@'https://n4.elfenbenstornet.se'",
+            "R": "5597538789"
+          }
+        ],
+        "more": false,
+        "pid": 9705265220,
+        "type": "success"
+      },
+      "duration_ms": 2069
+    },
+    {
+      "id": "LM-004",
+      "title": "Child termination leaves its linked parent alive",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "7568130200@'https://n4.elfenbenstornet.se'",
+            "Child": "Child",
+            "Me": "Me",
+            "Parent": "8788488594@'https://n4.elfenbenstornet.se'",
+            "S": "9959176426@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 9959176426,
+        "type": "success"
+      },
+      "duration_ms": 2180
+    },
+    {
+      "id": "LM-005",
+      "title": "A three-generation cascade delivers exact notifications under one deadline",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "C",
+            "CP": "CP",
+            "CR": "2150974694",
+            "Child": "2716068123@'https://n4.elfenbenstornet.se'",
+            "D": "1795175928.9542632",
+            "G": "G",
+            "GP": "GP",
+            "GR": "4962796549",
+            "Grand": "3407793734@'https://n4.elfenbenstornet.se'",
+            "R": "R",
+            "Root": "1122319231@'https://n4.elfenbenstornet.se'",
+            "S": "3551692928@'https://n4.elfenbenstornet.se'",
+            "T": "1795175926.9542632"
+          }
+        ],
+        "more": false,
+        "pid": 3551692928,
+        "type": "success"
+      },
+      "duration_ms": 2152
+    },
+    {
+      "id": "LM-006",
+      "title": "Demonitor withdrawal and scoped flush preserve unrelated monitors and messages",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Drop": "1564882881",
+            "Flush": "7912347715",
+            "Keep": "8327611235",
+            "Other": "6792180623",
+            "P": "4803942667@'https://n4.elfenbenstornet.se'",
+            "Q": "9548590010@'https://n4.elfenbenstornet.se'",
+            "S": "1194516946@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 1194516946,
+        "type": "success"
+      },
+      "duration_ms": 2038
+    }
+  ]
+}

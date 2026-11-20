@@ -1,0 +1,2 @@
+native SWI setup: browser schema provenance differs from native dependency pin; run python3 tools/setup_swi.py --native-root /path/to/swi-prolog-node
+pinned SWI CI: Command '['/Library/Developer/CommandLineTools/usr/bin/python3', '/Users/lager/trinity-demonstrator/tools/setup_swi.py', '--native-root', '/Users/lager/swi-prolog-node', '--state-file', '/Users/lager/trinity-demonstrator/.trinity/canonical-uri-release-20261120/pinned-ci/native-swi.json']' returned non-zero exit status 2.

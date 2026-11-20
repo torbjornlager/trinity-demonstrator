@@ -1,0 +1,161 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "trealla-exact-image",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 824,
+  "endpoint": "ws://127.0.0.1:19755/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 121,
+      "id": "CI-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Embedded": "1363254153",
+            "Me": "Me",
+            "P": "1363254153",
+            "S": "1830337997@'http://127.0.0.1:19755'",
+            "Self": "1363254153"
+          }
+        ],
+        "more": false,
+        "pid": 1830337997,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Spawn output pid is substituted inside the child goal"
+    },
+    {
+      "duration_ms": 125,
+      "id": "CI-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "1346425657",
+            "S": "1397828650@'http://127.0.0.1:19755'",
+            "Value": "child",
+            "X": "parent"
+          }
+        ],
+        "more": false,
+        "pid": 1397828650,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Parent and child bindings remain independent"
+    },
+    {
+      "duration_ms": 124,
+      "id": "CI-003",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "B",
+            "BaselineResult": "passed",
+            "C": "C",
+            "P": "1088182123",
+            "R1": "inside",
+            "R2": "inside",
+            "S": "2487777332@'http://127.0.0.1:19755'",
+            "U": "parent_received",
+            "V": "V"
+          }
+        ],
+        "more": false,
+        "pid": 2487777332,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Goal and message copies preserve sharing without sharing variable identity"
+    },
+    {
+      "duration_ms": 140,
+      "id": "CI-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "1825000828",
+            "S": "2490747540@'http://127.0.0.1:19755'",
+            "V": "V",
+            "Values": "[alpha,beta]"
+          }
+        ],
+        "more": false,
+        "pid": 2490747540,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Text source supplies child predicates in clause order"
+    },
+    {
+      "duration_ms": 137,
+      "id": "CI-005",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "A",
+            "BaselineResult": "passed",
+            "C": "C",
+            "D": "D",
+            "Data": "Data",
+            "P": "2817940291",
+            "Rows": "[first-(A-A),second-pair(C,D)]",
+            "S": "2709199940@'http://127.0.0.1:19755'",
+            "Tag": "Tag",
+            "X": "X",
+            "Y": "Y",
+            "Z": "Z"
+          }
+        ],
+        "more": false,
+        "pid": 2709199940,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Clause-list source preserves order and within-clause variable sharing"
+    },
+    {
+      "duration_ms": 176,
+      "id": "CI-006",
+      "observation": {
+        "data": [
+          {
+            "After": "[parent]",
+            "BaselineResult": "passed",
+            "Before": "[parent]",
+            "Changed": "[changed]",
+            "Initial": "Initial",
+            "P": "1718093920",
+            "Q": "1170705502",
+            "S": "2722557633@'http://127.0.0.1:19755'",
+            "Sibling": "[right]",
+            "V": "V",
+            "Values": "Values"
+          }
+        ],
+        "more": false,
+        "pid": 2722557633,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Sibling private databases and parent source remain isolated"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-20T11:33:22.688767+00:00",
+  "suite": "copying-isolation-0.1"
+}

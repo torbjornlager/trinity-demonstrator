@@ -1,0 +1,42 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "prompt-ws-0.1",
+  "scope": "required",
+  "candidate": "n3",
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "manifest_sha256": "04a0fae53d6c2f3bb40f16afb8cd4e836e23e4b7edf805f755d3517e86d913a8",
+  "counts": {
+    "pass": 4,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "PW-001",
+      "title": "A WebSocket prompt carries its reference separately from literal prompt_ref data",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2158
+    },
+    {
+      "id": "PW-002",
+      "title": "A later WebSocket prompt accepts its own reply after a stale replay and a reply without a reference",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2178
+    },
+    {
+      "id": "PW-003",
+      "title": "A malformed reply retains its reference and successful dispatch consumes it before the next prompt",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2112
+    },
+    {
+      "id": "PW-004",
+      "title": "A routed reply consumes its reference even when the input pattern rejects its value; Abort recovers",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2098
+    }
+  ]
+}

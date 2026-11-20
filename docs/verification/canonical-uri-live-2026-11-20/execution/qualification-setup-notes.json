@@ -1,0 +1,6 @@
+{
+  "initial_schema_setup": "Both image build and local CI stopped before tests because the browser schema revision still named the predecessor. Browser schema provenance was synchronized; all 12 executable/schema/engine metadata payloads remain byte-identical.",
+  "initial_image_uri_fixture": "12 pass, 32 refusals: temporary canonical Docker hostnames were not in the sandbox remote destination allowlist. The fixture now explicitly allows only its two disposable logical node origins. No production allowlist or test assertion changed.",
+  "image_gate_trealla_controller": "Host controller against loopback-only private fixture because the production Trealla image lacks Python.",
+  "assertions_and_watchdogs": "Unchanged: maintained 22-case URI pack, 45-case ACTOR gates, 136 OPEN exercise assertions, RPC goals and integration watchdogs."
+}

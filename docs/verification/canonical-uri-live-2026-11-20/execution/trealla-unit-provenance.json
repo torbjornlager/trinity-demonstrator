@@ -1,0 +1,75 @@
+{
+  "status": "pass",
+  "revision": "d451596b63fbca5259c9782ee4761cad8d801dcb",
+  "source_report": "reports/2026-11-20-canonical-uri-qualification",
+  "unit_groups_per_platform": 112,
+  "interop_groups_per_platform": 71,
+  "platforms": [
+    "macos",
+    "linux"
+  ],
+  "qualification": [
+    {
+      "id": "NATIVE-URI-CONTRACT",
+      "candidate": "macos",
+      "status": "pass",
+      "assertions": 44
+    },
+    {
+      "id": "SWI-COMPLETE-TIERS",
+      "candidate": "macos",
+      "status": "pass",
+      "tiers": 8,
+      "origin_and_visitor_controls": "pass"
+    },
+    {
+      "id": "TREALLA-COMPLETE-UNIT",
+      "candidate": "macos",
+      "status": "pass",
+      "groups": 112,
+      "per_check_watchdog_seconds": 30
+    },
+    {
+      "id": "TREALLA-INTEROP",
+      "candidate": "macos",
+      "status": "pass",
+      "groups": 71,
+      "scoped_peer_reclamation_controls": 2,
+      "per_check_watchdog_seconds": 30
+    },
+    {
+      "id": "NATIVE-URI-CONTRACT",
+      "candidate": "linux",
+      "status": "pass",
+      "assertions": 44
+    },
+    {
+      "id": "SWI-COMPLETE-TIERS",
+      "candidate": "linux",
+      "status": "pass",
+      "tiers": 8,
+      "origin_and_visitor_controls": "pass"
+    },
+    {
+      "id": "TREALLA-COMPLETE-UNIT",
+      "candidate": "linux",
+      "status": "pass",
+      "groups": 112,
+      "per_check_watchdog_seconds": 30
+    },
+    {
+      "id": "TREALLA-INTEROP",
+      "candidate": "linux",
+      "status": "pass",
+      "groups": 71,
+      "scoped_peer_reclamation_controls": 2,
+      "per_check_watchdog_seconds": 30
+    },
+    {
+      "id": "CONFORMANCE-RUNNER",
+      "candidate": "macos-node22",
+      "status": "pass",
+      "tests": 123
+    }
+  ]
+}

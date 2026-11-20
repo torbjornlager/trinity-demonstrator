@@ -1,0 +1,96 @@
+{
+  "status": "deployed_and_verified",
+  "completed_utc": "2026-11-20T12:13:03.464380+00:00",
+  "revisions": {
+    "shared": "fd7e9f815a4c37737eddb7696cfcf76af7b87a1b",
+    "native": "254ae3add4ee1d00342bdfaeaf85b87b0e10e5d0",
+    "browser": "b5ec41d3f68c49a1a6fac03f82f4481e88035cff",
+    "trealla": "d451596b63fbca5259c9782ee4761cad8d801dcb",
+    "conformance": "b47121a7520e922e951aa20957730ab0ff9f3b13",
+    "trealla_overlay_files": [
+      "README.md",
+      "actor_authority.pl",
+      "actor_authority_tests.pl",
+      "actors.pl",
+      "clause_io_reflection_tests.pl",
+      "distribution.pl",
+      "peer_topology.pl",
+      "peer_topology_tests.pl",
+      "remote_alias_tests.pl",
+      "sandbox_policy.pl",
+      "scoped_peer_connections_tests.pl",
+      "source_policy.pl",
+      "tools/test.sh",
+      "toplevel_actors.pl",
+      "uri_option_tests.pl",
+      "web_prolog.pl"
+    ]
+  },
+  "ci": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44728428742",
+  "live": {
+    "status": "pass",
+    "all_evidence_fresh": true,
+    "rpc_timeout_passes": 100,
+    "public_primary_passes": 354,
+    "http_prompt_passes": 76,
+    "sustained_finite_passes": 700,
+    "open_exercise_checks": 30,
+    "canonical_uri_passes": 63,
+    "scope": "Focused canonical URI/context deployment; not a full conformance sweep"
+  },
+  "owned_image_uri_assertions": 44,
+  "owned_image_lifecycle_controls": 2,
+  "owned_image_open_exercises": 136,
+  "scope": "Focused canonical node identity/context deployment; not a fresh full conformance sweep.",
+  "targets": [
+    {
+      "service": "n0",
+      "project": "web-prolog-hub",
+      "old_image": "sha256:8a4d3d60d3ec4945b9b09442288ea7f96bd1f9ef7d7147f4425f9bcc1949e1f8",
+      "image": "sha256:4446aee05ea9b221da62807661a825c770eb89e5e96878a04c5df961ed376b48",
+      "container_id": "42b3bdbbd1993324d2d9f02764206063e642642c2afd43f0644fc71700dfa4eb"
+    },
+    {
+      "service": "wp_n1",
+      "project": "deployment",
+      "old_image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e",
+      "image": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+      "container_id": "ddc079a13d2bc7a7f4a580298701a50bfaad2279f9b0c316642d9901e2cbfcc2"
+    },
+    {
+      "service": "wp_n2",
+      "project": "deployment",
+      "old_image": "sha256:544b627ae1c26d3a16b1f4c934c3d30d83ca8accd6f622826090b383fc4cee21",
+      "image": "sha256:3d3cac9d02d041fbd141835df07369ef56196790e5f3dac0ea3aa6c1402cb4b6",
+      "container_id": "d9f22866aa80e1d23050437e0d9633c1c048e8343c1b8b8e101c425383ff2363"
+    },
+    {
+      "service": "wp_n3",
+      "project": "deployment",
+      "old_image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e",
+      "image": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+      "container_id": "8749046e1520041863f9cf5c9022eb4ce8ac8d0bc4b706c90cdc0d01d30074fa"
+    },
+    {
+      "service": "wp_n4",
+      "project": "deployment",
+      "old_image": "sha256:cc5f399662f00f3cc664bc4af60d7621d360ac1ea8816a43984544d2c228e49e",
+      "image": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+      "container_id": "f9f677cf8afd4cefd9f76043b277671b334b6fdc0e01e925d147bb63e7b0bac5"
+    },
+    {
+      "service": "wp_admin",
+      "project": "deployment",
+      "old_image": "sha256:2539644305b45e9407f72e7842839bee7254dde5b103c117acd28f035ccc07f9",
+      "image": "sha256:0d2b8c85b9f4b19f7956cb4a0cb3d68dd06996db718d07030230a62382c81b25",
+      "container_id": "f237ff4cb170234ec4ef76eeaa3e0e21b0d490c99a2da2481d1447793d56c57c"
+    },
+    {
+      "service": "wp_n5",
+      "project": "deployment",
+      "old_image": "sha256:57ee398768b13c3626aec5c4106f85bc9d7c337a4edd1e836057a35bf3b145e8",
+      "image": "sha256:14130f034f6fd2ecee8ee5c51495fc0f80f3299630772faac40c865dd771459e",
+      "container_id": "3632faaaf5a101c0e38a4a3c57e16d2eec8dda267976f32cf5b15eb5c03ce2b1"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "status": "pass",
+  "all_public_rate_settings_unchanged": true,
+  "nodes": [
+    "n1",
+    "n2",
+    "n3",
+    "n4",
+    "n5",
+    "n7"
+  ]
+}

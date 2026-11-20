@@ -1,0 +1,151 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "trealla-exact-image",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 954,
+  "endpoint": "ws://127.0.0.1:19755/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 130,
+      "id": "LM-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "E": "1463095346",
+            "F": "2566864089",
+            "K": "2384632060",
+            "P": "2990867718"
+          }
+        ],
+        "more": false,
+        "pid": 1646556976,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Spawn monitoring preserves immediate success failure exception and explicit exit"
+    },
+    {
+      "duration_ms": 119,
+      "id": "LM-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "2677915410",
+            "R": "1000000133",
+            "S": "1157868694@'http://127.0.0.1:19755'"
+          }
+        ],
+        "more": false,
+        "pid": 1157868694,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Explicit and spawn-time monitors are independent and preserve unrelated data"
+    },
+    {
+      "duration_ms": 118,
+      "id": "LM-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "2660923288",
+            "R": "1000000144"
+          }
+        ],
+        "more": false,
+        "pid": 2411891636,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Monitoring a terminated actor yields no_process with the returned reference"
+    },
+    {
+      "duration_ms": 124,
+      "id": "LM-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "2140331966",
+            "Child": "Child",
+            "Me": "Me",
+            "Parent": "2659305807",
+            "S": "2752357089@'http://127.0.0.1:19755'"
+          }
+        ],
+        "more": false,
+        "pid": 2752357089,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Child termination leaves its linked parent alive"
+    },
+    {
+      "duration_ms": 334,
+      "id": "LM-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "C",
+            "CP": "CP",
+            "CR": "1000000171",
+            "Child": "2654027724",
+            "D": "1795174404.186701",
+            "G": "G",
+            "GP": "GP",
+            "GR": "1000000172",
+            "Grand": "1102629063",
+            "R": "R",
+            "Root": "1578844786",
+            "S": "2577299217@'http://127.0.0.1:19755'",
+            "T": "1795174402.186701"
+          }
+        ],
+        "more": false,
+        "pid": 2577299217,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A three-generation cascade delivers exact notifications under one deadline"
+    },
+    {
+      "duration_ms": 129,
+      "id": "LM-006",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Drop": "1000000183",
+            "Flush": "1000000187",
+            "Keep": "1000000184",
+            "Other": "1000000188",
+            "P": "1205440564",
+            "Q": "1328242075",
+            "S": "1272289272@'http://127.0.0.1:19755'"
+          }
+        ],
+        "more": false,
+        "pid": 1272289272,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Demonitor withdrawal and scoped flush preserve unrelated monitors and messages"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-20T11:33:21.665544+00:00",
+  "suite": "links-monitors-0.1"
+}

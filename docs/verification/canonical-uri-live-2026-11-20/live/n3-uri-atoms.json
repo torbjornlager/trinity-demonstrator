@@ -1,0 +1,191 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "n3",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 10,
+    "unsupported": 0
+  },
+  "duration_ms": 15171,
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 1608,
+      "id": "URI-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 6385906710,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "RPC rejects a non-text URI"
+    },
+    {
+      "duration_ms": 1525,
+      "id": "URI-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 1808214288,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "RPC does not accept authority shorthand"
+    },
+    {
+      "duration_ms": 1500,
+      "id": "URI-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Ref": "Ref",
+            "U": "U"
+          }
+        ],
+        "more": false,
+        "pid": 6574495867,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Promise URI validation leaves variables unbound"
+    },
+    {
+      "duration_ms": 1510,
+      "id": "URI-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Cs": "[h,t,t,p,:,/,/,i,n,v,a,l,i,d,'.',e,x,a,m,p,l,e]",
+            "E": "error(socket_error(eai_noname,'Name or service not known'),_)"
+          }
+        ],
+        "more": false,
+        "pid": 9189701767,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A character list is a URI value"
+    },
+    {
+      "duration_ms": 1501,
+      "id": "URI-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Cs": "[h,t,t,p,:,/,/,i,n,v,a,l,i,d,'.',e,x,a,m,p,l,e,/,s,o,u,r,c,e]",
+            "E": "error(permission_error(load,source_uri,[h,t,t,p,:,/,/,i,n,v,a,l,i,d,'.',e,x,a,m,p,l,e,/,s,o,u,r,c,e]),context(source_utils:open_source_uri/2,'src_uri target origin is not on the configured allowlist'))"
+          }
+        ],
+        "more": false,
+        "pid": 7902688314,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A character list is a source URI value"
+    },
+    {
+      "duration_ms": 1513,
+      "id": "URI-006",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Port": "Port",
+            "Ref": "Ref"
+          }
+        ],
+        "more": false,
+        "pid": 8979289683,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A compound URI does not bind its components"
+    },
+    {
+      "duration_ms": 1500,
+      "id": "URI-010",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 4384907340,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A list that is not text is not a URI value"
+    },
+    {
+      "duration_ms": 1520,
+      "id": "OPT-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 8676030544,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Non-atom Boolean options raise an atom type error"
+    },
+    {
+      "duration_ms": 1488,
+      "id": "OPT-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed"
+          }
+        ],
+        "more": false,
+        "pid": 2306826703,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Invalid Boolean atoms raise a Boolean domain error"
+    },
+    {
+      "duration_ms": 1504,
+      "id": "OPT-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Pending": "Pending",
+            "Ref": "Ref"
+          }
+        ],
+        "more": false,
+        "pid": 7793532069,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Later Boolean duplicates are validated"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "supporting",
+  "started_at": "2026-11-20T11:54:49.422939+00:00",
+  "suite": "uri-atoms-0.1"
+}

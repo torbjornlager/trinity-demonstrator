@@ -1,0 +1,269 @@
+{
+  "status": "pass",
+  "results": [
+    {
+      "candidate": "swi",
+      "candidate_image": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+      "suite": "rpc-timeout-0.1",
+      "manifest_sha256": "fab39e3043c75076cb35b09daac48b860a4fce2cd0c1d42de6cf9f7b0da28694",
+      "counts": {
+        "pass": 20,
+        "fail": 0
+      },
+      "results": [
+        {
+          "id": "RPC-TIME-001",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-002",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-003",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-004",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-005",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-006",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-007",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-008",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-009",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-010",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-011",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-012",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-013",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-014",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-015",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-016",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-017",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-018",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-019",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-020",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        }
+      ]
+    },
+    {
+      "candidate": "trealla",
+      "candidate_image": "sha256:14130f034f6fd2ecee8ee5c51495fc0f80f3299630772faac40c865dd771459e",
+      "suite": "rpc-timeout-0.1",
+      "manifest_sha256": "fab39e3043c75076cb35b09daac48b860a4fce2cd0c1d42de6cf9f7b0da28694",
+      "counts": {
+        "pass": 20,
+        "fail": 0
+      },
+      "results": [
+        {
+          "id": "RPC-TIME-001",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-002",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-003",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-004",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-005",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-006",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-007",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-008",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-009",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-010",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-011",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-012",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-013",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-014",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-015",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-016",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-017",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-018",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-019",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        },
+        {
+          "id": "RPC-TIME-020",
+          "status": "pass",
+          "exit_code": 0,
+          "output": ""
+        }
+      ]
+    }
+  ]
+}

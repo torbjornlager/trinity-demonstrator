@@ -1,0 +1,70 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "actor-workers-0.1",
+  "scope": "required",
+  "candidate": "n5",
+  "endpoint": "wss://n5.elfenbenstornet.se/ws",
+  "manifest_sha256": "c512fc15f4d35b4e06502d9778e63b282653f5995aa5a5bcdfcf6e14996fa5bd",
+  "counts": {
+    "pass": 8,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "WC-001",
+      "title": "Parallel preserves independent bindings and accepts an empty list",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 3937
+    },
+    {
+      "id": "WC-002",
+      "title": "Parallel reports logical failure and propagates original exceptions",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 8401
+    },
+    {
+      "id": "WC-003",
+      "title": "Both first_solution arities select a winner and reject an empty solver list",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 12598
+    },
+    {
+      "id": "WC-004",
+      "title": "Continue policies produce a final winning page after failure, exception or exit",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 12693
+    },
+    {
+      "id": "WC-005",
+      "title": "Unexpected exits and stop policies produce the documented outcome",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 16921
+    },
+    {
+      "id": "WC-006",
+      "title": "Workers resolve supplied predicates and preserve answer variable sharing",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 1979
+    },
+    {
+      "id": "WC-007",
+      "title": "A winning first_solution reclaims its loser and preserves unrelated state",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 4372
+    },
+    {
+      "id": "WC-008",
+      "title": "A failing parallel call reclaims its blocked sibling and preserves unrelated state",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 4200
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "admission": {
+    "window_policy": "fixed",
+    "rate_identity": "principal",
+    "rate_window_seconds": 60,
+    "max_call_requests_per_window": 120,
+    "max_session_spawns_per_window": 120,
+    "max_ws_commands_per_window": 1000,
+    "max_inflight_calls": 4,
+    "max_ws_actors_per_principal": 16
+  },
+  "self_url": "https://n5.elfenbenstornet.se",
+  "profile": "actor",
+  "auth": "open",
+  "sandbox": "blacklist",
+  "protocol_version": 1,
+  "auth_boundary": "trusted_headers",
+  "trusted_identity_headers": [
+    "X-Web-Prolog-User",
+    "X-Web-Prolog-Principal",
+    "X-Authenticated-User"
+  ],
+  "trusted_capability_headers": [
+    "X-Web-Prolog-Capabilities",
+    "X-Web-Prolog-Caps"
+  ],
+  "internal_transport_principal_prefix": "node:",
+  "principal_id": "[REDACTED]",
+  "principal_execution": true,
+  "maintenance": false,
+  "services": [
+    "linda"
+  ],
+  "provides": [
+    "ancestor_descendant/2",
+    "authorized/1",
+    "count_actor/1",
+    "echo_actor/0",
+    "father_child/2",
+    "human/1",
+    "linda_call/3",
+    "linda_in/1",
+    "linda_inp/1",
+    "linda_local_address/1",
+    "linda_local_call/2",
+    "linda_out/1",
+    "linda_rd/1",
+    "linda_rdp/1",
+    "linda_result/2",
+    "list_price/2",
+    "local_label/1",
+    "mother_child/2",
+    "online/1",
+    "owns/2",
+    "parent_child/2",
+    "ping/2",
+    "ping_pong/0",
+    "ping_pong/1",
+    "ping_pong_benchmark/2",
+    "pong/1",
+    "price/2",
+    "service/2",
+    "shared_fact/1",
+    "shared_transition_enabled/0"
+  ],
+  "self_contained": true,
+  "ws_allowed_origins": [
+    "https://n0.elfenbenstornet.se",
+    "https://n1.elfenbenstornet.se",
+    "https://n2.elfenbenstornet.se",
+    "https://n3.elfenbenstornet.se",
+    "https://n4.elfenbenstornet.se",
+    "https://n5.elfenbenstornet.se"
+  ],
+  "tutorial_sections": [
+    "local_actor",
+    "toplevels",
+    "distributed_actor"
+  ]
+}

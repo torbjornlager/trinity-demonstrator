@@ -1,0 +1,350 @@
+{
+  "suite": "node-uri-io-0.2",
+  "candidate": "n3",
+  "peer": "n5",
+  "authentication": "none",
+  "session_interval_seconds": 2.1,
+  "manifest_sha256": "57011a783232d3dce5037a1dad292f5b4e62917c0da5dbc3729e3a2ac633f6dc",
+  "source_sha256": "915145fb17665e283aeea5d73d89b2dc0922f3972c9ec52ffb07a1f84537f918",
+  "expected_live_case_ids": [
+    "NU-001",
+    "NU-002",
+    "NU-003",
+    "NU-004",
+    "NU-005",
+    "NU-006",
+    "NU-007",
+    "NU-008",
+    "NU-009",
+    "NU-010",
+    "NU-011",
+    "NU-012",
+    "NU-013",
+    "NU-014",
+    "NU-015",
+    "NU-016",
+    "NU-017",
+    "NU-018",
+    "NU-019",
+    "NU-020",
+    "NU-021"
+  ],
+  "owned_fixture_only": [
+    {
+      "id": "NU-022",
+      "reason": "Requires equal execution-only fixture credentials, qualified against both exact images instead of using production peer/operator credentials"
+    }
+  ],
+  "results": [
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-001",
+      "title": "Own node URI without trailing slash; canonical address without caller-namespace restoration",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-002",
+      "title": "Own node URI with trailing slash; canonical address without caller-namespace restoration",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-003",
+      "title": "Qualified local destination with trailing slash",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-004",
+      "title": "Own node URI alias for a retained toplevel; canonical address without caller-namespace restoration",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-005",
+      "title": "Copied writeln/1 across the node boundary",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "probe"
+        ],
+        "raw_output_data": [
+          "probe"
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-006",
+      "title": "Copied writeln/1 with peer URI alias",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "probe"
+        ],
+        "raw_output_data": [
+          "probe"
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-007",
+      "title": "Copied write/1 preserves the public operation",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "probe"
+        ],
+        "raw_output_data": [
+          "probe"
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-008",
+      "title": "Copied writeln/1 survives a second source transfer back to the origin",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "nested"
+        ],
+        "raw_output_data": [
+          "nested"
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-009",
+      "title": "Local ponger and remote copied pinger with writeln(Self) and URI alias",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "3102905103@localhost",
+          "Pong received ping.",
+          "Ping received pong.",
+          "3102905103@localhost",
+          "Pong received ping.",
+          "Ping received pong.",
+          "3102905103@localhost",
+          "Pong received ping.",
+          "Ping received pong.",
+          "Pong finished.",
+          "Ping finished."
+        ],
+        "raw_output_data": [
+          "3102905103@localhost",
+          "Pong received ping.",
+          "Ping received pong.",
+          "3102905103@localhost",
+          "Pong received ping.",
+          "Ping received pong.",
+          "3102905103@localhost",
+          "Pong received ping.",
+          "Ping received pong.",
+          "Pong finished.",
+          "Ping finished."
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-010",
+      "title": "Copied format/1 remains a working control",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "format probe."
+        ],
+        "raw_output_data": [
+          "format probe."
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-011",
+      "title": "Public clause bodies preserve write/writeln and variable sharing",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-012",
+      "title": "Source-less remote writeln/1 uses the terminal protocol",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "bare"
+        ],
+        "raw_output_data": [
+          "bare"
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-013",
+      "title": "Source-less remote call(writeln/1) uses the terminal protocol",
+      "status": "pass",
+      "observation": {
+        "outputs": [
+          "meta"
+        ],
+        "raw_output_data": [
+          "meta"
+        ],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-014",
+      "title": "Implicit local spawn is visible after its readiness handshake",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-015",
+      "title": "Own URL spawn uses a separate receiving context",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-016",
+      "title": "Own URL retained toplevel uses a separate receiving context",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-017",
+      "title": "Ordinary names remain isolated across the own-URL transport",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-018",
+      "title": "Halting a remote toplevel through a character-list node preserves the spawn monitor",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-019",
+      "title": "Canonical spelling does not grant exit authority across client contexts",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-020",
+      "title": "One retained client uses one receiving context for both root-URL spellings",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "n3",
+      "peer": "n5",
+      "id": "NU-021",
+      "title": "Fresh clients stay isolated at the same canonical peer node",
+      "status": "pass",
+      "observation": {
+        "distinct_client_actors": true,
+        "ordinary_names_isolated": true,
+        "foreign_exit_denied": true,
+        "both_targets_survived": true,
+        "baselines_restored": true
+      }
+    }
+  ],
+  "counts": {
+    "pass": 21,
+    "fail": 0
+  }
+}

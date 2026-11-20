@@ -1,0 +1,401 @@
+{
+  "suite": "rpc-timeout-0.1",
+  "candidate": "n4",
+  "endpoint": "wss://n4.elfenbenstornet.se/ws",
+  "transport": "original retained WSS query runner",
+  "manifest_sha256": "fab39e3043c75076cb35b09daac48b860a4fce2cd0c1d42de6cf9f7b0da28694",
+  "counts": {
+    "pass": 20,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "RPC-TIME-001",
+      "title": "rpc rejects [timeout(T)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(T)]",
+            "T": "T",
+            "Vars": "[T]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 1602614313,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-002",
+      "title": "rpc rejects [timeout(none)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(none)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 9267475211,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-003",
+      "title": "rpc rejects [timeout(infinite)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(infinite)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 3862380461,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-004",
+      "title": "rpc rejects [http_timeout(T)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(T)]",
+            "T": "T",
+            "Vars": "[T]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 7802003691,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-005",
+      "title": "rpc rejects [http_timeout(none)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(none)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 8322118423,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-006",
+      "title": "rpc rejects [timeout(1),timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(1),timeout(bad)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 6122841830,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-007",
+      "title": "rpc rejects [http_timeout(1),http_timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(1),http_timeout(bad)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 8404450172,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-008",
+      "title": "rpc rejects [timeout(1),http_timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(1),http_timeout(bad)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 8641840439,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-009",
+      "title": "rpc rejects [http_timeout(1),timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(1),timeout(bad)]",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 2441671864,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-010",
+      "title": "promise rejects [timeout(T)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(T)]",
+            "Ref": "Ref",
+            "T": "T",
+            "Vars": "[T]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 1190421405,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-011",
+      "title": "promise rejects [timeout(none)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(none)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 7301041197,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-012",
+      "title": "promise rejects [timeout(infinite)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(infinite)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 7306238370,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-013",
+      "title": "promise rejects [http_timeout(T)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(T)]",
+            "Ref": "Ref",
+            "T": "T",
+            "Vars": "[T]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 4671313369,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-014",
+      "title": "promise rejects [http_timeout(none)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(none)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 1416210919,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-015",
+      "title": "promise rejects [timeout(1),timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(1),timeout(bad)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 5093897658,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-016",
+      "title": "promise rejects [http_timeout(1),http_timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(1),http_timeout(bad)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 1514259795,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-017",
+      "title": "promise rejects [timeout(1),http_timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[timeout(1),http_timeout(bad)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 8196397121,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-018",
+      "title": "promise rejects [http_timeout(1),timeout(bad)] without bindings or dispatch",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Options": "[http_timeout(1),timeout(bad)]",
+            "Ref": "Ref",
+            "Vars": "[]",
+            "X": "X"
+          }
+        ],
+        "more": false,
+        "pid": 3062414297,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-019",
+      "title": "rpc validates every timeout before source fetching",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true"
+          }
+        ],
+        "more": false,
+        "pid": 8732486841,
+        "type": "success"
+      }
+    },
+    {
+      "id": "RPC-TIME-020",
+      "title": "promise validates every timeout before source fetching",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Caught": "true",
+            "Ref": "Ref"
+          }
+        ],
+        "more": false,
+        "pid": 3719256471,
+        "type": "success"
+      }
+    }
+  ]
+}

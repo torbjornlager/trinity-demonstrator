@@ -1,0 +1,152 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "trealla-exact-image",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 701,
+  "endpoint": "ws://127.0.0.1:19755/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 123,
+      "id": "SR-001",
+      "observation": {
+        "data": [
+          {
+            "A": "accepted",
+            "B": "accepted",
+            "BaselineResult": "passed",
+            "C": "C",
+            "Distinct": "retained",
+            "S": "2827636311@'http://127.0.0.1:19755'",
+            "Shared": "retained",
+            "U": "left",
+            "V": "right",
+            "X": "X",
+            "Y": "Y",
+            "Z": "Z"
+          }
+        ],
+        "more": false,
+        "pid": 2827636311,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "One-sided matching preserves message variables and sharing"
+    },
+    {
+      "duration_ms": 115,
+      "id": "SR-002",
+      "observation": {
+        "data": [
+          {
+            "A": "sr_a(1)",
+            "B": "sr_b(2)",
+            "BaselineResult": "passed",
+            "C": "sr_a(3)",
+            "D": "sr_b(4)",
+            "S": "1037814711@'http://127.0.0.1:19755'"
+          }
+        ],
+        "more": false,
+        "pid": 1037814711,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Deferred messages retain order across deferred and native queues"
+    },
+    {
+      "duration_ms": 117,
+      "id": "SR-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Outcome": "retained",
+            "S": "1088022952@'http://127.0.0.1:19755'",
+            "Tentative": "Tentative",
+            "ThrownBinding": "ThrownBinding",
+            "Value": "1",
+            "X": "X",
+            "Y": "Y"
+          }
+        ],
+        "more": false,
+        "pid": 1088022952,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Failing and ordinarily throwing guards retain messages and roll back bindings"
+    },
+    {
+      "duration_ms": 114,
+      "id": "SR-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "G": "G",
+            "Results": "[one-one]",
+            "S": "2410579465@'http://127.0.0.1:19755'",
+            "Seen": "Seen"
+          }
+        ],
+        "more": false,
+        "pid": 2410579465,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A guard uses only its first solution and shares bindings with the body"
+    },
+    {
+      "duration_ms": 116,
+      "id": "SR-005",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Error": "sr_body",
+            "S": "2505724298@'http://127.0.0.1:19755'"
+          }
+        ],
+        "more": false,
+        "pid": 2505724298,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Selected body failure and exception consume only their selected messages"
+    },
+    {
+      "duration_ms": 115,
+      "id": "SR-006",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Choice": "Choice",
+            "Choices": "[one,two]",
+            "Fallback": "kept",
+            "Me": "2514568151@'http://127.0.0.1:19755'",
+            "S": "S",
+            "V": "V"
+          }
+        ],
+        "more": false,
+        "pid": 2514568151,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "A selected body cut cannot prune caller alternatives"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-20T11:33:20.899764+00:00",
+  "suite": "selective-receive-0.1"
+}

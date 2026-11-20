@@ -1,0 +1,178 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "n4",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 9216,
+  "endpoint": "wss://n4.elfenbenstornet.se/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 1671,
+      "id": "CV-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "CVOptions1": "[unknown(creation_probe)]",
+            "CVSelf": "6193658917@'https://n4.elfenbenstornet.se'",
+            "E": "error(domain_error(spawn_option,unknown(creation_probe)),context(actors:spawn/3,'invalid spawn option'))",
+            "P": "P"
+          }
+        ],
+        "more": false,
+        "pid": 6193658917,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Unknown spawn options identify the option family"
+    },
+    {
+      "duration_ms": 1491,
+      "id": "CV-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "CVOptions1": "[monitor(true)|bad]",
+            "CVOptions2": "[_]",
+            "CVSelf": "3526884068@'https://n4.elfenbenstornet.se'",
+            "E1": "error(instantiation_error,context(actors:spawn/3,'invalid spawn option'))",
+            "E2": "error(type_error(list,[monitor(true)|bad]),context(actors:spawn/3,'invalid spawn option'))",
+            "E3": "error(instantiation_error,context(actors:spawn/3,'invalid spawn option'))",
+            "Option": "Option",
+            "Options": "Options",
+            "P": "P",
+            "Q": "Q",
+            "R": "R"
+          }
+        ],
+        "more": false,
+        "pid": 3526884068,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Option lists and entries must be instantiated and proper"
+    },
+    {
+      "duration_ms": 1497,
+      "id": "CV-003",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "CVOptions1": "[link(maybe)]",
+            "CVOptions2": "[monitor(1)]",
+            "CVOptions3": "[node(42)]",
+            "CVSelf": "1223944709@'https://n4.elfenbenstornet.se'",
+            "E1": "error(domain_error(boolean,maybe),context(actors:spawn/3,'invalid spawn option'))",
+            "E2": "error(type_error(atom,1),context(actors:spawn/3,'invalid spawn option'))",
+            "E3": "error(type_error(atom_or_string,42),context(actors:spawn/3,'invalid spawn option'))",
+            "P": "P",
+            "Q": "Q",
+            "R": "R"
+          }
+        ],
+        "more": false,
+        "pid": 1223944709,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Boolean and node values reject invalid types"
+    },
+    {
+      "duration_ms": 1504,
+      "id": "CV-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "CVOptions1": "[session(true),session(maybe)]",
+            "CVOptions2": "[link(true),link(maybe)]",
+            "CVOptions3": "[period(1),period(0)]",
+            "CVSelf": "5814200391@'https://n4.elfenbenstornet.se'",
+            "E1": "error(domain_error(boolean,maybe),context(actors:spawn/3,'invalid spawn option'))",
+            "E2": "error(domain_error(boolean,maybe),context(toplevel_actors:toplevel_spawn/2,'invalid spawn wrapper option'))",
+            "E3": "error(domain_error(supervisor_period,0),context(supervisor_actor:supervisor_spawn/3,'invalid spawn wrapper option'))",
+            "P": "P",
+            "Sup": "Sup",
+            "T": "T"
+          }
+        ],
+        "more": false,
+        "pid": 5814200391,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Later duplicate occurrences are validated"
+    },
+    {
+      "duration_ms": 1556,
+      "id": "CV-005",
+      "observation": {
+        "data": [
+          {
+            "A": "success(9731702428@'https://n4.elfenbenstornet.se',[true],false)",
+            "BaselineResult": "passed",
+            "CVOptions1": "[timeout(2),on_timeout(throw(first_session_setting_not_preserved))]",
+            "CVOptions2": "[strategy(one_for_one),intensity(0),period(0.25),monitor(true)]",
+            "CVOptions3": "[timeout(2),on_timeout(throw(missing_supervisor_down))]",
+            "CVOptions4": "[timeout(2),on_timeout(throw(missing_wrapper_answer))]",
+            "CVOptions5": "[session(false),session(true),monitor(true)]",
+            "CVOptions6": "[strategy(one_for_one)]",
+            "CVOptions7": "[session(false)]",
+            "CVSelf": "4209912024@'https://n4.elfenbenstornet.se'",
+            "Children": "[]",
+            "E1": "error(domain_error(spawn_option,session(false)),context(actors:spawn/3,'invalid spawn option'))",
+            "E2": "error(domain_error(spawn_option,strategy(one_for_one)),context(actors:spawn/3,'invalid spawn option'))",
+            "P": "P",
+            "Q": "Q",
+            "Sup": "6330720664@'https://n4.elfenbenstornet.se'",
+            "T": "9731702428@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 4209912024,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Wrapper-only options are separated and first scalar setting wins"
+    },
+    {
+      "duration_ms": 1497,
+      "id": "CV-006",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "CVOptions1": "[src_uri('file:///definitely-missing-creation-validation.pl'),unknown(creation_probe)]",
+            "CVOptions2": "[timeout(2),on_timeout(throw(missing_valid_start))]",
+            "CVOptions3": "[timeout(2),on_timeout(throw(missing_valid_down))]",
+            "CVOptions4": "[timeout(0),on_timeout(true)]",
+            "CVOptions5": "[monitor(true)]",
+            "CVSelf": "6036587474@'https://n4.elfenbenstornet.se'",
+            "E": "error(domain_error(spawn_option,unknown(creation_probe)),context(actors:spawn/3,'invalid spawn option'))",
+            "P": "9200954850@'https://n4.elfenbenstornet.se'",
+            "Rejected": "Rejected",
+            "S": "6036587474@'https://n4.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 6036587474,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Validation precedes source loading and application activation"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-20T11:55:15.636902+00:00",
+  "suite": "creation-validation-0.1"
+}

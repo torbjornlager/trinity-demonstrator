@@ -1,6 +1,47 @@
 # Trinity demonstrator: project and operations handover
 
-## Live RPC timeout validation — 20 November 2026
+## Live canonical node identity — 20 November 2026
+
+N0–N4 and admin select native SWI `254ae3a`, demonstrator runtime
+`fd7e9f8` and browser provenance `b5ec41d`. N5 selects Trealla
+`d451596`, including the preceding public clause-reflection repair.
+SWI-Prolog remains 11.0.0 and Trealla 3.14.20. All twelve browser executable,
+schema and engine-metadata payloads match the preceding package byte for byte.
+N6, N7, ingress and Caddy retain their service/image selections. OPEN access,
+admission rates, resource bounds, credentials, mounts and networks are preserved.
+
+Canonical empty-root aliases share routing, credential and owner topology keys.
+Non-root paths, ports, schemes and authorities stay distinct. Explicit URL calls
+retain receiving contexts; ordinary names stay client-context scoped. Trealla
+uses a separate peer connection cache per hosted client and reclaims it on
+retirement, preserving the other client's actors and delivery.
+
+Both CI jobs and all 36 local integration groups pass. Exact images pass 44 URI
+assertions, two independent-peer reclamation controls, 45 ACTOR cases per runtime,
+20 RPC timeout goals per runtime and all 136 visible OPEN exercise checks. Fresh
+live checks pass 63 URI/context assertions across N3/N4/N5, 100 RPC timeout goals,
+354 primary ACTOR cases, 30 anonymous parallel/fridge checks, 76 prompt assertions
+and 700 sustained finite HTTP probes. See the [release report](docs/verification/canonical-uri-live-2026-11-20/REPORT.md).
+
+The current conformance inventory has 183 unresolved failed observations. Nine
+unchanged URI/source failure observations are repaired and deployed; fifteen
+mixed address/visibility observations are superseded by the documented context
+contract and its separate version 0.2 assertions. Original results remain intact.
+This is a focused replay, not a new full sweep. N6/N7 and browser URI follow-up
+remain separate work.
+
+Current selection pointers identify the new frozen models. Private recovery is
+under `.trinity/canonical-uri-release-20261120/release/`. Verify the exact selection:
+
+`python3 .trinity/canonical-uri-release-20261120/release/rollback.py --check`
+
+Omitting `--check` restores this release's predecessors. The guard refuses a newer
+selection; earlier guards below are historical and refuse the current successors.
+An isolated injected-failure rehearsal preserved its state marker. No production
+rollback was needed.
+
+
+## Previous RPC timeout validation — 20 November 2026
 
 N0–N4 and admin select native SWI `0bf7286`, demonstrator runtime source
 `ed70764` and browser provenance `ca8e689`. N5 selects Trealla `e99126b`.

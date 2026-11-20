@@ -1,0 +1,63 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "actor-core-0.1",
+  "scope": "required",
+  "candidate": "n3",
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "manifest_sha256": "4198bb59573675dd75b12f0f173a5f289550ec5d3bce69cdd67141792d3ba7e8",
+  "counts": {
+    "pass": 7,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "AC-001",
+      "title": "Transport negotiation accepts protocol version 1 and browser capabilities",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 1136
+    },
+    {
+      "id": "AC-002",
+      "title": "Session self/1 is deterministic and denotes the spawned shell",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2192
+    },
+    {
+      "id": "AC-003",
+      "title": "Paged toplevel enumeration preserves bindings and final-page state",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2143
+    },
+    {
+      "id": "AC-004",
+      "title": "Guarded receive selects the non-positive clause and emits one line",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2116
+    },
+    {
+      "id": "AC-005",
+      "title": "Selective receive retains an earlier unmatched message",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2095
+    },
+    {
+      "id": "AC-006",
+      "title": "Direct browser input suspends until toplevel_respond",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2145
+    },
+    {
+      "id": "AC-007",
+      "title": "Nested toplevel input is delivered to its protocol caller",
+      "status": "pass",
+      "observation": null,
+      "duration_ms": 2091
+    }
+  ]
+}

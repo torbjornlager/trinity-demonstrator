@@ -1,0 +1,161 @@
+{
+  "advertised_profile": "actor",
+  "baseline": "0.1",
+  "candidate": "swi",
+  "counts": {
+    "diagnostic_error": 0,
+    "fail": 0,
+    "observed": 0,
+    "pass": 6,
+    "unsupported": 0
+  },
+  "duration_ms": 529,
+  "endpoint": "ws://127.0.0.1:57379/ws",
+  "peer": null,
+  "results": [
+    {
+      "duration_ms": 60,
+      "id": "CI-001",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "Embedded": "1936017177@'http://127.0.0.1:57379'",
+            "Me": "Me",
+            "P": "1936017177@'http://127.0.0.1:57379'",
+            "S": "3226377124@'http://127.0.0.1:57379'",
+            "Self": "1936017177@'http://127.0.0.1:57379'"
+          }
+        ],
+        "more": false,
+        "pid": 3226377124,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Spawn output pid is substituted inside the child goal"
+    },
+    {
+      "duration_ms": 104,
+      "id": "CI-002",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "5840960512@'http://127.0.0.1:57379'",
+            "S": "4907493388@'http://127.0.0.1:57379'",
+            "Value": "child",
+            "X": "parent"
+          }
+        ],
+        "more": false,
+        "pid": 4907493388,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Parent and child bindings remain independent"
+    },
+    {
+      "duration_ms": 104,
+      "id": "CI-003",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "B",
+            "BaselineResult": "passed",
+            "C": "C",
+            "P": "6584572834@'http://127.0.0.1:57379'",
+            "R1": "inside",
+            "R2": "inside",
+            "S": "9630147890@'http://127.0.0.1:57379'",
+            "U": "parent_received",
+            "V": "V"
+          }
+        ],
+        "more": false,
+        "pid": 9630147890,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Goal and message copies preserve sharing without sharing variable identity"
+    },
+    {
+      "duration_ms": 65,
+      "id": "CI-004",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "1194043284@'http://127.0.0.1:57379'",
+            "S": "8281070881@'http://127.0.0.1:57379'",
+            "V": "V",
+            "Values": "[alpha,beta]"
+          }
+        ],
+        "more": false,
+        "pid": 8281070881,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Text source supplies child predicates in clause order"
+    },
+    {
+      "duration_ms": 70,
+      "id": "CI-005",
+      "observation": {
+        "data": [
+          {
+            "A": "A",
+            "B": "A",
+            "BaselineResult": "passed",
+            "C": "C",
+            "D": "D",
+            "Data": "Data",
+            "P": "2268323983@'http://127.0.0.1:57379'",
+            "Rows": "[first-(A-A),second-pair(C,D)]",
+            "S": "9263023442@'http://127.0.0.1:57379'",
+            "Tag": "Tag",
+            "X": "X",
+            "Y": "Y",
+            "Z": "Z"
+          }
+        ],
+        "more": false,
+        "pid": 9263023442,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Clause-list source preserves order and within-clause variable sharing"
+    },
+    {
+      "duration_ms": 126,
+      "id": "CI-006",
+      "observation": {
+        "data": [
+          {
+            "After": "[parent]",
+            "BaselineResult": "passed",
+            "Before": "[parent]",
+            "Changed": "[changed]",
+            "Initial": "Initial",
+            "P": "2113117758@'http://127.0.0.1:57379'",
+            "Q": "3957245086@'http://127.0.0.1:57379'",
+            "S": "4269970511@'http://127.0.0.1:57379'",
+            "Sibling": "[right]",
+            "V": "V",
+            "Values": "Values"
+          }
+        ],
+        "more": false,
+        "pid": 4269970511,
+        "type": "success"
+      },
+      "status": "pass",
+      "title": "Sibling private databases and parent source remain isolated"
+    }
+  ],
+  "schema_version": 2,
+  "scope": "required",
+  "started_at": "2026-11-20T11:33:22.425060+00:00",
+  "suite": "copying-isolation-0.1"
+}

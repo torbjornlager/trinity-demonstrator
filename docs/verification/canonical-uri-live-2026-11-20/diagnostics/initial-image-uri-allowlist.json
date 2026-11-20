@@ -1,0 +1,421 @@
+{
+  "suite": "node-uri-io-0.2",
+  "fixture": "exact SWI/Trealla production candidate images on a disposable private Docker network; host controller via loopback-only published ports",
+  "images": {
+    "swi": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+    "trealla": "sha256:14130f034f6fd2ecee8ee5c51495fc0f80f3299630772faac40c865dd771459e"
+  },
+  "logical_node_urls": {
+    "swi": "http://canonical-swi:3053",
+    "trealla": "http://canonical-trealla:3053"
+  },
+  "adapter_sha256": "80c37b27e0ac6aef7eb81b94cd3cb4fbbe47234a42754feda48e88e5c06a70c4",
+  "manifest_sha256": "57011a783232d3dce5037a1dad292f5b4e62917c0da5dbc3729e3a2ac633f6dc",
+  "source_sha256": "915145fb17665e283aeea5d73d89b2dc0922f3972c9ec52ffb07a1f84537f918",
+  "results": [
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-001",
+      "title": "Own node URI without trailing slash; canonical address without caller-namespace restoration",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-swi:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-002",
+      "title": "Own node URI with trailing slash; canonical address without caller-namespace restoration",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-swi:3053/')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053/')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-003",
+      "title": "Qualified local destination with trailing slash",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-004",
+      "title": "Own node URI alias for a retained toplevel; canonical address without caller-namespace restoration",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-005",
+      "title": "Copied writeln/1 across the node boundary",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-006",
+      "title": "Copied writeln/1 with peer URI alias",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053/')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053/')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-007",
+      "title": "Copied write/1 preserves the public operation",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-008",
+      "title": "Copied writeln/1 survives a second source transfer back to the origin",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-009",
+      "title": "Local ponger and remote copied pinger with writeln(Self) and URI alias",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053/')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053/')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-010",
+      "title": "Copied format/1 remains a working control",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-011",
+      "title": "Public clause bodies preserve write/writeln and variable sharing",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-012",
+      "title": "Source-less remote writeln/1 uses the terminal protocol",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053/')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053/')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-013",
+      "title": "Source-less remote call(writeln/1) uses the terminal protocol",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053/')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053/')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-014",
+      "title": "Implicit local spawn is visible after its readiness handshake",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-015",
+      "title": "Own URL spawn uses a separate receiving context",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-swi:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-016",
+      "title": "Own URL retained toplevel uses a separate receiving context",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-017",
+      "title": "Ordinary names remain isolated across the own-URL transport",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-swi:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-018",
+      "title": "Halting a remote toplevel through a character-list node preserves the spawn monitor",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-019",
+      "title": "Canonical spelling does not grant exit authority across client contexts",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-swi:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-020",
+      "title": "One retained client uses one receiving context for both root-URL spellings",
+      "status": "fail",
+      "detail": "{'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-021",
+      "title": "Fresh clients stay isolated at the same canonical peer node",
+      "status": "fail",
+      "detail": "expected success, got {'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}; preceding events were []"
+    },
+    {
+      "candidate": "swi",
+      "peer": "trealla",
+      "id": "NU-022",
+      "title": "Equal credentials do not merge fresh client contexts at the canonical peer",
+      "status": "fail",
+      "detail": "expected success, got {'data': \"node_sandbox:reject_forbidden_spawn_option/2: No permission to option sandboxed node('http://canonical-trealla:3053')' (spawn option is disabled in sandbox mode)\", 'details': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),_)\", 'type': 'error'}; preceding events were []"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-001",
+      "title": "Own node URI without trailing slash; canonical address without caller-namespace restoration",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-002",
+      "title": "Own node URI with trailing slash; canonical address without caller-namespace restoration",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053/')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-003",
+      "title": "Qualified local destination with trailing slash",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-004",
+      "title": "Own node URI alias for a retained toplevel; canonical address without caller-namespace restoration",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-005",
+      "title": "Copied writeln/1 across the node boundary",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-006",
+      "title": "Copied writeln/1 with peer URI alias",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053/')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-007",
+      "title": "Copied write/1 preserves the public operation",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-008",
+      "title": "Copied writeln/1 survives a second source transfer back to the origin",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-009",
+      "title": "Local ponger and remote copied pinger with writeln(Self) and URI alias",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053/')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-010",
+      "title": "Copied format/1 remains a working control",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-011",
+      "title": "Public clause bodies preserve write/writeln and variable sharing",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-012",
+      "title": "Source-less remote writeln/1 uses the terminal protocol",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053/')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-013",
+      "title": "Source-less remote call(writeln/1) uses the terminal protocol",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053/')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-014",
+      "title": "Implicit local spawn is visible after its readiness handshake",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-015",
+      "title": "Own URL spawn uses a separate receiving context",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-016",
+      "title": "Own URL retained toplevel uses a separate receiving context",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-017",
+      "title": "Ordinary names remain isolated across the own-URL transport",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-018",
+      "title": "Halting a remote toplevel through a character-list node preserves the spawn monitor",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-019",
+      "title": "Canonical spelling does not grant exit authority across client contexts",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-trealla:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-020",
+      "title": "One retained client uses one receiving context for both root-URL spellings",
+      "status": "fail",
+      "detail": "{'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-021",
+      "title": "Fresh clients stay isolated at the same canonical peer node",
+      "status": "fail",
+      "detail": "expected success, got {'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}; preceding events were []"
+    },
+    {
+      "candidate": "trealla",
+      "peer": "swi",
+      "id": "NU-022",
+      "title": "Equal credentials do not merge fresh client contexts at the canonical peer",
+      "status": "fail",
+      "detail": "expected success, got {'type': 'error', 'data': \"error(permission_error(option,sandboxed,node('http://canonical-swi:3053')),context(sandbox_policy:sandbox_prepare_spawn/7,'remote spawn destination is not allowlisted'))\"}; preceding events were []"
+    }
+  ],
+  "counts": {
+    "pass": 12,
+    "fail": 32
+  }
+}

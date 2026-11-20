@@ -1,0 +1,278 @@
+{
+  "conclusion": "success",
+  "headSha": "fd7e9f815a4c37737eddb7696cfcf76af7b87a1b",
+  "jobs": [
+    {
+      "completedAt": "2026-11-20T11:45:21Z",
+      "conclusion": "success",
+      "databaseId": 136261795950,
+      "name": "test",
+      "startedAt": "2026-11-20T11:32:44Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-11-20T11:32:46Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-11-20T11:32:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:48Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v6",
+          "number": 2,
+          "startedAt": "2026-11-20T11:32:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:48Z",
+          "conclusion": "success",
+          "name": "Read exact native dependency pin",
+          "number": 3,
+          "startedAt": "2026-11-20T11:32:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:50Z",
+          "conclusion": "success",
+          "name": "Check out pinned native dependency",
+          "number": 4,
+          "startedAt": "2026-11-20T11:32:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:50Z",
+          "conclusion": "success",
+          "name": "Read exact browser dependency pin",
+          "number": 5,
+          "startedAt": "2026-11-20T11:32:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:51Z",
+          "conclusion": "success",
+          "name": "Check out pinned browser runtime",
+          "number": 6,
+          "startedAt": "2026-11-20T11:32:50Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:34:57Z",
+          "conclusion": "success",
+          "name": "Run ./.github/actions/setup-swi",
+          "number": 7,
+          "startedAt": "2026-11-20T11:32:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:35:01Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v6",
+          "number": 8,
+          "startedAt": "2026-11-20T11:34:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:15Z",
+          "conclusion": "success",
+          "name": "Run pinned native, demonstrator and browser checks",
+          "number": 9,
+          "startedAt": "2026-11-20T11:35:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:17Z",
+          "conclusion": "success",
+          "name": "Preserve check results",
+          "number": 10,
+          "startedAt": "2026-11-20T11:45:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:17Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v6",
+          "number": 17,
+          "startedAt": "2026-11-20T11:45:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:17Z",
+          "conclusion": "success",
+          "name": "Post Check out pinned browser runtime",
+          "number": 18,
+          "startedAt": "2026-11-20T11:45:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:17Z",
+          "conclusion": "success",
+          "name": "Post Check out pinned native dependency",
+          "number": 19,
+          "startedAt": "2026-11-20T11:45:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:18Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v6",
+          "number": 20,
+          "startedAt": "2026-11-20T11:45:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:45:18Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 21,
+          "startedAt": "2026-11-20T11:45:18Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44728428742/job/136261795950"
+    },
+    {
+      "completedAt": "2026-11-20T11:39:34Z",
+      "conclusion": "success",
+      "databaseId": 136261796300,
+      "name": "wasm",
+      "startedAt": "2026-11-20T11:32:43Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-11-20T11:32:45Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-11-20T11:32:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:46Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v6",
+          "number": 2,
+          "startedAt": "2026-11-20T11:32:45Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:46Z",
+          "conclusion": "success",
+          "name": "Read exact native dependency pin",
+          "number": 3,
+          "startedAt": "2026-11-20T11:32:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:47Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v6",
+          "number": 4,
+          "startedAt": "2026-11-20T11:32:46Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:47Z",
+          "conclusion": "success",
+          "name": "Read exact browser dependency pin",
+          "number": 5,
+          "startedAt": "2026-11-20T11:32:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:32:48Z",
+          "conclusion": "success",
+          "name": "Check out pinned browser runtime",
+          "number": 6,
+          "startedAt": "2026-11-20T11:32:47Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:34:38Z",
+          "conclusion": "success",
+          "name": "Run ./.github/actions/setup-swi",
+          "number": 7,
+          "startedAt": "2026-11-20T11:32:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:34:39Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v6",
+          "number": 8,
+          "startedAt": "2026-11-20T11:34:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:34:39Z",
+          "conclusion": "success",
+          "name": "Assemble browser sources from pinned schema",
+          "number": 9,
+          "startedAt": "2026-11-20T11:34:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:31Z",
+          "conclusion": "success",
+          "name": "Run WASM tier",
+          "number": 10,
+          "startedAt": "2026-11-20T11:34:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:32Z",
+          "conclusion": "success",
+          "name": "Preserve WASM results",
+          "number": 11,
+          "startedAt": "2026-11-20T11:39:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:32Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v6",
+          "number": 19,
+          "startedAt": "2026-11-20T11:39:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:32Z",
+          "conclusion": "success",
+          "name": "Post Check out pinned browser runtime",
+          "number": 20,
+          "startedAt": "2026-11-20T11:39:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:32Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v6",
+          "number": 21,
+          "startedAt": "2026-11-20T11:39:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:33Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v6",
+          "number": 22,
+          "startedAt": "2026-11-20T11:39:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-11-20T11:39:33Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 23,
+          "startedAt": "2026-11-20T11:39:33Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44728428742/job/136261796300"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/torbjornlager/trinity-demonstrator/actions/runs/44728428742"
+}

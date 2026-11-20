@@ -1,0 +1,22 @@
+{
+  "v01_sha256": "f8d3ad3b68f932faa5a5c49badd54a7871666c16411baea021446bd340da323a",
+  "v02_sha256": "57011a783232d3dce5037a1dad292f5b4e62917c0da5dbc3729e3a2ac633f6dc",
+  "unchanged_original_goal_ids": [
+    "NU-003",
+    "NU-005",
+    "NU-006",
+    "NU-007",
+    "NU-008",
+    "NU-009",
+    "NU-010",
+    "NU-011",
+    "NU-012",
+    "NU-013"
+  ],
+  "versioned_original_goal_ids": [
+    "NU-001",
+    "NU-002",
+    "NU-004"
+  ],
+  "note": "Versioned cases separate canonical addresses from caller namespace visibility; original files remain immutable."
+}
