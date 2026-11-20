@@ -291,9 +291,9 @@ integration_setup :-
         seed_node(n3, 'http://localhost:3999', "unspecified", "none", "")
     ]),
     hub_port(Hub),
-    directory_source_file(File),
-    node(Hub, [profile(relation), load_shared_db_file(File)]),
-    attach_discovery_hub(Hub).
+    % Keep the existing multi-node ACTOR fixture. The deployed RELATION
+    % route is separately checked with an owned running hub and browser.
+    start_discovery_hub(Hub).
 
 integration_cleanup :-
     catch(stop_discovery_hub, _, true),
