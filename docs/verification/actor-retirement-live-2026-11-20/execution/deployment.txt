@@ -1,0 +1,41 @@
+preflight_verified {}
+updated_and_healthy {'service': 'wp_admin', 'image': 'sha256:2d09de8e76c6491a0f751ca9b10e9dd72125b332e17e568de518d5045f4067d6'}
+updated_and_healthy {'service': 'wp_n4', 'image': 'sha256:fed35a2ceb4c355215bbd971d1fe1691234b8868e46046fa024f07bdb5bf116c'}
+updated_and_healthy {'service': 'wp_n3', 'image': 'sha256:fed35a2ceb4c355215bbd971d1fe1691234b8868e46046fa024f07bdb5bf116c'}
+updated_and_healthy {'service': 'wp_n1', 'image': 'sha256:fed35a2ceb4c355215bbd971d1fe1691234b8868e46046fa024f07bdb5bf116c'}
+updated_and_healthy {'service': 'wp_n2', 'image': 'sha256:a3bc1e9abaa47ddb4457d428337c988630313cd84b1b5157ca04de891a0f8b5d'}
+updated_and_healthy {'service': 'n0', 'image': 'sha256:f6972b4f3ad09d2990593fb41274bd75869e2a9667bc8f0800bc86f48d6ea497'}
+protected_configuration_preserved {'phase': 'candidate'}
+START settings
+PASS settings
+START http-context
+PASS http-context
+START open-exercises
+PASS open-exercises
+START swi-broad
+PASS swi-broad
+START n3-primary
+START n4-primary
+PASS n4-primary
+PASS n3-primary
+61-second quiet period before next public test phase
+START n2-prompts
+START n3-prompts
+START n4-prompts
+PASS n3-prompts
+PASS n2-prompts
+PASS n4-prompts
+61-second quiet period before next public test phase
+START retirement-live
+PASS retirement-live
+61-second quiet period before next public test phase
+START n1-sustained
+START n2-sustained
+START n3-sustained
+START n4-sustained
+PASS n1-sustained
+PASS n4-sustained
+PASS n3-sustained
+PASS n2-sustained
+protected_configuration_preserved {'phase': 'candidate'}
+verified_and_selected {}

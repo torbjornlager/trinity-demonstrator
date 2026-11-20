@@ -1,0 +1,104 @@
+{
+  "suite": "prompt-http-0.1",
+  "status": "pass",
+  "results": [
+    {
+      "id": "PT-004",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-005",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-006",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-007",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-008",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-009",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-010",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-011",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-012",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-013",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-014",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-015",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-016",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-017",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-018",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-019",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-020",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-021",
+      "engine": "swi",
+      "status": "pass"
+    },
+    {
+      "id": "PT-022",
+      "engine": "swi",
+      "status": "pass"
+    }
+  ],
+  "minimum_pause_between_session_spawns_seconds": 4,
+  "race_submissions_unchanged": true,
+  "endpoint": "https://n4.elfenbenstornet.se"
+}

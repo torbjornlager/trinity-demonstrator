@@ -1,0 +1,9 @@
+{
+  "status": "pass",
+  "all_evidence_fresh": true,
+  "public_primary_passes": 236,
+  "nu003_passes": 200,
+  "http_prompt_passes": 57,
+  "sustained_finite_passes": 560,
+  "open_exercise_checks": 30
+}

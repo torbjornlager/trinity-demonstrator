@@ -1,0 +1,42 @@
+[
+  {
+    "package": "current",
+    "revision": "b2fd3fe8eba9663c46c08fcd4b7a5ade6b60ed3f",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 34.11,
+    "log": "wasm-interrupt-current-1.log",
+    "diagnostic_controller_watchdog_seconds": 90,
+    "complete_suite_scenario_watchdog_seconds": 60
+  },
+  {
+    "package": "current",
+    "revision": "b2fd3fe8eba9663c46c08fcd4b7a5ade6b60ed3f",
+    "trial": 2,
+    "exit_code": 0,
+    "seconds": 33.92,
+    "log": "wasm-interrupt-current-2.log",
+    "diagnostic_controller_watchdog_seconds": 90,
+    "complete_suite_scenario_watchdog_seconds": 60
+  },
+  {
+    "package": "previous",
+    "revision": "0d024e5e61b9b87a6abaab60d2b1a6104f4a9215",
+    "trial": 1,
+    "exit_code": 0,
+    "seconds": 33.92,
+    "log": "wasm-interrupt-previous-1.log",
+    "diagnostic_controller_watchdog_seconds": 90,
+    "complete_suite_scenario_watchdog_seconds": 60
+  },
+  {
+    "package": "previous",
+    "revision": "0d024e5e61b9b87a6abaab60d2b1a6104f4a9215",
+    "trial": 2,
+    "exit_code": 0,
+    "seconds": 33.9,
+    "log": "wasm-interrupt-previous-2.log",
+    "diagnostic_controller_watchdog_seconds": 90,
+    "complete_suite_scenario_watchdog_seconds": 60
+  }
+]

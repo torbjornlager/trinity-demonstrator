@@ -1,0 +1,1178 @@
+{
+  "url": "https://n2.elfenbenstornet.se",
+  "status": "pass",
+  "node_info": {
+    "admission": {
+      "max_call_requests_per_window": 120,
+      "max_inflight_calls": 3,
+      "max_session_spawns_per_window": 120,
+      "max_sessions_per_principal": 16,
+      "rate_identity": "principal",
+      "rate_window_seconds": 60,
+      "window_policy": "fixed"
+    },
+    "auth": "open",
+    "auth_boundary": "trusted_headers",
+    "internal_transport_principal_prefix": "node:",
+    "principal_execution": true,
+    "principal_id": "[REDACTED]",
+    "profile": "isotope",
+    "provides": [
+      "ancestor_descendant/2",
+      "father_child/2",
+      "human/1",
+      "list_price/2",
+      "mortal/1",
+      "mother_child/2",
+      "parent_child/2",
+      "price/2",
+      "rpc/2"
+    ],
+    "sandbox": "blacklist",
+    "self_contained": true,
+    "self_url": "https://n2.elfenbenstornet.se",
+    "services": [],
+    "trusted_capability_headers": [
+      "X-Web-Prolog-Capabilities",
+      "X-Web-Prolog-Caps"
+    ],
+    "trusted_identity_headers": [
+      "X-Web-Prolog-User",
+      "X-Web-Prolog-Principal",
+      "X-Authenticated-User"
+    ],
+    "tutorial_sections": [
+      "all"
+    ],
+    "ws_allowed_origins": []
+  },
+  "count": 140,
+  "interval_seconds": 0.6,
+  "elapsed_seconds": 84.227,
+  "completed_requests_per_minute": 99.73,
+  "median_response_seconds": 0.1073105,
+  "p95_response_seconds": 0.260802,
+  "observations": [
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.086774,
+      "status": "pass",
+      "index": 1
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.091224,
+      "status": "pass",
+      "index": 2
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.174259,
+      "status": "pass",
+      "index": 3
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.185038,
+      "status": "pass",
+      "index": 4
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.107936,
+      "status": "pass",
+      "index": 5
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.088626,
+      "status": "pass",
+      "index": 6
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.084678,
+      "status": "pass",
+      "index": 7
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.115282,
+      "status": "pass",
+      "index": 8
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.090863,
+      "status": "pass",
+      "index": 9
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.181709,
+      "status": "pass",
+      "index": 10
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.150406,
+      "status": "pass",
+      "index": 11
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.088873,
+      "status": "pass",
+      "index": 12
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.072633,
+      "status": "pass",
+      "index": 13
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.091127,
+      "status": "pass",
+      "index": 14
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.078214,
+      "status": "pass",
+      "index": 15
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.161142,
+      "status": "pass",
+      "index": 16
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.164445,
+      "status": "pass",
+      "index": 17
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.122895,
+      "status": "pass",
+      "index": 18
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.096445,
+      "status": "pass",
+      "index": 19
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.088653,
+      "status": "pass",
+      "index": 20
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.093305,
+      "status": "pass",
+      "index": 21
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.094423,
+      "status": "pass",
+      "index": 22
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.177425,
+      "status": "pass",
+      "index": 23
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.127795,
+      "status": "pass",
+      "index": 24
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.098651,
+      "status": "pass",
+      "index": 25
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.109172,
+      "status": "pass",
+      "index": 26
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.105992,
+      "status": "pass",
+      "index": 27
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.101532,
+      "status": "pass",
+      "index": 28
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.172932,
+      "status": "pass",
+      "index": 29
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.177977,
+      "status": "pass",
+      "index": 30
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.096073,
+      "status": "pass",
+      "index": 31
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.08695,
+      "status": "pass",
+      "index": 32
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.09494,
+      "status": "pass",
+      "index": 33
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.089763,
+      "status": "pass",
+      "index": 34
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.103198,
+      "status": "pass",
+      "index": 35
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.19061,
+      "status": "pass",
+      "index": 36
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.134095,
+      "status": "pass",
+      "index": 37
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.116789,
+      "status": "pass",
+      "index": 38
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.112109,
+      "status": "pass",
+      "index": 39
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.0864,
+      "status": "pass",
+      "index": 40
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.113234,
+      "status": "pass",
+      "index": 41
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.195523,
+      "status": "pass",
+      "index": 42
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.171519,
+      "status": "pass",
+      "index": 43
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.118897,
+      "status": "pass",
+      "index": 44
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.100556,
+      "status": "pass",
+      "index": 45
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.104802,
+      "status": "pass",
+      "index": 46
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.103554,
+      "status": "pass",
+      "index": 47
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.10413,
+      "status": "pass",
+      "index": 48
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.194833,
+      "status": "pass",
+      "index": 49
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.121406,
+      "status": "pass",
+      "index": 50
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.100512,
+      "status": "pass",
+      "index": 51
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.097013,
+      "status": "pass",
+      "index": 52
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.094464,
+      "status": "pass",
+      "index": 53
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.089981,
+      "status": "pass",
+      "index": 54
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.181941,
+      "status": "pass",
+      "index": 55
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.156784,
+      "status": "pass",
+      "index": 56
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.084694,
+      "status": "pass",
+      "index": 57
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.090391,
+      "status": "pass",
+      "index": 58
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.093644,
+      "status": "pass",
+      "index": 59
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.10714,
+      "status": "pass",
+      "index": 60
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.175751,
+      "status": "pass",
+      "index": 61
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.169708,
+      "status": "pass",
+      "index": 62
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.106609,
+      "status": "pass",
+      "index": 63
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.093833,
+      "status": "pass",
+      "index": 64
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.070366,
+      "status": "pass",
+      "index": 65
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.103893,
+      "status": "pass",
+      "index": 66
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.494523,
+      "status": "pass",
+      "index": 67
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.409754,
+      "status": "pass",
+      "index": 68
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.328733,
+      "status": "pass",
+      "index": 69
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.249013,
+      "status": "pass",
+      "index": 70
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.143285,
+      "status": "pass",
+      "index": 71
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.091385,
+      "status": "pass",
+      "index": 72
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.465544,
+      "status": "pass",
+      "index": 73
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.159349,
+      "status": "pass",
+      "index": 74
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.166636,
+      "status": "pass",
+      "index": 75
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.087897,
+      "status": "pass",
+      "index": 76
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.172619,
+      "status": "pass",
+      "index": 77
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.129574,
+      "status": "pass",
+      "index": 78
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.089877,
+      "status": "pass",
+      "index": 79
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.083953,
+      "status": "pass",
+      "index": 80
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.18308,
+      "status": "pass",
+      "index": 81
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.122824,
+      "status": "pass",
+      "index": 82
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.170607,
+      "status": "pass",
+      "index": 83
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.154637,
+      "status": "pass",
+      "index": 84
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.098264,
+      "status": "pass",
+      "index": 85
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.096442,
+      "status": "pass",
+      "index": 86
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.157274,
+      "status": "pass",
+      "index": 87
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.165195,
+      "status": "pass",
+      "index": 88
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.190017,
+      "status": "pass",
+      "index": 89
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.088441,
+      "status": "pass",
+      "index": 90
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.089022,
+      "status": "pass",
+      "index": 91
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.093457,
+      "status": "pass",
+      "index": 92
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.312482,
+      "status": "pass",
+      "index": 93
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.260802,
+      "status": "pass",
+      "index": 94
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.141449,
+      "status": "pass",
+      "index": 95
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.088757,
+      "status": "pass",
+      "index": 96
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.172719,
+      "status": "pass",
+      "index": 97
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.107323,
+      "status": "pass",
+      "index": 98
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.110363,
+      "status": "pass",
+      "index": 99
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.09413,
+      "status": "pass",
+      "index": 100
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.180331,
+      "status": "pass",
+      "index": 101
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.124577,
+      "status": "pass",
+      "index": 102
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.085915,
+      "status": "pass",
+      "index": 103
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.177339,
+      "status": "pass",
+      "index": 104
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.314495,
+      "status": "pass",
+      "index": 105
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.297684,
+      "status": "pass",
+      "index": 106
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.163758,
+      "status": "pass",
+      "index": 107
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.167699,
+      "status": "pass",
+      "index": 108
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.113922,
+      "status": "pass",
+      "index": 109
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.105252,
+      "status": "pass",
+      "index": 110
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.096081,
+      "status": "pass",
+      "index": 111
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.083763,
+      "status": "pass",
+      "index": 112
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.082644,
+      "status": "pass",
+      "index": 113
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.189272,
+      "status": "pass",
+      "index": 114
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.141165,
+      "status": "pass",
+      "index": 115
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.099001,
+      "status": "pass",
+      "index": 116
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.093156,
+      "status": "pass",
+      "index": 117
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.109065,
+      "status": "pass",
+      "index": 118
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.099847,
+      "status": "pass",
+      "index": 119
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.174131,
+      "status": "pass",
+      "index": 120
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.198086,
+      "status": "pass",
+      "index": 121
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.110956,
+      "status": "pass",
+      "index": 122
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.089781,
+      "status": "pass",
+      "index": 123
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.095038,
+      "status": "pass",
+      "index": 124
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.097138,
+      "status": "pass",
+      "index": 125
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.091936,
+      "status": "pass",
+      "index": 126
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.181121,
+      "status": "pass",
+      "index": 127
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.160376,
+      "status": "pass",
+      "index": 128
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.107298,
+      "status": "pass",
+      "index": 129
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.098727,
+      "status": "pass",
+      "index": 130
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.100407,
+      "status": "pass",
+      "index": 131
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.094435,
+      "status": "pass",
+      "index": 132
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.089725,
+      "status": "pass",
+      "index": 133
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.184316,
+      "status": "pass",
+      "index": 134
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.125927,
+      "status": "pass",
+      "index": 135
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.09204,
+      "status": "pass",
+      "index": 136
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.088788,
+      "status": "pass",
+      "index": 137
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.105542,
+      "status": "pass",
+      "index": 138
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.093796,
+      "status": "pass",
+      "index": 139
+    },
+    {
+      "http_status": 200,
+      "body": "success([passed],false).\n",
+      "retry_after": null,
+      "seconds": 0.17388,
+      "status": "pass",
+      "index": 140
+    }
+  ],
+  "scope": "Finite HTTP equality checks. No concurrency, session-creation, isolation or resource-reclamation claim."
+}

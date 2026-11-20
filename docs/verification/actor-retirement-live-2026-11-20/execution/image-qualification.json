@@ -1,0 +1,33 @@
+{
+  "status": "pass",
+  "images": [
+    {
+      "service": "n0",
+      "candidate_image": "sha256:f6972b4f3ad09d2990593fb41274bd75869e2a9667bc8f0800bc86f48d6ea497",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n1",
+      "candidate_image": "sha256:fed35a2ceb4c355215bbd971d1fe1691234b8868e46046fa024f07bdb5bf116c",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_n2",
+      "candidate_image": "sha256:a3bc1e9abaa47ddb4457d428337c988630313cd84b1b5157ca04de891a0f8b5d",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    },
+    {
+      "service": "wp_admin",
+      "candidate_image": "sha256:2d09de8e76c6491a0f751ca9b10e9dd72125b332e17e568de518d5045f4067d6",
+      "engine_bytes_unchanged": true,
+      "engine_inventory_sha256": "086777e1642dbfcc3d6e13ef2ec39394fafe0d7bfb042cb5adf6099cc98ecbec",
+      "source_validation": "pass"
+    }
+  ]
+}

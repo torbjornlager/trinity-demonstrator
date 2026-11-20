@@ -1,0 +1,19 @@
+{
+  "status": "pass",
+  "files_unchanged": [
+    "dependencies/swi-wasm.json",
+    "third_party/sxml_schema.pl",
+    "web/swi_wasm_actor_worker.js",
+    "web/swipl-bundle.js",
+    "web/vendor/swi-wasm-minimal.html",
+    "web/vendor/swi-wasm-node.js",
+    "web/wasm/shared_db.pl",
+    "web/wasm/statechart_wasm.pl",
+    "web/wasm/statechart_wasm_exec.pl",
+    "web/wasm/statechart_wasm_model.pl",
+    "web/wasm/statechart_wasm_runtime.pl",
+    "web/wasm/sxml_schema.pl"
+  ],
+  "engine_unchanged": true,
+  "browser_revision": "b2fd3fe8eba9663c46c08fcd4b7a5ade6b60ed3f"
+}

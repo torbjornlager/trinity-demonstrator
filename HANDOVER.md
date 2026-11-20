@@ -1,5 +1,40 @@
 # Trinity demonstrator: project and operations handover
 
+## Live actor retirement repair — 20 November 2026
+
+N0–N4 and the private admin now select native SWI `0c11f2c`, demonstrator
+`8318918` and browser package `b2fd3fe`. SWI remains 11.0.0. Engine bytes and
+all 12 browser executable/schema/engine-metadata files are unchanged; the
+browser pin updates schema provenance. Trealla, GNU, ECLiPSe, ingress and
+Caddy retain their preceding selections. Access stays OPEN on public nodes,
+with the existing admission and concurrency bounds.
+
+Actor PID mappings now retire before monitor notification delivery. Both
+GitHub CI jobs pass. The deterministic regression passes in every exact
+candidate image, and the private ACTOR gate passes 45/45. Live N3/N4 each
+pass all 118 primary ACTOR cases and 100 unchanged NU-003 repetitions.
+The live smoke run also passes 30 anonymous exercise checks, 57 HTTP prompt
+cases, 560 sustained finite HTTP requests, context isolation, Linda,
+discovery and cross-runtime consumer checks. One initial local WASM worker
+cleanup failure is retained alongside four passing focused controls and a
+passing full WASM recheck; its precise cause remains unproven.
+
+The [deployment record](docs/verification/actor-retirement-live-2026-11-20/REPORT.md)
+contains source/image identities and fresh evidence. Configuration, credentials,
+volumes, read-only payloads, networks and resource bounds were preserved.
+Canonical `Deployment/compose.live.json` and `.trinity/live-swi-current.json`
+select the new models; the N5 pointer is unchanged. Recovery inputs are under
+`.trinity/retirement-release-20261120/release/`. Check the exact selection with:
+
+`python3 .trinity/retirement-release-20261120/release/rollback.py --check`
+
+Omit `--check` only for explicitly requested recovery of this release. The
+guard refuses a changed selection. Keep predecessor images, private models
+and data volumes available. Earlier SWI recovery instructions below are
+historical and do not identify the current selection. The conformance
+follow-up is focused deployment verification; earlier full-sweep findings
+remain open unless explicitly resolved in the new record.
+
 ## HTTP contexts and OPEN release — 19 November 2026
 
 The production pins and live services now select native SWI `a2ff186`, Trealla

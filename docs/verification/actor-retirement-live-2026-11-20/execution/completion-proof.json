@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "completed_utc": "2026-11-20T07:20:14.162185+00:00",
+  "services": 6,
+  "exact_native_and_demonstrator_git_revisions_verified": true,
+  "protected_configuration_preserved": true,
+  "unrelated_compose_services_unchanged": true,
+  "qualified_engine_bytes_preserved": true,
+  "guarded_recovery_bound_to_selected_ids": true
+}

@@ -1,0 +1,62 @@
+  ok   supervisor_request_wait_worker: synchronous call overrides retained target and keeps caller goal variables independent
+  ok   supervisor_request_wait_worker: synchronous paging correlates call and next answers
+  ok   supervisor_request_wait_worker: failure and query exception retain answer terms
+  ok   supervisor_request_wait_worker: deferred error uses next request reference
+  ok   supervisor_request_wait_worker: timeout leaves query running and later call skips stale answer
+  ok   supervisor_request_wait_worker: timeout callback bindings, failure and exception preserved with retry
+  ok   supervisor_request_wait_worker: output mismatch consumes reply; asynchronous call and next retain ordinary messages
+  ok   supervisor_request_wait_worker: synchronous send error is preserved
+  ok   supervisor_request_wait_worker: synchronous send error withdraws only private monitor
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [target(other)]
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [target(_)]
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [limit(1),limit(0)]
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [unknown(x)]
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [io_target(other)]
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [timeout(bad)]
+  ok   supervisor_request_wait_worker: reject invalid synchronous options [once(true)|bad]
+  ok   supervisor_request_wait_worker: unsupported pid forms rejected before dispatch
+  ok   supervisor_request_wait_worker: invalid calls have no creation side effects
+Execution Aborted
+Execution Aborted
+  ok   supervisor_request_wait_worker: execution time-limit error is correlated and session remains usable
+Execution Aborted
+  ok   supervisor_request_wait_worker: termination reported and unrelated actor, monitor and message preserved
+  ok   supervisor_request_wait_worker: synchronous tests leave no actors or monitors
+  ok   supervisor_request_wait_worker: successful supervisor reply uses common count format
+  ok   supervisor_request_wait_worker: mismatched output consumes reply and fails without consuming unrelated messages
+  ok   supervisor_request_wait_worker: success and mismatch withdraw only private monitors
+Execution Aborted
+  ok   supervisor_request_wait_worker: termination during request raises supervisor_down
+  ok   supervisor_request_wait_worker: ten-second timeout raises explicit error without cancelling target
+  ok   supervisor_request_wait_worker: down and timeout leave unrelated monitors intact
+  ok   supervisor_request_wait_worker: fresh reply selection preserves nonground payload sharing
+  ok   supervisor_request_wait_worker: send exception retains original error
+  ok   supervisor_request_wait_worker: send exception withdraws private monitor
+  ok   supervisor_request_wait_worker: supervisor remains usable and unrelated explicit monitor still delivers
+  ok   supervisor_request_wait_worker: request tests leave no actors or monitors
+  ok   supervisor_request_wait_worker: queued halt acknowledgement has precedence over an earlier abnormal down
+  ok   supervisor_request_wait_worker: normal down preserves an expired deadline and reports missing acknowledgement
+  ok   supervisor_request_wait_worker: tagged halt stops detached child and preserves unrelated reply and monitors
+Execution Aborted
+  ok   supervisor_request_wait_worker: halt reports observed termination while preserving explicit monitor
+  ok   supervisor_request_wait_worker: halt timeout does not cancel target or consume its explicit monitor
+  ok   supervisor_request_wait_worker: stop alias timeout leaves infinity-policy shutdown running to completion
+  ok   supervisor_request_wait_worker: halt preserves original send exception
+  ok   supervisor_request_wait_worker: halt send exception removes private monitor
+  ok   supervisor_request_wait_worker: legacy untagged stop request retains reply(true)
+  ok   supervisor_request_wait_worker: halt tests reclaim actors and private monitors
+  ok   supervisor_request_wait_worker: worker supervisor request wait is suspended with one private monitor
+Execution Aborted
+  ok   supervisor_request_wait_worker: worker interruption withdraws the supervisor request monitor
+  ok   supervisor_request_wait_worker: worker interruption drains private reply filters and leaves engine usable
+  ok   supervisor_request_wait_worker: worker supervisor request wait is suspended with one private monitor
+Execution Aborted
+  ok   supervisor_request_wait_worker: worker interruption withdraws the supervisor request monitor
+  ok   supervisor_request_wait_worker: worker interruption drains private reply filters and leaves engine usable
+  ok   supervisor_request_wait_worker: worker supervisor request wait is suspended with one private monitor
+Execution Aborted
+  ok   supervisor_request_wait_worker: worker interruption withdraws the supervisor request monitor
+  ok   supervisor_request_wait_worker: worker interruption drains private reply filters and leaves engine usable
+  ok   supervisor_request_wait_worker: abort recipient is routable: 9999999999
+  ok   supervisor_request_wait_worker: abort recipient is routable: 9999999999
+  ok   supervisor_request_wait_worker: abort recipient is routable: 9999999999

@@ -1,0 +1,1015 @@
+{
+  "candidate": "n4",
+  "endpoint": "https://n4.elfenbenstornet.se",
+  "case": "NU-003",
+  "unmodified_assertion": true,
+  "session_start_interval_seconds": 2.1,
+  "manifest_sha256": "f8d3ad3b68f932faa5a5c49badd54a7871666c16411baea021446bd340da323a",
+  "source_sha256": "915145fb17665e283aeea5d73d89b2dc0922f3972c9ec52ffb07a1f84537f918",
+  "results": [
+    {
+      "trial": 1,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 2,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 3,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 4,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 5,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 6,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 7,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 8,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 9,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 10,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 11,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 12,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 13,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 14,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 15,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 16,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 17,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 18,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 19,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 20,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 21,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 22,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 23,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 24,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 25,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 26,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 27,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 28,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 29,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 30,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 31,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 32,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 33,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 34,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 35,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 36,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 37,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 38,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 39,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 40,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 41,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 42,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 43,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 44,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 45,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 46,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 47,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 48,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 49,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 50,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 51,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 52,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 53,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 54,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 55,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 56,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 57,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 58,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 59,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 60,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 61,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 62,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 63,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 64,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 65,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 66,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 67,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 68,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 69,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 70,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 71,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 72,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 73,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 74,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 75,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 76,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 77,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 78,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 79,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 80,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 81,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 82,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 83,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 84,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 85,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 86,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 87,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 88,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 89,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 90,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 91,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 92,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 93,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 94,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 95,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 96,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 97,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 98,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 99,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    },
+    {
+      "trial": 100,
+      "id": "NU-003",
+      "status": "pass",
+      "observation": {
+        "outputs": [],
+        "raw_output_data": [],
+        "fresh_query": true
+      }
+    }
+  ],
+  "counts": {
+    "pass": 100,
+    "fail": 0
+  }
+}

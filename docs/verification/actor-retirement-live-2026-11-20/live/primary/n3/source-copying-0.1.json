@@ -1,0 +1,129 @@
+{
+  "format": "direct-runner-observations-v1",
+  "suite": "source-copying-0.1",
+  "scope": "required",
+  "candidate": "n3",
+  "endpoint": "wss://n3.elfenbenstornet.se/ws",
+  "manifest_sha256": "1b5d589c297be1ddb40cdb2a57ecb526dc4c073d39777a7abe147169da2abe22",
+  "counts": {
+    "pass": 6,
+    "fail": 0
+  },
+  "results": [
+    {
+      "id": "SCOPY-001",
+      "title": "Primitive guard remains admitted after private source copying",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "8450938321@'https://n3.elfenbenstornet.se'",
+            "R": "R",
+            "S": "5981375485@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 5981375485,
+        "type": "success"
+      },
+      "duration_ms": 2054
+    },
+    {
+      "id": "SCOPY-002",
+      "title": "Named guard helper control preserves inferred bindings",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "3078848375@'https://n3.elfenbenstornet.se'",
+            "R": "R",
+            "S": "3380256418@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 3380256418,
+        "type": "success"
+      },
+      "duration_ms": 2100
+    },
+    {
+      "id": "SCOPY-003",
+      "title": "Copied controller inline worker retains backtracking and stop",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "5234066745@'https://n3.elfenbenstornet.se'",
+            "P": "2874725786@'https://n3.elfenbenstornet.se'",
+            "S": "2220007107@'https://n3.elfenbenstornet.se'",
+            "WR": "5684983640"
+          }
+        ],
+        "more": false,
+        "pid": 2220007107,
+        "type": "success"
+      },
+      "duration_ms": 2123
+    },
+    {
+      "id": "SCOPY-004",
+      "title": "Named worker control retains backtracking and stop",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "C": "8084132120@'https://n3.elfenbenstornet.se'",
+            "P": "5996246844@'https://n3.elfenbenstornet.se'",
+            "S": "5778504854@'https://n3.elfenbenstornet.se'",
+            "WR": "7501905228"
+          }
+        ],
+        "more": false,
+        "pid": 5778504854,
+        "type": "success"
+      },
+      "duration_ms": 2588
+    },
+    {
+      "id": "SCOPY-005",
+      "title": "Copied receive options retain their list and timeout callback",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "3897540791@'https://n3.elfenbenstornet.se'",
+            "R": "R",
+            "S": "3851232102@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 3851232102,
+        "type": "success"
+      },
+      "duration_ms": 2100
+    },
+    {
+      "id": "SCOPY-006",
+      "title": "Second-generation copied guards retain private inference and fallback",
+      "status": "pass",
+      "observation": {
+        "data": [
+          {
+            "BaselineResult": "passed",
+            "P": "5763626478@'https://n3.elfenbenstornet.se'",
+            "S": "6905439015@'https://n3.elfenbenstornet.se'"
+          }
+        ],
+        "more": false,
+        "pid": 6905439015,
+        "type": "success"
+      },
+      "duration_ms": 2112
+    }
+  ]
+}

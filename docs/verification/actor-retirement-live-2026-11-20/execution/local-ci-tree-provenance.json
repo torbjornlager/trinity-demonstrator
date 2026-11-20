@@ -1,0 +1,12 @@
+{
+  "local_runner_started_before_pin_commit": true,
+  "only_commit_changes": [
+    "dependencies/swi-prolog-node.json",
+    "dependencies/swi-wasm-node.json"
+  ],
+  "qualified_tree_revision": "83189182276c96d5414e98ac562ed37e848b50db",
+  "pins": {
+    "dependencies/swi-prolog-node.json": "33be588e58919da75112b2fcbfa395b9950611d4bdb0db9cf333a060ff3d56f3",
+    "dependencies/swi-wasm-node.json": "66637106eb2937792a3ce2a74e02b8e87c64c20ca9ce71446b620c40efaf5d07"
+  }
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "label": "WASM",
+    "exit_code": 0,
+    "seconds": 180.237,
+    "assertions_and_timeout_unchanged": true,
+    "reason": "Recheck initial browser worker interruption-cleanup failure; focused old/current package controls pass."
+  }
+]
