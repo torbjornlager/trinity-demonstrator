@@ -228,9 +228,9 @@
 :- op(200, xfx, @).</code></pre>
 <p>Thus <code>@</code> binds more tightly than <code>!</code>, which binds more tightly than conjunction. The right-associative <code>if</code> has the same priority as the comma, so <code>Pattern if A, B -&gt; Body</code> is read as <code>(Pattern if (A, B)) -&gt; Body</code>. Parentheses around a conjunctive guard remain useful for readability.</p>
 <h3 id="sec:uri-values">URI values</h3>
-<p>Every API argument or option that takes a URI or node URL requires an atom, for example <code>'https://n3.example'</code>. This rule applies consistently to RPC and promise destinations, source URIs, the <code>node/1</code> spawn option, and the node component of a canonical pid. Strings, character lists, code lists, numbers and compound terms are not accepted as URI values. Callers constructing URI text in another representation must convert it to an atom before passing it to the API.</p>
-<p>An uninstantiated URI value raises an instantiation error without binding it; a non-atom raises a type error with expected type <code>atom</code>. Validation precedes source fetching, actor creation or request dispatch, as appropriate.</p>
-<p>Requiring an atom does not introduce URI resolution, case-folding, escaping or fetch permissions. URI syntax, schemes, ports, relative paths, file access and origin restrictions remain subject to each entry’s resolution and fetch policy. An atom need not denote an allowed or reachable URI.</p>
+<p>A URI value is an atom, a string object, or a proper list of characters or character codes. This applies to RPC and promise destinations, source URIs, the <code>node/1</code> spawn option, and the node component of an actor address <code>Id@Node</code> used by sends, monitors and exits. Accepted text is normalised to an atom for routing; different text representations of the same node identify the same actor. The node alias <code>localhost</code> identifies the caller's own node.</p>
+<p>An uninstantiated URI value raises an instantiation error without binding it; a non-text value raises <code>type_error(atom_or_string, Value)</code>. The compound <code>Host:Port</code> shorthand is not accepted. Validation precedes source fetching, actor creation or request dispatch, as appropriate.</p>
+<p>Representation normalisation does not introduce URI resolution, case-folding, escaping or fetch permissions. URI syntax, schemes, ports, relative paths, file access and origin restrictions remain subject to each entry’s resolution and fetch policy. Accepted text need not denote an allowed or reachable URI.</p>
 <h3 id="sec:option-validation">Options and validation</h3>
 <p>A Boolean option takes the atom <code>true</code> or <code>false</code>. This applies to <code>link/1</code>, <code>monitor/1</code>, <code>session/1</code>, <code>trace/1</code> and <code>once/1</code>.</p>
 <p>Option lists must be proper lists of recognised options with the documented arities and values. Every occurrence is validated, including later duplicates. The first occurrence of a scalar option determines its setting; repeated source options are additive. These rules apply to the creation predicates, toplevel calls and their synchronous wrappers, <code>first_solution/3</code>, <code>rpc/3</code>, <code>promise/4</code> and <code>yield/3</code>.</p>
@@ -728,7 +728,7 @@ Convert the clauses to source text and load them into the server.</p></li>
     <li><p><code>src_predicates(+ListOfPredicateIndicators)</code><br />
 Copy the caller’s indicated predicates into the server’s private database.</p></li>
     <li><p><code>src_uri(+URI)</code><br />
-The caller fetches callback source from the URI atom <code>URI</code> and sends its contents to the server for loading.</p></li>
+The caller fetches callback source from the URI text value <code>URI</code> and sends its contents to the server for loading.</p></li>
 </ul>
 <p>Options are validated and source is prepared by the caller before sending the upgrade request. Sources are loaded in option-list order, following <a href="#sec:source-loading">Source loading</a>. The operation replies only after the callback has been loaded and validated. It preserves the current state value and performs no state migration. If installation fails, <code>server_upgrade/2-3</code> rethrows the reported error and the state is unchanged. Source changes made in the server’s private database before the error are not rolled back.</p>
 </article>
@@ -753,7 +753,7 @@ The caller fetches callback source from the URI atom <code>URI</code> and sends 
 <p><code>statechart_spawn/2</code> requires exactly one initial XML source option:</p>
 <ul>
     <li><p><code>src_uri(+URI)</code><br />
-The caller fetches the initial XML document from a URI or file-path atom before creation or remote dispatch. The document’s URI is preserved as the base for relative references.</p></li>
+The caller fetches the initial XML document from a URI or file-path text value before creation or remote dispatch. The document’s URI is preserved as the base for relative references.</p></li>
     <li><p><code>src_text(+Text)</code><br />
 Load and run a statechart from an XML text string.</p></li>
 </ul>
@@ -991,7 +991,7 @@ Loads source text into the temporary private database before calling <code>Goal<
     <li><p><code>src_list(+ListOfClauses)</code><br />
 Converts the clauses to source text and loads them into the temporary private database.</p></li>
     <li><p><code>src_uri(+URI)</code><br />
-Fetches source from <code>URI</code> and loads it into the temporary private database in option-list order. This URI atom is a source location only. The caller resolves and fetches it before dispatch, then sends source text to the execution node. Relative URIs use the caller’s context and source-access policy.</p></li>
+Fetches source from <code>URI</code> and loads it into the temporary private database in option-list order. This URI value is a source location only. The caller resolves and fetches it before dispatch, then sends source text to the execution node. Relative URIs use the caller’s context and source-access policy.</p></li>
     <li><p><code>src_predicates(+ListOfPredicateIndicators)</code><br />
 Copies the caller’s indicated predicates into the temporary private database.</p></li>
 </ul>

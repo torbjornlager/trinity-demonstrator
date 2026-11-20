@@ -269,9 +269,10 @@ changes through reviewed dependency pin updates.
 
 ### URI representation boundary
 
-URI and node-URL inputs use atoms canonically; supported text forms and explicit
-`Host:Port` shorthand are normalised at API boundaries. The [shared URI contract](web/manual.html#sec:uri-values)
-records the runtime differences and unchanged resolution/fetch restrictions.
+URI and node-URL inputs accept atoms, string objects and proper character/code
+lists, and are normalised to atoms at API boundaries. The `Host:Port` compound
+shorthand is rejected. The [shared URI contract](web/manual.html#sec:uri-values)
+records the common representation rule and unchanged resolution/fetch restrictions.
 Browser bridges preserve source ordering and validate representations before
 fetching or dispatch. Native implementation and validation live in
 `swi-prolog-node`; updating source here does not update live nodes.
