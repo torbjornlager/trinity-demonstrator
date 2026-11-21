@@ -46,6 +46,28 @@ fixed address of a stopped container. Step 1 of
   a restart. Step 2 pins them at the next SWI release.
 - Operator: `.trinity/n5-addresses-20261121/deploy.py --rollback`.
 
+**Security hardening (evening).** A security review of the live system led to
+deployment-side fixes. Every visible demonstrator example gave the same result
+on N3, N4, N5 and N7 before and after. The review and its open items are kept
+privately in `.trinity/security-review-20261121/`.
+
+- Caddy, by graceful reload:
+  - N0–N4 send HSTS, `nosniff` and a Referrer-Policy.
+  - N5 `/metrics` is no longer public.
+  - The N3/N4 `@trusted_internal_ws` routes are gone.
+  - The N7→N3 peer bearer was rotated: the Caddy matcher and N7's
+    `peer-0-out`, with the N7 adapter restarted.
+- The unused `oauth2_n5` and `oauth2_n7` sidecars are removed (`oauth2_n5`
+  also from `compose.live.json`), so the N5 address plan's `.13` is now
+  free.
+- Process limits were set with `docker update`:
+  - N3/N4: 1024
+  - N0, N1, N2 and admin: 512
+  - Caddy and the N6 assets/hub: 256
+
+  The Compose models don't carry them yet, so the next SWI or Caddy recreate
+  must add `pids_limit`, together with step 2 of the address plan.
+
 ## Live canonical node identity — 20 November 2026
 
 N0–N4 and admin select native SWI `254ae3a`, demonstrator runtime
