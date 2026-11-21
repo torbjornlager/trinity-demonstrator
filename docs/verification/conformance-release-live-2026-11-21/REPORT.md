@@ -84,3 +84,25 @@ container was replaced. The only line before the restart is `Killed` at
 Private operators are under `.trinity/conformance-release-20261121/`:
 `n6/deploy_n6.py --rollback`, `n5/deploy_n5.py --rollback`,
 `n7/deploy_n7.py --rollback`, `swi/deploy_swi.py --rollback`. Each is scoped to its unit.
+
+## Post-release sweep and N5 rollback
+
+The full sweep ([report](https://github.com/torbjornlager/trinity-conformance/blob/490ecfe/reports/2026-11-21-post-release-conformance/REPORT.md),
+13:49–15:06Z, suite `a7a4a7b`) compared with 20 November: 263 rows fixed, 129 still
+failing, 6 new failures. Every brief "should no longer fail" item passes except
+PE-008 on N7 and URI-007 in the owned Trealla fixture; every "expected to remain"
+item remains. No N6 capacity refusals and no automatic restarts occurred.
+
+The new failures are receive-guard controls RG-001..003/005..007 on Trealla. In the
+same lab image `d451596` passes all eight; `7a8e8ce`, `a4739ed` and `49377b5` fail the
+same six. `7a8e8ce` maps every `time_limit_exceeded` during the rpc HTTP read to
+`rpc_error(http_timeout)`, so the owner's execution limit, abort and termination no
+longer propagate through an rpc in an entered guard.
+
+At Torbjörn's decision N5 was rolled back at 15:24Z to the qualified recovery
+image `50f53bfd95e2` (Trealla `d451596` sources). Configuration, mounts, static
+address and Compose hash match the captured predecessor, admission workers were
+refreshed, and every probe matches the pre-release baseline. The scripted
+preservation check reported a false mount difference (JSON-loaded lists against
+tuples); the comparison was corrected in all rollback operators. The Trealla pin
+returns to `d451596` until trealla-port is fixed.

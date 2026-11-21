@@ -1,5 +1,39 @@
 # Trinity demonstrator: project and operations handover
 
+## Live conformance fixes — 21 November 2026
+
+Live selection after the 21 November release:
+
+| Node | Runtime | Image |
+|---|---|---|
+| N0–N4, admin | native SWI `9239028`, demonstrator `6fc9db8`, browser `4c784f9`; SWI-Prolog 11.0.0 | N0 `202f9cbe479b`, N1/N3/N4 `7759b23d172b`, N2 `d3836c21fa46`, admin `26ad505af769` |
+| N5 | Trealla `d451596` (rolled back; see below), 3.14.20 | recovery `50f53bfd95e2` |
+| N6 | gprolog-port `8eeb3f8` (= `91f21bd` + `94960dd`) | `8caf7235a7f4` |
+| N7 | eclipse-node `a1aef63` worker and adapter (pin `9038bbb`) | adapter `de5c979bab1e`, worker `bcc48cd0fd5e` |
+
+Static assets were not republished: all eight origins already serve byte-identical
+runtime files, and the served trees carry no provenance records. OPEN access,
+admission rates, credentials, mounts, networks and static addresses are preserved.
+
+The [full sweep after the release](https://github.com/torbjornlager/trinity-conformance/blob/490ecfe/reports/2026-11-21-post-release-conformance/REPORT.md)
+compares row by row with 20 November: 263 rows fixed, 129 still failing, 6 new
+failures. The new failures are receive-guard controls RG-001..003/005..007 on
+Trealla, introduced by trealla-port `7a8e8ce` (rpc maps the owner's execution limit
+to `rpc_error(http_timeout)`, so abort, time limit and termination no longer
+propagate through an rpc in an entered guard). **N5 was rolled back** to a qualified
+recovery image equivalent to `d451596`, and the Trealla pin is back at `d451596`;
+the N5 fixes (SR-015, rpc timeouts, `/call` `timeout`, localhost rpc) wait for a
+trealla-port fix. N7 still fails PE-008 with an explicit limit plus timeout, and
+`atom_codes(A,"ab")` because N7 reads `"ab"` as chars.
+
+Deviations from the brief, qualification, the disk-full incident and rebuilt
+recovery images are in the [deployment record](docs/verification/conformance-release-live-2026-11-21/REPORT.md).
+Host cleanup removed the unused N5/N6/N7 predecessor images and older recovery
+images; earlier releases' `rollback.py` commands that reference them will refuse
+or fail. Private operators for this release are under
+`.trinity/conformance-release-20261121/`: `n5/`, `n6/`, `n7/` and `swi/deploy_*.py
+--rollback`, each scoped to its unit. N5's rollback is already applied.
+
 ## Live canonical node identity — 20 November 2026
 
 N0–N4 and admin select native SWI `254ae3a`, demonstrator runtime

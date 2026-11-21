@@ -42,7 +42,7 @@
         "files_verified": 150,
         "rehearsal": "pass"
       },
-      "live": "verified 2026-11-21T12:33:10Z, admission workers refreshed, Linda WebSocket smoke pass",
+      "live": "verified 2026-11-21T12:33:10Z, admission workers refreshed, Linda WebSocket smoke pass; rolled back after the post-release sweep",
       "restart_evidence": "docker logs for 2026-11-20 13:00-13:45Z saved privately before replacement; only line before restart: \"Killed\" at 13:26:43.83Z (RestartCount 1, OOMKilled false)"
     },
     "n7": {
@@ -154,6 +154,31 @@
         }
       ],
       "status": "differences"
+    }
+  },
+  "post_release": {
+    "sweep_report": "https://github.com/torbjornlager/trinity-conformance/blob/490ecfe/reports/2026-11-21-post-release-conformance/REPORT.md",
+    "fixed_rows": 263,
+    "still_failing": 129,
+    "new_failures": 6,
+    "regression": {
+      "cases": [
+        "RG-001",
+        "RG-002",
+        "RG-003",
+        "RG-005",
+        "RG-006",
+        "RG-007"
+      ],
+      "introduced_by": "trealla-port 7a8e8ce",
+      "control": "d451596 passes all eight in the same lab image"
+    },
+    "n5_rollback": {
+      "decision": "Torbj\u00f6rn",
+      "image": "sha256:50f53bfd95e26c495f4b430e2f2ac71046c8b9749c17a479446c7426b0c8bfa4",
+      "config_preserved": true,
+      "probes_equal_pre_release_baseline": true,
+      "trealla_pin": "d451596b63fbca5259c9782ee4761cad8d801dcb"
     }
   }
 }
