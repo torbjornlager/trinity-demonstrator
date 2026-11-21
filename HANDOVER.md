@@ -34,6 +34,18 @@ or fail. Private operators for this release are under
 `.trinity/conformance-release-20261121/`: `n5/`, `n6/`, `n7/` and `swi/deploy_*.py
 --rollback`, each scoped to its unit. N5's rollback is already applied.
 
+**N5 addresses (17:14 UTC).** A Docker restart at 16:27 UTC left N5 admission
+unable to start: a container without a fixed address had taken its `172.18.0.2`.
+Docker gives such containers the lowest free address and doesn't reserve the
+fixed address of a stopped container. Step 1 of
+[the address plan](docs/WP_NET_ADDRESS_PLAN.md) is now live:
+
+- `n5_admission` is on `172.18.0.12` and `oauth2_n5` on `172.18.0.13`. Images
+  and settings are unchanged, and `compose.live.json` is updated.
+- The six SWI containers still have dynamic addresses and fill `.2`–`.7` on
+  a restart. Step 2 pins them at the next SWI release.
+- Operator: `.trinity/n5-addresses-20261121/deploy.py --rollback`.
+
 ## Live canonical node identity — 20 November 2026
 
 N0–N4 and admin select native SWI `254ae3a`, demonstrator runtime

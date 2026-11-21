@@ -73,6 +73,22 @@ pre-release live answers (N5 and N7 source-exact; N6 `isobase-node` and
 `query-supervisor` byte-identical, `query-worker` rebuilt); `--rollback` targets them.
 Older releases' recovery commands that reference removed images need the same treatment.
 
+A second Docker restart at 16:27 UTC repeated the collision, and public N5
+returned 502 until about 16:34, when admission was restored the same way. The
+cause is general: Docker gives a container without a fixed address the lowest
+free address and doesn't reserve the fixed address of a stopped container.
+Seven containers on `deployment_wp_net` had no fixed address.
+
+The same day, admission moved to `172.18.0.12` and `oauth2_n5` got
+`172.18.0.13`; [docs/WP_NET_ADDRESS_PLAN.md](../../WP_NET_ADDRESS_PLAN.md),
+step 1, has the details.
+
+- **Rehearsal:** on an isolated copy of the layout it reproduced the
+  collision, switched, rolled back, and survived the same restart order.
+- **Live switch:** configuration was unchanged except the address. Seven N5
+  probes were identical before and after, and all public nodes kept their
+  status.
+
 ## N5 restart evidence (20 November)
 
 `docker logs` of `3632faaaf5a1` for 13:00–13:45Z were saved privately before the
