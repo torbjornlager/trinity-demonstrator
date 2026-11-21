@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/torbjornlager/eclipse-node.git",
-  "revision": "a1aef63afd954651ab7682288df4c912fd17cec4",
+  "revision": "9038bbb4e558df812e0f08e08452721609f43db9",
   "mode": "adapter and worker sources change at this revision; keep the qualified ECLiPSe 7.2_13 engine and shell assets, rebuild the worker image",
   "adapter_files": [
     "experiments/eclipse-clp/isotope_http.py",

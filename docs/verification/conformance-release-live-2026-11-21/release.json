@@ -1,0 +1,159 @@
+{
+  "date": "2026-11-21",
+  "brief": "docs/RELEASE-BRIEF-2026-11-21.md",
+  "sources": {
+    "swi_prolog_node": "9239028bcb09aa9f8a421db8773e74451d24e12e",
+    "swi_wasm_node": "4c784f9fcf1b7000e5e1199176b75d61d8c5028d",
+    "trealla_port": "49377b5a8ec8012b805bbfe3b9e414aa5c329189",
+    "gprolog_port": "8eeb3f833b97007474b55bc18885e21fde27bf8a",
+    "eclipse_node_runtime": "a1aef63afd954651ab7682288df4c912fd17cec4",
+    "eclipse_node_pin": "9038bbb4e558df812e0f08e08452721609f43db9",
+    "trinity_conformance": "a7a4a7bd5600f14e24e83396ba9b4a699ea072f3",
+    "trinity_demonstrator": "6fc9db8139ebffefc4c8eb51f8003212538269b1"
+  },
+  "deviations_from_brief": [
+    "N6: gprolog-port 8eeb3f8 (= 91f21bd + 94960dd) instead of 91f21bd; live N6 ran 94960dd (portable-core-0.1), which 91f21bd lacked",
+    "N6: n6_contained.py/n6_egress.py taken from e00b4f95 (what live N6 ran); main copies expected one-hash leases and would refuse all egress with the release controller",
+    "N7: eclipse-node 9038bbb (test-only) narrows a stale extraction-baseline test; runtime files deployed are exactly a1aef63",
+    "N7: PE-008 with limit=5&timeout=1 and atom_codes(A,\"ab\") remain failing (unchanged from predecessor / N7 reads \"ab\" as chars); recorded as remaining defects",
+    "N1-N4: PE-008 already passed before this release",
+    "Static assets: not republished; all eight origins already serve byte-identical runtime files and the served trees carry no provenance records"
+  ],
+  "units": {
+    "n6": {
+      "container": "trinity-n6-host-wp_n6-1",
+      "predecessor": "sha256:5d995bc9abc263787fa81227d9579055aba8fbeae4c52120c831c93b8bc9b9d7",
+      "selected": "sha256:8caf7235a7f4182c8913d748bc540c59d099c6e70755811e2a4ce679f3a565cb",
+      "qualification": {
+        "gnu_local_test_groups": 25,
+        "gnu_credentials_test": "not run (comparison checkout layout)",
+        "demonstrator_unit_tests": 13,
+        "rehearsal": "pass"
+      },
+      "live": "verified 2026-11-21T12:25:51Z"
+    },
+    "n5": {
+      "container": "deployment-wp_n5-1",
+      "predecessor": "sha256:14130f034f6fd2ecee8ee5c51495fc0f80f3299630772faac40c865dd771459e",
+      "selected": "sha256:d31f2a2a7211424909a1971b0706a760026d666b918403e593d9d807f2214234",
+      "qualification": {
+        "unit_groups": 112,
+        "overlay_files": 10,
+        "files_verified": 150,
+        "rehearsal": "pass"
+      },
+      "live": "verified 2026-11-21T12:33:10Z, admission workers refreshed, Linda WebSocket smoke pass",
+      "restart_evidence": "docker logs for 2026-11-20 13:00-13:45Z saved privately before replacement; only line before restart: \"Killed\" at 13:26:43.83Z (RestartCount 1, OOMKilled false)"
+    },
+    "n7": {
+      "container": "deployment-wp_n7-1",
+      "predecessor_adapter": "sha256:2e20ecea6280b7f36162174fd1a2b5b1a9e38e8cac4915f103c4b0324b90b915",
+      "predecessor_worker": "sha256:76787cc8fdf04dfc8c18dcab333c5bfe766f7160138e40d4c6f5212db878e32c",
+      "selected_adapter": "sha256:de5c979bab1e5f71844fe0d0d443b07e3b51e839d544c691c38e9590991af5e8",
+      "selected_worker": "sha256:bcc48cd0fd5e45e7e33e8c5be453c7d0660d0efd7f34831e978f1a0c4c6aefd1",
+      "qualification": {
+        "check_n7_aarch64": "pass at 9038bbb",
+        "language_contract_cases": "247/247 on the exact worker",
+        "packaged_reports": "no failures",
+        "engine_binary": "unchanged",
+        "rehearsal": "pass"
+      },
+      "live": "verified 2026-11-21T12:53:43Z; ISOBASE HTTP pack 12/12"
+    },
+    "swi": {
+      "n0": {
+        "container": "web-prolog-hub-n0-1",
+        "predecessor": "sha256:50021e7b4084b4b19ef2ad52c067edd386b0a4fe3723f16f0dba1bb3a66d2614",
+        "selected": "sha256:202f9cbe479bf6a855a870505e4eb4689d00dfff6f11e4d266a4bb32e1278a1e"
+      },
+      "wp_n1": {
+        "container": "deployment-wp_n1-1",
+        "predecessor": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+        "selected": "sha256:7759b23d172baa4ddfaf6fcb9fcb43da8a8a67d665306778960887372addf630"
+      },
+      "wp_n2": {
+        "container": "deployment-wp_n2-1",
+        "predecessor": "sha256:3d3cac9d02d041fbd141835df07369ef56196790e5f3dac0ea3aa6c1402cb4b6",
+        "selected": "sha256:d3836c21fa46552bdea459765c3d761a7e1d4bc4e0e799c77795c0e7481a07c2"
+      },
+      "wp_n3": {
+        "container": "deployment-wp_n3-1",
+        "predecessor": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+        "selected": "sha256:7759b23d172baa4ddfaf6fcb9fcb43da8a8a67d665306778960887372addf630"
+      },
+      "wp_n4": {
+        "container": "deployment-wp_n4-1",
+        "predecessor": "sha256:d81f37d05755b2f7affdd3bee25eaa065d1d2b9d94c7d17c919c652af50b4dfc",
+        "selected": "sha256:7759b23d172baa4ddfaf6fcb9fcb43da8a8a67d665306778960887372addf630"
+      },
+      "wp_admin": {
+        "container": "deployment-wp_admin-1",
+        "predecessor": "sha256:0d2b8c85b9f4b19f7956cb4a0cb3d68dd06996db718d07030230a62382c81b25",
+        "selected": "sha256:26ad505af7694cc850dcde3d0a8c07d4c1dabe4e0f4e46799d74df2952946671"
+      }
+    }
+  },
+  "swi_qualification": {
+    "test_sh": "pass (release pins, SWI 11.0.0, Node 22)",
+    "browser_manifest_sha256": "9cf7d60b15bb77c6e62ef04ff1ed03019bad8d4167a68b6b2b7e8a0b3b92195e",
+    "actor_gate": "45/45 (8 packs) in the exact N1/N3/N4 image",
+    "engine_inventory": "086777e1642dbfcc unchanged",
+    "rehearsal": "pass (6 services)",
+    "live_attempt_1": "rolled back automatically at 13:37Z: one N0 probe got an admission refusal (inflight_calls 3) after restarts; all six predecessors restored and verified",
+    "live_attempt_2": "verified 2026-11-21T13:39:50Z"
+  },
+  "incident": {
+    "utc_detected": "2026-11-21T13:00Z",
+    "what": "host root volume filled (218 MiB free); Docker Desktop VM storage went read-only; N5 /state not writable; builds failed",
+    "live_impact": "all node_info endpoints kept answering 200; writable volumes (e.g. N5 /state) refused writes until recovery",
+    "recovery": [
+      "user freed host disk space (24 GiB free) and restarted Docker Desktop",
+      "after restart deployment-n5_admission-1 failed: static IP 172.18.0.2 taken by dynamically addressed deployment-oauth2_n5-1 -> N5 502",
+      "restored: stop oauth2_n5, start n5_admission (172.18.0.2), start oauth2_n5 (now 172.18.0.9); N5 200 again",
+      "re-verified every container image, N7 pilot image and all probe sets on N1-N7"
+    ],
+    "contributing": "release session's throwaway test/staging images and candidate builds; scratch caches removed during incident"
+  },
+  "recovery": {
+    "note": "Host cleanup removed the unused predecessor images of N5, N6 and N7; equivalent recovery images were rebuilt from source and qualified against the pre-release live baselines. --rollback now targets them.",
+    "qualification": {
+      "images": {
+        "n5": "sha256:50f53bfd95e26c495f4b430e2f2ac71046c8b9749c17a479446c7426b0c8bfa4",
+        "n6": "sha256:d4a877f1cc85909353dba35e3a059eeda083a8f8d62db734f071f47a2cfbbc2f",
+        "n7": "sha256:3da8764350a811cf8fc2e17bf0bc1e95a3c8b4a38b2e0e8ded70a9895e4d8903",
+        "n7w": "sha256:c8e2045035a632222478be7703c4a3c10fb4f1551f1443c82ca842762aa53659"
+      },
+      "results": [
+        {
+          "node": "n6",
+          "compared": 11,
+          "skipped": [],
+          "differences": {}
+        },
+        {
+          "node": "n5",
+          "compared": 5,
+          "skipped": [
+            "n1-src",
+            "n2-n4"
+          ],
+          "differences": {}
+        },
+        {
+          "node": "n7",
+          "compared": 8,
+          "skipped": [
+            "halt"
+          ],
+          "differences": {
+            "n7/atom_codes": [
+              "error(error(existence_error(procedure, atom_codes / 2), '$web_prolog_actor_4208252799')).",
+              "error(error(existence_error(procedure, atom_codes / 2), '$web_prolog_actor_6930555691'))."
+            ]
+          }
+        }
+      ],
+      "status": "differences"
+    }
+  }
+}
