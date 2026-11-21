@@ -43,11 +43,11 @@ def serve(server_class, root, owner_hash):
         if not ipaddress.ip_address(address).is_global:
             raise RuntimeError('approved peer resolved to a non-public address')
         peers[hostname] = address
-    broker = Broker('\0trinity-n6-egress', peers, leases)
     token = secrets.token_hex(32)
     token_file = temporary / 'controller.token'
     token_file.write_text(token + '\n')
     token_file.chmod(0o600)
+    broker = Broker('\0trinity-n6-egress', peers, leases, local_rpc=(8081, token))
     lifetime_read, lifetime_write = os.pipe2(os.O_CLOEXEC)
     environment = {k: os.environ[k] for k in ('LANG', 'LC_ALL', 'LC_CTYPE', 'TZ') if k in os.environ}
     controller = subprocess.Popen([
