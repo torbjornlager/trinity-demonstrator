@@ -340,11 +340,14 @@ test(seed_url_preserved_through_probe, Url == 'http://localhost:3971') :-
 
 %  The hub publishes no claims of its own: a node it never reached has
 %  no implementation, version or description.
-test(unprobed_node_reports_nothing_about_itself,
-     [Implementation, Version, Description] == ['', "", ""]) :-
+%  (Over rpc/2 an empty string may arrive as [], so accept either.)
+test(unprobed_node_reports_nothing_about_itself) :-
     hub_url(Hub),
     rpc(Hub, node_directory_row(n2, down, _, _, _, _, _,
-                                Implementation, Version, Description)).
+                                Implementation, Version, Description)),
+    assertion(Implementation == ''),
+    forall(member(Text, [Version, Description]),
+           assertion(( Text == "" ; Text == [] ))).
 
 test(hub_appears_in_its_own_directory, S == up) :-
     hub_url(Hub),
