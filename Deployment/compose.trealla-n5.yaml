@@ -45,6 +45,7 @@ services:
       # alias above deliberately serves N3 assets and must not route RPCs.
       WP_PEER_RPC_ENDPOINTS_FILE: /app/owner_start/n5-peer-http-endpoints.pl
       WP_TUTORIAL_SECTIONS: local_actor,toplevels,distributed_actor
+      WP_DESCRIPTION: "Trealla Prolog implementation of the ACTOR profile."
       # Load Trealla's attributed copies of the three shared-database layers
       # plus the owner-installed Linda client and directory, all image-baked.
       WP_SHARED_DB_FILES: /app/Deployment/shared_db_common.pl,/app/Deployment/shared_db_actor_common.pl,/app/Deployment/shared_db_n4.pl,/app/owner_services/linda_client.pl,/app/owner_start/shared_db_linda.pl

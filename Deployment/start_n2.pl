@@ -41,6 +41,7 @@ start_n2 :-
         max_term_text_bytes(24576),
         max_load_text_bytes(131072),
         max_ws_commands_per_window(200),
+        description("Adds toplevel sessions with private session databases."),
         tutorial_sections([all]),
         load_uri_allowed_origins(DomainOrigins),
         load_shared_db_file(CommonSharedDBPath),

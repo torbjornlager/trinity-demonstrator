@@ -353,11 +353,14 @@ same command as first bring-up; `--build` is what matters:
 docker compose -f compose.hub-attach.yaml up -d --build
 ```
 
-Implementation labels come from the curated `seed_implementation/2` facts,
-so they remain visible when a peer is down. `node_implementation/2` publishes
-those labels through the RELATION API. Deploy the seed, registry and page
-together; the DISCOVERY checks cover all production implementation labels
-and show a warning if the page cannot fetch them.
+The seed lists addresses only (`seed_node/2` and optional `seed_probe_url/2`).
+Everything a card shows about a node (implementation, version, description,
+profile, auth and capabilities) comes from that node's own `/node_info`, so the
+hub never publishes a claim the node does not make. A node that has never been
+reached therefore shows no engine or description. Older `seed_node/5` and
+`seed_implementation/2` facts still load, but their prose and labels are
+dropped with a warning.
+See [what the hub reads from each node](../docs/DISCOVERY_NODE_METADATA.md).
 
 The hub harvests capabilities and access profiles from each node's `/node_info`. So a
 change that adds or alters a `/node_info` field (for example a new capability

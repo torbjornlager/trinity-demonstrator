@@ -55,8 +55,9 @@ services:
       # Turn this node into the discovery hub: serve discovery_directory.pl
       # and run the registry custodian.
       WP_DISCOVERY_HUB: "yes"
-      # Optional: a host file of `seed_node/5.` facts overriding the
-      # built-in n1–n5 public seed. Mount it under volumes below.
+      WP_DESCRIPTION: "Discovery hub. Probes the other nodes and serves the register as query relations."
+      # Optional: a host file of `seed_node/2.` facts overriding the
+      # built-in n1–n4 public seed. Mount it under volumes below.
       WP_DISCOVERY_SEED_FILE: "${WP_DISCOVERY_SEED_FILE:-}"
       WP_DRAIN_GRACE_SECONDS: "${WP_DRAIN_GRACE_SECONDS:-10}"
     ports:

@@ -35,26 +35,11 @@ relation_filter(node_implementation(_, _)).
 relation_filter(node_auth(_, _)).
 relation_filter(node_status(_, _)).
 relation_filter(node_card(_, _, _, _, _, _)).
-relation_filter(node_directory_row(_, _, _, _, _, _, _, _, _)).
+relation_filter(node_directory_row(_, _, _, _, _, _, _, _, _, _)).
 relation_filter(node_service(_, _)).
 relation_filter(node_provides(_, _)).
 relation_filter(node_self_contained(_, _)).
 relation_filter(node_profile_at_least(_, _)).
-
-
-% --- The hub's own owner-curated contract -----------------------------
-% Surfaced via /node_info and harvested back into node_provides(n0, _),
-% so the hub advertises the discovery relations it serves (n0 appears in
-% its own directory with a capability list, self-referential and honest).
-
-provides(node_record/2).
-provides(node_directory_row/9).
-provides(node_profile/2).
-provides(node_implementation/2).
-provides(node_auth/2).
-provides(node_status/2).
-provides(node_service/2).
-provides(node_provides/2).
 
 
 %!  node_record(?Id, -Record) is nondet.
@@ -139,7 +124,8 @@ node_profile(Id, Profile) :-
 
 %!  node_implementation(?Id, -Implementation) is nondet.
 %
-%   The Prolog implementation named in the deployment seed, if known.
+%   The Prolog implementation the node names in its /node_info, once it
+%   has been probed and if it reports one.
 
 node_implementation(Id, Implementation) :-
     node_record(Id, Record),
@@ -159,9 +145,8 @@ node_status(Id, Status) :-
 
 %!  node_card(?Id, -Status, -Profile, -Auth, -LatencyMs, -LastSeen) is nondet.
 %
-%   The flat, JSON-friendly projection the directory UI enumerates over
-%   `/call`: the *dynamic* fields keyed by id (the static seed tier —
-%   description, links — the client already holds).  One row per node;
+%   The minimal, JSON-friendly status projection keyed by id, for clients
+%   that only need liveness and profile.  One row per node;
 %   `profile`/`auth` are `unknown` until the node is first probed.
 
 node_card(Id, Status, Profile, Auth, LatencyMs, LastSeen) :-
@@ -174,15 +159,17 @@ node_card(Id, Status, Profile, Auth, LatencyMs, LastSeen) :-
 
 
 %!  node_directory_row(?Id, -Status, -Profile, -Auth, -LatencyMs,
-%!                      -LastSeen, -Url, -Description, -Note) is nondet.
+%!                      -LastSeen, -Url, -Implementation, -Version,
+%!                      -Description) is nondet.
 %
-%   The full flat projection the /discovery-hub directory page renders:
-%   the dynamic fields plus the seed tier (url, description, note), all
-%   JSON-friendly, one row per node.  node_card/6 stays the minimal
-%   status-only projection; this one carries enough to draw a card.
+%   The flat projection the /discovery-hub directory page renders, one
+%   JSON-friendly row per node.  Apart from the seeded url and the
+%   probe-derived status, latency and last-seen time, every field is what
+%   the node itself reports in /node_info ('' or "" when it reports
+%   nothing).  node_card/6 stays the minimal status-only projection.
 
 node_directory_row(Id, Status, Profile, Auth, LatencyMs, LastSeen,
-                   Url, Description, Note) :-
+                   Url, Implementation, Version, Description) :-
     node_record(Id, Record),
     get_dict(status, Record, Status),
     get_dict(profile, Record, Profile),
@@ -190,16 +177,23 @@ node_directory_row(Id, Status, Profile, Auth, LatencyMs, LastSeen,
     get_dict(latency_ms, Record, LatencyMs),
     get_dict(last_seen, Record, LastSeen),
     get_dict(url, Record, Url),
-    get_dict(description, Record, Description),
-    get_dict(note, Record, Note).
+    record_text(implementation, Record, '', Implementation),
+    record_text(version, Record, "", Version),
+    record_text(description, Record, "", Description).
+
+record_text(Key, Record, Default, Value) :-
+    (   get_dict(Key, Record, Value0)
+    ->  Value = Value0
+    ;   Value = Default
+    ).
 
 
 %!  node_service(?Id, ?Service) is nondet.
 %!  node_provides(?Id, ?Predicate) is nondet.
 %
 %   The harvested capability tier, one row per (node, capability): the
-%   node-resident services a node publishes, and the owner-curated
-%   predicates it advertises (its `provides/1` contract).  These let a
+%   node-resident services a node publishes, and the predicates it
+%   advertises in /node_info.  These let a
 %   client compose, over a single /call, the discovery payoff:
 %
 %       ?- node_profile(N, actor), node_status(N, up),

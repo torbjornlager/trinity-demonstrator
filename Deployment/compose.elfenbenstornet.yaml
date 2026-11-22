@@ -29,6 +29,7 @@ services:
       WP_PORT: "3060"
       WP_PUBLIC_URL: "https://n0.elfenbenstornet.se"
       WP_DISCOVERY_HUB: "yes"
+      WP_DESCRIPTION: "Discovery hub. Probes the other nodes and serves the register as query relations."
       WP_DISCOVERY_SEED_FILE: "/app/Deployment/discovery-seed.elfenbenstornet.pl"
       WP_PROFILE: "relation"
       WP_AUTH: "open"

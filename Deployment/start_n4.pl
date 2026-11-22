@@ -51,6 +51,7 @@ start_n4 :-
         max_load_text_bytes(131072),
         max_ws_commands_per_window(400),
         ws_allowed_origins(DomainOrigins),
+        description("Second SWI ACTOR node; pairs with N3 for cross-node messaging."),
         tutorial_sections([local_actor, toplevels, distributed_actor,
                            behaviours, statecharts]),
         load_uri_allowed_origins(DomainOrigins),

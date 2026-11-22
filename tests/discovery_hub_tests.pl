@@ -53,8 +53,7 @@ seed_replica(Id, LastSeen, LastError) :-
     retractall(node_record_gen(_, _, _)),
     retractall(current_gen(_)),
     Rec = node{
-        id: Id, url: 'http://x', description: "d", shared_db: "s",
-        note: "", profile: actor, auth: open, version: "",
+        id: Id, url: 'http://x', description: "", profile: actor, auth: open, version: "",
         services: [], provides: [],
         last_seen: LastSeen, last_error: LastError, latency_ms: 7
     },
@@ -75,7 +74,7 @@ seed_replica_pair(UpId, DownId) :-
     assertz(current_gen(1)).
 
 base_record(Id, LastSeen, node{
-        id: Id, url: u, description: "", shared_db: "", note: "",
+        id: Id, url: u, description: "",
         profile: actor, auth: open, version: "", services: [], provides: [],
         last_seen: LastSeen, last_error: 0, latency_ms: 1
     }).
@@ -86,7 +85,7 @@ seed_record(Id, Profile, Services, Provides) :-
     retractall(node_record_gen(_, _, _)),
     retractall(current_gen(_)),
     get_time(F), Now is integer(F),
-    Rec = node{id: Id, url: u, description: "", shared_db: "", note: "",
+    Rec = node{id: Id, url: u, description: "",
                profile: Profile, auth: open, version: "",
                services: Services, provides: Provides,
                last_seen: Now, last_error: 0, latency_ms: 1},
@@ -98,10 +97,10 @@ seed_pair_provides(Id1, Provides1, Id2, Provides2) :-
     retractall(node_record_gen(_, _, _)),
     retractall(current_gen(_)),
     get_time(F), Now is integer(F),
-    R1 = node{id:Id1, url:u, description:"", shared_db:"", note:"", profile:actor,
+    R1 = node{id:Id1, url:u, description: "", profile:actor,
               auth:open, version:"", services:[], provides:Provides1,
               last_seen:Now, last_error:0, latency_ms:1},
-    R2 = node{id:Id2, url:u, description:"", shared_db:"", note:"", profile:actor,
+    R2 = node{id:Id2, url:u, description: "", profile:actor,
               auth:open, version:"", services:[], provides:Provides2,
               last_seen:Now, last_error:0, latency_ms:1},
     assertz(node_record_gen(1, Id1, R1)),
@@ -141,7 +140,7 @@ test(fresh_maintenance_is_maintenance, S == maintenance) :-
     retractall(user:node_record_gen(_, _, _)),
     retractall(user:current_gen(_)),
     get_time(F), Now is integer(F),
-    Rec = node{id:n1, url:u, description:"", shared_db:"", note:"",
+    Rec = node{id:n1, url:u, description: "",
                profile:actor, auth:open, version:"",
                services:[], provides:[],
                maintenance:true,
@@ -154,7 +153,7 @@ test(stale_maintenance_is_down, S == down) :-
     retractall(user:node_record_gen(_, _, _)),
     retractall(user:current_gen(_)),
     get_time(F), Old is integer(F) - 100,
-    Rec = node{id:n1, url:u, description:"", shared_db:"", note:"",
+    Rec = node{id:n1, url:u, description: "",
                profile:actor, auth:open, version:"",
                services:[], provides:[],
                maintenance:true,
@@ -179,7 +178,28 @@ test(directory_row_carries_status_and_seed_fields,
      [St, Url] == [up, 'http://x']) :-
     get_time(F), Now is integer(F),
     seed_replica(n1, Now, 0),
-    node_directory_row(n1, St, _Pr, _Au, _La, _Se, Url, _Desc, _Note).
+    node_directory_row(n1, St, _Pr, _Au, _La, _Se, Url, _Impl, _Ver, _Desc).
+
+%  Implementation, version and description are whatever the node itself
+%  reported; a record without them yields empty values, never hub text.
+test(directory_row_carries_node_reported_fields,
+     [Impl, Ver, Desc, Impl0, Ver0, Desc0] ==
+     ['GNU Prolog', "1.6.0", "A node.", '', "", ""]) :-
+    retractall(user:node_record_gen(_, _, _)),
+    retractall(user:current_gen(_)),
+    get_time(F), Now is integer(F),
+    Reported = node{id:r1, url:u, implementation:'GNU Prolog', version:"1.6.0",
+                    description:"A node.", profile:isobase, auth:open,
+                    services:[], provides:[], last_seen:Now, last_error:0,
+                    latency_ms:1},
+    Silent = node{id:r2, url:u, profile:isobase, auth:open,
+                  services:[], provides:[], last_seen:Now, last_error:0,
+                  latency_ms:1},
+    assertz(user:node_record_gen(1, r1, Reported)),
+    assertz(user:node_record_gen(1, r2, Silent)),
+    assertz(user:current_gen(1)),
+    node_directory_row(r1, _, _, _, _, _, _, Impl, Ver, Desc),
+    node_directory_row(r2, _, _, _, _, _, _, Impl0, Ver0, Desc0).
 
 test(node_service_enumerates_harvested_services, Ss == [counter, pubsub_service]) :-
     seed_record(n1, actor, [counter, pubsub_service], []),
@@ -206,7 +226,7 @@ test(capability_query_composes_on_the_replica, Ids == [n1]) :-
 test(self_probe_targets_localhost_not_public_url,
      [Url, ProbeUrl] == ['https://hub.example.com', 'http://localhost:3060']) :-
     N0 = node{id:n0, url:'https://hub.example.com', probe_url:'https://hub.example.com',
-              description:"", shared_db:"", note:"", profile:unknown, auth:unknown,
+              description: "", profile:unknown, auth:unknown,
               version:"", services:[], provides:[], last_seen:0, last_error:0, latency_ms:0},
     discovery_hub:localize_probe_url(3060, N0, Node),
     get_dict(url, Node, Url),
@@ -214,7 +234,7 @@ test(self_probe_targets_localhost_not_public_url,
 
 test(peer_probe_url_is_left_public, ProbeUrl == 'https://n3.example.com') :-
     N3 = node{id:n3, url:'https://n3.example.com', probe_url:'https://n3.example.com',
-              description:"", shared_db:"", note:"", profile:unknown, auth:unknown,
+              description: "", profile:unknown, auth:unknown,
               version:"", services:[], provides:[], last_seen:0, last_error:0, latency_ms:0},
     discovery_hub:localize_probe_url(3060, N3, Node),
     get_dict(probe_url, Node, ProbeUrl).
@@ -225,7 +245,7 @@ test(seed_probe_url_overrides_probe_target,
      [Url, ProbeUrl] == ['https://n5.example.com', 'http://n5:3060']) :-
     setup_call_cleanup(
         ( discovery_hub:clear_seed,
-          discovery_hub:assertz(seed_node(n5, 'https://n5.example.com', "d", "s", "")),
+          discovery_hub:assertz(seed_node(n5, 'https://n5.example.com')),
           discovery_hub:assertz(seed_probe_url(n5, 'http://n5:3060')) ),
         ( discovery_hub:seed_to_node(Node),
           get_dict(url, Node, Url),
@@ -235,14 +255,13 @@ test(seed_probe_url_overrides_probe_target,
 test(seed_without_probe_url_falls_back_to_display_url, ProbeUrl == 'https://n2.example.com') :-
     setup_call_cleanup(
         ( discovery_hub:clear_seed,
-          discovery_hub:assertz(seed_node(n2, 'https://n2.example.com', "d", "s", "")) ),
+          discovery_hub:assertz(seed_node(n2, 'https://n2.example.com')) ),
         ( discovery_hub:seed_to_node(Node),
           get_dict(probe_url, Node, ProbeUrl) ),
         discovery_hub:clear_seed).
 
 test(published_record_drops_internal_probe_url) :-
-    N = node{id:n0, url:u, probe_url:'http://localhost:3060', description:"",
-             shared_db:"", note:"", profile:actor, auth:open, version:"",
+    N = node{id:n0, url:u, probe_url:'http://localhost:3060', description: "", profile:actor, auth:open, version:"",
              services:[], provides:[], last_seen:1, last_error:0, latency_ms:1},
     discovery_hub:published_record(N, Rec),
     assertion(\+ get_dict(probe_url, Rec, _)),
@@ -257,7 +276,7 @@ test(self_contained_defaults_unknown, V == unknown) :-
 test(self_contained_read_from_record, V == false) :-
     retractall(user:node_record_gen(_, _, _)),
     retractall(user:current_gen(_)),
-    Rec = node{id:scr, url:u, description:"", shared_db:"", note:"",
+    Rec = node{id:scr, url:u, description: "",
                profile:actor, auth:open, version:"", services:[], provides:[],
                self_contained:false,
                last_seen:100, last_error:0, latency_ms:0},
@@ -284,11 +303,8 @@ integration_setup :-
     peer_port(Peer),
     node(Peer, [profile(isobase)]),
     set_seed([
-        seed_node(n1, 'http://localhost:3971', "live peer", "peer db", ""),
-        seed_implementation(n1, 'SWI-Prolog'),
-        seed_node(n2, 'http://localhost:3999', "dead", "none", ""),
-        seed_implementation(n2, 'GNU Prolog'),
-        seed_node(n3, 'http://localhost:3999', "unspecified", "none", "")
+        seed_node(n1, 'http://localhost:3971'),
+        seed_node(n2, 'http://localhost:3999')
     ]),
     hub_port(Hub),
     % Keep the existing multi-node ACTOR fixture. The deployed RELATION
@@ -316,19 +332,19 @@ test(dead_node_is_down, S == down) :-
     hub_url(Hub),
     rpc(Hub, node_status(n2, S)).
 
-test(seed_tier_preserved_through_probe,
-     [Url, Implementation] == ['http://localhost:3971', 'SWI-Prolog']) :-
+test(seed_url_preserved_through_probe, Url == 'http://localhost:3971') :-
     hub_url(Hub),
     wait_until(rpc(Hub, node_status(n1, up)), 25),
     rpc(Hub, node_record(n1, R)),
-    get_dict(url, R, Url),
-    rpc(Hub, node_implementation(n1, Implementation)).
+    get_dict(url, R, Url).
 
-test(implementations_are_available_without_a_successful_probe,
-     Implementations == ['GNU Prolog']) :-
+%  The hub publishes no claims of its own: a node it never reached has
+%  no implementation, version or description.
+test(unprobed_node_reports_nothing_about_itself,
+     [Implementation, Version, Description] == ['', "", ""]) :-
     hub_url(Hub),
-    findall(Name, rpc(Hub, (node_status(Id, down),
-                           node_implementation(Id, Name))), Implementations).
+    rpc(Hub, node_directory_row(n2, down, _, _, _, _, _,
+                                Implementation, Version, Description)).
 
 test(hub_appears_in_its_own_directory, S == up) :-
     hub_url(Hub),

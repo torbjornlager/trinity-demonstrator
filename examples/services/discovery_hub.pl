@@ -8,7 +8,7 @@
     load_seed_file/1,             % +File
     clear_seed/0,
     directory_source_file/1,      % -File
-    seed_node/5                   % ?Id, ?Url, ?Description, ?SharedDb, ?Note
+    seed_node/2                   % ?Id, ?Url
 ]).
 
 /** <module> Discovery hub — the registry custodian (slice 1)
@@ -30,9 +30,12 @@ discovery_directory.pl turn it back into queryable relations.
   - The custodian (registry_actor/2) never blocks on the network.
   - A node never reports its own liveness; the hub *decides* status by
     probing (discovery_directory.pl derives it at read time).
-  - The seed tier (id, url, description, shared_db) is never sourced
-    from a node, so a buggy or hostile node cannot rewrite the directory
-    entries we chose for it — it can only move profile/auth.
+  - The seed holds only addresses: which nodes to probe (id, url and an
+    optional internal probe URL).  Everything a card shows about a node
+    (implementation, version, description, profile, auth, capabilities)
+    is harvested from that node's own /node_info, so the hub never
+    publishes claims about a node that the node does not make itself.
+    A node cannot move its id or url.
 
 Usage (after `?- [load].`):
 
@@ -50,8 +53,7 @@ that probe locally-started nodes instead of the public deployment).
 :- use_module(library(apply)).
 :- use_module(library(lists)).
 
-:- dynamic seed_node/5.
-:- dynamic seed_implementation/2.   % Id, curated Prolog implementation name
+:- dynamic seed_node/2.            % Id, public URL
 :- dynamic seed_probe_url/2.        % Id, internal probe URL (optional)
 
 
@@ -150,8 +152,8 @@ hub_self_url(Port, Url) :-
 %!  set_seed(+SeedTerms) is det.
 %!  clear_seed is det.
 %
-%   Replace the curated seed.  Each term is seed_node(Id, Url,
-%   Description, SharedDb, Note).  n0 (the hub's own card) is supplied
+%   Replace the seed.  Each term is seed_node(Id, Url) or
+%   seed_probe_url(Id, ProbeUrl).  n0 (the hub's own card) is supplied
 %   automatically at start if absent, so a seed need only list the
 %   peers.
 
@@ -161,13 +163,16 @@ set_seed(SeedTerms) :-
 
 %!  load_seed_file(+File) is det.
 %
-%   Replace the seed from a plain Prolog file holding `seed_node/5.`
-%   facts and, optionally, `seed_implementation/2.` implementation labels
-%   and `seed_probe_url/2.` facts — the latter give a
+%   Replace the seed from a plain Prolog file holding `seed_node/2.`
+%   facts and, optionally, `seed_probe_url/2.` facts — the latter give a
 %   node an *internal* probe address distinct from its public display
 %   URL (e.g. a co-located node reached as `http://n5:3060` over the
 %   container network rather than hairpinning to its public name).  n0 is
 %   still supplied automatically at start if the file does not name it.
+%
+%   Older seeds may still hold seed_node/5 (with hub-written prose) and
+%   seed_implementation/2.  They load, but the prose and labels are
+%   dropped with a warning: those facts now come from the nodes.
 
 load_seed_file(File) :-
     read_seed_terms(File, Terms),
@@ -190,26 +195,36 @@ read_seed_stream(Stream, Terms) :-
     ;   throw(error(type_error(seed_term, Term), _))
     ).
 
-valid_seed_term(seed_node(_, _, _, _, _)).
+valid_seed_term(seed_node(_, _)).
 valid_seed_term(seed_probe_url(_, _)).
-valid_seed_term(seed_implementation(_, _)).
+valid_seed_term(seed_node(_, _, _, _, _)).      % legacy, prose dropped
+valid_seed_term(seed_implementation(_, _)).     % legacy, ignored
 
-assert_seed_term(seed_node(Id, Url, Desc, SharedDb, Note)) :-
+assert_seed_term(seed_node(Id, Url)) :-
     !,
-    assertz(seed_node(Id, Url, Desc, SharedDb, Note)).
+    assertz(seed_node(Id, Url)).
 assert_seed_term(seed_probe_url(Id, Url)) :-
     !,
     assertz(seed_probe_url(Id, Url)).
-assert_seed_term(seed_implementation(Id, Implementation)) :-
+assert_seed_term(seed_node(Id, Url, _Desc, _SharedDb, _Note)) :-
     !,
-    assertz(seed_implementation(Id, Implementation)).
+    legacy_seed_warning(seed_node/5),
+    assertz(seed_node(Id, Url)).
+assert_seed_term(seed_implementation(_, _)) :-
+    !,
+    legacy_seed_warning(seed_implementation/2).
 assert_seed_term(Term) :-
     throw(error(type_error(seed_term, Term), _)).
 
+legacy_seed_warning(PI) :-
+    print_message(warning,
+                  format("discovery seed: ~w is obsolete; only the id and \c
+                          url are used (descriptions and labels now come \c
+                          from each node's /node_info)", [PI])).
+
 clear_seed :-
-    retractall(seed_node(_, _, _, _, _)),
-    retractall(seed_probe_url(_, _)),
-    retractall(seed_implementation(_, _)).
+    retractall(seed_node(_, _)),
+    retractall(seed_probe_url(_, _)).
 
 %!  ensure_seed(+SelfUrl) is det.
 %
@@ -218,79 +233,45 @@ clear_seed :-
 %   plan §7); if the configured seed already names n0, respect it.
 
 ensure_seed(SelfUrl) :-
-    (   seed_node(_, _, _, _, _)
+    (   seed_node(_, _)
     ->  true
     ;   default_seed
     ),
-    (   seed_node(n0, _, _, _, _)
+    (   seed_node(n0, _)
     ->  true
-    ;   assertz(seed_node(n0, SelfUrl,
-            "The discovery hub.  A RELATION node that publishes the live \c
-             register of the other nodes as named query relations over \c
-             the stateless /call API.  (It runs an actor internally to \c
-             probe them; that surface is not public.)",
-            "discovery_directory.pl: the published read replica \c
-             (node_record/2 and the node_* query relations).",
-            "This is the registry."))
-    ),
-    (   seed_implementation(n0, _)
-    ->  true
-    ;   assertz(seed_implementation(n0, 'SWI-Prolog'))
+    ;   assertz(seed_node(n0, SelfUrl))
     ).
 
 %!  default_seed is det.
 %
-%   The author-curated seed lifted from the demonstrator's
-%   splashNodeCards.  URLs point at the public deployment; override with
-%   set_seed/1 for a local demo or test.
+%   The public demonstrator nodes.  Override with set_seed/1 or a seed
+%   file for a local demo or test.
 
 default_seed :-
-    assertz(seed_node(n1, 'https://n1.elfenbenstornet.se',
-        "The conservative stateless node.  Use it for relational \c
-         querying and stateless Prolog execution over the /call API.",
-        "Family predicates from the common deployment layer, plus \c
-         human(plato), human(aristotle), and deployment_node(n1).",
-        "")),
-    assertz(seed_node(n2, 'https://n2.elfenbenstornet.se',
-        "The semi-stateful HTTP node.  Adds toplevel sessions, private \c
-         session databases, incremental loading, and an rpc/2-3 demo.",
-        "Common family predicates plus mortal/1, ancestor/2, \c
-         descendant/2, human(socrates), and a distributed human/1.",
-        "")),
-    assertz(seed_node(n3, 'https://n3.elfenbenstornet.se',
-        "The fully stateful node.  Adds /ws, direct actor messaging, \c
-         node-resident services, and the statechart demonstrator.",
-        "Common base + actor-common layer + the n3 overlay, with \c
-         registered counter / pubsub_service services.",
-        "")),
-    assertz(seed_node(n4, 'https://n4.elfenbenstornet.se',
-        "A second public ACTOR node for cross-node actor and statechart \c
-         demonstrations.  Pair it with n3 for distributed messaging.",
-        "Common base + the same actor-common layer as n3, plus an n4 \c
-         overlay providing human(plato) / human(aristotle).",
-        "")),
-    forall(member(Id, [n1, n2, n3, n4]),
-           assertz(seed_implementation(Id, 'SWI-Prolog'))).
+    forall(member(Id-Url,
+                  [ n1-'https://n1.elfenbenstornet.se',
+                    n2-'https://n2.elfenbenstornet.se',
+                    n3-'https://n3.elfenbenstornet.se',
+                    n4-'https://n4.elfenbenstornet.se'
+                  ]),
+           assertz(seed_node(Id, Url))).
 
 %!  seed_to_node(-Node) is nondet.
 %
-%   Lift a seed term to the in-actor record dict.  The self-reported
-%   tier (profile, auth) starts `unknown` and the observed tier starts
-%   zeroed; both fill in once the node is probed.
+%   Lift a seed term to the in-actor record dict.  Everything the node
+%   reports about itself starts empty or `unknown`, and the observed tier
+%   starts zeroed; both fill in once the node is probed.
 
 seed_to_node(Node) :-
-    seed_node(Id, Url, Desc, SharedDb, Note),
+    seed_node(Id, Url),
     ( seed_probe_url(Id, ProbeUrl) -> true ; ProbeUrl = Url ),
-    ( seed_implementation(Id, Implementation) -> true ; Implementation = '' ),
     Node = node{
         id: Id,
         url: Url,
         probe_url: ProbeUrl,    % internal probe target if seeded, else url;
                                 % n0 is further localized (localize_probe_url/3)
-        implementation: Implementation,
-        description: Desc,
-        shared_db: SharedDb,
-        note: Note,
+        implementation: '',
+        description: "",
         profile: unknown,
         auth: unknown,
         version: "",
@@ -439,11 +420,12 @@ http_status(URL, Status) :-
 
 %!  apply_probe(+Id, +Outcome, +State0, -State) is det.
 %
-%   ok(Info,L): overwrite the self-reported tier (profile, auth) and
+%   ok(Info,L): overwrite everything the node reports about itself and
 %   stamp the observed tier (last_seen := now, latency_ms := L); leave
-%   the seed tier untouched.  error: stamp last_error := now only —
+%   id and url untouched.  error: stamp last_error := now only —
 %   crucially *not* last_seen, so aging can notice the node went quiet
-%   (plan §3.3).
+%   (plan §3.3).  The last reported self-description is kept while a
+%   node is unreachable.
 
 apply_probe(Id, Outcome, State0, State) :-
     now(Now),
@@ -463,7 +445,14 @@ apply_outcome(ok(Info, LatencyMs), Now, Node0, Node) :-
     info_list(provides, Info, Provides),
     info_bool(self_contained, Info, SelfContained),
     info_bool(maintenance, Info, Maintenance),
+    info_text(implementation, Info, 40, ImplementationText),
+    atom_string(Implementation, ImplementationText),
+    info_text(version, Info, 40, Version),
+    info_text(description, Info, 160, Description),
     Node = Node0.put(_{
+        implementation: Implementation,
+        version: Version,
+        description: Description,
         profile: Profile,
         auth: Auth,
         services: Services,
@@ -505,6 +494,30 @@ info_bool(Key, Info, Value) :-
         ;   Value = unknown
         )
     ;   Value = unknown
+    ).
+
+%!  info_text(+Key, +Info, +MaxLength, -Text) is det.
+%
+%   Harvest a short self-reported text (implementation, version,
+%   description) as a string with whitespace collapsed, cut to MaxLength
+%   characters so one node cannot distort the directory layout; absent or
+%   non-text ⇒ "".
+info_text(Key, Info, MaxLength, Text) :-
+    (   get_dict(Key, Info, Raw),
+        ( string(Raw) ; atom(Raw), Raw \== null ; number(Raw) )
+    ->  format(string(Raw1), "~w", [Raw]),
+        split_string(Raw1, " \t\r\n", " \t\r\n", Words0),
+        exclude(==(""), Words0, Words),
+        atomic_list_concat(Words, ' ', Joined),
+        atom_string(Joined, Text0),
+        string_length(Text0, Length),
+        (   Length =< MaxLength
+        ->  Text = Text0
+        ;   Cut is MaxLength - 1,
+            sub_string(Text0, 0, Cut, _, Head),
+            string_concat(Head, "…", Text)
+        )
+    ;   Text = ""
     ).
 
 to_atom(A, A) :- atom(A), !.

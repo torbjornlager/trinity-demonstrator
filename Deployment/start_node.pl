@@ -121,7 +121,7 @@ drain_signal(_Signal) :-
 %   In discovery-hub mode, load the owner-local hub bootstrap and attach
 %   the registry custodian to the node we just started (whose shared
 %   database is already discovery_directory.pl).  A seed file
-%   (WP_DISCOVERY_SEED_FILE — plain `seed_node/5.` facts) overrides the
+%   (WP_DISCOVERY_SEED_FILE — plain `seed_node/2.` facts) overrides the
 %   built-in public seed.  No-op when the mode is off.
 maybe_attach_discovery_hub(Port) :-
     ( discovery_hub_enabled
@@ -301,6 +301,8 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
     ws_origins_option(WsOrigins, WsOpts),
     load_uri_option(LoadUriOrigins, LoadUriOpts),
     tutorial_sections_option(TutorialSections0, TutorialOpts),
+    env_atom('WP_DESCRIPTION', '', Description),
+    description_option(Description, DescriptionOpts),
     owner_option(Auth, OwnerOpts),
     shared_db_option(SharedOpts),
     append([
@@ -323,6 +325,7 @@ resolve_config([port-Port, public_url-PublicURL, options-Options]) :-
         WsOpts,
         LoadUriOpts,
         TutorialOpts,
+        DescriptionOpts,
         OwnerOpts,
         SharedOpts
     ], Options).
@@ -347,6 +350,10 @@ load_uri_option(Origins, [load_uri_allowed_origins(Origins)]).
 
 tutorial_sections_option([], [tutorial_sections([all])]) :- !.
 tutorial_sections_option(Sections, [tutorial_sections(Sections)]).
+
+%  WP_DESCRIPTION: the node's one-line self-description in /node_info.
+description_option('', []) :- !.
+description_option(Description, [description(Description)]).
 
 owner_option(private, [owner(Owner)]) :-
     env_atom('WP_OWNER', '', Owner),

@@ -126,6 +126,24 @@ class N6BoundaryTests(unittest.TestCase):
         finally:
             adapter.PUBLIC_EXECUTION = previous
 
+    def test_node_info_describes_the_node_itself(self):
+        previous = adapter.PUBLIC_EXECUTION, adapter.PINS_FILE
+        try:
+            adapter.PUBLIC_EXECUTION = True
+            with tempfile.TemporaryDirectory() as directory:
+                pins = Path(directory) / 'runtime-pins.json'
+                pins.write_text(json.dumps({'engine': {'version': '1.6.0'}}))
+                adapter.PINS_FILE = pins
+                info = adapter.node_info('visitor', False, {})
+                self.assertEqual(info['implementation'], 'GNU Prolog')
+                self.assertEqual(info['version'], '1.6.0')
+                self.assertEqual(info['description'], adapter.DESCRIPTION)
+                self.assertEqual((info['profile'], info['auth']), ('isobase', 'open'))
+                adapter.PINS_FILE = Path(directory) / 'missing.json'
+                self.assertNotIn('version', adapter.node_info('visitor', False, {}))
+        finally:
+            adapter.PUBLIC_EXECUTION, adapter.PINS_FILE = previous
+
     def test_owner_authentication_rejects_wrong_and_malformed_credentials(self):
         salt = bytes(range(16))
         digest = hashlib.pbkdf2_hmac('sha256', b'fixture-password', salt, 200000).hex()

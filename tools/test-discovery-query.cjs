@@ -31,14 +31,18 @@ for (const capability of ['counter', 'Counter', 'my-service', "owner's-service",
 console.log('Discovery query names round-trip as Prolog atoms');
 
 
-// Exercise the real page's fetch/merge/render flow, including its public
-// three-query concurrency bound and the formerly silent metadata failure.
-async function checkImplementationCards(unavailable = false) {
-  const labels = {n0:'SWI-Prolog', n1:'SWI-Prolog', n2:'SWI-Prolog',
-    n3:'SWI-Prolog', n4:'SWI-Prolog', n5:'Trealla Prolog',
-    n6:'GNU Prolog', n7:'ECLiPSe CLP'};
+// Exercise the real page's fetch/merge/render flow: one directory query
+// carrying the node-reported fields, then at most three concurrent
+// capability queries, with a warning when those cannot be fetched.
+async function checkCards(unavailable = false) {
+  const nodes = {
+    n0: ['SWI-Prolog', '10.1.19', '', 'relation'],
+    n5: ['Trealla Prolog', '', 'Trealla <port>.', 'actor'],
+    n6: ['GNU Prolog', '1.6.0', 'GNU Prolog port of the ISOBASE profile.', 'isobase'],
+    n9: ['', '', '', 'isotope']
+  };
   const elements = new Map();
-  let inflight = 0, maximum = 0, labelQueries = 0;
+  let inflight = 0, maximum = 0, directoryQueries = 0;
   const page = vm.createContext({URLSearchParams,
     document: {getElementById(id) {
       if (!elements.has(id)) elements.set(id, {innerHTML:'', textContent:''});
@@ -50,15 +54,16 @@ async function checkImplementationCards(unavailable = false) {
       inflight--;
       const goal = new URLSearchParams(url.split('?')[1]).get('goal');
       let data = [];
-      if (goal.includes('node_directory_row')) data = Object.keys(labels).map(Id =>
-        ({Id, Status:Id === 'n6' ? 'down' : 'up', Profile:'actor', Auth:'open',
-          Url:'https://' + Id + '.example', LastSeen:0}));
-      if (goal.includes('node_implementation')) {
-        labelQueries++;
-        if (unavailable) return {ok:true, json:async () =>
-          ({type:'error', data:'Unknown procedure: node_implementation/2'})};
-        data = Object.entries(labels).map(([Id, Implementation]) =>
-          ({Id, Implementation:"'" + Implementation + "'"}));
+      if (goal.includes('node_directory_row')) {
+        directoryQueries++;
+        assert.match(goal, /Implementation,Version,Description\)/);
+        data = Object.entries(nodes).map(([Id, [impl, ver, desc, Profile]]) =>
+          ({Id, Status:Id === 'n6' ? 'down' : 'up', Profile, Auth:'open',
+            Url:"'https://" + Id + ".example'", LastSeen:0,
+            Implementation:"'" + impl + "'", Version:'"' + ver + '"',
+            Description:'"' + desc + '"'}));
+      } else if (unavailable) {
+        return {ok:true, json:async () => ({type:'error', data:'unavailable'})};
       }
       return {ok:true, json:async () => ({type:'success', data})};
     }});
@@ -70,23 +75,22 @@ async function checkImplementationCards(unavailable = false) {
   for (let i = 0; i < 20 && !page.lastFetch; i++)
     await new Promise(resolve => setImmediate(resolve));
   assert.ok(page.lastFetch, 'directory polling did not finish');
-  assert.equal(labelQueries, 1, 'implementation metadata must be fetched');
+  assert.equal(directoryQueries, 1);
   assert.ok(maximum <= 3, 'public query concurrency exceeded: ' + maximum);
   const alert = elements.get('dh-alert').innerHTML;
-  if (unavailable) assert.match(alert, /incomplete/i);
-  else {
-    assert.equal(alert, '');
-    for (const [id, label] of Object.entries(labels)) {
-      const row = page.ALL.find(r => r.id === id);
-      assert.equal(row?.implementation, label, id);
-      assert.ok(page.nodeCard(row).includes('>' + label + '</div>'), id);
-    }
-    assert.ok(page.nodeCard({...page.ALL[0], implementation:'<script>'})
-      .includes('&lt;script&gt;'));
-  }
+  if (unavailable) { assert.match(alert, /incomplete/i); return; }
+  assert.equal(alert, '');
+  const card = id => page.nodeCard(page.ALL.find(r => r.id === id));
+  assert.ok(card('n0').includes('>SWI-Prolog 10.1.19</div>'));
+  assert.ok(card('n0').includes('/call (advertised relations only)'));
+  assert.ok(card('n5').includes('>Trealla Prolog</div>'));
+  assert.ok(card('n5').includes('Trealla &lt;port&gt;.'));
+  assert.ok(card('n6').includes('GNU Prolog port of the ISOBASE profile.'));
+  assert.ok(!card('n9').includes('text-muted small"></div>'), 'no empty engine line');
+  assert.ok(!card('n0').includes('registry</span>'), 'no hub-invented badges');
 }
 (async () => {
-  await checkImplementationCards();
-  await checkImplementationCards(true);
-  console.log('Discovery implementation cards, offline labels and query bounds pass');
+  await checkCards();
+  await checkCards(true);
+  console.log('Discovery cards show only node-reported fields; query bounds pass');
 })().catch(error => { console.error(error); process.exitCode = 1; });

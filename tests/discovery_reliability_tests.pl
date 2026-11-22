@@ -15,7 +15,9 @@
 probe_info(_) :-
     probe_queue(Queue),
     thread_send_message(Queue, probed),
-    reply_json_dict(_{profile:actor, auth:open, services:[], provides:[]}).
+    reply_json_dict(_{profile:actor, auth:open, services:[], provides:[],
+                      implementation:"SWI-Prolog", version:"10.1.19",
+                      description:"  A test\n   node.  "}).
 
 probe_ready(_) :-
     sleep(0.3),
@@ -77,21 +79,53 @@ test(readiness_delay_is_excluded_from_node_info_latency) :-
           assertion(Latency < ElapsedMs - 250) ),
         discovery_reliability_tests:cleanup(Port, Queue)).
 
-% Curated implementation labels survive unavailable peers and seed reloads.
-% Validate the actual production seed, including the hub's automatic self row.
-test(production_seed_names_every_registered_implementation,
+% Everything a card shows about a node is harvested from its /node_info,
+% with whitespace collapsed; nothing comes from the seed.
+test(node_reported_fields_are_harvested,
+     [Impl, Ver, Desc] == ['SWI-Prolog', "10.1.19", "A test node."]) :-
+    setup_call_cleanup(
+        discovery_reliability_tests:fixture(Port, Queue, URL),
+        ( discovery_hub:fetch_info(URL, Info, Latency),
+          discovery_hub:apply_outcome(ok(Info, Latency), 1,
+              node{id:peer, url:URL, implementation:'', version:"",
+                   description:""}, Node),
+          Impl = Node.implementation, Ver = Node.version,
+          Desc = Node.description ),
+        discovery_reliability_tests:cleanup(Port, Queue)).
+
+test(long_or_missing_node_text_is_bounded,
+     [Short, Empty] == ["abcdefghi…", ""]) :-
+    discovery_hub:info_text(description, _{description:"abcdefghijklmnop"},
+                            10, Short),
+    discovery_hub:info_text(description, _{description:null}, 10, Empty).
+
+% The production seeds hold addresses only; the hub adds its own row.
+test(production_seeds_hold_addresses_only,
      [cleanup(discovery_hub:clear_seed)]) :-
+    forall(member(File, ['Deployment/discovery-seed.coexist.pl',
+                         'Deployment/discovery-seed.elfenbenstornet.pl',
+                         'Deployment/discovery-seed.n6-local.pl']),
+           ( discovery_hub:load_seed_file(File),
+             discovery_hub:read_seed_terms(File, Terms),
+             assertion(forall(member(T, Terms),
+                              ( T = seed_node(_, _) ; T = seed_probe_url(_, _) ))) )),
     discovery_hub:load_seed_file('Deployment/discovery-seed.coexist.pl'),
     discovery_hub:ensure_seed('http://localhost'),
-    findall(Id-Name,
-            (discovery_hub:seed_to_node(Node), Id=Node.id, Name=Node.implementation),
-            Pairs),
-    sort(Pairs, Names),
-    assertion(Names == [n0-'SWI-Prolog', n1-'SWI-Prolog', n2-'SWI-Prolog',
-                        n3-'SWI-Prolog', n4-'SWI-Prolog', n5-'Trealla Prolog',
-                        n6-'GNU Prolog', n7-'ECLiPSe CLP']),
-    discovery_hub:set_seed([seed_node(custom, u, "", "", "")]),
-    discovery_hub:seed_to_node(Custom),
-    assertion(Custom.implementation == '').
+    findall(Id, discovery_hub:seed_node(Id, _), Ids0),
+    sort(Ids0, Ids),
+    assertion(Ids == [n0, n1, n2, n3, n4, n5, n6, n7]),
+    forall(discovery_hub:seed_to_node(Node),
+           ( assertion(Node.implementation == ''),
+             assertion(Node.description == "") )).
+
+% An older seed still loads; its prose and labels are dropped.
+test(legacy_seed_terms_keep_only_the_address,
+     [Url-Desc == 'https://old.example'-"",
+      cleanup(discovery_hub:clear_seed)]) :-
+    discovery_hub:set_seed([seed_node(old, 'https://old.example',
+                                      "hub prose", "db prose", "note"),
+                            seed_implementation(old, 'Some Prolog')]),
+    discovery_hub:seed_to_node(Node),
+    Url = Node.url, Desc = Node.description.
 
 :- end_tests(discovery_reliability).

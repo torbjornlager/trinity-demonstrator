@@ -175,12 +175,11 @@ Then discovery is a query against the hub over `/call`:
 ?- rpc('http://localhost:3060', (node_profile(N, actor), node_status(N, up))).
 ```
 
-The default seed lists the public n1–n5 nodes; override it for a local demo
+The default seed lists the public n1–n4 nodes; override it for a local demo
 or test with `set_seed/1` before starting:
 
 ```prolog
-?- set_seed([ seed_node(n1, 'http://localhost:3071',
-                        "a local peer", "its shared db", "") ]).
+?- set_seed([ seed_node(n1, 'http://localhost:3071') ]).
 ?- start_discovery_hub(3060).
 ```
 

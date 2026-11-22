@@ -46,6 +46,7 @@ start_n1 :-
         max_term_text_bytes(16384),
         max_load_text_bytes(65536),
         max_ws_commands_per_window(60),
+        description("Stateless node with family, movie and small DCG grammar examples."),
         tutorial_sections([all]),
         load_uri_allowed_origins(DomainOrigins),
         load_shared_db_file(CommonSharedDBPath),

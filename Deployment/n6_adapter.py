@@ -28,6 +28,9 @@ VISITOR_COOKIE = '__Host-n6_visitor' if os.environ.get('N6_PUBLIC_URL', '').star
 PUBLIC_URL = os.environ.get('N6_PUBLIC_URL', 'http://localhost:3057').rstrip('/')
 ASSET_URL = os.environ.get('N6_ASSET_URL', 'http://n6_assets:3051')
 HUB_URL = os.environ.get('N6_HUB_URL', 'http://localhost:3058/discovery-hub')
+# Self-description for the Discovery Hub, which shows only what nodes report.
+DESCRIPTION = os.environ.get('N6_DESCRIPTION', 'GNU Prolog port of the ISOBASE profile.')
+PINS_FILE = Path('/usr/share/doc/gprolog/runtime-pins.json')
 HTTPS_OWNER = PUBLIC_URL == 'https://n6.elfenbenstornet.se'
 OWNER_COOKIE = '__Host-n6_owner' if HTTPS_OWNER else 'n6_owner'
 LOGIN_COOKIE = '__Secure-n6_login' if HTTPS_OWNER else 'n6_login'
@@ -35,6 +38,30 @@ COOKIE_SECURE = '; Secure' if HTTPS_OWNER else ''
 ROOT = Path('/app/n6')
 PROVIDES = ['ancestor_descendant/2', 'parent_child/2', 'mother_child/2',
             'father_child/2', 'list_price/2', 'price/2', 'human/1', 'deployment_node/1']
+
+
+def engine_version():
+    try:
+        return json.loads(PINS_FILE.read_text())['engine']['version']
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def node_info(public_identity, authorized, admission):
+    info = dict(self_url=PUBLIC_URL, implementation='GNU Prolog', profile='isobase',
+                auth='open' if PUBLIC_EXECUTION else 'private',
+                self_contained=True, provides=PROVIDES, services=[],
+                principal_id=('anon:visitor:' + hashlib.sha256(public_identity.encode()).hexdigest()) if PUBLIC_EXECUTION else ('owner' if authorized else 'anonymous'),
+                principal_execution=authorized, tutorial_sections=['all'],
+                admission=admission)
+    version = engine_version()
+    if version:
+        info['version'] = version
+    if DESCRIPTION:
+        info['description'] = DESCRIPTION
+    return info
+
+
 ASSET_PATHS = {
     '/demonstrator', '/portal', '/manual', '/editor_frame', '/examples_index',
     '/tutorial', '/swi-wasm-tutorial', '/isobase-profile-tutorial',
@@ -337,13 +364,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400, {'error': 'invalid_query_owner'})
         # Discovery can inspect non-sensitive metadata without a query credential.
         if path.path == '/node_info':
-            return self.reply(200, dict(self_url=PUBLIC_URL, profile='isobase', auth='open' if PUBLIC_EXECUTION else 'private',
-                                       self_contained=True, provides=PROVIDES, services=[],
-                                       principal_id=('anon:visitor:' + hashlib.sha256(self.public_identity.encode()).hexdigest()) if PUBLIC_EXECUTION else ('owner' if authorized else 'anonymous'),
-                                       principal_execution=authorized, tutorial_sections=['all'],
-                                       admission=self.server.admission))
+            return self.reply(200, node_info(self.public_identity, authorized, self.server.admission))
         if path.path == '/version':
-            pins = json.loads(Path('/usr/share/doc/gprolog/runtime-pins.json').read_text())
+            pins = json.loads(PINS_FILE.read_text())
             return self.reply(200, dict(web_prolog='gprolog-port', gprolog=pins['engine']['version']))
         if path.path in ('/portal', '/portal/'):
             return self.reply(308, '', 'text/plain', {'Location': '/demonstrator' + ('?' + path.query if path.query else '')})
