@@ -1,0 +1,549 @@
+{
+  "release": "discovery-self-description-2026-11-22",
+  "date": "2026-11-22",
+  "status": "deployed",
+  "units": [
+    {
+      "unit": "N5",
+      "image": "sha256:b3f82f9011069404e32e753e0e9b66ba77ed8f5f6aa689492c1c95e1e4c789b4",
+      "source": "trealla-port@edf2283"
+    },
+    {
+      "unit": "N7",
+      "adapter_image": "sha256:e00889c5e08fd90b5d8e6250b71b0638e7943be88c697db449ec9ad4500cb527",
+      "source": "eclipse-node@cbe235c"
+    },
+    {
+      "unit": "N6",
+      "image": "sha256:b86ec3b3aa9ef957fce4e3a56e01dd3f1bbada4bb7806c6ae7a1afecf28a502f",
+      "source": "trinity-demonstrator@c5ebc76"
+    },
+    {
+      "unit": "N1-N4+admin",
+      "n134_image": "sha256:8fc5c543fab8f62a740e87e77d2e2b15f3f5e51182bd6cf929e21b3edaac36b5",
+      "n2_image": "sha256:bb85170bb902070b072ade55062ad1ae1878b352c7d86de301f838b7478d34c1",
+      "admin_image": "sha256:e1f380affa9e0f4a737373e309bac5a16657d2a84d4e8adb4b987ab906ab3fbc",
+      "source": "swi-prolog-node@67f0b17 + swi-wasm-node@1d6ee0d"
+    },
+    {
+      "unit": "static-assets",
+      "caddy_root": "/srv/trinity/discovery-20261122",
+      "source": "trinity-demonstrator@c5ebc76 + swi-wasm-node@1d6ee0d",
+      "browser_manifest_sha256": "e874d2dec0f2874aae08398465f9f151f22ca421e8598f0d6ce3922cc9a461b5"
+    },
+    {
+      "unit": "N0",
+      "image": "sha256:b728c88d6eebcd7c839d44083b9b7ac887bd44d6337d5183486dc65d97555319",
+      "source": "swi-prolog-node@67f0b17 + swi-wasm-node@1d6ee0d"
+    }
+  ],
+  "node_info": {
+    "n0": {
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "auth": "open",
+      "auth_boundary": "trusted_headers",
+      "description": "Discovery hub. Probes the other nodes and serves the register as query relations.",
+      "implementation": "SWI-Prolog",
+      "internal_transport_principal_prefix": "node:",
+      "principal_execution": true,
+      "principal_id": "anon:visitor:276699a0ade33fbfb6b5570243b987d7206b57283b3f8f351761e101ffd80430",
+      "profile": "relation",
+      "provides": [
+        "node_auth/2",
+        "node_card/6",
+        "node_directory_row/10",
+        "node_id/1",
+        "node_implementation/2",
+        "node_profile/2",
+        "node_profile_at_least/2",
+        "node_provides/2",
+        "node_record/2",
+        "node_self_contained/2",
+        "node_service/2",
+        "node_status/2",
+        "node_url/2"
+      ],
+      "sandbox": "blacklist",
+      "self_contained": true,
+      "self_url": "https://n0.elfenbenstornet.se",
+      "services": [
+        "registry"
+      ],
+      "trusted_capability_headers": [
+        "X-Web-Prolog-Capabilities",
+        "X-Web-Prolog-Caps"
+      ],
+      "trusted_identity_headers": [
+        "X-Web-Prolog-User",
+        "X-Web-Prolog-Principal",
+        "X-Authenticated-User"
+      ],
+      "tutorial_sections": [
+        "all"
+      ],
+      "version": "11.0.0",
+      "ws_allowed_origins": []
+    },
+    "n1": {
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 2,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "auth": "open",
+      "auth_boundary": "trusted_headers",
+      "description": "Stateless node with family, movie and small DCG grammar examples.",
+      "implementation": "SWI-Prolog",
+      "internal_transport_principal_prefix": "node:",
+      "principal_execution": true,
+      "principal_id": "anon:visitor:e99171f50951bdc4fbeeab6f280ce629bb3a81aab3f41d221ffcb45ec95409b1",
+      "profile": "isobase",
+      "provides": [
+        "actor/3",
+        "actress/3",
+        "ancestor_descendant/2",
+        "det/4",
+        "director/2",
+        "father_child/2",
+        "human/1",
+        "list_price/2",
+        "mother_child/2",
+        "movie/2",
+        "n/4",
+        "np/4",
+        "p/3",
+        "parent_child/2",
+        "pn/4",
+        "pp/3",
+        "price/2",
+        "s/3",
+        "v/4",
+        "vp/4"
+      ],
+      "sandbox": "blacklist",
+      "self_contained": false,
+      "self_url": "https://n1.elfenbenstornet.se",
+      "services": [],
+      "trusted_capability_headers": [
+        "X-Web-Prolog-Capabilities",
+        "X-Web-Prolog-Caps"
+      ],
+      "trusted_identity_headers": [
+        "X-Web-Prolog-User",
+        "X-Web-Prolog-Principal",
+        "X-Authenticated-User"
+      ],
+      "tutorial_sections": [
+        "all"
+      ],
+      "version": "11.0.0",
+      "ws_allowed_origins": []
+    },
+    "n2": {
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "max_session_spawns_per_window": 120,
+        "max_sessions_per_principal": 16,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "auth": "open",
+      "auth_boundary": "trusted_headers",
+      "description": "Adds toplevel sessions with private session databases.",
+      "implementation": "SWI-Prolog",
+      "internal_transport_principal_prefix": "node:",
+      "principal_execution": true,
+      "principal_id": "anon:visitor:7f7ce7e0679544479c905a52ac9529226dbd0ec063e96e2979485f4d13212070",
+      "profile": "isotope",
+      "provides": [
+        "ancestor_descendant/2",
+        "father_child/2",
+        "human/1",
+        "list_price/2",
+        "mortal/1",
+        "mother_child/2",
+        "parent_child/2",
+        "price/2"
+      ],
+      "sandbox": "blacklist",
+      "self_contained": true,
+      "self_url": "https://n2.elfenbenstornet.se",
+      "services": [],
+      "trusted_capability_headers": [
+        "X-Web-Prolog-Capabilities",
+        "X-Web-Prolog-Caps"
+      ],
+      "trusted_identity_headers": [
+        "X-Web-Prolog-User",
+        "X-Web-Prolog-Principal",
+        "X-Authenticated-User"
+      ],
+      "tutorial_sections": [
+        "all"
+      ],
+      "version": "11.0.0",
+      "ws_allowed_origins": []
+    },
+    "n3": {
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "max_session_spawns_per_window": 120,
+        "max_sessions_per_principal": 16,
+        "max_ws_actors_per_principal": 16,
+        "max_ws_commands_per_window": 400,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "auth": "open",
+      "auth_boundary": "trusted_headers",
+      "description": "Hosts the statechart demonstrator; pairs with N4 for cross-node messaging.",
+      "implementation": "SWI-Prolog",
+      "internal_transport_principal_prefix": "node:",
+      "principal_execution": true,
+      "principal_id": "anon:visitor:efe1b038adc9e63beac2d5ad53770412c3cd76e1937a2ce00480c9273dc7120c",
+      "profile": "actor",
+      "provides": [
+        "ancestor_descendant/2",
+        "authorized/1",
+        "count_actor/1",
+        "echo_actor/0",
+        "father_child/2",
+        "human/1",
+        "jev_deployment_observation/2",
+        "linda_call/3",
+        "linda_in/1",
+        "linda_inp/1",
+        "linda_local_address/1",
+        "linda_local_call/2",
+        "linda_out/1",
+        "linda_rd/1",
+        "linda_rdp/1",
+        "linda_result/2",
+        "list_price/2",
+        "local_label/1",
+        "model_answer/2",
+        "model_chat/2",
+        "mortal/1",
+        "mother_child/2",
+        "must_be/2",
+        "online/1",
+        "owns/2",
+        "parent_child/2",
+        "ping/2",
+        "ping_pong/0",
+        "ping_pong/1",
+        "ping_pong_benchmark/2",
+        "pong/1",
+        "price/2",
+        "receive/1",
+        "service/2",
+        "shared_fact/1",
+        "shared_transition_enabled/0"
+      ],
+      "sandbox": "blacklist",
+      "self_contained": true,
+      "self_url": "https://n3.elfenbenstornet.se",
+      "services": [
+        "counter",
+        "linda",
+        "pubsub_service"
+      ],
+      "trusted_capability_headers": [
+        "X-Web-Prolog-Capabilities",
+        "X-Web-Prolog-Caps"
+      ],
+      "trusted_identity_headers": [
+        "X-Web-Prolog-User",
+        "X-Web-Prolog-Principal",
+        "X-Authenticated-User"
+      ],
+      "tutorial_sections": [
+        "behaviours",
+        "distributed_actor",
+        "local_actor",
+        "statecharts",
+        "toplevels"
+      ],
+      "version": "11.0.0",
+      "ws_allowed_origins": [
+        "https://n0.elfenbenstornet.se:443",
+        "https://n1.elfenbenstornet.se:443",
+        "https://n2.elfenbenstornet.se:443",
+        "https://n3.elfenbenstornet.se:443",
+        "https://n4.elfenbenstornet.se:443",
+        "https://n5.elfenbenstornet.se:443",
+        "https://n6.elfenbenstornet.se:443",
+        "https://n7.elfenbenstornet.se:443"
+      ]
+    },
+    "n4": {
+      "admission": {
+        "max_call_requests_per_window": 120,
+        "max_inflight_calls": 3,
+        "max_session_spawns_per_window": 120,
+        "max_sessions_per_principal": 16,
+        "max_ws_actors_per_principal": 16,
+        "max_ws_commands_per_window": 400,
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "window_policy": "fixed"
+      },
+      "auth": "open",
+      "auth_boundary": "trusted_headers",
+      "description": "Second SWI ACTOR node; pairs with N3 for cross-node messaging.",
+      "implementation": "SWI-Prolog",
+      "internal_transport_principal_prefix": "node:",
+      "principal_execution": true,
+      "principal_id": "anon:visitor:842f41f128f3502e1ed5d3f79ed422386caed4a580cf8501732d21ab53092bf1",
+      "profile": "actor",
+      "provides": [
+        "ancestor_descendant/2",
+        "authorized/1",
+        "count_actor/1",
+        "echo_actor/0",
+        "father_child/2",
+        "human/1",
+        "linda_call/3",
+        "linda_in/1",
+        "linda_inp/1",
+        "linda_local_address/1",
+        "linda_local_call/2",
+        "linda_out/1",
+        "linda_rd/1",
+        "linda_rdp/1",
+        "linda_result/2",
+        "list_price/2",
+        "local_label/1",
+        "mother_child/2",
+        "must_be/2",
+        "online/1",
+        "owns/2",
+        "parent_child/2",
+        "ping/2",
+        "ping_pong/0",
+        "ping_pong/1",
+        "ping_pong_benchmark/2",
+        "pong/1",
+        "price/2",
+        "receive/1",
+        "service/2",
+        "shared_fact/1",
+        "shared_transition_enabled/0"
+      ],
+      "sandbox": "blacklist",
+      "self_contained": true,
+      "self_url": "https://n4.elfenbenstornet.se",
+      "services": [
+        "counter",
+        "linda",
+        "pubsub_service"
+      ],
+      "trusted_capability_headers": [
+        "X-Web-Prolog-Capabilities",
+        "X-Web-Prolog-Caps"
+      ],
+      "trusted_identity_headers": [
+        "X-Web-Prolog-User",
+        "X-Web-Prolog-Principal",
+        "X-Authenticated-User"
+      ],
+      "tutorial_sections": [
+        "behaviours",
+        "distributed_actor",
+        "local_actor",
+        "statecharts",
+        "toplevels"
+      ],
+      "version": "11.0.0",
+      "ws_allowed_origins": [
+        "https://n0.elfenbenstornet.se:443",
+        "https://n1.elfenbenstornet.se:443",
+        "https://n2.elfenbenstornet.se:443",
+        "https://n3.elfenbenstornet.se:443",
+        "https://n4.elfenbenstornet.se:443",
+        "https://n5.elfenbenstornet.se:443",
+        "https://n6.elfenbenstornet.se:443",
+        "https://n7.elfenbenstornet.se:443"
+      ]
+    },
+    "n5": {
+      "admission": {
+        "window_policy": "fixed",
+        "rate_identity": "principal",
+        "rate_window_seconds": 60,
+        "max_call_requests_per_window": 120,
+        "max_session_spawns_per_window": 120,
+        "max_ws_commands_per_window": 1000,
+        "max_inflight_calls": 4,
+        "max_ws_actors_per_principal": 16
+      },
+      "self_url": "https://n5.elfenbenstornet.se",
+      "implementation": "Trealla Prolog",
+      "version": "3.14.20",
+      "profile": "actor",
+      "auth": "open",
+      "sandbox": "blacklist",
+      "protocol_version": 1,
+      "auth_boundary": "trusted_headers",
+      "trusted_identity_headers": [
+        "X-Web-Prolog-User",
+        "X-Web-Prolog-Principal",
+        "X-Authenticated-User"
+      ],
+      "trusted_capability_headers": [
+        "X-Web-Prolog-Capabilities",
+        "X-Web-Prolog-Caps"
+      ],
+      "internal_transport_principal_prefix": "node:",
+      "principal_id": "anonymous",
+      "principal_execution": true,
+      "maintenance": false,
+      "services": [
+        "linda"
+      ],
+      "provides": [
+        "ancestor_descendant/2",
+        "authorized/1",
+        "count_actor/1",
+        "echo_actor/0",
+        "father_child/2",
+        "human/1",
+        "linda_call/3",
+        "linda_in/1",
+        "linda_inp/1",
+        "linda_local_address/1",
+        "linda_local_call/2",
+        "linda_out/1",
+        "linda_rd/1",
+        "linda_rdp/1",
+        "linda_result/2",
+        "list_price/2",
+        "local_label/1",
+        "mother_child/2",
+        "online/1",
+        "owns/2",
+        "parent_child/2",
+        "ping/2",
+        "ping_pong/0",
+        "ping_pong/1",
+        "ping_pong_benchmark/2",
+        "pong/1",
+        "price/2",
+        "service/2",
+        "shared_fact/1",
+        "shared_transition_enabled/0"
+      ],
+      "self_contained": true,
+      "ws_allowed_origins": [
+        "https://n0.elfenbenstornet.se",
+        "https://n1.elfenbenstornet.se",
+        "https://n2.elfenbenstornet.se",
+        "https://n3.elfenbenstornet.se",
+        "https://n4.elfenbenstornet.se",
+        "https://n5.elfenbenstornet.se"
+      ],
+      "tutorial_sections": [
+        "local_actor",
+        "toplevels",
+        "distributed_actor"
+      ],
+      "description": "Trealla Prolog implementation of the ACTOR profile."
+    },
+    "n6": {
+      "self_url": "https://n6.elfenbenstornet.se",
+      "implementation": "GNU Prolog",
+      "profile": "isobase",
+      "auth": "open",
+      "self_contained": true,
+      "provides": [
+        "ancestor_descendant/2",
+        "parent_child/2",
+        "mother_child/2",
+        "father_child/2",
+        "list_price/2",
+        "price/2",
+        "human/1",
+        "deployment_node/1"
+      ],
+      "services": [],
+      "principal_id": "anon:visitor:9e836a1f18f1bf849c005efae1484c927a97df7ab7ed604634bd47822d934667",
+      "principal_execution": true,
+      "tutorial_sections": [
+        "all"
+      ],
+      "admission": {
+        "rate_identity": "client_ip",
+        "window_policy": "leaky_bucket",
+        "rate_window_seconds": 60,
+        "requests_per_minute": 120,
+        "burst": 60
+      },
+      "version": "1.6.0",
+      "description": "GNU Prolog port of the ISOBASE profile."
+    },
+    "n7": {
+      "self_url": "https://n7.elfenbenstornet.se",
+      "implementation": "ECLiPSe Prolog",
+      "version": "7.2.13",
+      "profile": "actor",
+      "auth": "open",
+      "services": [],
+      "provides": [
+        "ancestor_descendant/2",
+        "authorized/1",
+        "count_actor/1",
+        "echo_actor/0",
+        "father_child/2",
+        "human/1",
+        "linda_local_address/1",
+        "list_price/2",
+        "local_label/1",
+        "mother_child/2",
+        "online/1",
+        "owns/2",
+        "parent_child/2",
+        "ping/2",
+        "ping_pong/0",
+        "ping_pong/1",
+        "ping_pong_benchmark/2",
+        "pong/1",
+        "price/2",
+        "service/2",
+        "shared_fact/1",
+        "shared_transition_enabled/0"
+      ],
+      "self_contained": true,
+      "description": "Each public engine runs in its own isolated container.",
+      "http_session_options": [
+        "src_text",
+        "prompt_correlation"
+      ],
+      "request_isolation": "container",
+      "execution_policy": "isolated_actor",
+      "max_public_engines": 4,
+      "ready_public_engines": 2,
+      "admission": {
+        "rate_window_seconds": 60,
+        "max_engine_starts_per_window": 120,
+        "max_public_engines": 4,
+        "max_public_engines_per_client": 2,
+        "window_policy": "rolling",
+        "rate_identity": "client_ip"
+      },
+      "sandbox": "off"
+    }
+  },
+  "wp_net_address_plan_step2": "static ipv4_address pins added to 6 SWI containers"
+}
