@@ -29,6 +29,25 @@ class EgressTests(unittest.TestCase):
             self.assertLess(time.monotonic()-started,.4)
         finally:stop.set();left.close();right.close();t.join()
 
+    def test_body_after_connection_close_headers(self):
+        # Regression: a "Connection: close" response whose body arrives after
+        # the headers must still be readable (src_uri fetches failed with EBADF).
+        listener=socket.create_server(('127.0.0.1',0))
+        def serve():
+            conn,_=listener.accept()
+            with conn:
+                conn.recv(4096)
+                conn.sendall(b'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 11\r\nConnection: close\r\n\r\n')
+                time.sleep(.1);conn.sendall(b'hello world')
+        t=threading.Thread(target=serve);t.start()
+        class Plain(egress.LocalRPCConnection):pass
+        connection=Plain(listener.getsockname()[1],2.0)
+        try:
+            connection.request('GET','/',headers={'connection':'close'})
+            response=connection.getresponse()
+            self.assertEqual(response.read(),b'hello world')
+        finally:connection.close();t.join();listener.close()
+
     def test_destination_and_response_policy(self):
         class FakeConnection:
             status=200;body=b'ok';calls=[]

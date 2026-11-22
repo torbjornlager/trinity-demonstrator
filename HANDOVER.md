@@ -68,6 +68,19 @@ privately in `.trinity/security-review-20261121/`.
   The Compose models don't carry them yet, so the next SWI or Caddy recreate
   must add `pids_limit`, together with step 2 of the address plan.
 
+**N6 `src_uri` fix (22 November).** `rpc(…, [src_uri(…)])` on N6 failed with
+`http_transport_error`. When a reply came with `Connection: close`, Python's
+`http.client` closed the socket before the body was read, and the egress
+broker's own reader then hit `EBADF`. Plain `rpc` worked only because `/call`
+replies arrive in one packet. The fix in `Deployment/n6_egress.py` keeps the
+socket open for the reader, and `tests/test_n6_egress.py` covers it.
+
+- Live N6 runs a one-file overlay on the previous image: image `6330bcda1582`;
+  rollback goes back to `8caf7235a7f4`.
+- The rehearsal and the live switch both checked the two `src_uri` goals and
+  N6's regression probes.
+- Operator: `.trinity/n6-egress-fix-20261122/deploy.py --rollback`.
+
 ## Live canonical node identity — 20 November 2026
 
 N0–N4 and admin select native SWI `254ae3a`, demonstrator runtime

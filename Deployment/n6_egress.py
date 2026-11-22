@@ -65,6 +65,13 @@ class DeadlineReader(io.RawIOBase):
         self.connection.settimeout(remaining)
         return self.connection.recv_into(buffer)
 
+    def close(self):
+        # Like socket.SocketIO: release the reference taken by makefile(), so
+        # the descriptor closes only once both connection and reader are done.
+        if not self.closed:
+            super().close()
+            self.connection._decref_socketios()
+
 
 class DeadlineSocket:
     def __init__(self, connection, deadline):
@@ -83,6 +90,10 @@ class DeadlineSocket:
     def makefile(self, mode):
         if mode != 'rb':
             raise ValueError('read-only response stream required')
+        # http.client closes the connection as soon as it has parsed the
+        # headers of a "Connection: close" response, before the body is read.
+        # Keep the descriptor open for the reader, as socket.makefile() does.
+        self.connection._io_refs += 1
         return io.BufferedReader(DeadlineReader(self.connection, self.deadline))
 
 
