@@ -1,5 +1,26 @@
 # Trinity demonstrator: project and operations handover
 
+## N6 peers release — 23 November 2026
+
+N6 was released from `n6-peers` `8c901b3`: `APPROVED_PEER_HOSTS` added to
+`n6_egress.py` as a single source of truth — N6 may now call every other
+demonstrator node (N0–N5, N7). `n6_adapter.py` and `n6_contained.py`
+updated consistently. Overlay built on `b86ec3b3`; operator:
+`.trinity/n6-peers-20261123/deploy_n6.py --rollback` restores `b86ec3b3`.
+Verification record: `docs/verification/n6-peers-2026-11-23/`.
+
+Live selection after the 23 November N6 release:
+
+| Node | Runtime | Image |
+|---|---|---|
+| N0 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0; `WP_DESCRIPTION` set | `b728c88d6eeb` |
+| N1/N3/N4 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `8fc5c543fab8` |
+| N2 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `bb85170bb902` |
+| admin | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `e1f380affa9e` |
+| N5 | Trealla `2924726` (= `edf2283` + rpc guard fix + self-description merge), 3.14.20; `WP_DESCRIPTION` set | `3270d5abdfed` |
+| N6 | trinity-demonstrator `8c901b3` (adapter overlay on `b86ec3b3`); APPROVED_PEER_HOSTS N0–N5,N7 | `dcaa3fe4fb22` |
+| N7 | eclipse-node `cbe235c` adapter, `bcc48cd0fd5e` worker | adapter `e00889c5e08f` |
+
 ## N5 rpc guard controls fix — 23 November 2026
 
 N5 was re-released from trealla-port `2924726` (`fix-rpc-guard-controls` branch:
@@ -10,7 +31,7 @@ to `2924726`; `discovery-self-description` and `fix-rpc-guard-controls` branches
 deleted. Operator: `.trinity/n5-rg-fix-20261123/deploy_n5.py --rollback`
 restores `b3f82f90` (22 November candidate).
 
-Live selection after the 23 November N5 release:
+Live selection after the 23 November N5 release (N6 superseded same day — see above):
 
 | Node | Runtime | Image |
 |---|---|---|
