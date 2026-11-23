@@ -57,6 +57,35 @@ Static `ipv4_address` pins added to all six SWI containers in their candidate
 Compose models: wp_admin (172.18.0.2), wp_n1 (172.18.0.3), wp_n2 (172.18.0.4),
 wp_n3 (172.18.0.5), wp_n4 (172.18.0.6), n0 (172.18.0.7).
 
+## Static assets rollback
+
+The `discovery-20261122` Caddy roots staged for the static-assets unit held a
+`package_demonstrator.py` output with `WEB_PROLOG_HOST = {"mode":"static",
+"nodeUrl":null}`. This broke every node UI: pages requested `.html` routes
+(404), node buttons stayed on SWI-WASM, and N7 linked to `/index.html`. The
+issue is that `package_demonstrator.py` produces a fully self-contained static
+site for CDN/file-server hosting, not an overlay for a live node's Caddy root.
+The live roots serve the node's own `demonstrator.html` via the backend; Caddy
+only fronts the runtime assets (JS, wasm, vendor). As on 21 November, the
+existing roots already match the pin; republishing is not needed.
+
+The `discovery-20261122` roots were removed from Caddy immediately (before any
+change to the node containers or the hub page). `original-Caddyfile` (the
+pre-release snapshot) was restored and Caddy was reloaded gracefully.
+
+Verification after rollback:
+
+| Check | N1 | N4 |
+|-------|----|----|
+| `/demonstrator` HTTP 200 | ✓ | ✓ |
+| Editor present | ✓ | ✓ |
+| `/examples_index` actors/statecharts | 25/20 | 25/20 |
+| `/demonstrator.html` returns 404 | ✓ | ✓ |
+| `swipl-bundle.js` sha256 matches `uri-20261117` | ✓ | ✓ |
+
+N7 `/demonstrator` returns 200 (own UI, correct title, 508 KB). The N7
+static-assets Caddy root was not part of this release and was not changed.
+
 ## Discovery Hub static file
 
 After all units were switched, `https://n0.elfenbenstornet.se/discovery-hub`
