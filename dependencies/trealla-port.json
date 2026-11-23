@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/torbjornlager/trealla-port.git",
-  "revision": "edf22832d4faa977e87fc77b506ed79ac153ecd4",
+  "revision": "2924726b6f0bc3416b16e30e2c72fd03b1a39f05",
   "mode": "required for optional Trealla N5 builds",
   "engine": {
     "repository": "https://github.com/trealla-prolog/trealla.git",

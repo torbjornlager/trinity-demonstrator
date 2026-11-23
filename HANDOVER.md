@@ -1,8 +1,16 @@
 # Trinity demonstrator: project and operations handover
 
-## Discovery self-description — 22 November 2026
+## N5 rpc guard controls fix — 23 November 2026
 
-Live selection after the 22 November release:
+N5 was re-released from trealla-port `2924726` (`fix-rpc-guard-controls` branch:
+`d451596` + rpc guard fix `ad7377c` + self-description `edf2283` + merge
+`2924726`). RG-001..008 all pass. `pe008` and `timeout-abc` now pass live.
+Interop tests passed before the release. trealla-port `main` was fast-forwarded
+to `2924726`; `discovery-self-description` and `fix-rpc-guard-controls` branches
+deleted. Operator: `.trinity/n5-rg-fix-20261123/deploy_n5.py --rollback`
+restores `b3f82f90` (22 November candidate).
+
+Live selection after the 23 November N5 release:
 
 | Node | Runtime | Image |
 |---|---|---|
@@ -10,7 +18,7 @@ Live selection after the 22 November release:
 | N1/N3/N4 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `8fc5c543fab8` |
 | N2 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `bb85170bb902` |
 | admin | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `e1f380affa9e` |
-| N5 | Trealla `edf2283`, 3.14.20; `WP_DESCRIPTION` set | `b3f82f901106` |
+| N5 | Trealla `2924726` (= `edf2283` + rpc guard fix + self-description merge), 3.14.20; `WP_DESCRIPTION` set | `3270d5abdfed` |
 | N6 | trinity-demonstrator `c5ebc76` (adapter overlay) | `b86ec3b3aa9e` |
 | N7 | eclipse-node `cbe235c` adapter, `bcc48cd0fd5e` worker | adapter `e00889c5e08f` |
 
@@ -46,9 +54,7 @@ Private operators: `.trinity/discovery-release-20261122/`: `n5/deploy_n5.py`,
 `--rollback`. Verification record:
 `docs/verification/discovery-self-description-2026-11-22/`.
 
-trealla-port `main` was **not** fast-forwarded: `main` still carries the
-`7a8e8ce` receive-guard regression. N5 runs `edf2283` from the
-`discovery-self-description` branch, which starts at `d451596`.
+trealla-port `main` was fast-forwarded to `2924726` on 23 November (see above).
 
 ## Live conformance fixes — 21 November 2026
 
