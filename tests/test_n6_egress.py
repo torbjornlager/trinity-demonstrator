@@ -14,6 +14,11 @@ spec=importlib.util.spec_from_file_location('n6_egress',Path(__file__).resolve()
 egress=importlib.util.module_from_spec(spec);spec.loader.exec_module(egress)
 
 class EgressTests(unittest.TestCase):
+    def test_every_other_domain_node_is_an_approved_peer(self):
+        hosts = set(egress.APPROVED_PEER_HOSTS)
+        self.assertEqual(hosts, {f'n{n}.elfenbenstornet.se' for n in (0, 1, 2, 3, 4, 5, 7)})
+        self.assertNotIn('n6.elfenbenstornet.se', hosts)  # N6 reaches itself via localhost
+
     def test_absolute_deadline(self):
         left,right=socket.socketpair()
         stop=threading.Event()

@@ -17,6 +17,10 @@ import threading
 import time
 from urllib.parse import parse_qs, quote, urlsplit
 
+# Public nodes N6 may call: every other node of the demonstrator domain.
+# N6 reaches itself through rpc(localhost, ...), not through this list.
+APPROVED_PEER_HOSTS = tuple(f'n{n}.elfenbenstornet.se' for n in (0, 1, 2, 3, 4, 5, 7))
+
 MAX_BODY = 1024 * 1024
 
 

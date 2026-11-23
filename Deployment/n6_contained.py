@@ -10,7 +10,7 @@ import socket
 import stat
 import subprocess
 import threading
-from n6_egress import Broker
+from n6_egress import APPROVED_PEER_HOSTS, Broker
 
 
 def validate_jail(destination):
@@ -37,8 +37,7 @@ def serve(server_class, root, owner_hash):
     jail = root / 'jail-template'
     validate_jail(jail)
     peers = {}
-    for n in range(1, 6):
-        hostname = f'n{n}.elfenbenstornet.se'
+    for hostname in APPROVED_PEER_HOSTS:
         address = socket.getaddrinfo(hostname, 443, socket.AF_INET, socket.SOCK_STREAM)[0][4][0]
         if not ipaddress.ip_address(address).is_global:
             raise RuntimeError('approved peer resolved to a non-public address')

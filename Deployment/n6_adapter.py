@@ -455,10 +455,10 @@ def main():
     # Only operator-approved public peers can be called. Pins are resolved
     # once at startup and retained for this node lifetime.
     import socket
+    from n6_egress import APPROVED_PEER_HOSTS
     policy = temporary / 'outbound.policy'
     entries = []
-    for number in range(1, 6):
-        hostname = f'n{number}.elfenbenstornet.se'
+    for hostname in APPROVED_PEER_HOSTS:
         address = socket.getaddrinfo(hostname, 443, socket.AF_INET, socket.SOCK_STREAM)[0][4][0]
         entries.append(f'https {hostname} 443 {address}\n')
     policy.write_text(''.join(entries))
