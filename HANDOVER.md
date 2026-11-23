@@ -1,5 +1,50 @@
 # Trinity demonstrator: project and operations handover
 
+## Discovery self-description — 22 November 2026
+
+Live selection after the 22 November release:
+
+| Node | Runtime | Image |
+|---|---|---|
+| N0 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0; `WP_DESCRIPTION` set | `b728c88d6eeb` |
+| N1/N3/N4 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `8fc5c543fab8` |
+| N2 | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `bb85170bb902` |
+| admin | native SWI `67f0b17`, demonstrator `c5ebc76`, browser `1d6ee0d`; SWI-Prolog 11.0.0 | `e1f380affa9e` |
+| N5 | Trealla `edf2283`, 3.14.20; `WP_DESCRIPTION` set | `b3f82f901106` |
+| N6 | trinity-demonstrator `c5ebc76` (adapter overlay) | `b86ec3b3aa9e` |
+| N7 | eclipse-node `cbe235c` adapter, `bcc48cd0fd5e` worker | adapter `e00889c5e08f` |
+
+Every node reports `implementation`, `version` and `description` in `/node_info`.
+The Discovery Hub at `https://n0.elfenbenstornet.se/discovery-hub` queries
+`node_directory_row/10` and shows all 8 nodes up with engine and description.
+
+**Static assets** were not republished: the existing `uri-20261117` Caddy roots
+already serve byte-identical runtime files and carry no provenance records. A
+`package_demonstrator.py` build was staged and immediately rolled back after it
+broke the node UIs (the tool produces a fully self-contained static site, not an
+overlay for a live node's Caddy front-end). The node containers were not
+affected by the rollback.
+
+**Hub page** (`/discovery-hub`): Caddy serves this as a static file from
+`eclipse-node/.trinity/releases/n7-portable-20261112-zsn664hr` (inside
+`deployment-caddy-1:/srv/trinity/portable-20261112-zsn664hr/hub/`).
+That file was replaced in-place with `web/discovery-hub.html` from `c5ebc76`,
+which queries the new `node_directory_row/10` signature with `Implementation`,
+`Version` and `Description`. No Caddy reload was needed (`Cache-Control: no-cache`).
+
+**WP_NET_ADDRESS_PLAN step 2** is now live: all six SWI containers carry static
+`ipv4_address` pins in their candidate Compose models (admin `.2`, N1 `.3`,
+N2 `.4`, N3 `.5`, N4 `.6`, N0 `.7`). `pids_limit` values were also carried.
+
+Private operators: `.trinity/discovery-release-20261122/`: `n5/deploy_n5.py`,
+`n7/deploy_n7.py`, `n6/deploy_n6.py`, `swi/deploy_swi.py` — each with
+`--rollback`. Verification record:
+`docs/verification/discovery-self-description-2026-11-22/`.
+
+trealla-port `main` was **not** fast-forwarded: `main` still carries the
+`7a8e8ce` receive-guard regression. N5 runs `edf2283` from the
+`discovery-self-description` branch, which starts at `d451596`.
+
 ## Live conformance fixes — 21 November 2026
 
 Live selection after the 21 November release:
