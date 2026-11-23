@@ -26,11 +26,16 @@ overlay for a live node's Caddy front-end). The node containers were not
 affected by the rollback.
 
 **Hub page** (`/discovery-hub`): Caddy serves this as a static file from
-`eclipse-node/.trinity/releases/n7-portable-20261112-zsn664hr` (inside
-`deployment-caddy-1:/srv/trinity/portable-20261112-zsn664hr/hub/`).
-That file was replaced in-place with `web/discovery-hub.html` from `c5ebc76`,
+`deployment-caddy-1:/srv/trinity/portable-20261112-zsn664hr/hub/discovery-hub.html`.
+That path lives only inside the `deployment_edge_assets` Docker volume — there
+is no host-path backing it (`/srv/trinity` is a named volume, not a bind mount).
+The file was replaced in-place with `web/discovery-hub.html` from `c5ebc76`,
 which queries the new `node_directory_row/10` signature with `Implementation`,
 `Version` and `Description`. No Caddy reload was needed (`Cache-Control: no-cache`).
+A Caddy recreate would reattach the same `deployment_edge_assets` volume; the
+modified file would survive. Replacing the volume or running `docker cp` from an
+older source would restore the old hub page, which queries the old arity and
+shows "Hub unreachable".
 
 **WP_NET_ADDRESS_PLAN step 2** is now live: all six SWI containers carry static
 `ipv4_address` pins in their candidate Compose models (admin `.2`, N1 `.3`,
