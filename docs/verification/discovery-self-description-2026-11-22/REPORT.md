@@ -96,10 +96,16 @@ pointer from the N0–N6 static roots). That file still called
 `Implementation` and `Version`. N0 now serves the new 10-arity form with those
 fields instead of `Note`.
 
-Fix: replaced the file with `web/discovery-hub.html` from `c5ebc76`
+Fix: replaced the file in-place with `web/discovery-hub.html` from `c5ebc76`
 (sha256 `51add514…`). The N7 Data-button hide is already in that file. No Caddy
 reload was needed (`Cache-Control: no-cache` already set). The hub immediately
 returned 8 rows, all `up`, each with the correct engine and description.
+
+`/srv/trinity` inside `deployment-caddy-1` is backed by the
+`deployment_edge_assets` named Docker volume — there is no host-path binding.
+The modified file lives only in that volume. A Caddy recreate reattaches the
+same volume and the fix survives; replacing the volume or copying from an older
+source would restore the old file and break the hub page again.
 
 ## Rollback
 
