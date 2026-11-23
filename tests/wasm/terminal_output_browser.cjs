@@ -3,6 +3,9 @@
 // CANDIDATE_HTML replaces only the demonstrator page; node traffic is real.
 //   node tests/wasm/terminal_output_browser.cjs
 //   CANDIDATE_HTML=web/demonstrator.html TERMINAL_NODES=3,5 node tests/wasm/terminal_output_browser.cjs
+// The endless-output Abort check is skipped on N5 unless TERMINAL_FLOOD_N5=1:
+// on 23 November it stalled production N5 for about five minutes (see
+// docs/verification/terminal-output-batching-2026-11-23/REPORT.md).
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const {chromium} = require('playwright');
@@ -10,6 +13,9 @@ const {chromium} = require('playwright');
 const nodes = (process.env.TERMINAL_NODES || '3,5').split(',').map(Number);
 const candidate = process.env.CANDIDATE_HTML ? fs.readFileSync(process.env.CANDIDATE_HTML) : null;
 const rows = [];
+// N5 (Trealla) blocks while reaping aborted sessions with large queued output,
+// so flooding production N5 takes the whole node down. Opt in explicitly.
+const floodN5 = process.env.TERMINAL_FLOOD_N5 === '1';
 
 // Program output is a character stream; answers start on a fresh line.
 const streamCases = [
@@ -94,21 +100,25 @@ async function maxRoundTrip(page, ms) {
         assert.ok(burst.logEntries <= 1000, `logger holds ${burst.logEntries} entries`);
         rows.push({node, check: `${lines}-line burst`, roundTripMs: burstRoundTrip, passed: true});
 
-        // During endless output the Abort button must still respond at once.
-        await page.evaluate(() => {
-          vm.terminal.clear();
-          vm.terminal.exec('between(1,inf,I), writeln(I), fail.');
-        });
-        await page.waitForTimeout(1500);
-        const floodRoundTrip = await maxRoundTrip(page, 1500);
-        const clickedAt = Date.now();
-        await page.getByRole('button', {name: 'Abort', exact: true}).click({timeout: 2000});
-        await page.waitForTimeout(500);
-        const abort = sent.find(entry => entry.at >= clickedAt && /abort/.test(entry.message.command || ''));
-        assert.ok(abort, 'no abort command sent within 500 ms of the click');
-        assert.ok(floodRoundTrip < 1000, `page blocked ${floodRoundTrip} ms during flood`);
-        rows.push({node, check: 'abort under flood', roundTripMs: floodRoundTrip,
-          abortSentMs: abort.at - clickedAt, passed: true});
+        if (node === 5 && !floodN5) {
+          rows.push({node, check: 'abort under flood', skipped: 'set TERMINAL_FLOOD_N5=1 to run'});
+        } else {
+          // During endless output the Abort button must still respond at once.
+          await page.evaluate(() => {
+            vm.terminal.clear();
+            vm.terminal.exec('between(1,inf,I), writeln(I), fail.');
+          });
+          await page.waitForTimeout(1500);
+          const floodRoundTrip = await maxRoundTrip(page, 1500);
+          const clickedAt = Date.now();
+          await page.getByRole('button', {name: 'Abort', exact: true}).click({timeout: 2000});
+          await page.waitForTimeout(500);
+          const abort = sent.find(entry => entry.at >= clickedAt && /abort/.test(entry.message.command || ''));
+          assert.ok(abort, 'no abort command sent within 500 ms of the click');
+          assert.ok(floodRoundTrip < 1000, `page blocked ${floodRoundTrip} ms during flood`);
+          rows.push({node, check: 'abort under flood', roundTripMs: floodRoundTrip,
+            abortSentMs: abort.at - clickedAt, passed: true});
+        }
         // Closing the context ends the session; how quickly the node itself
         // stops producing output is a node property, not checked here.
       } finally {

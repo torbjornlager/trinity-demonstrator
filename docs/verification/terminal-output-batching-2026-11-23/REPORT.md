@@ -98,6 +98,50 @@ their node policy and does not depend on the page.
 - `/tutorial`, `/manual`, `/vendor/jquery.terminal.min.css` and
   `/swipl-bundle.js` return 200 on N1, N3, N5 and N6.
 
+## Incident: N5 unresponsive 14:02:35–14:07:27 UTC
+
+After verification, the Discovery Hub showed N5 as down. N5 recovered by
+itself after about five minutes. Nothing was changed, restarted or rolled back.
+
+**Cause:** the endless-output flood/Abort tests run against production N5
+during verification. The release did not cause it. The last of these tests
+was three in-page runs of `between(1,inf,I), writeln(I), fail.` with Abort
+([`abort_inpage.cjs`](abort_inpage.cjs)), ending at 13:57:31.
+
+Evidence, from the `deployment-n5_admission-1` access log and Docker health
+state:
+
+- The hub's probes from `172.18.0.1` (`/node_info` and `/readyz` every
+  30 s) returned 200 continuously through the Caddy reload and the tests, up
+  to 14:02:00. N5's API traffic does not pass through the static root.
+- N5 runs with `WP_IDLE_LIMIT=300`. 13:57:31 + 300 s = 14:02:31, and the stall
+  began at 14:02:35. This matches the idle reaping of the aborted flood
+  sessions.
+- From 14:02:35 to 14:07:27 every hub `/node_info` probe ended `499`, because
+  the client gave up on it. `/readyz` got no answer, and the admission
+  healthcheck was rejected with `429`, because the `n5_per_client` connection
+  zone was filled by hung requests. `deployment-wp_n5-1` and
+  `deployment-n5_admission-1` both reported `unhealthy`.
+- The Trealla process was nearly idle (under 1% CPU) at 885 MiB of its 1 GiB
+  limit, with no OOM kill and no restart (`RestartCount` 0, started 07:58).
+  It appears to block while tearing down sessions with large queued output,
+  and then resumes.
+- From 14:07:27 all probes returned 200 (`/node_info` about 40 ms), and both
+  containers were `healthy` again.
+- N3 and N4 ran the same flood tests and stayed responsive (about 45 ms)
+  throughout. Only N5 (Trealla) was affected.
+
+This is a stronger N5 form of the open issue in the brief, where Abort takes
+effect late under heavy output. The fix belongs in trealla-port: drop or bound
+queued output after an abort or a closed connection, rather than tearing it
+down in one blocking step. Not done here.
+
+**Mitigation:** `tests/wasm/terminal_output_browser.cjs` now skips the
+flood/Abort check on N5 unless `TERMINAL_FLOOD_N5=1`. The stream cases and the
+bounded 5,000-line burst still run on N5. After the change, the test was
+re-run on N3 only and passed. N5 was left at 885 MiB resident and was not
+restarted.
+
 ## Rollback
 
 The old root `uri-20261117` is untouched, and both roots are kept. To roll

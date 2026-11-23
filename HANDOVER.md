@@ -28,6 +28,17 @@ Still open, from the release brief: Abort taking effect late under heavy
 output in swi-prolog-node (`node_ws.pl` output path), and "Computation
 aborted." showing after `true.`.
 
+**N5 incident, 14:02:35–14:07:27 UTC.** After verification N5 was
+unresponsive for about five minutes and then recovered by itself. The cause
+was the endless-output flood/Abort tests against production N5, not the
+release. The stall began exactly `WP_IDLE_LIMIT` (300 s) after the last flood
+sessions closed. The Trealla process was nearly idle but held 885 MiB of its
+1 GiB limit. It did not restart or run out of memory. The fix belongs in
+trealla-port: bound or drop queued output after an abort or a closed
+connection. `tests/wasm/terminal_output_browser.cjs` now skips the flood check
+on N5 unless `TERMINAL_FLOOD_N5=1`; do not flood production N5. Details are in
+the verification record.
+
 ## N6 peers release — 23 November 2026
 
 N6 was released from `n6-peers` `8c901b3`: `APPROVED_PEER_HOSTS` added to
