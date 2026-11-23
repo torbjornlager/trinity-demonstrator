@@ -33,17 +33,18 @@ broke the node UIs (the tool produces a fully self-contained static site, not an
 overlay for a live node's Caddy front-end). The node containers were not
 affected by the rollback.
 
-**Hub page** (`/discovery-hub`): Caddy serves this as a static file from
-`deployment-caddy-1:/srv/trinity/portable-20261112-zsn664hr/hub/discovery-hub.html`.
-That path lives only inside the `deployment_edge_assets` Docker volume — there
-is no host-path backing it (`/srv/trinity` is a named volume, not a bind mount).
-The file was replaced in-place with `web/discovery-hub.html` from `c5ebc76`,
-which queries the new `node_directory_row/10` signature with `Implementation`,
-`Version` and `Description`. No Caddy reload was needed (`Cache-Control: no-cache`).
-A Caddy recreate would reattach the same `deployment_edge_assets` volume; the
-modified file would survive. Replacing the volume or running `docker cp` from an
-older source would restore the old hub page, which queries the old arity and
-shows "Hub unreachable".
+**Hub page** (`/discovery-hub`): Caddy now reverse-proxies this path to N0
+(`n0:3060`) — it is no longer served as a static file from the
+`deployment_edge_assets` volume. The 11-line `@n7_discovery_asset` file-server
+block was removed from the N0 site block in `/etc/caddy/Caddyfile` (on the
+`deployment_edge_config_compose` volume). `/discovery-hub` and
+`/admin/tabler.min.css` were already in the `@allowed` path matcher and fall
+through to the existing `reverse_proxy n0:3060`. The old edge file
+(`portable-20261112-zsn664hr/hub/discovery-hub.html`, sha256 `51add514…`) was
+left in place in the `deployment_edge_assets` volume; it is no longer served.
+Rollback: copy `.trinity/edge-hub-route-20261123/private/Caddyfile` back into
+the `deployment_edge_config_compose` volume and reload gracefully. Verification
+record: `docs/verification/edge-hub-route-2026-11-23/`.
 
 **WP_NET_ADDRESS_PLAN step 2** is now live: all six SWI containers carry static
 `ipv4_address` pins in their candidate Compose models (admin `.2`, N1 `.3`,
