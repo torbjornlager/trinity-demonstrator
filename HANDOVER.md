@@ -1,5 +1,33 @@
 # Trinity demonstrator: project and operations handover
 
+## Terminal output batching release — 23 November 2026
+
+UI-only release of `web/demonstrator.html` from `main` `0886105`. Program
+output is now shown as a character stream (`write(a),write(b)` prints `ab`).
+Terminal output and logger entries are rendered in 50 ms batches, and the
+logger keeps the newest 1,000 entries. Output bursts no longer freeze the
+page, and Abort responds at once.
+
+N0–N6 pages are served from the new Caddy static root
+`/srv/trinity/termout-20261123` (volume `deployment_edge_assets`). It is a
+`cp -a` of `uri-20261117` with only `nX/demonstrator.html` replaced; N6 keeps
+its per-node `WEB_PROLOG_HOST` line. Exactly 8 `root` lines in
+`/etc/caddy/Caddyfile` were repointed, followed by a graceful reload. No
+container was recreated. Image selections are unchanged from the N6 peers
+table below.
+
+N7 was not changed. Its own shell, from the eclipse-node package, already
+streams and batches output; it lacks only the logger cap, which can go into
+the next N7 asset package.
+
+Rollback: restore `.trinity/terminal-batching-20261123/private/Caddyfile.predecessor`
+(sha256 `dd2bdf66…`) and reload gracefully. `uri-20261117` is untouched.
+Verification record: `docs/verification/terminal-output-batching-2026-11-23/`.
+
+Still open, from the release brief: Abort taking effect late under heavy
+output in swi-prolog-node (`node_ws.pl` output path), and "Computation
+aborted." showing after `true.`.
+
 ## N6 peers release — 23 November 2026
 
 N6 was released from `n6-peers` `8c901b3`: `APPROVED_PEER_HOSTS` added to

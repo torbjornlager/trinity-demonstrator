@@ -1,0 +1,146 @@
+[
+  {
+    "node": 3,
+    "check": "write(a),write(b).",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "write(a),sleep(0.2),write(b).",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "writeln(a),writeln(b).",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "self(Me),Me ! a,Me ! b,flush.",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "write(a),nl,nl,writeln(b),write(c).",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "format('a~nb~n~n'),write(c).",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "write(after_previous_query).",
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "5000-line burst",
+    "roundTripMs": 31,
+    "passed": true
+  },
+  {
+    "node": 3,
+    "check": "abort under flood",
+    "roundTripMs": 31,
+    "abortSentMs": 186,
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "write(a),write(b).",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "write(a),sleep(0.2),write(b).",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "writeln(a),writeln(b).",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "self(Me),Me ! a,Me ! b,flush.",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "write(a),nl,nl,writeln(b),write(c).",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "format('a~nb~n~n'),write(c).",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "write(after_previous_query).",
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "5000-line burst",
+    "roundTripMs": 74,
+    "passed": true
+  },
+  {
+    "node": 4,
+    "check": "abort under flood",
+    "roundTripMs": 74,
+    "abortSentMs": 875,
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "write(a),write(b).",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "write(a),sleep(0.2),write(b).",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "writeln(a),writeln(b).",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "self(Me),Me ! a,Me ! b,flush.",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "write(a),nl,nl,writeln(b),write(c).",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "format('a~nb~n~n'),write(c).",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "write(after_previous_query).",
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "5000-line burst",
+    "roundTripMs": 19,
+    "passed": true
+  },
+  {
+    "node": 5,
+    "check": "abort under flood",
+    "roundTripMs": 20,
+    "abortSentMs": 24,
+    "passed": true
+  }
+]

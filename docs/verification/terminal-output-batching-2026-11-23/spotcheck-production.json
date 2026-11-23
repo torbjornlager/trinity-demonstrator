@@ -1,0 +1,141 @@
+[
+  {
+    "node": "N2",
+    "mode": "isotope",
+    "candidate": false,
+    "cases": [
+      {
+        "goal": "write(a),write(b).",
+        "output": "?- write(a),write(b).\nab\ntrue.",
+        "outputMessages": [
+          {
+            "hasStdout": true,
+            "stdout": "a",
+            "data": "a"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "b",
+            "data": "b"
+          }
+        ]
+      },
+      {
+        "goal": "writeln(a),writeln(b).",
+        "output": "?- writeln(a),writeln(b).\na\nb\ntrue.",
+        "outputMessages": [
+          {
+            "hasStdout": true,
+            "stdout": "a\n",
+            "data": "a"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "b\n",
+            "data": "b"
+          }
+        ]
+      },
+      {
+        "goal": "write(a),nl,nl,writeln(b),write(c).",
+        "output": "?- write(a),nl,nl,writeln(b),write(c).\na\n\nb\nc\ntrue.",
+        "outputMessages": [
+          {
+            "hasStdout": true,
+            "stdout": "a",
+            "data": "a"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "\n",
+            "data": "\n"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "\n",
+            "data": "\n"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "b\n",
+            "data": "b"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "c",
+            "data": "c"
+          }
+        ]
+      },
+      {
+        "goal": "format('a~nb~n~n'),write(c).",
+        "output": "?- format('a~nb~n~n'),write(c).\na\nb\n\nc\ntrue.",
+        "outputMessages": [
+          {
+            "hasStdout": true,
+            "stdout": "a\nb\n\n",
+            "data": "a\nb\n"
+          },
+          {
+            "hasStdout": true,
+            "stdout": "c",
+            "data": "c"
+          }
+        ]
+      }
+    ],
+    "transport": {
+      "transportMode": "isotope",
+      "dock": "Runtime",
+      "wasm": false,
+      "hasQueue": true
+    },
+    "burst2000": {
+      "ms": 4582,
+      "tail": "\n295\n296\n297\n298\n299\n300\ntrue.",
+      "logEntries": 956,
+      "messages": 300
+    },
+    "pageErrors": []
+  },
+  {
+    "node": "N3-wasm",
+    "mode": "wasm",
+    "candidate": false,
+    "cases": [
+      {
+        "goal": "write(a),write(b).",
+        "output": "?- write(a),write(b).\nab\ntrue.",
+        "outputMessages": []
+      },
+      {
+        "goal": "writeln(a),writeln(b).",
+        "output": "?- writeln(a),writeln(b).\na\nb\ntrue.",
+        "outputMessages": []
+      },
+      {
+        "goal": "write(a),nl,nl,writeln(b),write(c).",
+        "output": "?- write(a),nl,nl,writeln(b),write(c).\na\n \nb\nc\ntrue.",
+        "outputMessages": []
+      },
+      {
+        "goal": "format('a~nb~n~n'),write(c).",
+        "output": "?- format('a~nb~n~n'),write(c).\na\nb\n \nc\ntrue.",
+        "outputMessages": []
+      }
+    ],
+    "transport": {
+      "transportMode": "actor",
+      "dock": "Runtime",
+      "wasm": true,
+      "hasQueue": true
+    },
+    "burst2000": {
+      "ms": 415,
+      "tail": "\n295\n296\n297\n298\n299\n300\ntrue.",
+      "logEntries": 336,
+      "messages": 0
+    },
+    "pageErrors": []
+  }
+]
