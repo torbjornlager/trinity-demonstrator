@@ -1,5 +1,47 @@
 # Trinity demonstrator: project and operations handover
 
+## N7 relay robustness release — 24 November 2026
+
+Live N7 restarted four times on 24 November (14:27, 15:01, 15:03 and 15:06
+UTC) under cross-node test traffic. Each time a request about one WebSocket
+actor got no reply within the shared engine bridge's 6 s deadline, and the
+adapter treated that as an engine failure and exited. Reproduced and
+root-caused on an isolated lab clone of N7 with a local Trealla peer; the
+details stay in the private operator notes
+(`.trinity/third-party-send-20261124/N7-RESTART-FINDINGS.md`).
+
+Released at 17:43 UTC from eclipse-node `n7-relay-robustness` `0b1903c`
+(on top of `cbe235c`), not yet merged or pushed:
+
+- engine (`isotope_bridge.ecl`): an actor relay that fails now kills the
+  actor and reports it down, instead of stopping silently;
+- adapter (`isotope_http.py`): an unanswered `ws_actor_start`, `ws_actor_send`
+  or `ws_actor_exit` fails that request alone and its late reply is ignored;
+  engine-wide requests still restart the node. Tests:
+  `tests/test_actor_request_timeout.py`.
+
+Live N7 is now adapter `895574ad3918` (live adapter `e00889c5e08f` plus the
+new `isotope_http.py`) and engine `8db547a69d03` (live engine base plus the
+new `isotope_bridge.ecl`), set through `--pilot-image` in `adapter.json`.
+Isolated rehearsal passed (candidate probes identical to the predecessor,
+injected failure restored). Live checks passed: configuration and the other
+containers preserved, healthy, probes unchanged against the 22 November
+reference (18 rows, 3 passing as before). Operator:
+`.trinity/n7-relay-fix-20261124/deploy_n7.py --rollback` restores both
+images and `adapter.json.before-relay-fix-20261124`.
+
+Context: this was step 0 of the third-party send plan,
+`docs/THIRD_PARTY_SEND_PLAN.md` (why the ping-pong example with pong on N5
+and ping on N7 hangs). Also prepared, not released or pushed:
+
+- trealla-port `third-party-send` `fd0907a`: authenticated peers may send to
+  any local actor; local pids leave as `Id@URL`; an already qualified pid is
+  no longer qualified again (the accidental trigger of the N7 restarts).
+- trinity-conformance `cross-node-actor` `8e34080`: cases XN-001 to XN-004,
+  `runner/cross_node.py`, and the baseline report before any fix.
+
+Next: release N5 (Phase 1), then N7 third-party sends (Phase 2).
+
 ## Terminal output batching release — 23 November 2026
 
 UI-only release of `web/demonstrator.html` from `main` `0886105`. Program
