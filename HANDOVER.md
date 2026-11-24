@@ -1,5 +1,32 @@
 # Trinity demonstrator: project and operations handover
 
+## N5 third-party send release — 24 November 2026
+
+Phase 1 of `docs/THIRD_PARTY_SEND_PLAN.md`. N5 was released from trealla-port
+`third-party-send` `fd0907a` (on live `2924726`), not yet merged to `main`:
+
+- an authenticated peer node (`internal_transport`) may `send` to any live
+  local actor; browsers and anonymous clients keep connection ownership, and
+  `exit`, `monitor` and the toplevel commands stay owner-only;
+- local pids leave as `Id@https://n5.elfenbenstornet.se` (from
+  `WP_PUBLIC_URL`), so a receiver can pass them on to a third node;
+- an already qualified pid is no longer qualified again.
+
+Live N5 is image `cf1d2277e8b5`: the previous image `3270d5abdfed` with only
+`web_prolog.pl`, `distribution.pl`, `README.md`, `tools/test.sh` and the new
+`swi_third_party_send.pl` replaced (file hashes checked; owner start and
+service files unchanged). Isolated rehearsal passed. Live checks passed:
+configuration and the other containers preserved, admission workers
+refreshed, self-description and probes unchanged.
+
+Cross-node cases (trinity-conformance `cross-node-actor`, N3, N4 and N5, every
+caller): before the switch XN-001 failed 4 of 18 combinations, XN-002 8 of 18,
+XN-003 4 of 18; after it all four cases pass (16 combinations newly passing,
+none regressed). The ping-pong example now works with pong and ping on any
+two of N3, N4 and N5. N7 still fails as a target or sender until Phase 2.
+Operator: `.trinity/n5-third-party-send-20261124/deploy_n5.py --rollback`
+restores `3270d5abdfed`; reports are in the same folder.
+
 ## N7 relay robustness release — 24 November 2026
 
 Live N7 restarted four times on 24 November (14:27, 15:01, 15:03 and 15:06

@@ -1,8 +1,9 @@
 # Third-party actor sends across N3, N4, N5 and N7
 
 Status, 24 November 2026: Phase 0 cases written (trinity-conformance branch
-`cross-node-actor`, baseline recorded). Phase 1 implemented on trealla-port
-branch `third-party-send`, not released. Phase 2 step 0 released on live N7.
+`cross-node-actor`, baseline recorded). Phase 1 released on live N5 from
+trealla-port branch `third-party-send`; XN-001 to XN-004 pass over N3, N4 and
+N5. Phase 2 step 0 released on live N7.
 Phase 2 proper, Phase 3 and Phase 4 not started.
 
 ## Problem
