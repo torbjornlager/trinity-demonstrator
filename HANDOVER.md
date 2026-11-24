@@ -1,5 +1,16 @@
 # Trinity demonstrator: project and operations handover
 
+## Top priority: distributed nodes across machines
+
+[docs/DISTRIBUTION_AGENDA.md](docs/DISTRIBUTION_AGENDA.md) (24 November 2026)
+is the current top item. It explains why cross-node work keeps hitting new
+boundary problems: there is no normative node-to-node layer, pid forms depend
+on the connection, browser concepts leaked into distribution, and peer trust is
+tied to network position. It sets the agenda, in order: a node-to-node
+specification (wire protocol 2 draft), cross-node conformance on separate
+hosts, peer identity for the open internet, implementation work per node, and
+deployment on separate machines.
+
 ## N7 third-party send release, with an N5 follow-up — 24 November 2026
 
 Phase 2 of `docs/THIRD_PARTY_SEND_PLAN.md`. Third-party sends now work
