@@ -11,6 +11,51 @@ specification (wire protocol 2 draft), cross-node conformance on separate
 hosts, peer identity for the open internet, implementation work per node, and
 deployment on separate machines.
 
+## N5 synchronous reply fix, memory restart and conformance sweep — 24 November 2026
+
+**Conformance sweep** after the third-party send releases: 82 manifests / 2,085
+rows, report in trinity-conformance `reports/2026-11-24-post-xn-conformance`.
+All primary public selections pass, and `cross-node-actor-0.1` passes on all 148
+combinations. Compared with 21 November: 6 rows fixed, 52 new failures, which
+break down as follows:
+
+- 41 N5 standard-library rows that ran while N5 was down (below);
+- 8 interop rows from a regression (below);
+- 3 owned-fixture Trealla-to-Trealla rows. Two Trealla nodes without peer
+  credentials can no longer reply to each other's qualified pids. That is a
+  node-to-node trust question for the distribution agenda, left open.
+
+**N5 memory.** During the sweep (20:06 UTC) N5's Trealla process was killed at
+the container's 1 GiB limit and Docker restarted it. Afterwards it sat at
+1014 MiB while idle, so it was restarted in a controlled way (memory 1014 →
+30 MiB). It grows fast under cross-node traffic: about 465 MiB after one
+cross-node run. The fix belongs in trealla-port and is the next N5 item; until
+then N5 may need restarting after heavy test traffic. Do not run full sweeps
+or cross-node runs repeatedly against it without watching its memory.
+
+**Regression fixed.** Since trealla-port `fd0907a` (the morning's N5 release),
+a synchronous remote toplevel call from N5 sent its reply route `target(Self)`
+as a qualified pid, so the reply arrived on another connection and the call
+failed (interop-actor IX-001 and IX-003). Released from trealla-port
+`sync-reply-route` `0344c8f` (on `47b9e1d`), not yet merged: the reply route
+stays a return handle on the calling connection. Live N5 is `2621b22ceee2`
+(previous `6bd09468e13d` plus `distribution.pl` and `swi_third_party_send.pl`).
+IX-001 and IX-003 failed before the switch and pass after it; cross-node cases
+unchanged. Operator: `.trinity/n5-sync-reply-20261124/deploy_n5.py --rollback`.
+
+**SWI-WASM ping-pong with N7** (pong on N5, ping on N7) fails from the browser
+node. Found by replaying the browser's frames:
+
+- each hung ping stays on the browser's single N7 connection, so after four
+  attempts N7's per-connection actor limit refuses the next spawn;
+- the browser turns that refusal into an opaque `<js>(5,'Error')`
+  (swi-wasm-node);
+- N7 rejects `monitor` from browser connections;
+- an actor that N7's browser engine runs cannot send to a pid on another node;
+- N5 refuses pages served from N6 and N7.
+
+All are open; see docs/DISTRIBUTION_AGENDA.md.
+
 ## N7 third-party send release, with an N5 follow-up — 24 November 2026
 
 Phase 2 of `docs/THIRD_PARTY_SEND_PLAN.md`. Third-party sends now work
