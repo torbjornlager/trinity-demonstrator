@@ -1,5 +1,57 @@
 # Trinity demonstrator: project and operations handover
 
+## N7 third-party send release, with an N5 follow-up — 24 November 2026
+
+Phase 2 of `docs/THIRD_PARTY_SEND_PLAN.md`. Third-party sends now work
+across N3, N4, N5 and N7: cross-node-actor-0.1 (XN-001 to XN-004) passes on
+all 148 combinations, from every caller including N7's own browser shell.
+The ping-pong example works with pong and ping on any two of these nodes.
+
+**N7**, from eclipse-node `n7-third-party-send` `44b3900` (on `0b1903c`), not
+yet merged or pushed:
+
+- an authenticated actor peer may `send` to any actor on N7's shared engine;
+  browsers keep connection ownership, and `exit` and `monitor` stay with the
+  owning connection;
+- an actor a peer spawned may send to any configured actor peer; the adapter
+  forwards with N7's outbound credential for that peer;
+- N7 pids leave as `Id@https://n7.elfenbenstornet.se`, and that form coming
+  back is the local pid again;
+- from N7's browser shell, pids in a message to an actor it spawned on a peer
+  travel as virtual reply addresses on that connection, as in spawn goals,
+  and every such connection negotiates browser pids.
+
+Live N7 is adapter `bb2805e1adab` (previous adapter `895574ad3918` plus the
+new `n7_actor_ws.py`) and engine `52204c3188db` (previous engine
+`8db547a69d03` plus the new `isotope_bridge.ecl`). Operator:
+`.trinity/n7-third-party-send-20261124/deploy_n7.py --rollback`.
+
+**N5**, from trealla-port `browser-reply-pids` `47b9e1d` (on `fd0907a`), not
+yet merged or pushed. Needed for N7's browser shell, found in the lab:
+
+- a Trealla actor's reply to a browser connection's virtual address carries
+  its pids as `Id@https://n5.elfenbenstornet.se`, as on a peer connection and
+  as on the SWI nodes, instead of bare integers;
+- a send queued while a new outbound connection still waited for the peer's
+  welcome was dropped if the owning connection closed in that window; it is
+  now delivered.
+
+Live N5 is `6bd09468e13d` (previous `cf1d2277e8b5` plus four changed files).
+Operator: `.trinity/n5-browser-reply-20261124/deploy_n5.py --rollback`.
+
+Evidence: a local lab (N7 with two Trealla peers, built from the live images)
+went from failing XN-001 to XN-003 to passing all cases from every caller.
+Both rehearsals passed. Live checks after each switch: configuration and the
+other containers preserved, probes unchanged, and cross-node cases on all
+four nodes with no regressions. After N5: 4 combinations newly passing, the
+47 remaining failures all involving N7. After N7: all 148 pass, and N7 did
+not restart during any of the four cross-node runs. Reports are in the two
+release folders. Tests: eclipse-node `tests/test_third_party_send.py`;
+trealla-port `swi_third_party_send.pl` (all unit and interop groups pass).
+
+Next: Phase 4 (Erlang parity for `monitor/2` and `exit/2`), and merging the
+four feature branches.
+
 ## N5 third-party send release — 24 November 2026
 
 Phase 1 of `docs/THIRD_PARTY_SEND_PLAN.md`. N5 was released from trealla-port
