@@ -72,6 +72,47 @@ frames) are sound. What is missing is a **normative node-to-node layer**.
    almost entirely single-node. `cross-node-actor-0.1` (XN-001..004) is the
    first cross-node pack, so gaps surfaced on the live nodes.
 
+## The book's protocol reference (Appendix D) today
+
+Appendix D of the book ("Node protocol reference") describes the
+browser-client protocol largely as the SWI demonstrator implements it. It is
+not yet a specification of what every node must do, and it says little about
+node-to-node behaviour. Checked against the code on 24 November 2026:
+
+| Appendix D says | Implementations |
+|---|---|
+| A `send` target is an actor owned by the connection or a published service; monitoring follows the send rule | Out of date: an authenticated peer node may send to (and on SWI monitor) any live actor. SWI always allowed this; N5 and N7 do since 24 November. |
+| Pids are `Id@Node`; JSON `pid` fields are numbers | Right for the JSON field. Silent on pids inside term text (messages, goals, reasons), where the bare-integer and double-qualification bugs were. N7's browser engines send `Id@localhost` handles to peers. |
+| A connecting node announces itself with `X-Web-Prolog-Protocol` and then receives `term` fields; browsers do not | SWI does this. Trealla and N7 negotiate the same with `answer_terms:true` in `transport_hello`, and the SWI-WASM browser node sends it too. |
+| The welcome frame carries `browser_pids` and `io_ack` | Implementations also send `answer_terms`, `prompt_correlation` and `context_close`, and offer the `web-prolog-sync-v1` and `web-prolog-sync-spawn-v1` subprotocols. None are described. |
+| `toplevel_respond` takes `pid` and `input` | Correlated prompts also use `prompt_ref` in `prompt` events and replies; only the `invalid_prompt_ref` code is mentioned. |
+| Node-to-node spawns carry `request_id` | SWI and Trealla. N7's outgoing peer spawns do not (its inbound side echoes one). |
+| Trusted commands carry `lineage` and `account` | SWI and Trealla. N7 neither sends nor uses them. |
+| `/version` reports protocol and build | SWI and Trealla; not N7. `/node_info`, served by all three since 22 November, is not in the appendix. |
+| Session responses carry `Web-Prolog-Seq`; retries use `Web-Prolog-Ack` | SWI only (also in DEVIATIONS.md); not Trealla or N7. |
+| `browser_from` on `send` | SWI and N7 as described; Trealla only for correlated toplevel replies. |
+| `internal_transport` authority protects node-to-node commands | How a node authenticates is not specified. SWI's reference rule is network position; the live federation uses bearer tokens. |
+
+The conformance suite tests much of the appendix's behaviour, organised by
+feature: `http-fields`, `http-transport-options`, `partial-page-errors`,
+`prompt-http`, `prompt-ws`, `http-session-context`, `ownership-lifecycle`,
+`monitor-contracts`, `wire-capabilities` (3 cases), `interop-http`,
+`interop-actor` and `cross-node-actor`. Not tested at all:
+- `Web-Prolog-Seq` and `Web-Prolog-Ack`;
+- the contents of `/version` and `/node_info`;
+- the hello and welcome fields (`answer_terms`, `context_close`);
+- `lineage` and `account`;
+- peer-spawn `request_id` correlation;
+- node authentication;
+- pid forms inside term text;
+- delivery on close;
+- cross-node monitor and exit.
+
+Appendix B (the predicate reference) has a requirements map in
+trinity-conformance (`requirements/appendix-b-0.1.json`); Appendix D has none,
+so no file says which statement each case checks, and drift goes unnoticed. The
+ownership paragraph, for example, has not matched SWI's peer behaviour.
+
 ## Agenda
 
 In priority order. Each item ends with what "done" means.
@@ -101,8 +142,14 @@ above.
   they address another node.
 - **Versioning:** what is negotiated, and what is simply required in version 2.
 
+Start from Appendix D: split it into a browser-client protocol and a
+node-to-node protocol, and settle each row of the table above, in the text or
+in the implementations (for example, whether `Web-Prolog-Seq` is required of
+every ISOTOPE node or is an SWI extension).
+
 Done: a reviewed specification in this repository or trinity-conformance, with
-the open questions resolved and recorded in OPEN_DECISIONS.md.
+the open questions resolved and recorded in OPEN_DECISIONS.md, and Appendix D
+revised to match it.
 
 ### 2. Cross-node conformance
 
@@ -111,8 +158,13 @@ Extend `cross-node-actor` beyond XN-001..004: third-party monitor and exit
 close, node loss and reconnection, ordering. Run it with nodes on separate
 hosts, not only on one Docker network.
 
-Done: the pack covers every rule in item 1 and runs against at least two
-separate machines.
+Add an Appendix D requirements map (`requirements/appendix-d-0.1.json`), like
+the one for Appendix B, linking each normative statement to its cases or
+marking it untested.
+
+Done: the pack covers every rule in item 1, the requirements map has no
+untested normative statement, and the suite runs against at least two separate
+machines.
 
 ### 3. Peer identity and trust for the open internet
 
