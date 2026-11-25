@@ -11,6 +11,29 @@ specification (wire protocol 2 draft), cross-node conformance on separate
 hosts, peer identity for the open internet, implementation work per node, and
 deployment on separate machines.
 
+## N7 runtime name in the welcome banner — 25 November 2026
+
+N7's welcome banner said "powered by [Prolog](https://trinity.elfenbenstornet.se/)"
+instead of "ECLiPSe Prolog". The cause dates from 22 November. eclipse-node
+`cbe235c` changed `/node_info` to report `implementation: "ECLiPSe Prolog"`, but
+the shell sealed inside N7's adapter image still recognised only
+`"ECLiPSe CLP"`. That shell is an older package and is not built from this
+repository's `web/demonstrator.html`, which identifies N7 by its address and was
+unaffected.
+
+- **Live:** N7's adapter is `af5cd7e165f5`. It is the previous adapter
+  `bb2805e1adab` with only `/app/shell/demonstrator.html` and `index.html`
+  replaced, and their runtime check now accepts both names. The engine image is
+  unchanged (`52204c3188db`).
+- **Checks:** the rehearsal and the live switch both checked the shell served
+  before and after the switch. All 148 cross-node combinations passed before
+  and after, and the probes matched the previous release.
+- **Operator:** `.trinity/n7-runtime-label-20261125/deploy_n7.py --rollback`.
+
+**Still open:** the sealed N7 shell packages in eclipse-node still contain the
+old check. An adapter rebuilt from one of them would show "Prolog" again until
+the packaging is fixed.
+
 ## N6 self-rpc fix — 25 November 2026
 
 `rpc('https://n6.elfenbenstornet.se', G, Opts)` run on N6 itself failed with
