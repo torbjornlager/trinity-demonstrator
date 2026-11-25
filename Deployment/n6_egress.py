@@ -18,8 +18,11 @@ import time
 from urllib.parse import parse_qs, quote, urlsplit
 
 # Public nodes N6 may call: every other node of the demonstrator domain.
-# N6 reaches itself through rpc(localhost, ...), not through this list.
+# N6 reaches itself through the local route below, not through this list.
 APPROVED_PEER_HOSTS = tuple(f'n{n}.elfenbenstornet.se' for n in (0, 1, 2, 3, 4, 5, 7))
+# N6's own public origin. rpc to https://n6.elfenbenstornet.se/call is not
+# outbound: it takes the same fixed local route as rpc(localhost, ...).
+SELF_PUBLIC_HOST = 'n6.elfenbenstornet.se'
 
 MAX_BODY = 1024 * 1024
 
@@ -249,9 +252,13 @@ class BrokerHandler(BaseHTTPRequestHandler):
             # reach only /call on the configured controller, never arbitrary
             # loopback resources, source URLs or administration endpoints.
             local_rpc = getattr(self.server, 'local_rpc', None)
+            # N6's own public /call origin is the same node and takes the same route.
             local = (local_rpc is not None and purpose == 'rpc'
-                     and target.scheme == 'http' and target.netloc == 'localhost'
-                     and target.path == '/call' and not target.fragment)
+                     and target.path == '/call' and not target.fragment
+                     and ((target.scheme == 'http' and target.netloc == 'localhost')
+                          or (target.scheme == 'https' and target.hostname == SELF_PUBLIC_HOST
+                              and target.port in (None, 443)
+                              and target.username is None and target.password is None)))
             if (not local and (purpose not in ('rpc', 'source') or target.scheme != 'https'
                     or target.hostname not in self.server.peers or target.port not in (None, 443)
                     or target.username is not None or target.password is not None or target.fragment)):

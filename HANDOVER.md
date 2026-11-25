@@ -11,6 +11,29 @@ specification (wire protocol 2 draft), cross-node conformance on separate
 hosts, peer identity for the open internet, implementation work per node, and
 deployment on separate machines.
 
+## N6 self-rpc fix — 25 November 2026
+
+`rpc('https://n6.elfenbenstornet.se', G, Opts)` run on N6 itself failed with
+`outbound_denied`, while `rpc(localhost, G, Opts)` worked. The cause was N6's
+egress broker. Its allow-list holds only the other nodes, and N6 could reach
+itself only through `localhost`. A call to N6's own address is not outbound.
+
+`Deployment/n6_egress.py` now sends an rpc to N6's own `https:` address, on
+port 443 and path `/call`, along the same fixed local route as `localhost`. That
+route carries the controller credential, the owner derived from the lease, and
+the lease budget. Anything else to N6's own host is still refused: other paths,
+other ports, `http`, user information in the URL, source downloads, and
+look-alike hosts. `tests/test_n6_egress.py` covers both sides.
+
+- **Live:** N6 is `27628912ea83`, which is `dcaa3fe4fb22` with only
+  `/app/n6/n6_egress.py` replaced. The rollback model reproduces the
+  predecessor's Compose config hash.
+- **Rehearsal and live checks:** in both, a self-rpc gate confirmed that the
+  predecessor denies the call and the candidate allows it, with and without
+  `src_uri` from N2. `localhost` still worked and port 8443 stayed denied. N6's
+  probes passed.
+- **Operator:** `.trinity/n6-self-rpc-20261125/deploy_n6.py --rollback`.
+
 ## N5 memory releases: actor module pool and patched Trealla engine — 24–25 November 2026
 
 Two releases followed the memory restart below. **Live N5 is now

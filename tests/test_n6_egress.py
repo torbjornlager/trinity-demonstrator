@@ -158,6 +158,20 @@ class EgressTests(unittest.TestCase):
                 self.assertEqual(fetch('http://localhost/call',headers='Authorization: untrusted\n')[0],200)
                 self.assertEqual(calls[-1][-1]['authorization'],'Bearer private-controller-token')
                 self.assertEqual(calls[-1][-1]['x-web-prolog-query-owner'],owner)
+                # N6's own public /call origin is the same node: same route,
+                # same lease-derived owner and budget, never an outbound peer.
+                for url in ['https://n6.elfenbenstornet.se/call?goal=true','https://N6.elfenbenstornet.se:443/call?goal=true']:
+                    self.assertEqual(fetch(url),(200,b'success([ok],false).'),url)
+                    self.assertEqual(calls[-1][:2],(8081,'/call?goal=true'))
+                    self.assertEqual(calls[-1][-1]['x-web-prolog-query-owner'],owner)
+                    self.assertEqual(calls[-1][-1]['x-web-prolog-query-budget'],'b'*64)
+                count=len(calls)
+                for url in ['https://n6.elfenbenstornet.se/admin','https://n6.elfenbenstornet.se/','https://n6.elfenbenstornet.se:8443/call',
+                            'http://n6.elfenbenstornet.se/call','https://user@n6.elfenbenstornet.se/call','https://n6.elfenbenstornet.se/call#x',
+                            'https://n6.elfenbenstornet.se/%63all','https://n6.elfenbenstornet.se.evil.example/call']:
+                    self.assertEqual(fetch(url)[0],403,url)
+                self.assertEqual(fetch('https://n6.elfenbenstornet.se/call',purpose='source')[0],403)
+                self.assertEqual(len(calls),count)
                 server.lease=lambda uid:('b'*64,'d'*64)
                 self.assertEqual(fetch('http://localhost/call')[0],200)
                 self.assertNotEqual(calls[-1][-1]['x-web-prolog-query-owner'],owner)
