@@ -83,6 +83,14 @@ async function maxRoundTrip(page, ms) {
           rows.push({node, check: goal, passed: true});
         }
 
+        // A time/1 report is one green "% N seconds elapsed" line, whether the
+        // node sends it as a timing event or as raw stdout (N5 does the latter).
+        // get_output() keeps jQuery Terminal colour markup: [[;#15803d;]text].
+        const timed = await run(page, 'time(true).');
+        assert.ok(/\n\[\[;#(?:15803d|7ae2a1);\]% \d+\.\d{3} seconds elapsed\]\ntrue\./.test(timed)
+          && !/seconds wall|inferences/.test(timed), JSON.stringify({node, goal: 'time(true).', output: timed}));
+        rows.push({node, check: 'time/1 green elapsed line', passed: true});
+
         // A burst of output must neither freeze the page nor bloat the logger.
         const lines = 5000;
         await page.evaluate(n => {

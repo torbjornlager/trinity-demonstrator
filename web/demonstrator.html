@@ -7919,10 +7919,15 @@
           // Node output is queued and rendered in batches: one terminal echo per
           // wire message costs a layout pass, and a flood of them starves Abort.
           queueNodeOutput: function(term, event) {
-            var stream = typeof event.stdout === "string" && event.kind !== "timing";
+            // A time/1 report may arrive as raw stdout (N5 sends it that way).
+            // It keeps the green "% N seconds elapsed" line instead of streaming.
+            var value = typeof event.stdout === "string" ? event.stdout : event.data;
+            var concise = this.conciseSwiWasmOutput(renderOutputData(value));
+            var timing = event.kind === "timing" || /^%\s+\d+(?:\.\d+)? seconds elapsed\s*$/.test(concise);
+            var stream = typeof event.stdout === "string" && !timing;
             this.queueTerminalOutput(term, stream
               ? this.formatDisplayText(event.stdout)
-              : this.formatOutputDisplay(event.data, event.kind), stream);
+              : this.formatOutputDisplay(timing ? concise.trimEnd() : event.data, event.kind), stream);
           },
           queueTerminalOutput: function(term, text, stream) {
             if (!this._terminalOutputBatch) this._terminalOutputBatch = [];
