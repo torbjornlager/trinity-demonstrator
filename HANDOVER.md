@@ -11,6 +11,73 @@ specification (wire protocol 2 draft), cross-node conformance on separate
 hosts, peer identity for the open internet, implementation work per node, and
 deployment on separate machines.
 
+## N5 memory releases: actor module pool and patched Trealla engine — 24–25 November 2026
+
+Two releases followed the memory restart below. **Live N5 is now
+`370ba060f249`**, which runs a patched Trealla engine that has not been
+published (see "Engine provenance" below).
+
+**1. Actor module pool** (24 November, 22:42 UTC). Image `5985e1785e1b` (on
+`2621b22ceee2`), from trealla-port `ws-connection-cleanup` `d74792c` (on
+`0344c8f`). It is not yet pushed or merged, and the pins still name `47b9e1d`.
+
+- Framework actors reuse pooled modules. A module goes back to the pool only if
+  its predicate set still equals the baseline.
+- Two `setup_call_cleanup` goals in `node.pl` and `node_settings.pl` are wrapped
+  in `once/1`. If a thread ends with a choice point open, the cleanup is
+  skipped.
+- Rehearsal, 500 WebSocket connections: growth fell from 68.9 to 38.4 MiB.
+- Live: 538 MiB before the switch, 463 MiB after the checks. All checks passed:
+  IX, the 148 cross-node combinations and the probes.
+- Rollback: `.trinity/n5-module-pool-20261124/deploy_n5.py --rollback`.
+
+**2. Patched Trealla engine** (25 November, 09:12 UTC). Image `370ba060f249` is
+`5985e1785e1b` with only `/opt/trealla/tpl` replaced. The new binary is built
+from Trealla `841f819` (v3.14.20, the pinned engine) plus one commit, `da55c99`,
+with N5's usual Debian build flags. It reports `v3.14.20-1-gda55`, while
+`/node_info` still says 3.14.20.
+
+- **Cause.** When a module is destroyed, Trealla keeps its static clauses until
+  every query that was alive at that moment has ended. A server's main query
+  never ends, so every temporary module (and every actor) leaked its clauses.
+- **Fix.** Modules created by `'$create_module'` record which queries enter
+  their predicates. When such a module is destroyed, its clauses wait only for
+  those queries and are freed when the last one ends. Everything else keeps the
+  old conservative path.
+- **Engine tests.** The engine suites fail the same 7 + 1 tests with and without
+  the patch; these are local failures that predate it. The tests for temporary
+  modules, abolishing predicates in use and sandboxed loading pass.
+- **trealla-port tests.** The unit and interop suites pass on the patched
+  engine.
+- **Locally:**
+  - 2,000 temporary modules with 100 clauses each: 101 → 8 MB;
+  - 3,000 actors: 168 → 77 MB.
+- **Rehearsal**, 500 connections that each spawn an actor: growth fell from
+  203.0 to 63.7 MiB.
+- **Live:** 782.5 MiB of 1 GiB before the switch, 426 MiB after the checks. All
+  checks passed: IX, the 148 cross-node combinations and the probes.
+- **Rollback** to `5985e1785e1b`:
+  `.trinity/n5-engine-reclaim-20261125/deploy_n5.py --rollback`.
+
+**Engine provenance (open).** Commit `da55c99` exists only on the operator's
+Mac:
+
+- branch `scoped-module-reclaim` in `~/trealla-engine-fix`;
+- as an archive, `.trinity/n5-engine-reclaim-20261125/build/trealla-src.tar`.
+
+A normal N5 build fetches the pinned upstream engine and would drop the fix. The
+fix needs a durable home before N5 is rebuilt from source: a patch carried in
+trealla-port, a fork, or an upstream pull request. Publishing it is the owner's
+decision.
+
+**Still open.** About 58 KB per WebSocket connection remains. Most of it is
+bookkeeping clauses kept by design (issued refs and pids, tombstones, reader
+thread pids) plus tables that grow. Keep watching N5's memory under heavy
+cross-node traffic.
+
+Section 6.2's image table is older than these releases. For current N5 images,
+use this entry.
+
 ## N5 synchronous reply fix, memory restart and conformance sweep — 24 November 2026
 
 **Conformance sweep** after the third-party send releases: 82 manifests / 2,085
