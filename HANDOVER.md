@@ -11,6 +11,29 @@ specification (wire protocol 2 draft), cross-node conformance on separate
 hosts, peer identity for the open internet, implementation work per node, and
 deployment on separate machines.
 
+## N5 page: green time/1 line restored — 25 November 2026
+
+Since the terminal batching release on 23 November (`95511b1`), N5 showed
+`time/1` reports as raw `% X seconds wall, Y seconds CPU, N inferences` text,
+not as the agreed green `% X seconds elapsed` line. N5 sends the report as raw
+stdout, and the batched stdout path skipped the rewrite. N3 sends a separate
+timing event and was unaffected. Today's N5 engine switch was not involved:
+the engine's own `time/1` output is the same in both images. `15fd3b4` fixes
+`queueNodeOutput` in `web/demonstrator.html`, and
+`tests/wasm/terminal_output_browser.cjs` gains a `time/1` case.
+
+- **Live:** N5's page is served from the new static root
+  `/srv/trinity/timing-20261125`. It is a `cp -a` of `termout-20261123` with
+  only `n5/demonstrator.html` replaced (sha256 `4ca15c3e…`). Of the 524 files,
+  only that one differs.
+- **Caddy:** only N5's `root` line was repointed, followed by a graceful
+  reload. No container was recreated.
+- **Other nodes:** N0–N4 and N6 still serve the `termout-20261123` pages, and
+  N7 serves its own shell.
+- **Check:** the browser output test passes on production N5.
+- **Rollback:** see `.trinity/n5-timing-page-20261125/RELEASE.md`. It restores
+  the predecessor Caddyfile (sha256 `5d57b605…`) and reloads.
+
 ## N7 runtime name in the welcome banner — 25 November 2026
 
 N7's welcome banner said "powered by [Prolog](https://trinity.elfenbenstornet.se/)"
