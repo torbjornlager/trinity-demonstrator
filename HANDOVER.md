@@ -30,9 +30,14 @@ unaffected.
   and after, and the probes matched the previous release.
 - **Operator:** `.trinity/n7-runtime-label-20261125/deploy_n7.py --rollback`.
 
-**Still open:** the sealed N7 shell packages in eclipse-node still contain the
-old check. An adapter rebuilt from one of them would show "Prolog" again until
-the packaging is fixed.
+**Packaging fixed:** eclipse-node `e459541` changes `apply_owner_shell` in
+`tools/n7_ui_assets.py` to accept both names, through a new `runtime_label()`
+helper covered by `tests/test_owner_shell_runtime.py`. Applied to the shell N7
+served before this release, it reproduces the deployed overlay byte for byte.
+`dependencies/eclipse-node.json` now pins `e459541`; its adapter and worker
+sources are unchanged from `44b3900`. The sealed release packages under
+eclipse-node's `.trinity/releases/` are immutable and still contain the old
+check, so build any new N7 adapter from a fresh package.
 
 ## N6 self-rpc fix — 25 November 2026
 
